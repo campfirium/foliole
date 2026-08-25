@@ -25,6 +25,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'content-resource-read'");
     expect(entry).toContain("iosAcceptanceScenario === 'database-upgrade-runtime'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-group-migration'");
+    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-authorization'");
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
@@ -62,6 +63,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(standalone).toContain('runIosDatabaseUpgradeAcceptance(repoRoot, artifactDir)');
     expect(standalone).toContain("scenario === 'sync-group-migration'");
     expect(standalone).toContain('runIosSyncGroupMigrationAcceptance(repoRoot, artifactDir)');
+    expect(standalone).toContain('runIosSyncGroupAuthorizationAcceptance(repoRoot, artifactDir)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');
     expect(runner).toContain('installApp(options, simulator.udid, false)');
     expect(runner).not.toContain('waitForBootstrapSnapshot');

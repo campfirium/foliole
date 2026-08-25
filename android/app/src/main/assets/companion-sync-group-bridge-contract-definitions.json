@@ -1,0 +1,102 @@
+{
+  "authorization": {
+    "canonical": {
+      "algorithm": "HMAC-SHA256",
+      "fields": [
+        "version",
+        "method",
+        "path_with_query",
+        "timestamp",
+        "nonce",
+        "body_hash",
+        "group_id",
+        "local_member_id",
+        "peer_member_id",
+        "authorization_epoch",
+        "route_id"
+      ],
+      "version": "foliole-sync-group-route-hmac-v1"
+    },
+    "headerKeys": {
+      "authorizationEpoch": "X-Authorization-Epoch",
+      "authorizationId": "X-Authorization-Id",
+      "groupId": "X-Sync-Group-Id",
+      "localMemberId": "X-Local-Member-Id",
+      "nonce": "X-Nonce",
+      "peerMemberId": "X-Peer-Member-Id",
+      "routeId": "X-Route-Id",
+      "signature": "X-Signature",
+      "timestamp": "X-Timestamp"
+    },
+    "prepare": {
+      "registrationState": "inactive",
+      "token": "t151-prepare-authorization-v1"
+    },
+    "requestKeys": {
+      "authorizationEpoch": "authorization_epoch",
+      "authorizationId": "authorization_id",
+      "bodyHash": "body_hash",
+      "endpointHint": "endpoint_hint",
+      "groupId": "group_id",
+      "localMemberId": "local_member_id",
+      "method": "method",
+      "nonce": "nonce",
+      "pathWithQuery": "path_with_query",
+      "peerMemberId": "peer_member_id",
+      "prepareToken": "prepare_token",
+      "protocolVersion": "protocol_version",
+      "routeId": "route_id",
+      "timestamp": "timestamp"
+    },
+    "stateKeys": {
+      "authorizationEpoch": "authorization_epoch",
+      "authorizationId": "authorization_id",
+      "endpointHint": "endpoint_hint",
+      "groupId": "group_id",
+      "kind": "kind",
+      "localMemberId": "local_member_id",
+      "peerMemberId": "peer_member_id",
+      "protocolVersion": "protocol_version",
+      "routeId": "route_id",
+      "state": "state"
+    },
+    "storage": {
+      "memberKeyAlias": "foliole_sync_group_member_route_v1",
+      "memberPreferencesName": "foliole_sync_group_member_routes_v1",
+      "verificationKeyAlias": "foliole_sync_group_verification_route_v1",
+      "verificationPreferencesName": "foliole_sync_group_verification_routes_v1"
+    }
+  },
+  "methodInventory": {
+    "folioleCompanionSync": [
+      "approveSyncGroupJoinRequest",
+      "bindSyncGroupPeerRoute",
+      "clearPairingCredentials",
+      "clearSyncGroupCredentials",
+      "desktopHttpRequest",
+      "downloadAttachmentResourceBatch",
+      "downloadContentBlobBatch",
+      "finishAttachmentResourceBatch",
+      "finishContentBlobBatch",
+      "loadDiscoveryCandidates",
+      "loadPairingState",
+      "loadSyncGroupMemberRoute",
+      "loadSyncGroupProviderState",
+      "loadSyncParticipationState",
+      "migrateLegacyPairingToMemberRoute",
+      "rejectSyncGroupJoinRequest",
+      "resolveAttachmentResource",
+      "resolveSyncGroupDataRequest",
+      "revokeSyncGroupMemberRoute",
+      "savePairingCredentials",
+      "setSyncEnabled",
+      "setSyncPaused",
+      "signCompanionSyncRequest",
+      "signSyncGroupMemberRequest",
+      "stageAttachmentResourceBatch",
+      "startSyncGroupProvider",
+      "stopSyncGroupProvider"
+    ]
+  },
+  "productionBridgeAsset": "companion-bridge-contract-definitions.json"
+}

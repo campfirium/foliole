@@ -54,11 +54,23 @@ struct FolioleCompanionAttachmentResourceContract {
     let statuses: [String: String]
 }
 
+struct FolioleCompanionSyncGroupAuthorizationContract {
+    let canonicalVersion: String
+    let headerKeys: [String: String]
+    let methodInventory: [String]
+    let prepareToken: String
+    let requestKeys: [String: String]
+    let stateKeys: [String: String]
+    let storageKeys: [String: String]
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
+    private let bundle: Bundle
     private let sync: [String: Any]
 
     init(bundle: Bundle = .main) throws {
+        self.bundle = bundle
         bridge = try Self.load("companion-bridge-contract-definitions", bundle: bundle)
         sync = try Self.load("companion-sync-protocol-definitions", bundle: bundle)
     }
@@ -107,6 +119,19 @@ final class FolioleCompanionContractStore {
         )
     }
 
+    func syncGroupAuthorizationContract() throws -> FolioleCompanionSyncGroupAuthorizationContract {
+        let root = try Self.load("companion-sync-group-bridge-contract-definitions", bundle: bundle)
+        return FolioleCompanionSyncGroupAuthorizationContract(
+            canonicalVersion: try string(path: ["authorization", "canonical", "version"], root: root),
+            headerKeys: try stringMap(path: ["authorization", "headerKeys"], root: root),
+            methodInventory: try strings(path: ["methodInventory", "folioleCompanionSync"], root: root),
+            prepareToken: try string(path: ["authorization", "prepare", "token"], root: root),
+            requestKeys: try stringMap(path: ["authorization", "requestKeys"], root: root),
+            stateKeys: try stringMap(path: ["authorization", "stateKeys"], root: root),
+            storageKeys: try stringMap(path: ["authorization", "storage"], root: root)
+        )
+    }
+
     func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
         let root = try object(path: ["hostApi", "contentBlobSync"], root: bridge)
         return FolioleCompanionContentBlobContract(
@@ -141,7 +166,8 @@ final class FolioleCompanionContractStore {
     }
 
     private static func load(_ name: String, bundle: Bundle) throws -> [String: Any] {
-        guard let url = bundle.url(forResource: name, withExtension: "json") else {
+        guard let url = bundle.url(forResource: name, withExtension: "json") ??
+                bundle.url(forResource: name, withExtension: "json", subdirectory: "public") else {
             throw contractError("missing resource \(name)")
         }
         let value = try JSONSerialization.jsonObject(with: Data(contentsOf: url))

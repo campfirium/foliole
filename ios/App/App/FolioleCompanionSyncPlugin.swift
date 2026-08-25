@@ -14,12 +14,16 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadSyncGroupMemberRoute", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "migrateLegacyPairingToMemberRoute", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "revokeSyncGroupMemberRoute", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "signSyncGroupMemberRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]
 

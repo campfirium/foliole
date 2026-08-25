@@ -1,31 +1,4 @@
 {
-  "methodInventory": {
-    "folioleCompanionSync": [
-      "approveSyncGroupJoinRequest",
-      "bindSyncGroupPeerRoute",
-      "clearPairingCredentials",
-      "clearSyncGroupCredentials",
-      "desktopHttpRequest",
-      "downloadAttachmentResourceBatch",
-      "downloadContentBlobBatch",
-      "finishAttachmentResourceBatch",
-      "finishContentBlobBatch",
-      "loadDiscoveryCandidates",
-      "loadPairingState",
-      "loadSyncGroupProviderState",
-      "loadSyncParticipationState",
-      "rejectSyncGroupJoinRequest",
-      "resolveAttachmentResource",
-      "resolveSyncGroupDataRequest",
-      "savePairingCredentials",
-      "setSyncEnabled",
-      "setSyncPaused",
-      "signCompanionSyncRequest",
-      "stageAttachmentResourceBatch",
-      "startSyncGroupProvider",
-      "stopSyncGroupProvider"
-    ]
-  },
   "hostApi": {
     "attachmentResourceSync": {
       "batchResponseKeys": {

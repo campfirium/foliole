@@ -43,10 +43,12 @@ describe('Android Java SQL surface', () => {
       'approveSyncGroupJoinRequest', 'bindSyncGroupPeerRoute',
       'clearPairingCredentials', 'clearSyncGroupCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
-      'rejectSyncGroupJoinRequest',
+      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupMemberRoute',
+      'loadSyncGroupProviderState', 'loadSyncParticipationState', 'migrateLegacyPairingToMemberRoute',
+      'rejectSyncGroupJoinRequest', 'revokeSyncGroupMemberRoute',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
       'savePairingCredentials', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'signSyncGroupMemberRequest',
       'stageAttachmentResourceBatch', 'startSyncGroupProvider', 'stopSyncGroupProvider'
     ].sort());
   });

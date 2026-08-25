@@ -36,6 +36,7 @@ let package = Package(
             ],
             resources: [
                 .copy("companion-bridge-contract-definitions.json"),
+                .copy("companion-sync-group-bridge-contract-definitions.json"),
                 .copy("companion-mutation-definitions.json"),
                 .copy("companion-query-definitions.json"),
                 .copy("companion-sync-protocol-definitions.json")

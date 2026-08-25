@@ -18,33 +18,6 @@ import {
 import { COMPANION_TOPIC_SEARCH_HOST_CONTRACT } from './companionTopicSearchDefinitions.js';
 
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
-  methodInventory: {
-    folioleCompanionSync: [
-      'approveSyncGroupJoinRequest',
-      'bindSyncGroupPeerRoute',
-      'clearPairingCredentials',
-      'clearSyncGroupCredentials',
-      'desktopHttpRequest',
-      'downloadAttachmentResourceBatch',
-      'downloadContentBlobBatch',
-      'finishAttachmentResourceBatch',
-      'finishContentBlobBatch',
-      'loadDiscoveryCandidates',
-      'loadPairingState',
-      'loadSyncGroupProviderState',
-      'loadSyncParticipationState',
-      'rejectSyncGroupJoinRequest',
-      'resolveAttachmentResource',
-      'resolveSyncGroupDataRequest',
-      'savePairingCredentials',
-      'setSyncEnabled',
-      'setSyncPaused',
-      'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch',
-      'startSyncGroupProvider',
-      'stopSyncGroupProvider'
-    ]
-  },
   hostApi: {
     attachmentResourceSync: COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS,
     bootstrap: {

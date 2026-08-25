@@ -19,6 +19,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionQueryDefinitionShapeKeys.java',
       'FolioleCompanionResourceQueryStringKeys.java',
       'FolioleCompanionResourceReadQueryRules.java',
+      'FolioleCompanionSyncGroupAuthorizationContract.java',
       'FolioleCompanionSyncParticipationContractDefinitions.java',
       'FolioleCompanionSyncPackContract.java',
       'FolioleCompanionSyncPackProviderDefinitions.java',
@@ -33,7 +34,9 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionPairingPluginActions.java',
       'FolioleCompanionPluginErrors.java',
       'FolioleCompanionResourcePluginActions.java',
+      'FolioleCompanionSyncGroupAuthorizationPluginActions.java',
       'FolioleCompanionSyncPackTransferPlugin.java',
+      'FolioleCompanionSyncParticipationActions.java',
       'FolioleCompanionSyncPlugin.java'
     ]
   },
@@ -69,6 +72,9 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionPairingProtocolStore.java',
       'FolioleCompanionPairingStore.java',
       'FolioleCompanionPrimaryDeviceRetirement.java',
+      'FolioleCompanionSyncGroupAuthorizationAndroidStore.java',
+      'FolioleCompanionSyncGroupAuthorizationRecord.java',
+      'FolioleCompanionSyncGroupAuthorizationStore.java',
       'FolioleCompanionSyncGroupDataBridge.java',
       'FolioleCompanionSyncGroupCrypto.java',
       'FolioleCompanionSyncGroupJoinGrantStore.java',
