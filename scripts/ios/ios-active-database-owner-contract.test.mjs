@@ -27,16 +27,18 @@ describe('iOS active database ownership', () => {
     for (const token of RETIRED_ACTIVE_DATABASE_TOKENS) expect(source.join('\n')).not.toContain(token);
   });
 
-  it('exposes only keychain, network, discovery, file, and staged-pack methods from Swift', async () => {
+  it('exposes only keychain, member-route, network, discovery, file, and staged-pack methods from Swift', async () => {
     const plugin = await readFile(path.join(APP, 'FolioleCompanionSyncPlugin.swift'), 'utf8');
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
     expect(methods).toEqual([
       'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncParticipationState',
+      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupMemberRoute',
+      'loadSyncParticipationState', 'migrateLegacyPairingToMemberRoute',
       'resolveAttachmentResource', 'savePairingCredentials',
-      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest', 'signSyncGroupMemberRequest',
+      'revokeSyncGroupMemberRoute',
       'stageAttachmentResourceBatch'
     ].sort());
   });
