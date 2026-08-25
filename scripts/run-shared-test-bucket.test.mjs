@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -33,6 +33,28 @@ function report(overrides = {}) {
   };
 }
 
+async function collectTests(root) {
+  const entries = await readdir(root, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(root, entry.name);
+    if (entry.isDirectory()) return collectTests(entryPath);
+    return /\.test\.(?:mjs|mts|ts|tsx)$/u.test(entry.name)
+      ? [entryPath.replaceAll('\\', '/')]
+      : [];
+  }));
+  return nested.flat().sort();
+}
+
+async function expandSharedBucketTargets() {
+  const targets = SHARED_TEST_BUCKETS
+    .filter((bucket) => bucket.label.startsWith('shared-'))
+    .flatMap((bucket) => bucket.targets);
+  const expanded = await Promise.all(targets.map(async (target) => (
+    (await stat(target)).isDirectory() ? collectTests(target) : [target]
+  )));
+  return expanded.flat().sort();
+}
+
 describe('run-shared-test-bucket', () => {
   it('keeps lib tests in their own shared bucket', () => {
     expect(SHARED_TEST_BUCKETS).toContainEqual({
@@ -54,6 +76,13 @@ describe('run-shared-test-bucket', () => {
 
     expect(SHARED_TEST_BUCKETS.some((bucket) => bucket.targets.includes('src/features'))).toBe(false);
     expect(featureTargets).toEqual(featureDirectories);
+  });
+
+  it('keeps split shared buckets covering every shared test exactly once', async () => {
+    const selected = await expandSharedBucketTargets();
+
+    expect(selected).toEqual(await collectTests('src/shared'));
+    expect(new Set(selected).size).toBe(selected.length);
   });
 
   it('keeps default bucket labels and report paths unique', () => {

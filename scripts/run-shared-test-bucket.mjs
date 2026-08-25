@@ -6,35 +6,10 @@ import path from 'node:path';
 
 import { ensureElectronBinary } from './electron-runtime-binary.mjs';
 import { assertElectronAbi } from './electron-sqlite-runner.mjs';
+import { SHARED_TEST_BUCKETS } from './shared-test-bucket-config.mjs';
 import { runSharedBucketVitest } from './shared-test-bucket-runtime.mjs';
 
-export const SHARED_TEST_BUCKETS = [
-  { label: 'lib', report: '.tmp/vitest/shared-lib.json', targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**'] },
-  { label: 'shared', report: '.tmp/vitest/shared-src-shared.json', targets: ['src/shared'] },
-  { label: 'features-editor', report: '.tmp/vitest/shared-src-features-editor.json', targets: ['src/features/editor'] },
-  { label: 'features-nodes', report: '.tmp/vitest/shared-src-features-nodes.json', targets: ['src/features/nodes'] },
-  { label: 'features-settings', report: '.tmp/vitest/shared-src-features-settings.json', targets: ['src/features/settings'] },
-  {
-    label: 'features-review-docs',
-    report: '.tmp/vitest/shared-src-features-review-docs.json',
-    targets: ['src/features/review', 'src/features/pdf', 'src/features/image-cloze', 'src/features/formula-cloze']
-  },
-  {
-    label: 'features-guided',
-    report: '.tmp/vitest/shared-src-features-guided.json',
-    targets: ['src/features/guidedSample', 'src/features/help']
-  },
-  { label: 'store', report: '.tmp/vitest/shared-src-store.json', targets: ['src/store'] },
-  {
-    label: 'scripts',
-    report: '.tmp/vitest/shared-scripts.json',
-    targets: [
-      'scripts/check-settings-classification.test.mjs',
-      'scripts/lint-changed.test.mjs',
-      'scripts/vite-config.test.mjs'
-    ]
-  }
-];
+export { SHARED_TEST_BUCKETS } from './shared-test-bucket-config.mjs';
 
 function printUsage() {
   console.error('Usage: node scripts/run-shared-test-bucket.mjs <report.json>');
