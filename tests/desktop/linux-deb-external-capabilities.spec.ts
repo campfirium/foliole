@@ -12,7 +12,7 @@ import { closeDesktopApplication } from '../../scripts/desktop/playwright-deskto
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
-import { discoverFolioleService } from './harness/linuxMdnsDiscovery';
+import { prepareFolioleServiceDiscovery } from './harness/linuxMdnsDiscovery';
 
 const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
 const API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
@@ -173,14 +173,15 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     expect(authorized.status).toBe(200);
     expect(await authorized.text()).not.toContain(descriptor.token);
 
-    const discovery = discoverFolioleService();
+    const discovery = prepareFolioleServiceDiscovery();
+    await discovery.ready;
     const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('create_sync_group')) as {
       server_status: { advertised_urls: string[]; last_error: string | null; port: number; state: string };
       sync_group: { local_member_state: string };
     };
     expect(overview.sync_group).toMatchObject({ local_member_state: 'active' });
     expect(overview.server_status).toMatchObject({ last_error: null, state: 'running' });
-    const service = await discovery;
+    const service = await discovery.discover();
     expect(service).toMatchObject({ port: overview.server_status.port });
     expect(service.txt.protocol_version).toBe('1');
     const endpoint = `http://127.0.0.1:${overview.server_status.port}`;
