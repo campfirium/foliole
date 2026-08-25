@@ -24,7 +24,6 @@ vi.mock('./remoteImageLearnedSources.js', () => ({
 
 import {
   configureRemoteImageFetchTransportForTests,
-  configureRemoteImageHostResolverForTests,
   configureRemoteImagePipelineCacheRoot,
   fetchRemoteImageResource,
   resetRemoteImagePipelineForTests
@@ -40,7 +39,6 @@ beforeEach(async () => {
   resetRemoteImagePipelineForTests();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-remote-image-cache-'));
   configureRemoteImagePipelineCacheRoot(tempRoot);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 });
 
 afterEach(async () => {
@@ -70,7 +68,6 @@ it('rejects empty image responses without writing them into the render cache', a
   await expect(fetchRemoteImageResource('https://example.com/images/cover.jpg')).resolves.toMatchObject({ status: 'error' });
   resetRemoteImagePipelineForTests();
   configureRemoteImagePipelineCacheRoot(tempRoot);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 
   await expect(fetchRemoteImageResource('https://example.com/images/cover.jpg')).resolves.toMatchObject({
     resource: { bytes: JPEG_BYTES },

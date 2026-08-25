@@ -1,4 +1,3 @@
-import type { RemoteImageHostResolver } from './remoteImageTransport.js';
 import { isAllowedRemoteImageHostname } from './remoteImageUrlGuard.js';
 
 export const REMOTE_IMAGE_MAX_REDIRECTS = 5;
@@ -27,7 +26,7 @@ export function resolveRemoteImageRedirectTarget(currentUrl: string, location: s
   }
 }
 
-export async function validateRemoteImageFetchTarget(sourceUrl: string, resolver: RemoteImageHostResolver) {
+export function validateRemoteImageFetchTarget(sourceUrl: string) {
   let parsed: URL;
   try {
     parsed = new URL(sourceUrl.trim());
@@ -36,9 +35,5 @@ export async function validateRemoteImageFetchTarget(sourceUrl: string, resolver
   }
   if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !isAllowedRemoteImageHostname(parsed.hostname)) {
     throw new RemoteImagePolicyError('The remote image URL is not supported.');
-  }
-  const addresses = await resolver(parsed.hostname);
-  if (addresses.length === 0 || addresses.some((address) => !isAllowedRemoteImageHostname(address))) {
-    throw new RemoteImagePolicyError('The remote image resolved to an unsupported network target.');
   }
 }

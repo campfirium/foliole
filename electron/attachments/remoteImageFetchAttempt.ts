@@ -7,9 +7,7 @@ import {
 } from './remoteImageFetchPolicy.js';
 import {
   fetchRemoteImageWithRuntimeTransport,
-  resolveRemoteImageHostWithRuntimeResolver,
-  type RemoteImageFetchTransport,
-  type RemoteImageHostResolver
+  type RemoteImageFetchTransport
 } from './remoteImageTransport.js';
 
 const REMOTE_IMAGE_TIMEOUT_MS = 12_000;
@@ -48,6 +46,7 @@ async function fetchRemoteImageOnce(
   const transport = fetchTransportForTests ?? fetchRemoteImageWithRuntimeTransport;
   try {
     const response = await transport(sourceUrl, {
+      credentials: 'omit',
       headers: createAttemptHeaders(attempt),
       redirect: 'manual',
       signal: controller.signal
@@ -62,14 +61,12 @@ async function fetchRemoteImageOnce(
 export async function fetchRemoteImage(
   sourceUrl: string,
   attempt: RemoteImageAttempt,
-  fetchTransportForTests: RemoteImageFetchTransport | null,
-  hostResolverForTests: RemoteImageHostResolver | null
+  fetchTransportForTests: RemoteImageFetchTransport | null
 ): Promise<RemoteImageFetchResponse> {
-  const resolver = hostResolverForTests ?? resolveRemoteImageHostWithRuntimeResolver;
   let currentUrl = sourceUrl;
   let redirectCount = 0;
   while (true) {
-    await validateRemoteImageFetchTarget(currentUrl, resolver);
+    validateRemoteImageFetchTarget(currentUrl);
     const fetched = await fetchRemoteImageOnce(currentUrl, attempt, fetchTransportForTests);
     if (!isRemoteImageRedirectStatus(fetched.response.status)) {
       return fetched;

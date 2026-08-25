@@ -14,7 +14,6 @@ import {
 } from './remoteImageFetchAttempt.js';
 import {
   resolveRemoteImageTransportName,
-  type RemoteImageHostResolver,
   type RemoteImageFetchTransport
 } from './remoteImageTransport.js';
 import { isAllowedRemoteImageHostname } from './remoteImageUrlGuard.js';
@@ -74,15 +73,14 @@ async function runRemoteImageAttempt(
   sourceUrl: string,
   cacheKey: string,
   attempt: RemoteImageAttempt,
-  fetchTransportForTests: RemoteImageFetchTransport | null,
-  hostResolverForTests: RemoteImageHostResolver | null
+  fetchTransportForTests: RemoteImageFetchTransport | null
 ): Promise<RemoteImageFetchResult> {
   const startedAt = Date.now();
   const transportName = resolveRemoteImageTransportName(fetchTransportForTests);
   let fetched: RemoteImageFetchResponse;
   let response: Response;
   try {
-    fetched = await fetchRemoteImage(sourceUrl, attempt, fetchTransportForTests, hostResolverForTests);
+    fetched = await fetchRemoteImage(sourceUrl, attempt, fetchTransportForTests);
     response = fetched.response;
   } catch (error) {
     return handleRemoteImageFetchError(sourceUrl, attempt, startedAt, transportName, error);
@@ -109,15 +107,13 @@ export async function downloadRemoteImageBytes(
   sourceUrl: string,
   cacheKey: string,
   sourceOrigin: string | null,
-  fetchTransportForTests: RemoteImageFetchTransport | null,
-  hostResolverForTests: RemoteImageHostResolver | null = null
+  fetchTransportForTests: RemoteImageFetchTransport | null
 ): Promise<RemoteImageFetchResult> {
   const direct = await runRemoteImageAttempt(
     sourceUrl,
     cacheKey,
     { attempt: 1, sourceOrigin, strategy: 'direct' },
-    fetchTransportForTests,
-    hostResolverForTests
+    fetchTransportForTests
   );
   return direct.status === 'ready' || !sourceOrigin
     ? direct
@@ -125,7 +121,6 @@ export async function downloadRemoteImageBytes(
       sourceUrl,
       cacheKey,
       { attempt: 2, sourceOrigin, strategy: 'source-origin' },
-      fetchTransportForTests,
-      hostResolverForTests
+      fetchTransportForTests
     );
 }

@@ -19,7 +19,6 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
 }));
 
 import {
-  configureRemoteImageHostResolverForTests,
   configureRemoteImagePipelineCacheRoot,
   fetchRemoteImageResource,
   importRemoteImageAttachment,
@@ -36,7 +35,6 @@ beforeEach(async () => {
   resetRemoteImagePipelineForTests();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-remote-image-cache-'));
   configureRemoteImagePipelineCacheRoot(tempRoot);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 });
 
 afterEach(async () => {
@@ -56,7 +54,6 @@ it('imports from the remote image cache without downloading again', async () => 
   await fetchRemoteImageResource('https://example.com/images/cover.png');
   resetRemoteImagePipelineForTests();
   configureRemoteImagePipelineCacheRoot(tempRoot);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
   fetchMock.mockRejectedValue(new Error('offline'));
 
   await expect(importRemoteImageAttachment({

@@ -22,7 +22,6 @@ import { importRemoteImageAttachment } from './importRemoteImageAttachment.js';
 import { resolveRemoteImageCacheFilePathsForTests } from './remoteImageCache.js';
 import {
   configureRemoteImageFetchTransportForTests,
-  configureRemoteImageHostResolverForTests,
   configureRemoteImagePipelineCacheRoot,
   fetchRemoteImageResource,
   resetRemoteImagePipelineForTests,
@@ -47,7 +46,6 @@ afterEach(async () => {
 
 function configureTestCacheRoot() {
   configureRemoteImagePipelineCacheRoot(tempRoot);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 }
 
 it('downloads a remote image and forwards it into CAS storage', async () => {

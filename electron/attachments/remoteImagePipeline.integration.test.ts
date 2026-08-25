@@ -34,7 +34,6 @@ vi.mock('./remoteImageSourceContext.js', () => ({
 import { buildRemoteImageRenderUrl } from '../../lib/platform/remoteImageProtocolUrl.js';
 
 import {
-  configureRemoteImageHostResolverForTests,
   importRemoteImageAttachment,
   resetRemoteImagePipelineForTests
 } from './remoteImagePipeline.js';
@@ -46,7 +45,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   resetRemoteImagePipelineForTests();
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 });
 
 it('shares one remote fetch across protocol renders and auto localization', async () => {

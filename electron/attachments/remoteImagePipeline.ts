@@ -24,13 +24,12 @@ import {
   type RemoteImageFetchTransport
 } from './remoteImageDownload.js';
 import { learnRemoteImageSourceOrigin } from './remoteImageLearnedSources.js';
-import { resolveRemoteImageTransportName, type RemoteImageHostResolver } from './remoteImageTransport.js';
+import { resolveRemoteImageTransportName } from './remoteImageTransport.js';
 
 const fetchByCacheKey = new Map<string, Promise<RemoteImageFetchResult>>();
 const importByNodeAndCacheKey = new Map<string, Promise<NativeImportLocalImageAttachmentResult>>();
 const failureByCacheKey = new Map<string, { error: RemoteImageErrorResult; expiresAt: number }>();
 let fetchTransportForTests: RemoteImageFetchTransport | null = null;
-let hostResolverForTests: RemoteImageHostResolver | null = null;
 
 function readFailureCache(fetchKey: string) {
   const cached = failureByCacheKey.get(fetchKey);
@@ -65,7 +64,6 @@ export function resetRemoteImagePipelineForTests() {
   importByNodeAndCacheKey.clear();
   failureByCacheKey.clear();
   fetchTransportForTests = null;
-  hostResolverForTests = null;
   resetRemoteImageCacheForTests();
 }
 
@@ -75,10 +73,6 @@ export function configureRemoteImagePipelineCacheRoot(root: string | null) {
 
 export function configureRemoteImageFetchTransportForTests(transport: RemoteImageFetchTransport | null) {
   fetchTransportForTests = transport;
-}
-
-export function configureRemoteImageHostResolverForTests(resolver: RemoteImageHostResolver | null) {
-  hostResolverForTests = resolver;
 }
 
 export async function fetchRemoteImageResource(
@@ -156,8 +150,7 @@ function createRemoteImageFetchPromise(
     sourceUrl.trim(),
     cacheKey,
     options.sourceOrigin ?? null,
-    fetchTransportForTests,
-    hostResolverForTests
+    fetchTransportForTests
   ).then(async (result) => {
     if (result.status === 'error') {
       fetchByCacheKey.delete(fetchKey);

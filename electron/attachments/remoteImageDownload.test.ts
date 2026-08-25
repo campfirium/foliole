@@ -29,12 +29,8 @@ function createTransport(response: Response): RemoteImageFetchTransport {
   return vi.fn(async () => response);
 }
 
-function createAllowedResolver() {
-  return vi.fn(async () => ['93.184.216.34']);
-}
-
 async function downloadWith(response: Response) {
-  return downloadRemoteImageBytes(SOURCE_URL, CACHE_KEY, null, createTransport(response), createAllowedResolver());
+  return downloadRemoteImageBytes(SOURCE_URL, CACHE_KEY, null, createTransport(response));
 }
 
 it('keeps normal remote image responses downloadable', async () => {

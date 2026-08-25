@@ -20,7 +20,6 @@ vi.mock('../ipc/paths.js', () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import {
   configureRemoteImageFetchTransportForTests,
-  configureRemoteImageHostResolverForTests,
   resetRemoteImagePipelineForTests
 } from '../attachments/remoteImagePipeline.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -217,7 +216,6 @@ it('localizes shared remote images before matching manually merged readwise high
     status: 200
   }));
   configureRemoteImageFetchTransportForTests(fetchTransport);
-  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
   const imported = runPreparedImport(
     createPreparedDesktopTextImport({
       content: [
