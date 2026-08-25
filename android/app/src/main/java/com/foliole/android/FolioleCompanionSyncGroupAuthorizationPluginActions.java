@@ -8,6 +8,52 @@ import com.getcapacitor.PluginCall;
 final class FolioleCompanionSyncGroupAuthorizationPluginActions {
     private FolioleCompanionSyncGroupAuthorizationPluginActions() {}
 
+    static JSObject createJoinIntentKey(Context context, PluginCall call) throws Exception {
+        FolioleCompanionSyncGroupAuthorizationContract contract = contract(context, call);
+        String publicKey = FolioleCompanionSyncGroupLifecycleKeyStore.create(
+            context, required(call, contract, "requestId"));
+        return new JSObject().put("public_key", publicKey);
+    }
+
+    static JSObject discardJoinIntentKey(Context context, PluginCall call) throws Exception {
+        FolioleCompanionSyncGroupAuthorizationContract contract = contract(context, call);
+        boolean discarded = FolioleCompanionSyncGroupLifecycleKeyStore.remove(
+            context, required(call, contract, "requestId"));
+        return new JSObject().put("discarded", discarded);
+    }
+
+    static JSObject consumeGrant(Context context, PluginCall call) throws Exception {
+        FolioleCompanionSyncGroupAuthorizationContract contract = contract(context, call);
+        String requestId = required(call, contract, "requestId");
+        FolioleCompanionSyncGroupAuthorizationStore store =
+            FolioleCompanionSyncGroupAuthorizationAndroidStore.member(context);
+        FolioleCompanionSyncGroupAuthorizationRecord existing = store.load(required(call, contract, "routeId"));
+        if (existing != null) {
+            requireMatchingGrant(call, contract, existing);
+            FolioleCompanionSyncGroupLifecycleKeyStore.remove(context, requestId);
+            return new JSObject().put("route", state(contract, existing)).put("status", "consumed");
+        }
+        org.json.JSONObject encrypted = call.getObject(contract.request("encryptedRouteSecret"));
+        if (encrypted == null) throw new IllegalArgumentException("encryptedRouteSecret is required");
+        String secret = FolioleCompanionSyncGroupLifecycleKeyStore.decrypt(context, requestId, encrypted);
+        FolioleCompanionSyncGroupAuthorizationRecord record = record(call, contract, secret);
+        store.save(record);
+        FolioleCompanionSyncGroupLifecycleKeyStore.remove(context, requestId);
+        return new JSObject().put("route", state(contract, record)).put("status", "consumed");
+    }
+
+    private static void requireMatchingGrant(
+        PluginCall call, FolioleCompanionSyncGroupAuthorizationContract contract,
+        FolioleCompanionSyncGroupAuthorizationRecord record
+    ) throws Exception {
+        boolean matches = record.authorizationEpoch == requiredInt(call, contract, "authorizationEpoch") &&
+            record.authorizationId.equals(required(call, contract, "authorizationId")) &&
+            record.groupId.equals(required(call, contract, "groupId")) &&
+            record.localMemberId.equals(required(call, contract, "localMemberId")) &&
+            record.peerMemberId.equals(required(call, contract, "peerMemberId"));
+        if (!matches) throw new SecurityException("route_grant_conflict");
+    }
+
     static JSObject migrate(Context context, PluginCall call) throws Exception {
         FolioleCompanionSyncGroupAuthorizationContract contract = contract(context, call);
         String authorizationId = required(call, contract, "authorizationId");

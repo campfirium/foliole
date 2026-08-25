@@ -16,9 +16,9 @@ export type AcceptanceResult = {
   error: string | null;
   phase: 'applied' | 'background' | 'disconnected' | 'failed' | 'foreground' | 'paired' | 'reapplied' | 'rejected' |
     'migration-verified' | 'resources-restored' | 'resources-synced' | 'ready' | 'route-restarted' |
-    'route-saved' | 'upgraded';
+    'route-saved' | 'intent-waiting' | 'waiting-restarted' | 'grant-consumed' | 'upgraded';
   scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'pairing-signed-transport' |
-    'foreground-sync-lifecycle' | 'state-writeback-runtime' | 'sync-group-authorization' |
+    'foreground-sync-lifecycle' | 'state-writeback-runtime' | 'sync-group-authorization' | 'sync-group-lifecycle' |
     'sync-group-migration' | 'sync-pack-runtime';
   status: 'failed' | 'passed';
   [key: string]: unknown;

@@ -41,7 +41,9 @@ describe('Android Java SQL surface', () => {
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
       'approveSyncGroupJoinRequest', 'bindSyncGroupPeerRoute',
-      'clearPairingCredentials', 'clearSyncGroupCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'clearPairingCredentials', 'clearSyncGroupCredentials', 'consumeSyncGroupRouteGrant',
+      'createSyncGroupJoinIntentKey', 'desktopHttpRequest', 'discardSyncGroupJoinIntentKey',
+      'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupMemberRoute',
       'loadSyncGroupProviderState', 'loadSyncParticipationState', 'migrateLegacyPairingToMemberRoute',

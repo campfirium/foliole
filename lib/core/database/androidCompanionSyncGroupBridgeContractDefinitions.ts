@@ -4,6 +4,9 @@ import {
 } from '../../platform/syncGroupAuthorizationContract.js';
 
 const AUTHORIZATION_METHODS = [
+  'consumeSyncGroupRouteGrant',
+  'createSyncGroupJoinIntentKey',
+  'discardSyncGroupJoinIntentKey',
   'loadSyncGroupMemberRoute',
   'migrateLegacyPairingToMemberRoute',
   'revokeSyncGroupMemberRoute',
@@ -46,8 +49,9 @@ const AUTHORIZATION_CONTRACT = {
   requestKeys: {
     authorizationEpoch: 'authorization_epoch', authorizationId: 'authorization_id',
     bodyHash: 'body_hash', endpointHint: 'endpoint_hint', groupId: 'group_id',
+    encryptedRouteSecret: 'encrypted_route_secret', grantId: 'grant_id',
     localMemberId: 'local_member_id', method: 'method', nonce: 'nonce',
-    pathWithQuery: 'path_with_query', peerMemberId: 'peer_member_id',
+    pathWithQuery: 'path_with_query', peerMemberId: 'peer_member_id', requestId: 'request_id',
     prepareToken: 'prepare_token', protocolVersion: 'protocol_version', routeId: 'route_id',
     timestamp: 'timestamp'
   },

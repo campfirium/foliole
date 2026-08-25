@@ -12,15 +12,13 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
-    private boolean lifecycleActive = true;
-    private FolioleCompanionNsdMonitor serviceMonitor;
+    private FolioleCompanionPluginLifecycle lifecycle;
 
     @Override public void load() {
         super.load();
         try {
             FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest);
-            serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
-            reconcileServiceMonitor();
+            lifecycle = new FolioleCompanionPluginLifecycle(getContext(), this, this::dispatchServiceHint);
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
         }
@@ -42,22 +40,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         async(call, "Failed to start Sync Group provider.", () ->
             FolioleCompanionSyncGroupProvider.start(
                 getContext(), getActivity(), call, this, this::dispatchDataRequest,
-                this::dispatchProviderState, isParticipating()
+                this::dispatchProviderState, lifecycle.isParticipating()
             ));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
         async(call, "Failed to stop Sync Group provider.", () ->
-            withParticipation(FolioleCompanionSyncGroupProvider.stop(this)));
+            lifecycle.withState(FolioleCompanionSyncGroupProvider.stop(this)));
     }
 
     @PluginMethod public void loadSyncGroupProviderState(PluginCall call) {
-        try { call.resolve(withParticipation(FolioleCompanionSyncGroupProvider.state())); }
+        try { call.resolve(lifecycle.withState(FolioleCompanionSyncGroupProvider.state())); }
         catch (Exception error) { call.reject("Failed to load Sync participation state.", error); }
     }
 
     @PluginMethod public void loadSyncParticipationState(PluginCall call) {
-        try { call.resolve(FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive)); }
+        try { call.resolve(lifecycle.state()); }
         catch (Exception error) { call.reject("Failed to load Sync participation state.", error); }
     }
 
@@ -71,12 +69,12 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void approveSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to approve Device.", () ->
-            withParticipation(FolioleCompanionSyncGroupProvider.approve(getContext(), call)));
+            lifecycle.withState(FolioleCompanionSyncGroupProvider.approve(getContext(), call)));
     }
 
     @PluginMethod public void rejectSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to reject Device.", () ->
-            withParticipation(FolioleCompanionSyncGroupProvider.reject(getContext(), call)));
+            lifecycle.withState(FolioleCompanionSyncGroupProvider.reject(getContext(), call)));
     }
 
     @PluginMethod public void resolveSyncGroupDataRequest(PluginCall call) {
@@ -116,6 +114,21 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void loadSyncGroupMemberRoute(PluginCall call) {
         async(call, "Failed to load inactive Sync Group route.", () ->
             FolioleCompanionSyncGroupAuthorizationPluginActions.load(getContext(), call));
+    }
+
+    @PluginMethod public void createSyncGroupJoinIntentKey(PluginCall call) {
+        async(call, "Failed to create inactive Sync Group join key.", () ->
+            FolioleCompanionSyncGroupAuthorizationPluginActions.createJoinIntentKey(getContext(), call));
+    }
+
+    @PluginMethod public void discardSyncGroupJoinIntentKey(PluginCall call) {
+        async(call, "Failed to discard inactive Sync Group join key.", () ->
+            FolioleCompanionSyncGroupAuthorizationPluginActions.discardJoinIntentKey(getContext(), call));
+    }
+
+    @PluginMethod public void consumeSyncGroupRouteGrant(PluginCall call) {
+        async(call, "Failed to consume inactive Sync Group route grant.", () ->
+            FolioleCompanionSyncGroupAuthorizationPluginActions.consumeGrant(getContext(), call));
     }
 
     @PluginMethod public void migrateLegacyPairingToMemberRoute(PluginCall call) {
@@ -163,7 +176,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionResourcePluginActions.resolveAttachmentResource(getContext(), call));
     }
 
-    private void async(PluginCall call, String message, FileWork work) {
+    private void async(PluginCall call, String message, FolioleCompanionPluginWork work) {
         fileExecutor.execute(() -> {
             try {
                 call.resolve(work.run());
@@ -190,7 +203,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private void dispatchProviderState() {
         try {
             String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderStateEvent(getContext());
-            JSObject event = withParticipation(FolioleCompanionSyncGroupProvider.state());
+            JSObject event = lifecycle.withState(FolioleCompanionSyncGroupProvider.state());
             getActivity().runOnUiThread(() -> notifyListeners(name, event));
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncProvider", "State dispatch failed", error);
@@ -198,55 +211,28 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     private void setParticipation(PluginCall call, String name) {
-        async(call, "Failed to update Sync participation.", () -> {
-            JSObject result = FolioleCompanionSyncParticipationActions.set(
-                getContext(), call, name, lifecycleActive);
-            reconcileServiceMonitor();
-            FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
-            return result;
-        });
-    }
-
-    private boolean isParticipating() throws Exception {
-        return FolioleCompanionSyncParticipationStore.isParticipating(getContext(), lifecycleActive);
-    }
-
-    private void reconcileServiceMonitor() throws Exception {
-        if (serviceMonitor == null) return;
-        if (isParticipating()) serviceMonitor.start();
-        else serviceMonitor.stop();
-    }
-
-    private JSObject withParticipation(JSObject result) throws Exception {
-        return FolioleCompanionSyncParticipationActions.withState(getContext(), result, lifecycleActive);
+        async(call, "Failed to update Sync participation.", () -> lifecycle.set(call, name));
     }
 
     @Override protected void handleOnDestroy() {
-        lifecycleActive = false;
-        if (serviceMonitor != null) serviceMonitor.stop();
-        FolioleCompanionSyncGroupProvider.pause(this);
+        if (lifecycle != null) lifecycle.pause();
         FolioleCompanionSyncGroupDataBridge.uninstall(this);
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }
 
     @Override protected void handleOnPause() {
-        lifecycleActive = false;
-        if (serviceMonitor != null) serviceMonitor.stop();
-        FolioleCompanionSyncGroupProvider.pause(this);
+        if (lifecycle != null) lifecycle.pause();
         super.handleOnPause();
     }
 
     @Override protected void handleOnResume() {
         super.handleOnResume();
-        lifecycleActive = true;
-        try { reconcileServiceMonitor(); }
+        try { if (lifecycle != null) lifecycle.resume(); }
         catch (Exception error) { android.util.Log.w("FolioleSyncDiscovery", "Resume failed", error); }
         fileExecutor.execute(() -> {
-            try { FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating()); }
+            try { if (lifecycle != null) lifecycle.reconcileProvider(); }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }
         });
     }
-
-    private interface FileWork { JSObject run() throws Exception; }
 }

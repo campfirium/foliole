@@ -36,6 +36,9 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'sync-group-authorization'
       ? import('./iosSyncGroupAuthorizationAcceptance').then(({ runIosSyncGroupAuthorizationAcceptance }) =>
         runIosSyncGroupAuthorizationAcceptance())
+    : iosAcceptanceScenario === 'sync-group-lifecycle'
+      ? import('./iosSyncGroupLifecycleAcceptance').then(({ runIosSyncGroupLifecycleAcceptance }) =>
+        runIosSyncGroupLifecycleAcceptance())
     : iosAcceptanceScenario === 'sync-pack-runtime'
       ? import('./iosSyncPackAcceptance').then(({ runIosSyncPackAcceptance }) => runIosSyncPackAcceptance())
       : import('./iosBridgeAcceptance').then(({ runIosBridgeAcceptance }) => runIosBridgeAcceptance());

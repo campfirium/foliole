@@ -16,6 +16,7 @@ final class FolioleCompanionSyncGroupServer {
     private static final int SYNC_PORT = 38641;
     final Map<String, FolioleCompanionSyncGroupJoinRequest> requests;
     private final Context context;
+    private final FolioleCompanionSyncGroupAdmissionAdapter admission;
     private final JSONObject config;
     private final FolioleCompanionSyncGroupDataBridge dataBridge;
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -30,6 +31,7 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupDataBridge dataBridge
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config; this.requests = requests; this.dataBridge = dataBridge;
+        admission = new FolioleCompanionSyncGroupAdmissionAdapter(this.context, config, requests);
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
@@ -70,7 +72,9 @@ final class FolioleCompanionSyncGroupServer {
     private void route(FolioleCompanionHttpRequest request, java.io.OutputStream output, String remoteAddress) throws Exception {
         String pathOnly = request.path.split("\\?", 2)[0];
         if (request.method.equals("GET") && pathOnly.equals("/companion/discovery")) { discovery(output); return; }
-        if (request.method.equals("POST") && pathOnly.equals("/companion/pair-requests")) { createRequest(request, output, remoteAddress); return; }
+        if (request.method.equals("POST") && pathOnly.equals("/companion/pair-requests")) {
+            admission.handleLegacy(request, output, remoteAddress); return;
+        }
         if (request.method.equals("POST") && pathOnly.equals("/companion/pair")) { completePair(request, output); return; }
         if (request.method.equals("POST") && pathOnly.equals("/companion/sync-group/departure")) {
             departure(request, output); return;
@@ -96,34 +100,6 @@ final class FolioleCompanionSyncGroupServer {
             .put("desktop_name", config.getString("host_name"))
             .put("desktop_host_name", config.getString("host_name"))
             .put("desktop_platform", "android-capacitor").put("pairing_mode", "desktop-confirm"));
-    }
-
-    private void createRequest(FolioleCompanionHttpRequest request, java.io.OutputStream output, String remoteAddress) throws Exception {
-        JSONObject body = new JSONObject(request.bodyText());
-        JSONObject group = config.getJSONObject("sync_group");
-        JSONObject facts = body.optJSONObject("library_facts");
-        if (!group.getString("group_id").equals(body.optString("group_id")) ||
-            !config.getString("group_tag").equals(body.optString("group_tag"))) {
-            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_identity_mismatch")); return;
-        }
-        if (!FolioleCompanionSyncGroupLibraryFacts.valid(facts)) {
-            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_library_facts_invalid")); return;
-        }
-        if (!FolioleCompanionWorkgroupHttp.compatibleWith(protocol(), body.optJSONObject("protocol"))) {
-            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_protocol_incompatible")); return;
-        }
-        FolioleCompanionSyncGroupProvider.pruneExpired(context);
-        FolioleCompanionSyncGroupJoinRequest existing = requests.values().stream()
-            .filter(item -> !item.status.equals("rejected") && item.matches(body)).findFirst().orElse(null);
-        if (existing != null) {
-            FolioleCompanionHttpResponse.json(output, 202, existing.publicJson()
-                .put("compatibility", FolioleCompanionWorkgroupHttp.compatible(protocol())).put("desktop_protocol", protocol())); return;
-        }
-        FolioleCompanionSyncGroupJoinRequest pending = new FolioleCompanionSyncGroupJoinRequest(body, normalizeAddress(remoteAddress));
-        requests.put(pending.pairRequestId, pending);
-        FolioleCompanionSyncGroupProvider.notifyStateChanged();
-        FolioleCompanionHttpResponse.json(output, 202, pending.publicJson()
-            .put("compatibility", FolioleCompanionWorkgroupHttp.compatible(protocol())).put("desktop_protocol", protocol()));
     }
 
     private void completePair(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
@@ -239,5 +215,4 @@ final class FolioleCompanionSyncGroupServer {
     }
     private static int integerQuery(String path, String key) throws Exception { String value = query(path, key); return value == null ? 0 : Integer.parseInt(value); }
     private static String query(String path, String key) throws Exception { String query = path.contains("?") ? path.substring(path.indexOf('?') + 1) : ""; for (String item : query.split("&")) { String[] pair = item.split("=", 2); if (pair.length == 2 && pair[0].equals(key)) return URLDecoder.decode(pair[1], "UTF-8"); } return null; }
-    private static String normalizeAddress(String value) { return value.startsWith("::ffff:") ? value.substring(7) : value; }
 }

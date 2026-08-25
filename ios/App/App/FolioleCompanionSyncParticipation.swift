@@ -56,6 +56,59 @@ extension FolioleCompanionSyncPlugin {
 }
 
 extension FolioleCompanionSyncPlugin {
+    @objc func createSyncGroupJoinIntentKey(_ call: CAPPluginCall) {
+        resolveInactiveRoute(call) { _, contract in
+            let requestId = try self.routeString(call, contract, "requestId")
+            return ["public_key": try FolioleCompanionSyncGroupLifecycleKeyStore().create(requestId)]
+        }
+    }
+
+    @objc func discardSyncGroupJoinIntentKey(_ call: CAPPluginCall) {
+        resolveInactiveRoute(call) { _, contract in
+            let requestId = try self.routeString(call, contract, "requestId")
+            return ["discarded": try FolioleCompanionSyncGroupLifecycleKeyStore().remove(requestId)]
+        }
+    }
+
+    @objc func consumeSyncGroupRouteGrant(_ call: CAPPluginCall) {
+        resolveInactiveRoute(call) { store, contract in
+            let requestId = try self.routeString(call, contract, "requestId")
+            let routeId = try self.routeString(call, contract, "routeId")
+            if let existing = try store.load(routeId) {
+                let authorizationEpoch = try self.routeInt(call, contract, "authorizationEpoch")
+                let authorizationId = try self.routeString(call, contract, "authorizationId")
+                let groupId = try self.routeString(call, contract, "groupId")
+                let localMemberId = try self.routeString(call, contract, "localMemberId")
+                let peerMemberId = try self.routeString(call, contract, "peerMemberId")
+                guard existing.authorizationEpoch == authorizationEpoch,
+                      existing.authorizationId == authorizationId,
+                      existing.groupId == groupId,
+                      existing.localMemberId == localMemberId,
+                      existing.peerMemberId == peerMemberId else {
+                    throw self.routeInvalid("route grant conflict")
+                }
+                _ = try FolioleCompanionSyncGroupLifecycleKeyStore().remove(requestId)
+                return ["route": try store.state(existing), "status": "consumed"]
+            }
+            let encryptedKey = try self.routeKey("encryptedRouteSecret", contract.requestKeys)
+            guard let encrypted = call.getObject(encryptedKey) else { throw self.routeInvalid("encryptedRouteSecret is required") }
+            let keys = FolioleCompanionSyncGroupLifecycleKeyStore()
+            let route = FolioleCompanionSyncGroupMemberRoute(
+                authorizationEpoch: try self.routeInt(call, contract, "authorizationEpoch"),
+                authorizationId: try self.routeString(call, contract, "authorizationId"),
+                endpointHint: call.getString(try self.routeKey("endpointHint", contract.requestKeys)),
+                groupId: try self.routeString(call, contract, "groupId"),
+                localMemberId: try self.routeString(call, contract, "localMemberId"),
+                peerMemberId: try self.routeString(call, contract, "peerMemberId"),
+                protocolVersion: try self.routeInt(call, contract, "protocolVersion"),
+                routeId: routeId,
+                secret: try keys.decrypt(requestId, payload: encrypted))
+            try store.save(route)
+            _ = try keys.remove(requestId)
+            return ["route": try store.state(route), "status": "consumed"]
+        }
+    }
+
     @objc func loadSyncGroupMemberRoute(_ call: CAPPluginCall) {
         resolveInactiveRoute(call) { store, contract in
             let routeId = try self.routeString(call, contract, "routeId")

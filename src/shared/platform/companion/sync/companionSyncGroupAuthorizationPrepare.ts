@@ -6,6 +6,29 @@ import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository'
 
 const token = { prepare_token: SYNC_GROUP_AUTHORIZATION_PREPARE_TOKEN };
 
+export function createPreparedSyncGroupJoinIntentKey(requestId: string) {
+  return FolioleCompanionSync.createSyncGroupJoinIntentKey({ ...token, request_id: requestId });
+}
+
+export function discardPreparedSyncGroupJoinIntentKey(requestId: string) {
+  return FolioleCompanionSync.discardSyncGroupJoinIntentKey({ ...token, request_id: requestId });
+}
+
+export function consumePreparedSyncGroupRouteGrant(args: {
+  authorization_epoch: number;
+  authorization_id: string;
+  encrypted_route_secret: Record<string, unknown>;
+  endpoint_hint?: string | null;
+  group_id: string;
+  local_member_id: string;
+  peer_member_id: string;
+  protocol_version: 4;
+  request_id: string;
+  route_id: string;
+}) {
+  return FolioleCompanionSync.consumeSyncGroupRouteGrant({ ...token, ...args });
+}
+
 export function loadPreparedSyncGroupMemberRoute(routeId: string) {
   return FolioleCompanionSync.loadSyncGroupMemberRoute({ ...token, route_id: routeId });
 }

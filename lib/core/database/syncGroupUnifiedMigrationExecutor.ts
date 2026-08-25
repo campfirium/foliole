@@ -160,8 +160,10 @@ async function insertLocalProjection(db: DbPort, input: ApplyUnifiedLibraryMigra
   ]);
   if (state === 'active') return;
   await db.run(`INSERT INTO sync_group_departure_outbox
-    (departure_id, group_id, member_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`, [
-    `legacy-departure:${decision.library_id}:${decision.group_id}`, decision.group_id, local.member_id,
+    (departure_id, group_id, timeline_id, member_id, kind, roster_revision, state, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'leave', ?, ?, ?, ?)`, [
+    `legacy-departure:${decision.library_id}:${decision.group_id}`, decision.group_id,
+    decision.timeline_id, local.member_id, decision.roster_revision,
     state === 'repair' ? 'repair' : 'pending', input.now, input.now
   ]);
 }

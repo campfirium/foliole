@@ -9,17 +9,22 @@ import { expect, it } from 'vitest';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = (filePath) => readFile(path.join(root, filePath), 'utf8');
 
-it('projects join requests to the public companion surface without polling', async () => {
-  const [plugin, provider, server, rows] = await Promise.all([
+it('keeps legacy admission registered while inactive v4 denies ordinary providers without polling', async () => {
+  const [plugin, provider, server, admission, rows] = await Promise.all([
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java'),
+    source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupAdmissionAdapter.java'),
     source('src/companion/CompanionSyncGroupRows.tsx')
   ]);
-  expect(server).toContain('FolioleCompanionSyncGroupProvider.notifyStateChanged();');
+  expect(server).toContain('admission.handleLegacy(request, output, remoteAddress)');
+  expect(server).not.toContain('/companion/v4');
+  expect(admission).toContain('FolioleCompanionSyncGroupProvider.notifyStateChanged();');
+  expect(admission).toContain('"manager_required"');
+  expect(admission).toContain('inactiveV4Admission');
   expect(provider).toContain('static void notifyStateChanged()');
   expect(plugin).toContain('syncGroupProviderStateEvent');
   expect(plugin).toContain('notifyListeners(name, event)');
   expect(rows).toContain('<CompanionSyncGroupJoinApproval provider={provider} />');
-  expect(rows).not.toContain('setInterval');
+  expect(`${server}\n${admission}\n${rows}`).not.toContain('setInterval');
 });

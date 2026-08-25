@@ -7,9 +7,12 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "consumeSyncGroupRouteGrant", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "createSyncGroupJoinIntentKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "discardSyncGroupJoinIntentKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
