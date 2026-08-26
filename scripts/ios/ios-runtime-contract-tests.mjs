@@ -39,6 +39,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/companion/iosNodeVersionRoundtripAcceptance.test.ts',
   'src/companion/iosStateWritebackAcceptance.test.ts',
   'src/companion/iosSyncGroupDiscoveryAcceptance.test.ts',
+  'src/companion/iosSyncTriggerAcceptance.test.ts',
   'src/companion/iosSyncPackAcceptance.test.ts',
   'src/companion/CompanionBrowseTopActions.test.tsx',
   'src/companion/CompanionHandoffReminderRuntime.test.tsx',
@@ -122,6 +123,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-pack-transfer-contract.test.mjs',
   'scripts/ios/ios-state-writeback-acceptance-service.test.mjs',
   'scripts/ios/ios-sync-group-discovery-acceptance-runner.test.mjs',
+  'scripts/ios/ios-sync-trigger-acceptance-runner.test.mjs',
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [

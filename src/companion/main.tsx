@@ -38,6 +38,9 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'sync-group-discovery-events'
       ? import('./iosSyncGroupDiscoveryAcceptance').then(({ runIosSyncGroupDiscoveryAcceptance }) =>
         runIosSyncGroupDiscoveryAcceptance())
+    : iosAcceptanceScenario === 'sync-trigger-runtime'
+      ? import('./iosSyncTriggerAcceptance').then(({ runIosSyncTriggerAcceptance }) =>
+        runIosSyncTriggerAcceptance())
       : import('./iosBridgeAcceptance').then(({ runIosBridgeAcceptance }) => runIosBridgeAcceptance());
   void module.catch((error) => {
     window.webkit?.messageHandlers?.folioleBridgeAcceptance?.postMessage({

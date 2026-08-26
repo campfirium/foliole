@@ -105,6 +105,7 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(resolveAcceptanceScenario('device-identity')).toBe('device-identity');
     expect(resolveAcceptanceScenario('sync-pack-runtime')).toBe('sync-pack-runtime');
     expect(resolveAcceptanceScenario('sync-group-discovery-events')).toBe('sync-group-discovery-events');
+    expect(resolveAcceptanceScenario('sync-trigger-runtime')).toBe('sync-trigger-runtime');
     expect(() => resolveAcceptanceScenario('unknown')).toThrow('Unknown iOS acceptance scenario');
   });
 

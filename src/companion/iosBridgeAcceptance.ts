@@ -15,11 +15,12 @@ import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 export type AcceptanceResult = {
   error: string | null;
   phase: 'applied' | 'background' | 'disconnected' | 'failed' | 'foreground' | 'paired' | 'reapplied' | 'rejected' |
-    'resources-restored' | 'resources-synced' | 'ready' | 'upgraded' | 'anchor-observed' | 'events-observed';
+    'resources-restored' | 'resources-synced' | 'ready' | 'upgraded' | 'anchor-observed' | 'events-observed' |
+    'trigger-observed';
   scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'pairing-signed-transport' |
     'device-identity' |
     'foreground-sync-lifecycle' | 'state-writeback-runtime' |
-    'sync-pack-runtime' | 'sync-group-discovery-events';
+    'sync-pack-runtime' | 'sync-group-discovery-events' | 'sync-trigger-runtime';
   status: 'failed' | 'passed';
   [key: string]: unknown;
 };
