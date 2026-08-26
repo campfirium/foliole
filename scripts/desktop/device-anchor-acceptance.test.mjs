@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import {
+  createAcceptanceLaunchEnvironments,
   parseAcceptanceOutput,
   resolvePackagedChannel,
   verifyDesktopDeviceAnchorAcceptance
@@ -24,6 +25,15 @@ it('accepts only supported signed package channels', () => {
   expect(resolvePackagedChannel('mas')).toBe('mas');
   expect(resolvePackagedChannel()).toBe('github');
   expect(() => resolvePackagedChannel('development')).toThrow('Unsupported signed macOS package channel');
+});
+
+it('isolates daily DEV without overriding the signed app sandbox root', () => {
+  const environments = createAcceptanceLaunchEnvironments({ BASE: '1' }, '/task/evidence');
+  expect(environments.development).toEqual({
+    BASE: '1',
+    FOLIOLE_PREVIEW_SANDBOX_ROOT: '/task/evidence/development-runtime'
+  });
+  expect(environments.packaged).toEqual({ BASE: '1' });
 });
 
 it('requires DEV and signed package to share one anchor and one Device', () => {

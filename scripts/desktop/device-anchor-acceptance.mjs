@@ -61,6 +61,16 @@ export function resolvePackagedChannel(channel = 'github') {
   return channel;
 }
 
+export function createAcceptanceLaunchEnvironments(commonEnv, artifactRoot) {
+  return {
+    development: {
+      ...commonEnv,
+      FOLIOLE_PREVIEW_SANDBOX_ROOT: path.join(artifactRoot, 'development-runtime')
+    },
+    packaged: { ...commonEnv }
+  };
+}
+
 export function runDesktopDeviceAnchorAcceptance(options = {}) {
   const repoRoot = options.repoRoot ?? ROOT;
   const artifactRoot = options.artifactRoot ?? ARTIFACT_ROOT;
@@ -83,11 +93,12 @@ export function runDesktopDeviceAnchorAcceptance(options = {}) {
     FOLIOLE_PREVIEW_SANDBOX: '1',
     FOLIOLE_PREVIEW_SANDBOX_RESET: '0'
   };
+  const launchEnvironments = createAcceptanceLaunchEnvironments(commonEnv, artifactRoot);
   const development = launchAcceptance(repoRoot,
     path.join(repoRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
-    [path.join(repoRoot, 'dist/electron/main.js')], commonEnv, 'development');
+    [path.join(repoRoot, 'dist/electron/main.js')], launchEnvironments.development, 'development');
   const packaged = launchAcceptance(repoRoot,
-    path.join(appPath, 'Contents/MacOS/Foliole'), [], commonEnv, packagedChannel);
+    path.join(appPath, 'Contents/MacOS/Foliole'), [], launchEnvironments.packaged, packagedChannel);
   const separation = verifyDesktopDeviceAnchorAcceptance(development, packaged);
   const receipt = {
     accepted_tip: revision,
