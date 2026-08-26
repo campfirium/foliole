@@ -35,7 +35,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionResourcePluginActions.java',
       'FolioleCompanionSyncPackTransferPlugin.java',
       'FolioleCompanionSyncParticipationActions.java',
-      'FolioleCompanionSyncPlugin.java'
+      'FolioleCompanionSyncPlugin.java',
+      'FolioleCompanionSyncTrigger.java'
     ]
   },
   host_platform_adapter: {

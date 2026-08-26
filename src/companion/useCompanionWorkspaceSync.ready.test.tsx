@@ -84,11 +84,11 @@ describe('useCompanionWorkspaceSync ready gate', () => {
     expect(result.current.status).toBe('idle');
   });
 
-  it('enables automatic sync only after the first explicit sync has completed', async () => {
+  it('enables the initial automatic sync before any explicit sync has completed', async () => {
     const { shouldEnableCompanionAutoSync } = await import('./useCompanionWorkspaceSync');
     expect(shouldEnableCompanionAutoSync({
       pairingReady: true, participating: true, state: createSyncState(null)
-    })).toBe(false);
+    })).toBe(true);
     expect(shouldEnableCompanionAutoSync({
       pairingReady: true, participating: true,
       state: { ...createSyncState(null), last_synced_at: '2026-04-25T09:06:00.000Z' }

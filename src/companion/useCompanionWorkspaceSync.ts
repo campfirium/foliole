@@ -13,13 +13,13 @@ import {
 
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
+import { runCompanionSyncCoordinator } from './companionSyncCoordinator';
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import {
   type CompanionWorkspaceSyncStatus,
-  syncReadableArticle,
-  tryForegroundAutoSync
+  syncReadableArticle
 } from './companionWorkspaceSyncFlow';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
@@ -133,7 +133,7 @@ function useCompanionAutoSync(
     viewState.setStatus,
     enabled,
     viewState.state,
-    tryForegroundAutoSync
+    runCompanionSyncCoordinator
   );
 }
 
@@ -142,7 +142,7 @@ export function shouldEnableCompanionAutoSync(args: {
   participating: boolean;
   state: NativeCompanionWorkspaceSyncState;
 }) {
-  return args.pairingReady && args.participating && args.state.last_synced_at !== null;
+  return args.pairingReady && args.participating;
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {

@@ -114,6 +114,7 @@ export async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.pauseCompanionSync
     | typeof NATIVE_COMMANDS.resumeCompanionSync
+    | typeof NATIVE_COMMANDS.syncCompanionNow
     | typeof NATIVE_COMMANDS.approveCompanionPairRequest
     | typeof NATIVE_COMMANDS.rejectCompanionPairRequest
 >(
@@ -165,6 +166,13 @@ export function requestDesktopSyncGroupJoin(endpointUrl: string) {
 
 export function completeDesktopSyncGroupJoin() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.completeSyncGroupJoin);
+}
+
+export function syncDesktopCompanionNow() {
+  if (!getRuntimeInvoke()) {
+    return Promise.reject(new Error('sync_trigger_bridge_unavailable'));
+  }
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.syncCompanionNow);
 }
 
 export function approveDesktopCompanionPairRequest(pairRequestId: string) {

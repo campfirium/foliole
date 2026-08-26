@@ -1,6 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -27,6 +28,7 @@ export type TryForegroundAutoSync = (args: {
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
+  triggerReason: SyncTriggerReason;
 }) => Promise<ForegroundAutoSyncOutcome>;
 
 type ForegroundSyncRunnerArgs = {
@@ -140,7 +142,8 @@ function startForegroundSync(
     setStatus: args.setStatus,
     state: reason === 'service-hint' && hintedEndpointUrl
       ? { ...state, endpoint_url: hintedEndpointUrl }
-      : state
+      : state,
+    triggerReason: state.last_synced_at ? 'automatic' : 'initial'
   })
     .then((outcome) => {
       if (outcome === 'completed') {

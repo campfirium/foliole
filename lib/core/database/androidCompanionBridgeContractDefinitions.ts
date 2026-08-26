@@ -101,6 +101,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         endpointUrl: 'endpoint_url',
         message: 'message',
         occurredAt: 'occurred_at',
+        reason: 'reason',
+        runId: 'run_id',
         status: 'status'
       }
     }

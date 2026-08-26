@@ -5,6 +5,7 @@ import type {
   SyncProtocolCompatibilityResult,
   SyncProtocolDescriptor
 } from './syncProtocolContract.js';
+import type { SyncTriggerReason } from './syncTriggerContract.js';
 
 export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSignedRequestContract.js';
 
@@ -19,6 +20,7 @@ export interface NativeCompanionSyncEvent {
   started_at?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
   summary?: NativeCompanionSyncEventSummary;
+  trigger_reason?: SyncTriggerReason;
 }
 
 export interface NativeCompanionSyncEventSummary {

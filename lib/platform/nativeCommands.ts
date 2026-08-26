@@ -158,6 +158,7 @@ export const NATIVE_COMMANDS = {
   disableCompanionSync: 'disable_companion_sync',
   pauseCompanionSync: 'pause_companion_sync',
   resumeCompanionSync: 'resume_companion_sync',
+  syncCompanionNow: 'sync_companion_now',
   approveCompanionPairRequest: 'approve_companion_pair_request',
   rejectCompanionPairRequest: 'reject_companion_pair_request',
   loadSyncIndex: 'load_sync_index',

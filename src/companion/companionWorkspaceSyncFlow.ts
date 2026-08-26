@@ -1,4 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncProgress
@@ -46,6 +47,7 @@ export interface RunCompanionStreamSyncArgs {
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
+  triggerReason: SyncTriggerReason;
 }
 
 export interface TryForegroundAutoSyncArgs {
@@ -58,6 +60,7 @@ export interface TryForegroundAutoSyncArgs {
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   state: NativeCompanionWorkspaceSyncState;
+  triggerReason?: SyncTriggerReason;
 }
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
@@ -138,7 +141,8 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     runId: args.runId,
     startedAt: args.startedAt,
     status: statusForSyncRunResult(passResult.result),
-    summary: buildCompanionSyncRunSummary({ occurredAt, result, startedAt: args.startedAt })
+    summary: buildCompanionSyncRunSummary({ occurredAt, result, startedAt: args.startedAt }),
+    triggerReason: args.triggerReason
   });
   await showCompletedStructure({
     setReadableArticle: args.setReadableArticle,
@@ -180,7 +184,7 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
     if (args.cancelled()) break;
     const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
     outcomes.push(await tryForegroundAutoSyncTarget(
-      targetArgs, target, storedEndpointUrl, runCompanionStreamSync
+      targetArgs, target, runCompanionStreamSync
     ));
   }
   return combineForegroundSyncOutcomes(outcomes);

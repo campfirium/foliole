@@ -30,6 +30,47 @@ function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onTog
   );
 }
 
+function SyncNowRow(props: { disabled: boolean; onSync(): void }) {
+  const t = useTranslation();
+  return (
+    <SettingsRow
+      description={t('settings.companionSync.group.syncNow.description')}
+      title={t('settings.companionSync.group.syncNow.title')}
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <SettingsButton disabled={props.disabled} onClick={props.onSync}>
+          {t('companion.sync.action.syncNow')}
+        </SettingsButton>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
+function useSyncGroupConfirmationActions(
+  state: ReturnType<typeof useDesktopCompanionPairingRequests>,
+  groupName: string
+) {
+  const t = useTranslation();
+  const confirmLeave = async () => {
+    if (!state.overview.sync_group || !await requestAppConfirmation({
+      confirmLabel: t('settings.companionSync.group.leave'),
+      description: t('settings.companionSync.group.leave.confirm.description', { name: groupName }),
+      title: t('settings.companionSync.group.leave.confirm.title')
+    })) return;
+    await state.leaveSyncGroup();
+  };
+  const confirmRemove = async (hostName: string) => {
+    const member = state.overview.sync_group?.members.find((candidate) => candidate.host_name === hostName);
+    if (!member || !await requestAppConfirmation({
+      confirmLabel: t('settings.companionSync.group.remove'),
+      description: t('settings.companionSync.group.remove.confirm.description', { name: member.host_name }),
+      title: t('settings.companionSync.group.remove.confirm.title')
+    })) return;
+    await state.removeSyncGroupMember(hostName);
+  };
+  return { confirmLeave, confirmRemove };
+}
+
 export function SettingsCompanionSyncSection() {
   const t = useTranslation();
   const state = useDesktopCompanionPairingRequests(3_000);
@@ -38,23 +79,7 @@ export function SettingsCompanionSyncSection() {
     : undefined;
   const group = state.overview.sync_group;
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
-  const confirmLeave = async () => {
-    if (!group || !await requestAppConfirmation({
-      confirmLabel: t('settings.companionSync.group.leave'),
-      description: t('settings.companionSync.group.leave.confirm.description', { name: groupName }),
-      title: t('settings.companionSync.group.leave.confirm.title')
-    })) return;
-    await state.leaveSyncGroup();
-  };
-  const confirmRemove = async (hostName: string) => {
-    const member = group?.members.find((candidate) => candidate.host_name === hostName);
-    if (!member || !await requestAppConfirmation({
-      confirmLabel: t('settings.companionSync.group.remove'),
-      description: t('settings.companionSync.group.remove.confirm.description', { name: member.host_name }),
-      title: t('settings.companionSync.group.remove.confirm.title')
-    })) return;
-    await state.removeSyncGroupMember(hostName);
-  };
+  const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
   return (
     <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
       {syncError ? (
@@ -64,6 +89,10 @@ export function SettingsCompanionSyncSection() {
         disabled={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         enabled={state.overview.sync_enabled}
         onToggle={() => void (state.overview.sync_enabled ? state.disableSync() : state.enableSync())}
+      />
+      <SyncNowRow
+        disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
+        onSync={() => void state.syncNow()}
       />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}

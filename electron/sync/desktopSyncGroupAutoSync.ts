@@ -4,9 +4,9 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import {
-  completeDesktopSyncGroupJoin,
-  continueDesktopSyncGroupSync
+  completeDesktopSyncGroupJoin
 } from './desktopSyncGroupJoin.js';
 import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
@@ -91,7 +91,7 @@ async function syncAvailablePeer(args: { endpoint: string; groupId: string; peer
     retryAfterFlight.set(args.peerAuthorizationId, args);
     return;
   }
-  const work = continueDesktopSyncGroupSync(peer).catch((error) => {
+  const work = runDesktopSyncCoordinator('automatic', peer).catch((error) => {
     console.info('[sync-group] sync paused until provider is available', {
       error: error instanceof Error ? error.message : String(error), peerAuthorizationId: args.peerAuthorizationId
     });

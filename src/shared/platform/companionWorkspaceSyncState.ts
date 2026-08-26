@@ -1,4 +1,5 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+import { isSyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import {
   compactSyncEvents,
@@ -52,7 +53,8 @@ function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
     ...(runId ? { run_id: runId } : {}),
     ...(startedAt ? { started_at: startedAt } : {}),
     status,
-    ...(summary ? { summary } : {})
+    ...(summary ? { summary } : {}),
+    ...(isSyncTriggerReason(raw.trigger_reason) ? { trigger_reason: raw.trigger_reason } : {})
   };
 }
 

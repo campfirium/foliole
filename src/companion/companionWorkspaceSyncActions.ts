@@ -1,6 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { definedProps } from '../shared/lib/definedProps';
-import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -9,10 +8,7 @@ import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   persistCompanionWorkspaceSnapshot,
-  recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget,
-  bindCompanionWorkspaceSyncTarget,
-  resolveReachableCompanionWorkspaceSyncEndpoints,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
@@ -24,13 +20,9 @@ import {
   type CompanionManualSyncAction
 } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
+import { runCompanionSyncCoordinator } from './companionSyncCoordinator';
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
-import { queueCompanionSyncAsOwner } from './companionSyncRunOwner';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
-import {
-  recordCompanionManualSyncFailure,
-  syncCompanionDesktopStreams
-} from './companionWorkspaceManualSync';
 import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
 
 interface WorkspaceSnapshotActionArgs {
@@ -43,12 +35,6 @@ interface WorkspaceSnapshotActionArgs {
   setManualSyncAction?: (action: CompanionManualSyncAction | null) => void;
   state: NativeCompanionWorkspaceSyncState;
 }
-
-const STARTING_STRUCTURE_PROGRESS = {
-  completed: 0,
-  phase: 'structure' as const,
-  total: null
-};
 
 async function refreshConflictAwareState(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
@@ -64,69 +50,31 @@ async function refreshConflictAwareState(args: {
   return nextState;
 }
 
-async function saveResolvedSyncTarget(args: WorkspaceSnapshotActionArgs, target: CompanionWorkspaceSyncTarget) {
-  await bindCompanionWorkspaceSyncTarget(target);
-  const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(target.endpointUrl);
-  args.setState({ ...savedEndpointState, workspace_snapshot: args.state.workspace_snapshot });
-  return target.endpointUrl;
-}
-
-async function runManualSyncTarget(
-  args: WorkspaceSnapshotActionArgs,
-  target: CompanionWorkspaceSyncTarget,
-  onStarted: () => void
-) {
-  const endpointUrl = target.endpointUrl;
-  const candidateRunId = createCompanionSyncRunId();
-  const run = queueCompanionSyncAsOwner(endpointUrl, candidateRunId, async () => {
-    onStarted();
-    args.setStatus('syncing');
-    args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
-    args.setError(null);
-    const syncEndpointUrl = await saveResolvedSyncTarget(args, target);
-    const runId = candidateRunId;
-    const startedAt = new Date().toISOString();
-    try {
-      const startedState = await recordCompanionWorkspaceSyncEvent({
-        endpointUrl: syncEndpointUrl, kind: 'run_started', message: 'Sync started.',
-        runId, startedAt, status: 'started'
-      });
-      args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
-      const nextState = await syncCompanionDesktopStreams({
-        endpointUrl: syncEndpointUrl, runId, setReadableArticle: args.setReadableArticle,
-        setSyncConflictCount: args.setSyncConflictCount, setState: args.setState,
-        setSyncProgress: args.setSyncProgress, startedAt,
-        workspaceSnapshot: args.state.workspace_snapshot
-      });
-      await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-      await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
-      args.setStatus('idle');
-      return nextState;
-    } catch (syncError) {
-      await handleSyncFailure(args, syncEndpointUrl, runId, startedAt, syncError);
-      throw syncError;
-    }
-  });
-  return run.completion;
-}
-
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
     let action = startCompanionManualSyncAction(createCompanionSyncRunId());
+    let syncFailure: string | null = null;
     args.setManualSyncAction?.(action);
     try {
-      const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl);
-      if (targets.length === 0) throw new Error('No reachable Sync Group member is available.');
-      let state: NativeCompanionWorkspaceSyncState | undefined;
-      let started = false;
-      const markStarted = () => {
-        if (started) return;
-        started = true;
-        action = markCompanionManualSyncActionRunning(action);
-        args.setManualSyncAction?.(action);
-      };
-      for (const target of targets) state = await runManualSyncTarget(args, target, markStarted);
-      if (!state) throw new Error('Manual sync did not run.');
+      action = markCompanionManualSyncActionRunning(action);
+      args.setManualSyncAction?.(action);
+      const outcome = await runCompanionSyncCoordinator({
+        cancelled: () => false,
+        setError: (message) => {
+          syncFailure = message;
+          args.setError(message);
+        },
+        setReadableArticle: args.setReadableArticle,
+        setState: args.setState,
+        setSyncProgress: args.setSyncProgress,
+        setStatus: args.setStatus,
+        state: { ...args.state, endpoint_url: endpointUrl },
+        triggerReason: 'manual'
+      });
+      if (outcome === 'failed' || outcome === 'skipped') {
+        throw new Error(syncFailure ?? 'Manual sync did not complete.');
+      }
+      const state = await refreshConflictAwareState(args);
       args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'completed'));
       return state;
     } catch (error) {
@@ -137,27 +85,6 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
       throw error;
     }
   };
-}
-
-async function handleSyncFailure(
-  args: WorkspaceSnapshotActionArgs,
-  endpointUrl: string,
-  runId: string,
-  startedAt: string,
-  syncError: unknown
-) {
-  const message = formatCompanionSyncFailureMessage(syncError);
-  args.setStatus('idle');
-  args.setSyncProgress(null);
-  args.setError(message);
-  await recordCompanionManualSyncFailure({
-    endpointUrl,
-    message,
-    runId,
-    setState: args.setState,
-    startedAt,
-    workspaceSnapshot: args.state.workspace_snapshot
-  });
 }
 
 async function replaceCompanionWorkspaceSnapshot(

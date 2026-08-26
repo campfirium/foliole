@@ -5,10 +5,12 @@ import type {
   CompanionWorkspacePairPayload,
   CompanionWorkspacePairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import {
   getCompanionRuntimeCapability,
   isCompanionRuntimeCapabilityAvailable,
+  NativeCompanionCapabilityUnavailableError,
   requireAvailableCompanionRuntime
 } from './companionRuntimeCapabilities';
 import type { CompanionWorkspaceSyncPlugin } from './companionWorkspaceSyncPluginTypes';
@@ -19,6 +21,17 @@ export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
 export const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');
+
+export function beginNativeCompanionSyncRun(reason: SyncTriggerReason, runId: string) {
+  const runtime = requireAvailableCompanionRuntime('sync-trigger');
+  if (
+    (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') ||
+    typeof FolioleCompanionSync.beginSyncRun !== 'function'
+  ) {
+    throw new NativeCompanionCapabilityUnavailableError('sync-trigger', runtime.platform);
+  }
+  return FolioleCompanionSync.beginSyncRun({ reason, run_id: runId });
+}
 
 export function isNativeAndroidCompanionRuntime() {
   return requireAvailableCompanionRuntime('native-runtime').kind === 'android-native';

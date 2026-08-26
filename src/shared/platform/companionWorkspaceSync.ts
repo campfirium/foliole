@@ -115,6 +115,7 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
   startedAt?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
   summary?: NativeCompanionSyncEvent['summary'];
+  triggerReason?: NativeCompanionSyncEvent['trigger_reason'];
 }) {
   const occurredAt = args.occurredAt ?? new Date().toISOString();
   const event = {
@@ -126,7 +127,8 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
     ...(args.runId !== undefined ? { run_id: args.runId } : {}),
     ...(args.startedAt !== undefined ? { started_at: args.startedAt } : {}),
     status: args.status,
-    ...(args.summary !== undefined ? { summary: args.summary } : {})
+    ...(args.summary !== undefined ? { summary: args.summary } : {}),
+    ...(args.triggerReason !== undefined ? { trigger_reason: args.triggerReason } : {})
   };
   if (usesSharedOwner()) {
     return updateIosWorkspaceSyncState((current) => prependSyncEvent(current, event));

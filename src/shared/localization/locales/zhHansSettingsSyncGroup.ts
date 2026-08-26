@@ -28,6 +28,8 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.group.devices.syncWith': '与 {name} 同步',
   'settings.companionSync.group.sync.title': '同步',
   'settings.companionSync.group.sync.description': '打开或关闭网络同步，不会离开同步组。',
+  'settings.companionSync.group.syncNow.title': '立即同步',
+  'settings.companionSync.group.syncNow.description': '立即检查同步组内可用的设备；即使自动同步已关闭，也可以执行。',
   'settings.companionSync.group.sync.turnOn': '打开',
   'settings.companionSync.group.sync.turnOff': '关闭',
   'settings.companionSync.group.pause': '暂停同步',

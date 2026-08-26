@@ -38,6 +38,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'setting-write',
   'sync-group-store',
   'sync-participation',
+  'sync-trigger',
   'topic-search',
   'view-state-write'
 ]);

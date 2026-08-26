@@ -31,6 +31,9 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
   loadCompanionSyncNodeConflicts: syncObjectsMock.loadCompanionSyncNodeConflicts
 }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+  beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({ reason, run_id: runId, runtime: 'android' }))
+}));
 
 const activeGroupTarget: CompanionWorkspaceSyncTarget = {
   authorizationId: 'authorization-maci',
@@ -161,7 +164,7 @@ function resetSyncRunOwnerMocks() {
 describe('companion sync run owner', () => {
   beforeEach(resetSyncRunOwnerMocks);
 
-  it('queues a distinct clicked manual run behind an active automatic run', async () => {
+  it('joins a clicked manual action to the active automatic run', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
     const { releaseSync, syncStarted } = await startBlockedSync();
@@ -184,18 +187,19 @@ describe('companion sync run owner', () => {
       setState: vi.fn(),
       setSyncProgress: vi.fn(),
       setStatus: vi.fn(),
-      state: syncState()
+      state: syncState(),
+      triggerReason: 'automatic'
     });
     await syncStarted;
     const manualSync = actions.pullFromDesktop('http://10.0.2.2:38641');
-    expect(setManualSyncAction.mock.calls.map(([action]) => action.status)).toEqual(['starting']);
+    expect(setManualSyncAction.mock.calls.map(([action]) => action.status)).toEqual(['starting', 'running']);
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(syncResult());
     releaseSync();
 
     await autoSync;
     await expect(manualSync).resolves.toMatchObject({ sync_events: expect.any(Array) });
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
-    expect(countRunEvents()).toBe(4);
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
+    expect(countRunEvents()).toBe(2);
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
     expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
     expect(new Set(lifecycle.map(({ runId }) => runId)).size).toBe(1);

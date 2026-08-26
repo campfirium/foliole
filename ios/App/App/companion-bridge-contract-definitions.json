@@ -291,6 +291,8 @@
         "endpointUrl": "endpoint_url",
         "message": "message",
         "occurredAt": "occurred_at",
+        "reason": "reason",
+        "runId": "run_id",
         "status": "status"
       }
     }

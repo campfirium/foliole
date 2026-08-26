@@ -31,6 +31,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
     }
 
+    @PluginMethod public void beginSyncRun(PluginCall call) {
+        try { call.resolve(FolioleCompanionSyncTrigger.begin(call)); }
+        catch (Exception error) { call.reject("Sync command is unavailable.", error); }
+    }
+
     @PluginMethod public void loadDiscoveryCandidates(PluginCall call) {
         try {
             FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);

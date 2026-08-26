@@ -26,6 +26,8 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.devices.syncWith': 'Sync with {name}',
   'settings.companionSync.group.sync.title': 'Sync',
   'settings.companionSync.group.sync.description': 'Turn network Sync on or off without leaving your Sync Group.',
+  'settings.companionSync.group.syncNow.title': 'Sync now',
+  'settings.companionSync.group.syncNow.description': 'Check every available device in this Sync Group now, even when automatic sync is off.',
   'settings.companionSync.group.sync.turnOn': 'Turn On',
   'settings.companionSync.group.sync.turnOff': 'Turn Off',
   'settings.companionSync.group.pause': 'Pause Sync',

@@ -10,7 +10,8 @@ import {
   removeDesktopSyncGroupMember,
   pauseDesktopCompanionSync,
   rejectDesktopCompanionPairRequest,
-  resumeDesktopCompanionSync
+  resumeDesktopCompanionSync,
+  syncDesktopCompanionNow
 } from './desktopCompanionPairingBridge';
 
 function createMockElectronApi(invoke: NativeInvoke) {
@@ -130,4 +131,17 @@ it('toggles desktop companion sync through the native bridge', async () => {
   expect(invoke).toHaveBeenNthCalledWith(2, 'disable_companion_sync');
   expect(invoke).toHaveBeenNthCalledWith(3, 'pause_companion_sync');
   expect(invoke).toHaveBeenNthCalledWith(4, 'resume_companion_sync');
+});
+
+it('routes Sync Now through the sandbox-safe native invoke bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({ sync_enabled: false });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await syncDesktopCompanionNow();
+
+  expect(invoke).toHaveBeenCalledWith('sync_companion_now');
+});
+
+it('fails closed when an older preload does not expose native invoke', async () => {
+  await expect(syncDesktopCompanionNow()).rejects.toThrow('sync_trigger_bridge_unavailable');
 });

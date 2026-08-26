@@ -12,7 +12,7 @@ vi.mock('./companionStructureSyncSnapshot', () => ({
   loadCompanionStateAfterStructureSync: vi.fn()
 }));
 
-it('projects an automatic duplicate request as a no-op for the active run', async () => {
+it('joins a duplicate request to the active shared run', async () => {
   ownerMock.run.mockReturnValue({
     completion: Promise.resolve('completed'), mode: 'joined', runId: 'run-active'
   });
@@ -24,8 +24,8 @@ it('projects an automatic duplicate request as a no-op for the active run', asyn
     state: { endpoint_url: 'http://desktop:38641', last_synced_at: null,
       remembered_targets: [], sync_events: [], sync_onboarding_status: 'completed',
       workspace_snapshot: null }
-  }, { endpointUrl: 'http://desktop:38641' }, 'http://desktop:38641', runStreamSync);
+  }, { endpointUrl: 'http://desktop:38641' }, runStreamSync);
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('completed');
   expect(runStreamSync).not.toHaveBeenCalled();
 });

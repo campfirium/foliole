@@ -56,6 +56,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     removeSyncGroupMember: vi.fn(),
     requestSyncGroupJoin: vi.fn(),
     resumeSync: vi.fn(),
+    syncNow: vi.fn(),
     ...overrides
   };
 }

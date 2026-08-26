@@ -61,7 +61,9 @@ vi.mock('./companionPairingStore.js', () => ({
 }));
 vi.mock('./desktopSyncGroupJoin.js', () => ({
   completeDesktopSyncGroupJoin: runtime.completeJoin,
-  continueDesktopSyncGroupSync: runtime.continueSync
+}));
+vi.mock('./desktopSyncCoordinator.js', () => ({
+  runDesktopSyncCoordinator: runtime.continueSync
 }));
 vi.mock('./desktopSyncGroupJoinState.js', () => ({
   refreshDesktopSyncGroupPendingJoinEndpoint: runtime.refreshPending
@@ -90,7 +92,7 @@ it('continues the saved member sync when its provider advertises again', async (
   expect(runtime.constructorOptions).toEqual([
     undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
   ]);
-  expect(runtime.continueSync).toHaveBeenCalledWith(expect.objectContaining({
+  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', local_authorization_id: 'desktop-a',
     peer_authorization_id: 'android-b', peer_host_name: 'A5'
   }));
@@ -142,7 +144,7 @@ it('retries the latest advertisement after an interrupted peer sync settles', as
 
   first.resolve({ complete: false, cursor: 9 });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(2));
-  expect(runtime.continueSync).toHaveBeenLastCalledWith(expect.objectContaining({
+  expect(runtime.continueSync).toHaveBeenLastCalledWith('automatic', expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43122'
   }));
 });

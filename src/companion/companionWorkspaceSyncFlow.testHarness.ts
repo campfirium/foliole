@@ -23,6 +23,9 @@ export const syncObjectsMock = {
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+  beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({ reason, run_id: runId, runtime: 'android' }))
+}));
 
 export function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> = {}): CompanionDesktopSyncResult {
   return {

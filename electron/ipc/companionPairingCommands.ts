@@ -27,6 +27,7 @@ import {
   resumeDesktopCompanionSync
 } from '../sync/desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from '../sync/desktopCompanionSyncPreference.js';
+import { runDesktopSyncCoordinator } from '../sync/desktopSyncCoordinator.js';
 import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -63,6 +64,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.disableCompanionSync,
   NATIVE_COMMANDS.pauseCompanionSync,
   NATIVE_COMMANDS.resumeCompanionSync,
+  NATIVE_COMMANDS.syncCompanionNow,
   NATIVE_COMMANDS.approveCompanionPairRequest,
   NATIVE_COMMANDS.rejectCompanionPairRequest
 ]);
@@ -176,6 +178,9 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
   if (command === NATIVE_COMMANDS.resumeCompanionSync) {
     return resumeDesktopCompanionSync(desktopSyncRuntimeIdentity())
       .then(() => buildDesktopCompanionPairingOverview());
+  }
+  if (command === NATIVE_COMMANDS.syncCompanionNow) {
+    return runDesktopSyncCoordinator('manual').then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.leaveSyncGroup) {
     return leaveDesktopSyncGroup()

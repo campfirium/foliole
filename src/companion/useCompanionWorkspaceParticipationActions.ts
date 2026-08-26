@@ -22,11 +22,10 @@ export function useCompanionWorkspaceParticipationActions(args: {
     }
   }, [args, participation.participating]);
   const pullFromDesktop = useCallback(async (endpointUrl: string) => {
-    requireParticipation();
     const nextState = await args.snapshotActions.pullFromDesktop(endpointUrl);
     await args.pairing.refreshPairingState();
     return nextState;
-  }, [args, requireParticipation]);
+  }, [args]);
   const checkDesktop = useCallback((endpointUrl: string) => {
     requireParticipation();
     return args.pairing.checkDesktop(endpointUrl);

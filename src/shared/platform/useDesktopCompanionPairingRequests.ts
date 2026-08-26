@@ -22,6 +22,7 @@ import {
   onDesktopSyncGroupDiscoveryChanged,
   approveDesktopCompanionPairRequest,
   rejectDesktopCompanionPairRequest,
+  syncDesktopCompanionNow,
   stopDiscoveringDesktopSyncGroups
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
@@ -141,6 +142,20 @@ function usePairingMutationActions(state: ReturnType<typeof useDesktopCompanionP
     createSyncGroup: useCreateSyncGroupAction(...args),
     membership: useSyncGroupMembershipActions(state),
     runAction: useCompanionPairingAction(...args),
+    syncNow: useCallback(async () => {
+      state.setPendingActionId('sync-now');
+      try {
+        const overview = await syncDesktopCompanionNow();
+        state.setOverview(overview);
+        state.setError(null);
+        return overview;
+      } catch (error) {
+        state.setError(error instanceof Error ? error.message : 'Sync failed.');
+        throw error;
+      } finally {
+        state.setPendingActionId(null);
+      }
+    }, [state]),
     togglePause: useToggleCompanionPauseAction(...args),
     toggleSync: useToggleCompanionSyncAction(...args)
   };
@@ -180,7 +195,8 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       refresh,
       requestSyncGroupJoin: join.requestJoin,
       rejectRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'reject'),
-      resumeSync: () => actions.togglePause(false)
+      resumeSync: () => actions.togglePause(false),
+      syncNow: actions.syncNow
     }),
     [actions, discovery, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
       state.overview, state.pendingActionId]

@@ -30,7 +30,8 @@ async function testKeepsUnreachableDesktopQuiet() {
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Desktop unreachable.',
     result: 'failed',
-    status: 'failed'
+    status: 'failed',
+    triggerReason: 'automatic'
   }));
 }
 

@@ -46,25 +46,3 @@ export function runCompanionSyncAsOwner<T>(
   void completion.then(release, release);
   return { completion, mode: 'owned', runId };
 }
-
-export function queueCompanionSyncAsOwner<T>(
-  endpointUrl: string,
-  runId: string,
-  work: () => Promise<T>
-): Extract<CompanionSyncRunHandle<T>, { mode: 'owned' }> {
-  const key = syncRunKey(endpointUrl);
-  const preceding = activeSyncRuns.get(key)?.completion;
-  if (!preceding) {
-    return runCompanionSyncAsOwner(endpointUrl, runId, work) as Extract<
-      CompanionSyncRunHandle<T>, { mode: 'owned' }
-    >;
-  }
-  const completion = preceding.then(work, work);
-  const queued: ActiveSyncRun = { completion, runId };
-  activeSyncRuns.set(key, queued);
-  const release = () => {
-    if (activeSyncRuns.get(key) === queued) activeSyncRuns.delete(key);
-  };
-  void completion.then(release, release);
-  return { completion, mode: 'owned', runId };
-}

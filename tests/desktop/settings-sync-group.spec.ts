@@ -31,6 +31,12 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
   await expect(devices.getByRole('listitem')).toHaveCount(1);
   await expect(devices.getByText(/^(macOS|Windows|Linux)$/)).toBeVisible();
   await expect(create).toHaveCount(0);
+  const syncNow = section.getByRole('button', { name: /^(Sync Now|立即同步)$/ });
+  const turnOff = section.getByRole('button', { name: /^(Turn Off|关闭)$/ });
+  await expect(syncNow).toBeEnabled();
+  await turnOff.click();
+  await expect(section.getByRole('button', { name: /^(Turn On|打开)$/ })).toBeVisible();
+  await expect(syncNow).toBeEnabled();
 
   const screenshot = await section.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('settings-sync-group', { body: screenshot, contentType: 'image/png' });

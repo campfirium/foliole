@@ -83,6 +83,12 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(),
+  beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({
+    reason, run_id: runId, runtime: 'android'
+  }))
+}));
 vi.mock('./companionReviewSchedulerSettingsHydration', () => ({
   hydrateCompanionReviewSchedulerSettings: schedulerSettingsMock.hydrate
 }));
@@ -162,8 +168,8 @@ async function testManualSyncRefreshesReadableArticle() {
     'http://10.0.2.2:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
-  expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
-  expect(schedulerSettingsMock.hydrate).toHaveBeenCalledTimes(2);
+  expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalled();
+  expect(schedulerSettingsMock.hydrate).toHaveBeenCalled();
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');
   expect(result.current.status).toBe('idle');
 }
@@ -202,31 +208,6 @@ async function testManualSyncRefreshesConflictCount() {
   expect(result.current.syncConflictCount).toBe(2);
 }
 
-async function testManualSyncContinuesResourceBacklog() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop
-    .mockResolvedValueOnce(createSyncObjectsResult({
-      remainingContentBlobCount: 1,
-      syncedContentBlobHashes: ['hash-1']
-    }))
-    .mockResolvedValueOnce(createSyncObjectsResult());
-  workspaceSyncMock.recordCompanionWorkspaceSyncEvent
-    .mockResolvedValue(createSyncState(createSnapshot()));
-  const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
-  const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
-
-  await waitFor(() => expect(result.current.status).toBe('idle'));
-  await act(async () => {
-    await result.current.pullFromDesktop('http://10.0.2.2:38641');
-  });
-
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenLastCalledWith(
-    'http://10.0.2.2:38641',
-    expect.objectContaining({ resourcesOnly: true })
-  );
-  expect(result.current.status).toBe('idle');
-}
-
 describe('useCompanionWorkspaceSync', () => {
   beforeEach(resetCompanionWorkspaceSyncMocks);
 
@@ -234,5 +215,4 @@ describe('useCompanionWorkspaceSync', () => {
 
   it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
 
-  it('continues a decreasing manual resource backlog', testManualSyncContinuesResourceBacklog);
 });

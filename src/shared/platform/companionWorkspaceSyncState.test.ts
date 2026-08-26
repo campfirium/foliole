@@ -158,6 +158,17 @@ function testNormalizesSyncEventSummary() {
   });
 }
 
+function testNormalizesSyncTriggerReason() {
+  const state = normalizeWorkspaceSyncState({
+    sync_events: [{
+      id: 'run-manual', kind: 'run_finished', message: 'Sync completed.',
+      occurred_at: '2026-08-26T06:00:00.000Z', status: 'completed', trigger_reason: 'manual'
+    }]
+  });
+
+  expect(state.sync_events[0]).toMatchObject({ status: 'completed', trigger_reason: 'manual' });
+}
+
 function testKeepsCurrentStartedRunBeforeFinish() {
   const initial = normalizeWorkspaceSyncState({ sync_events: [] });
   const state = prependSyncEvent(initial, runEvent(1, 'run_started'));
@@ -175,4 +186,5 @@ describe('normalizeWorkspaceSyncState', () => {
   it('keeps capacity by finished run instead of started event count', testCapacityUsesFinishedRuns);
   it('keeps a started run until its final result arrives', testKeepsCurrentStartedRunBeforeFinish);
   it('normalizes structured sync event summaries', testNormalizesSyncEventSummary);
+  it('normalizes the durable sync trigger reason', testNormalizesSyncTriggerReason);
 });

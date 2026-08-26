@@ -32,12 +32,12 @@ describe('iOS active database ownership', () => {
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
     expect(methods).toEqual([
-      'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'beginSyncRun', 'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncParticipationState',
       'resolveAttachmentResource', 'savePairingCredentials',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch'
+      'stageAttachmentResourceBatch', 'startDiscoverySession', 'stopDiscoverySession'
     ].sort());
   });
 

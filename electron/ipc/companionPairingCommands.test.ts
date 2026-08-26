@@ -22,6 +22,7 @@ const commandMocks = vi.hoisted(() => ({
   })),
   requestDesktopSyncGroupJoin: vi.fn().mockResolvedValue(undefined),
   removeDesktopSyncGroupMember: vi.fn().mockResolvedValue(undefined),
+  runDesktopSyncCoordinator: vi.fn().mockResolvedValue({ reason: 'manual', status: 'completed' }),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute()),
   setDesktopCompanionSyncEnabled: vi.fn(),
   setDesktopCompanionSyncPaused: vi.fn(),
@@ -93,6 +94,9 @@ vi.mock('../sync/desktopSyncGroupJoinState.js', () => ({
   loadDesktopSyncGroupJoinState: commandMocks.loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupCandidates: vi.fn()
 }));
+vi.mock('../sync/desktopSyncCoordinator.js', () => ({
+  runDesktopSyncCoordinator: commandMocks.runDesktopSyncCoordinator
+}));
 vi.mock('../sync/syncGroupDeparture.js', () => ({
   leaveDesktopSyncGroup: vi.fn().mockResolvedValue(undefined),
   removeDesktopSyncGroupMember: commandMocks.removeDesktopSyncGroupMember
@@ -148,6 +152,15 @@ it('keeps discovery available while local sync participation is inactive', async
   commandMocks.enabled = false;
   await expect(handleCompanionPairingCommand('discover_sync_groups', {}))
     .resolves.toMatchObject({ change: 'started', status: 'searching' });
+});
+
+it('runs Sync Now through the shared coordinator while automatic sync is disabled', async () => {
+  commandMocks.enabled = false;
+
+  await expect(handleCompanionPairingCommand('sync_companion_now', {})).resolves.toMatchObject({
+    sync_enabled: false
+  });
+  expect(commandMocks.runDesktopSyncCoordinator).toHaveBeenCalledWith('manual');
 });
 
 it('keeps discovered Sync Group candidates in the polling overview', async () => {

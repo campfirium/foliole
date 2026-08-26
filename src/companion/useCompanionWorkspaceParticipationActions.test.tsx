@@ -12,7 +12,7 @@ vi.mock('./useCompanionSyncParticipation', () => ({
 
 import { useCompanionWorkspaceParticipationActions } from './useCompanionWorkspaceParticipationActions';
 
-it('blocks manual sync and joining while local participation is inactive', async () => {
+it('keeps manual sync available while joining remains inactive', async () => {
   const pairing = {
     checkDesktop: vi.fn(), completePairing: vi.fn(), refreshPairingState: vi.fn(), requestPairing: vi.fn()
   };
@@ -23,10 +23,10 @@ it('blocks manual sync and joining while local participation is inactive', async
   }));
 
   await act(async () => {
-    await expect(result.current.pullFromDesktop('http://desktop')).rejects
-      .toThrow('sync_participation_inactive');
+    await expect(result.current.pullFromDesktop('http://desktop')).resolves.toBeUndefined();
   });
-  expect(snapshotActions.pullFromDesktop).not.toHaveBeenCalled();
-  expect(pairing.refreshPairingState).not.toHaveBeenCalled();
+  expect(() => result.current.requestPairing('http://desktop')).toThrow('sync_participation_inactive');
+  expect(snapshotActions.pullFromDesktop).toHaveBeenCalledWith('http://desktop');
+  expect(pairing.refreshPairingState).toHaveBeenCalledOnce();
   expect(setError).toHaveBeenCalledWith('sync_participation_inactive');
 });

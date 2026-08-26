@@ -1,4 +1,5 @@
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
+import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
@@ -41,6 +42,11 @@ export interface CompanionWorkspaceSyncPlugin
     method: string;
     url: string;
   }): Promise<{ body: string; status: number }>;
+  beginSyncRun(args: { reason: SyncTriggerReason; run_id: string }): Promise<{
+    reason: SyncTriggerReason;
+    run_id: string;
+    runtime: 'android' | 'ios';
+  }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   startDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   stopDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;

@@ -31,7 +31,7 @@ async function loadTypeScriptMethods() {
   const sources = await Promise.all(
     TYPES_FILES.map((fileName) => readFile(path.join(PLATFORM_ROOT, fileName), 'utf8'))
   );
-  return sources.flatMap(extractTypeScriptMethods);
+  return sources.flatMap(extractTypeScriptMethods).filter((method) => method !== 'addListener');
 }
 
 describe('FolioleCompanionSync method inventory', () => {

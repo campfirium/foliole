@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capacitorState = vi.hoisted(() => ({
+  beginSyncRun: vi.fn(),
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
-  registerPlugin: vi.fn(() => ({}))
+  registerPlugin: vi.fn(() => ({ beginSyncRun: capacitorState.beginSyncRun }))
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -12,6 +13,7 @@ vi.mock('@capacitor/core', () => ({
 }));
 
 import {
+  beginNativeCompanionSyncRun,
   isAvailableNativeAndroidCompanionRuntime,
   isAvailableNativeCompanionRuntime,
   isNativeAndroidCompanionRuntime,
@@ -117,6 +119,23 @@ describe('companion workspace runtime boundary', () => {
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
     expect(isAvailableNativeCompanionRuntime()).toBe(true);
     expectNodeMutationSurfaces(true);
+  });
+
+  it('lands the shared trigger command in the native plugin', async () => {
+    capacitorState.getPlatform.mockReturnValue('ios');
+    capacitorState.isNativePlatform.mockReturnValue(true);
+    capacitorState.beginSyncRun.mockResolvedValue({ reason: 'manual', run_id: 'run-1', runtime: 'ios' });
+
+    await expect(beginNativeCompanionSyncRun('manual', 'run-1')).resolves.toMatchObject({ runtime: 'ios' });
+    expect(capacitorState.beginSyncRun).toHaveBeenCalledWith({ reason: 'manual', run_id: 'run-1' });
+  });
+
+  it('fails closed outside a native companion runtime', () => {
+    expect(() => beginNativeCompanionSyncRun('manual', 'run-1')).toThrowError(expect.objectContaining({
+      capability: 'sync-trigger',
+      code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+      platform: 'web'
+    }));
   });
 
   it('exposes iOS storage capabilities while keeping Android-only operations unavailable', expectIosRuntimeBoundary);
