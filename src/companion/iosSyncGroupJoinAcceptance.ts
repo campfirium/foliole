@@ -1,6 +1,7 @@
 import type { CompanionPairingSecretPayload } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupJoinRequestInput } from '../../lib/platform/syncGroupJoinContract';
 import { FolioleSyncGroupJoinPrepare } from '../shared/platform/companion/sync/syncGroupJoinPrepare';
+import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 
 import { postResult } from './iosBridgeAcceptance';
 
@@ -89,6 +90,7 @@ async function runInitial() {
 
 export async function runIosSyncGroupJoinAcceptance() {
   try {
+    await loadCompanionBootstrapState();
     const state = await plugin.beginAcceptance({ group_info: GROUP_INFO });
     if (!state.restart_probe) return await runInitial();
     postResult({ error: null, phase: 'restart-clean', provider_restarted_clean: state.provider_restarted_clean,

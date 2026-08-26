@@ -58,6 +58,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(syncTriggerScenario).toContain("kind: 'run_finished'");
     expect(syncTriggerScenario).toContain('loadCompanionWorkspaceSyncState()');
     expect(syncGroupJoinScenario).toContain('FolioleSyncGroupJoinPrepare.receiveRequest');
+    expect(syncGroupJoinScenario).toContain('loadCompanionBootstrapState()');
     expect(syncGroupJoinScenario).toContain('crypto.subtle.deriveKey');
     expect(syncGroupJoinScenario).toContain("scenario: 'sync-group-join-runtime'");
   });
