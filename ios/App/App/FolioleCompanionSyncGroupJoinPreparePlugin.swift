@@ -6,7 +6,7 @@ public final class FolioleCompanionSyncGroupJoinPreparePlugin: CAPPlugin, CAPBri
     public let identifier = "FolioleCompanionSyncGroupJoinPreparePlugin"
     public let jsName = "FolioleSyncGroupJoinPrepare"
     public let pluginMethods: [CAPPluginMethod] = {
-        var methods = [
+        var methods: [CAPPluginMethod] = [
             CAPPluginMethod(name: "receiveRequest", returnType: CAPPluginReturnPromise),
             CAPPluginMethod(name: "loadRequests", returnType: CAPPluginReturnPromise),
             CAPPluginMethod(name: "acceptRequest", returnType: CAPPluginReturnPromise),
