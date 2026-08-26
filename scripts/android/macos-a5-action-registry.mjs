@@ -25,6 +25,7 @@ const FORMAL_EVIDENCE = Object.freeze({
   'leave-sync-group': { kind: 'run-directory', root: 'a5-sync-group-maintenance' },
   'pair-credentials': { kind: 'run-directory', root: 'a5-pair-credentials' },
   'system-entry-sync': { kind: 'run-directory', root: 'a5-system-entry-sync' },
+  'sync-group-join-prepare': { kind: 'run-directory', root: 'a5-sync-group-join-prepare' },
   'sync-existing': { kind: 'run-directory', root: 'a5-existing-sync' },
   'sync-now': { kind: 'run-directory', root: 'a5-sync-now' },
   'sync-group-rejoin': { kind: 'run-directory', root: 'a5-sync-group-rejoin' },
@@ -36,7 +37,8 @@ const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials', 'system-entry-sync', 'sync-existing',
-  'sync-group-rejoin', 'sync-group-rejoin-recover', 'sync-group-stopped-status', 'sync-now'
+  'sync-group-join-prepare', 'sync-group-rejoin', 'sync-group-rejoin-recover',
+  'sync-group-stopped-status', 'sync-now'
 ]);
 
 export function assertRegisteredMacosA5Action(action) {

@@ -8,6 +8,9 @@ import {
 } from './macos-a5-extended-actions.mjs';
 import { runMacosA5DatabasePerformanceEntry } from './macos-a5-database-performance-entry.mjs';
 import { runMacosA5HiddenDesktopStatusEntry } from './macos-a5-hidden-desktop-status.mjs';
+import {
+  runMacosA5SyncGroupJoinPrepareEntry
+} from './macos-a5-sync-group-join-prepare-entry.mjs';
 import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
 
 export { macosA5ErrorEvidence };
@@ -60,6 +63,9 @@ export async function dispatchMacosA5Action({
   }
   if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
   if (action === 'sync-now') await runMacosA5SyncNowEntry(productArgs);
+  if (action === 'sync-group-join-prepare') {
+    await runMacosA5SyncGroupJoinPrepareEntry(productArgs);
+  }
   if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
   if (action === 'sync-group-rejoin-recover') {
     await recoverMacosA5SyncGroupRejoinEntry(productArgs);

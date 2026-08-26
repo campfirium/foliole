@@ -19,6 +19,9 @@ import { windowsDevPaths } from './windows-dev-paths.mjs';
 import { allowsSyncGroupNativeClient } from './windows-dev-residual-process.mjs';
 import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import {
+  runWindowsSyncGroupJoinPrepareAcceptance
+} from './windows-sync-group-join-prepare-action.mjs';
+import {
   attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
   WINDOWS_SYNC_GROUP_ACTIONS
 } from './windows-sync-group-build-routing.mjs';
@@ -28,6 +31,7 @@ const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug ass
 const BUILD_TIMEOUT_MS = 20 * 60_000;
 const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'secondary',
+  'sync-group-join-prepare',
   ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];
 
@@ -101,9 +105,11 @@ export async function runWindowsDevBuild({
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy'].includes(action)
-        || action === 'device-profile' || preparesWindowsSyncGroupCandidate(action)
+        || action === 'device-profile' || action === 'sync-group-join-prepare'
+        || preparesWindowsSyncGroupCandidate(action)
         ? [paths.systemNpmCli] : []),
-      ...(['build', 'device-profile'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
+      ...(['build', 'device-profile', 'sync-group-join-prepare'].includes(action)
+        || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
@@ -134,7 +140,7 @@ export async function runWindowsDevBuild({
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (action === 'device-profile'
+    if (['device-profile', 'sync-group-join-prepare'].includes(action)
         || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
@@ -148,7 +154,13 @@ export async function runWindowsDevBuild({
       output += build.output;
     }
     const desktopDeviceProfile = await runWindowsDeviceProfileAcceptance(action, execute, paths);
-    if (desktopDeviceProfile) {
+    const desktopJoinPrepare = await runWindowsSyncGroupJoinPrepareAcceptance(
+      action, execute, paths, context.root
+    );
+    if (desktopJoinPrepare) {
+      output += desktopJoinPrepare.output;
+      actionResult = { desktopSyncGroupJoinPrepare: desktopJoinPrepare.evidence };
+    } else if (desktopDeviceProfile) {
       output += desktopDeviceProfile.output;
       actionResult = { desktopDeviceProfile: desktopDeviceProfile.evidence };
     } else if (action !== 'build') {
@@ -170,6 +182,9 @@ export async function runWindowsDevBuild({
       ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
     if (actionResult?.desktopDeviceProfile) summary.desktopDeviceProfile = actionResult.desktopDeviceProfile;
+    if (actionResult?.desktopSyncGroupJoinPrepare) {
+      summary.desktopSyncGroupJoinPrepare = actionResult.desktopSyncGroupJoinPrepare;
+    }
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };

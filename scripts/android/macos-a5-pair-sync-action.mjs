@@ -60,7 +60,12 @@ export async function reconcileAuthorizedMacosDailyPairing(
       || routeAuthorizationFingerprint !== memberAuthorizationFingerprint)) {
     throw new Error('Existing A5 authorization route is missing.');
   }
-  if (!existingPairing && (memberAuthorizationFingerprint || routes.length > 0)) {
+  const recoverableRoute = credentialRepairRequired
+    && memberAuthorizationFingerprint
+    && routes.length === 1
+    && routeAuthorizationFingerprint === memberAuthorizationFingerprint;
+  if (!existingPairing && !recoverableRoute
+      && (memberAuthorizationFingerprint || routes.length > 0)) {
     throw new Error('Fresh A5 authorization route is not empty.');
   }
   return { ...safe, rePairRequired: credentialRepairRequired || !existingPairing };

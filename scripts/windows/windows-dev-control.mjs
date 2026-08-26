@@ -22,6 +22,9 @@ import {
   isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from './windows-sync-group-provider-release-control.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
+import {
+  copyWindowsSyncGroupJoinPrepareEvidence
+} from './windows-sync-group-join-prepare-control.mjs';
 
 export {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
@@ -34,6 +37,7 @@ export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
+  'sync-group-join-prepare',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
   ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
@@ -170,6 +174,11 @@ export async function runWindowsDevControl({
       windowsDevScpSpec(host, remote, local, env), { env }
     ) });
   if (deviceProfile) Object.assign(result, deviceProfile);
+  const joinPrepare = await copyWindowsSyncGroupJoinPrepareEvidence({ action, fsApi, remoteError,
+    remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
+      windowsDevScpSpec(host, remote, local, env), { env }
+    ) });
+  if (joinPrepare) Object.assign(result, joinPrepare);
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     let evidence;
     try { evidence = parseWindowsDevLiveEvidence(remoteOutput); }

@@ -1,4 +1,4 @@
-import type { CompanionPairingSecretPayload } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionPairingSecretPayload } from '../../../lib/platform/nativeCompanionSyncContract.js';
 
 const PAIRING_SECRET_INFO = new TextEncoder().encode('Foliole companion pairing v1');
 const pairingPrivateKeys = new Map<string, CryptoKey>();

@@ -78,6 +78,20 @@ it('keeps the authorized member route while requesting credential repair', async
   )).resolves.toMatchObject({ rePairRequired: true });
 });
 
+it('reauthorizes a cleared A5 through its unique existing route', async () => {
+  const value = overview();
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), false, true
+  )).resolves.toMatchObject({ rePairRequired: true });
+
+  const missingRoute = overview({ includeRoute: false });
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    missingRoute, session(missingRoute), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), false, true
+  )).rejects.toThrow('Fresh A5 authorization route is not empty');
+});
+
 it('rejects Host ambiguity and protected group drift', async () => {
   const value = overview();
   value.sync_group.members.push({
