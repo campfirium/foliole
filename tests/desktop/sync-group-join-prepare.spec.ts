@@ -15,7 +15,6 @@ interface AcceptanceEnvelope {
 }
 
 async function openAcceptanceWindow(electronApp: ElectronApplication) {
-  const windowReady = electronApp.waitForEvent('window');
   const requester = await electronApp.evaluate(async ({ app, BrowserWindow, ipcMain }, input) => {
     const pathApi = process.getBuiltinModule('node:path');
     const moduleApi = process.getBuiltinModule('node:module');
@@ -56,7 +55,10 @@ async function openAcceptanceWindow(electronApp: ElectronApplication) {
   }, { channel: CHANNEL, groupInfo: {
     display_name: 'T152 Acceptance Group', group_id: 'group-a', workgroup_key: GROUP_KEY
   } });
-  const page = await windowReady;
+  const page = electronApp.windows().find((candidate) =>
+    candidate.url().replaceAll('\\', '/').endsWith('/tests/desktop/fixtures/sync-group-join-prepare.html')
+  );
+  if (!page) throw new Error('Sync Group join prepare acceptance window did not open.');
   await page.waitForLoadState('domcontentloaded');
   return { page, requester };
 }
