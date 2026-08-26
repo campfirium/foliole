@@ -24,11 +24,11 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
-        String joiningAuthorizationId = pendingJoiningAuthorizationId();
+        String requestId = pendingRequestId();
         FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
-        waitForPeerCredential(instrumentation.getTargetContext(), joiningAuthorizationId, deadline);
+        waitForAcceptedRequestToLeavePending(requestId, deadline);
         return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
             .put("approved", true).put("foreground", true);
     }
@@ -87,19 +87,27 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
     }
 
-    private static String pendingJoiningAuthorizationId() throws Exception {
+    private static String pendingRequestId() throws Exception {
         JSONArray requests = FolioleCompanionSyncGroupProvider.state().getJSONArray("pending_requests");
         if (requests.length() != 1) throw new IllegalStateException("Expected one joining Device.");
-        return requests.getJSONObject(0).getString("pair_request_id");
+        return requests.getJSONObject(0).getString("request_id");
     }
 
-    private static void waitForPeerCredential(Context context, String deviceId, long deadline) throws Exception {
-        String groupId = FolioleCompanionSyncGroupProvider.activeGroupId();
+    private static void waitForAcceptedRequestToLeavePending(
+        String requestId, long deadline
+    ) throws Exception {
         while (System.nanoTime() < deadline) {
-            if (FolioleCompanionSyncGroupOutboundPeerStore.contains(context, groupId, deviceId)) return;
+            JSONArray requests = FolioleCompanionSyncGroupProvider.state().getJSONArray("pending_requests");
+            boolean stillPending = false;
+            for (int index = 0; index < requests.length(); index++) {
+                if (requestId.equals(requests.getJSONObject(index).optString("request_id"))) {
+                    stillPending = true;
+                }
+            }
+            if (!stillPending) return;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Approved Device peer credential was not persisted.");
+        throw new IllegalStateException("Accepted Device request remained pending.");
     }
 
     private static Activity start(Instrumentation instrumentation) {

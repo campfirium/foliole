@@ -40,6 +40,7 @@ export const WINDOWS_DEV_ACTIONS = [
   'sync-group-join-prepare',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
+  'single-principal-sync-group',
   ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
   'verify'
 ];

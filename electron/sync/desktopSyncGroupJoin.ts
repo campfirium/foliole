@@ -8,6 +8,7 @@ import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGrou
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
 import { resolveDesktopHostName } from './companionLanPayloads.js';
+import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { requestJson } from './desktopSyncGroupHttp.js';
 import {
   createDesktopSyncGroupJoinKey,
@@ -18,6 +19,7 @@ import {
   loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupPendingJoin
 } from './desktopSyncGroupJoinState.js';
+import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
 
@@ -94,7 +96,7 @@ async function completeDesktopSyncGroupJoinOnce() {
   const { identity } = await loadDesktopDeviceIdentity({
     groupId: groupInfo.group_id, libraryPath: connection.dbPath
   });
-  joinDesktopSyncGroup({
+  const group = joinDesktopSyncGroup({
     device: identity,
     deviceName: resolveDesktopHostName(),
     displayName: groupInfo.display_name,
@@ -102,6 +104,15 @@ async function completeDesktopSyncGroupJoinOnce() {
     workgroupKey: groupInfo.workgroup_key
   });
   saveDesktopSyncGroupPendingJoin(null);
+  const route = saveDesktopSyncGroupRoute({
+    endpoint_url: pending.candidate.endpoint_url,
+    group_id: groupInfo.group_id,
+    local_device_id: group.local_device_identity_key,
+    peer_device_id: pending.candidate.provider_device_id,
+    peer_device_name: pending.candidate.provider_device_name,
+    peer_platform: pending.candidate.provider_platform
+  });
+  await runDesktopSyncCoordinator('initial', route);
   return loadDesktopSyncGroup();
 }
 

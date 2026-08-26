@@ -66,6 +66,10 @@ export async function dispatchMacosA5Action({
   if (action === 'sync-group-join-prepare') {
     await runMacosA5SyncGroupJoinPrepareEntry(productArgs);
   }
+  if (action === 'single-principal-sync-group') {
+    await (await import('./macos-a5-single-principal-sync-group-entry.mjs'))
+      .runMacosA5SinglePrincipalSyncGroupEntry(productArgs);
+  }
   if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
   if (action === 'sync-group-rejoin-recover') {
     await recoverMacosA5SyncGroupRejoinEntry(productArgs);

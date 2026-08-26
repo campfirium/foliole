@@ -29,7 +29,8 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
     'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',
     'multi-device-sync-c': 'sync-group-recovery-receipt.json',
     'multi-device-sync-from-zero': 'multi-device-sync-from-zero-receipt.json',
-    'multi-device-sync-participation': 'multi-device-sync-participation-receipt.json'
+    'multi-device-sync-participation': 'multi-device-sync-participation-receipt.json',
+    'single-principal-sync-group': 'single-principal-sync-group-receipt.json'
   };
   const receiptName = receiptNames[action];
   if (!receiptName) throw new Error(`Unsupported multi-device sync action: ${action}`);

@@ -27,9 +27,7 @@ public final class FolioleCompanionJoinRequestProviderTest {
     private static final String GROUP_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     @Test public void requestAcceptanceIsEphemeralAndEncrypted() throws Exception {
-        FolioleCompanionJoinRequestPlugin.installProviderForAcceptance(groupInfo());
-        FolioleCompanionJoinRequestProvider provider =
-            FolioleCompanionJoinRequestPlugin.requireProvider();
+        FolioleCompanionJoinRequestProvider provider = provider();
         KeyPair requester = keyPair();
         JSRequest request = request(provider, requester, NOW);
 
@@ -49,8 +47,8 @@ public final class FolioleCompanionJoinRequestProviderTest {
         assertEquals(0, provider.pending(NOW).length());
         request(provider, keyPair(), NOW);
         assertEquals(0, provider.pending(NOW + FolioleCompanionJoinRequest.TTL_MS + 1).length());
-        FolioleCompanionJoinRequestPlugin.clearForRestart();
-        assertEquals(0, provider().pending(NOW).length());
+        provider.clear();
+        assertEquals(0, provider.pending(NOW).length());
     }
 
     @Test public void malformedRequestsMatchTheSharedContract() throws Exception {

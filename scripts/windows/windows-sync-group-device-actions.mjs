@@ -11,6 +11,10 @@ import {
 } from './windows-multi-device-sync-participation-action.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
+  if (options.action === 'single-principal-sync-group') {
+    return (await import('./windows-single-principal-sync-group-action.mjs'))
+      .runWindowsSinglePrincipalSyncGroup(options);
+  }
   if (options.action === 'multi-device-sync-a-leave') {
     return runWindowsMultiDeviceSyncALeave(options);
   }

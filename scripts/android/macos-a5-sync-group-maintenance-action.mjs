@@ -4,7 +4,6 @@ import path from 'node:path';
 import { pairSyncHostPort, PAIR_SYNC_PORT } from '../sync-group/pair-sync-transport.mjs';
 
 const APP_ID = 'com.foliole.android';
-const RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
 
 function executionFailure(message, details = {}) {
@@ -35,24 +34,31 @@ async function removeOwnedTransport(execute, paths, serial, options) {
 }
 
 export async function runMacosA5InstrumentationMechanics({
-  buildIdentity, env, evidenceRoot, execute, installMain = true, needsTransport = false,
-  observeWhileTransportOpen, paths, releaseAfterObservation = false,
-  restartApp = false, serial, testClass, validateInstrumentation
+  appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
+  needsTransport = false, observeConcurrently = false, observeWhileTransportOpen, paths,
+  releaseAfterObservation = false, restartApp = false, serial, testClass,
+  testClassPrefix = APP_ID, validateInstrumentation
 }) {
-  if (typeof testClass !== 'string' || !testClass.startsWith(`${APP_ID}.`)) {
+  if (typeof testClass !== 'string' || !testClass.startsWith(`${testClassPrefix}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
       missingFact: 'android_instrumentation_target'
     });
   }
   const testApk = path.join(paths.buildRoot, TEST_APK);
+  if (observeConcurrently && typeof observeWhileTransportOpen !== 'function') {
+    throw executionFailure('Concurrent instrumentation requires an exact-fact observer.', {
+      missingFact: 'sync_observation_binding'
+    });
+  }
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  const runner = `${appId}.test/androidx.test.runner.AndroidJUnitRunner`;
   const options = { env, timeoutCode: 'a5_instrumentation_timeout', timeoutMs: 3 * 60_000 };
   const hostPort = pairSyncHostPort(env);
   const output = [];
   let reverseCreated = false; let testInstalled = false;
   try {
     if (needsTransport) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
+      ['-s', serial, 'shell', 'am', 'force-stop', appId],
       options, 'transport app stop')).output);
     if (installMain) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
@@ -67,7 +73,7 @@ export async function runMacosA5InstrumentationMechanics({
       reverseCreated = true;
     }
     const instrumentationTask = execute(paths.adb, [
-      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
+      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, runner
     ], options, 'instrumentation');
     let observation;
     let instrumentation;
@@ -92,7 +98,11 @@ export async function runMacosA5InstrumentationMechanics({
         options, 'instrumentation controlled stop')).output);
       instrumentation = await instrumentationTask;
     } else {
-      instrumentation = await instrumentationTask;
+      if (observeConcurrently) {
+        [instrumentation, observation] = await Promise.all([
+          instrumentationTask, observeWhileTransportOpen?.()
+        ]);
+      } else instrumentation = await instrumentationTask;
       if (instrumentation.code !== 0) throw executionFailure('instrumentation failed', {
         result: instrumentation, stage: 'instrumentation'
       });
@@ -118,7 +128,7 @@ export async function runMacosA5InstrumentationMechanics({
     validateInstrumentation?.({ evidencePath, stdout: instrumentation.stdout });
     observation ??= await observeWhileTransportOpen?.();
     if (restartApp) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`],
+      ['-s', serial, 'shell', 'am', 'start', '-n', `${appId}/${APP_ID}.MainActivity`],
       options, 'activity restart')).output);
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } finally {
@@ -126,6 +136,6 @@ export async function runMacosA5InstrumentationMechanics({
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
       options, 'transport cleanup')).output);
     if (testInstalled) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'uninstall', `${APP_ID}.test`], options, 'test cleanup')).output);
+      ['-s', serial, 'uninstall', `${appId}.test`], options, 'test cleanup')).output);
   }
 }

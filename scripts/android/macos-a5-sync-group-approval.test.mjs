@@ -79,14 +79,15 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).not.toContain('clickVisible');
 });
 
-it('waits for the approved join authorization persisted by the public request', () => {
+it('waits for the accepted Device request to leave the provider queue', () => {
   const approval = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
     'utf8'
   );
-  expect(approval).toContain('pendingJoiningAuthorizationId()');
-  expect(approval).toContain('getString("pair_request_id")');
-  expect(approval).not.toContain('getString("device_id")');
+  expect(approval).toContain('pendingRequestId()');
+  expect(approval).toContain('getString("request_id")');
+  expect(approval).toContain('waitForAcceptedRequestToLeavePending(requestId, deadline)');
+  expect(approval).not.toContain('authorization');
 });
 
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {

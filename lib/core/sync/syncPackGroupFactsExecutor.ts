@@ -37,25 +37,36 @@ export async function applySyncPackGroupFactsWithDbPort(port: DbPort, args: {
      WHERE l.singleton_id = 1 LIMIT 1`
   );
   assertSameGroup(local, incomingGroup);
-  const [source] = await port.query<DeviceRow>(
+  const devices = await port.query<DeviceRow>(`SELECT * FROM ${alias}.sync_group_devices`);
+  validateDevices(incomingGroup.group_id, devices);
+  const [knownSource] = await port.query<DeviceRow>(
     `SELECT * FROM main.sync_group_devices
      WHERE group_id = ? AND device_identity_key = ? AND state = 'active' LIMIT 1`,
     [local.group_id, args.sourcePeerId]
   );
-  if (!source) throw new Error('sync_group_source_not_authorized');
-  const devices = await port.query<DeviceRow>(`SELECT * FROM ${alias}.sync_group_devices`);
-  validateDevices(incomingGroup.group_id, devices);
+  const incomingSource = devices.find((device) =>
+    device.device_identity_key === args.sourcePeerId && device.state === 'active');
+  if (!knownSource && !incomingSource) throw new Error('sync_group_source_not_authorized');
   const localDevice = devices.find((device) =>
     device.device_identity_key === local.local_device_identity_key);
   if (localDevice?.state === 'left') throw new Error('sync_group_local_departure_requires_local_action');
+  await mergeGroupMetadata(port, incomingGroup);
   for (const device of devices) await mergeDevice(port, device);
   return { appliedFactCount: 1 + devices.length };
 }
 
 function assertSameGroup(local: GroupRow | undefined, incoming: GroupRow): asserts local is GroupRow {
-  if (!local || ['group_id', 'created_at', 'display_name'].some((key) => local[key] !== incoming[key])) {
+  if (!local || local.group_id !== incoming.group_id) {
     throw new Error('sync_group_identity_mismatch');
   }
+}
+
+async function mergeGroupMetadata(port: DbPort, group: GroupRow) {
+  await port.run(
+    `UPDATE main.sync_groups SET display_name = ?, created_at = ?, updated_at = ?
+     WHERE group_id = ?`,
+    [group.display_name, group.created_at, group.created_at, group.group_id]
+  );
 }
 
 function validateDevices(groupId: string, devices: DeviceRow[]) {

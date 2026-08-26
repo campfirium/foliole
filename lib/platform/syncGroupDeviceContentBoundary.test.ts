@@ -23,9 +23,17 @@ it('keeps T152 Device identity out of nested business payloads', () => {
   }
 });
 
-it('keeps the current Sync Pack schema free of T152 Device identity fields', () => {
-  const schema = PACK_SCHEMA.join('\n');
-  for (const key of DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS) expect(schema).not.toMatch(new RegExp(`\\b${key}\\b`));
+it('keeps Device identity in group facts and out of Sync Pack business rows', () => {
+  const groupFacts = PACK_SCHEMA.filter((statement) =>
+    statement.includes('sync_group_devices')).join('\n');
+  const businessRows = PACK_SCHEMA.filter((statement) =>
+    !statement.includes('sync_group_devices')).join('\n');
+  for (const key of ['canonical_library_path', 'device_anchor', 'device_identity_key']) {
+    expect(groupFacts).toMatch(new RegExp(`\\b${key}\\b`));
+  }
+  for (const key of DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS) {
+    expect(businessRows).not.toMatch(new RegExp(`\\b${key}\\b`));
+  }
 });
 
 it('removes the inactive T151 manager/member admission prepare', () => {

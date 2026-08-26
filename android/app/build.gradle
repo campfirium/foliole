@@ -10,7 +10,7 @@ android {
         baseline file("lint-baseline.xml")
     }
     defaultConfig {
-        applicationId "com.foliole.android"
+        applicationId System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.foliole.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
