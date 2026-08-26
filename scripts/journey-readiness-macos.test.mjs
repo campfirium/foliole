@@ -13,6 +13,7 @@ import {
   assertOwnedSimulatorRemoved,
   createSignedSimulatorBuildArgs
 } from './macos/journey-readiness-simulator-adapter.mjs';
+import { resolveLocalQualificationScenario } from './macos/journey-readiness-local-qualification.mjs';
 import { collectScriptTestFiles, selectScriptTestBucketFiles } from './script-test-bucket-selection.mjs';
 
 describe('local journey readiness adapters', () => {
@@ -45,6 +46,16 @@ describe('local journey readiness adapters', () => {
     expect(definition).not.toHaveProperty('checks');
     expect(definition.action).not.toHaveProperty('scenario');
     expect(definition.source.archiveDigest).toHaveLength(64);
+  });
+
+  it('routes the device identity runtime through the formal local qualification entry', () => {
+    expect(resolveLocalQualificationScenario({})).toBeNull();
+    expect(resolveLocalQualificationScenario({
+      FOLIOLE_JOURNEY_READINESS_SCENARIO: 'device-identity'
+    })).toBe('device-identity');
+    expect(() => resolveLocalQualificationScenario({
+      FOLIOLE_JOURNEY_READINESS_SCENARIO: 'unregistered'
+    })).toThrow('Unsupported local qualification scenario');
   });
 
   it('rejects a source revision change during qualification', () => {
