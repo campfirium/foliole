@@ -1,3 +1,4 @@
+import { webcrypto } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -6,12 +7,20 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 const CHANNEL = 'foliole:sync-group-join-prepare';
 const GROUP_KEY = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
+interface AcceptanceEnvelope {
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  server_public_key: string;
+}
+
 async function openAcceptanceWindow(electronApp: ElectronApplication) {
   const windowReady = electronApp.waitForEvent('window');
-  await electronApp.evaluate(async ({ app, BrowserWindow, ipcMain }, input) => {
+  const requester = await electronApp.evaluate(async ({ app, BrowserWindow, ipcMain }, input) => {
     const pathApi = process.getBuiltinModule('node:path');
     const moduleApi = process.getBuiltinModule('node:module');
-    if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
+    const cryptoApi = process.getBuiltinModule('node:crypto');
+    if (!pathApi || !moduleApi || !cryptoApi) throw new Error('Node built-ins unavailable.');
     const loadModule = moduleApi.createRequire(pathApi.join(app.getAppPath(), 'main.js'));
     const { DesktopSyncGroupJoinPrepareProvider } = loadModule(pathApi.join(
       app.getAppPath(), 'sync', 'syncGroupJoinPrepareProvider.js'
@@ -35,22 +44,25 @@ async function openAcceptanceWindow(electronApp: ElectronApplication) {
     await window.loadFile(pathApi.join(
       process.cwd(), 'tests', 'desktop', 'fixtures', 'sync-group-join-prepare.html'
     ));
+    const keyPair = await cryptoApi.webcrypto.subtle.generateKey(
+      { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
+    );
+    return {
+      privateKey: await cryptoApi.webcrypto.subtle.exportKey('jwk', keyPair.privateKey),
+      publicKey: Buffer.from(await cryptoApi.webcrypto.subtle.exportKey(
+        'raw', keyPair.publicKey
+      )).toString('base64url')
+    };
   }, { channel: CHANNEL, groupInfo: {
     display_name: 'T152 Acceptance Group', group_id: 'group-a', workgroup_key: GROUP_KEY
   } });
   const page = await windowReady;
   await page.waitForLoadState('domcontentloaded');
-  return page;
+  return { page, requester };
 }
 
-async function seedRequest(page: Page) {
-  return page.evaluate(async () => {
-    const keyPair = await crypto.subtle.generateKey(
-      { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
-    );
-    const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
-    const publicKey = btoa(String.fromCharCode(...rawKey))
-      .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+async function seedRequest(page: Page, publicKey: string) {
+  return page.evaluate(async (requesterPublicKey) => {
     const bridge = (globalThis as unknown as { folioleSyncGroupJoinPrepare: {
       acceptRequest(id: string): Promise<unknown>;
       collectAcceptance(id: string): Promise<unknown>;
@@ -61,9 +73,8 @@ async function seedRequest(page: Page) {
       canonical_library_path: '/Users/device/Foliole/Data/foliole.db',
       device_anchor: 'a1111111-1111-4111-8111-111111111111',
       device_name: 'Desktop requester', path_flavor: 'posix', platform: 'desktop'
-    }, ephemeral_public_key: publicKey, group_id: 'group-a' });
+    }, ephemeral_public_key: requesterPublicKey, group_id: 'group-a' });
     const state = globalThis as unknown as Record<string, unknown>;
-    state.__t152PrivateKey = keyPair.privateKey;
     state.__t152RequestId = request.request_id;
     const pending = await bridge.loadRequests();
     document.querySelector('main')!.innerHTML = `<h1>Join request</h1>
@@ -74,37 +85,41 @@ async function seedRequest(page: Page) {
       document.querySelector('#status')!.textContent = 'Accepted';
     });
     return { before: await bridge.collectAcceptance(request.request_id), requestId: request.request_id };
-  });
+  }, publicKey);
 }
 
-async function collectAndDecrypt(page: Page) {
+async function collectAcceptance(page: Page) {
   return page.evaluate(async () => {
     const state = globalThis as unknown as Record<string, unknown>;
-    type Acceptance = { encrypted_group_info: {
-      ciphertext: string; iv: string; salt: string; server_public_key: string;
-    } };
+    type Acceptance = { encrypted_group_info: AcceptanceEnvelope };
     const bridge = (globalThis as unknown as { folioleSyncGroupJoinPrepare: {
       collectAcceptance(id: string): Promise<Acceptance | null>;
     } }).folioleSyncGroupJoinPrepare;
     const requestId = state.__t152RequestId as string;
     const acceptance = await bridge.collectAcceptance(requestId);
     if (!acceptance) throw new Error('Accepted request did not expose its encrypted envelope.');
-    const envelope = acceptance.encrypted_group_info;
-    const decode = (value: string) => Uint8Array.from(atob(value.replaceAll('-', '+')
-      .replaceAll('_', '/').padEnd(Math.ceil(value.length / 4) * 4, '=')), (char) => char.charCodeAt(0));
-    const serverKey = await crypto.subtle.importKey('raw', decode(envelope.server_public_key),
-      { name: 'ECDH', namedCurve: 'P-256' }, false, []);
-    const secret = await crypto.subtle.deriveBits({ name: 'ECDH', public: serverKey },
-      state.__t152PrivateKey as CryptoKey, 256);
-    const hkdf = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
-    const key = await crypto.subtle.deriveKey({ hash: 'SHA-256',
-      info: new TextEncoder().encode('Foliole companion pairing v1'), name: 'HKDF',
-      salt: decode(envelope.salt) }, hkdf, { length: 256, name: 'AES-GCM' }, false, ['decrypt']);
-    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(envelope.iv) },
-      key, decode(envelope.ciphertext));
     return { after: await bridge.collectAcceptance(requestId),
-      groupInfo: JSON.parse(new TextDecoder().decode(plaintext)) };
+      envelope: acceptance.encrypted_group_info };
   });
+}
+
+async function decryptAcceptance(privateKey: JsonWebKey, envelope: AcceptanceEnvelope) {
+  const decode = (value: string) => Buffer.from(value, 'base64url');
+  const clientKey = await webcrypto.subtle.importKey(
+    'jwk', privateKey, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']
+  );
+  const serverKey = await webcrypto.subtle.importKey('raw', decode(envelope.server_public_key),
+    { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const secret = await webcrypto.subtle.deriveBits(
+    { name: 'ECDH', public: serverKey }, clientKey, 256
+  );
+  const hkdf = await webcrypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
+  const key = await webcrypto.subtle.deriveKey({ hash: 'SHA-256',
+    info: new TextEncoder().encode('Foliole companion pairing v1'), name: 'HKDF',
+    salt: decode(envelope.salt) }, hkdf, { length: 256, name: 'AES-GCM' }, false, ['decrypt']);
+  const plaintext = await webcrypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(envelope.iv) },
+    key, decode(envelope.ciphertext));
+  return JSON.parse(new TextDecoder().decode(plaintext));
 }
 
 test('accepts one concrete Device request through the inactive sandbox bridge', async ({ browserName }) => {
@@ -115,15 +130,16 @@ test('accepts one concrete Device request through the inactive sandbox bridge', 
     || path.resolve('.tmp/artifacts/desktop-acceptance', `sync-group-join-prepare-${process.platform}`);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   try {
-    const page = await openAcceptanceWindow(session.electronApp);
-    const seeded = await seedRequest(page);
+    const { page, requester } = await openAcceptanceWindow(session.electronApp);
+    const seeded = await seedRequest(page, requester.publicKey);
     expect(seeded.before).toBeNull();
     await expect(page.getByText('Desktop requester wants to join this Sync Group.')).toBeVisible();
     await page.screenshot({ path: path.join(evidenceRoot, 'sync-group-join-prepare.png') });
     await page.getByRole('button', { name: 'Accept' }).click();
     await expect(page.getByText('Accepted')).toBeVisible();
-    const result = await collectAndDecrypt(page);
-    expect(result.groupInfo).toEqual({ display_name: 'T152 Acceptance Group',
+    const result = await collectAcceptance(page);
+    expect(await decryptAcceptance(requester.privateKey, result.envelope)).toEqual({
+      display_name: 'T152 Acceptance Group',
       group_id: 'group-a', workgroup_key: GROUP_KEY });
     expect(result.after).toBeNull();
     fs.writeFileSync(path.join(evidenceRoot, 'sync-group-join-prepare-receipt.json'),
