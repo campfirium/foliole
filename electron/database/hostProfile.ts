@@ -4,7 +4,6 @@ import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNode
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { updateLocalDesktopSourceHosts } from './desktopSources.js';
-import { saveApprovedSyncGroupMember } from './syncGroupMemberRegistration.js';
 
 const HOST_NAME_KEY = 'host_name';
 const LEGACY_DEVICE_KEYS = ['device_id', 'desktop_device_id'] as const;
@@ -49,25 +48,16 @@ export function migrateDesktopHostProfile(
 
 function transferSyncGroupHost(driver: DatabaseDriver, current: string, now: string) {
   const local = driver.queryOne<{
-    approved_by_host_name: string;
-    authorization_id: string;
+    device_identity_key: string;
     group_id: string;
-    host_name: string;
-    host_platform: string;
-  }>(`SELECT m.approved_by_host_name, m.authorization_id, m.group_id,
-             m.host_name, m.host_platform
+  }>(`SELECT d.device_identity_key, d.group_id
       FROM sync_group_local_state l
-      JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
-      WHERE l.singleton_id = 1 AND m.state = 'active' LIMIT 1`);
+      JOIN sync_group_devices d ON d.group_id = l.group_id
+        AND d.device_identity_key = l.local_device_identity_key
+      WHERE l.singleton_id = 1 AND l.state = 'active' AND d.state = 'active' LIMIT 1`);
   if (!local) return;
-  saveApprovedSyncGroupMember({
-    approvedByHostName: local.approved_by_host_name,
-    authorizationId: local.authorization_id,
-    groupId: local.group_id,
-    hostName: current,
-    hostPlatform: local.host_platform,
-    now
-  }, driver);
+  driver.execute(`UPDATE sync_group_devices SET device_name = ?, updated_at = ?
+    WHERE group_id = ? AND device_identity_key = ?`, [current, now, local.group_id, local.device_identity_key]);
 }
 
 function transferHostState(driver: DatabaseDriver, previous: string, current: string) {

@@ -27,8 +27,6 @@
 		50F021151FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */; };
 		50F021161FED79650016851F /* FolioleCompanionSyncPackTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */; };
 		50F021171FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */; };
-		50F022111FED79650016851F /* FolioleCompanionPairingSecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022011FED79650016851F /* FolioleCompanionPairingSecretStore.swift */; };
-		50F022121FED79650016851F /* FolioleCompanionPairingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022021FED79650016851F /* FolioleCompanionPairingStore.swift */; };
 		50F022131FED79650016851F /* FolioleCompanionDesktopHttpClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */; };
 		50F022141FED79650016851F /* FolioleCompanionBonjourDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */; };
 		50F022151FED79650016851F /* FolioleCompanionSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */; };
@@ -45,7 +43,20 @@
 		50F030111FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */; };
 		50F030121FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */; };
 		50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */; };
-		50F030141FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */; };
+		50F031111FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */; };
+		50F032111FED79650016851F /* FolioleCompanionSyncGroupSigning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */; };
+		50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */; };
+		50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */; };
+		50F035111FED79650016851F /* FolioleCompanionSyncGroupProviderPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F035011FED79650016851F /* FolioleCompanionSyncGroupProviderPlugin.swift */; };
+		50F036111FED79650016851F /* FolioleCompanionSyncGroupWorkgroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F036011FED79650016851F /* FolioleCompanionSyncGroupWorkgroup.swift */; };
+		50F037111FED79650016851F /* FolioleCompanionSyncGroupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F037011FED79650016851F /* FolioleCompanionSyncGroupSnapshot.swift */; };
+		50F038111FED79650016851F /* FolioleCompanionSyncGroupResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F038011FED79650016851F /* FolioleCompanionSyncGroupResources.swift */; };
+		50F039111FED79650016851F /* FolioleCompanionSyncPackProviderDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F039011FED79650016851F /* FolioleCompanionSyncPackProviderDefinitions.swift */; };
+		50F040111FED79650016851F /* FolioleCompanionSyncPackArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F040011FED79650016851F /* FolioleCompanionSyncPackArchive.swift */; };
+		50F041111FED79650016851F /* FolioleCompanionSyncPackSQLite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F041011FED79650016851F /* FolioleCompanionSyncPackSQLite.swift */; };
+		50F042111FED79650016851F /* FolioleCompanionSyncPackPayloadWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F042011FED79650016851F /* FolioleCompanionSyncPackPayloadWriter.swift */; };
+		50F043111FED79650016851F /* FolioleCompanionSyncPackProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F043011FED79650016851F /* FolioleCompanionSyncPackProvider.swift */; };
+		50F044111FED79650016851F /* companion-sync-pack-provider-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F044011FED79650016851F /* companion-sync-pack-provider-definitions.json */; };
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -70,8 +81,6 @@
 		50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackDatabaseValidator.swift; sourceTree = "<group>"; };
 		50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackTransfer.swift; sourceTree = "<group>"; };
 		50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackTransferPlugin.swift; sourceTree = "<group>"; };
-		50F022011FED79650016851F /* FolioleCompanionPairingSecretStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionPairingSecretStore.swift; sourceTree = "<group>"; };
-		50F022021FED79650016851F /* FolioleCompanionPairingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionPairingStore.swift; sourceTree = "<group>"; };
 		50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionDesktopHttpClient.swift; sourceTree = "<group>"; };
 		50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBonjourDiscovery.swift; sourceTree = "<group>"; };
 		50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPlugin.swift; sourceTree = "<group>"; };
@@ -88,7 +97,20 @@
 		50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinCrypto.swift; sourceTree = "<group>"; };
 		50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinRequest.swift; sourceTree = "<group>"; };
 		50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinProvider.swift; sourceTree = "<group>"; };
-		50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinPreparePlugin.swift; sourceTree = "<group>"; };
+		50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupDataBridge.swift; sourceTree = "<group>"; };
+		50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupSigning.swift; sourceTree = "<group>"; };
+		50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionHttpMessage.swift; sourceTree = "<group>"; };
+		50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinServer.swift; sourceTree = "<group>"; };
+		50F035011FED79650016851F /* FolioleCompanionSyncGroupProviderPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupProviderPlugin.swift; sourceTree = "<group>"; };
+		50F036011FED79650016851F /* FolioleCompanionSyncGroupWorkgroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupWorkgroup.swift; sourceTree = "<group>"; };
+		50F037011FED79650016851F /* FolioleCompanionSyncGroupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupSnapshot.swift; sourceTree = "<group>"; };
+		50F038011FED79650016851F /* FolioleCompanionSyncGroupResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupResources.swift; sourceTree = "<group>"; };
+		50F039011FED79650016851F /* FolioleCompanionSyncPackProviderDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackProviderDefinitions.swift; sourceTree = "<group>"; };
+		50F040011FED79650016851F /* FolioleCompanionSyncPackArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackArchive.swift; sourceTree = "<group>"; };
+		50F041011FED79650016851F /* FolioleCompanionSyncPackSQLite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackSQLite.swift; sourceTree = "<group>"; };
+		50F042011FED79650016851F /* FolioleCompanionSyncPackPayloadWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackPayloadWriter.swift; sourceTree = "<group>"; };
+		50F043011FED79650016851F /* FolioleCompanionSyncPackProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackProvider.swift; sourceTree = "<group>"; };
+		50F044011FED79650016851F /* companion-sync-pack-provider-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-sync-pack-provider-definitions.json"; sourceTree = "<group>"; };
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -140,8 +162,6 @@
 				50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */,
 				50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */,
 				50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */,
-				50F022011FED79650016851F /* FolioleCompanionPairingSecretStore.swift */,
-				50F022021FED79650016851F /* FolioleCompanionPairingStore.swift */,
 				50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */,
 				50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */,
 				50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */,
@@ -157,7 +177,20 @@
 				50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */,
 				50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */,
 				50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */,
-				50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */,
+				50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */,
+				50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */,
+				50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */,
+				50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */,
+				50F035011FED79650016851F /* FolioleCompanionSyncGroupProviderPlugin.swift */,
+				50F036011FED79650016851F /* FolioleCompanionSyncGroupWorkgroup.swift */,
+				50F037011FED79650016851F /* FolioleCompanionSyncGroupSnapshot.swift */,
+				50F038011FED79650016851F /* FolioleCompanionSyncGroupResources.swift */,
+				50F039011FED79650016851F /* FolioleCompanionSyncPackProviderDefinitions.swift */,
+				50F040011FED79650016851F /* FolioleCompanionSyncPackArchive.swift */,
+				50F041011FED79650016851F /* FolioleCompanionSyncPackSQLite.swift */,
+				50F042011FED79650016851F /* FolioleCompanionSyncPackPayloadWriter.swift */,
+				50F043011FED79650016851F /* FolioleCompanionSyncPackProvider.swift */,
+				50F044011FED79650016851F /* companion-sync-pack-provider-definitions.json */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -246,6 +279,7 @@
 				50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */,
 				50F025141FED79650016851F /* companion-query-definitions.json in Resources */,
 				50F029131FED79650016851F /* companion-mutation-definitions.json in Resources */,
+				50F044111FED79650016851F /* companion-sync-pack-provider-definitions.json in Resources */,
 				50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -267,8 +301,6 @@
 				50F021151FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift in Sources */,
 				50F021161FED79650016851F /* FolioleCompanionSyncPackTransfer.swift in Sources */,
 				50F021171FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift in Sources */,
-				50F022111FED79650016851F /* FolioleCompanionPairingSecretStore.swift in Sources */,
-				50F022121FED79650016851F /* FolioleCompanionPairingStore.swift in Sources */,
 				50F022131FED79650016851F /* FolioleCompanionDesktopHttpClient.swift in Sources */,
 				50F022141FED79650016851F /* FolioleCompanionBonjourDiscovery.swift in Sources */,
 				50F022151FED79650016851F /* FolioleCompanionSyncPlugin.swift in Sources */,
@@ -283,7 +315,19 @@
 				50F030111FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift in Sources */,
 				50F030121FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift in Sources */,
 				50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */,
-				50F030141FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift in Sources */,
+				50F031111FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift in Sources */,
+				50F032111FED79650016851F /* FolioleCompanionSyncGroupSigning.swift in Sources */,
+				50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */,
+				50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */,
+				50F035111FED79650016851F /* FolioleCompanionSyncGroupProviderPlugin.swift in Sources */,
+				50F036111FED79650016851F /* FolioleCompanionSyncGroupWorkgroup.swift in Sources */,
+				50F037111FED79650016851F /* FolioleCompanionSyncGroupSnapshot.swift in Sources */,
+				50F038111FED79650016851F /* FolioleCompanionSyncGroupResources.swift in Sources */,
+				50F039111FED79650016851F /* FolioleCompanionSyncPackProviderDefinitions.swift in Sources */,
+				50F040111FED79650016851F /* FolioleCompanionSyncPackArchive.swift in Sources */,
+				50F041111FED79650016851F /* FolioleCompanionSyncPackSQLite.swift in Sources */,
+				50F042111FED79650016851F /* FolioleCompanionSyncPackPayloadWriter.swift in Sources */,
+				50F043111FED79650016851F /* FolioleCompanionSyncPackProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

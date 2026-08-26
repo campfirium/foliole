@@ -1,11 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
+
 const mocks = vi.hoisted(() => ({
   listener: null as null | ((event: Record<string, unknown>) => void),
   query: vi.fn(),
   resolve: vi.fn(),
   run: vi.fn(),
-  controlWriter: vi.fn(),
   writer: vi.fn()
 }));
 
@@ -19,7 +20,6 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   }
 }));
 vi.mock('../../companionSyncWriterQueue', () => ({
-  runCompanionSyncControlWriterTask: mocks.controlWriter,
   runCompanionSyncWriterTask: mocks.writer
 }));
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
@@ -38,7 +38,6 @@ beforeEach(async () => {
   mocks.query.mockReset();
   mocks.resolve.mockReset().mockResolvedValue(undefined);
   mocks.run.mockReset().mockResolvedValue({ changes: 0, lastInsertRowId: null });
-  mocks.controlWriter.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
   mocks.writer.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
   await ensureCompanionSyncGroupDataOwner();
 });
@@ -51,7 +50,7 @@ it('runs provider live-database writes through the shared writer queue', async (
   });
   await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
   expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('(authorization_id, stream_name'), [
+  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('(peer_id, stream_name'), [
     'desktop-c', '4:9', expect.any(String)
   ]);
   expect(mocks.resolve).toHaveBeenCalledWith({ request_id: 'request-1', result: { recorded: true } });
@@ -74,23 +73,23 @@ it('creates provider read snapshots through the Capacitor database owner', async
   });
 });
 
-it('loads the active authorization credential through the Capacitor database owner', async () => {
-  mocks.query.mockResolvedValueOnce([{ authorization_id: 'auth-1', workgroup_key: 'group-key' }]);
+it('loads the active Device credential through the Capacitor database owner', async () => {
+  mocks.query.mockResolvedValueOnce([{ device_id: 'device-1', workgroup_key: 'group-key' }]);
   mocks.listener?.({
     operation: 'load_current_credential', payload: { group_id: 'group-1' }, request_id: 'request-key'
   });
   await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
-  expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining('groups.workgroup_key'), ['group-1']);
+  expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining('g.workgroup_key'), ['group-1']);
   expect(mocks.resolve).toHaveBeenCalledWith({
     request_id: 'request-key',
-    result: { authorization_id: 'auth-1', workgroup_key: 'group-key' }
+    result: { device_id: 'device-1', workgroup_key: 'group-key' }
   });
 });
 
-it('rejects an ambiguous active authorization credential', async () => {
+it('rejects an ambiguous active Device credential', async () => {
   mocks.query.mockResolvedValueOnce([
-    { authorization_id: 'auth-1', workgroup_key: 'group-key' },
-    { authorization_id: 'auth-2', workgroup_key: 'group-key' }
+    { device_id: 'device-1', workgroup_key: 'group-key' },
+    { device_id: 'device-2', workgroup_key: 'group-key' }
   ]);
   mocks.listener?.({
     operation: 'load_current_credential', payload: { group_id: 'group-1' }, request_id: 'request-key'
@@ -100,29 +99,29 @@ it('rejects an ambiguous active authorization credential', async () => {
   }));
 });
 
-it('allocates the smallest unused member profile inside the writer transaction', async () => {
-  mocks.query
-    .mockResolvedValueOnce([])
-    .mockResolvedValueOnce([{ host_name: 'Maci' }, { host_name: 'Maci 2' }]);
+it('registers the exact accepted Device identity through the writer queue', async () => {
+  const identity = createSyncGroupDeviceIdentity({
+    device_anchor: 'a1111111-1111-4111-8111-111111111111', group_id: 'group-1',
+    library_path: '/Users/maci/Foliole/foliole.db', path_flavor: 'posix'
+  });
   mocks.listener?.({
-    operation: 'authorize_member',
+    operation: 'register_device',
     payload: {
-      approved_by_host_name: 'Maci', group_id: 'group-1',
-      member: {
-        authorization_id: 'request-3', host_platform: 'darwin', host_name: 'Maci',
-        joined_at: '2026-08-12T00:00:00.000Z'
+      group_id: 'group-1',
+      device: {
+        canonical_library_path: identity.canonical_library_path,
+        device_anchor: identity.device_anchor,
+        device_identity_key: identity.identity_key,
+        device_name: 'Maci', path_flavor: 'posix', platform: 'darwin'
       }
     },
     request_id: 'request-3'
   });
   await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
-  expect(mocks.controlWriter).toHaveBeenCalledOnce();
-  expect(mocks.writer).not.toHaveBeenCalled();
-  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_group_members'), [
-    'group-1', 'Maci 3', 'darwin', 'Maci', 'request-3',
-    '2026-08-12T00:00:00.000Z', expect.any(String)
-  ]);
+  expect(mocks.writer).toHaveBeenCalledOnce();
+  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_group_devices'),
+    expect.arrayContaining(['group-1', identity.identity_key, 'Maci', 'darwin']));
   expect(mocks.resolve).toHaveBeenCalledWith({
-    request_id: 'request-3', result: { authorized: true, host_name: 'Maci 3' }
+    request_id: 'request-3', result: { device_id: identity.identity_key, registered: true }
   });
 });

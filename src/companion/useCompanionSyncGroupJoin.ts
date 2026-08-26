@@ -1,0 +1,127 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
+import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
+import {
+  cancelCompanionSyncGroupJoin,
+  completeCompanionSyncGroupJoin,
+  requestCompanionSyncGroupJoin
+} from '../shared/platform/companionSyncGroupJoinClient';
+
+import type {
+  CompanionSyncGroupDiscovery,
+  PendingSyncGroupJoinRequest
+} from './companionSyncGroupJoinModel';
+
+export type CompanionSyncGroupJoinStatus = 'idle' | 'discovering' | 'requesting' | 'awaiting-acceptance';
+
+interface SyncGroupJoinArgs {
+  bootstrapState: NativeCompanionBootstrapState;
+  onError(message: string | null): void;
+  onSaveEndpoint(endpointUrl: string): Promise<unknown>;
+}
+
+function mapCandidates(snapshot: Parameters<Parameters<typeof startCompanionSyncGroupDiscoverySession>[0]>[0]) {
+  return snapshot.candidates.map((candidate): CompanionSyncGroupDiscovery => ({
+    appVersion: '',
+    compatibility: { missing_capabilities: [], negotiated_version: null, reason: null, status: 'compatible' },
+    endpointUrl: candidate.endpoint_url,
+    groupDisplayName: candidate.group_display_name,
+    groupId: candidate.group_id,
+    groupTag: candidate.group_tag,
+    providerDeviceId: candidate.provider_device_id,
+    providerDeviceName: candidate.provider_device_name,
+    providerPlatform: candidate.provider_platform
+  }));
+}
+
+function useJoinCompletion(args: {
+  config: SyncGroupJoinArgs;
+  pendingRequest: PendingSyncGroupJoinRequest | null;
+  setJoined(value: boolean): void;
+  setPendingRequest(value: PendingSyncGroupJoinRequest | null): void;
+  setStatus(value: CompanionSyncGroupJoinStatus): void;
+}) {
+  const completionRef = useRef<Promise<unknown> | null>(null);
+  return useCallback(async (request = args.pendingRequest) => {
+    if (!request || !args.config.bootstrapState.database_path) return null;
+    completionRef.current ??= completeCompanionSyncGroupJoin({
+      databasePath: args.config.bootstrapState.database_path,
+      endpointUrl: request.endpointUrl,
+      requestId: request.requestId
+    }).then((group) => {
+      args.setPendingRequest(null); args.setStatus('idle'); args.config.onError(null);
+      args.setJoined(true);
+      publishCompanionSyncMutationRevision();
+      return group;
+    }).finally(() => { completionRef.current = null; });
+    return completionRef.current;
+  }, [args]);
+}
+
+export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
+  const [discoveries, setDiscoveries] = useState<CompanionSyncGroupDiscovery[]>([]);
+  const [pendingRequest, setPendingRequest] = useState<PendingSyncGroupJoinRequest | null>(null);
+  const [status, setStatus] = useState<CompanionSyncGroupJoinStatus>('idle');
+  const [joined, setJoined] = useState(false);
+  const pendingRequestRef = useRef<PendingSyncGroupJoinRequest | null>(null);
+  const stopRef = useRef<null | (() => Promise<void>)>(null);
+  const complete = useJoinCompletion({
+    config: args, pendingRequest, setJoined, setPendingRequest, setStatus
+  });
+
+  const stopDiscovery = useCallback(async () => {
+    const stop = stopRef.current;
+    stopRef.current = null;
+    await stop?.();
+  }, []);
+
+  const discover = useCallback(async () => {
+    await stopDiscovery();
+    setStatus('discovering'); args.onError(null);
+    stopRef.current = await startCompanionSyncGroupDiscoverySession((snapshot) => {
+      setDiscoveries(mapCandidates(snapshot));
+      if (snapshot.status === 'permission_required' || snapshot.status === 'unavailable'
+        || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed') {
+        args.onError(`discovery_${snapshot.status}`); setStatus('idle');
+      }
+      const pending = pendingRequestRef.current;
+      if (pending && snapshot.candidates.some((candidate) =>
+        candidate.group_id === pending.groupId)) void complete(pending).catch(() => undefined);
+    });
+  }, [args, complete, stopDiscovery]);
+
+  const request = useCallback(async (endpointUrl: string) => {
+    if (!args.bootstrapState.database_path) throw new Error('companion_database_unavailable');
+    const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
+    if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
+    setStatus('requesting'); args.onError(null);
+    const result = await requestCompanionSyncGroupJoin({
+      databasePath: args.bootstrapState.database_path,
+      endpointUrl: candidate.endpointUrl,
+      groupId: candidate.groupId
+    });
+    const next = { endpointUrl: result.endpoint_url, expiresAt: result.expires_at,
+      groupId: result.group_id, requestId: result.request_id };
+    pendingRequestRef.current = next;
+    setPendingRequest(next); setStatus('awaiting-acceptance');
+    await args.onSaveEndpoint(result.endpoint_url);
+    return result;
+  }, [args, discoveries]);
+
+  const cancel = useCallback(() => {
+    if (pendingRequest) cancelCompanionSyncGroupJoin(pendingRequest.requestId);
+    pendingRequestRef.current = null;
+    setPendingRequest(null); setStatus('idle'); args.onError(null);
+  }, [args, pendingRequest]);
+
+  useEffect(() => () => { void stopRef.current?.(); }, []);
+  useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
+  useEffect(() => {
+    void Promise.resolve().then(() => loadCompanionSyncGroup())
+      .then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
+  }, [args.bootstrapState.database_path]);
+  return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };
+}

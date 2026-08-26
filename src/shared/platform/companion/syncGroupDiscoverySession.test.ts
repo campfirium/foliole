@@ -20,7 +20,7 @@ vi.mock('../companionWorkspaceRuntimeRepository', () => ({
     startDiscoverySession: runtime.start,
     stopDiscoverySession: runtime.stop
   },
-  isNativeCompanionPairingRuntime: () => runtime.native
+  isNativeCompanionNetworkRuntime: () => runtime.native
 }));
 vi.mock('../companionWorkspaceDiscovery', () => ({ loadCompanionDiscoveryCandidates: runtime.load }));
 

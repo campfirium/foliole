@@ -1,2 +1,0 @@
-export { approveDesktopCompanionPairRequest, createDesktopSyncGroup, leaveDesktopSyncGroup, loadDesktopCompanionPairingOverview, rejectDesktopCompanionPairRequest, removeDesktopSyncGroupMember, syncDesktopCompanionNow } from './desktopCompanionPairingRuntimeRepository';
-export { disableDesktopCompanionSync, enableDesktopCompanionSync, pauseDesktopCompanionSync, resumeDesktopCompanionSync } from './desktop/companionSyncParticipationRuntime';

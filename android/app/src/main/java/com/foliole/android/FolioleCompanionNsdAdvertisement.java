@@ -36,9 +36,10 @@ final class FolioleCompanionNsdAdvertisement {
         put(info, "group_id", config.getJSONObject("sync_group").getString("group_id"));
         put(info, "group_tag", config.getString("group_tag"));
         put(info, "group_display_name", config.getJSONObject("sync_group").getString("display_name"));
-        put(info, "peer_id", config.getString("authorization_id"));
+        put(info, "provider_device_id", config.getString("device_id"));
+        put(info, "provider_device_name", config.getString("device_name"));
+        put(info, "provider_platform", config.getString("platform"));
         put(info, "runtime_instance_id", config.getString("runtime_instance_id"));
-        put(info, "timeline_id", config.getJSONObject("sync_group").getString("timeline_id"));
         JSONObject protocol = config.getJSONObject("protocol");
         put(info, "protocol_version", String.valueOf(protocol.getInt("version")));
         put(info, "protocol_min_version", String.valueOf(protocol.getInt("min_supported_version")));

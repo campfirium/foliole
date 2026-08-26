@@ -154,7 +154,7 @@ async function applySyncPackSurfaceInTransaction(
   const applyOptions = options;
   const groupFacts = await applySyncPackGroupFactsWithDbPort(port, {
     ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
-    sourceHostName: options.sourceHostName ?? options.sourcePeerId!
+    sourcePeerId: options.sourcePeerId ?? options.sourceHostName!
   });
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, applyOptions);
   const nodeConvergence = await applyVersionedNodeStage(port, options);

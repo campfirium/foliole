@@ -63,7 +63,7 @@ beforeEach(() => {
 
 it('binds sync push provenance to the authenticated Host', async () => {
   authMock.authenticateCompanionRequest.mockReturnValue({
-    device_id: 'device-android', host_name: 'Android A5', ok: true
+    device_id: 'device-android', device_name: 'Android A5', ok: true
   } as never);
   syncPushMock.handleCompanionSyncPush.mockResolvedValue({ acks: [] });
   const response = createResponse();

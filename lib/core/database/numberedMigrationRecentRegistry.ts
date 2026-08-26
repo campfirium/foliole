@@ -20,6 +20,7 @@ import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetire
 import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
+import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js';
@@ -205,5 +206,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 77,
     migrate: migrateReadwiseHostSettings
+  },
+  {
+    version: 78,
+    migrate: migrateSinglePrincipalSyncGroup
   }
 ];

@@ -80,9 +80,9 @@ function writeCurrentProfile(
 function loadActiveSyncGroupDeviceId() {
   try {
     const row = openDatabaseConnection().driver.queryOne<{ local_device_id: string }>(
-      `SELECT l.local_device_id FROM sync_group_local_state l
-       JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
-       WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+      `SELECT l.local_device_identity_key AS local_device_id FROM sync_group_local_state l
+       JOIN sync_group_devices d ON d.group_id = l.group_id AND d.device_identity_key = l.local_device_identity_key
+       WHERE l.singleton_id = 1 AND l.state = 'active' AND d.state = 'active' LIMIT 1`
     );
     return normalizeDeviceId(row?.local_device_id);
   } catch {

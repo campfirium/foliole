@@ -4,7 +4,7 @@ import type { DbPort, DbRow } from '../sync/dbPort.js';
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { rehashCompanionHostState } from './companionHostStateHashes.js';
 import { transferCompanionSourceHosts } from './companionSourceHostOwnershipMigration.js';
-import { renameCompanionLocalSyncGroupHost } from './companionSyncGroupHostRename.js';
+import { renameCompanionLocalSyncGroupDevice } from './companionSyncGroupDeviceRename.js';
 
 export type CompanionJournalMode = 'delete' | 'wal';
 
@@ -137,7 +137,7 @@ async function readMeta(db: DbPort, key: string) {
 
 async function transferCompanionHostState(db: DbPort, previous: string, current: string, now: string) {
   if (previous !== current) {
-    await renameCompanionLocalSyncGroupHost(db, current, now);
+    await renameCompanionLocalSyncGroupDevice(db, current, now);
     await transferCompanionSourceHosts(db, previous, current);
     await db.run(`INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at)
       SELECT node_id, ?, reading_position, updated_at FROM node_reading_host_state WHERE host_name = ?`, [current, previous]);

@@ -149,7 +149,7 @@ export function selectSyncStateChangesSince(driver: DatabaseDriver, cursor: numb
 
 export function getPeerCursor(driver: DatabaseDriver, peerId: string, streamName: SyncStreamName): string | null {
   return driver.queryOne<SyncPeerCursorRow>(
-    'SELECT cursor_value FROM sync_peer_cursors WHERE authorization_id = ? AND stream_name = ?',
+    'SELECT cursor_value FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ?',
     [peerId, streamName]
   )?.cursor_value ?? null;
 }
@@ -162,9 +162,9 @@ export function setPeerCursor(
   updatedAt: string
 ): void {
   driver.execute(
-    `INSERT INTO sync_peer_cursors (authorization_id, stream_name, cursor_value, updated_at)
+    `INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
      VALUES (?, ?, ?, ?)
-     ON CONFLICT(authorization_id, stream_name) DO UPDATE SET
+     ON CONFLICT(peer_id, stream_name) DO UPDATE SET
        cursor_value = excluded.cursor_value,
        updated_at = excluded.updated_at`,
     [peerId, streamName, cursorValue, updatedAt]

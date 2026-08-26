@@ -23,20 +23,6 @@ final class FolioleCompanionBridgeContractAsset {
         return object;
     }
 
-    static int intValue(Context context, String sectionName, String objectName, String key) throws Exception {
-        return object(context, sectionName, objectName).getInt(key);
-    }
-
-    static String pairingSignatureString(Context context, String objectName, String key) throws Exception {
-        JSONObject object = object(context, "pairingPlugin", "signature").optJSONObject(objectName);
-        if (object == null) {
-            throw new IllegalStateException(
-                "Companion bridge contract asset is missing object: pairingPlugin.signature." + objectName
-            );
-        }
-        return object.getString(key);
-    }
-
     static String string(Context context, String sectionName, String objectName, String key) throws Exception {
         JSONObject object = object(context, sectionName, objectName);
         if (!object.has(key)) {

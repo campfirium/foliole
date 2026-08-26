@@ -15,14 +15,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionDesktopSyncPush', () => ({ pushLocalDirtyObjects: mocks.push }));
 vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
-vi.mock('../shared/platform/companionWorkspacePairing', () => ({ createSignedRequestHeaders: mocks.sign }));
+vi.mock('../shared/platform/companion/network/signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({ loadCompanionWorkspaceSyncState: mocks.loadWorkspace }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   supportsCompanionNodeMutationSurface: () => false
 }));
 vi.mock('./companionCaptureTextActions', () => ({ persistCompanionCapturedText: mocks.capture }));
 vi.mock('./companionTrashActions', () => ({ restoreCompanionTrashNode: mocks.restore }));
-vi.mock('./iosAcceptancePairing', () => ({ loadIosAcceptanceSyncPeer: mocks.loadPeer }));
+vi.mock('./iosAcceptanceSyncGroup', () => ({ loadIosAcceptanceSyncPeer: mocks.loadPeer }));
 
 import { runIosNodeVersionRoundtripAcceptance } from './iosNodeVersionRoundtripAcceptance';
 

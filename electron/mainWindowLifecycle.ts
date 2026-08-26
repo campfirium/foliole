@@ -1,13 +1,13 @@
 import type { BrowserWindow } from 'electron';
 
 import { updateLocalSyncGroupHostName } from './database/syncGroupIdentityStore.js';
-import { IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL } from './ipc/contracts.js';
+import { IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL } from './ipc/contracts.js';
 import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { focusWindow } from './runtimeMainSupport.js';
 import { resolveDesktopHostName } from './sync/companionLanPayloads.js';
 import { reconcileDesktopCompanionSyncRuntime } from './sync/desktopCompanionSyncParticipation.js';
-import { setLanWorkspaceSyncPairRequestHandler } from './sync/lanWorkspaceSyncServer.js';
+import { setLanWorkspaceSyncJoinRequestHandler } from './sync/lanWorkspaceSyncServer.js';
 import { applyStartupWindowPresentation, presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 
 export interface MainWindowLifecycleRuntime {
@@ -39,10 +39,10 @@ export async function openOrCreateMainWindow(
   return window;
 }
 
-export function installPairingFocusHandler(openMainWindow: () => Promise<BrowserWindow | null>) {
-  setLanWorkspaceSyncPairRequestHandler(() => {
+export function installSyncGroupJoinRequestFocusHandler(openMainWindow: () => Promise<BrowserWindow | null>) {
+  setLanWorkspaceSyncJoinRequestHandler(() => {
     void openMainWindow().then((window) => {
-      window?.webContents.send(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL);
+      window?.webContents.send(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL);
     });
   });
 }
@@ -50,11 +50,11 @@ export function installPairingFocusHandler(openMainWindow: () => Promise<Browser
 export async function startCompanionSyncIfEnabled(args: {
   appVersion: string;
   isEnabled: () => boolean;
-  peerId: string;
+  deviceId: string;
 }) {
   updateLocalSyncGroupHostName(resolveDesktopHostName());
   if (!args.isEnabled()) {
     return;
   }
-  await reconcileDesktopCompanionSyncRuntime({ appVersion: args.appVersion, peerId: args.peerId });
+  await reconcileDesktopCompanionSyncRuntime({ appVersion: args.appVersion, deviceId: args.deviceId });
 }

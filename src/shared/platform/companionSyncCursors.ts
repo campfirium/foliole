@@ -4,6 +4,7 @@ import type {
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
+import { resolveRemoteSyncGroupDevices } from '../../../lib/platform/syncGroupContract';
 
 import {
   loadIosCompanionChangeCursor,
@@ -13,6 +14,7 @@ import {
 } from './companion/runtime/iosCompanionSyncCursorStore';
 import { createIosCompanionSyncPackCursorStore } from './companion/sync/cursor/iosCompanionSyncPackCursorStore';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
+import { loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   readWebCursor,
@@ -31,10 +33,11 @@ const WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY = 'foliole-companion-sync-node-versi
 const WEB_SYNC_REVIEW_LOG_CURSOR_KEY = 'foliole-companion-sync-review-log-cursor';
 const WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = 'foliole-companion-sync-review-log-push-cursor';
 async function getSyncPackPeerId() {
-  const { loadCompanionPairingState } = await import('./companionWorkspacePairing');
-  const peerId = (await loadCompanionPairingState()).remote_peer_id?.trim();
-  if (!peerId) throw new Error('sync_pack_source_identity_unavailable');
-  return peerId;
+  const group = await loadCompanionSyncGroup();
+  if (!group) throw new Error('sync_group_not_joined');
+  const devices = resolveRemoteSyncGroupDevices(group);
+  if (devices.length !== 1) throw new Error('sync_pack_source_device_ambiguous');
+  return devices[0]!.device_identity_key;
 }
 
 export async function loadCompanionSyncStateCursor() {
@@ -154,9 +157,9 @@ export async function loadCompanionSyncStateChanges(peerId: string, cursor: numb
 }
 
 export async function loadCompanionPendingSyncSummary() {
-  const { loadCompanionPairingState } = await import('./companionWorkspacePairing');
-  const pairing = await loadCompanionPairingState();
-  const peerId = pairing.remote_peer_id?.trim();
+  const group = await loadCompanionSyncGroup();
+  if (!group) return { pendingCount: 0 };
+  const peerId = resolveRemoteSyncGroupDevices(group)[0]?.device_identity_key;
   if (!peerId) return { pendingCount: 0 };
   const [stateCursor, nodeCursor, reviewCursor] = await Promise.all([
     loadCompanionSyncStatePushCursor(),

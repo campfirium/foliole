@@ -15,8 +15,8 @@ const capacitorMock = vi.hoisted(() => ({
   }
 }));
 
-vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('./companion/network/signedRequest', () => ({
+  createSignedRequestHeaders: pairingMock.createSignedRequestHeaders,
   prepareNativeCompanionWorkgroupRequestIfPresent: workgroupMock.prepare
 }));
 vi.mock('@capacitor/core', () => ({

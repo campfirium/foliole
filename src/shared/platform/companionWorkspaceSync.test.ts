@@ -20,6 +20,15 @@ const nativeWorkspaceState = vi.hoisted(() => ({
   load: vi.fn(),
   save: vi.fn(async (state) => state)
 }));
+const signedRequestMock = vi.hoisted(() => ({
+  create: vi.fn(async () => ({
+    'X-Device-Id': 'web-preview-device',
+    'X-Nonce': 'nonce',
+    'X-Signature': 'signature',
+    'X-Sync-Group-Id': 'web-preview-group',
+    'X-Timestamp': '2026-08-26T00:00:00.000Z'
+  }))
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -34,6 +43,9 @@ vi.mock('./companion/runtime/iosCompanionActiveDataClear', () => ({
 vi.mock('./companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore', () => ({
   loadIosCompanionWorkspaceSyncState: nativeWorkspaceState.load,
   saveIosCompanionWorkspaceSyncState: nativeWorkspaceState.save
+}));
+vi.mock('./companion/network/signedRequest', () => ({
+  createSignedRequestHeaders: signedRequestMock.create
 }));
 
 import { clearCompanionAppData } from './companionAppData';
@@ -168,9 +180,10 @@ function registerWorkspaceVersionTest() {
     });
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       headers: expect.objectContaining({
-        'X-Authorization-Id': 'web-preview-authorization',
+        'X-Device-Id': 'web-preview-device',
         'X-Nonce': expect.any(String),
         'X-Signature': expect.any(String),
+        'X-Sync-Group-Id': 'web-preview-group',
         'X-Timestamp': expect.any(String)
       })
     });

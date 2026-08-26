@@ -5,7 +5,7 @@ final class FolioleCompanionBonjourDiscoveryPool {
     private var active: [UUID: FolioleCompanionBonjourDiscovery] = [:]
     private var session: FolioleCompanionBonjourDiscoverySession?
 
-    func start(contract: FolioleCompanionPairingContract, completion: @escaping ([[String: Any]]) -> Void) {
+    func start(contract: FolioleCompanionNetworkContract, completion: @escaping ([[String: Any]]) -> Void) {
         DispatchQueue.main.async {
             let id = UUID()
             let discovery = FolioleCompanionBonjourDiscovery(contract: contract) { [weak self] candidates in
@@ -18,7 +18,7 @@ final class FolioleCompanionBonjourDiscoveryPool {
     }
 
     func startSession(
-        contract: FolioleCompanionPairingContract,
+        contract: FolioleCompanionNetworkContract,
         onEvent: @escaping ([String: Any]) -> Void
     ) -> [String: Any] {
         session?.stop()
@@ -44,10 +44,10 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
     private var browser: NWBrowser?
     private var results: [String: [String: Any]] = [:]
     private var services: [String: NetService] = [:]
-    private let contract: FolioleCompanionPairingContract
+    private let contract: FolioleCompanionNetworkContract
     private let onEvent: ([String: Any]) -> Void
 
-    init(contract: FolioleCompanionPairingContract, onEvent: @escaping ([String: Any]) -> Void) {
+    init(contract: FolioleCompanionNetworkContract, onEvent: @escaping ([String: Any]) -> Void) {
         self.contract = contract
         self.onEvent = onEvent
     }
@@ -137,13 +137,13 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
 final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
     private var browser: NWBrowser?
     private let completion: ([[String: Any]]) -> Void
-    private let contract: FolioleCompanionPairingContract
+    private let contract: FolioleCompanionNetworkContract
     private var finished = false
     private var results: [[String: Any]] = []
     private var services: [NetService] = []
     private var serviceKeys = Set<String>()
 
-    init(contract: FolioleCompanionPairingContract, completion: @escaping ([[String: Any]]) -> Void) {
+    init(contract: FolioleCompanionNetworkContract, completion: @escaping ([[String: Any]]) -> Void) {
         self.completion = completion
         self.contract = contract
         super.init()

@@ -23,7 +23,7 @@ import {
   isNativeCompanionExternalDocumentReadRuntime,
   isNativeCompanionExternalDocumentSearchRuntime,
   isNativeCompanionNodeVersionWriteRuntime,
-  isNativeCompanionPairingRuntime,
+  isNativeCompanionNetworkRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncDiagnosticsRuntime,
   isNativeCompanionSyncObjectReadRuntime,
@@ -60,7 +60,7 @@ function expectIosRuntimeBoundary() {
   expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
   expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
   expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(true);
-  expect(isNativeCompanionPairingRuntime()).toBe(true);
+  expect(isNativeCompanionNetworkRuntime()).toBe(true);
   expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
   expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
   expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
@@ -88,7 +88,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(false);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(false);
     expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(false);
-    expect(isNativeCompanionPairingRuntime()).toBe(false);
+    expect(isNativeCompanionNetworkRuntime()).toBe(false);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(false);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(false);
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(false);
@@ -110,7 +110,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
     expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(true);
-    expect(isNativeCompanionPairingRuntime()).toBe(true);
+    expect(isNativeCompanionNetworkRuntime()).toBe(true);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);

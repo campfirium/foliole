@@ -44,9 +44,6 @@ final class FolioleCompanionNetworkPluginActions {
         new Thread(() -> {
             try {
                 JSArray candidates = new JSArray();
-                for (String endpointUrl : FolioleCompanionSyncGroupOutboundPeerStore.discoveryEndpointUrls(context)) {
-                    addDirectEndpointCandidate(context, candidates, endpointUrl);
-                }
                 if (isEmulator(context)) {
                     addDirectHostCandidate(context, candidates,
                         FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));

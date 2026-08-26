@@ -6,7 +6,7 @@ import type {
   NativeWatchedFolderBindingsState
 } from '../../../lib/platform/nativeWatchedFolderContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useActiveSyncGroupMembership } from '../../shared/platform/external/useActiveSyncGroupMembership';
+import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 import {
   loadWatchedFolderBindingsFromRuntime,
 } from '../../shared/platform/import/watchedFolderRuntimeRepository';
@@ -161,7 +161,7 @@ function WatchedFolderGroupList(props: {
 
 export function WatchedFolderConnections() {
   const t = useTranslation();
-  const hasActiveSyncGroup = useActiveSyncGroupMembership();
+  const hasActiveSyncGroup = useActiveSyncGroup();
   const [state, setState] = useState<NativeWatchedFolderBindingsState | null>(null);
   const refresh = () => void loadWatchedFolderBindingsFromRuntime().then(setState).catch(() => undefined);
   useEffect(refresh, []);

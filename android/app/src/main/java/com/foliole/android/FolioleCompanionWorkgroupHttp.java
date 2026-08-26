@@ -96,7 +96,7 @@ final class FolioleCompanionWorkgroupHttp {
     static PreparedRequest acceptPrepared(String url, JSONObject inputHeaders, String body) throws Exception {
         JSONObject headers = new JSONObject(inputHeaders.toString());
         if (!isPrepared(headers) || trim(headers.optString("X-Sync-Group-Id", null)) == null
-            || trim(headers.optString("X-Authorization-Id", null)) == null
+            || trim(headers.optString("X-Device-Id", null)) == null
             || trim(headers.optString("X-Nonce", null)) == null
             || trim(headers.optString("X-Signature", null)) == null
             || trim(headers.optString("X-Timestamp", null)) == null || body == null) {
@@ -156,11 +156,11 @@ final class FolioleCompanionWorkgroupHttp {
         String timestamp = Instant.now().toString();
         String nonce = UUID.randomUUID().toString();
         String canonical = method.toUpperCase() + "\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(body);
-        if (trim(headers.optString("X-Authorization-Id", null)) == null) {
-            throw new SecurityException("sync_group_local_member_missing");
+        if (trim(headers.optString("X-Device-Id", null)) == null) {
+            throw new SecurityException("sync_group_local_device_missing");
         }
         headers.put("X-Nonce", nonce).put("X-Timestamp", timestamp)
-            .put("X-Signature", FolioleCompanionPairingCrypto.signCanonicalRequest(groupKey, canonical));
+            .put("X-Signature", FolioleCompanionSyncGroupHmac.sign(groupKey, canonical));
     }
 
     private static String path(URL url) {

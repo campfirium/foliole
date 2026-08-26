@@ -24,8 +24,14 @@ const iosSyncbackStoreMock = vi.hoisted(() => ({
   saveReviewLogPushCursor: vi.fn(async (cursor) => cursor),
   saveStatePushCursor: vi.fn(async (cursor) => cursor)
 }));
-const pairingStateMock = vi.hoisted(() => ({
-  load: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))
+const syncGroupMock = vi.hoisted(() => ({
+  load: vi.fn(async () => ({
+    devices: [
+      { device_identity_key: 'local-device', state: 'active' },
+      { device_identity_key: 'desktop-peer', state: 'active' }
+    ],
+    local_device_identity_key: 'local-device'
+  }))
 }));
 
 vi.mock('./companionSyncWriterQueue', () => ({
@@ -43,8 +49,8 @@ vi.mock('./companion/runtime/iosCompanionSyncCursorStore', () => ({
 vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
 }));
-vi.mock('./companionWorkspacePairing', () => ({
-  loadCompanionPairingState: pairingStateMock.load
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: syncGroupMock.load
 }));
 
 const capacitorMock = vi.hoisted(() => ({

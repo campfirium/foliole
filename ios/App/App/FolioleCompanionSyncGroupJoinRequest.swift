@@ -6,6 +6,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
     private static let uuidV4 = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
     let deviceName: String
+    let device: [String: Any]
     let expiresAt: Date
     let groupId: String
     let platform: String
@@ -26,6 +27,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
             "canonical_library_path", "device_anchor", "device_name", "path_flavor", "platform"
         ])
         try Self.validateDevice(device)
+        self.device = device
         groupId = try Self.required(value, "group_id")
         publicKey = try Self.validatePublicKey(Self.required(value, "ephemeral_public_key"))
         deviceName = try Self.required(device, "device_name")
@@ -47,6 +49,16 @@ final class FolioleCompanionSyncGroupJoinRequest {
             "requested_at": Self.timestamp(requestedAt),
             "status": isPending ? "pending" : "accepted"
         ]
+    }
+
+    func registeredDevice(groupId: String) throws -> [String: Any] {
+        let anchor = try Self.required(device, "device_anchor")
+        let path = try Self.required(device, "canonical_library_path")
+        let identityData = try JSONSerialization.data(withJSONObject: [1, groupId, anchor, path])
+        guard let identity = String(data: identityData, encoding: .utf8) else {
+            throw Self.invalid("sync_group_device_identity_invalid")
+        }
+        return device.merging(["device_identity_key": identity]) { _, new in new }
     }
 
     private static func validateDevice(_ device: [String: Any]) throws {

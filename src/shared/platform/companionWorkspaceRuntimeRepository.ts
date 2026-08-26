@@ -1,10 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 
-import type {
-  CompanionWorkspaceDiscoveryPayload,
-  CompanionWorkspacePairPayload,
-  CompanionWorkspacePairRequestPayload
-} from '../../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionWorkspaceDiscoveryPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import {
@@ -16,8 +12,6 @@ import {
 import type { CompanionWorkspaceSyncPlugin } from './companionWorkspaceSyncPluginTypes';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
-export const PAIR_ENDPOINT_PATH = '/companion/pair';
-export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
 export const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');
@@ -37,8 +31,8 @@ export function isNativeAndroidCompanionRuntime() {
   return requireAvailableCompanionRuntime('native-runtime').kind === 'android-native';
 }
 
-export function isNativeCompanionPairingRuntime() {
-  const runtime = requireAvailableCompanionRuntime('pairing-runtime');
+export function isNativeCompanionNetworkRuntime() {
+  const runtime = requireAvailableCompanionRuntime('sync-group-provider');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
@@ -171,28 +165,4 @@ export function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }
 
-export type PairCompanionWithDesktopArgs = {
-  hostName: string;
-  hostPlatform: string;
-  endpointUrl: string;
-  pairRequestId: string;
-  groupId?: string | undefined;
-  groupTag?: string | undefined;
-  timelineId?: string | undefined;
-  remotePeerId?: string | null;
-  remotePeerName?: string | null;
-  remotePeerPlatform?: string | null;
-};
-
-export type RequestCompanionPairingArgs = {
-  hostName: string;
-  hostPlatform: string;
-  endpointUrl: string;
-  groupId?: string | undefined;
-  groupTag?: string | undefined;
-  timelineId?: string | undefined;
-};
-
-export type PairCompanionWithDesktopResponse = CompanionWorkspacePairPayload;
-export type RequestCompanionPairingResponse = CompanionWorkspacePairRequestPayload;
 export type LoadCompanionDiscoveryResponse = CompanionWorkspaceDiscoveryPayload;

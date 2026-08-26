@@ -1,10 +1,10 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
+import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import { commitStagedCompanionAttachmentBatch } from './companion/runtime/companionBatchDataPlane';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionMissingAttachmentResource } from './companionSyncObjects';
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
   isNativeCompanionAttachmentResourceRuntime,

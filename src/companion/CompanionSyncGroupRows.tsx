@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
-import { resolveSyncGroupDisplayHostName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { leaveCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupDeparture';
 import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
+import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
 import {
@@ -19,7 +19,7 @@ function LeaveSyncGroup() {
   async function leave() {
     setLeaving(true); setErrorCode(null);
     try {
-      await leaveCompanionSyncGroup();
+      await leaveCompanionSyncGroupDevice();
       window.location.reload();
     } catch (error) {
       setLeaving(false);
@@ -71,13 +71,13 @@ function SyncGroupDevices(props: {
   const paused = props.providerState?.sync_paused ?? false;
   return (
     <div aria-label={t('companion.sync.devices')} className="ml-4 divide-y divide-companion-divider border-t border-companion-divider pl-4" role="list">
-      {props.group.members.filter((member) => member.state === 'active').map((member) => {
-        const isLocal = member.host_name === props.group.local_host_name;
+      {props.group.devices.filter((device) => device.state === 'active').map((device) => {
+        const isLocal = device.device_identity_key === props.group.local_device_identity_key;
         return (
-          <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={member.host_name} role="listitem">
+          <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={device.device_identity_key} role="listitem">
             <span className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate text-sm font-semibold text-foreground">{member.host_name}</span>
-              <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(member.host_platform)}</span>
+              <span className="truncate text-sm font-semibold text-foreground">{device.device_name}</span>
+              <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(device.platform)}</span>
             </span>
             {isLocal ? (
               <button className="min-h-11 shrink-0 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent disabled:opacity-45"
@@ -108,7 +108,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
     <section className="border-y border-companion-divider text-foreground">
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4">
         <h2 className="truncate text-base font-semibold text-foreground">
-          {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayHostName(props.group) })}
+          {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
         </h2>
         <LeaveSyncGroup />
       </div>

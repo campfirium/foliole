@@ -35,7 +35,7 @@ type ForegroundSyncRunnerArgs = {
   cancelled: () => boolean;
   inFlightRef: MutableRefObject<boolean>;
   isAppActiveRef: MutableRefObject<boolean>;
-  isPairingReadyRef: MutableRefObject<boolean>;
+  isSyncGroupReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
   pendingServiceHintRef: MutableRefObject<Set<string>>;
@@ -56,7 +56,7 @@ export type ForegroundSyncRefs = Pick<
   ForegroundSyncRunnerArgs,
   | 'inFlightRef'
   | 'isAppActiveRef'
-  | 'isPairingReadyRef'
+  | 'isSyncGroupReadyRef'
   | 'lastCheckedAtRef'
   | 'lastForegroundAtRef'
   | 'pendingServiceHintRef'
@@ -105,7 +105,7 @@ async function runRetryIfActive(
 
 function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number) {
   if (!args.isAppActiveRef.current) return false;
-  if (!args.isPairingReadyRef.current) return false;
+  if (!args.isSyncGroupReadyRef.current) return false;
   if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
   if (reason === 'foreground') {
     const elapsed = now - args.lastForegroundAtRef.current;

@@ -47,7 +47,9 @@ vi.mock('@capacitor/core', () => ({
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
-vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/network/signedRequest', () => ({
+  createSignedRequestHeaders: pairingMock.createSignedRequestHeaders
+}));
 vi.mock('./companionSyncObjects', () => syncObjectsMock);
 vi.mock('./attachmentResources', () => ({
   invalidateAttachmentResourceResolution: vi.fn()

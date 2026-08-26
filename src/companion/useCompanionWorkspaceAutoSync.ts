@@ -21,10 +21,10 @@ import {
 } from './companionForegroundSyncRunner';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
-function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWorkspaceSyncState) {
+function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanionWorkspaceSyncState) {
   const inFlightRef = useRef(false);
   const isAppActiveRef = useRef(true);
-  const isPairingReadyRef = useRef(isPairingReady);
+  const isSyncGroupReadyRef = useRef(isSyncGroupReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
   const pendingServiceHintRef = useRef(new Set<string>());
@@ -35,7 +35,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const refs: ForegroundSyncRefs = useMemo(() => ({
     inFlightRef,
     isAppActiveRef,
-    isPairingReadyRef,
+    isSyncGroupReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
     pendingServiceHintRef,
@@ -47,9 +47,9 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   }), []);
 
   useEffect(() => {
-    refs.isPairingReadyRef.current = isPairingReady;
+    refs.isSyncGroupReadyRef.current = isSyncGroupReady;
     refs.stateRef.current = state;
-  }, [isPairingReady, refs, state]);
+  }, [isSyncGroupReady, refs, state]);
 
   return refs;
 }
@@ -83,11 +83,11 @@ export function useForegroundAutoSync(
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void,
-  isPairingReady: boolean,
+  isSyncGroupReady: boolean,
   state: NativeCompanionWorkspaceSyncState,
   tryForegroundAutoSync: TryForegroundAutoSync
 ) {
-  const refs = useForegroundSyncRefs(isPairingReady, state);
+  const refs = useForegroundSyncRefs(isSyncGroupReady, state);
   const runForegroundSyncCheckRef = useRef<
     (reason: ForegroundSyncReason, endpointUrl?: string) => void
   >(() => undefined);
@@ -95,7 +95,7 @@ export function useForegroundAutoSync(
 
   useEffect(() => {
     runForegroundSyncCheckRef.current('endpoint-ready');
-  }, [endpointUrl, isPairingReady]);
+  }, [endpointUrl, isSyncGroupReady]);
 
   useEffect(() => {
     let cancelled = false;

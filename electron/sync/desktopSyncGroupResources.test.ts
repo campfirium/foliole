@@ -78,7 +78,7 @@ it('persists a content body batch through the transaction owner that enumerated 
   ]), { headers: { 'X-Foliole-Original-Content-Type': `multipart/mixed; boundary=${boundary}` } })));
 
   await downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_authorization_id: 'authorization-desktop-c'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'authorization-desktop-c'
   });
 
   expect(runtime.openConnection).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ it('keeps a completed attachment when another concurrent request interrupts the 
   )));
 
   await expect(downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_authorization_id: 'authorization-desktop-c'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'authorization-desktop-c'
   })).rejects.toThrow('sync_resource_http_503');
 
   await vi.waitFor(() => expect(runtime.run).toHaveBeenCalledWith(
@@ -121,7 +121,7 @@ it('treats locally owned and downloaded attachment resources as complete', async
     "availability NOT IN ('cached', 'local')"
   ));
   await downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_authorization_id: 'authorization-desktop-c'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'authorization-desktop-c'
   });
   expect(runtime.query.mock.calls[1]?.[0]).toContain("availability NOT IN ('cached', 'local')");
 });

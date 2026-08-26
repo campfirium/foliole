@@ -4,11 +4,9 @@ import type {
 } from '../../../../../../lib/platform/syncDiagnosticsContract';
 import { fetchDesktopJson } from '../../../companionDesktopSyncHttp';
 import { classifyCompanionSyncTimeoutMessage } from '../../../companionSyncTimeoutOwnership';
-import {
-  FolioleCompanionSync,
-  isNativeCompanionSyncDiagnosticsRuntime
-} from '../../../companionWorkspaceRuntimeRepository';
+import { isNativeCompanionSyncDiagnosticsRuntime } from '../../../companionWorkspaceRuntimeRepository';
 import { diagnoseIosCompanionDatabase } from '../../runtime/iosCompanionActiveDatabaseDiagnostics';
+import { loadCompanionSyncGroup } from '../syncGroupStore';
 
 const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 
@@ -40,7 +38,7 @@ export async function loadLocalSyncDiagnostics(): Promise<SyncDiagnosticSnapshot
   if (!isNativeCompanionSyncDiagnosticsRuntime()) {
     return null;
   }
-  return diagnoseIosCompanionDatabase(await FolioleCompanionSync.loadPairingState());
+  return diagnoseIosCompanionDatabase(await loadCompanionSyncGroup());
 }
 
 export async function loadDesktopSyncDiagnostics(endpointUrl: string): Promise<SyncDiagnosticSnapshot> {

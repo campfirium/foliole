@@ -27,7 +27,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'external-document-search',
   'node-version-write',
   'open-state-write',
-  'pairing-runtime',
+  'sync-group-provider',
   'pdf-page-text',
   'reading-write',
   'syncback',

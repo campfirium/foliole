@@ -1,4 +1,4 @@
-import type { CompanionPairingSecretPayload } from './nativeCompanionSyncContract.js';
+import type { SyncGroupJoinEncryptedInfoPayload } from './nativeCompanionSyncContract.js';
 import {
   canonicalizeLibraryPath,
   parseDeviceAnchor,
@@ -37,7 +37,7 @@ export interface SyncGroupJoinGroupInfo {
 }
 
 export interface SyncGroupJoinAcceptance {
-  encrypted_group_info: CompanionPairingSecretPayload;
+  encrypted_group_info: SyncGroupJoinEncryptedInfoPayload;
   expires_at: string;
   request_id: string;
 }

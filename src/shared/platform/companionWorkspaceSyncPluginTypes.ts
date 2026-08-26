@@ -1,9 +1,9 @@
+import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
-import type { CompanionPairingSyncPlugin } from './companionPairingSyncPluginTypes';
 
 export interface CompanionDiscoveryCandidate {
   endpoint_url: string;
@@ -23,9 +23,9 @@ export interface CompanionNativeDiscoveryEvent extends CompanionDiscoveryCandida
 
 export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
   pending_requests: Array<{
-    host_name: string;
-    host_platform: string;
-    pair_request_id: string;
+    device_name: string;
+    platform: string;
+    request_id: string;
     requested_at: string;
   }>;
   port: number | null;
@@ -35,7 +35,7 @@ export interface CompanionSyncGroupProviderState extends SyncParticipationSnapsh
 export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
-  extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin, CompanionPairingSyncPlugin {
+  extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -48,39 +48,46 @@ export interface CompanionWorkspaceSyncPlugin
     runtime: 'android' | 'ios';
   }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
+  loadSyncGroupDeviceIdentity(args: { database_path: string }): Promise<{
+    canonical_library_path: string;
+    device_anchor: string;
+    device_name: string;
+    path_flavor: 'posix';
+    platform: string;
+  }>;
   startDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   stopDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   addListener(
     eventName: 'syncGroupDiscoveryChanged',
     listener: (event: CompanionNativeDiscoveryEvent) => void
   ): Promise<import('@capacitor/core').PluginListenerHandle>;
-  bindSyncGroupPeerRoute(args: {
-    endpoint_url: string;
-    local_authorization_id: string;
-    local_host_name: string;
-    peer_authorization_id: string;
-    peer_host_name: string;
-    peer_host_platform: string;
-    sync_group_id: string;
-  }): Promise<void>;
-  clearSyncGroupCredentials(): Promise<void>;
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
   loadSyncParticipationState(): Promise<CompanionSyncParticipationState>;
   setSyncEnabled(args: { sync_enabled: boolean }): Promise<CompanionSyncParticipationState>;
   setSyncPaused(args: { sync_paused: boolean }): Promise<CompanionSyncParticipationState>;
-  approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
-  rejectSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
+  acceptSyncGroupJoinRequest(args: { request_id: string }): Promise<CompanionSyncGroupProviderState>;
+  rejectSyncGroupJoinRequest(args: { request_id: string }): Promise<CompanionSyncGroupProviderState>;
   resolveSyncGroupDataRequest(args: {
     error?: string;
     request_id: string;
     result?: Record<string, unknown>;
   }): Promise<void>;
+  signCompanionSyncRequest(args: {
+    body?: string;
+    body_hash: string;
+    endpoint_url?: string;
+    method: string;
+    nonce: string;
+    path_with_query: string;
+    sync_group_id: string;
+    timestamp: string;
+  }): Promise<NativeCompanionSignedRequestHeaders>;
   startSyncGroupProvider(args: {
     app_version: string;
-    authorization_id: string;
+    device_id: string;
+    device_name: string;
     facts_revision: string;
-    host_name: string;
-    host_platform: string;
+    platform: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
   }): Promise<CompanionSyncGroupProviderState>;
   stopSyncGroupProvider(): Promise<CompanionSyncGroupProviderState>;

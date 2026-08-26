@@ -21,6 +21,7 @@ final class FolioleCompanionJoinRequest {
     );
     private static final Pattern BASE64_URL = Pattern.compile("^[A-Za-z0-9_-]+$");
     final String deviceName;
+    final JSONObject device;
     final String expiresAt;
     final long expiresAtMs;
     final String groupId;
@@ -37,13 +38,14 @@ final class FolioleCompanionJoinRequest {
             || ((Number) contractVersion).doubleValue() != 1.0d) {
             throw new IllegalArgumentException("sync_group_join_contract_incompatible");
         }
-        JSONObject device = value.getJSONObject("device");
-        exactKeys(device, "canonical_library_path", "device_anchor", "device_name", "path_flavor", "platform");
-        validateDevice(device);
+        JSONObject deviceValue = value.getJSONObject("device");
+        exactKeys(deviceValue, "canonical_library_path", "device_anchor", "device_name", "path_flavor", "platform");
+        validateDevice(deviceValue);
+        device = new JSONObject(deviceValue.toString());
         groupId = required(value, "group_id");
         publicKey = validatePublicKey(required(value, "ephemeral_public_key"));
-        deviceName = required(device, "device_name");
-        platform = required(device, "platform");
+        deviceName = required(deviceValue, "device_name");
+        platform = required(deviceValue, "platform");
         requestId = UUID.randomUUID().toString();
         requestedAt = timestamp(nowMs);
         expiresAtMs = nowMs + TTL_MS;
@@ -56,6 +58,11 @@ final class FolioleCompanionJoinRequest {
         return new JSONObject().put("device_name", deviceName).put("expires_at", expiresAt)
             .put("platform", platform).put("request_id", requestId)
             .put("requested_at", requestedAt).put("status", acceptance == null ? "pending" : "accepted");
+    }
+
+    JSONObject registeredDevice(String identityKey) throws Exception {
+        return new JSONObject(device.toString())
+            .put("device_identity_key", identityKey);
     }
 
     private static void validateDevice(JSONObject device) throws Exception {

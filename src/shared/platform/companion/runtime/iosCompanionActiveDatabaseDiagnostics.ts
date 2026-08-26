@@ -1,18 +1,13 @@
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { SyncDiagnosticSnapshot } from '../../../../../lib/platform/syncDiagnosticsContract';
+import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
+import { resolveLocalSyncGroupDevice, resolveRemoteSyncGroupDevices } from '../../../../../lib/platform/syncGroupContract';
 import { createIosCompanionSyncPackCursorStore } from '../sync/cursor/iosCompanionSyncPackCursorStore';
 
 import { queryIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
-type PairingState = {
-  device_id?: string | null;
-  device_name?: string | null;
-  is_paired?: boolean;
-  remote_peer_id?: string | null;
-};
-
-export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promise<SyncDiagnosticSnapshot> {
+export async function diagnoseIosCompanionDatabase(group: SyncGroupPayload | null): Promise<SyncDiagnosticSnapshot> {
   const [storage, stateMetrics, bodyMetrics, blobRows, attachmentRows, activeTopics, recentTopics, dirty,
     pending, issues, counts, conflicts, endpoint, cursor, events] = await Promise.all([
     metrics('diagnosticStorageMetrics'), metrics('diagnosticSyncStateMetrics'), metrics('diagnosticContentBodyMetrics'),
@@ -21,7 +16,7 @@ export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promi
     queryIosCompanionDatabase<DbRow>('diagnosticActiveTopic'), queryIosCompanionDatabase<DbRow>('diagnosticRecentTopics'),
     queryIosCompanionDatabase<DbRow>('diagnosticDirtyObjects'), queryIosCompanionDatabase<DbRow>('diagnosticPendingAcks'),
     queryIosCompanionDatabase<DbRow>('diagnosticPushIssues'), queryIosCompanionDatabase<DbRow>('diagnosticSyncStateCounts'),
-    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'), packCursor(pairing),
+    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'), packCursor(group),
     meta('workspace_sync_events')
   ]);
   const attachment = attachmentSummary(attachmentRows);
@@ -30,11 +25,12 @@ export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promi
   const maxStateSeq = numberOrNull(stateMetrics.max_state_seq);
   return {
     collected_at: new Date().toISOString(),
-    connection: { endpoint_url: endpoint, last_error: null, state: pairing.is_paired && endpoint ? 'ready' : 'missing' },
+    connection: { endpoint_url: endpoint, last_error: null, state: group && endpoint ? 'ready' : 'missing' },
     content: content as SyncDiagnosticSnapshot['content'], events: parseEvents(events),
     host: getIosCompanionDatabaseOwner().platform,
     identity: { app_version: null, database_path: getIosCompanionDatabaseOwner().databasePath,
-      device_id: pairing.device_id ?? null, device_name: pairing.device_name ?? null },
+      device_id: resolveLocalSyncGroupDevice(group ?? emptyGroup())?.device_identity_key ?? null,
+      device_name: resolveLocalSyncGroupDevice(group ?? emptyGroup())?.device_name ?? null },
     storage: storage as unknown as SyncDiagnosticSnapshot['storage'],
     sync_state: { ...stateMetrics, dirty_objects: dirty, max_state_seq: maxStateSeq,
       pack_cursor: cursor === null ? null : Number(cursor), pending_acks: pending, push_issues: issues,
@@ -53,10 +49,14 @@ async function meta(key: string) {
   return rows[0]?.value ?? null;
 }
 
-async function packCursor(pairing: PairingState) {
-  const peerId = pairing.remote_peer_id?.trim();
+async function packCursor(group: SyncGroupPayload | null) {
+  const peerId = group ? resolveRemoteSyncGroupDevices(group)[0]?.device_identity_key : null;
   if (!peerId) return null;
   return createIosCompanionSyncPackCursorStore(undefined, peerId).loadCursor();
+}
+
+function emptyGroup(): SyncGroupPayload {
+  return { created_at: '', devices: [], display_name: '', group_id: '', local_device_identity_key: '' };
 }
 
 function blobSummary(rows: DbRow[]) {

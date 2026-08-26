@@ -79,8 +79,8 @@ async function loadLocalFilePreview(absolutePath: string): Promise<NativeExterna
 }
 
 export function handleExternalSearchStorageCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.loadActiveSyncGroupMembership) {
-    return loadDesktopSyncGroup()?.local_member_state === 'active';
+  if (command === NATIVE_COMMANDS.loadActiveSyncGroupDevice) {
+    return Boolean(loadDesktopSyncGroup());
   }
   if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
     return refreshOpenedExternalDocumentRows().then(() => appendManagedExternalSearchFolders(loadExternalSearchFolders()));

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
-  approveCompanionSyncGroupJoinRequest,
+  acceptCompanionSyncGroupJoinRequest,
   loadCompanionSyncGroupProviderState,
   rejectCompanionSyncGroupJoinRequest,
   subscribeCompanionSyncGroupProviderState
@@ -43,13 +43,13 @@ function PendingJoinRequest(props: {
   const t = useTranslation();
   const [resolving, setResolving] = useState(false);
   const [failed, setFailed] = useState(false);
-  async function resolve(approve: boolean) {
+  async function resolve(accept: boolean) {
     setResolving(true); setFailed(false);
     try {
-      const action = approve
-        ? approveCompanionSyncGroupJoinRequest
+      const action = accept
+        ? acceptCompanionSyncGroupJoinRequest
         : rejectCompanionSyncGroupJoinRequest;
-      props.onState(await action(props.request.pair_request_id));
+      props.onState(await action(props.request.request_id));
     } catch {
       setFailed(true);
     } finally {
@@ -59,9 +59,9 @@ function PendingJoinRequest(props: {
   return (
     <div className="border-t border-companion-divider py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="truncate text-sm font-semibold text-foreground">{props.request.host_name}</span>
+        <span className="truncate text-sm font-semibold text-foreground">{props.request.device_name}</span>
         <span className="shrink-0 text-xs text-companion-text-tertiary">
-          {platformFor(props.request.host_platform)}
+          {platformFor(props.request.platform)}
         </span>
       </div>
       <p className="mt-1 text-sm leading-6 text-companion-text-secondary">

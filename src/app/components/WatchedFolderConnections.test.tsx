@@ -15,8 +15,8 @@ vi.mock('../../shared/platform/import/watchedFolderRuntimeRepository', () => ({
   removeWatchedFolderInRuntime: vi.fn()
 }));
 
-vi.mock('../../shared/platform/external/useActiveSyncGroupMembership', () => ({
-  useActiveSyncGroupMembership: activeGroup
+vi.mock('../../shared/platform/external/useActiveSyncGroup', () => ({
+  useActiveSyncGroup: activeGroup
 }));
 
 beforeEach(() => activeGroup.mockReturnValue(true));

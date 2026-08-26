@@ -35,19 +35,18 @@ describe('Android Java SQL surface', () => {
     expect(formalSource).not.toContain('foliole-companionSQLite.db');
   });
 
-  it('exposes only network, pairing, file, and staged-pack methods from Java', () => {
+  it('exposes only network, Sync Group, file, and staged-pack methods from Java', () => {
     const plugin = source('FolioleCompanionSyncPlugin.java');
     const methods = [...plugin.matchAll(/@PluginMethod\s+public void\s+([A-Za-z0-9_]+)/g)]
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
-      'approveSyncGroupJoinRequest', 'beginSyncRun', 'bindSyncGroupPeerRoute',
-      'clearPairingCredentials', 'clearSyncGroupCredentials', 'desktopHttpRequest',
+      'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
+      'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
-      'savePairingCredentials', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider'
     ].sort());

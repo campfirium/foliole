@@ -10,7 +10,7 @@ const providerMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-  approveCompanionSyncGroupJoinRequest: providerMocks.approve,
+  acceptCompanionSyncGroupJoinRequest: providerMocks.approve,
   loadCompanionSyncGroupProviderState: providerMocks.load,
   rejectCompanionSyncGroupJoinRequest: providerMocks.reject,
   setCompanionSyncPaused: providerMocks.setPaused,
@@ -22,7 +22,7 @@ beforeEach(() => {
   const state = {
     lifecycle_active: true, participating: true,
     pending_requests: [{
-      host_name: 'Waiting client', host_platform: 'win32', pair_request_id: 'request-2',
+      device_name: 'Waiting client', platform: 'win32', request_id: 'request-2',
       requested_at: '2026-08-24T00:00:00.000Z'
     }], port: 38641,
     state: 'running', sync_enabled: true, sync_paused: false
@@ -36,14 +36,13 @@ beforeEach(() => {
 
 it('shows persistent membership and keeps Leave independent from participation controls', async () => {
   renderWithLocalization(<CompanionSyncGroupRows group={{
-    created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'desktop-1', display_name: 'Studio',
-    group_id: 'group-1', local_host_name: 'Pixel', local_member_state: 'active',
-    members: [{
-      approved_by_host_name: 'desktop-1',
-      authorization_id: 'request-1', host_name: 'Pixel', host_platform: 'android-capacitor',
-      joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
-    }],
-    timeline_id: 'timeline-1'
+    created_at: '2026-08-08T00:00:00.000Z', display_name: 'Studio', group_id: 'group-1',
+    local_device_identity_key: 'device-pixel', devices: [{
+      canonical_library_path: '/pixel', contract_version: 1, device_anchor: 'pixel-anchor',
+      device_identity_key: 'device-pixel', device_name: 'Pixel', joined_at: '2026-08-08T00:00:00.000Z',
+      last_seen_at: null, left_at: null, platform: 'android-capacitor', state: 'active',
+      updated_at: '2026-08-08T00:00:00.000Z'
+    }]
   }} />);
 
   expect(screen.getByText("Studio's Sync Group")).toBeInTheDocument();

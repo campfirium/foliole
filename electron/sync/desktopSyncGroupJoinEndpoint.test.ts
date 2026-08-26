@@ -20,7 +20,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   runtime.pending = { candidate: {
     endpoint_url: 'http://192.168.1.12:41000', group_id: 'group-1',
-    provider_authorization_id: 'authorization-android-b', provider_device_id: 'android-b', timeline_id: 'timeline-1'
+    provider_device_id: 'android-b'
   } };
   runtime.candidates = [];
 });
@@ -28,21 +28,21 @@ beforeEach(() => {
 it('selects the new endpoint for the exact approved provider identity', async () => {
   runtime.candidates = [
     { endpoint_url: 'http://192.168.1.99:43000', group_id: 'group-1',
-      provider_device_id: 'stranger', timeline_id: 'timeline-1' },
+      provider_device_id: 'stranger' },
     { endpoint_url: 'http://192.168.1.12:42000', group_id: 'group-1',
-      provider_authorization_id: 'authorization-android-b', provider_device_id: 'android-b', timeline_id: 'timeline-1' }
+      provider_device_id: 'android-b' }
   ];
   expect(await refreshDesktopSyncGroupPendingJoinFromDiscovery()).toBe(true);
   expect(runtime.refresh).toHaveBeenCalledWith({
     endpointUrl: 'http://192.168.1.12:42000', groupId: 'group-1',
-    providerAuthorizationId: 'authorization-android-b', timelineId: 'timeline-1'
+    providerDeviceId: 'android-b'
   });
 });
 
 it('does not redirect the handshake to an unapproved discovery identity', async () => {
   runtime.candidates = [{
     endpoint_url: 'http://192.168.1.99:43000', group_id: 'group-1',
-    provider_authorization_id: 'authorization-stranger', provider_device_id: 'stranger', timeline_id: 'timeline-1'
+    provider_device_id: 'stranger'
   }];
   expect(await refreshDesktopSyncGroupPendingJoinFromDiscovery()).toBe(false);
   expect(runtime.refresh).not.toHaveBeenCalled();

@@ -41,8 +41,7 @@ export function CompanionSyncGroupRuntime(props: {
       setGroup(null);
       setLoaded(true);
     });
-  }, [bootstrapState.runtime_kind, workspaceSync.pairingState.is_paired,
-    workspaceSync.state.last_synced_at]);
+  }, [bootstrapState.runtime_kind, mutationRevision, workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
     if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
@@ -50,7 +49,7 @@ export function CompanionSyncGroupRuntime(props: {
     void reconcileCompanionSyncGroupProvider(
       bootstrapState, group, factsRevision
     ).catch(() => undefined);
-  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
+  }, [bootstrapState, group, loaded, mutationRevision,
     workspaceSync.state.last_synced_at]);
 
   return (

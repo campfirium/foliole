@@ -6,16 +6,16 @@ import {
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
 import { resolveReadableCompanionArticle } from './companionReadableArticle';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import {
+  cancelCompanionSyncGroupJoin,
+  completeCompanionSyncGroupJoin,
+  requestCompanionSyncGroupJoin
+} from './companionSyncGroupJoinClient';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
-  clearCompanionPairingCredentials,
   discoverCompanionDesktop,
-  discoverCompanionDesktops,
-  loadCompanionDiscovery,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
-} from './companionWorkspacePairing';
+  discoverCompanionDesktops
+} from './companionWorkspaceDiscovery';
 import { normalizeEndpointUrl } from './companionWorkspaceRuntimeRepository';
 import {
   appendRememberedTarget,
@@ -46,11 +46,9 @@ export async function loadCompanionWorkspaceSyncState() {
 export {
   discoverCompanionDesktop,
   discoverCompanionDesktops,
-  clearCompanionPairingCredentials,
-  loadCompanionDiscovery,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  cancelCompanionSyncGroupJoin,
+  completeCompanionSyncGroupJoin,
+  requestCompanionSyncGroupJoin
 };
 export {
   bindCompanionWorkspaceSyncTarget,

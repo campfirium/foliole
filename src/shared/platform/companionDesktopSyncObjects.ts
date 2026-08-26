@@ -1,5 +1,6 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 
+import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import {
   resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId
@@ -25,7 +26,6 @@ import {
   createCompanionSyncTimeoutError,
   type CompanionSyncTimeoutKey
 } from './companionSyncTimeoutOwnership';
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const SYNC_PACK_PATH = '/companion/sync-pack';
 export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS =

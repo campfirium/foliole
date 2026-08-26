@@ -34,7 +34,7 @@ it('retains one pending fact-change hint for every endpoint during an active syn
     cancelled: () => false,
     inFlightRef: { current: false },
     isAppActiveRef: { current: true },
-    isPairingReadyRef: { current: true },
+    isSyncGroupReadyRef: { current: true },
     lastCheckedAtRef: { current: 0 },
     lastForegroundAtRef: { current: 0 },
     pendingServiceHintRef: { current: new Set<string>() },

@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 
-import './commands.settings.companionMocks.testSupport.js';
 import './commands.settings.reviewSchedulerMocks.testSupport.js';
 import { resetDatabaseReadinessForTests } from '../database/databaseReadiness.js';
 
@@ -43,32 +42,32 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_authorization_count: 1,
-    pending_pair_request_count: 1,
+    active_device_count: 1,
+    pending_join_request_count: 1,
     port: 38641,
     state: 'running'
   }),
   getLanWorkspaceSyncServerStatus: vi.fn().mockReturnValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_authorization_count: 1,
-    pending_pair_request_count: 1,
+    active_device_count: 1,
+    pending_join_request_count: 1,
     port: 38641,
     state: 'running'
   }),
-  refreshLanWorkspaceSyncServerPairingStatus: vi.fn().mockReturnValue({
+  refreshLanWorkspaceSyncServerJoinRequestStatus: vi.fn().mockReturnValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_authorization_count: 1,
-    pending_pair_request_count: 0,
+    active_device_count: 1,
+    pending_join_request_count: 0,
     port: 38641,
     state: 'running'
   }),
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
     advertised_urls: [],
     last_error: null,
-    paired_authorization_count: 0,
-    pending_pair_request_count: 0,
+    active_device_count: 0,
+    pending_join_request_count: 0,
     port: null,
     state: 'stopped'
   })

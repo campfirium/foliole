@@ -1,14 +1,14 @@
 import http from 'node:http';
 
-import { resolveSyncGroupDisplayHostName } from '../../lib/platform/syncGroupContract.js';
+import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
   createLanWorkspaceSyncRequestHandler,
   ATTACHMENT_RESOURCE_PATH,
   DISCOVERY_ENDPOINT_PATH,
-  PAIR_ENDPOINT_PATH,
-  PAIR_REQUESTS_ENDPOINT_PATH,
+  SYNC_GROUP_JOIN_ACCEPTANCE_PATH,
+  SYNC_GROUP_JOIN_REQUESTS_PATH,
   SYNC_DIAGNOSTICS_PATH,
   SYNC_PACK_PATH,
   WORKSPACE_SNAPSHOT_PATH,
@@ -18,10 +18,9 @@ import {
   startCompanionMdnsAdvertisement,
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
-import { resolveCompanionPairingMetadata } from './companionPairingMetadata.js';
-import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
+import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
 import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -35,34 +34,35 @@ export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
 export interface LanWorkspaceSyncServerStatus {
   advertised_urls: string[];
   last_error: string | null;
-  paired_authorization_count: number;
-  pending_pair_request_count: number;
+  active_device_count: number;
+  pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
 }
 
-let activePairRequestHandler: (() => void) | null = null;
+let activeJoinRequestHandler: (() => void) | null = null;
 let activeServer: http.Server | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
   last_error: null,
-  paired_authorization_count: 0,
-  pending_pair_request_count: 0,
+  active_device_count: 0,
+  pending_join_request_count: 0,
   port: null,
   state: 'stopped'
 };
 
-function resolveLatestPairingStatus() {
+function resolveLatestGroupStatus() {
+  const group = loadDesktopSyncGroup();
   return {
-    paired_authorization_count: resolveCompanionPairingMetadata(loadDesktopSyncGroup()).paired_authorization_count,
-    pending_pair_request_count: countPendingCompanionPairRequests()
+    active_device_count: group?.devices.filter((device) => device.state === 'active').length ?? 0,
+    pending_join_request_count: loadDesktopSyncGroupJoinProvider()?.pending().length ?? 0
   };
 }
 
-export function refreshLanWorkspaceSyncServerPairingStatus() {
+export function refreshLanWorkspaceSyncServerJoinRequestStatus() {
   activeStatus = {
     ...activeStatus,
-    ...resolveLatestPairingStatus()
+    ...resolveLatestGroupStatus()
   };
   return activeStatus;
 }
@@ -76,19 +76,19 @@ function resolveSyncPort() {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_SYNC_PORT;
 }
 
-export function setLanWorkspaceSyncPairRequestHandler(handler: (() => void) | null) {
-  activePairRequestHandler = handler;
+export function setLanWorkspaceSyncJoinRequestHandler(handler: (() => void) | null) {
+  activeJoinRequestHandler = handler;
 }
 
-export function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: string }) {
+export function createWorkspaceSyncHttpServer(args: { appVersion: string; deviceId: string }) {
   const server = http.createServer(
     createLanWorkspaceSyncRequestHandler({
       appVersion: args.appVersion,
       getSyncStatus: () => activeStatus,
-      onPairRequestCreated: activePairRequestHandler,
-      peerId: args.peerId,
-      updatePairingStatus: (pairing) => {
-        activeStatus = { ...activeStatus, ...pairing };
+      onJoinRequestCreated: activeJoinRequestHandler,
+      deviceId: args.deviceId,
+      updateGroupStatus: (groupStatus) => {
+        activeStatus = { ...activeStatus, ...groupStatus };
       }
     })
   );
@@ -109,7 +109,7 @@ function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
   return {
     advertised_urls: collectLanWorkspaceSyncUrls(port),
     last_error: null,
-    ...resolveLatestPairingStatus(),
+    ...resolveLatestGroupStatus(),
     port,
     state: 'running'
   };
@@ -119,8 +119,8 @@ function logRunningStatus() {
   console.info('[companion-sync] lan workspace sync server started', {
     endpointPaths: [
       DISCOVERY_ENDPOINT_PATH,
-      PAIR_REQUESTS_ENDPOINT_PATH,
-      PAIR_ENDPOINT_PATH,
+      SYNC_GROUP_JOIN_REQUESTS_PATH,
+      SYNC_GROUP_JOIN_ACCEPTANCE_PATH,
       SYNC_PACK_PATH,
       SYNC_DIAGNOSTICS_PATH,
       ATTACHMENT_RESOURCE_PATH,
@@ -145,25 +145,24 @@ function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
 }
 
-function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; port: number }) {
+function advertiseActiveSyncGroup(args: { appVersion: string; deviceId: string; port: number }) {
   const group = loadDesktopSyncGroup();
-  if (!group || group.local_member_state !== 'active') return;
+  if (!group) return;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
-  const local = group.members.find((member) => member.host_name === group.local_host_name);
-  if (!local) throw new Error('sync_group_local_authorization_missing');
+  const local = resolveLocalSyncGroupDevice(group);
+  if (!local) throw new Error('sync_group_local_device_missing');
   startCompanionMdnsAdvertisement({
     ...args,
-    peerId: local.authorization_id,
-    groupDisplayName: resolveSyncGroupDisplayHostName(group),
+    deviceId: local.device_identity_key,
+    groupDisplayName: group.display_name,
     groupId: group.group_id,
     groupTag: workgroup.group_tag,
-    onWarning: recordMdnsWarning,
-    timelineId: group.timeline_id
+    onWarning: recordMdnsWarning
   });
 }
 
-export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
+export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return activeStatus;
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
@@ -177,7 +176,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
   const server = createWorkspaceSyncHttpServer(args);
   try {
     await listenOnSyncPort(server, port);
-    advertiseActiveSyncGroup({ appVersion: args.appVersion, peerId: args.peerId, port });
+    advertiseActiveSyncGroup({ appVersion: args.appVersion, deviceId: args.deviceId, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port);
     logRunningStatus();
@@ -187,8 +186,8 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
     activeStatus = {
       advertised_urls: [],
       last_error: error instanceof Error ? error.message : 'Unknown sync server error.',
-      paired_authorization_count: 0,
-      pending_pair_request_count: 0,
+      active_device_count: 0,
+      pending_join_request_count: 0,
       port: null,
       state: 'failed'
     };
@@ -203,8 +202,8 @@ export async function stopLanWorkspaceSyncServer() {
     activeStatus = {
       advertised_urls: [],
       last_error: null,
-      paired_authorization_count: 0,
-      pending_pair_request_count: 0,
+      active_device_count: 0,
+      pending_join_request_count: 0,
       port: null,
       state: 'stopped'
     };
@@ -226,8 +225,8 @@ export async function stopLanWorkspaceSyncServer() {
   activeStatus = {
     advertised_urls: [],
     last_error: null,
-    paired_authorization_count: 0,
-    pending_pair_request_count: 0,
+    active_device_count: 0,
+    pending_join_request_count: 0,
     port: null,
     state: 'stopped'
   };
@@ -235,5 +234,5 @@ export async function stopLanWorkspaceSyncServer() {
 }
 
 export function getLanWorkspaceSyncServerStatus() {
-  return refreshLanWorkspaceSyncServerPairingStatus();
+  return refreshLanWorkspaceSyncServerJoinRequestStatus();
 }

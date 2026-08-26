@@ -1,5 +1,6 @@
 import Capacitor
 import Foundation
+import UIKit
 
 @objc(FolioleCompanionSyncPlugin)
 public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -7,19 +8,23 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "beginSyncRun", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadSyncGroupDeviceIdentity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startDiscoverySession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopDiscoverySession", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadSyncGroupProviderState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startSyncGroupProvider", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopSyncGroupProvider", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "acceptSyncGroupJoinRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "rejectSyncGroupJoinRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resolveSyncGroupDataRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
@@ -29,9 +34,8 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()
     let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
     private let contentBlobSessions = FolioleCompanionContentBlobSessions()
-
-    @objc func loadPairingState(_ call: CAPPluginCall) {
-        resolvePairing(call) { try $0.loadState() }
+    lazy var groupData = FolioleCompanionSyncGroupDataBridge { [weak self] event in
+        DispatchQueue.main.async { self?.notifyListeners("syncGroupDataRequest", data: event) }
     }
 
     @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {
@@ -68,41 +72,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    @objc func clearPairingCredentials(_ call: CAPPluginCall) {
-        resolvePairing(call) { try $0.clear() }
-    }
-
-    @objc func savePairingCredentials(_ call: CAPPluginCall) {
-        resolvePairing(call) { store in
-            let contract = try self.contract()
-            return try store.save(
-                authorizationId: try self.requiredString(call, contract.credentialRequestKeys, "authorizationId"),
-                credentialSecret: try self.requiredString(call, contract.credentialRequestKeys, "credentialSecret"),
-                hostName: try self.requiredString(call, contract.credentialRequestKeys, "hostName"),
-                hostPlatform: try self.requiredString(call, contract.credentialRequestKeys, "hostPlatform"),
-                negotiatedProtocolVersion: try self.requiredInt(call, contract.credentialRequestKeys, "negotiatedProtocolVersion"),
-                pairedAt: try self.requiredString(call, contract.credentialRequestKeys, "pairedAt"),
-                remotePeerId: call.getString(try self.key("remotePeerId", contract.credentialRequestKeys)),
-                remotePeerName: call.getString(try self.key("remotePeerName", contract.credentialRequestKeys)),
-                remotePeerPlatform: call.getString(try self.key("remotePeerPlatform", contract.credentialRequestKeys)),
-                remoteProtocol: try self.requiredObject(call, contract.credentialRequestKeys, "remoteProtocol")
-            )
-        }
-    }
-
-    @objc func signCompanionSyncRequest(_ call: CAPPluginCall) {
-        resolvePairing(call) { store in
-            let contract = try self.contract()
-            return try store.sign(
-                method: try self.requiredString(call, contract.signatureRequestKeys, "method"),
-                path: try self.requiredString(call, contract.signatureRequestKeys, "pathWithQuery"),
-                timestamp: try self.requiredString(call, contract.signatureRequestKeys, "timestamp"),
-                nonce: try self.requiredString(call, contract.signatureRequestKeys, "nonce"),
-                bodyHash: try self.requiredString(call, contract.signatureRequestKeys, "bodyHash")
-            )
-        }
-    }
-
     @objc func desktopHttpRequest(_ call: CAPPluginCall) {
         do {
             let contract = try contract()
@@ -129,6 +98,21 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         } catch { call.reject("Failed to load companion discovery candidates: \(error.localizedDescription)") }
     }
 
+    @objc func loadSyncGroupDeviceIdentity(_ call: CAPPluginCall) {
+        do {
+            guard let databasePath = call.getString("database_path"), !databasePath.isEmpty else {
+                throw invalid("database_path_required")
+            }
+            call.resolve([
+                "canonical_library_path": try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(databasePath),
+                "device_anchor": try FolioleCompanionDeviceAnchorStore().loadOrCreate(),
+                "device_name": UIDevice.current.name,
+                "path_flavor": "posix",
+                "platform": "ios-capacitor"
+            ])
+        } catch { call.reject("Failed to load Device identity: \(error.localizedDescription)") }
+    }
+
     @objc func startDiscoverySession(_ call: CAPPluginCall) {
         do {
             let snapshot = discoveries.startSession(contract: try contract()) { [weak self] event in
@@ -142,18 +126,18 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(discoveries.stopSession())
     }
 
-    private func resolvePairing(
-        _ call: CAPPluginCall,
-        operation: (FolioleCompanionPairingStore) throws -> [String: Any]
-    ) {
-        do {
-            let contract = try contract()
-            call.resolve(try operation(FolioleCompanionPairingStore(contract: contract)))
-        } catch { call.reject("Companion pairing operation failed: \(error.localizedDescription)") }
+    @objc func resolveSyncGroupDataRequest(_ call: CAPPluginCall) {
+        do { try groupData.resolve(call.jsObjectRepresentation); call.resolve() }
+        catch { call.reject("Failed to resolve Sync Group data request: \(error.localizedDescription)") }
     }
 
-    private func contract() throws -> FolioleCompanionPairingContract {
-        try FolioleCompanionContractStore().pairingContract()
+    func required(_ value: [String: Any], _ key: String) throws -> String {
+        guard let result = value[key] as? String, !result.isEmpty else { throw invalid("\(key)_required") }
+        return result
+    }
+
+    func contract() throws -> FolioleCompanionNetworkContract {
+        try FolioleCompanionContractStore().networkContract()
     }
 
     private func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
@@ -161,7 +145,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
 
-    private func requiredString(_ call: CAPPluginCall, _ keys: [String: String], _ name: String) throws -> String {
+    func requiredString(_ call: CAPPluginCall, _ keys: [String: String], _ name: String) throws -> String {
         let value = call.getString(try key(name, keys))?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let value, !value.isEmpty else { throw invalid("\(name) is required") }
         return value
@@ -189,7 +173,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         return value
     }
 
-    private func invalid(_ message: String) -> NSError {
+    func invalid(_ message: String) -> NSError {
         NSError(domain: "FolioleCompanionSyncPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 }

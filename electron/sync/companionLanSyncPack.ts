@@ -26,7 +26,7 @@ function parseStateSeq(value: string | null) {
 
 export async function buildCompanionSyncPackResource(
   parsedRequestUrl: URL,
-  authenticatedAuthorizationId: string
+  authenticatedDeviceId: string
 ): Promise<CompanionSyncPackResource> {
   const fromStateSeq = parseStateSeq(parsedRequestUrl.searchParams.get('after_state_seq'));
   if (fromStateSeq == null) {
@@ -37,11 +37,12 @@ export async function buildCompanionSyncPackResource(
   const outputPath = path.join(tempRoot, `${packId}.syncpack`);
   try {
     const group = loadDesktopSyncGroup();
-    const local = group?.members.find((member) => member.host_name === group.local_host_name);
-    if (!local) throw new Error('sync_group_local_authorization_missing');
+    const local = group?.devices.find((device) =>
+      device.device_identity_key === group.local_device_identity_key && device.state === 'active');
+    if (!local) throw new Error('sync_group_local_device_missing');
     await buildDesktopSyncPack({
-      fromPeerId: local.authorization_id, fromStateSeq, outputPath, packId,
-      toPeerId: authenticatedAuthorizationId
+      fromPeerId: local.device_identity_key, fromStateSeq, outputPath, packId,
+      toPeerId: authenticatedDeviceId
     });
     return {
       body: await fs.readFile(outputPath),

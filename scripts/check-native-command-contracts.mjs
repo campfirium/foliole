@@ -31,7 +31,6 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
   'electron/ipc/assistantLocalHistoryCommands.ts',
   'electron/ipc/assistantStorageCommands.ts',
-  'electron/ipc/companionPairingCommands.ts',
   'electron/ipc/displayScaleCommands.ts',
   'electron/ipc/importCommands.ts',
   'electron/ipc/initialLibrarySetupCommands.ts',
@@ -47,6 +46,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageReadCommands.ts',
   'electron/ipc/storageSettingsCommands.ts',
   'electron/ipc/storageSyncCommands.ts',
+  'electron/ipc/syncGroupCommands.ts',
   'electron/ipc/updateCommands.ts',
   'electron/ipc/windowControlCommands.ts',
   'electron/ipc/windowCommands.ts'

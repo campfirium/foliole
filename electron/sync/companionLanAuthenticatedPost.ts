@@ -11,7 +11,6 @@ import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
-import { acceptSyncGroupDeparture, SYNC_GROUP_DEPARTURE_PATH } from './syncGroupDeparture.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
 type WriteJson = (
@@ -26,7 +25,6 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
-  if (parsedRequestUrl.pathname === SYNC_GROUP_DEPARTURE_PATH) return 'sync-group-departure';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
 }
@@ -64,18 +62,10 @@ async function handleAuthenticatedRoute(args: {
     else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
   } else if (route === 'sync-push') {
     try {
-      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.host_name), 'POST, OPTIONS');
+      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.device_name), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
-      }, 'POST, OPTIONS');
-    }
-  } else if (route === 'sync-group-departure') {
-    try {
-      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.authorization_id), 'POST, OPTIONS');
-    } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'sync_group_departure_payload_invalid'
       }, 'POST, OPTIONS');
     }
   }

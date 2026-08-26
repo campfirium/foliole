@@ -7,16 +7,14 @@ export type SyncPackTableName =
   | 'node_sync_version_parents'
   | 'nodes'
   | 'review_log'
-  | 'sync_group_member_departures'
-  | 'sync_group_members'
+  | 'sync_group_devices'
   | 'sync_groups'
   | 'sync_object_state'
   | 'sync_objects';
 
 export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'sync_groups',
-  'sync_group_members',
-  'sync_group_member_departures',
+  'sync_group_devices',
   'sync_object_state',
   'sync_objects',
   'nodes',

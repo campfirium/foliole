@@ -36,10 +36,10 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
 }));
 
 const activeGroupTarget: CompanionWorkspaceSyncTarget = {
-  authorizationId: 'authorization-maci',
+  deviceId: 'device-maci',
   endpointUrl: 'http://192.168.1.20:38641',
   groupId: 'group-1',
-  hostName: 'Maci'
+  deviceName: 'Maci'
 };
 
 function snapshot(nodeId = 'topic-1'): WorkspaceSnapshot {

@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
-import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
-import {
-  clearCompanionPairingCredentials,
-  loadCompanionWorkspaceSyncState
-} from '../shared/platform/companionWorkspaceSync';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
@@ -21,8 +19,8 @@ import {
   type CompanionWorkspaceSyncStatus,
   syncReadableArticle
 } from './companionWorkspaceSyncFlow';
+import { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
-import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 import { useCompanionWorkspaceParticipationActions } from './useCompanionWorkspaceParticipationActions';
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
@@ -87,14 +85,12 @@ function useWorkspaceSyncBootstrap(
   }, [setIsStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus]);
 }
 
-async function disconnectCompanionWorkspacePairing(args: {
-  refreshPairingState: () => Promise<unknown>;
+async function leaveCompanionWorkspaceSyncGroup(args: {
   saveEndpoint: (endpointUrl: string) => Promise<unknown>;
 }) {
-  await clearCompanionPairingCredentials();
-  const nextPairingState = await args.refreshPairingState();
+  await leaveCompanionSyncGroupDevice();
+  publishCompanionSyncMutationRevision();
   await args.saveEndpoint('');
-  return nextPairingState;
 }
 
 function useMergedCompanionSyncProgress() {
@@ -121,10 +117,10 @@ function useCompanionSyncViewState() {
 function useCompanionAutoSync(
   viewState: ReturnType<typeof useCompanionSyncViewState>,
   setSyncProgress: ReturnType<typeof useMergedCompanionSyncProgress>[1],
-  pairingReady: boolean,
+  groupReady: boolean,
   participating: boolean
 ) {
-  const enabled = shouldEnableCompanionAutoSync({ pairingReady, participating, state: viewState.state });
+  const enabled = shouldEnableCompanionAutoSync({ groupReady, participating, state: viewState.state });
   useForegroundAutoSync(
     viewState.setError,
     viewState.setReadableArticle,
@@ -137,45 +133,51 @@ function useCompanionAutoSync(
   );
 }
 
+function createCompanionSnapshotActions(
+  viewState: ReturnType<typeof useCompanionSyncViewState>,
+  setSyncProgress: ReturnType<typeof useMergedCompanionSyncProgress>[1]
+) {
+  return createWorkspaceSnapshotActions({
+    setError: viewState.setError,
+    setReadableArticle: viewState.setReadableArticle,
+    setSyncConflictCount: viewState.setSyncConflictCount,
+    setState: viewState.setState,
+    setManualSyncAction: viewState.setManualSyncAction,
+    setSyncProgress,
+    setStatus: viewState.setStatus,
+    state: viewState.state
+  });
+}
+
 export function shouldEnableCompanionAutoSync(args: {
-  pairingReady: boolean;
+  groupReady: boolean;
   participating: boolean;
   state: NativeCompanionWorkspaceSyncState;
 }) {
-  return args.pairingReady && args.participating;
+  return args.groupReady && args.participating;
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const viewState = useCompanionSyncViewState();
   const { error, isWorkspaceSyncStateReady, readableArticle, setError, setIsWorkspaceSyncStateReady,
-    manualSyncAction, setManualSyncAction, setReadableArticle, setState, setStatus,
+    manualSyncAction, setReadableArticle, setState, setStatus,
     setSyncConflictCount, state, status, syncConflictCount } = viewState;
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
-  const snapshotActions = createWorkspaceSnapshotActions({
-    setError,
-    setReadableArticle,
-    setSyncConflictCount,
-    setState,
-    setManualSyncAction,
-    setSyncProgress: setMergedSyncProgress,
-    setStatus,
-    state
-  });
-  const pairing = useCompanionWorkspacePairing({
+  const snapshotActions = createCompanionSnapshotActions(viewState, setMergedSyncProgress);
+  const join = useCompanionSyncGroupJoin({
     bootstrapState,
     onError: setError,
     onSaveEndpoint: snapshotActions.saveEndpoint
   });
-  const participationActions = useCompanionWorkspaceParticipationActions({ pairing, setError, snapshotActions });
-  const disconnectPairing = useCallback(() => disconnectCompanionWorkspacePairing({
-    refreshPairingState: pairing.refreshPairingState,
+  const participationActions = useCompanionWorkspaceParticipationActions({ join, setError, snapshotActions });
+  const leaveSyncGroup = useCallback(() => leaveCompanionWorkspaceSyncGroup({
     saveEndpoint: snapshotActions.saveEndpoint
-  }), [pairing.refreshPairingState, snapshotActions.saveEndpoint]);
+  }), [snapshotActions.saveEndpoint]);
   useWorkspaceSyncBootstrap(setIsWorkspaceSyncStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus);
   useCompanionAutoSync(
     viewState,
     setMergedSyncProgress,
-    isCompanionPairingSyncUsable(pairing.pairingState),
+    join.joined,
     participationActions.participation.participating
   );
 
@@ -191,16 +193,23 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     syncConflictCount,
     syncProgress,
     status,
-    pullFromDesktop: participationActions.pullFromDesktop,
+    pullFromDesktop: participationActions.pullFromDevice,
     refreshFromDevice: snapshotActions.refreshFromDevice,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
     replaceSnapshot: snapshotActions.replaceSnapshot,
     saveEndpoint: snapshotActions.saveEndpoint,
     saveSyncOnboardingStatus: snapshotActions.saveSyncOnboardingStatus,
-    ...pairing,
-    checkDesktop: participationActions.checkDesktop,
-    completePairing: participationActions.completePairing,
-    disconnectPairing,
-    requestPairing: participationActions.requestPairing
+    cancelJoin: join.cancel,
+    completeSyncGroupJoin: join.complete,
+    syncGroupDiscoveries: join.discoveries,
+    discoverSyncGroups: join.discover,
+    syncGroupJoined: join.joined,
+    pendingJoinRequest: join.pendingRequest,
+    requestSyncGroupJoin: join.request,
+    joinStatus: join.status,
+    checkDesktop: participationActions.discover,
+    completeJoin: participationActions.completeJoin,
+    leaveSyncGroup,
+    requestJoin: participationActions.requestJoin
   };
 }

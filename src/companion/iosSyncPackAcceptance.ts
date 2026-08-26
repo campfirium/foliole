@@ -1,13 +1,10 @@
+import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
+import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import {
-  clearCompanionPairingCredentials,
-  createSignedRequestHeaders,
-  loadCompanionPairingState
-} from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { loadIosAcceptanceSyncPeer, pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import {
   rerunIosNodeVersionRoundtripAcceptance,
@@ -28,10 +25,10 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
   'wrong-target': 'sync_pack_target_mismatch'
 };
 
-async function pairForSyncPack(endpoint: string, hostName: string) {
-  await clearCompanionPairingCredentials();
+async function prepareSyncGroup(endpoint: string, databasePath: string | null) {
+  await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
-  await pairIosAcceptanceCompanion(endpoint, hostName);
+  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
@@ -85,10 +82,7 @@ export async function runIosSyncPackAcceptance() {
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS Sync Pack acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    const pairing = await loadCompanionPairingState();
-    if (!pairing.is_paired) {
-      await pairForSyncPack(endpoint, bootstrap.host_name ?? 'Acceptance iPhone');
-    }
+    await prepareSyncGroup(endpoint, bootstrap.database_path);
     const phase = loadPhase();
     const result = await runPhase(endpoint, phase);
     advancePhase(phase);

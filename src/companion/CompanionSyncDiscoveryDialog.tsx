@@ -4,7 +4,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
-import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
+import type { CompanionSyncGroupDiscovery } from './companionSyncGroupJoinModel';
 
 function SearchingDiscoveryContent(props: {
   onRefresh(): void;
@@ -35,13 +35,13 @@ function SearchingDiscoveryContent(props: {
 }
 
 function FoundDevicesDiscoveryContent(props: {
-  desktops: CompanionDesktopDiscovery[];
+  devices: CompanionSyncGroupDiscovery[];
   disabled: boolean;
   isConnecting: boolean;
-  onPair(endpointUrl: string): void;
+  onJoin(endpointUrl: string): void;
 }) {
   const t = useTranslation();
-  const deviceCount = props.desktops.length;
+  const deviceCount = props.devices.length;
   const unit = t(deviceCount === 1 ? 'companion.sync.discovery.device' : 'companion.sync.discovery.devices');
   return (
     <>
@@ -53,10 +53,10 @@ function FoundDevicesDiscoveryContent(props: {
       </p>
       <div className="mt-5">
         <CompanionSyncDeviceList
-          desktops={props.desktops}
+          devices={props.devices}
           disabled={props.disabled}
           isConnecting={props.isConnecting}
-          onPair={props.onPair}
+          onJoin={props.onJoin}
           showHeading={false}
         />
       </div>
@@ -65,25 +65,25 @@ function FoundDevicesDiscoveryContent(props: {
 }
 
 export function CompanionSyncDiscoveryDialog(props: {
-  desktops: CompanionDesktopDiscovery[];
+  devices: CompanionSyncGroupDiscovery[];
   disabled: boolean;
   isConnecting: boolean;
   isSearching: boolean;
-  onPair(endpointUrl: string): void;
+  onJoin(endpointUrl: string): void;
   onRefresh(): void;
 }) {
-  const isOpen = props.isSearching || props.desktops.length > 0;
+  const isOpen = props.isSearching || props.devices.length > 0;
   if (!isOpen) return null;
   return (
     <section className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-      {props.isSearching && props.desktops.length === 0 ? (
+      {props.isSearching && props.devices.length === 0 ? (
         <SearchingDiscoveryContent onRefresh={props.onRefresh} />
       ) : (
         <FoundDevicesDiscoveryContent
-          desktops={props.desktops}
+          devices={props.devices}
           disabled={props.disabled}
           isConnecting={props.isConnecting}
-          onPair={props.onPair}
+          onJoin={props.onJoin}
         />
       )}
     </section>

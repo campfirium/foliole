@@ -46,7 +46,7 @@ enum FolioleCompanionDesktopHttpClient {
         method: String,
         headers: [String: String],
         body: String?,
-        contract: FolioleCompanionPairingContract
+        contract: FolioleCompanionNetworkContract
     ) async throws -> [String: Any] {
         guard let endpoint = URL(string: url), ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
             throw invalid("Desktop URL must use HTTP or HTTPS.")

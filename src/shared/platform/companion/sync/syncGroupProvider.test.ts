@@ -37,12 +37,13 @@ const bootstrap = {
 };
 
 const group = {
-  created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'mac-a', display_name: 'Studio',
-  group_id: 'group-1', local_host_name: 'A5 2', local_member_state: 'active' as const,
-  members: [{
-    approved_by_host_name: 'mac-a', authorization_id: 'pair-1', host_name: 'A5 2',
-    host_platform: 'android-capacitor', joined_at: '2026-08-08T00:00:00.000Z', state: 'active' as const
-  }], timeline_id: 'timeline-1'
+  created_at: '2026-08-08T00:00:00.000Z', display_name: 'Studio', group_id: 'group-1',
+  local_device_identity_key: 'device-a5', devices: [{
+    canonical_library_path: '/data/foliole.db', contract_version: 1 as const,
+    device_anchor: 'anchor-a5', device_identity_key: 'device-a5', device_name: 'A5 2',
+    joined_at: '2026-08-08T00:00:00.000Z', last_seen_at: null, left_at: null,
+    platform: 'android-capacitor', state: 'active' as const, updated_at: '2026-08-08T00:00:00.000Z'
+  }]
 };
 
 beforeEach(() => {
@@ -62,7 +63,7 @@ beforeEach(() => {
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, group, '4:2026-08-12T00:00:00.000Z');
   expect(runtime.start).toHaveBeenCalledWith(expect.objectContaining({
-    app_version: '0.7.5', host_name: 'A5 2'
+    app_version: '0.7.5', device_id: 'device-a5', device_name: 'A5 2'
   }));
   expect(runtime.start).toHaveBeenCalledWith(
     expect.not.objectContaining({ workgroup_key: expect.anything() })

@@ -5,15 +5,15 @@ import {
   IOS_SYNC_PACK_RESTORED_AT,
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract';
+import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import { createSignedRequestHeaders } from '../shared/platform/companionWorkspacePairing';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
 import { restoreCompanionTrashNode } from './companionTrashActions';
-import { loadIosAcceptanceSyncPeer } from './iosAcceptancePairing';
+import { loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
 
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
 const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';

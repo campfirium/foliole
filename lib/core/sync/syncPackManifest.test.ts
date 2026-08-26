@@ -14,7 +14,7 @@ import {
 } from './syncPackManifest.js';
 
 const EXPECTED_SYNC_PACK_TABLES = [
-  'sync_groups', 'sync_group_members', 'sync_group_member_departures', 'sync_object_state',
+  'sync_groups', 'sync_group_devices', 'sync_object_state',
   'sync_objects', 'nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_order',
   'node_attachments', 'external_documents', 'content_blobs', 'review_log'
 ];
@@ -40,8 +40,7 @@ it('builds the pack manifest from the shared table map', () => {
       node_sync_version_parents: [],
       nodes: [{}, {}],
       review_log: [{}],
-      sync_group_member_departures: [],
-      sync_group_members: [{}, {}, {}],
+      sync_group_devices: [{}, {}, {}],
       sync_groups: [{}],
       sync_object_state: [{}, {}, {}],
       sync_objects: [{}]
@@ -52,8 +51,7 @@ it('builds the pack manifest from the shared table map', () => {
     pack_id: 'pack-1',
     tables: [
       { name: 'sync_groups', row_count: 1 },
-      { name: 'sync_group_members', row_count: 3 },
-      { name: 'sync_group_member_departures', row_count: 0 },
+      { name: 'sync_group_devices', row_count: 3 },
       { name: 'sync_object_state', row_count: 3 },
       { name: 'sync_objects', row_count: 1 },
       { name: 'nodes', row_count: 2 },

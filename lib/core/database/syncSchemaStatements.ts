@@ -45,11 +45,11 @@ export const SYNC_SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_sync_change_log_result_version
     ON sync_change_log (result_version_id)`,
   `CREATE TABLE IF NOT EXISTS sync_peer_cursors (
-    authorization_id TEXT NOT NULL,
+    peer_id TEXT NOT NULL,
     stream_name TEXT NOT NULL,
     cursor_value TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (authorization_id, stream_name)
+    PRIMARY KEY (peer_id, stream_name)
   )`,
   ...SYNC_DELIVERY_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS attachment_blobs (

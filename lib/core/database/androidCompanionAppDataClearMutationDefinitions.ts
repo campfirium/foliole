@@ -1,6 +1,7 @@
 export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'sync_group_local_state', statementName: 'appDataClearSyncGroupLocalState' },
-  { table: 'sync_group_members', statementName: 'appDataClearSyncGroupMembers' },
+  { table: 'sync_group_devices', statementName: 'appDataClearSyncGroupDevices' },
+  { table: 'sync_group_nonce_ledger', statementName: 'appDataClearSyncGroupNonceLedger' },
   { table: 'sync_groups', statementName: 'appDataClearSyncGroups' },
   { table: 'sync_delivery_receipts', statementName: 'appDataClearSyncDeliveryReceipts' },
   { table: 'sync_peer_cursors', statementName: 'appDataClearSyncPeerCursors' },

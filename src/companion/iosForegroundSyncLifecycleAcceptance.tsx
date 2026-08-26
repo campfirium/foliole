@@ -4,12 +4,9 @@ import ReactDOM from 'react-dom/client';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import {
-  loadCompanionPairingState
-} from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -19,7 +16,7 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
 
   useEffect(() => {
     if (initialSyncStarted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
-      workspaceSync.pairingState.sync_usable !== true) return;
+      !workspaceSync.syncGroupJoined) return;
     initialSyncStarted.current = true;
     const endpoint = workspaceSync.state.endpoint_url;
     if (workspaceSync.state.last_synced_at !== null) {
@@ -36,7 +33,7 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
         status: 'failed'
       });
     });
-  }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.pairingState,
+  }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.syncGroupJoined,
     workspaceSync.pullFromDesktop, workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at,
     workspaceSync.status]);
 
@@ -46,8 +43,7 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
 function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
   postResult({
     error: null,
-    pairing_is_paired: workspaceSync.pairingState.is_paired,
-    pairing_sync_usable: workspaceSync.pairingState.sync_usable,
+    sync_group_joined: workspaceSync.syncGroupJoined,
     phase: 'ready',
     scenario: 'foreground-sync-lifecycle',
     sync_error: workspaceSync.error,
@@ -56,12 +52,8 @@ function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) 
   });
 }
 
-async function prepareAcceptancePairing(bootstrap: NativeCompanionBootstrapState, endpoint: string) {
-  const pairing = await loadCompanionPairingState();
-  if (!pairing.is_paired) {
-    const hostName = bootstrap.host_name ?? 'Acceptance iPhone';
-    await pairIosAcceptanceCompanion(endpoint, hostName);
-  }
+async function prepareAcceptanceGroup(bootstrap: NativeCompanionBootstrapState, endpoint: string) {
+  await ensureIosAcceptanceSyncGroup(endpoint, bootstrap.database_path);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
@@ -94,7 +86,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(rootElement: HTMLE
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS foreground sync lifecycle acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    await prepareAcceptancePairing(bootstrap, endpoint);
+    await prepareAcceptanceGroup(bootstrap, endpoint);
     await installLifecycleEvidence();
     ReactDOM.createRoot(rootElement).render(<ForegroundSyncLifecycleShell bootstrap={bootstrap} />);
   } catch (error) {

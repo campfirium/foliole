@@ -18,8 +18,8 @@ vi.mock('../../shared/platform/import/readwiseHostAssignmentRuntimeRepository', 
   loadReadwiseHostAssignmentFromRuntime: load
 }));
 
-vi.mock('../../shared/platform/external/useActiveSyncGroupMembership', () => ({
-  useActiveSyncGroupMembership: activeGroup
+vi.mock('../../shared/platform/external/useActiveSyncGroup', () => ({
+  useActiveSyncGroup: activeGroup
 }));
 
 beforeEach(() => {

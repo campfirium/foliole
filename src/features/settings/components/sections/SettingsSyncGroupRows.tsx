@@ -1,11 +1,11 @@
 import type {
-  DesktopCompanionPairRequestPayload,
+  DesktopSyncGroupJoinRequestSummaryPayload,
   DesktopSyncGroupJoinCandidatePayload,
   DesktopSyncGroupJoinRequestPayload
 } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import {
-  resolveSyncGroupDisplayHostName,
-  type SyncGroupMemberPayload,
+  resolveSyncGroupDisplayDeviceName,
+  type SyncGroupDevicePayload,
   type SyncGroupPayload
 } from '../../../../../lib/platform/syncGroupContract';
 import type { SyncGroupDiscoverySnapshot } from '../../../../../lib/platform/syncGroupDiscoveryContract';
@@ -39,25 +39,22 @@ function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'
 
 function DeviceRow(props: {
   disabled: boolean;
+  device: SyncGroupDevicePayload;
   group: SyncGroupPayload;
-  member: SyncGroupMemberPayload;
-  onRemove(hostName: string): void;
   onTogglePause(): void;
   syncPaused: boolean;
 }) {
   const t = useTranslation();
-  const local = props.member.host_name === props.group.local_host_name;
+  const local = props.device.device_identity_key === props.group.local_device_identity_key;
   return (
     <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-ui-md font-normal text-foreground">{props.member.host_name}</span>
-        <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.member.host_platform)}</span>
+        <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
+        <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.device.platform)}</span>
       </div>
       <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-        disabled={props.disabled} onClick={local ? props.onTogglePause : () => props.onRemove(props.member.host_name)} type="button">
-        {local
-          ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause')
-          : t('settings.companionSync.group.remove')}
+        disabled={props.disabled || !local} onClick={props.onTogglePause} type="button">
+        {local ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause') : t('companion.sync.member.active')}
       </button>
     </div>
   );
@@ -105,15 +102,15 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
         </SettingsButton>
       </div>
       <div className="border-b border-settings-divider/65">
-        {props.currentHost ? (
+        {props.currentDevice ? (
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="border-t border-settings-divider/65" role="list">
             <div className="flex min-h-14 items-baseline gap-2 py-2.5" role="listitem">
               <span className="truncate text-ui-md font-normal text-foreground">
-                {props.currentHost.host_name}
+                {props.currentDevice.device_name}
               </span>
               <span className="shrink-0 text-ui-sm text-muted-foreground">
-                {platformFor(props.currentHost.host_platform)}
+                {platformFor(props.currentDevice.platform)}
               </span>
             </div>
           </div>
@@ -153,20 +150,19 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
 export function SettingsSyncGroupRows(props: {
   candidates: DesktopSyncGroupJoinCandidatePayload[];
   discovery?: SyncGroupDiscoverySnapshot;
-  currentHost: { host_name: string; host_platform: string } | null;
+  currentDevice: { device_name: string; platform: string } | null;
   group: SyncGroupPayload | null;
   isBusy: boolean;
   isCreating: boolean;
   joinRequest: DesktopSyncGroupJoinRequestPayload | null;
-  onApprove(id: string): void;
+  onAccept(id: string): void;
   onCreate(): void;
   onDiscover(): void;
   onLeave(): void;
   onReject(id: string): void;
-  onRemove(hostName: string): void;
   onRequestJoin(endpointUrl: string): void;
   onTogglePause(): void;
-  pendingRequests: DesktopCompanionPairRequestPayload[];
+  joinRequests: DesktopSyncGroupJoinRequestSummaryPayload[];
   syncPaused: boolean;
 }) {
   const t = useTranslation();
@@ -181,7 +177,7 @@ export function SettingsSyncGroupRows(props: {
         <section aria-labelledby={groupHeadingId} className="mt-5 border-b border-settings-divider/65 pb-5">
           <div className="flex min-h-12 items-center justify-between gap-7 pb-2">
             <h5 className="truncate text-ui-lg font-semibold text-foreground" id={groupHeadingId}>
-              {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayHostName(props.group) })}
+              {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
             </h5>
             <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
               disabled={props.isBusy} onClick={props.onLeave} type="button">
@@ -190,18 +186,18 @@ export function SettingsSyncGroupRows(props: {
           </div>
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
-            {props.group.members.filter((member) => member.state === 'active').map((member) => (
-              <DeviceRow disabled={props.isBusy} group={props.group!} key={member.host_name} member={member}
-                onRemove={props.onRemove} onTogglePause={props.onTogglePause} syncPaused={props.syncPaused} />
+            {props.group.devices.filter((device) => device.state === 'active').map((device) => (
+              <DeviceRow device={device} disabled={props.isBusy} group={props.group!} key={device.device_identity_key}
+                onTogglePause={props.onTogglePause} syncPaused={props.syncPaused} />
             ))}
           </div>
         </section>
       </div>
-      {props.pendingRequests.length > 0 ? (
+      {props.joinRequests.length > 0 ? (
         <SettingsRow description={t('settings.companionSync.group.join.description')} title={t('settings.companionSync.group.join.title')}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <SettingsSyncGroupJoinRequests disabled={props.isBusy} onApprove={props.onApprove}
-              onReject={props.onReject} requests={props.pendingRequests} />
+            <SettingsSyncGroupJoinRequests disabled={props.isBusy} onAccept={props.onAccept}
+              onReject={props.onReject} requests={props.joinRequests} />
           </SettingsControlSlot>
         </SettingsRow>
       ) : null}

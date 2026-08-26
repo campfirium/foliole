@@ -123,42 +123,6 @@ public class FolioleCompanionWebViewAutomationTest {
         }
     }
 
-    @Test
-    public void recoversPairingAndInitialSync() throws Exception {
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "test-started");
-        boolean forceRePair = "re-pair".equals(
-            InstrumentationRegistry.getArguments().getString("foliolePairSyncMode", "")
-        );
-        String expectedEndpointUrl = InstrumentationRegistry.getArguments().getString(
-            "foliolePairSyncEndpoint", ""
-        );
-        boolean credentialsOnly = "credentials-signable".equals(
-            InstrumentationRegistry.getArguments().getString("foliolePairSyncEvidenceGoal", "")
-        );
-        long scenarioTimeoutMs = boundedPairSyncTimeout(
-            InstrumentationRegistry.getArguments().getString("foliolePairSyncTimeoutMs", "600000")
-        );
-        Activity activity = FolioleCompanionActivityLauncher.start(instrumentation, 30_000);
-        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "activity-started");
-        try {
-            waitForWindowFocus(activity, 30_000);
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "window-focused");
-            WebView webView = activity.findViewById(R.id.webview);
-            assertNotNull(webView);
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "webview-ready");
-            JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
-            JSONObject receipt = FolioleCompanionPairSyncRecoveryScenario.run(
-                instrumentation, webView, forceRePair, credentialsOnly,
-                expectedEndpointUrl, scenarioTimeoutMs
-            );
-            sendEvidence(instrumentation, before,
-                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
-        } finally {
-            activity.runOnUiThread(activity::finish);
-        }
-    }
-
     private static Activity startMainActivity(Instrumentation instrumentation) {
         Context context = instrumentation.getTargetContext();
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -197,14 +161,6 @@ public class FolioleCompanionWebViewAutomationTest {
     private static long boundedTimeout(String raw) {
         long value = Long.parseLong(raw);
         if (value < 1_000 || value > 30_000) throw new IllegalArgumentException("timeoutMs is outside 1000..30000");
-        return value;
-    }
-
-    private static long boundedPairSyncTimeout(String raw) {
-        long value = Long.parseLong(raw);
-        if (value < 30_000 || value > 600_000) {
-            throw new IllegalArgumentException("foliolePairSyncTimeoutMs is outside 30000..600000");
-        }
         return value;
     }
 

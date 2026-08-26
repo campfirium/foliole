@@ -14,7 +14,7 @@ export async function clearConfirmedSyncPushAcksWithDbPort(
   const sourcePeerId = options.sourcePeerId;
   await port.run(
     `UPDATE sync_delivery_receipts SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP ` +
-    `WHERE authorization_id = ? AND stream_name = 'state' AND status = 'accepted' AND EXISTS (` +
+    `WHERE peer_id = ? AND stream_name = 'state' AND status = 'accepted' AND EXISTS (` +
     `SELECT 1 FROM ${alias}.sync_object_state incoming ` +
     `WHERE incoming.object_type = sync_delivery_receipts.object_type ` +
     `AND incoming.object_id = sync_delivery_receipts.object_id ` +

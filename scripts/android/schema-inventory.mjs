@@ -154,8 +154,12 @@ function classifyDifference(difference) {
 function buildInventory(statements) {
   const database = new Database(':memory:');
   try {
-    for (const statement of statements) {
-      database.exec(statement);
+    for (const [index, statement] of statements.entries()) {
+      try {
+        database.exec(statement);
+      } catch (error) {
+        throw new Error(`schema_inventory_statement_${index}_invalid: ${statement}`, { cause: error });
+      }
     }
     const tables = {};
     const rows = database

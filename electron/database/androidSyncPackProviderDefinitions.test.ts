@@ -108,7 +108,7 @@ it('loads each payload surface in bulk instead of querying once per state row', 
   }
 });
 
-it('selects an independent delta for each member cursor', () => {
+it('selects an independent delta for each Device cursor', () => {
   const baseline = buildPack(0);
   const laterPeer = buildPack(2);
   expect(baseline.prepare('SELECT COUNT(*) AS value FROM sync_object_state').get()).toEqual({ value: 3 });
@@ -163,25 +163,29 @@ it('projects an alternative under a deleted node as a tombstone', () => {
   pack.close();
 });
 
-it('keeps local provisioning rows out of shared group facts', () => {
+it('shares active and left Devices without exposing the group key', () => {
   const now = '2026-08-08T00:00:00.000Z';
   source.exec(`
-    INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-    VALUES ('group-1', 'Daily Group', 'timeline-1', 'android-b', '${now}', '${now}');
+    INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+    VALUES ('group-1', 'Daily Group', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', '${now}', '${now}');
     INSERT INTO sync_group_local_state
-      (singleton_id, group_id, local_host_name, member_state, updated_at)
-      VALUES (1, 'group-1', 'Android B', 'active', '${now}');
-    INSERT INTO sync_group_members
-      (group_id, host_name, host_platform, state, approved_by_host_name,
-       authorization_id, joined_at, updated_at)
+      (singleton_id, group_id, local_device_identity_key, state, updated_at)
+      VALUES (1, 'group-1', 'device-b', 'active', '${now}');
+    INSERT INTO sync_group_devices
+      (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+       platform, state, joined_at, left_at, last_seen_at, updated_at)
       VALUES
-      ('group-1', 'Android B', 'android', 'active', 'Android B',
-       'authorization-b', '${now}', '${now}'),
-      ('group-1', 'Desktop C', 'windows', 'provisioning', 'Android B',
-       'authorization-c', '${now}', '${now}');
+      ('group-1', 'device-b', 'anchor-b', '/data/b.db', 'Android B', 'android',
+       'active', '${now}', NULL, '${now}', '${now}'),
+      ('group-1', 'device-c', 'anchor-c', 'C:/data/c.db', 'Desktop C', 'windows',
+       'left', '${now}', '${now}', '${now}', '${now}');
   `);
   const pack = buildPack(0);
-  expect(pack.prepare('SELECT host_name FROM sync_group_members').all()).toEqual([{ host_name: 'Android B' }]);
+  expect(pack.prepare('PRAGMA table_info(sync_groups)').all()).not.toContainEqual(
+    expect.objectContaining({ name: 'workgroup_key' })
+  );
+  expect(pack.prepare('SELECT device_identity_key, state FROM sync_group_devices ORDER BY device_identity_key').all())
+    .toEqual([{ device_identity_key: 'device-b', state: 'active' }, { device_identity_key: 'device-c', state: 'left' }]);
   pack.close();
 });
 

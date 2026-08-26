@@ -2,9 +2,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  apply: vi.fn(), clearPairing: vi.fn(), loadBootstrap: vi.fn(), loadExternal: vi.fn(), loadPairing: vi.fn(),
-  loadPdf: vi.fn(), loadWorkspace: vi.fn(), pair: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
-  pullContent: vi.fn(), requestPairing: vi.fn(), resolveArticle: vi.fn(), resolveResource: vi.fn(),
+  apply: vi.fn(), ensureGroup: vi.fn(), loadBootstrap: vi.fn(), loadExternal: vi.fn(), loadGroup: vi.fn(),
+  loadPdf: vi.fn(), loadPeer: vi.fn(), loadWorkspace: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
+  pullContent: vi.fn(), resolveArticle: vi.fn(), resolveResource: vi.fn(),
   saveEndpoint: vi.fn(), search: vi.fn(), sign: vi.fn()
 }));
 
@@ -14,15 +14,10 @@ vi.mock('../shared/platform/companionDesktopSyncContentBlobs', () => ({ pullMiss
 vi.mock('../shared/platform/companionExternalDocuments', () => ({ loadCompanionExternalDocument: mocks.loadExternal }));
 vi.mock('../shared/platform/companionFullTextSearch', () => ({ searchCompanionFullText: mocks.search }));
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
+vi.mock('../shared/platform/companion/network/signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: mocks.loadGroup }));
 vi.mock('../shared/platform/companionSyncObjects', () => ({ loadCompanionPdfPageText: mocks.loadPdf }));
 vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
-vi.mock('../shared/platform/companionWorkspacePairing', () => ({
-  clearCompanionPairingCredentials: mocks.clearPairing,
-  createSignedRequestHeaders: mocks.sign,
-  loadCompanionPairingState: mocks.loadPairing,
-  pairCompanionWithDesktop: mocks.pair,
-  requestCompanionPairing: mocks.requestPairing
-}));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionWorkspaceSyncState: mocks.loadWorkspace,
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
@@ -31,14 +26,18 @@ vi.mock('../shared/platform/companionReadableArticle', () => ({ resolveReadableC
 vi.mock('./iosBridgeAcceptance', () => ({
   acceptanceEndpoint: () => 'http://127.0.0.1:43123', postResult: mocks.postResult
 }));
+vi.mock('./iosAcceptanceSyncGroup', () => ({
+  ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
+}));
 
 import { runIosContentResourceAcceptance } from './iosContentResourceAcceptance';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
-  mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
-  mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop' });
+  mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
+  mocks.loadGroup.mockResolvedValue(null);
+  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
+  mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });
   mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['ios-acceptance-valid-attachment'] });
@@ -58,15 +57,11 @@ beforeEach(() => {
     : { resource_url: null, status: 'missing_file' });
 });
 
-it('pairs, applies, downloads resources, and reads all three domains on the first launch', async () => {
-  mocks.loadPairing.mockResolvedValue({
-    is_paired: false, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
-  });
-
+it('joins, applies, downloads resources, and reads all three domains on the first launch', async () => {
   await runIosContentResourceAcceptance();
 
   expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
-    .toBeLessThan(mocks.loadPairing.mock.invocationCallOrder[0] ?? -Infinity);
+    .toBeLessThan(mocks.loadGroup.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
     sourceHostName: 'Acceptance Desktop',
@@ -85,7 +80,7 @@ it('pairs, applies, downloads resources, and reads all three domains on the firs
 });
 
 it('only reloads persisted reads and searches after restart', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1' });
+  mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
 
   await runIosContentResourceAcceptance();
 
@@ -98,9 +93,9 @@ it('only reloads persisted reads and searches after restart', async () => {
 });
 
 it('posts a structured failure without reporting partial success', async () => {
-  mocks.loadPairing.mockRejectedValue(new Error('pairing unavailable'));
+  mocks.ensureGroup.mockRejectedValue(new Error('join unavailable'));
   await runIosContentResourceAcceptance();
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
-    error: 'pairing unavailable', phase: 'failed', scenario: 'content-resource-read', status: 'failed'
+    error: 'join unavailable', phase: 'failed', scenario: 'content-resource-read', status: 'failed'
   }));
 });

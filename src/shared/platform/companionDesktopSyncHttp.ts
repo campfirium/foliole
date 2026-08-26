@@ -1,8 +1,8 @@
 import { prepareNativeCompanionWorkgroupRequestIfPresent } from './companion/network/signedRequest';
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
+import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import {
   FolioleCompanionSync,
-  isNativeCompanionPairingRuntime,
+  isNativeCompanionNetworkRuntime,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
 
@@ -50,7 +50,7 @@ async function requestDesktop(
   url: string,
   init: { body?: string; headers?: Record<string, string>; method: string }
 ): Promise<Response> {
-  if (!isNativeCompanionPairingRuntime()) {
+  if (!isNativeCompanionNetworkRuntime()) {
     return await fetch(url, init);
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({

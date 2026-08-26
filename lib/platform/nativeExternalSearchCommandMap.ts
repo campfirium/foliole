@@ -9,7 +9,7 @@ import type { NativeTextImportResult } from './nativeImportContract.js';
 
 
 export type NativeExternalSearchCommandMap = {
-  [NATIVE_COMMANDS.loadActiveSyncGroupMembership]: {
+  [NATIVE_COMMANDS.loadActiveSyncGroupDevice]: {
     args: undefined;
     result: boolean;
   };

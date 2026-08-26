@@ -21,7 +21,7 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
 
     func testRejectTimeoutAndRestartRemoveTemporaryRequests() throws {
         let service = FolioleCompanionSyncGroupJoinService()
-        try service.install(groupInfo: groupInfo())
+        try service.install(groupInfo: groupInfo(), discovery: discovery(), stateChanged: {})
         let requester = P256.KeyAgreement.PrivateKey()
         let request = try service.withProvider { try $0.receive(
             self.request(publicKey: requester.publicKey.x963Representation), now: self.now
@@ -55,6 +55,10 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
     private func groupInfo() -> [String: String] {
         ["display_name": "My Sync Group", "group_id": "group-a",
          "workgroup_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]
+    }
+
+    private func discovery() -> [String: Any] {
+        ["group_display_name": "My Sync Group", "runtime_instance_id": UUID().uuidString.lowercased()]
     }
 
     private func request(publicKey: Data) -> [String: Any] {

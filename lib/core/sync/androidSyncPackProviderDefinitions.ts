@@ -53,15 +53,12 @@ const payloadPlans = [
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   compression: 'zlib',
   copyStatements: [
-    `INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_host_name, created_at
+    `INSERT INTO sync_groups SELECT group_id, display_name, created_at
      FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)`,
-    `INSERT INTO sync_group_members SELECT group_id, host_name, host_platform, state,
-       approved_by_host_name, authorization_id, joined_at, left_at, updated_at
-     FROM source.sync_group_members
+    `INSERT INTO sync_group_devices SELECT group_id, device_identity_key, device_anchor,
+       canonical_library_path, device_name, platform, state, joined_at, left_at, last_seen_at, updated_at
+     FROM source.sync_group_devices
      WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')`,
-    `INSERT INTO sync_group_member_departures SELECT group_id, host_name, authorized_by_host_name,
-       authorization_id, left_at FROM source.sync_group_member_departures
-     WHERE group_id IN (SELECT group_id FROM sync_groups)`,
     `INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,
        state.content_hash, state.last_modified_by_host_name, state.updated_at,
        CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,
@@ -116,11 +113,11 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   databaseEntry: SYNC_PACK_DATABASE_ENTRY,
   format: SYNC_PACK_FORMAT,
   formatVersion: SYNC_PACK_FORMAT_VERSION,
-  payloadCopyIndex: 5,
+  payloadCopyIndex: 4,
   payloadPlans,
   packSchema: PACK_SCHEMA,
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   schemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
-  stateCopyIndex: 3,
+  stateCopyIndex: 2,
   tableNames: SYNC_PACK_TABLE_NAMES
 } as const;

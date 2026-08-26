@@ -3,7 +3,6 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
-import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
@@ -12,26 +11,30 @@ import {
   assertDesktopSyncGroupResourcesComplete,
   downloadDesktopSyncGroupResources
 } from './desktopSyncGroupResources.js';
+import {
+  loadDesktopSyncGroupRoutes,
+  type DesktopSyncGroupPeer
+} from './desktopSyncGroupRoutes.js';
 
-export type DesktopSyncGroupPeer = ReturnType<typeof savePairedSyncGroupPeer>;
+export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
 export function loadDesktopSyncGroupPeers() {
   const group = loadDesktopSyncGroup();
-  return group ? loadPairedSyncGroupPeers(group.group_id) : [];
+  return group ? loadDesktopSyncGroupRoutes(group.group_id) : [];
 }
 
 export async function continueDesktopSyncGroupSync(peer?: DesktopSyncGroupPeer) {
   const target = peer ?? loadDesktopSyncGroupPeers()[0];
   if (!target) return null;
-  return runDesktopSyncGroupPeerSingleFlight(target.peer_authorization_id, () => continuePeerSync(target));
+  return runDesktopSyncGroupPeerSingleFlight(target.peer_device_id, () => continuePeerSync(target));
 }
 
 async function continuePeerSync(target: DesktopSyncGroupPeer) {
-  const cursor = loadReceiveCursor(target.peer_authorization_id);
+  const cursor = loadReceiveCursor(target.peer_device_id);
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
-  saveReceiveCursor(target.peer_authorization_id, nextCursor);
+  saveReceiveCursor(target.peer_device_id, nextCursor);
   await reportDesktopSyncGroupCursorCommitted({
-    cursor: nextCursor, peerAuthorizationId: target.peer_authorization_id
+    cursor: nextCursor, peerAuthorizationId: target.peer_device_id
   });
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = resourcesComplete();
@@ -54,7 +57,7 @@ async function downloadAndApply(peer: DesktopSyncGroupPeer, after: number) {
     return await requestAndApply(peer, after);
   } catch (error) {
     if (after === 0 || !requiresCursorReenumeration(error)) throw error;
-    saveReceiveCursor(peer.peer_authorization_id, 0);
+    saveReceiveCursor(peer.peer_device_id, 0);
     return requestAndApply(peer, 0);
   }
 }

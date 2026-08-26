@@ -35,8 +35,7 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 
 const EXTERNAL_DOCUMENT_PACK_TABLES = [
   { name: 'sync_groups', row_count: 0 },
-  { name: 'sync_group_members', row_count: 0 },
-  { name: 'sync_group_member_departures', row_count: 0 },
+  { name: 'sync_group_devices', row_count: 0 },
   { name: 'sync_object_state', row_count: 1 },
   { name: 'sync_objects', row_count: 0 },
   { name: 'nodes', row_count: 0 },
@@ -135,8 +134,7 @@ function expectNodePackRows(packPath: string) {
       to_state_seq: 2,
       tables: [
         { name: 'sync_groups', row_count: 0 },
-        { name: 'sync_group_members', row_count: 0 },
-        { name: 'sync_group_member_departures', row_count: 0 },
+        { name: 'sync_group_devices', row_count: 0 },
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },

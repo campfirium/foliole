@@ -1,11 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
-
 const nativeMock = vi.hoisted(() => ({
   addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   androidAvailable: true,
-  loadPairingState: vi.fn(),
   resolveSyncGroupDataRequest: vi.fn(),
   signCompanionSyncRequest: vi.fn()
 }));
@@ -15,7 +12,7 @@ vi.mock('../../companionUuid', () => ({ createCompanionUuid: () => 'nonce-1' }))
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: nativeMock,
   isAvailableNativeAndroidCompanionRuntime: () => nativeMock.androidAvailable,
-  isNativeCompanionPairingRuntime: () => true
+  isNativeCompanionNetworkRuntime: () => true
 }));
 vi.mock('../sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: groupMock.load
@@ -29,12 +26,16 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   nativeMock.androidAvailable = true;
-  nativeMock.loadPairingState.mockResolvedValue({
-    device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true,
-    negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  groupMock.load.mockResolvedValue({
+    created_at: '2026-08-09T00:00:00.000Z',
+    devices: [{
+      canonical_library_path: '/data/foliole.db', contract_version: 1,
+      device_anchor: 'anchor-b', device_identity_key: 'mobile-b', device_name: 'Android B',
+      joined_at: '2026-08-09T00:00:00.000Z', last_seen_at: null, left_at: null,
+      platform: 'android-capacitor', state: 'active', updated_at: '2026-08-09T00:00:00.000Z'
+    }],
+    display_name: 'My Sync Group', group_id: 'group-1', local_device_identity_key: 'mobile-b'
   });
-  groupMock.load.mockResolvedValue({ group_id: 'group-1' });
   nativeMock.signCompanionSyncRequest.mockResolvedValue({
     headers: {
       'X-Authorization-Id': 'mobile-b', 'X-Nonce': 'nonce-1', 'X-Signature': 'signed',
@@ -90,13 +91,7 @@ it('returns an opaque prepared envelope without exposing the persistent key', as
   );
 });
 
-it('uses the persistent Sync Group even when legacy pairing metadata names the latest remote host', async () => {
-  nativeMock.loadPairingState.mockResolvedValue({
-    device_id: 'mobile-b', device_kind: 'win32', is_paired: true,
-    negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    remote_peer_id: 'desktop-c', remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-  });
-
+it('uses the persistent Sync Group for the exact requested Device endpoint', async () => {
   await createSignedRequestHeaders({
     endpointUrl: 'http://192.168.0.10:38641', method: 'GET', pathWithQuery: '/companion/sync-pack'
   });
@@ -113,25 +108,6 @@ it('rejects an ambiguous target before asking the native peer store to sign', as
   expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
 });
 
-it('rejects an old pairing profile before signing a Sync Group request', async () => {
-  nativeMock.loadPairingState.mockResolvedValue({
-    device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true,
-    negotiated_protocol_version: 2,
-    remote_protocol: {
-      ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      max_supported_version: 2,
-      min_supported_version: 2,
-      version: 2
-    }
-  });
-
-  await expect(createSignedRequestHeaders({
-    endpointUrl: 'http://192.168.0.11:38641', method: 'GET',
-    pathWithQuery: '/companion/sync-pack?after_state_seq=7'
-  })).rejects.toThrow('sync_protocol_incompatible');
-  expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
-});
-
 it('lets native code fail closed when the current-group credential is unavailable', async () => {
   nativeMock.signCompanionSyncRequest.mockRejectedValueOnce(
     new Error('sync_group_current_credential_missing')
@@ -144,15 +120,13 @@ it('lets native code fail closed when the current-group credential is unavailabl
   expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledOnce();
 });
 
-it('keeps standalone native signing free of Sync Group credentials', async () => {
+it('refuses native signing when no Sync Group is active', async () => {
   groupMock.load.mockResolvedValue(null);
 
-  await createSignedRequestHeaders({
+  await expect(createSignedRequestHeaders({
     endpointUrl: 'http://192.168.0.11:38641', method: 'GET',
     pathWithQuery: '/companion/workspace-version'
-  });
+  })).rejects.toThrow('sync_group_not_joined');
 
-  expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.not.objectContaining({
-    sync_group_id: expect.anything(), workgroup_key: expect.anything()
-  }));
+  expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
 });

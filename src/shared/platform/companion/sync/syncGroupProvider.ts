@@ -43,17 +43,18 @@ export async function reconcileCompanionSyncGroupProvider(
   factsRevision = '0'
 ) {
   if (!isNativeCompanionSyncGroupRuntime()) return null;
-  if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
+  if (!group || !bootstrap.database_path) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
-  const localMember = group.members.find((member) => member.host_name === group.local_host_name);
-  if (!localMember) throw new Error('sync_group_member_not_authorized');
+  const localDevice = group.devices.find((device) =>
+    device.device_identity_key === group.local_device_identity_key && device.state === 'active');
+  if (!localDevice) throw new Error('sync_group_local_device_missing');
   await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
-    authorization_id: localMember.authorization_id,
-    host_name: localMember.host_name,
-    host_platform: localMember.host_platform,
+    device_id: localDevice.device_identity_key,
+    device_name: localDevice.device_name,
+    platform: localDevice.platform,
     facts_revision: factsRevision,
     sync_group: group
   });
@@ -102,10 +103,10 @@ export async function setCompanionSyncPaused(paused: boolean) {
   return publishParticipation(await FolioleCompanionSync.setSyncPaused({ sync_paused: paused }));
 }
 
-export function approveCompanionSyncGroupJoinRequest(pairRequestId: string) {
-  return FolioleCompanionSync.approveSyncGroupJoinRequest({ pair_request_id: pairRequestId });
+export function acceptCompanionSyncGroupJoinRequest(requestId: string) {
+  return FolioleCompanionSync.acceptSyncGroupJoinRequest({ request_id: requestId });
 }
 
-export function rejectCompanionSyncGroupJoinRequest(pairRequestId: string) {
-  return FolioleCompanionSync.rejectSyncGroupJoinRequest({ pair_request_id: pairRequestId });
+export function rejectCompanionSyncGroupJoinRequest(requestId: string) {
+  return FolioleCompanionSync.rejectSyncGroupJoinRequest({ request_id: requestId });
 }

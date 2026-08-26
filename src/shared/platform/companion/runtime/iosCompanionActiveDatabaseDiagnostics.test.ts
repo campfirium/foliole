@@ -14,7 +14,7 @@ const runtime = vi.hoisted(() => ({
 
 vi.mock('../sync/cursor/iosCompanionSyncPackCursorStore', () => ({
   createIosCompanionSyncPackCursorStore: vi.fn((_manager, peerId) => {
-    expect(peerId).toBe('authorization-desktop');
+    expect(peerId).toBe('device-desktop');
     return { loadCursor: runtime.loadCursor };
   })
 }));
@@ -35,14 +35,14 @@ beforeEach(() => {
   runtime.query.mockClear();
 });
 
-it('projects the current authorization-scoped sync-pack cursor into diagnostics', async () => {
+it('projects the current remote Device sync-pack cursor into diagnostics', async () => {
   const { diagnoseIosCompanionDatabase } = await import('./iosCompanionActiveDatabaseDiagnostics');
 
   const result = await diagnoseIosCompanionDatabase({
-    device_id: 'authorization-android',
-    device_name: 'A5',
-    is_paired: true,
-    remote_peer_id: ' authorization-desktop '
+    created_at: '2026-08-26T00:00:00.000Z', display_name: 'Studio', group_id: 'group-1',
+    local_device_identity_key: 'device-android', devices: [
+      device('device-android', 'A5'), device('device-desktop', 'Mac')
+    ]
   });
 
   expect(result.sync_state.pack_cursor).toBe(42);
@@ -50,11 +50,20 @@ it('projects the current authorization-scoped sync-pack cursor into diagnostics'
   expect(runtime.query).not.toHaveBeenCalledWith('companionMetaValue', ['sync_pack_cursor']);
 });
 
-it('reports no pack cursor when the pairing has no current peer authorization', async () => {
+it('reports no pack cursor when the Sync Group has no remote Device', async () => {
   const { diagnoseIosCompanionDatabase } = await import('./iosCompanionActiveDatabaseDiagnostics');
 
-  const result = await diagnoseIosCompanionDatabase({ is_paired: false });
+  const result = await diagnoseIosCompanionDatabase(null);
 
   expect(result.sync_state.pack_cursor).toBeNull();
   expect(runtime.loadCursor).not.toHaveBeenCalled();
 });
+
+function device(id: string, name: string) {
+  return {
+    canonical_library_path: `/${id}`, contract_version: 1 as const, device_anchor: `${id}-anchor`,
+    device_identity_key: id, device_name: name, joined_at: '2026-08-26T00:00:00.000Z',
+    last_seen_at: null, left_at: null, platform: 'test', state: 'active' as const,
+    updated_at: '2026-08-26T00:00:00.000Z'
+  };
+}

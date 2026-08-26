@@ -17,13 +17,13 @@ export const ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS = {
   },
   requestKeys: {
     appVersion: 'app_version',
-    authorizationId: 'authorization_id',
     databasePath: 'database_path',
+    deviceId: 'device_id',
+    deviceName: 'device_name',
     factsRevision: 'facts_revision',
     group: 'sync_group',
-    hostName: 'host_name',
-    hostPlatform: 'host_platform',
-    pairRequestId: 'pair_request_id'
+    platform: 'platform',
+    requestId: 'request_id'
   }
 } as const;
 

@@ -87,7 +87,7 @@ final class FolioleCompanionWebViewSemanticAdapter {
             JSONObject receipt = evaluateJson(instrumentation, webView, script);
             if (receipt.optBoolean("ok")) return receipt;
             if ("target_ambiguous".equals(receipt.optString("code"))) {
-                throw new IllegalStateException("Pairing target is not unique: " + testId);
+                throw new IllegalStateException("Sync Group target is not unique: " + testId);
             }
             Thread.sleep(150);
         }
@@ -132,21 +132,6 @@ final class FolioleCompanionWebViewSemanticAdapter {
             JSONObject.quote(testId) + "+'\"]');return JSON.stringify({found:!!node," +
             "value:node?(node.getAttribute(" + JSONObject.quote(attribute) + ")||''):''});})()";
         return evaluateJson(instrumentation, webView, script);
-    }
-
-    static JSONObject pairingRequestState(
-        Instrumentation instrumentation,
-        WebView webView
-    ) throws Exception {
-        return FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
-    }
-
-    static JSONObject installPairSyncObserver(
-        Instrumentation instrumentation,
-        WebView webView,
-        boolean existingPairing
-    ) throws Exception {
-        return FolioleCompanionPairSyncEvidence.install(instrumentation, webView, existingPairing);
     }
 
     static JSONObject evaluateJson(

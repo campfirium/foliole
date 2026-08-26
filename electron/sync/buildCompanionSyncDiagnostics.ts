@@ -66,8 +66,8 @@ function buildConnection(status: LanWorkspaceSyncServerStatus | null): SyncDiagn
   return {
     endpoint_url: status?.advertised_urls[0] ?? null,
     last_error: status?.last_error ?? null,
-    paired_authorization_count: status?.paired_authorization_count ?? 0,
-    pending_pair_request_count: status?.pending_pair_request_count ?? 0,
+    active_device_count: status?.active_device_count ?? 0,
+    pending_join_request_count: status?.pending_join_request_count ?? 0,
     port: status?.port ?? null,
     state: status?.state ?? 'missing'
   };

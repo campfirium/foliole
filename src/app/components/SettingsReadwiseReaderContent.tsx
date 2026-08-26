@@ -7,7 +7,7 @@ import type {
 } from '../../../lib/platform/nativeImportContract';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useActiveSyncGroupMembership } from '../../shared/platform/external/useActiveSyncGroupMembership';
+import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 import {
   AppButton,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -216,7 +216,7 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
 
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
   const hostAssignment = useReadwiseHostAssignment();
-  const hasActiveSyncGroup = useActiveSyncGroupMembership();
+  const hasActiveSyncGroup = useActiveSyncGroup();
   if (hasActiveSyncGroup && hostAssignment.assignment?.is_active === false) {
     return (
       <ReadwiseHostAssignmentRow

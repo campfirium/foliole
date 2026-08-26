@@ -3,6 +3,8 @@ package com.foliole.android;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONObject;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -16,11 +18,11 @@ final class FolioleCompanionSyncGroupRequestAuth {
         String groupId,
         FolioleCompanionSyncGroupDataBridge bridge
     ) throws Exception {
-        String authorizationId = request.header("x-authorization-id");
+        String deviceId = request.header("x-device-id");
         String nonce = request.header("x-nonce");
         String signature = request.header("x-signature");
         String timestamp = request.header("x-timestamp");
-        if (authorizationId == null || nonce == null || signature == null || timestamp == null ||
+        if (deviceId == null || nonce == null || signature == null || timestamp == null ||
             !groupId.equals(request.header("x-sync-group-id"))) throw new SecurityException("missing_headers");
         long drift = Math.abs(System.currentTimeMillis() - Instant.parse(timestamp).toEpochMilli());
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
@@ -28,14 +30,16 @@ final class FolioleCompanionSyncGroupRequestAuth {
             groupId
         ).workgroupKey;
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
-        String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);
+        String expected = FolioleCompanionSyncGroupHmac.sign(encodedSecret, canonical);
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), signature.getBytes(StandardCharsets.US_ASCII))) {
             throw new SecurityException("invalid_signature");
         }
         long now = System.currentTimeMillis();
-        consumeNonce(context, groupId + ":" + authorizationId + ":" + timestamp + ":" + nonce, now);
-        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, authorizationId);
-        return authorizationId;
+        JSONObject verified = bridge.request("verify_device", new org.json.JSONObject()
+            .put("group_id", groupId).put("device_id", deviceId));
+        if (!verified.optBoolean("active")) throw new SecurityException("sync_group_device_not_active");
+        consumeNonce(context, groupId + ":" + deviceId + ":" + timestamp + ":" + nonce, now);
+        return deviceId;
     }
 
     private static void consumeNonce(Context context, String identity, long now) {

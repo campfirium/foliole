@@ -8,7 +8,7 @@ export async function stagePushDeliveries(port: DbPort, authorizationId: string,
       const delivery = deliveryIdentity(item);
       await tx.run(
         `INSERT OR IGNORE INTO sync_delivery_receipts (
-          authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
+          peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
           local_position, status, remote_position, issue_reason, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL, ?, ?)`,
         [authorizationId, delivery.stream, item.clientOpId, item.identity.objectType, item.identity.objectId,
@@ -16,7 +16,7 @@ export async function stagePushDeliveries(port: DbPort, authorizationId: string,
       );
       const stored = (await tx.query<DbRow>(
         `SELECT payload_identity FROM sync_delivery_receipts
-         WHERE authorization_id = ? AND stream_name = ? AND operation_id = ?`,
+         WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
         [authorizationId, delivery.stream, item.clientOpId]
       ))[0];
       if (stored?.payload_identity !== delivery.payloadIdentity) {
@@ -33,7 +33,7 @@ export async function savePeerPushAcksWithinTransaction(port: DbPort, authorizat
     if (!delivery) continue;
     const result = await port.run(
       `UPDATE sync_delivery_receipts SET status = ?, remote_position = ?, issue_reason = ?, updated_at = ?
-       WHERE authorization_id = ? AND stream_name = ? AND operation_id = ?`,
+       WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
       [delivery.status, delivery.remotePosition, ack.conflictReason ?? null, new Date().toISOString(),
         authorizationId, delivery.stream, ack.clientOpId]
     );

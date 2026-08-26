@@ -3,7 +3,7 @@ import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 export const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 export const IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL = 'foliole:desktop-update-state';
-export const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
+export const IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL = 'foliole:sync-group-join-requests-changed';
 export const IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL = 'foliole:sync-group-discovery-changed';
 export const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
 export const IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL = 'foliole:global-capture-navigate';

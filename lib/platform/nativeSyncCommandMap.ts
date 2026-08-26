@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
-import type { DesktopCompanionPairingOverviewPayload } from './nativeCompanionSyncContract.js';
+import type { DesktopSyncGroupOverviewPayload } from './nativeCompanionSyncContract.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
@@ -55,21 +55,17 @@ export type NativeSyncCommandMap = {
     args: { peers: NativeSyncPeer[] };
     result: NativeSyncPeer[];
   };
-  [NATIVE_COMMANDS.loadCompanionPairingOverview]: {
+  [NATIVE_COMMANDS.loadSyncGroupOverview]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.createSyncGroup]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.leaveSyncGroup]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
-  };
-  [NATIVE_COMMANDS.removeSyncGroupMember]: {
-    args: { host_name: string };
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.discoverSyncGroups]: {
     args: undefined;
@@ -81,38 +77,38 @@ export type NativeSyncCommandMap = {
   };
   [NATIVE_COMMANDS.requestSyncGroupJoin]: {
     args: { endpoint_url: string };
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.completeSyncGroupJoin]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.enableCompanionSync]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.disableCompanionSync]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.pauseCompanionSync]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.resumeCompanionSync]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.syncCompanionNow]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: DesktopSyncGroupOverviewPayload;
   };
-  [NATIVE_COMMANDS.approveCompanionPairRequest]: {
-    args: { pair_request_id: string };
-    result: DesktopCompanionPairingOverviewPayload;
+  [NATIVE_COMMANDS.acceptSyncGroupJoinRequest]: {
+    args: { request_id: string };
+    result: DesktopSyncGroupOverviewPayload;
   };
-  [NATIVE_COMMANDS.rejectCompanionPairRequest]: {
-    args: { pair_request_id: string };
-    result: DesktopCompanionPairingOverviewPayload;
+  [NATIVE_COMMANDS.rejectSyncGroupJoinRequest]: {
+    args: { request_id: string };
+    result: DesktopSyncGroupOverviewPayload;
   };
 };

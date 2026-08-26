@@ -22,15 +22,6 @@ final class FolioleCompanionSyncPackTransfer {
         return storeDownloadedPack(context, body, expectedPeerId, expectedSourcePeerId);
     }
 
-    static File storeDownloadedPack(Context context, byte[] body) throws Exception {
-        return storeDownloadedPack(
-            context,
-            body,
-            FolioleCompanionPairingStore.loadPairingState(context).getString("authorization_id"),
-            FolioleCompanionPairingStore.loadPairingState(context).optString("remote_peer_id")
-        );
-    }
-
     static File storeDownloadedPack(
         Context context,
         byte[] body,

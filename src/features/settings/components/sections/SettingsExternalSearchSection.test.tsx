@@ -3,16 +3,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
-import { useActiveSyncGroupMembership } from '../../../../shared/platform/external/useActiveSyncGroupMembership';
+import { useActiveSyncGroup } from '../../../../shared/platform/external/useActiveSyncGroup';
 import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
 
-vi.mock('../../../../shared/platform/external/useActiveSyncGroupMembership', () => ({
-  useActiveSyncGroupMembership: vi.fn()
+vi.mock('../../../../shared/platform/external/useActiveSyncGroup', () => ({
+  useActiveSyncGroup: vi.fn()
 }));
 
-const activeSyncGroupMock = vi.mocked(useActiveSyncGroupMembership);
+const activeSyncGroupMock = vi.mocked(useActiveSyncGroup);
 
 const baseProps = {
   error: null,

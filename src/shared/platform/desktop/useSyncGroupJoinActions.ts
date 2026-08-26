@@ -1,22 +1,22 @@
 import { useCallback } from 'react';
 
-import type { DesktopCompanionPairingOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
+import type { DesktopSyncGroupOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
 import {
   completeDesktopSyncGroupJoin,
   discoverDesktopSyncGroups,
   onDesktopSyncGroupDiscoveryChanged,
   requestDesktopSyncGroupJoin,
   stopDiscoveringDesktopSyncGroups
-} from '../desktopCompanionPairingRuntimeRepository';
+} from '../desktopSyncGroupRuntimeRepository';
 
 export function useDesktopSyncGroupJoinActions(args: {
   setError(value: string | null): void;
   setIsLoading(value: boolean): void;
-  setOverview(value: DesktopCompanionPairingOverviewPayload): void;
+  setOverview(value: DesktopSyncGroupOverviewPayload): void;
   setPendingActionId(value: string | null): void;
 }) {
   const { setError, setIsLoading, setOverview, setPendingActionId } = args;
-  const run = useCallback(async (id: string, action: () => Promise<DesktopCompanionPairingOverviewPayload>) => {
+  const run = useCallback(async (id: string, action: () => Promise<DesktopSyncGroupOverviewPayload>) => {
     setPendingActionId(id);
     try {
       const overview = await action();

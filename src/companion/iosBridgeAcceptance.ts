@@ -1,26 +1,26 @@
+import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
+import {
+  leaveCompanionSyncGroupDevice,
+  loadCompanionSyncGroup
+} from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { DesktopSyncHttpError, fetchDesktopJson } from '../shared/platform/companionDesktopSyncHttp';
-import {
-  clearCompanionPairingCredentials,
-  createSignedRequestHeaders,
-  loadCompanionPairingState
-} from '../shared/platform/companionWorkspacePairing';
 import {
   loadCompanionWorkspaceSyncState,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
-import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { joinIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 
 export type AcceptanceResult = {
   error: string | null;
   phase: 'applied' | 'background' | 'disconnected' | 'failed' | 'foreground' | 'paired' | 'reapplied' | 'rejected' |
     'resources-restored' | 'resources-synced' | 'ready' | 'upgraded' | 'anchor-observed' | 'events-observed' |
     'trigger-observed' | 'join-observed' | 'restart-clean';
-  scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'pairing-signed-transport' |
+  scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'sync-group-signed-transport' |
     'device-identity' |
     'foreground-sync-lifecycle' | 'state-writeback-runtime' |
-    'sync-pack-runtime' | 'sync-group-discovery-events' | 'sync-group-join-runtime' | 'sync-trigger-runtime';
+    'sync-pack-runtime' | 'sync-group-discovery-events' | 'sync-trigger-runtime';
   status: 'failed' | 'passed';
   [key: string]: unknown;
 };
@@ -63,57 +63,57 @@ async function expectHttpStatus(path: string, status: number) {
 }
 
 async function bestEffortClearAcceptanceState() {
-  const [pairing, endpoint] = await Promise.allSettled([
-    clearCompanionPairingCredentials(),
+  const [group, endpoint] = await Promise.allSettled([
+    leaveCompanionSyncGroupDevice(),
     saveCompanionWorkspaceSyncEndpoint('')
   ]);
   return {
     endpoint_cleanup_succeeded: endpoint.status === 'fulfilled',
-    pairing_cleanup_succeeded: pairing.status === 'fulfilled'
+    sync_group_cleanup_succeeded: group.status === 'fulfilled'
   };
 }
 
-async function runInitialPairing(hostName: string, databasePath: string | null) {
+async function runInitialJoin(databasePath: string) {
   const endpoint = acceptanceEndpoint()!;
-  await clearCompanionPairingCredentials();
+  await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
-  if (!await expectSigningRejected()) throw new Error('Preflight pairing cleanup did not remove signing ability.');
-  const pairing = await pairIosAcceptanceCompanion(endpoint, hostName);
+  if (!await expectSigningRejected()) throw new Error('Preflight Sync Group cleanup did not remove signing ability.');
+  const group = await joinIosAcceptanceSyncGroup(endpoint, databasePath);
   const workspace = await saveCompanionWorkspaceSyncEndpoint(endpoint!);
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   postResult({
     database_path: databasePath,
     endpoint_restored: workspace.endpoint_url === endpoint,
     error: null,
-    pairing_authorization_id: pairing.authorization_id,
-    phase: 'paired',
-    scenario: 'pairing-signed-transport',
+    group_id: group.group_id,
+    phase: 'join-observed',
+    scenario: 'sync-group-signed-transport',
     signed_request_passed: signed.ok === true,
     status: 'passed'
   });
 }
 
-async function runRestartAndDisconnect(pairingAuthorizationId: string) {
+async function runRestartAndLeave(groupId: string) {
   const endpoint = acceptanceEndpoint()!;
   const workspace = await loadCompanionWorkspaceSyncState();
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   const redirectRejected = await expectHttpStatus('/acceptance/redirect', 302);
   const httpErrorPropagated = await expectHttpStatus('/acceptance/error', 503);
-  await clearCompanionPairingCredentials();
+  await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
-  const clearedPairing = await loadCompanionPairingState();
+  const clearedGroup = await loadCompanionSyncGroup();
   const clearedWorkspace = await loadCompanionWorkspaceSyncState();
   postResult({
     error: null,
     http_error_propagated: httpErrorPropagated,
-    identity_restored: pairingAuthorizationId.length > 0,
-    pairing_authorization_id: pairingAuthorizationId,
+    identity_restored: groupId.length > 0,
+    group_id: groupId,
     endpoint_cleared: clearedWorkspace.endpoint_url === null,
     endpoint_restored: workspace.endpoint_url === endpoint,
-    pairing_cleared: clearedPairing.is_paired === false,
+    sync_group_left: clearedGroup === null,
     phase: 'disconnected',
     redirect_rejected: redirectRejected,
-    scenario: 'pairing-signed-transport',
+    scenario: 'sync-group-signed-transport',
     signed_after_restart: signed.ok === true,
     signing_rejected_after_disconnect: await expectSigningRejected(),
     status: 'passed'
@@ -123,20 +123,19 @@ async function runRestartAndDisconnect(pairingAuthorizationId: string) {
 export async function runIosBridgeAcceptance() {
   try {
     const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS pairing acceptance endpoint is unavailable.');
+    if (!endpoint) throw new Error('iOS Sync Group acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    const pairing = await loadCompanionPairingState();
-    if (pairing.is_paired) await runRestartAndDisconnect(pairing.authorization_id ?? '');
-    else await runInitialPairing(
-      bootstrap.host_name ?? 'Acceptance iPhone', bootstrap.database_path
-    );
+    const group = await loadCompanionSyncGroup();
+    if (group) await runRestartAndLeave(group.group_id);
+    else if (bootstrap.database_path) await runInitialJoin(bootstrap.database_path);
+    else throw new Error('iOS acceptance database is unavailable.');
   } catch (error) {
     const cleanup = await bestEffortClearAcceptanceState();
     postResult({
       ...cleanup,
       error: error instanceof Error ? error.message : String(error),
       phase: 'failed',
-      scenario: 'pairing-signed-transport',
+      scenario: 'sync-group-signed-transport',
       status: 'failed'
     });
   }

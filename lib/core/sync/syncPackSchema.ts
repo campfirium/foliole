@@ -8,30 +8,21 @@ export const PACK_SCHEMA = [
   `CREATE TABLE sync_groups (
     group_id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,
-    timeline_id TEXT NOT NULL,
-    created_by_host_name TEXT NOT NULL,
     created_at TEXT NOT NULL
   )`,
-  `CREATE TABLE sync_group_members (
+  `CREATE TABLE sync_group_devices (
     group_id TEXT NOT NULL,
-    host_name TEXT NOT NULL,
-    host_platform TEXT NOT NULL,
+    device_identity_key TEXT NOT NULL,
+    device_anchor TEXT NOT NULL,
+    canonical_library_path TEXT NOT NULL,
+    device_name TEXT NOT NULL,
+    platform TEXT NOT NULL,
     state TEXT NOT NULL,
-    approved_by_host_name TEXT NOT NULL,
-    authorization_id TEXT NOT NULL,
     joined_at TEXT NOT NULL,
     left_at TEXT,
+    last_seen_at TEXT,
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (group_id, host_name),
-    UNIQUE (authorization_id)
-  )`,
-  `CREATE TABLE sync_group_member_departures (
-    group_id TEXT NOT NULL,
-    host_name TEXT NOT NULL,
-    authorized_by_host_name TEXT NOT NULL,
-    authorization_id TEXT NOT NULL UNIQUE,
-    left_at TEXT NOT NULL,
-    PRIMARY KEY (group_id, host_name)
+    PRIMARY KEY (group_id, device_identity_key)
   )`,
   `CREATE TABLE sync_object_state (
     object_type TEXT NOT NULL,

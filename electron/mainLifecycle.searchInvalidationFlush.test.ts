@@ -54,7 +54,7 @@ vi.mock('./import/keepImportMonitor.js', () => ({ stopKeepImportMonitor: vi.fn()
 vi.mock('./import/managedInboxMonitor.js', () => ({ stopManagedInboxMonitor: vi.fn() }));
 vi.mock('./mainStartup.js', () => ({ startInitialMainWindow: vi.fn() }));
 vi.mock('./mainWindowLifecycle.js', () => ({
-  installPairingFocusHandler: vi.fn(),
+  installSyncGroupJoinRequestFocusHandler: vi.fn(),
   openOrCreateMainWindow: vi.fn(),
   startCompanionSyncIfEnabled: vi.fn()
 }));

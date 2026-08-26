@@ -51,8 +51,7 @@ export function writePackManifest(
         node_sync_version_parents: rows.nodeVersionParents,
         nodes: rows.nodes,
         review_log: rows.reviewLog,
-        sync_group_member_departures: rows.groupDepartures,
-        sync_group_members: rows.groupMembers,
+        sync_group_devices: rows.groupDevices,
         sync_groups: rows.groups,
         sync_object_state: rows.stateRows,
         sync_objects: rows.syncObjects
@@ -73,19 +72,14 @@ export function writePackRows(db: import('better-sqlite3').Database, rows: Loade
 function writeGroupPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   copyRows({
     db, table: 'sync_groups',
-    columns: ['group_id', 'display_name', 'timeline_id', 'created_by_host_name', 'created_at'],
+    columns: ['group_id', 'display_name', 'created_at'],
     rows: rows.groups
   });
   copyRows({
-    db, table: 'sync_group_members',
-    columns: ['group_id', 'host_name', 'host_platform', 'state', 'approved_by_host_name',
-      'authorization_id', 'joined_at', 'left_at', 'updated_at'],
-    rows: rows.groupMembers
-  });
-  copyRows({
-    db, table: 'sync_group_member_departures',
-    columns: ['group_id', 'host_name', 'authorized_by_host_name', 'authorization_id', 'left_at'],
-    rows: rows.groupDepartures
+    db, table: 'sync_group_devices',
+    columns: ['group_id', 'device_identity_key', 'device_anchor', 'canonical_library_path',
+      'device_name', 'platform', 'state', 'joined_at', 'left_at', 'last_seen_at', 'updated_at'],
+    rows: rows.groupDevices
   });
 }
 

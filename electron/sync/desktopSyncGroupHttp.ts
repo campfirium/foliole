@@ -17,7 +17,7 @@ export async function requestJson(url: string, init: RequestInit) {
 export function createDesktopWorkgroupPost(args: {
   body: string;
   groupId: string;
-  localAuthorizationId: string;
+  localDeviceId: string;
   pathWithQuery: string;
   secret: string;
 }) {
@@ -55,7 +55,7 @@ export async function postDesktopWorkgroupJson(args: {
   body: string;
   endpointUrl: string;
   groupId: string;
-  localAuthorizationId: string;
+  localDeviceId: string;
   pathWithQuery: string;
   secret: string;
 }) {

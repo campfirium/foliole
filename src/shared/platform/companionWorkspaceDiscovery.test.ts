@@ -35,11 +35,13 @@ function nsdCandidate(endpoint_url: string) {
 function discoveryBody(args: { hostName: string; peerId: string; platform: string }) {
   return JSON.stringify({
     app_version: '0.1.0',
-    desktop_device_name: `Foliole Desktop on ${args.hostName}`,
-    desktop_name: 'Foliole Desktop',
-    desktop_platform: args.platform,
-    pairing_mode: 'desktop-confirm',
-    peer_id: args.peerId,
+    group_display_name: 'Foliole',
+    group_id: 'group-1',
+    group_tag: 'group-tag-1',
+    provider_device_id: args.peerId,
+    provider_device_name: `Foliole Desktop on ${args.hostName}`,
+    provider_platform: args.platform,
+    runtime_instance_id: `runtime-${args.peerId}`,
     protocol
   });
 }
@@ -100,7 +102,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
 
     expect(result.endpointUrl).toBe('http://192.168.1.44:38641');
-    expect(result.discovery.desktop_name).toBe('Foliole Desktop');
+    expect(result.discovery.provider_device_name).toBe('Foliole Desktop on ZEPHU-PC');
     expect(result.compatibility.status).toBe('compatible');
   });
 
@@ -137,7 +139,7 @@ it('keeps ordinary discovery stopped while allowing explicit Leave routing when 
   const result = await discoverCompanionDesktop('http://old:38641', {
     allowWhileNotParticipating: true
   });
-  expect(result.discovery.peer_id).toBe('desktop-c');
+  expect(result.discovery.provider_device_id).toBe('desktop-c');
   expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
 });
 
@@ -166,7 +168,7 @@ describe('companionWorkspaceDiscovery compatibility', () => {
     const results = await discoverCompanionDesktops('http://10.0.2.2:38641');
 
     expect(results).toHaveLength(2);
-    expect(results.map((result) => result.discovery.peer_id)).toEqual(['desktop-dev', 'desktop-studio']);
+    expect(results.map((result) => result.discovery.provider_device_id)).toEqual(['desktop-dev', 'desktop-studio']);
   });
 
   it('keeps an incompatible desktop with an explainable compatibility result', async () => {
@@ -200,13 +202,13 @@ describe('companionWorkspaceDiscovery compatibility', () => {
       const peerId = url.startsWith('http://192.168.1.44:38641') ? 'desktop-a' : 'desktop-c';
       if (!url.startsWith('http://192.168.1.4')) throw new TypeError('Failed to fetch');
       const body = JSON.parse(discoveryBody({ hostName: peerId, peerId, platform: 'macOS' }));
-      Object.assign(body, { group_id: 'group-1', timeline_id: 'timeline-1' });
+      Object.assign(body, { group_id: 'group-1' });
       return { body: JSON.stringify(body), status: 200 };
     });
 
     const results = await discoverCompanionDesktops('http://10.0.2.2:38641');
 
-    expect(results.map((result) => result.discovery.peer_id)).toEqual(['desktop-a', 'desktop-c']);
+    expect(results.map((result) => result.discovery.provider_device_id)).toEqual(['desktop-a', 'desktop-c']);
   });
 });
 

@@ -50,23 +50,11 @@ export const attachmentResolutionMock = {
   invalidateAttachmentResourceResolution: vi.fn()
 };
 
-const pairingMock = {
+const signedRequestMock = {
   createSignedRequestHeaders: vi.fn(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Authorization-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
   })),
-  loadCompanionPairingState: vi.fn(async () => ({
-    authorization_id: 'authorization-android-test',
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Android test device',
-    host_name: 'Android test device',
-    host_platform: 'android',
-    is_paired: true,
-    paired_at: '2026-05-10T00:00:00.000Z',
-    remote_peer_id: 'authorization-desktop-test',
-    remote_peer_name: 'Desktop Test Host'
-  }))
 };
 
 export const capacitorMock = {
@@ -82,23 +70,11 @@ export const diagnosticsMock = {
   loadLocalSyncDiagnostics: vi.fn(async (): Promise<unknown> => null)
 };
 
-function resetPairingMocks() {
-  pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
+function resetSignedRequestMocks() {
+  signedRequestMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Authorization-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
   }));
-  pairingMock.loadCompanionPairingState.mockResolvedValue({
-    authorization_id: 'authorization-android-test',
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Android test device',
-    host_name: 'Android test device',
-    host_platform: 'android',
-    is_paired: true,
-    paired_at: '2026-05-10T00:00:00.000Z',
-    remote_peer_id: 'authorization-desktop-test',
-    remote_peer_name: 'Desktop Test Host'
-  });
 }
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
@@ -109,7 +85,9 @@ vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
   resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop Test Host'),
   resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-test-device')
 }));
-vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/network/signedRequest', () => ({
+  createSignedRequestHeaders: signedRequestMock.createSignedRequestHeaders
+}));
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: capacitorMock.getPlatform,
@@ -157,5 +135,5 @@ export function resetCompanionDesktopSyncMocks() {
     return syncedIds;
   });
   attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
-  resetPairingMocks();
+  resetSignedRequestMocks();
 }

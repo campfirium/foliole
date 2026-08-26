@@ -10,7 +10,6 @@ final class FolioleBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(FolioleCompanionSyncPlugin())
         bridge?.registerPluginInstance(FolioleCompanionSyncPackTransferPlugin())
 #if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)
-        bridge?.registerPluginInstance(FolioleCompanionSyncGroupJoinPreparePlugin())
         webView?.configuration.userContentController.add(self, name: Self.acceptanceHandler)
 #endif
     }

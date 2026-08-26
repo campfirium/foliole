@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
+import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsButton,
@@ -47,7 +47,7 @@ function SyncNowRow(props: { disabled: boolean; onSync(): void }) {
 }
 
 function useSyncGroupConfirmationActions(
-  state: ReturnType<typeof useDesktopCompanionPairingRequests>,
+  state: ReturnType<typeof useDesktopSyncGroup>,
   groupName: string
 ) {
   const t = useTranslation();
@@ -59,27 +59,18 @@ function useSyncGroupConfirmationActions(
     })) return;
     await state.leaveSyncGroup();
   };
-  const confirmRemove = async (hostName: string) => {
-    const member = state.overview.sync_group?.members.find((candidate) => candidate.host_name === hostName);
-    if (!member || !await requestAppConfirmation({
-      confirmLabel: t('settings.companionSync.group.remove'),
-      description: t('settings.companionSync.group.remove.confirm.description', { name: member.host_name }),
-      title: t('settings.companionSync.group.remove.confirm.title')
-    })) return;
-    await state.removeSyncGroupMember(hostName);
-  };
-  return { confirmLeave, confirmRemove };
+  return { confirmLeave };
 }
 
 export function SettingsCompanionSyncSection() {
   const t = useTranslation();
-  const state = useDesktopCompanionPairingRequests(3_000);
+  const state = useDesktopSyncGroup();
   const syncError = state.overview.server_status.last_error
     ? t('settings.companionSync.error.open', { error: state.overview.server_status.last_error })
     : undefined;
   const group = state.overview.sync_group;
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
-  const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
+  const { confirmLeave } = useSyncGroupConfirmationActions(state, groupName);
   return (
     <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
       {syncError ? (
@@ -97,19 +88,18 @@ export function SettingsCompanionSyncSection() {
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
         discovery={state.discovery}
-        currentHost={state.overview.current_host ?? null}
+        currentDevice={state.overview.current_device ?? null}
         group={state.overview.sync_group ?? null}
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         isCreating={state.pendingActionId === 'create-sync-group'}
         onLeave={() => void confirmLeave()}
-        onRemove={(deviceId) => void confirmRemove(deviceId)}
         onTogglePause={() => void (state.overview.sync_paused ? state.resumeSync() : state.pauseSync())}
         onCreate={() => void state.createSyncGroup()}
         onDiscover={() => void state.discoverSyncGroups()}
         onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}
-        onApprove={(id) => void state.approveRequest(id)}
+        onAccept={(id) => void state.acceptRequest(id)}
         onReject={(id) => void state.rejectRequest(id)}
-        pendingRequests={state.overview.pending_requests}
+        joinRequests={state.overview.join_requests}
         joinRequest={state.overview.join_request ?? null}
         syncPaused={state.overview.sync_paused}
       />

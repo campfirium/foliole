@@ -51,12 +51,16 @@ final class FolioleCompanionJoinRequestProvider {
     synchronized JSObject accept(String requestId, long nowMs) throws Exception {
         FolioleCompanionJoinRequest request = requirePending(requestId, nowMs);
         request.acceptance = new JSONObject()
-            .put("encrypted_group_info", FolioleCompanionSyncGroupPairCrypto.encrypt(
+            .put("encrypted_group_info", FolioleCompanionSyncGroupJoinCrypto.encrypt(
                 request.publicKey, groupInfo.toString()
             ))
             .put("expires_at", request.expiresAt)
             .put("request_id", request.requestId);
         return new JSObject(request.acceptance.toString());
+    }
+
+    synchronized FolioleCompanionJoinRequest request(String requestId, long nowMs) {
+        return requirePending(requestId, nowMs);
     }
 
     synchronized JSObject collect(String requestId, long nowMs) throws Exception {

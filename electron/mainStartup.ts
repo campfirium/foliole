@@ -27,7 +27,7 @@ interface StartupErrorSurfaceArgs {
 interface InitialMainWindowStartupArgs {
   failDatabaseStartup: (error: unknown) => void;
   initializeRuntimeServices: () => Promise<void>;
-  installPairingFocusHandler: () => void;
+  installSyncGroupJoinRequestFocusHandler: () => void;
   initialStartupView?: StartupRendererView | null;
   loadStartupErrorSurface: (args: StartupErrorSurfaceArgs) => Promise<void>;
   mainWindow: BrowserWindow;
@@ -77,7 +77,7 @@ export async function startInitialMainWindow(
   startup: InitialMainWindowStartupArgs
 ) {
   startDevScreenshotServer({ getWindow: () => startup.mainWindow });
-  startup.installPairingFocusHandler();
+  startup.installSyncGroupJoinRequestFocusHandler();
   try {
     configureRemoteImagePipelineCacheRoot(path.join(resolveAppPaths().app_cache_dir, 'remote-images'));
     registerAttachmentProtocol();

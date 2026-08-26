@@ -11,16 +11,15 @@ describe('iOS bridge acceptance host contract', () => {
     expect(controller).not.toContain('registerPluginInstance(FolioleBridgeAcceptance');
   });
 
-  it('uses an exclusive Web entry and existing pairing/workspace methods', () => {
+  it('uses an exclusive Web entry and active Sync Group/workspace methods', () => {
     const entry = fs.readFileSync('src/companion/main.tsx', 'utf8');
-    const acceptancePairing = fs.readFileSync('src/companion/iosAcceptancePairing.ts', 'utf8');
+    const acceptanceSyncGroup = fs.readFileSync('src/companion/iosAcceptanceSyncGroup.ts', 'utf8');
     const scenario = fs.readFileSync('src/companion/iosBridgeAcceptance.ts', 'utf8');
     const contentResourceScenario = fs.readFileSync('src/companion/iosContentResourceAcceptance.ts', 'utf8');
     const databaseUpgradeScenario = fs.readFileSync('src/companion/iosDatabaseUpgradeAcceptance.ts', 'utf8');
     const deviceIdentityScenario = fs.readFileSync('src/companion/iosDeviceIdentityAcceptance.ts', 'utf8');
     const syncPackScenario = fs.readFileSync('src/companion/iosSyncPackAcceptance.ts', 'utf8');
     const syncTriggerScenario = fs.readFileSync('src/companion/iosSyncTriggerAcceptance.ts', 'utf8');
-    const syncGroupJoinScenario = fs.readFileSync('src/companion/iosSyncGroupJoinAcceptance.ts', 'utf8');
     const stateWritebackScenario = fs.readFileSync('src/companion/iosStateWritebackAcceptance.ts', 'utf8');
     expect(entry).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-pack-runtime'");
@@ -29,13 +28,11 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'device-identity'");
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-trigger-runtime'");
-    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-join-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
-    expect(scenario).toContain('pairIosAcceptanceCompanion(endpoint, hostName)');
-    expect(acceptancePairing).toContain('requestCompanionPairing({');
-    expect(acceptancePairing).toContain('pairCompanionWithDesktop({');
-    expect(acceptancePairing).toContain("remotePeerName: ACCEPTANCE_DESKTOP_NAME");
+    expect(scenario).toContain('joinIosAcceptanceSyncGroup(endpoint, databasePath)');
+    expect(acceptanceSyncGroup).toContain('requestCompanionSyncGroupJoin({');
+    expect(acceptanceSyncGroup).toContain('completeCompanionSyncGroupJoin({');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
     expect(syncPackScenario).toContain(
@@ -57,10 +54,6 @@ describe('iOS bridge acceptance host contract', () => {
     expect(syncTriggerScenario).toContain("beginNativeCompanionSyncRun('manual', runId)");
     expect(syncTriggerScenario).toContain("kind: 'run_finished'");
     expect(syncTriggerScenario).toContain('loadCompanionWorkspaceSyncState()');
-    expect(syncGroupJoinScenario).toContain('FolioleSyncGroupJoinPrepare.receiveRequest');
-    expect(syncGroupJoinScenario).toContain('loadCompanionBootstrapState()');
-    expect(syncGroupJoinScenario).toContain('crypto.subtle.deriveKey');
-    expect(syncGroupJoinScenario).toContain("scenario: 'sync-group-join-runtime'");
   });
 
   it('runs expected database upgrade failure without waiting for bootstrap ready', () => {
@@ -102,7 +95,7 @@ describe('iOS bridge acceptance host contract', () => {
   it('reuses authoritative crypto/auth helpers without loading the Electron pairing store', () => {
     const service = fs.readFileSync('scripts/ios/ios-pairing-acceptance-service.ts', 'utf8');
     const auth = fs.readFileSync('electron/sync/companionRequestAuth.ts', 'utf8');
-    expect(service).toContain("from '../../electron/sync/companionPairingEncryption.ts'");
+    expect(service).toContain("from '../../electron/sync/desktopSyncGroupJoinCrypto.ts'");
     expect(service).toContain("from '../../electron/sync/companionRequestSignature.ts'");
     expect(service).not.toContain('companionPairingStore');
     expect(auth).toContain("from './companionRequestSignature.js'");

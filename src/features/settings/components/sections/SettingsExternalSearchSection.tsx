@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { useActiveSyncGroupMembership } from '../../../../shared/platform/external/useActiveSyncGroupMembership';
+import { useActiveSyncGroup } from '../../../../shared/platform/external/useActiveSyncGroup';
 import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
@@ -76,7 +76,7 @@ function LocalExternalFolders(props: {
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   const t = useTranslation();
-  const hasActiveSyncGroup = useActiveSyncGroupMembership();
+  const hasActiveSyncGroup = useActiveSyncGroup();
   const remoteFolders = props.folders.filter((folder) => folder.accessMode !== 'local');
   const localFolders = props.folders.filter((folder) => folder.accessMode === 'local');
 

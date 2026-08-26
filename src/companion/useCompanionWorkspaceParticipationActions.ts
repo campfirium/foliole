@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 
 import type { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
+import type { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 import {
   assertCompanionSyncParticipating,
   useCompanionSyncParticipation
 } from './useCompanionSyncParticipation';
-import type { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 
 export function useCompanionWorkspaceParticipationActions(args: {
-  pairing: ReturnType<typeof useCompanionWorkspacePairing>;
+  join: ReturnType<typeof useCompanionSyncGroupJoin>;
   setError(error: string | null): void;
   snapshotActions: ReturnType<typeof createWorkspaceSnapshotActions>;
 }) {
@@ -16,27 +16,25 @@ export function useCompanionWorkspaceParticipationActions(args: {
   const requireParticipation = useCallback(() => {
     try {
       assertCompanionSyncParticipating(participation.participating);
-    } catch (participationError) {
+    } catch (error) {
       args.setError('sync_participation_inactive');
-      throw participationError;
+      throw error;
     }
   }, [args, participation.participating]);
-  const pullFromDesktop = useCallback(async (endpointUrl: string) => {
-    const nextState = await args.snapshotActions.pullFromDesktop(endpointUrl);
-    await args.pairing.refreshPairingState();
-    return nextState;
-  }, [args]);
-  const checkDesktop = useCallback((endpointUrl: string) => {
+  const pullFromDevice = useCallback(async (endpointUrl: string) => {
+    return args.snapshotActions.pullFromDesktop(endpointUrl);
+  }, [args.snapshotActions]);
+  const discover = useCallback(() => {
     requireParticipation();
-    return args.pairing.checkDesktop(endpointUrl);
-  }, [args, requireParticipation]);
-  const completePairing = useCallback(() => {
+    return args.join.discover();
+  }, [args.join, requireParticipation]);
+  const completeJoin = useCallback(() => {
     requireParticipation();
-    return args.pairing.completePairing();
-  }, [args, requireParticipation]);
-  const requestPairing = useCallback((endpointUrl: string) => {
+    return args.join.complete();
+  }, [args.join, requireParticipation]);
+  const requestJoin = useCallback((endpointUrl: string) => {
     requireParticipation();
-    return args.pairing.requestPairing(endpointUrl);
-  }, [args, requireParticipation]);
-  return { checkDesktop, completePairing, participation, pullFromDesktop, requestPairing };
+    return args.join.request(endpointUrl);
+  }, [args.join, requireParticipation]);
+  return { completeJoin, discover, participation, pullFromDevice, requestJoin };
 }

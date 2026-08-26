@@ -52,15 +52,16 @@ afterEach(async () => {
 it('uses the active sync-group Host when separating local and remote sources', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO sync_groups
-    (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-    VALUES ('group-a', 'Workgroup', 'timeline-a', 'This Mac', 'now', 'now')`);
-  driver.execute(`INSERT INTO sync_group_members
-    (group_id, host_name, host_platform, state, approved_by_host_name,
-     authorization_id, joined_at, updated_at)
-    VALUES ('group-a', 'This Mac', 'darwin', 'active', 'This Mac', 'authorization-a', 'now', 'now')`);
+    (group_id, display_name, workgroup_key, created_at, updated_at)
+    VALUES ('group-a', 'Sync Group', 'key-a', 'now', 'now')`);
+  driver.execute(`INSERT INTO sync_group_devices
+    (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+     platform, state, joined_at, left_at, last_seen_at, updated_at)
+    VALUES ('group-a', 'device-a', 'anchor-a', '/library', 'This Mac',
+      'darwin', 'active', 'now', NULL, 'now', 'now')`);
   driver.execute(`INSERT INTO sync_group_local_state
-    (singleton_id, group_id, local_host_name, member_state, updated_at)
-    VALUES (1, 'group-a', 'This Mac', 'active', 'now')`);
+    (singleton_id, group_id, local_device_identity_key, state, updated_at)
+    VALUES (1, 'group-a', 'device-a', 'active', 'now')`);
 
   expect(loadWatchedFolderBindingState().current_host_name).toBe('This Mac');
 });

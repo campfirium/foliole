@@ -41,7 +41,7 @@ function createStartupArgs(overrides: Partial<Parameters<typeof startInitialMain
   return {
     failDatabaseStartup: vi.fn(),
     initializeRuntimeServices: vi.fn().mockResolvedValue(undefined),
-    installPairingFocusHandler: vi.fn(),
+    installSyncGroupJoinRequestFocusHandler: vi.fn(),
     loadStartupErrorSurface: vi.fn().mockResolvedValue(undefined),
     mainWindow: {} as Parameters<typeof startInitialMainWindow>[1]['mainWindow'],
     startCompanionSyncIfEnabled: vi.fn().mockResolvedValue(undefined),

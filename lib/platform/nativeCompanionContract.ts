@@ -15,7 +15,7 @@ export interface NativeCompanionBootstrapState {
   booted_at: string;
   database_path: string | null;
   database_ready: boolean;
-  /** Frozen Source execution identity, separate from pairing authorization. */
+  /** Frozen Source execution identity, separate from Sync Group Device identity. */
   device_id: string;
   device_name?: string | null;
   host_name?: string;

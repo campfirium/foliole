@@ -3,8 +3,8 @@ import { Suspense, lazy } from 'react';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { useAppController } from '../hooks/useAppController';
 
-import { CompanionPairingRequestsDialog } from './CompanionPairingRequestsDialog';
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
+import { SyncGroupJoinRequestsDialog } from './SyncGroupJoinRequestsDialog';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 type AppController = ReturnType<typeof useAppController>;
@@ -107,7 +107,7 @@ export function AppOverlayStack({
 }) {
   return (
     <>
-      <CompanionPairingRequestsDialog />
+      <SyncGroupJoinRequestsDialog />
       <EpubImportReleaseModeDialog />
       <Suspense fallback={null}>
         {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}

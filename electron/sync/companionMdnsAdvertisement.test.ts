@@ -71,9 +71,9 @@ describe('companion mDNS advertisement', () => {
       groupId: 'group-1',
       groupTag: 'tag-1',
       onWarning,
-      peerId: 'desktop-local',
+      deviceId: 'desktop-local',
       port: 38683,
-      timelineId: 'timeline-1'
+
     });
     bonjourMock.constructorCallback?.(new Error('multicast unavailable'));
 
@@ -88,9 +88,9 @@ describe('companion mDNS advertisement', () => {
       groupDisplayName: 'V',
       groupId: 'group-1',
       groupTag: 'tag-1',
-      peerId: 'desktop-local',
+      deviceId: 'desktop-local',
       port: 38683,
-      timelineId: 'timeline-1'
+
     });
 
     expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
@@ -106,9 +106,8 @@ describe('companion mDNS advertisement', () => {
         group_id: 'group-1',
         group_tag: 'tag-1',
         ipv4_addresses: '192.168.0.11',
-        peer_id: 'desktop-local',
+        device_id: 'desktop-local',
         runtime_instance_id: expect.any(String),
-        timeline_id: 'timeline-1',
         ...serializeSyncProtocolTxt()
       },
       type: 'foliole-sync'
@@ -126,7 +125,7 @@ describe('companion mDNS facts hints', () => {
     );
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+      deviceId: 'desktop-local', port: 38683,
     });
     const initial = (bonjourMock.publish.mock.calls[0]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
     await refreshCompanionMdnsAdvertisement();
@@ -145,7 +144,7 @@ describe('companion mDNS facts hints', () => {
     );
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+      deviceId: 'desktop-local', port: 38683,
     });
 
     const refreshed = refreshCompanionMdnsAdvertisement();
@@ -162,7 +161,7 @@ describe('companion mDNS facts hints', () => {
     );
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1', groupTag: 'tag-1',
-      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+      deviceId: 'desktop-local', port: 38683,
     });
     await refreshCompanionMdnsAdvertisement();
 
@@ -205,7 +204,7 @@ describe('companion mDNS lifecycle', () => {
 
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+      deviceId: 'desktop-local', port: 38683,
     });
 
     expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
@@ -221,7 +220,7 @@ describe('companion mDNS lifecycle', () => {
 
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+      deviceId: 'desktop-local', port: 38683,
     });
 
     expect(bonjourMock.constructorOptions).toEqual([
@@ -240,9 +239,9 @@ describe('companion mDNS lifecycle', () => {
       groupDisplayName: 'V',
       groupId: 'group-1',
       groupTag: 'tag-1',
-      peerId: 'desktop-local',
+      deviceId: 'desktop-local',
       port: 38683,
-      timelineId: 'timeline-1'
+
     });
     stopCompanionMdnsAdvertisement();
 

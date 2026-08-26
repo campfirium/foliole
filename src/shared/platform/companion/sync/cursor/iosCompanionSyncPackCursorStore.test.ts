@@ -37,7 +37,7 @@ describe('iosCompanionSyncPackCursorStore', () => {
     await expect(store.saveCursor(7)).resolves.toBe(7);
     await expect(store.saveCursor(null)).resolves.toBeNull();
     expect(connection.run).toHaveBeenCalledWith(
-      expect.stringContaining('ON CONFLICT(authorization_id, stream_name) DO UPDATE'),
+      expect.stringContaining('ON CONFLICT(peer_id, stream_name) DO UPDATE'),
       ['device-c', 'sync-pack-receive', '7', expect.any(String)],
       false
     );

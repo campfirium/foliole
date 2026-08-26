@@ -3,11 +3,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 
-import {
-  encryptCompanionPairingSecret,
-  isSupportedPairingPublicKey
-} from '../../electron/sync/companionPairingEncryption.ts';
 import { verifyCompanionRequestSignature } from '../../electron/sync/companionRequestSignature.ts';
+import { encryptDesktopSyncGroupJoinInfo } from '../../electron/sync/desktopSyncGroupJoinCrypto.ts';
 import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   evaluateSyncProtocolCompatibility
@@ -88,7 +85,7 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
   clientPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key : '';
   const hostName = typeof payload.host_name === 'string' ? payload.host_name.trim() : '';
   const hostPlatform = typeof payload.host_platform === 'string' ? payload.host_platform.trim() : '';
-  if (!hostName || !hostPlatform || !isSupportedPairingPublicKey(clientPublicKey)
+  if (!hostName || !hostPlatform || !isSupportedSyncGroupJoinPublicKey(clientPublicKey)
       || compatibility.status !== 'compatible') {
     send(response, 400, { error: 'invalid_pair_request' });
     return;
@@ -133,14 +130,20 @@ async function handlePairCompletion(request: IncomingMessage, response: ServerRe
     compatibility: evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR),
     desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     authorization_id: authorizationId,
-    encrypted_credential_secret: await encryptCompanionPairingSecret({
-      clientPublicKey, credentialSecret
+    encrypted_credential_secret: await encryptDesktopSyncGroupJoinInfo({
+      clientPublicKey, groupInfo: credentialSecret
     }),
     host_name: 'Acceptance iPhone',
     host_platform: 'ios-capacitor',
     paired_at: new Date().toISOString(),
     peer_id: IOS_ACCEPTANCE_DESKTOP_PEER_ID
   });
+}
+
+function isSupportedSyncGroupJoinPublicKey(value: string) {
+  if (!/^[A-Za-z0-9_-]+$/u.test(value)) return false;
+  const decoded = Buffer.from(value, 'base64url');
+  return decoded.length === 65 && decoded[0] === 4 && decoded.toString('base64url') === value;
 }
 
 async function routeSyncPackRequest(

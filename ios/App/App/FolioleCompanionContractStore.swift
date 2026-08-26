@@ -11,20 +11,18 @@ struct FolioleCompanionSyncPackContract {
     let sqliteTableRequirements: [String: Set<String>]
 }
 
-struct FolioleCompanionPairingContract {
+struct FolioleCompanionNetworkContract {
+    let protocolCapabilities: [String]
+    let protocolMaximumVersion: Int
+    let protocolMinimumVersion: Int
     let protocolVersion: Int
-    let credentialRequestKeys: [String: String]
     let discoveryCandidateKeys: [String: String]
     let discoveryResponseKeys: [String: String]
     let networkRequestKeys: [String: String]
     let networkResponseKeys: [String: String]
-    let legacyPreferenceKeys: [String: String]
-    let preferenceKeys: [String: String]
     let signatureHeaderKeys: [String: String]
     let signatureRequestKeys: [String: String]
     let signatureResponseKeys: [String: String]
-    let stateKeys: [String: String]
-    let storageKeys: [String: String]
 }
 
 struct FolioleCompanionContentBlobContract {
@@ -89,22 +87,24 @@ final class FolioleCompanionContractStore {
         )
     }
 
-    func pairingContract() throws -> FolioleCompanionPairingContract {
-        FolioleCompanionPairingContract(
+    func networkContract() throws -> FolioleCompanionNetworkContract {
+        FolioleCompanionNetworkContract(
+            protocolCapabilities: try strings(path: ["syncProtocol", "capabilities"], root: sync),
+            protocolMaximumVersion: try integer(path: ["syncProtocol", "max_supported_version"], root: sync),
+            protocolMinimumVersion: try integer(path: ["syncProtocol", "min_supported_version"], root: sync),
             protocolVersion: try integer(path: ["syncProtocol", "version"], root: sync),
-            credentialRequestKeys: try stringMap(path: ["pairingPlugin", "credentialRequestKeys"], root: bridge),
             discoveryCandidateKeys: try stringMap(path: ["hostApi", "network", "discoveryCandidateKeys"], root: bridge),
             discoveryResponseKeys: try stringMap(path: ["hostApi", "network", "discoveryResponseKeys"], root: bridge),
             networkRequestKeys: try stringMap(path: ["hostApi", "network", "requestKeys"], root: bridge),
             networkResponseKeys: try stringMap(path: ["hostApi", "network", "responseKeys"], root: bridge),
-            legacyPreferenceKeys: try stringMap(path: ["pairingPlugin", "legacyPreferenceKeys"], root: bridge),
-            preferenceKeys: try stringMap(path: ["pairingPlugin", "preferenceKeys"], root: bridge),
-            signatureHeaderKeys: try stringMap(path: ["pairingPlugin", "signature", "headerKeys"], root: bridge),
-            signatureRequestKeys: try stringMap(path: ["pairingPlugin", "signature", "requestKeys"], root: bridge),
-            signatureResponseKeys: try stringMap(path: ["pairingPlugin", "signature", "responseKeys"], root: bridge),
-            stateKeys: try stringMap(path: ["pairingPlugin", "stateKeys"], root: bridge),
-            storageKeys: try stringMap(path: ["pairingPlugin", "storageKeys"], root: bridge)
+            signatureHeaderKeys: try stringMap(path: ["syncGroupSecurity", "signature", "headerKeys"], root: bridge),
+            signatureRequestKeys: try stringMap(path: ["syncGroupSecurity", "signature", "requestKeys"], root: bridge),
+            signatureResponseKeys: try stringMap(path: ["syncGroupSecurity", "signature", "responseKeys"], root: bridge)
         )
+    }
+
+    func syncGroupProviderContract() throws -> [String: Any] {
+        try object(path: ["hostApi", "syncGroupProvider"], root: bridge)
     }
 
     func contentBlobContract() throws -> FolioleCompanionContentBlobContract {

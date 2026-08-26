@@ -6,10 +6,10 @@ import {
 } from './syncAcceptanceSnapshotContract.js';
 import { syncAcceptanceFactsFixture } from './syncAcceptanceSnapshotFixtures.js';
 
-const HOSTS = ['android', 'desktop'] as const;
+const HOSTS = ['android', 'desktop', 'ios', 'windows'] as const;
 const BASELINES = ['fresh_join', 'existing_sync', 'rejoin'] as const;
 
-it.each(BASELINES)('projects %s to the same unique baseline on Android and desktop', (baseline) => {
+it.each(BASELINES)('projects %s to the same unique baseline on every host', (baseline) => {
   for (const host of HOSTS) {
     const snapshot = projectSyncAcceptanceSnapshot(syncAcceptanceFactsFixture(baseline, host));
     expect(snapshot.journey_baseline).toBe(baseline);
@@ -33,7 +33,7 @@ it('rejects an unknown version before acceptance', () => {
   const snapshot = projectSyncAcceptanceSnapshot(
     syncAcceptanceFactsFixture('fresh_join', 'desktop')
   );
-  expect(parseSyncAcceptanceSnapshot({ ...snapshot, schema_version: 2 })).toEqual({
+  expect(parseSyncAcceptanceSnapshot({ ...snapshot, schema_version: 3 })).toEqual({
     ok: false,
     reason: 'unknown_version'
   });
@@ -51,7 +51,7 @@ it('rejects missing required fields', () => {
   });
 });
 
-it('rejects fields outside the frozen v1 envelope', () => {
+it('rejects fields outside the frozen v2 envelope', () => {
   const snapshot = projectSyncAcceptanceSnapshot(
     syncAcceptanceFactsFixture('fresh_join', 'android')
   );

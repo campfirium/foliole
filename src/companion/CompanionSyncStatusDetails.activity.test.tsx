@@ -16,13 +16,7 @@ function renderActivity(
       lastSyncedAt={null}
       onOpenPage={vi.fn()}
       page="syncActivity"
-      pairingState={{
-        authorization_id: 'authorization-android',
-        host_name: 'Android companion',
-        host_platform: 'android-capacitor',
-        is_paired: true,
-        paired_at: '2026-04-22T09:00:00.000Z'
-      }}
+      syncGroup={{ created_at: '', devices: [], display_name: 'Studio', group_id: 'group-1', local_device_identity_key: '' }}
       status={overrides.status ?? 'idle'}
       syncConflictCount={0}
       syncEvents={events}

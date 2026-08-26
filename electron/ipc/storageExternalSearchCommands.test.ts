@@ -15,7 +15,7 @@ const SAVE_EXTERNAL_SEARCH_FOLDERS = 'save_external_search_folders';
 const LOAD_EXTERNAL_SEARCH_BROWSE_ENTRIES = 'load_external_search_browse_entries';
 const LOAD_EXTERNAL_SEARCH_FOLDERS = 'load_external_search_folders';
 const LOAD_EXTERNAL_SEARCH_PREVIEW = 'load_external_search_preview';
-const LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP = 'load_active_sync_group_membership';
+const LOAD_ACTIVE_SYNC_GROUP_DEVICE = 'load_active_sync_group_device';
 const REBUILD_EXTERNAL_SEARCH_INDEX = 'rebuild_external_search_index';
 let mockedAppDataDir = '/tmp/foliole-storage-external-search-commands';
 
@@ -59,11 +59,11 @@ beforeEach(async () => {
   loadDesktopSyncGroup.mockReturnValue(null);
 });
 
-it('reads active workgroup membership without loading pairing secrets', () => {
-  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP, {})).toBe(false);
-  loadDesktopSyncGroup.mockReturnValue({ local_member_state: 'active' });
+it('reads the active Sync Group Device without loading retired secrets', () => {
+  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_DEVICE, {})).toBe(false);
+  loadDesktopSyncGroup.mockReturnValue({ group_id: 'group-1' });
 
-  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP, {})).toBe(true);
+  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_DEVICE, {})).toBe(true);
 });
 
 afterEach(async () => {

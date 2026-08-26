@@ -1,8 +1,7 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
-import { UNKNOWN_DESKTOP_PLATFORM } from './companionWorkspacePairingModel';
-import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
+import type { CompanionSyncGroupDiscovery } from './companionSyncGroupJoinModel';
 
 function formatEndpoint(endpointUrl: string) {
   try {
@@ -13,15 +12,15 @@ function formatEndpoint(endpointUrl: string) {
   }
 }
 
-function resolveDeviceTitle(desktop: CompanionDesktopDiscovery, unknownHost: string) {
-  return desktop.groupDisplayName || desktop.desktopHostName || unknownHost;
+function resolveDeviceTitle(device: CompanionSyncGroupDiscovery, unknownHost: string) {
+  return device.groupDisplayName || device.providerDeviceName || unknownHost;
 }
 
-function resolveDesktopPlatform(desktop: CompanionDesktopDiscovery, desktopFallback: string) {
-  return desktop.desktopPlatform !== UNKNOWN_DESKTOP_PLATFORM ? desktop.desktopPlatform : desktopFallback;
+function resolveDevicePlatform(device: CompanionSyncGroupDiscovery, fallback: string) {
+  return device.providerPlatform || fallback;
 }
 
-function PairAction(props: {
+function JoinAction(props: {
   disabled: boolean;
   endpointUrl: string;
   isConnecting: boolean;
@@ -34,7 +33,7 @@ function PairAction(props: {
       className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
       data-sync-endpoint={props.endpointUrl}
-      data-testid="companion-sync-pair"
+      data-testid="companion-sync-group-join"
       onClick={props.onClick}
       type="button"
     >
@@ -49,22 +48,22 @@ function PairAction(props: {
 }
 
 function DeviceRow(props: {
-  desktop: CompanionDesktopDiscovery;
+  device: CompanionSyncGroupDiscovery;
   disabled: boolean;
   isConnecting: boolean;
-  onPair(endpointUrl: string): void;
+  onJoin(endpointUrl: string): void;
 }) {
   const t = useTranslation();
-  const deviceTitle = resolveDeviceTitle(props.desktop, t('companion.sync.discovery.unknownHost'));
-  const desktopPlatform = resolveDesktopPlatform(props.desktop, t('companion.sync.discovery.desktopFallback'));
-  const endpointLabel = formatEndpoint(props.desktop.endpointUrl);
-  const isCompatible = props.desktop.compatibility.status === 'compatible';
+  const deviceTitle = resolveDeviceTitle(props.device, t('companion.sync.discovery.unknownHost'));
+  const devicePlatform = resolveDevicePlatform(props.device, t('companion.sync.discovery.desktopFallback'));
+  const endpointLabel = formatEndpoint(props.device.endpointUrl);
+  const isCompatible = props.device.compatibility.status === 'compatible';
   return (
     <div className="px-1 py-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {deviceTitle} <span className="font-medium text-accent">({desktopPlatform})</span>
+            {deviceTitle} <span className="font-medium text-accent">({devicePlatform})</span>
           </p>
           <p className="mt-1 truncate text-xs text-accent">{endpointLabel}</p>
           {isCompatible ? null : (
@@ -73,11 +72,11 @@ function DeviceRow(props: {
             </p>
           )}
         </div>
-        <PairAction
+        <JoinAction
           disabled={props.disabled || !isCompatible}
-          endpointUrl={props.desktop.endpointUrl}
+          endpointUrl={props.device.endpointUrl}
           isConnecting={props.isConnecting}
-          onClick={() => props.onPair(props.desktop.endpointUrl)}
+          onClick={() => props.onJoin(props.device.endpointUrl)}
         />
       </div>
     </div>
@@ -85,14 +84,14 @@ function DeviceRow(props: {
 }
 
 export function CompanionSyncDeviceList(props: {
-  desktops: CompanionDesktopDiscovery[];
+  devices: CompanionSyncGroupDiscovery[];
   disabled: boolean;
   isConnecting?: boolean;
-  onPair(endpointUrl: string): void;
+  onJoin(endpointUrl: string): void;
   showHeading?: boolean;
 }) {
   const t = useTranslation();
-  const deviceCount = props.desktops.length;
+  const deviceCount = props.devices.length;
   const unit = t(deviceCount === 1 ? 'companion.sync.discovery.device' : 'companion.sync.discovery.devices');
   return (
     <div>
@@ -102,13 +101,13 @@ export function CompanionSyncDeviceList(props: {
         </h2>
       )}
       <div className={props.showHeading === false ? 'flex flex-col gap-2' : 'mt-3 flex flex-col gap-2'}>
-        {props.desktops.map((desktop) => (
+        {props.devices.map((device) => (
           <DeviceRow
-            desktop={desktop}
+            device={device}
             disabled={props.disabled}
             isConnecting={props.isConnecting === true}
-            key={`${desktop.peerId}:${desktop.endpointUrl}`}
-            onPair={props.onPair}
+            key={`${device.providerDeviceId}:${device.endpointUrl}`}
+            onJoin={props.onJoin}
           />
         ))}
       </div>

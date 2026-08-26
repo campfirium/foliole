@@ -14,8 +14,6 @@ import {
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
 import { loadCompanionLanDiscovery } from './companionLanDiscovery.js';
-import { handlePairRequest } from './companionLanPairCompletion.js';
-import { handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
@@ -34,10 +32,14 @@ import {
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import {
+  handleSyncGroupJoinAcceptance,
+  handleSyncGroupJoinRequest
+} from './syncGroupJoinEndpoints.js';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
-export const PAIR_ENDPOINT_PATH = '/companion/pair';
-export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
+export const SYNC_GROUP_JOIN_ACCEPTANCE_PATH = '/sync-group/join-acceptance';
+export const SYNC_GROUP_JOIN_REQUESTS_PATH = '/sync-group/join-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
@@ -70,14 +72,14 @@ function handleWorkspaceMetadataGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
-    authenticatedHostName: string;
+    authenticatedDeviceId: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
-    peerId: string;
+    deviceId: string;
   }
 ) {
   if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
     const version = loadWorkspaceVersionMetadata();
-    writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, version));
+    writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.deviceId, version));
     return true;
   }
   if (parsedRequestUrl.pathname === SYNC_DIAGNOSTICS_PATH) {
@@ -96,17 +98,17 @@ async function handlePostRequest(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
-    onPairRequestCreated: (() => void) | null;
-    peerId: string;
-    updatePairingStatus: (pairing: { paired_authorization_count: number; pending_pair_request_count: number }) => void;
+    onJoinRequestCreated: (() => void) | null;
+    deviceId: string;
+    updateGroupStatus: (status: { active_device_count: number; pending_join_request_count: number }) => void;
   }
 ) {
-  if (parsedRequestUrl.pathname === PAIR_REQUESTS_ENDPOINT_PATH) {
-    await handlePairRequestCreate(request, response, args.updatePairingStatus, args.onPairRequestCreated, writeJson);
+  if (parsedRequestUrl.pathname === SYNC_GROUP_JOIN_REQUESTS_PATH) {
+    await handleSyncGroupJoinRequest(request, response, args.onJoinRequestCreated, writeJson);
     return true;
   }
-  if (parsedRequestUrl.pathname === PAIR_ENDPOINT_PATH) {
-    await handlePairRequest(request, response, args.appVersion, args.peerId, args.updatePairingStatus, writeJson);
+  if (parsedRequestUrl.pathname === SYNC_GROUP_JOIN_ACCEPTANCE_PATH) {
+    await handleSyncGroupJoinAcceptance(request, response, writeJson);
     return true;
   }
   return false;
@@ -118,9 +120,9 @@ async function handleAuthenticatedGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
-    authenticatedHostName: string;
+    authenticatedDeviceId: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
-    peerId: string;
+    deviceId: string;
   }
 ) {
   if (request.method === 'GET' && isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
@@ -152,7 +154,7 @@ async function handleAuthenticatedGet(
     request,
     response,
     parsedRequestUrl,
-    args.authenticatedHostName,
+    args.authenticatedDeviceId,
     writeJson
   )) return;
   if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
@@ -161,15 +163,15 @@ async function handleAuthenticatedGet(
     return;
   }
   const snapshot = loadWorkspaceSnapshot({ includeBody: true });
-  writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.peerId, snapshot));
+  writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.deviceId, snapshot));
 }
 
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
   getSyncStatus?: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
-  onPairRequestCreated: (() => void) | null;
-  peerId: string;
-  updatePairingStatus: (pairing: { paired_authorization_count: number; pending_pair_request_count: number }) => void;
+  onJoinRequestCreated: (() => void) | null;
+  deviceId: string;
+  updateGroupStatus: (status: { active_device_count: number; pending_join_request_count: number }) => void;
 }) {
   return async (request: http.IncomingMessage, response: http.ServerResponse) => {
     try {
@@ -202,7 +204,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
     }
     await handleAuthenticatedGet(request, response, parsedRequestUrl, {
       ...args,
-      authenticatedHostName: auth.host_name,
+      authenticatedDeviceId: auth.device_id,
       getSyncStatus: args.getSyncStatus ?? (() => null)
     });
     } catch (error) {

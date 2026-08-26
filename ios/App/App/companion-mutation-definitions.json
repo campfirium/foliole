@@ -5,8 +5,12 @@
       "statementName": "appDataClearSyncGroupLocalState"
     },
     {
-      "table": "sync_group_members",
-      "statementName": "appDataClearSyncGroupMembers"
+      "table": "sync_group_devices",
+      "statementName": "appDataClearSyncGroupDevices"
+    },
+    {
+      "table": "sync_group_nonce_ledger",
+      "statementName": "appDataClearSyncGroupNonceLedger"
     },
     {
       "table": "sync_groups",
@@ -237,7 +241,8 @@
     "companionMetaDeleteExceptDeviceId": "DELETE FROM companion_meta WHERE key <> 'device_id'",
     "companionMetaUpsert": "INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)",
     "appDataClearSyncGroupLocalState": "DELETE FROM sync_group_local_state",
-    "appDataClearSyncGroupMembers": "DELETE FROM sync_group_members",
+    "appDataClearSyncGroupDevices": "DELETE FROM sync_group_devices",
+    "appDataClearSyncGroupNonceLedger": "DELETE FROM sync_group_nonce_ledger",
     "appDataClearSyncGroups": "DELETE FROM sync_groups",
     "appDataClearSyncDeliveryReceipts": "DELETE FROM sync_delivery_receipts",
     "appDataClearSyncPeerCursors": "DELETE FROM sync_peer_cursors",

@@ -33,7 +33,6 @@ import {
 } from '../reviewSchedulerSettings.js';
 
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
-import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
 import {
   loadLibraryPathSettings,
@@ -52,6 +51,7 @@ import { handleExternalSearchStorageCommand } from './storageExternalSearchComma
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
 import { handleSourceManagementCommand } from './storageSourceManagementCommands.js';
 import { handleWatchedFolderSettingsCommand } from './storageWatchedFolderCommands.js';
+import { handleSyncGroupCommand } from './syncGroupCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
@@ -119,8 +119,8 @@ export async function handleSettingsStorageCommand(
 ) {
   const externalSearchResult = handleSourceSettingsCommand(command, args);
   if (externalSearchResult !== undefined) return externalSearchResult;
-  const companionPairingResult = handleCompanionPairingCommand(command, args);
-  if (companionPairingResult !== undefined) return companionPairingResult;
+  const syncGroupResult = handleSyncGroupCommand(command, args);
+  if (syncGroupResult !== undefined) return syncGroupResult;
   const publishingResult = await handlePublishingStorageCommand(command, args);
   if (publishingResult !== undefined) {
     if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress)

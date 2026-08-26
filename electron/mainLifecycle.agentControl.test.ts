@@ -66,7 +66,11 @@ vi.mock('./mainStartup.js', () => ({
   startInitialMainWindow: vi.fn((_args, startup: { initializeRuntimeServices: () => Promise<void> }) =>
     startup.initializeRuntimeServices())
 }));
-vi.mock('./mainWindowLifecycle.js', () => ({ installPairingFocusHandler: vi.fn(), openOrCreateMainWindow: vi.fn(), startCompanionSyncIfEnabled: vi.fn() }));
+vi.mock('./mainWindowLifecycle.js', () => ({
+  installSyncGroupJoinRequestFocusHandler: vi.fn(),
+  openOrCreateMainWindow: vi.fn(),
+  startCompanionSyncIfEnabled: vi.fn()
+}));
 vi.mock('./mainWindowRegistry.js', () => ({ getMainWindow: vi.fn(), setMainWindow: vi.fn() }));
 vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./runtimeMainSupport.js', () => ({ bindEmbeddedLinkPanelContents: vi.fn(), installMainRuntimeDiagnostics: vi.fn() }));

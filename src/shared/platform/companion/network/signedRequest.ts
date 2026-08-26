@@ -1,16 +1,16 @@
-import { normalizePairingState, readStoredWebPairingState } from '../../companionPairingState';
 import { createCompanionUuid } from '../../companionUuid';
 import {
   FolioleCompanionSync,
   isAvailableNativeAndroidCompanionRuntime,
-  isNativeCompanionPairingRuntime
+  isNativeCompanionNetworkRuntime
 } from '../../companionWorkspaceRuntimeRepository';
 import { ensureCompanionSyncGroupDataOwner } from '../sync/syncGroupProviderDataOwner';
 import {
-  loadCompanionSyncGroup
+  loadCompanionSyncGroup,
+  loadCompanionSyncGroupWorkgroupKey
 } from '../sync/syncGroupStore';
 
-const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
+const SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
 export const WORKGROUP_ENVELOPE_CONTENT_TYPE = 'application/vnd.foliole.workgroup-aead+json';
 
 function toHex(buffer: ArrayBuffer) {
@@ -41,38 +41,29 @@ export async function createSignedRequestHeaders(args: {
   const timestamp = new Date().toISOString();
   const nonce = createCompanionUuid();
   const bodyHash = await sha256Hex(args.bodyText ?? '');
-  if (isNativeCompanionPairingRuntime()) {
-    const group = await loadCompanionSyncGroup();
-    if (group) {
-      if (!args.endpointUrl) throw new Error('Sync Group request target is required.');
-      const pairing = normalizePairingState(await FolioleCompanionSync.loadPairingState());
-      if (pairing.sync_usable !== true) throw new Error('sync_protocol_incompatible');
-      const result = await signNativeWorkgroupRequest({
-        ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }),
-        bodyHash,
-        endpointUrl: args.endpointUrl,
-        method: args.method,
-        nonce,
-        pathWithQuery: args.pathWithQuery,
-        timestamp
-      }, group.group_id);
-      return { ...result.headers, 'X-Sync-Group-Id': group.group_id };
-    }
-    return (await FolioleCompanionSync.signCompanionSyncRequest({
-      body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp
-    })).headers;
+  const group = await loadCompanionSyncGroup();
+  if (!group) throw new Error('sync_group_not_joined');
+  const localDevice = group.devices.find((device) =>
+    device.device_identity_key === group.local_device_identity_key && device.state === 'active');
+  if (!localDevice) throw new Error('sync_group_local_device_missing');
+  if (isNativeCompanionNetworkRuntime()) {
+    if (!args.endpointUrl) throw new Error('Sync Group request target is required.');
+    const result = await signNativeWorkgroupRequest({
+      ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }), bodyHash,
+      endpointUrl: args.endpointUrl, method: args.method, nonce,
+      pathWithQuery: args.pathWithQuery, timestamp
+    }, group.group_id);
+    return { ...result.headers, 'X-Sync-Group-Id': group.group_id };
   }
-  const stored = readStoredWebPairingState();
-  if (!stored?.authorization_id || !stored.credential_secret || normalizePairingState(stored).sync_usable !== true) {
-    throw new Error('Companion is not paired with a compatible desktop sync source.');
-  }
+  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+  if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   return {
-    'X-Authorization-Id': stored.authorization_id,
+    'X-Device-Id': localDevice.device_identity_key,
     'X-Nonce': nonce,
-    'X-Signature': await hmacSha256Hex(stored.credential_secret, canonical({
+    'X-Signature': await hmacSha256Hex(workgroupKey, canonical({
       bodyHash, method: args.method, nonce, pathWithQuery: args.pathWithQuery, timestamp
     })),
-    'X-Sync-Group-Id': 'web-preview',
+    'X-Sync-Group-Id': group.group_id,
     'X-Timestamp': timestamp
   };
 }
@@ -116,16 +107,16 @@ async function signNativeWorkgroupRequest(args: {
   });
 }
 
-export async function verifyNativePairingCanSignRequest(endpointUrl?: string) {
+export async function verifyNativeSyncGroupCanSignRequest(endpointUrl?: string) {
   try {
     const headers = await createSignedRequestHeaders({
-      ...(endpointUrl ? { endpointUrl } : {}), method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH
+      ...(endpointUrl ? { endpointUrl } : {}), method: 'GET', pathWithQuery: SIGNATURE_CHECK_PATH
     });
-    if (!headers['X-Authorization-Id'] || !headers['X-Signature']) {
+    if (!headers['X-Device-Id'] || !headers['X-Signature']) {
       throw new Error('Missing signed request headers.');
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error';
-    throw new Error(`Native pairing credentials cannot sign sync requests: ${reason}`);
+    throw new Error(`Sync Group credentials cannot sign sync requests: ${reason}`);
   }
 }

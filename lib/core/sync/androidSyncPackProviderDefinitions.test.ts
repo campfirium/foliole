@@ -16,13 +16,12 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.compression).toBe('zlib');
   expect(definitions.protocol).toMatchObject({
     capabilities: [
-      'author-host-snapshots-v1', 'authorization-credential-routing-v1',
-      'authorization-delivery-receipts-v1',
-      'host-workgroup-members-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
-      'source-host-ownership-v1', 'sync-group-facts-v1',
+      'author-host-snapshots-v1', 'device-delivery-receipts-v1',
+      'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
+      'source-host-ownership-v1', 'sync-group-device-facts-v1',
       'system-entry-display-names-v1', 'workgroup-aead-v1'
     ],
-    version: 3
+    version: 4
   });
   expect(definitions.payloadPlans).toContainEqual(expect.objectContaining({
     objectType: 'watched_folder', sql: expect.stringContaining('s.host_name')

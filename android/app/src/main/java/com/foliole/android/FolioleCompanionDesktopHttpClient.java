@@ -172,7 +172,6 @@ final class FolioleCompanionDesktopHttpClient {
         return "expired_timestamp".equals(value)
             || "invalid_signature".equals(value)
             || "missing_headers".equals(value)
-            || "protocol_pairing_repair_required".equals(value)
             || "replayed_nonce".equals(value)
             || "unknown_authorization".equals(value);
     }

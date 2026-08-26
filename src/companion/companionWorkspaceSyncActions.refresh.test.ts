@@ -55,8 +55,8 @@ describe('companion workspace manual sync refresh', () => {
   it('repairs a stale emulator endpoint before manual sync on a real device', async () => {
     const { actions } = createActions();
     workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([{
-      authorizationId: 'authorization-maci', endpointUrl: 'http://192.168.0.11:38641',
-      groupId: 'group-1', hostName: 'Maci'
+      deviceId: 'device-maci', endpointUrl: 'http://192.168.0.11:38641',
+      groupId: 'group-1', deviceName: 'Maci'
     }]);
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce(createSyncState({
       endpoint_url: 'http://192.168.0.11:38641',

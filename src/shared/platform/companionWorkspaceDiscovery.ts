@@ -9,7 +9,7 @@ import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
-  isNativeCompanionPairingRuntime,
+  isNativeCompanionNetworkRuntime,
   type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
@@ -59,7 +59,7 @@ async function loadNativeDiscoveryCandidates(
   preferredEndpointUrl: string,
   options: CompanionDiscoveryOptions
 ) {
-  if (!isNativeCompanionPairingRuntime()) {
+  if (!isNativeCompanionNetworkRuntime()) {
     return uniqueCandidates([directCandidate(preferredEndpointUrl)]);
   }
   if (!options.allowWhileNotParticipating) {
@@ -130,7 +130,7 @@ export async function loadCompanionDiscoveryCandidates(candidates: DiscoveryCand
 }
 
 async function requestDiscovery(url: string, signal: AbortSignal) {
-  if (!isNativeCompanionPairingRuntime()) {
+  if (!isNativeCompanionNetworkRuntime()) {
     return await fetch(url, { signal });
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });
@@ -139,10 +139,9 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
   const groupId = result.discovery.group_id?.trim();
-  const timelineId = result.discovery.timeline_id?.trim();
-  const peerId = result.discovery.peer_id?.trim();
-  if (groupId && timelineId && peerId) return `group:${groupId}:${timelineId}:peer:${peerId}`;
-  return result.discovery.runtime_instance_id?.trim() || peerId || result.endpointUrl;
+  const deviceId = result.discovery.provider_device_id?.trim();
+  if (groupId && deviceId) return `group:${groupId}:device:${deviceId}`;
+  return result.discovery.runtime_instance_id?.trim() || deviceId || result.endpointUrl;
 }
 
 function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
@@ -153,7 +152,7 @@ function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: Comp
 }
 
 function providerRank(result: CompanionDiscoveryResult) {
-  return result.discovery.desktop_platform === 'android-capacitor' ? 1 : 0;
+  return result.discovery.provider_platform === 'android-capacitor' ? 1 : 0;
 }
 
 export async function discoverCompanionDesktops(

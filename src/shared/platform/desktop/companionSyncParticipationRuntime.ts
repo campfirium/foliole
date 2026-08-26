@@ -1,18 +1,18 @@
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import { invokeDesktopCompanionPairingCommand } from '../desktopCompanionPairingRuntimeRepository';
+import { invokeDesktopSyncGroupCommand } from '../desktopSyncGroupRuntimeRepository';
 
 export function enableDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.enableCompanionSync);
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync);
 }
 
 export function disableDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.disableCompanionSync);
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.disableCompanionSync);
 }
 
 export function pauseDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.pauseCompanionSync);
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.pauseCompanionSync);
 }
 
 export function resumeDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.resumeCompanionSync);
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.resumeCompanionSync);
 }

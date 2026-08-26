@@ -2,8 +2,6 @@ import type { SyncAcceptanceProjectionFacts } from './syncAcceptanceSnapshotCont
 
 const DEVICE_DIGEST = `sha256:${'a'.repeat(64)}`;
 const GROUP_DIGEST = `sha256:${'b'.repeat(64)}`;
-const TIMELINE_DIGEST = `sha256:${'c'.repeat(64)}`;
-
 const BASE_FACTS = {
   device_id_digest: DEVICE_DIGEST,
   local_dirty_count: 0,
@@ -18,44 +16,25 @@ export function syncAcceptanceFactsFixture(
   name: SyncAcceptanceFixtureName,
   host: SyncAcceptanceProjectionFacts['host']
 ): SyncAcceptanceProjectionFacts {
-  const fixture = FIXTURES[name];
-  return { ...BASE_FACTS, ...fixture, host };
+  return { ...BASE_FACTS, ...FIXTURES[name], host };
 }
 
-const FIXTURES: Record<
-  SyncAcceptanceFixtureName,
-  Omit<SyncAcceptanceProjectionFacts, keyof typeof BASE_FACTS | 'host'>
-> = {
+const FIXTURES: Record<SyncAcceptanceFixtureName,
+  Omit<SyncAcceptanceProjectionFacts, keyof typeof BASE_FACTS | 'host'>> = {
   existing_sync: {
-    authorization: 'active',
-    credential_signability: 'signable',
-    group_id_digest: GROUP_DIGEST,
-    membership: 'active',
-    route: 'ready',
-    timeline_id_digest: TIMELINE_DIGEST
+    device_state: 'active', group_id_digest: GROUP_DIGEST,
+    group_key_signability: 'signable', route: 'ready'
   },
   fresh_join: {
-    authorization: 'none',
-    credential_signability: 'absent',
-    group_id_digest: null,
-    membership: 'absent',
-    route: 'absent',
-    timeline_id_digest: null
+    device_state: 'absent', group_id_digest: null,
+    group_key_signability: 'absent', route: 'absent'
   },
   rejoin: {
-    authorization: 'none',
-    credential_signability: 'absent',
-    group_id_digest: GROUP_DIGEST,
-    membership: 'left',
-    route: 'ready',
-    timeline_id_digest: TIMELINE_DIGEST
+    device_state: 'left', group_id_digest: GROUP_DIGEST,
+    group_key_signability: 'absent', route: 'ready'
   },
   unknown: {
-    authorization: 'pending',
-    credential_signability: 'invalid',
-    group_id_digest: GROUP_DIGEST,
-    membership: 'active',
-    route: 'unavailable',
-    timeline_id_digest: TIMELINE_DIGEST
+    device_state: 'active', group_id_digest: GROUP_DIGEST,
+    group_key_signability: 'invalid', route: 'unavailable'
   }
 };

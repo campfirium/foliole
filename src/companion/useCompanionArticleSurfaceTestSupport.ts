@@ -51,24 +51,25 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     },
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
-    completePairing: vi.fn(),
-    cancelPairing: vi.fn(),
-    disconnectPairing: vi.fn(),
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
+    cancelJoin: vi.fn(),
+    completeJoin: vi.fn(),
+    completeSyncGroupJoin: vi.fn(),
+    discoverSyncGroups: vi.fn(),
     error: null,
     isWorkspaceSyncStateReady: true,
     manualSyncAction: null,
-    pendingPairRequest: null,
-    pairingState: createPairingState(true),
-    pairingStatus: 'idle' as const,
+    pendingJoinRequest: null,
+    syncGroupDiscoveries: [],
+    syncGroupJoined: true,
+    joinStatus: 'idle' as const,
     pullFromDesktop: vi.fn(async () => createSyncState(snapshot)),
     readableArticle: createReadableArticle(),
     replaceSnapshot: vi.fn(async () => state),
     refreshFromDevice: vi.fn(async () => state),
-    refreshPairingState: vi.fn(async () => createPairingState(true)),
+    leaveSyncGroup: vi.fn(),
     removeRememberedTarget: vi.fn(),
-    requestPairing: vi.fn(),
+    requestJoin: vi.fn(),
+    requestSyncGroupJoin: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(async () => state),
     saveEndpoint: vi.fn(),
     state,
@@ -92,16 +93,6 @@ function createSyncState(snapshot: WorkspaceSnapshot | null) {
   };
 }
 
-function createPairingState(isPaired: boolean) {
-  return {
-    device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
-    device_name: 'Android companion',
-    is_paired: isPaired,
-    paired_at: isPaired ? '2026-04-22T08:03:00.000Z' : null
-  };
-}
-
 function createReadableArticle() {
   return {
     content: '# First article\n\nBody',
@@ -117,7 +108,7 @@ function createReadableArticle() {
 export function createUnpairedWorkspaceSync() {
   return {
     ...createWorkspaceSync(null),
-    pairingState: createPairingState(false),
+    syncGroupJoined: false,
     readableArticle: null,
     state: {
       endpoint_url: null,

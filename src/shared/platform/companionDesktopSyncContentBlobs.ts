@@ -1,3 +1,4 @@
+import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import { loadLocalSyncDiagnostics } from './companion/sync/diagnostics/companionSyncDiagnostics';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import type {
@@ -9,7 +10,6 @@ import {
   loadCompanionMissingContentBlobs,
   syncCompanionContentBlobs
 } from './companionSyncObjects';
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const CONTENT_BLOB_BATCH_PATH = '/companion/content-blobs';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';

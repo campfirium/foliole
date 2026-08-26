@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 export const SPECIALIZED_SURFACE_SCAN_ROOTS = ['src/app/components', 'src/features', 'src/shared/ui'];
 export const SPECIALIZED_SURFACE_PATTERN = /\b(?:bg-bg-(?:panel|elevated)(?:\/\d+)?|rounded-(?:xl|2xl))\b/u;
 export const ALLOWED_SPECIALIZED_SURFACE_FILES = [
-  'src/app/components/CompanionPairingRequestsDialog.tsx',
+  'src/app/components/SyncGroupJoinRequestsDialog.tsx',
   'src/app/components/EditorInputDiagnosticsPanel.tsx',
   'src/app/components/PdfDocumentPageRender.tsx',
   'src/app/components/PdfPageCanvas.tsx',

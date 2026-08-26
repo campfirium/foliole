@@ -2,12 +2,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  clearPairing: vi.fn(),
+  ensureGroup: vi.fn(),
   loadBootstrap: vi.fn(),
-  loadPairing: vi.fn(),
-  pair: vi.fn(),
+  loadGroup: vi.fn(),
   postResult: vi.fn(),
-  requestPairing: vi.fn(),
   saveActive: vi.fn(),
   saveEndpoint: vi.fn(),
   saveReading: vi.fn(),
@@ -18,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: mocks.loadGroup }));
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => ({ syncCompanionObjectsFromDesktop: mocks.sync }));
 vi.mock('../shared/platform/companionSyncStateWriters', () => ({
   saveCompanionSyncActiveViewState: mocks.saveActive,
@@ -26,12 +25,6 @@ vi.mock('../shared/platform/companionSyncStateWriters', () => ({
   saveCompanionSyncNodeViewState: mocks.saveView,
   saveCompanionSyncSettingRecord: mocks.saveSetting
 }));
-vi.mock('../shared/platform/companionWorkspacePairing', () => ({
-  clearCompanionPairingCredentials: mocks.clearPairing,
-  loadCompanionPairingState: mocks.loadPairing,
-  pairCompanionWithDesktop: mocks.pair,
-  requestCompanionPairing: mocks.requestPairing
-}));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
@@ -39,19 +32,19 @@ vi.mock('./iosBridgeAcceptance', () => ({
   acceptanceEndpoint: () => 'http://127.0.0.1:43123',
   postResult: mocks.postResult
 }));
+vi.mock('./iosAcceptanceSyncGroup', () => ({ ensureIosAcceptanceSyncGroup: mocks.ensureGroup }));
 
 import { runIosStateWritebackAcceptance } from './iosStateWritebackAcceptance';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
-  mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
+  mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
+  mocks.loadGroup.mockResolvedValue(null);
+  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
   mocks.sync.mockResolvedValue({ pushedObjectIds: [] });
 });
 
 it('seeds the node, writes through shared writers, and confirms on the first launch', async () => {
-  mocks.loadPairing.mockResolvedValue({ is_paired: false });
-
   await runIosStateWritebackAcceptance();
 
   expect(mocks.sync).toHaveBeenCalledTimes(2);
@@ -69,7 +62,7 @@ it('seeds the node, writes through shared writers, and confirms on the first lau
 });
 
 it('syncs without rewriting state after process restart', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
 
   await runIosStateWritebackAcceptance();
 
@@ -86,7 +79,7 @@ it('syncs without rewriting state after process restart', async () => {
 });
 
 it('posts a structured sync failure', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
   mocks.sync.mockRejectedValue(new Error('push rejected'));
 
   await runIosStateWritebackAcceptance();

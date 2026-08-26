@@ -1,56 +1,47 @@
-export const SYNC_GROUP_JOIN_PREPARE_INVENTORY_VERSION = 1;
+export const SYNC_GROUP_JOIN_INVENTORY_VERSION = 2;
 
-export const SYNC_GROUP_JOIN_PREPARE_HOSTS = [
+export const SYNC_GROUP_JOIN_ACTIVE_HOSTS = [
   {
-    activation: 'inactive',
-    bridge: 'electron/preloadSyncGroupJoinPrepare.cjs',
+    bridge: 'electron/preload.cjs',
     host: 'electron-macos-windows',
-    provider: 'electron/sync/syncGroupJoinPrepareProvider.ts',
-    status: 'prepared'
+    provider: 'electron/sync/syncGroupJoinProvider.ts'
   },
   {
-    activation: 'inactive',
-    bridge: 'android/app/src/main/java/com/foliole/android/FolioleCompanionJoinRequestPlugin.java',
+    bridge: 'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java',
     host: 'android',
-    provider: 'android/app/src/main/java/com/foliole/android/FolioleCompanionJoinRequestProvider.java',
-    status: 'prepared'
+    provider: 'android/app/src/main/java/com/foliole/android/FolioleCompanionJoinRequestProvider.java'
   },
   {
-    activation: 'inactive',
-    bridge: 'ios/App/App/FolioleCompanionSyncGroupJoinPreparePlugin.swift',
+    bridge: 'ios/App/App/FolioleCompanionSyncPlugin.swift',
     host: 'ios',
-    projection: 'src/shared/platform/companion/sync/syncGroupJoinPrepare.ts',
-    provider: 'ios/App/App/FolioleCompanionSyncGroupJoinProvider.swift',
-    status: 'prepared'
+    provider: 'ios/App/App/FolioleCompanionSyncGroupJoinProvider.swift'
   }
 ] as const;
 
-export const SYNC_GROUP_JOIN_REUSED_CRYPTO_HELPERS = [
-  'electron/sync/companionPairingEncryption.ts',
-  'src/shared/platform/companionPairingEncryption.ts',
-  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupPairCrypto.java',
+export const SYNC_GROUP_JOIN_CRYPTO_HELPERS = [
+  'electron/sync/desktopSyncGroupJoinCrypto.ts',
+  'src/shared/platform/companionSyncGroupJoinEncryption.ts',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupJoinCrypto.java',
   'ios/App/App/FolioleCompanionSyncGroupJoinCrypto.swift'
 ] as const;
 
-export const SYNC_GROUP_JOIN_LEGACY_CONSUMERS = [
+export const SYNC_GROUP_JOIN_RETIRED_CONSUMERS = [
+  'electron/preloadSyncGroupJoinPrepare.cjs',
   'electron/ipc/companionPairingCommands.ts',
   'electron/sync/companionLanPairCompletion.ts',
   'electron/sync/companionLanPairingEndpoints.ts',
   'electron/sync/companionMembershipApproval.ts',
   'electron/sync/companionPairingRequests.ts',
   'electron/sync/companionPairingStore.ts',
+  'electron/sync/syncGroupJoinPrepareProvider.ts',
   'src/app/components/CompanionPairingRequestsDialog.tsx',
+  'src/shared/platform/companion/sync/syncGroupJoinPrepare.ts',
   'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupJoinGrantStore.java',
-  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java',
-  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java',
-  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java',
-  'src/companion/CompanionSyncGroupJoinApproval.tsx',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingStore.java',
   'ios/App/App/FolioleCompanionPairingStore.swift',
-  'ios/App/App/FolioleCompanionSyncPlugin.swift'
+  'ios/App/App/FolioleCompanionSyncGroupJoinPreparePlugin.swift'
 ] as const;
 
-export function syncGroupJoinPrepareMissingHosts() {
-  return SYNC_GROUP_JOIN_PREPARE_HOSTS
-    .filter((host) => host.status !== 'prepared')
-    .map((host) => host.host);
+export function syncGroupJoinMissingActiveHosts() {
+  return SYNC_GROUP_JOIN_ACTIVE_HOSTS.filter((host) => !host.provider || !host.bridge).map((host) => host.host);
 }

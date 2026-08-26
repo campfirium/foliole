@@ -7,15 +7,14 @@ const runtime = vi.hoisted(() => ({
   constructorOptions: [] as unknown[],
   credentialAccess: vi.fn(() => { throw new Error('credential store should stay closed'); }),
   updateCallbacks: new Map<string, (service: unknown) => void>(),
-  completeJoin: vi.fn(),
   continueSync: vi.fn(),
   destroy: vi.fn(),
   group: {
-    group_id: 'group-1', local_host_name: 'Desktop', timeline_id: 'timeline-1',
-    members: [
-      { authorization_id: 'desktop-a', host_name: 'Desktop', host_platform: 'darwin' },
-      { authorization_id: 'android-b', host_name: 'A5', host_platform: 'android-capacitor' }
-    ]
+    devices: [
+      { device_identity_key: 'desktop-a', device_name: 'Desktop', platform: 'darwin', state: 'active' },
+      { device_identity_key: 'android-b', device_name: 'A5', platform: 'android-capacitor', state: 'active' }
+    ],
+    group_id: 'group-1', local_device_identity_key: 'desktop-a'
   },
   stop: vi.fn(),
   update: vi.fn(),
@@ -55,13 +54,6 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => true
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
-vi.mock('./companionPairingStore.js', () => ({
-  loadPairedSyncGroupPeers: runtime.credentialAccess,
-  savePairedSyncGroupPeer: runtime.credentialAccess
-}));
-vi.mock('./desktopSyncGroupJoin.js', () => ({
-  completeDesktopSyncGroupJoin: runtime.completeJoin,
-}));
 vi.mock('./desktopSyncCoordinator.js', () => ({
   runDesktopSyncCoordinator: runtime.continueSync
 }));
@@ -77,55 +69,50 @@ beforeEach(() => {
   runtime.callback = null;
   runtime.constructorOptions = [];
   runtime.updateCallbacks.clear();
-  runtime.completeJoin.mockResolvedValue({ group_id: 'group-1' });
   runtime.continueSync.mockResolvedValue({ complete: true, cursor: 9 });
   runtime.refreshPending.mockReturnValue(false);
 });
 
-it('continues the saved member sync when its provider advertises again', async () => {
+it('continues sync with a saved Device when its provider advertises again', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   expect(runtime.constructorOptions).toEqual([
     undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
   ]);
   expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
-    endpoint_url: 'http://192.168.1.12:43121', local_authorization_id: 'desktop-a',
-    peer_authorization_id: 'android-b', peer_host_name: 'A5'
+    endpoint_url: 'http://192.168.1.12:43121', local_device_id: 'desktop-a',
+    peer_device_id: 'android-b', peer_device_name: 'A5'
   }));
   expect(runtime.credentialAccess).not.toHaveBeenCalled();
 });
 
-it('does not start a session for an advertised v2 member', async () => {
+it('does not start a session for an advertised v2 Device', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
     txt: currentTxt({
-      group_id: 'group-1', peer_id: 'android-b', protocol_max_version: '2',
+      device_id: 'android-b', group_id: 'group-1', protocol_max_version: '2',
       protocol_min_version: '2', protocol_version: '2'
     })
   });
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(runtime.continueSync).not.toHaveBeenCalled();
-  expect(runtime.completeJoin).not.toHaveBeenCalled();
 });
 
-it('continues an approved join at the same provider new endpoint', async () => {
-  runtime.refreshPending.mockReturnValue(true);
+it('continues a saved Device at its newly advertised endpoint', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b', timeline_id: 'timeline-1' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
-  await vi.waitFor(() => expect(runtime.completeJoin).toHaveBeenCalledOnce());
-  expect(runtime.refreshPending).toHaveBeenCalledWith({
-    endpointUrl: 'http://192.168.1.12:43122', groupId: 'group-1',
-    providerAuthorizationId: 'android-b', timelineId: 'timeline-1'
-  });
-  expect(runtime.continueSync).not.toHaveBeenCalled();
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
+    endpoint_url: 'http://192.168.1.12:43122', peer_device_id: 'android-b'
+  }));
 });
 
 it('retries the latest advertisement after an interrupted peer sync settles', async () => {
@@ -134,12 +121,12 @@ it('retries the latest advertisement after an interrupted peer sync settles', as
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
 
   first.resolve({ complete: false, cursor: 9 });
@@ -153,7 +140,7 @@ it('continues sync when an existing service publishes a newer facts revision', a
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('txt-update')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ facts_revision: '2', group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', facts_revision: '2', group_id: 'group-1' })
   });
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
@@ -165,7 +152,7 @@ it('requeries the replacement instance after withdrawal-triggered sync settles',
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('down')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
@@ -180,7 +167,7 @@ it('does not requery a replacement after automatic sync stops', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('down')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
 

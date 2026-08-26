@@ -5,11 +5,11 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   applyStartupWindowPresentation: vi.fn(),
   focusWindow: vi.fn(),
-  pairingHandler: null as (() => void) | null,
+  joinRequestHandler: null as (() => void) | null,
   presentInitialRendererWindow: vi.fn().mockResolvedValue(undefined),
   reconcileDesktopCompanionSyncRuntime: vi.fn().mockResolvedValue(undefined),
-  setLanWorkspaceSyncPairRequestHandler: vi.fn((handler: () => void) => {
-    mocks.pairingHandler = handler;
+  setLanWorkspaceSyncJoinRequestHandler: vi.fn((handler: () => void) => {
+    mocks.joinRequestHandler = handler;
   }),
   updateLocalSyncGroupHostName: vi.fn()
 }));
@@ -27,7 +27,7 @@ vi.mock('./windowRuntimeDiagnostics.js', () => ({
   presentInitialRendererWindow: mocks.presentInitialRendererWindow
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
-  setLanWorkspaceSyncPairRequestHandler: mocks.setLanWorkspaceSyncPairRequestHandler
+  setLanWorkspaceSyncJoinRequestHandler: mocks.setLanWorkspaceSyncJoinRequestHandler
 }));
 
 function createWindow(visible = false) {
@@ -44,7 +44,7 @@ function createWindow(visible = false) {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  mocks.pairingHandler = null;
+  mocks.joinRequestHandler = null;
   const { clearMainWindowForTests } = await import('./mainWindowRegistry.js');
   clearMainWindowForTests();
 });
@@ -90,21 +90,21 @@ it('rebuilds the main window when the registry has no usable window', async () =
   expect(onWindowReady).toHaveBeenCalledWith(window);
 });
 
-it('routes pairing requests through the main window opener', async () => {
+it('routes Sync Group join requests through the main window opener', async () => {
   const window = createWindow(true);
-  const { installPairingFocusHandler } = await import('./mainWindowLifecycle.js');
-  installPairingFocusHandler(vi.fn().mockResolvedValue(window));
+  const { installSyncGroupJoinRequestFocusHandler } = await import('./mainWindowLifecycle.js');
+  installSyncGroupJoinRequestFocusHandler(vi.fn().mockResolvedValue(window));
 
-  mocks.pairingHandler?.();
+  mocks.joinRequestHandler?.();
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  expect(window.webContents.send).toHaveBeenCalledWith('foliole:companion-pairing-requests-changed');
+  expect(window.webContents.send).toHaveBeenCalledWith('foliole:sync-group-join-requests-changed');
 });
 
 it('refreshes the persisted local Host name even while Sync is paused', async () => {
   const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
 
-  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => false, peerId: 'desktop-a' });
+  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => false, deviceId: 'desktop-a' });
 
   expect(mocks.updateLocalSyncGroupHostName).toHaveBeenCalledWith('Maci');
 });
@@ -112,9 +112,9 @@ it('refreshes the persisted local Host name even while Sync is paused', async ()
 it('reconciles enabled Sync through the workgroup security boundary', async () => {
   const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
 
-  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => true, peerId: 'desktop-a' });
+  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => true, deviceId: 'desktop-a' });
 
   expect(mocks.reconcileDesktopCompanionSyncRuntime).toHaveBeenCalledWith({
-    appVersion: '0.7.5', peerId: 'desktop-a'
+    appVersion: '0.7.5', deviceId: 'desktop-a'
   });
 });

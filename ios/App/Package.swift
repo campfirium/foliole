@@ -19,8 +19,9 @@ let package = Package(
                 "FolioleCompanionContentBlobPack.swift", "FolioleCompanionQueryDefinitions.swift",
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
                 "Info.plist", "PrivacyInfo.xcprivacy", "capacitor.config.json",
-                "FolioleCompanionSyncPlugin.swift",
-                "FolioleCompanionSyncGroupJoinPreparePlugin.swift",
+                "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncGroupProviderPlugin.swift",
+                "FolioleCompanionSyncGroupDataBridge.swift", "FolioleCompanionSyncGroupSigning.swift",
+                "FolioleCompanionSyncParticipation.swift", "FolioleCompanionSyncTrigger.swift",
                 "config.xml", "public"
             ],
             sources: [
@@ -29,20 +30,29 @@ let package = Package(
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleCompanionDeviceAnchorStore.swift",
+                "FolioleCompanionHttpMessage.swift",
                 "FolioleCompanionSyncGroupJoinCrypto.swift",
                 "FolioleCompanionSyncGroupJoinProvider.swift",
                 "FolioleCompanionSyncGroupJoinRequest.swift",
+                "FolioleCompanionSyncGroupJoinServer.swift",
+                "FolioleCompanionSyncGroupResources.swift",
+                "FolioleCompanionSyncGroupSnapshot.swift",
+                "FolioleCompanionSyncGroupWorkgroup.swift",
                 "FolioleCompanionZlib.swift",
+                "FolioleCompanionSyncPackArchive.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
+                "FolioleCompanionSyncPackPayloadWriter.swift",
+                "FolioleCompanionSyncPackProvider.swift",
+                "FolioleCompanionSyncPackProviderDefinitions.swift",
+                "FolioleCompanionSyncPackSQLite.swift",
                 "FolioleReadOnlySQLite.swift",
-                "FolioleCompanionSyncPackDatabaseValidator.swift",
-                "FolioleCompanionPairingSecretStore.swift",
-                "FolioleCompanionPairingStore.swift"
+                "FolioleCompanionSyncPackDatabaseValidator.swift"
             ],
             resources: [
                 .copy("companion-bridge-contract-definitions.json"),
                 .copy("companion-mutation-definitions.json"),
                 .copy("companion-query-definitions.json"),
+                .copy("companion-sync-pack-provider-definitions.json"),
                 .copy("companion-sync-protocol-definitions.json")
             ]
         ),

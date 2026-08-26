@@ -92,10 +92,10 @@ async function testRepairsStaleEmulatorEndpoint() {
 async function testSyncsEveryReachableGroupMember() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
-    { authorizationId: 'authorization-a', endpointUrl: 'http://192.168.0.11:38641',
-      groupId: 'group-1', hostName: 'desktop-a' },
-    { authorizationId: 'authorization-c', endpointUrl: 'http://192.168.0.12:38641',
-      groupId: 'group-1', hostName: 'desktop-c' }
+    { deviceId: 'device-a', endpointUrl: 'http://192.168.0.11:38641',
+      groupId: 'group-1', deviceName: 'desktop-a' },
+    { deviceId: 'device-c', endpointUrl: 'http://192.168.0.12:38641',
+      groupId: 'group-1', deviceName: 'desktop-c' }
   ]);
 
   const outcome = await tryForegroundAutoSync({
@@ -110,7 +110,7 @@ async function testSyncsEveryReachableGroupMember() {
     'http://192.168.0.11:38641',
     'http://192.168.0.12:38641'
   ]);
-  expect(syncPlatformMock.bindCompanionWorkspaceSyncTarget.mock.calls.map(([target]) => target.hostName))
+  expect(syncPlatformMock.bindCompanionWorkspaceSyncTarget.mock.calls.map(([target]) => target.deviceName))
     .toEqual(['desktop-a', 'desktop-c']);
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenNthCalledWith(
     2, 'http://192.168.0.12:38641', expect.objectContaining({ resourcesOnly: false })
@@ -121,10 +121,10 @@ async function testSyncsEveryReachableGroupMember() {
 async function testContinuesAfterOneGroupMemberFails() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
-    { authorizationId: 'authorization-a', endpointUrl: 'http://192.168.0.11:38641',
-      groupId: 'group-1', hostName: 'desktop-a' },
-    { authorizationId: 'authorization-c', endpointUrl: 'http://192.168.0.12:38641',
-      groupId: 'group-1', hostName: 'desktop-c' }
+    { deviceId: 'device-a', endpointUrl: 'http://192.168.0.11:38641',
+      groupId: 'group-1', deviceName: 'desktop-a' },
+    { deviceId: 'device-c', endpointUrl: 'http://192.168.0.12:38641',
+      groupId: 'group-1', deviceName: 'desktop-c' }
   ]);
   syncObjectsMock.syncCompanionObjectsFromDesktop
     .mockRejectedValueOnce(new Error('First Device unavailable.'))

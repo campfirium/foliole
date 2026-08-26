@@ -6,9 +6,10 @@ import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import {
-  completeDesktopSyncGroupJoin
-} from './desktopSyncGroupJoin.js';
-import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
+  clearDesktopSyncGroupRoutes,
+  removeDesktopSyncGroupRoute,
+  saveDesktopSyncGroupRoute
+} from './desktopSyncGroupRoutes.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
@@ -20,7 +21,7 @@ type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof B
 
 let runtimes: AutoSyncRuntime[] = [];
 const inFlight = new Map<string, Promise<unknown>>();
-const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerAuthorizationId: string }>();
+const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
 
 export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
@@ -37,19 +38,9 @@ export function startDesktopSyncGroupAutoSync() {
       return null;
     }
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
-    const peerAuthorizationId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
-    const timelineId = typeof txt.timeline_id === 'string' ? txt.timeline_id : null;
-    if (!endpoint || !groupId || !peerAuthorizationId) return null;
-    if (timelineId && refreshDesktopSyncGroupPendingJoinEndpoint({
-      endpointUrl: endpoint, groupId, providerAuthorizationId: peerAuthorizationId, timelineId
-    })) {
-      return completeDesktopSyncGroupJoin().catch((error) => {
-        console.info('[sync-group] approved join waiting for provider', {
-          error: error instanceof Error ? error.message : String(error), peerAuthorizationId
-        });
-      });
-    }
-    return syncAvailablePeer({ endpoint, groupId, peerAuthorizationId });
+    const peerDeviceId = typeof txt.device_id === 'string' ? txt.device_id : null;
+    if (!endpoint || !groupId || !peerDeviceId) return null;
+    return syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   };
   const consumeService = (service: DiscoveredService) => { void handleService(service); };
   const addresses = resolveCompanionMdnsIpv4Addresses();
@@ -60,6 +51,8 @@ export function startDesktopSyncGroupAutoSync() {
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
     const runtime = { bonjour, browser };
     browser.on('down', (service) => {
+      const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
+      if (deviceId) removeDesktopSyncGroupRoute(deviceId);
       const work = handleService(service);
       void Promise.resolve(work).finally(() => {
         if (runtimes.includes(runtime)) browser.update();
@@ -79,50 +72,51 @@ export function stopDesktopSyncGroupAutoSync() {
     bonjour.destroy();
   });
   retryAfterFlight.clear();
+  clearDesktopSyncGroupRoutes();
 }
 
-async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerAuthorizationId: string }) {
+async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerDeviceId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return;
   const group = loadDesktopSyncGroup();
   if (!group || group.group_id !== args.groupId) return;
   const peer = resolveDiscoveredPeer(group, args);
   if (!peer) return;
-  if (inFlight.has(args.peerAuthorizationId)) {
-    retryAfterFlight.set(args.peerAuthorizationId, args);
+  if (inFlight.has(args.peerDeviceId)) {
+    retryAfterFlight.set(args.peerDeviceId, args);
     return;
   }
   const work = runDesktopSyncCoordinator('automatic', peer).catch((error) => {
     console.info('[sync-group] sync paused until provider is available', {
-      error: error instanceof Error ? error.message : String(error), peerAuthorizationId: args.peerAuthorizationId
+      error: error instanceof Error ? error.message : String(error), peerDeviceId: args.peerDeviceId
     });
   }).finally(() => {
-    inFlight.delete(args.peerAuthorizationId);
-    const retry = retryAfterFlight.get(args.peerAuthorizationId);
+    inFlight.delete(args.peerDeviceId);
+    const retry = retryAfterFlight.get(args.peerDeviceId);
     if (!retry) return;
-    retryAfterFlight.delete(args.peerAuthorizationId);
+    retryAfterFlight.delete(args.peerDeviceId);
     void syncAvailablePeer(retry);
   });
-  inFlight.set(args.peerAuthorizationId, work);
+  inFlight.set(args.peerDeviceId, work);
   await work;
 }
 
 function resolveDiscoveredPeer(
   group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  args: { endpoint: string; groupId: string; peerAuthorizationId: string }
+  args: { endpoint: string; groupId: string; peerDeviceId: string }
 ) {
-  const local = group.members.find((member) => member.host_name === group.local_host_name);
-  const remote = group.members.find((member) => member.authorization_id === args.peerAuthorizationId);
-  if (!local || !remote || remote.host_name === group.local_host_name) return null;
-  return {
+  const local = group.devices.find((device) =>
+    device.device_identity_key === group.local_device_identity_key && device.state === 'active');
+  const remote = group.devices.find((device) =>
+    device.device_identity_key === args.peerDeviceId && device.state === 'active');
+  if (!local || !remote || remote.device_identity_key === local.device_identity_key) return null;
+  return saveDesktopSyncGroupRoute({
     endpoint_url: args.endpoint,
     group_id: group.group_id,
-    local_authorization_id: local.authorization_id,
-    local_host_name: local.host_name,
-    peer_authorization_id: remote.authorization_id,
-    peer_host_name: remote.host_name,
-    peer_host_platform: remote.host_platform,
-    timeline_id: group.timeline_id
-  };
+    local_device_id: local.device_identity_key,
+    peer_device_id: remote.device_identity_key,
+    peer_device_name: remote.device_name,
+    peer_platform: remote.platform
+  });
 }
 
 function endpointForService(service: { addresses?: string[]; port?: number; referer?: { address?: string } }) {

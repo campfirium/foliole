@@ -45,9 +45,9 @@ function localHostProfile(now: string) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(now);
   const member = driver.queryOne<{ host_name: string; host_platform: string }>(
-    `SELECT m.host_name, m.host_platform FROM sync_group_local_state l
-     JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
-     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+    `SELECT d.device_name AS host_name, d.platform AS host_platform FROM sync_group_local_state l
+     JOIN sync_group_devices d ON d.group_id = l.group_id AND d.device_identity_key = l.local_device_identity_key
+     WHERE l.singleton_id = 1 AND l.state = 'active' AND d.state = 'active' LIMIT 1`
   );
   return { hostName: member?.host_name ?? hostName, platform: member?.host_platform ?? process.platform };
 }

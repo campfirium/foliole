@@ -1,6 +1,6 @@
 import os from 'node:os';
 
-import { resolveSyncGroupDisplayHostName } from '../../lib/platform/syncGroupContract.js';
+import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
@@ -49,23 +49,20 @@ export function normalizeDesktopHostName(value: string) {
 
 export function buildDiscoveryPayload(appVersion: string) {
   const group = loadDesktopSyncGroup();
-  if (!group || group.local_member_state !== 'active') return null;
+  if (!group) return null;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
   if (!workgroup) return null;
-  const local = group.members.find((member) => member.host_name === group.local_host_name);
-  if (!local) throw new Error('sync_group_local_authorization_missing');
+  const local = resolveLocalSyncGroupDevice(group);
+  if (!local) throw new Error('sync_group_local_device_missing');
   return {
     app_version: appVersion,
-    desktop_host_name: resolveDesktopHostName(),
-    desktop_name: 'Foliole Desktop',
-    desktop_platform: resolveDesktopPlatformLabel(),
-    pairing_mode: 'desktop-confirm' as const,
-    peer_id: local.authorization_id,
     runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
-    group_display_name: resolveSyncGroupDisplayHostName(group),
+    group_display_name: group.display_name,
     group_id: group.group_id,
     group_tag: workgroup.group_tag,
-    timeline_id: group.timeline_id,
-    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    provider_device_id: local.device_identity_key,
+    provider_device_name: local.device_name,
+    provider_platform: resolveDesktopPlatformLabel()
   };
 }

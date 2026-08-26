@@ -20,26 +20,28 @@ function readActiveHostName() {
 
 function hostDetails(hostName: string): NativeReadwiseWorkgroupHost {
   return openDatabaseConnection().driver.queryOne<NativeReadwiseWorkgroupHost & DatabaseRow>(
-    `SELECT host_name, host_platform AS platform
-     FROM sync_group_members WHERE host_name = ? ORDER BY updated_at DESC LIMIT 1`, [hostName]
+    `SELECT device_name AS host_name, platform
+     FROM sync_group_devices WHERE device_name = ? ORDER BY updated_at DESC LIMIT 1`, [hostName]
   ) ?? { host_name: hostName, platform: null };
 }
 
 function currentHostName() {
   return openDatabaseConnection().driver.queryOne<{ host_name: string }>(
-    `SELECT l.local_host_name AS host_name FROM sync_group_local_state l
-     JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
-     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+    `SELECT d.device_name AS host_name FROM sync_group_local_state l
+     JOIN sync_group_devices d
+       ON d.group_id = l.group_id AND d.device_identity_key = l.local_device_identity_key
+     WHERE l.singleton_id = 1 AND l.state = 'active' AND d.state = 'active' LIMIT 1`
   )?.host_name ?? loadOrCreateDesktopHostName();
 }
 
 function readWorkgroupDesktopHosts(currentHostName: string, activeHostName: string | null) {
   const hosts = openDatabaseConnection().driver.queryAll<NativeReadwiseWorkgroupHost & DatabaseRow>(
-    `SELECT m.host_name, m.host_platform AS platform
+    `SELECT d.device_name AS host_name, d.platform
      FROM sync_group_local_state l
-     JOIN sync_group_members m ON m.group_id = l.group_id
-     WHERE l.singleton_id = 1 AND m.state = 'active' AND m.host_platform IN ('darwin', 'win32')
-     ORDER BY m.host_name`
+     JOIN sync_group_devices d ON d.group_id = l.group_id
+     WHERE l.singleton_id = 1 AND l.state = 'active' AND d.state = 'active'
+       AND d.platform IN ('darwin', 'win32')
+     ORDER BY d.device_name`
   );
   const byName = new Map<string, NativeReadwiseWorkgroupHost>(
     hosts.map((host) => [host.host_name, host])

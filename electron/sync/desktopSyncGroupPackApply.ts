@@ -17,9 +17,9 @@ import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 type Peer = {
   endpoint_url: string;
   group_id: string;
-  local_authorization_id: string;
-  peer_authorization_id: string;
-  peer_host_name?: string;
+  local_device_id: string;
+  peer_device_id: string;
+  peer_device_name?: string;
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
@@ -47,7 +47,7 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   if (!key) throw new Error('sync_group_workgroup_key_missing');
   const response = await fetch(`${args.peer.endpoint_url}${pathWithQuery}`, {
     headers: args.createHeaders({ groupId: args.peer.group_id,
-      localAuthorizationId: args.peer.local_authorization_id,
+      localDeviceId: args.peer.local_device_id,
       method: 'GET', pathWithQuery, secret: key.group_key })
   });
   const body = await readDesktopWorkgroupResponse({
@@ -68,11 +68,11 @@ async function applyDownloadedPack(
   tempRoot: string
 ) {
   const incomingPath = path.join(tempRoot, 'incoming.db');
-  const sourceHostName = args.peer.peer_host_name?.trim();
-  if (!sourceHostName) throw new Error('sync_group_source_host_unavailable');
+  const sourceDeviceName = args.peer.peer_device_name?.trim();
+  if (!sourceDeviceName) throw new Error('sync_group_source_device_unavailable');
   const manifest = await extractSyncPackDatabase({
-    body, expectedPeerId: args.peer.local_authorization_id,
-    expectedSourcePeerId: args.peer.peer_authorization_id, outputPath: incomingPath
+    body, expectedPeerId: args.peer.local_device_id,
+    expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
   });
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
@@ -81,8 +81,8 @@ async function applyDownloadedPack(
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName: loadOrCreateDesktopHostName(),
-      incomingAlias: 'inc', sourceHostName,
-      sourcePeerId: args.peer.peer_authorization_id
+      incomingAlias: 'inc', sourceHostName: sourceDeviceName,
+      sourcePeerId: args.peer.peer_device_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
   } finally {

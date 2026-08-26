@@ -9,19 +9,19 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
-    'authorization-credential-routing-v1',
-    'authorization-delivery-receipts-v1',
-    'host-workgroup-members-v1',
+    'device-delivery-receipts-v1',
+    'device-sync-groups-v1',
+    'group-key-routing-v1',
     'lan-sync-v1',
     'opaque-sync-refs-v1',
     'source-host-ownership-v1',
-    'sync-group-facts-v1',
+    'sync-group-device-facts-v1',
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
     'workgroup-aead-v1'
   ]),
-  max_supported_version: 3,
-  min_supported_version: 3,
-  version: 3
+  max_supported_version: 4,
+  min_supported_version: 4,
+  version: 4
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

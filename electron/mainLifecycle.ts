@@ -40,7 +40,11 @@ import { wasOpenedAtLogin } from './loginItemSettings.js';
 import { installMacosDailyDebugExitHandler } from './macosDailyDebugExit.js';
 import { installDatabaseBackedEntryPoints } from './mainDatabaseBackedEntryPoints.js';
 import { startInitialMainWindow } from './mainStartup.js';
-import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
+import {
+  installSyncGroupJoinRequestFocusHandler,
+  openOrCreateMainWindow,
+  startCompanionSyncIfEnabled
+} from './mainWindowLifecycle.js';
 import { setMainWindow } from './mainWindowRegistry.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
@@ -203,7 +207,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
           () => installDatabaseBackedEntryPoints(openMainWindow)
         ),
         ...(initialLibrarySetup ? { initialStartupView: initialLibrarySetup.startupView } : {}),
-        installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
+        installSyncGroupJoinRequestFocusHandler: () => installSyncGroupJoinRequestFocusHandler(openMainWindow),
         loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
         mainWindow,
         showInitialWindow: shouldShowInitialWindow({
@@ -213,7 +217,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncParticipating,
-          peerId: loadOrCreateDesktopDeviceId()
+          deviceId: loadOrCreateDesktopDeviceId()
         })
       });
       externalDocumentFileOpen.setReadyWindow(mainWindow);

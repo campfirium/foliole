@@ -14,7 +14,7 @@ export function subscribeCompanionSyncMutationRevision(listener: MutationListene
   return () => mutationListeners.delete(listener);
 }
 
-function publishMutationRevision() {
+export function publishCompanionSyncMutationRevision() {
   mutationRevision += 1;
   for (const listener of mutationListeners) {
     try {
@@ -27,12 +27,12 @@ function publishMutationRevision() {
 
 export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
   const result = await runCompanionSyncWriterTask(task);
-  publishMutationRevision();
+  publishCompanionSyncMutationRevision();
   return result;
 }
 
 export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promise<T | null>) {
   const result = await runCompanionSyncWriterTask(task);
-  if (result !== null) publishMutationRevision();
+  if (result !== null) publishCompanionSyncMutationRevision();
   return result;
 }

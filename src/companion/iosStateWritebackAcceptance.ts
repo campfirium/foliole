@@ -1,3 +1,4 @@
+import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
 import {
@@ -7,22 +8,16 @@ import {
   saveCompanionSyncNodeViewState,
   saveCompanionSyncSettingRecord
 } from '../shared/platform/companionSyncStateWriters';
-import {
-  clearCompanionPairingCredentials,
-  loadCompanionPairingState
-} from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
 const NODE_ID = 'ios-state-node';
 const REVIEWED_AT = '2026-07-21T00:01:00.000Z';
 
-async function pairForStateWriteback(endpoint: string, hostName: string) {
-  await clearCompanionPairingCredentials();
-  await saveCompanionWorkspaceSyncEndpoint('');
-  await pairIosAcceptanceCompanion(endpoint, hostName);
+async function prepareGroup(endpoint: string, databasePath: string | null) {
+  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
@@ -78,19 +73,16 @@ export async function runIosStateWritebackAcceptance() {
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS state writeback acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    const pairing = await loadCompanionPairingState();
-    if (!pairing.is_paired) {
-      await pairForStateWriteback(
-        endpoint,
-        bootstrap.host_name ?? 'Acceptance iPhone'
-      );
+    const group = await loadCompanionSyncGroup();
+    if (!group) {
+      await prepareGroup(endpoint, bootstrap.database_path);
       await syncWithoutResources(endpoint);
       await writeAcceptanceState();
     }
     const sync = await syncWithoutResources(endpoint);
     postResult({
       error: null,
-      phase: pairing.is_paired ? 'reapplied' : 'applied',
+      phase: group ? 'reapplied' : 'applied',
       scenario: 'state-writeback-runtime',
       status: 'passed',
       sync

@@ -69,8 +69,7 @@ function buildContainerManifest(args: {
       node_sync_version_parents: args.rows.nodeVersionParents,
       nodes: args.rows.nodes,
       review_log: args.rows.reviewLog,
-      sync_group_member_departures: args.rows.groupDepartures,
-      sync_group_members: args.rows.groupMembers,
+      sync_group_devices: args.rows.groupDevices,
       sync_groups: args.rows.groups,
       sync_object_state: args.rows.stateRows,
       sync_objects: args.rows.syncObjects
@@ -115,8 +114,7 @@ export async function buildDesktopSyncPackFromDriver(
     const nodeVersions = loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes);
     const rows: LoadedDesktopSyncPackRows = {
       ...baseRows,
-      groupDepartures: groupRows.departures,
-      groupMembers: groupRows.members,
+      groupDevices: groupRows.devices,
       groups: groupRows.groups,
       nodeVersions,
       nodeVersionParents: loadSyncPackNodeVersionParentRows(sourceDriver, nodeVersions)

@@ -94,7 +94,7 @@ export interface ElectronAPI {
   onSearchIndexRebuildStatus?: (handler: (payload: SearchIndexRebuildStatusPayload) => void) => () => void;
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
-  onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
+  onSyncGroupJoinRequestsChanged?: (handler: () => void) => () => void;
   onSyncGroupDiscoveryChanged?: (handler: (payload: SyncGroupDiscoverySnapshot) => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onAssistantTurnEvent?: (handler: (payload: NativeAssistantTurnEvent) => void) => () => void;

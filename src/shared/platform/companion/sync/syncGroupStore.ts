@@ -1,10 +1,9 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
+import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-function owner() {
-  return getIosCompanionDatabaseOwner();
-}
+function owner() { return getIosCompanionDatabaseOwner(); }
 
 export function loadCompanionSyncGroup() {
   return owner().read(loadGroup);
@@ -13,22 +12,10 @@ export function loadCompanionSyncGroup() {
 export function loadCompanionSyncGroupWorkgroupKey() {
   return owner().read(async (db) => {
     const row = (await db.query<DbRow>(
-      `SELECT g.workgroup_key FROM sync_groups g
-       JOIN sync_group_local_state l ON l.group_id = g.group_id
-       WHERE l.singleton_id = 1 LIMIT 1`
+      `SELECT g.workgroup_key FROM sync_groups g JOIN sync_group_local_state l ON l.group_id = g.group_id
+       WHERE l.singleton_id = 1 AND l.state = 'active' LIMIT 1`
     ))[0];
-    return typeof row?.workgroup_key === 'string' && row.workgroup_key.trim()
-      ? row.workgroup_key.trim() : null;
-  });
-}
-
-export function loadCompanionSyncGroupEndpoint() {
-  return owner().read(async (db) => {
-    const row = (await db.query<DbRow>(
-      `SELECT value FROM companion_meta
-       WHERE key = 'workspace_sync_endpoint_url' LIMIT 1`
-    ))[0];
-    return typeof row?.value === 'string' && row.value.trim() ? row.value.trim() : null;
+    return text(row?.workgroup_key);
   });
 }
 
@@ -37,181 +24,96 @@ export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFa
     attachment_count: await count(db, 'attachments'),
     content_blob_count: await count(db, 'content_blobs'),
     node_count: await count(db, 'nodes'),
-    review_log_count: await count(db, 'review_log'),
-    timeline_id: await loadTimelineId(db)
+    review_log_count: await count(db, 'review_log')
   }));
 }
 
 export function joinCompanionSyncGroup(args: {
-  hostName: string;
-  group: SyncGroupPayload;
+  device: SyncGroupDeviceIdentity;
+  deviceName: string;
+  displayName: string;
+  platform: string;
   workgroupKey: string;
 }) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
-    const group = args.group;
-    const local = (await tx.query<DbRow>(
-      `SELECT l.group_id, l.local_host_name, l.member_state, g.timeline_id
-       FROM sync_group_local_state l JOIN sync_groups g ON g.group_id = l.group_id
-       WHERE l.singleton_id = 1`
-    ))[0];
-    if (local && (local.group_id !== group.group_id
-      || local.local_host_name !== args.hostName || local.member_state !== 'active')) {
-      throw new Error('sync_group_identity_mismatch');
-    }
-    const localMember = group.members.find((member) => member.host_name === args.hostName);
-    if (!localMember || localMember.state !== 'active') throw new Error('sync_group_member_not_authorized');
+    if (await loadGroup(tx)) throw new Error('sync_group_identity_mismatch');
     const now = new Date().toISOString();
     await tx.run(
-      `INSERT INTO sync_groups (
-        group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at, workgroup_key
-       ) VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(group_id) DO UPDATE SET display_name = excluded.display_name,
-         updated_at = excluded.updated_at, workgroup_key = excluded.workgroup_key`,
-      [group.group_id, group.display_name, group.timeline_id, group.created_by_host_name,
-        group.created_at, now, args.workgroupKey]
+      `INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [args.device.group_id, args.displayName, args.workgroupKey, now, now]
     );
-    for (const member of group.members) await saveMember(tx, group.group_id, member, now);
+    await saveDevice(tx, args.device, args.deviceName, args.platform, now);
     await tx.run(
-      `INSERT OR REPLACE INTO sync_group_local_state (
-        singleton_id, group_id, local_host_name, member_state, provisioning_cursor,
-        created_empty_proof_json, updated_at
-      ) VALUES (1, ?, ?, 'active', NULL, NULL, ?)`,
-      [group.group_id, args.hostName, now]
+      `INSERT INTO sync_group_local_state
+       (singleton_id, group_id, local_device_identity_key, state, updated_at)
+       VALUES (1, ?, ?, 'active', ?)`,
+      [args.device.group_id, args.device.identity_key, now]
     );
-    await saveLocalDeviceProfile(tx, args.hostName, now);
     return (await loadGroup(tx))!;
   }));
 }
 
-export function refreshActiveCompanionSyncGroupMembership(args: {
-  hostName: string;
-  group: SyncGroupPayload;
-  workgroupKey: string;
-}) {
+export function leaveCompanionSyncGroupDevice() {
   return owner().runWriter((db) => db.transaction(async (tx) => {
-    const local = (await tx.query<DbRow>(
-      `SELECT l.group_id, l.local_host_name, l.member_state, g.timeline_id
-       FROM sync_group_local_state l JOIN sync_groups g ON g.group_id = l.group_id
-       WHERE l.singleton_id = 1`
-    ))[0];
-    if (local?.group_id !== args.group.group_id
-      || local.local_host_name !== args.hostName
-      || local.member_state !== 'active') {
-      throw new Error('sync_group_identity_mismatch');
-    }
+    const group = await loadGroup(tx);
+    if (!group) return;
     const now = new Date().toISOString();
     await tx.run(
-      'UPDATE sync_groups SET display_name = ?, updated_at = ?, workgroup_key = ? WHERE group_id = ?',
-      [args.group.display_name, now, args.workgroupKey, args.group.group_id]
+      `UPDATE sync_group_devices SET state = 'left', left_at = ?, updated_at = ?
+       WHERE group_id = ? AND device_identity_key = ?`,
+      [now, now, group.group_id, group.local_device_identity_key]
     );
-    for (const member of args.group.members) await saveMember(tx, args.group.group_id, member, now);
-    await tx.run('UPDATE sync_group_local_state SET updated_at = ? WHERE singleton_id = 1', [now]);
-    await saveLocalDeviceProfile(tx, args.hostName, now);
-    return (await loadGroup(tx))!;
-  }));
-}
-
-export function recordLocalCompanionSyncGroupDeparture(args: {
-  authorizationId: string;
-  hostName: string;
-  groupId: string;
-  leftAt: string;
-}) {
-  return owner().runWriter((db) => db.transaction(async (tx) => {
-    const local = (await tx.query<DbRow>(
-      `SELECT l.local_host_name, l.member_state, m.joined_at
-       FROM sync_group_local_state l
-       JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
-       WHERE l.singleton_id = 1 AND l.group_id = ? LIMIT 1`, [args.groupId]
-    ))[0];
-    if (local?.local_host_name !== args.hostName || local.member_state !== 'active'
-      || Date.parse(args.leftAt) < Date.parse(String(local.joined_at))) {
-      throw new Error('sync_group_departure_authorization_invalid');
-    }
-    await tx.run(
-      `INSERT INTO sync_group_member_departures
-       (group_id, host_name, authorized_by_host_name, authorization_id, left_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(group_id, host_name) DO UPDATE SET
-         authorized_by_host_name = excluded.authorized_by_host_name,
-         authorization_id = excluded.authorization_id,
-         left_at = excluded.left_at
-       WHERE excluded.left_at > sync_group_member_departures.left_at`,
-      [args.groupId, args.hostName, args.hostName, args.authorizationId, args.leftAt]
-    );
-    await tx.run(
-      `UPDATE sync_group_members SET state = 'left', left_at = ?, updated_at = ?
-       WHERE group_id = ? AND host_name = ?`,
-      [args.leftAt, args.leftAt, args.groupId, args.hostName]
-    );
-    await tx.run('UPDATE sync_groups SET workgroup_key = NULL, updated_at = ? WHERE group_id = ?',
-      [args.leftAt, args.groupId]);
+    await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
     await tx.run('DELETE FROM sync_delivery_receipts');
     await tx.run('DELETE FROM sync_peer_cursors');
-    await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_host_name = ?',
-      [args.hostName]);
+    await tx.run('DELETE FROM sync_group_nonce_ledger');
   }));
 }
 
 async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {
   const row = (await db.query<DbRow>(
-    `SELECT g.*, l.local_host_name, l.member_state AS local_member_state
+    `SELECT g.group_id, g.display_name, g.created_at, l.local_device_identity_key
      FROM sync_groups g JOIN sync_group_local_state l ON l.group_id = g.group_id
-     WHERE l.singleton_id = 1 LIMIT 1`
+     WHERE l.singleton_id = 1 AND l.state = 'active' LIMIT 1`
   ))[0];
-  if (!row || typeof row.group_id !== 'string') return null;
-  const members = await db.query<DbRow>(
-    `SELECT host_name, host_platform, state, approved_by_host_name,
-            authorization_id, joined_at
-     FROM sync_group_members WHERE group_id = ? AND state = 'active' ORDER BY joined_at, host_name`,
-    [row.group_id]
+  if (!text(row?.group_id)) return null;
+  const devices = await db.query<DbRow>(
+    `SELECT device_identity_key, device_anchor, canonical_library_path, device_name,
+            platform, state, joined_at, left_at, last_seen_at, updated_at
+     FROM sync_group_devices WHERE group_id = ? AND state = 'active'
+     ORDER BY joined_at, device_identity_key`, [String(row!.group_id)]
   );
-  if (row.local_member_state !== 'active') return null;
   return {
-    created_at: String(row.created_at), created_by_host_name: String(row.created_by_host_name),
-    display_name: String(row.display_name), group_id: row.group_id,
-    local_host_name: String(row.local_host_name),
-    local_member_state: 'active',
-    members: members.map((member) => ({
-      approved_by_host_name: String(member.approved_by_host_name),
-      authorization_id: String(member.authorization_id), host_name: String(member.host_name),
-      host_platform: String(member.host_platform),
-      joined_at: String(member.joined_at),
-      state: 'active'
+    created_at: String(row!.created_at),
+    devices: devices.map((device) => ({
+      canonical_library_path: String(device.canonical_library_path), contract_version: 1,
+      device_anchor: String(device.device_anchor), device_identity_key: String(device.device_identity_key),
+      device_name: String(device.device_name), joined_at: String(device.joined_at),
+      last_seen_at: text(device.last_seen_at), left_at: text(device.left_at),
+      platform: String(device.platform), state: device.state === 'left' ? 'left' : 'active',
+      updated_at: String(device.updated_at)
     })),
-    timeline_id: String(row.timeline_id)
+    display_name: String(row!.display_name),
+    group_id: String(row!.group_id),
+    local_device_identity_key: String(row!.local_device_identity_key)
   };
 }
 
-async function saveMember(db: DbPort, groupId: string, member: SyncGroupPayload['members'][number], now: string) {
+async function saveDevice(
+  db: DbPort,
+  device: SyncGroupDeviceIdentity,
+  deviceName: string,
+  platform: string,
+  now: string
+) {
   await db.run(
-    `INSERT INTO sync_group_members (
-      group_id, host_name, host_platform, state, approved_by_host_name,
-      authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL, NULL, ?)
-    ON CONFLICT(group_id, host_name) DO UPDATE SET
-      host_platform = excluded.host_platform,
-      state = excluded.state,
-      approved_by_host_name = excluded.approved_by_host_name,
-      authorization_id = CASE WHEN excluded.joined_at >= joined_at
-        THEN excluded.authorization_id ELSE authorization_id END,
-      joined_at = MAX(joined_at, excluded.joined_at),
-      left_at = CASE WHEN excluded.joined_at > joined_at THEN NULL ELSE left_at END,
-      updated_at = excluded.updated_at`,
-    [groupId, member.host_name, member.host_platform, member.state,
-      member.approved_by_host_name, member.authorization_id, member.joined_at, now]
-  );
-  await db.run(
-    `DELETE FROM sync_group_member_departures
-     WHERE group_id = ? AND host_name = ? AND left_at < ?`,
-    [groupId, member.host_name, member.joined_at]
-  );
-}
-
-function saveLocalDeviceProfile(db: DbPort, hostName: string, now: string) {
-  return db.run(
-    `INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES ('host_name', ?, ?)`,
-    [hostName, now]
+    `INSERT INTO sync_group_devices (
+      group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+      platform, state, joined_at, left_at, last_seen_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, NULL, ?, ?)`,
+    [device.group_id, device.identity_key, device.device_anchor, device.canonical_library_path,
+      deviceName, platform, now, now, now]
   );
 }
 
@@ -220,7 +122,6 @@ async function count(db: DbPort, table: string) {
   return Number(row?.value ?? 0);
 }
 
-async function loadTimelineId(db: DbPort) {
-  const row = (await db.query<DbRow>('SELECT timeline_id FROM sync_groups LIMIT 1'))[0];
-  return typeof row?.timeline_id === 'string' && row.timeline_id.trim() ? row.timeline_id : null;
+function text(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

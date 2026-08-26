@@ -8,6 +8,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.io.File;
 
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
@@ -41,6 +42,21 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
         } catch (Exception error) {
             call.reject(FolioleCompanionPluginErrors.withCause("Failed to load Sync Group candidates.", error), error);
+        }
+    }
+
+    @PluginMethod public void loadSyncGroupDeviceIdentity(PluginCall call) {
+        try {
+            String databasePath = call.getString("database_path", "");
+            if (databasePath.isEmpty()) throw new IllegalArgumentException("database_path_required");
+            call.resolve(new JSObject()
+                .put("canonical_library_path", FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(new File(databasePath)))
+                .put("device_anchor", FolioleCompanionDeviceAnchorStore.loadOrCreate(getContext()))
+                .put("device_name", android.os.Build.MODEL)
+                .put("path_flavor", "posix")
+                .put("platform", "android-capacitor"));
+        } catch (Exception error) {
+            call.reject("Failed to load Device identity.", error);
         }
     }
 
@@ -87,9 +103,9 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         setParticipation(call, "syncPaused");
     }
 
-    @PluginMethod public void approveSyncGroupJoinRequest(PluginCall call) {
-        async(call, "Failed to approve Device.", () ->
-            withParticipation(FolioleCompanionSyncGroupProvider.approve(getContext(), call)));
+    @PluginMethod public void acceptSyncGroupJoinRequest(PluginCall call) {
+        async(call, "Failed to accept Device.", () ->
+            withParticipation(FolioleCompanionSyncGroupProvider.accept(getContext(), call)));
     }
 
     @PluginMethod public void rejectSyncGroupJoinRequest(PluginCall call) {
@@ -106,29 +122,9 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         }
     }
 
-    @PluginMethod public void loadPairingState(PluginCall call) {
-        FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call);
-    }
-
-    @PluginMethod public void clearPairingCredentials(PluginCall call) {
-        FolioleCompanionPairingPluginActions.clearPairingCredentials(getContext(), call);
-    }
-
-    @PluginMethod public void clearSyncGroupCredentials(PluginCall call) {
-        FolioleCompanionPairingPluginActions.clearSyncGroupCredentials(getContext(), call);
-    }
-
-    @PluginMethod public void bindSyncGroupPeerRoute(PluginCall call) {
-        FolioleCompanionPairingPluginActions.bindSyncGroupPeerRoute(getContext(), call);
-    }
-
-    @PluginMethod public void savePairingCredentials(PluginCall call) {
-        FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
-    }
-
     @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
-        fileExecutor.execute(() ->
-            FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call));
+        async(call, "Failed to sign Sync Group request.", () ->
+            FolioleCompanionSyncGroupSigning.sign(getContext(), call));
     }
 
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {

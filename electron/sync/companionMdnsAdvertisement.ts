@@ -26,12 +26,11 @@ let refreshQueue = Promise.resolve();
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
   onWarning?: (error: unknown) => void;
-  peerId: string;
+  deviceId: string;
   port: number;
   groupDisplayName: string;
   groupId: string;
   groupTag: string;
-  timelineId: string;
 }
 
 function runtimeSuffix(runtimeInstanceId: string) {
@@ -93,9 +92,8 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
         group_id: input.groupId,
         group_tag: input.groupTag,
         ipv4_addresses: ipv4Addresses.join(','),
-        peer_id: input.peerId,
+        device_id: input.deviceId,
         runtime_instance_id: runtimeInstanceId,
-        timeline_id: input.timelineId,
         ...serializeSyncProtocolTxt()
       },
       type: COMPANION_SYNC_MDNS_SERVICE_TYPE

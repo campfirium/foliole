@@ -16,10 +16,10 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 }
 
 describe('syncProtocolContract', () => {
-  it('accepts the exact v3 descriptor and returns a negotiated version', () => {
+  it('accepts the exact v4 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({
       missing_capabilities: [],
-      negotiated_version: 3,
+      negotiated_version: 4,
       reason: null,
       status: 'compatible'
     });
@@ -30,8 +30,8 @@ describe('syncProtocolContract', () => {
     [{}, 'protocol_metadata_invalid'],
     [descriptor({ max_supported_version: 2, min_supported_version: 2, version: 2 }), 'protocol_version_unsupported'],
     [descriptor({ version: 2 }), 'protocol_version_unsupported'],
-    [descriptor({ min_supported_version: 4 }), 'protocol_metadata_invalid'],
-    [descriptor({ max_supported_version: 4, min_supported_version: 4, version: 4 }), 'protocol_version_unsupported']
+    [descriptor({ min_supported_version: 5 }), 'protocol_metadata_invalid'],
+    [descriptor({ max_supported_version: 5, min_supported_version: 5, version: 5 }), 'protocol_version_unsupported']
   ])('rejects %j as %s', (remote, reason) => {
     expect(evaluateSyncProtocolCompatibility(remote)).toMatchObject({ reason, status: 'incompatible' });
   });
@@ -39,10 +39,9 @@ describe('syncProtocolContract', () => {
   it('reports missing required capabilities', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor({ capabilities: [] }))).toEqual({
       missing_capabilities: [
-        'author-host-snapshots-v1', 'authorization-credential-routing-v1',
-        'authorization-delivery-receipts-v1',
-        'host-workgroup-members-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
-        'source-host-ownership-v1', 'sync-group-facts-v1',
+        'author-host-snapshots-v1', 'device-delivery-receipts-v1',
+        'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
+        'source-host-ownership-v1', 'sync-group-device-facts-v1',
         'system-entry-display-names-v1', 'workgroup-aead-v1'
       ],
       negotiated_version: null,
@@ -56,7 +55,7 @@ describe('syncProtocolContract', () => {
     const hint = parseSyncProtocolTxt(txt);
     expect(txt).not.toHaveProperty('protocol_capabilities');
     expect(Object.entries(txt).every(([key, value]) => Buffer.byteLength(`${key}=${value}`) <= 255)).toBe(true);
-    expect(hint).toEqual({ max_supported_version: 3, min_supported_version: 3, version: 3 });
+    expect(hint).toEqual({ max_supported_version: 4, min_supported_version: 4, version: 4 });
     expect(evaluateSyncProtocolVersionHint(hint)).toMatchObject({ status: 'compatible' });
     expect(syncProtocolVersionHintMatchesDescriptor(hint, CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
   });
@@ -64,14 +63,14 @@ describe('syncProtocolContract', () => {
   it('rejects malformed descriptors rather than repairing them', () => {
     expect(parseSyncProtocolDescriptor({
       capabilities: [''],
-      max_supported_version: 3,
-      min_supported_version: 3,
-      version: 3
+      max_supported_version: 4,
+      min_supported_version: 4,
+      version: 4
     })).toBeNull();
   });
 });
 
-it('requires the display-name contract as part of the exact v3 generation', () => {
+it('requires the display-name contract as part of the exact v4 generation', () => {
   const legacyV2 = descriptor({
     max_supported_version: 2,
     min_supported_version: 2,
@@ -86,5 +85,5 @@ it('requires the display-name contract as part of the exact v3 generation', () =
     status: 'incompatible'
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
-    .toMatchObject({ negotiated_version: 3, status: 'compatible' });
+    .toMatchObject({ negotiated_version: 4, status: 'compatible' });
 });

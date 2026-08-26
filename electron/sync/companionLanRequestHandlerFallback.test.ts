@@ -56,9 +56,9 @@ function createResponse() {
 function createHandler() {
   return createLanWorkspaceSyncRequestHandler({
     appVersion: '0.1.0-test',
-    onPairRequestCreated: null,
-    peerId: 'desktop-local',
-    updatePairingStatus: vi.fn()
+    onJoinRequestCreated: null,
+    deviceId: 'desktop-local',
+    updateGroupStatus: vi.fn()
   });
 }
 

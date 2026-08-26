@@ -9,7 +9,7 @@ const DIALOG_SURFACE_FILES = [
   'src/app/components/ExternalSearchPreviewDialog.tsx',
   'src/app/components/KeepImportPreviewDialog.tsx',
   'src/app/components/KeepImportDisableDialog.tsx',
-  'src/app/components/CompanionPairingRequestsDialog.tsx'
+  'src/app/components/SyncGroupJoinRequestsDialog.tsx'
 ];
 
 const DIALOG_CONTENT_OVERRIDE_PATTERN =

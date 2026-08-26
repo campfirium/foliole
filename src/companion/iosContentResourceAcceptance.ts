@@ -1,4 +1,6 @@
 import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
+import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
+import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { pullMissingContentBlobs } from '../shared/platform/companionDesktopSyncContentBlobs';
 import { pullMissingAttachmentResources } from '../shared/platform/companionDesktopSyncResources';
@@ -7,14 +9,9 @@ import { searchCompanionFullText } from '../shared/platform/companionFullTextSea
 import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
 import { loadCompanionPdfPageText } from '../shared/platform/companionSyncObjects';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import {
-  clearCompanionPairingCredentials,
-  createSignedRequestHeaders,
-  loadCompanionPairingState
-} from '../shared/platform/companionWorkspacePairing';
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { loadIosAcceptanceSyncPeer, pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
@@ -32,10 +29,8 @@ const TOKENS = {
   topic: 'topic-amber-token'
 } as const;
 
-async function pairForContent(endpoint: string, hostName: string) {
-  await clearCompanionPairingCredentials();
-  await saveCompanionWorkspaceSyncEndpoint('');
-  await pairIosAcceptanceCompanion(endpoint, hostName);
+async function prepareGroup(endpoint: string, databasePath: string | null) {
+  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
@@ -88,10 +83,10 @@ export async function runIosContentResourceAcceptance() {
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS content resource acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    const pairing = await loadCompanionPairingState();
+    const group = await loadCompanionSyncGroup();
     let resourceSync = null;
-    if (!pairing.is_paired) {
-      await pairForContent(endpoint, bootstrap.host_name ?? 'Acceptance iPhone');
+    if (!group) {
+      await prepareGroup(endpoint, bootstrap.database_path);
       await applyStructure(endpoint);
       resourceSync = {
         content: await pullMissingContentBlobs(endpoint),
@@ -101,7 +96,7 @@ export async function runIosContentResourceAcceptance() {
     postResult({
       error: null,
       evidence: await loadReadEvidence(),
-      phase: pairing.is_paired ? 'resources-restored' : 'resources-synced',
+      phase: group ? 'resources-restored' : 'resources-synced',
       resource_sync: resourceSync,
       scenario: 'content-resource-read',
       status: 'passed'

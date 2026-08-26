@@ -3,12 +3,11 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
-  clearPairing: vi.fn(),
+  ensureGroup: vi.fn(),
+  leaveGroup: vi.fn(),
   loadBootstrap: vi.fn(),
-  loadPairing: vi.fn(),
-  pair: vi.fn(),
+  loadPeer: vi.fn(),
   postResult: vi.fn(),
-  requestPairing: vi.fn(),
   rerunRoundtrip: vi.fn(),
   runRoundtrip: vi.fn(),
   saveEndpoint: vi.fn(),
@@ -16,20 +15,20 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
-vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
-vi.mock('../shared/platform/companionWorkspacePairing', () => ({
-  clearCompanionPairingCredentials: mocks.clearPairing,
-  createSignedRequestHeaders: mocks.sign,
-  loadCompanionPairingState: mocks.loadPairing,
-  pairCompanionWithDesktop: mocks.pair,
-  requestCompanionPairing: mocks.requestPairing
+vi.mock('../shared/platform/companion/network/signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  leaveCompanionSyncGroupDevice: mocks.leaveGroup
 }));
+vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
 vi.mock('./iosBridgeAcceptance', () => ({
   acceptanceEndpoint: () => 'http://127.0.0.1:43123',
   postResult: mocks.postResult
+}));
+vi.mock('./iosAcceptanceSyncGroup', () => ({
+  ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
 }));
 vi.mock('./iosNodeVersionRoundtripAcceptance', () => ({
   rerunIosNodeVersionRoundtripAcceptance: mocks.rerunRoundtrip,
@@ -42,25 +41,19 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
-  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', host_name: 'Acceptance iPhone' });
-  mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
-  mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop' });
+  mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
+  mocks.leaveGroup.mockResolvedValue(undefined);
+  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
+  mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
   mocks.rerunRoundtrip.mockResolvedValue({ push: { pushedObjectIds: [] } });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
 });
 
-it('pairs and applies the identity-bound legal pack on the first launch', async () => {
-  mocks.loadPairing.mockResolvedValue({
-    is_paired: false, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
-  });
-
+it('joins and applies the identity-bound legal pack on the first launch', async () => {
   await runIosSyncPackAcceptance();
 
-  expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({
-    hostName: 'Acceptance iPhone',
-    hostPlatform: 'ios-capacitor'
-  }));
+  expect(mocks.ensureGroup).toHaveBeenCalledWith('http://127.0.0.1:43123', '/app/foliole.db');
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
     sourceHostName: 'Acceptance Desktop',
@@ -70,10 +63,7 @@ it('pairs and applies the identity-bound legal pack on the first launch', async 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'applied', status: 'passed' }));
 });
 
-it('reapplies through the shared path without repairing an existing pairing', async () => {
-  mocks.loadPairing.mockResolvedValue({
-    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
-  });
+it('reapplies through the shared path after rebuilding the acceptance Sync Group', async () => {
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'reapply');
 
   await runIosSyncPackAcceptance();
@@ -81,7 +71,7 @@ it('reapplies through the shared path without repairing an existing pairing', as
   expect(mocks.loadBootstrap).toHaveBeenCalledOnce();
   expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
     .toBeLessThan(mocks.rerunRoundtrip.mock.invocationCallOrder[0] ?? -Infinity);
-  expect(mocks.requestPairing).not.toHaveBeenCalled();
+  expect(mocks.ensureGroup).toHaveBeenCalledOnce();
   expect(mocks.apply).not.toHaveBeenCalled();
   expect(mocks.rerunRoundtrip).toHaveBeenCalledOnce();
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'reapplied', status: 'passed' }));
@@ -94,9 +84,6 @@ it.each([
   ['legacy-format', 'unsupported_sync_pack_format_version'],
   ['illegal-dag', 'sync_pack_node_version_missing_parent']
 ])('accepts only the deterministic %s rejection', async (phase, error) => {
-  mocks.loadPairing.mockResolvedValue({
-    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
-  });
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', phase);
   mocks.apply.mockRejectedValue(new Error(error));
 
@@ -108,9 +95,6 @@ it.each([
 });
 
 it('fails when a rejection category does not match the active phase', async () => {
-  mocks.loadPairing.mockResolvedValue({
-    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
-  });
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'wrong-target');
   mocks.apply.mockRejectedValue(new Error('missing_sync_pack_entry'));
 

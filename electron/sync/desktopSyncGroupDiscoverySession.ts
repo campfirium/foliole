@@ -115,10 +115,9 @@ async function probeService(fetchDiscovery: typeof fetch, service: Service) {
       endpoint_url: endpointUrl,
       group_display_name: text(payload.group_display_name) ?? service.name,
       group_id: String(payload.group_id), group_tag: String(payload.group_tag),
-      provider_authorization_id: text(payload.peer_id) ?? String(service.txt.peer_id),
-      provider_host_name: text(payload.provider_host_name) ?? text(payload.desktop_host_name) ?? service.name,
-      provider_host_platform: text(payload.provider_host_platform) ?? desktopKind(text(payload.desktop_platform) ?? ''),
-      timeline_id: String(payload.timeline_id)
+      provider_device_id: text(payload.provider_device_id) ?? String(service.txt.device_id),
+      provider_device_name: text(payload.provider_device_name) ?? service.name,
+      provider_platform: text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '')
     } satisfies DesktopSyncGroupJoinCandidatePayload;
     return { candidate, status: 'results' as const };
   } catch { return { status: 'connection_failed' as const }; }

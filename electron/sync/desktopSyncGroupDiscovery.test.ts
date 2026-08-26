@@ -48,15 +48,16 @@ describe('desktop Sync Group discovery', () => {
       tunnel: [{ address: '198.18.0.1', family: 'IPv4', internal: false }]
     });
     const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
-      group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-a',
-      provider_device_kind: 'android-capacitor', provider_device_name: 'Android B', timeline_id: 'timeline-1'
+      group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'device-a', provider_device_name: 'Android B',
+      provider_platform: 'android-capacitor', runtime_instance_id: 'runtime-android-b'
     })));
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
     runtime.onServices[1]?.({
       addresses: ['192.168.0.10'],
       name: 'Desktop A',
       port: 41186,
-      txt: { group_id: 'group-1', peer_id: 'device-a', runtime_instance_id: 'runtime-local', timeline_id: 'timeline-1' }
+      txt: { device_id: 'device-a', group_id: 'group-1', runtime_instance_id: 'runtime-local' }
     });
     runtime.onServices[1]?.({
       addresses: ['192.168.0.107'],
@@ -66,8 +67,7 @@ describe('desktop Sync Group discovery', () => {
         group_display_name: 'Daily Group',
         group_id: 'group-1',
         group_tag: 'tag-1',
-        peer_id: 'device-a',
-        timeline_id: 'timeline-1'
+        device_id: 'device-a'
       }
     });
     await vi.advanceTimersByTimeAsync(1_800);
@@ -80,10 +80,9 @@ describe('desktop Sync Group discovery', () => {
       group_display_name: 'Daily Group',
       group_id: 'group-1',
       group_tag: 'tag-1',
-      provider_authorization_id: 'device-a',
-      provider_host_name: 'Android B',
-      provider_host_platform: 'desktop',
-      timeline_id: 'timeline-1'
+      provider_device_id: 'device-a',
+      provider_device_name: 'Android B',
+      provider_platform: 'android-capacitor'
     }]);
     expect(runtime.stop).toHaveBeenCalledTimes(3);
     expect(runtime.destroy).toHaveBeenCalledTimes(3);
@@ -96,28 +95,27 @@ describe('desktop Sync Group provider selection', () => {
     const fetchDiscovery = vi.fn(async (url: string | URL | Request) => {
       const desktop = String(url).includes('192.168.0.12');
       return new Response(JSON.stringify({
-        desktop_device_name: desktop ? 'Desktop A' : undefined,
-        desktop_platform: desktop ? 'macOS' : undefined,
         group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
-        peer_id: desktop ? 'device-a' : 'device-b',
-        provider_device_kind: desktop ? undefined : 'android-capacitor',
-        provider_device_name: desktop ? undefined : 'Android B', timeline_id: 'timeline-1'
+        provider_device_id: desktop ? 'device-a' : 'device-b',
+        provider_device_name: desktop ? 'Desktop A' : 'Android B',
+        provider_platform: desktop ? 'darwin' : 'android-capacitor',
+        runtime_instance_id: desktop ? 'runtime-desktop-a' : 'runtime-android-b'
       }));
     });
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
     runtime.onServices[0]?.({ addresses: ['198.18.0.1'], name: 'Desktop A', port: 38641,
       referer: { address: '192.168.0.12' }, txt: {
-        group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-a', timeline_id: 'timeline-1'
+        device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1'
       } });
     runtime.onServices[0]?.({ addresses: ['192.168.0.13'], name: 'Android B', port: 37819,
       referer: { address: '192.168.0.13' }, txt: {
-        group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-b', timeline_id: 'timeline-1'
+        device_id: 'device-b', group_id: 'group-1', group_tag: 'tag-1'
       } });
     await vi.advanceTimersByTimeAsync(1_800);
 
     await expect(discovery).resolves.toEqual([expect.objectContaining({
       endpoint_url: 'http://192.168.0.12:38641',
-      provider_authorization_id: 'device-a', provider_host_platform: 'darwin'
+      provider_device_id: 'device-a', provider_platform: 'darwin'
     })]);
   });
 });

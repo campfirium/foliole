@@ -38,9 +38,6 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'sync-group-discovery-events'
       ? import('./iosSyncGroupDiscoveryAcceptance').then(({ runIosSyncGroupDiscoveryAcceptance }) =>
         runIosSyncGroupDiscoveryAcceptance())
-    : iosAcceptanceScenario === 'sync-group-join-runtime'
-      ? import('./iosSyncGroupJoinAcceptance').then(({ runIosSyncGroupJoinAcceptance }) =>
-        runIosSyncGroupJoinAcceptance())
     : iosAcceptanceScenario === 'sync-trigger-runtime'
       ? import('./iosSyncTriggerAcceptance').then(({ runIosSyncTriggerAcceptance }) =>
         runIosSyncTriggerAcceptance())
@@ -49,7 +46,7 @@ if (isIosBridgeAcceptance) {
     window.webkit?.messageHandlers?.folioleBridgeAcceptance?.postMessage({
       error: error instanceof Error ? error.message : String(error),
       phase: 'failed',
-      scenario: (iosAcceptanceScenario ?? 'pairing-signed-transport') as AcceptanceResult['scenario'],
+      scenario: (iosAcceptanceScenario ?? 'sync-group-signed-transport') as AcceptanceResult['scenario'],
       status: 'failed'
     });
   });

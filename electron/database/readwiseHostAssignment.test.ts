@@ -44,19 +44,25 @@ it('keeps Readwise active until a Host is explicitly selected, then runs only on
   const currentHost = 'This Mac';
   const driver = openDatabaseConnection().driver;
   driver.execute(
-    `INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-     VALUES ('group', 'Workgroup', 'timeline', ?, 'now', 'now')`, [currentHost]
+    `INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+     VALUES ('group', 'Workgroup', 'workgroup-key', 'now', 'now')`
   );
   driver.execute(
-    `INSERT INTO sync_group_local_state (singleton_id, group_id, local_host_name, member_state, updated_at)
-     VALUES (1, 'group', ?, 'active', 'now')`, [currentHost]
+    `INSERT INTO sync_group_local_state
+       (singleton_id, group_id, local_device_identity_key, state, updated_at)
+     VALUES (1, 'group', 'device-this-mac', 'active', 'now')`
   );
-  for (const hostName of [currentHost, 'Office PC']) {
+  const devices: Array<[string, string]> = [
+    ['device-this-mac', currentHost],
+    ['device-office-pc', 'Office PC']
+  ];
+  for (const [deviceId, hostName] of devices) {
     driver.execute(
-      `INSERT INTO sync_group_members (group_id, host_name, host_platform, state,
-         approved_by_host_name, authorization_id, joined_at, updated_at)
-       VALUES ('group', ?, 'darwin', 'active', ?, ?, 'now', 'now')`,
-      [hostName, currentHost, `authorization-${hostName}`]
+      `INSERT INTO sync_group_devices
+        (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+         platform, state, joined_at, left_at, last_seen_at, updated_at)
+       VALUES ('group', ?, ?, ?, ?, 'darwin', 'active', 'now', NULL, 'now', 'now')`,
+      [deviceId, `${deviceId}-anchor`, `/library/${deviceId}`, hostName]
     );
   }
   expect(loadReadwiseHostAssignment()).toMatchObject({

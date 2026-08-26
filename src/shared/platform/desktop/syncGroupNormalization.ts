@@ -1,41 +1,53 @@
-import type { SyncGroupMemberPayload, SyncGroupPayload } from '../../../../lib/platform/syncGroupContract';
+import type {
+  SyncGroupDevicePayload,
+  SyncGroupPayload
+} from '../../../../lib/platform/syncGroupContract';
 
 function readString(raw: Record<string, unknown>, key: string) {
   return typeof raw[key] === 'string' && raw[key].trim() ? raw[key].trim() : null;
 }
 
-function normalizeMember(value: unknown): SyncGroupMemberPayload | null {
+function readNullableString(raw: Record<string, unknown>, key: string) {
+  return raw[key] === null ? null : readString(raw, key);
+}
+
+function normalizeDevice(value: unknown): SyncGroupDevicePayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const state = raw.state;
-  if (state !== 'active' && state !== 'left') return null;
-  const required = ['approved_by_host_name', 'authorization_id', 'host_name', 'host_platform', 'joined_at'];
+  if (raw.contract_version !== 1 || (raw.state !== 'active' && raw.state !== 'left')) return null;
+  const required = ['canonical_library_path', 'device_anchor', 'device_identity_key', 'device_name',
+    'joined_at', 'platform', 'updated_at'];
   if (required.some((key) => !readString(raw, key))) return null;
+  const lastSeenAt = readNullableString(raw, 'last_seen_at');
+  const leftAt = readNullableString(raw, 'left_at');
+  if ((raw.last_seen_at !== null && !lastSeenAt) || (raw.left_at !== null && !leftAt)) return null;
   return {
-    approved_by_host_name: readString(raw, 'approved_by_host_name')!,
-    authorization_id: readString(raw, 'authorization_id')!,
-    host_name: readString(raw, 'host_name')!,
-    host_platform: readString(raw, 'host_platform')!,
+    canonical_library_path: readString(raw, 'canonical_library_path')!,
+    contract_version: 1,
+    device_anchor: readString(raw, 'device_anchor')!,
+    device_identity_key: readString(raw, 'device_identity_key')!,
+    device_name: readString(raw, 'device_name')!,
     joined_at: readString(raw, 'joined_at')!,
-    state
+    last_seen_at: lastSeenAt,
+    left_at: leftAt,
+    platform: readString(raw, 'platform')!,
+    state: raw.state,
+    updated_at: readString(raw, 'updated_at')!
   };
 }
 
 export function normalizeSyncGroup(value: unknown): SyncGroupPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const localState = raw.local_member_state;
-  if (localState !== 'active' && localState !== 'left') return null;
-  const required = ['created_at', 'created_by_host_name', 'display_name', 'group_id', 'local_host_name', 'timeline_id'];
-  if (required.some((key) => !readString(raw, key))) return null;
+  const required = ['created_at', 'display_name', 'group_id', 'local_device_identity_key'];
+  if (required.some((key) => !readString(raw, key)) || !Array.isArray(raw.devices)) return null;
+  const devices = raw.devices.map(normalizeDevice);
+  if (devices.some((device) => device === null)) return null;
   return {
     created_at: readString(raw, 'created_at')!,
-    created_by_host_name: readString(raw, 'created_by_host_name')!,
+    devices: devices as SyncGroupDevicePayload[],
     display_name: readString(raw, 'display_name')!,
     group_id: readString(raw, 'group_id')!,
-    local_host_name: readString(raw, 'local_host_name')!,
-    local_member_state: localState,
-    members: Array.isArray(raw.members) ? raw.members.map(normalizeMember).filter((item): item is SyncGroupMemberPayload => item !== null) : [],
-    timeline_id: readString(raw, 'timeline_id')!
+    local_device_identity_key: readString(raw, 'local_device_identity_key')!
   };
 }

@@ -13,7 +13,7 @@ describe('iOS database upgrade acceptance isolation', () => {
     expect(shouldInjectIosDatabaseUpgradeFault()).toBe(false);
     vi.stubEnv('VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT', '1');
     expect(shouldInjectIosDatabaseUpgradeFault()).toBe(true);
-    vi.stubEnv('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'pairing-signed-transport');
+    vi.stubEnv('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'sync-group-signed-transport');
     expect(shouldInjectIosDatabaseUpgradeFault()).toBe(false);
   });
 

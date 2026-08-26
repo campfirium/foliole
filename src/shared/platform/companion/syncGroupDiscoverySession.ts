@@ -1,12 +1,12 @@
 import type { SyncGroupDiscoverySnapshot } from '../../../../lib/platform/syncGroupDiscoveryContract';
 import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery';
-import { FolioleCompanionSync, isNativeCompanionPairingRuntime } from '../companionWorkspaceRuntimeRepository';
+import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
 
 export async function startCompanionSyncGroupDiscoverySession(
   onSnapshot: (snapshot: SyncGroupDiscoverySnapshot) => void
 ) {
-  if (!isNativeCompanionPairingRuntime()) {
+  if (!isNativeCompanionNetworkRuntime()) {
     onSnapshot({ candidates: [], change: 'failed', error_code: 'bridge_incompatible', status: 'incompatible' });
     return async () => undefined;
   }
@@ -33,10 +33,9 @@ export async function startCompanionSyncGroupDiscoverySession(
         group_display_name: candidate.discovery.group_display_name,
         group_id: candidate.discovery.group_id,
         group_tag: candidate.discovery.group_tag,
-        provider_authorization_id: candidate.discovery.peer_id,
-        provider_host_name: candidate.discovery.desktop_host_name,
-        provider_host_platform: candidate.discovery.desktop_platform,
-        timeline_id: candidate.discovery.timeline_id
+        provider_device_id: candidate.discovery.provider_device_id,
+        provider_device_name: candidate.discovery.provider_device_name,
+        provider_platform: candidate.discovery.provider_platform
       })),
       change: status === 'results' ? event.change : 'failed',
       error_code: status === 'results' ? null : status,
