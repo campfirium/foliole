@@ -62,6 +62,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNsdAddresses.java',
       'FolioleCompanionNsdAdvertisement.java',
       'FolioleCompanionNsdDiscovery.java',
+      'FolioleCompanionNsdDiscoverySession.java',
       'FolioleCompanionNsdMonitor.java',
       'FolioleCompanionPairingAuthorizationCutover.java',
       'FolioleCompanionPairingCrypto.java',

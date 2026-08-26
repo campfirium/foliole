@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const runtimeRepositoryMocks = vi.hoisted(() => ({
   loadDesktopCompanionPairingOverview: vi.fn(),
-  onDesktopCompanionPairingRequestsChanged: vi.fn()
+  onDesktopCompanionPairingRequestsChanged: vi.fn(),
+  onDesktopSyncGroupDiscoveryChanged: vi.fn(),
+  stopDiscoveringDesktopSyncGroups: vi.fn()
 }));
 
 vi.mock('./desktopCompanionPairingRuntimeRepository', () => ({
@@ -13,8 +15,10 @@ vi.mock('./desktopCompanionPairingRuntimeRepository', () => ({
   enableDesktopCompanionSync: vi.fn(),
   loadDesktopCompanionPairingOverview: runtimeRepositoryMocks.loadDesktopCompanionPairingOverview,
   onDesktopCompanionPairingRequestsChanged: runtimeRepositoryMocks.onDesktopCompanionPairingRequestsChanged,
+  onDesktopSyncGroupDiscoveryChanged: runtimeRepositoryMocks.onDesktopSyncGroupDiscoveryChanged,
   removeDesktopCompanionPairedDevice: vi.fn(),
-  rejectDesktopCompanionPairRequest: vi.fn()
+  rejectDesktopCompanionPairRequest: vi.fn(),
+  stopDiscoveringDesktopSyncGroups: runtimeRepositoryMocks.stopDiscoveringDesktopSyncGroups
 }));
 
 vi.mock('./runtime', () => ({
@@ -58,6 +62,8 @@ describe('useDesktopCompanionPairingRequests', () => {
     vi.useFakeTimers();
     runtimeRepositoryMocks.loadDesktopCompanionPairingOverview.mockResolvedValue(createOverview(0));
     runtimeRepositoryMocks.onDesktopCompanionPairingRequestsChanged.mockReturnValue(() => undefined);
+    runtimeRepositoryMocks.onDesktopSyncGroupDiscoveryChanged.mockReturnValue(() => undefined);
+    runtimeRepositoryMocks.stopDiscoveringDesktopSyncGroups.mockResolvedValue(undefined);
   });
 
   afterEach(() => {

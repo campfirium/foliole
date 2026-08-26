@@ -4,6 +4,7 @@ import type {
   DesktopCompanionPairingOverviewPayload,
   DesktopCompanionPairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroupDiscoveryContract';
 
 import { normalizePairingHost } from './desktop/pairingHostNormalization';
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/pairingJoinNormalization';
@@ -143,7 +144,19 @@ export function removeDesktopSyncGroupMember(hostName: string) {
 }
 
 export function discoverDesktopSyncGroups() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.discoverSyncGroups);
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return Promise.resolve({
+    candidates: [], change: 'failed', error_code: 'bridge_incompatible', status: 'incompatible'
+  } satisfies SyncGroupDiscoverySnapshot);
+  return runtimeInvoke(NATIVE_COMMANDS.discoverSyncGroups);
+}
+
+export function stopDiscoveringDesktopSyncGroups() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return Promise.resolve({
+    candidates: [], change: 'stopped', error_code: null, status: 'stopped'
+  } satisfies SyncGroupDiscoverySnapshot);
+  return runtimeInvoke(NATIVE_COMMANDS.stopDiscoverSyncGroups);
 }
 
 export function requestDesktopSyncGroupJoin(endpointUrl: string) {
@@ -168,4 +181,8 @@ export function rejectDesktopCompanionPairRequest(pairRequestId: string) {
 
 export function onDesktopCompanionPairingRequestsChanged(handler: () => void) {
   return getElectronAPI()?.onCompanionPairingRequestsChanged?.(handler) ?? null;
+}
+
+export function onDesktopSyncGroupDiscoveryChanged(handler: (payload: SyncGroupDiscoverySnapshot) => void) {
+  return getElectronAPI()?.onSyncGroupDiscoveryChanged?.(handler) ?? null;
 }

@@ -17,6 +17,7 @@ const syncMocks = vi.hoisted(() => ({
   pairCompanionWithDesktop: vi.fn(),
   requestCompanionPairing: vi.fn()
 }));
+const discoveryMocks = vi.hoisted(() => ({ start: vi.fn() }));
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   discoverCompanionDesktop: syncMocks.discoverCompanionDesktop,
@@ -24,6 +25,9 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionPairingState: syncMocks.loadCompanionPairingState,
   pairCompanionWithDesktop: syncMocks.pairCompanionWithDesktop,
   requestCompanionPairing: syncMocks.requestCompanionPairing
+}));
+vi.mock('../shared/platform/companion/syncGroupDiscoverySession', () => ({
+  startCompanionSyncGroupDiscoverySession: discoveryMocks.start
 }));
 
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
@@ -66,7 +70,30 @@ function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:3864
 
 beforeEach(() => {
   vi.clearAllMocks();
+  discoveryMocks.start.mockImplementation(async (onSnapshot) => {
+    onSnapshot({
+      candidates: [
+        nativeCandidate('V', 'http://192.168.1.8:38641'),
+        nativeCandidate('Studio', 'http://192.168.1.12:38641')
+      ],
+      change: 'found', error_code: null, status: 'results'
+    });
+    return async () => undefined;
+  });
 });
+
+function nativeCandidate(hostName: string, endpointUrl: string) {
+  return {
+    endpoint_url: endpointUrl,
+    group_display_name: 'Daily Group',
+    group_id: 'group-1',
+    group_tag: 'tag-1',
+    provider_authorization_id: `desktop-${hostName.toLowerCase()}`,
+    provider_host_name: `Foliole Desktop on ${hostName}`,
+    provider_host_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
+    timeline_id: 'timeline-1'
+  };
+}
 
 it('can cancel a pending pair request and keep discovered devices available', async () => {
   syncMocks.loadCompanionPairingState.mockResolvedValue({

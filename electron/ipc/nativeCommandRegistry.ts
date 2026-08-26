@@ -161,6 +161,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.leaveSyncGroup, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.removeSyncGroupMember, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.discoverSyncGroups, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.stopDiscoverSyncGroups, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.requestSyncGroupJoin, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.completeSyncGroupJoin, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.enableCompanionSync, route: 'storage', capability: 'settingsMutation' },

@@ -76,7 +76,7 @@ export function CompanionSyncDiscoveryDialog(props: {
   if (!isOpen) return null;
   return (
     <section className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-      {props.isSearching ? (
+      {props.isSearching && props.desktops.length === 0 ? (
         <SearchingDiscoveryContent onRefresh={props.onRefresh} />
       ) : (
         <FoundDevicesDiscoveryContent

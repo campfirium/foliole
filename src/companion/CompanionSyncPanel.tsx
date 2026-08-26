@@ -69,6 +69,10 @@ function shouldShowStandaloneParticipation(props: CompanionSyncPanelProps) {
 }
 
 function formatSyncPanelError(message: string, t: Translate) {
+  if (message === 'discovery_permission_required') return t('companion.sync.discovery.permissionRequired');
+  if (message === 'discovery_unavailable') return t('companion.sync.discovery.unavailable');
+  if (message === 'discovery_incompatible') return t('companion.sync.discovery.incompatible');
+  if (message === 'discovery_connection_failed') return t('companion.sync.discovery.connectionFailed');
   if (message.includes('sync_participation_inactive')) return t('companion.sync.participation.inactive');
   const lowerMessage = message.toLowerCase();
   const isPairingError = lowerMessage.includes('pair') || lowerMessage.includes('pairing');

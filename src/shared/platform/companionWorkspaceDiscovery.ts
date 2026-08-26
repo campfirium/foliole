@@ -24,7 +24,7 @@ export type CompanionDiscoveryOptions = {
   allowWhileNotParticipating?: boolean;
 };
 
-type DiscoveryCandidate = {
+export type DiscoveryCandidate = {
   endpointUrl: string;
   protocolTxt: Record<string, string> | null;
   source: 'direct' | 'nsd';
@@ -119,6 +119,16 @@ async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise
   }
 }
 
+export async function loadCompanionDiscoveryCandidates(candidates: DiscoveryCandidate[]) {
+  const discovered: CompanionDiscoveryResult[] = [];
+  for (let index = 0; index < candidates.length; index += DISCOVERY_BATCH_SIZE) {
+    const batch = candidates.slice(index, index + DISCOVERY_BATCH_SIZE);
+    const results = await Promise.all(batch.map((candidate) => tryLoadCompanionDiscovery(candidate)));
+    results.forEach((result) => { if (result) appendUniqueDiscovery(discovered, result); });
+  }
+  return discovered;
+}
+
 async function requestDiscovery(url: string, signal: AbortSignal) {
   if (!isNativeCompanionPairingRuntime()) {
     return await fetch(url, { signal });
@@ -151,17 +161,7 @@ export async function discoverCompanionDesktops(
   options: CompanionDiscoveryOptions = {}
 ): Promise<CompanionDiscoveryResult[]> {
   const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl, options);
-  const discovered: CompanionDiscoveryResult[] = [];
-  for (let index = 0; index < candidates.length; index += DISCOVERY_BATCH_SIZE) {
-    const batch = candidates.slice(index, index + DISCOVERY_BATCH_SIZE);
-    const results = await Promise.all(batch.map((candidate) => tryLoadCompanionDiscovery(candidate)));
-    results.forEach((result) => {
-      if (result) {
-        appendUniqueDiscovery(discovered, result);
-      }
-    });
-  }
-  return discovered;
+  return loadCompanionDiscoveryCandidates(candidates);
 }
 
 export async function discoverCompanionDesktop(

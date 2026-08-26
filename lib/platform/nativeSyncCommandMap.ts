@@ -7,6 +7,7 @@ import type {
   NativeSyncObjectRecord,
   NativeSyncPeer
 } from './nativeSyncContract.js';
+import type { SyncGroupDiscoverySnapshot } from './syncGroupDiscoveryContract.js';
 import type { SystemEntryDisplayNamesPayload } from './systemEntryDisplayNameContract.js';
 
 export type NativeSyncCommandMap = {
@@ -72,7 +73,11 @@ export type NativeSyncCommandMap = {
   };
   [NATIVE_COMMANDS.discoverSyncGroups]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
+    result: SyncGroupDiscoverySnapshot;
+  };
+  [NATIVE_COMMANDS.stopDiscoverSyncGroups]: {
+    args: undefined;
+    result: SyncGroupDiscoverySnapshot;
   };
   [NATIVE_COMMANDS.requestSyncGroupJoin]: {
     args: { endpoint_url: string };

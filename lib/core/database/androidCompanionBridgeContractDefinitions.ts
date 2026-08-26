@@ -55,6 +55,11 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       discoveryResponseKeys: {
         candidates: 'candidates'
       },
+      discoverySession: {
+        eventName: 'syncGroupDiscoveryChanged',
+        startMethod: 'startDiscoverySession',
+        stopMethod: 'stopDiscoverySession'
+      },
       discoveryCandidateKeys: {
         endpointUrl: 'endpoint_url',
         protocolTxt: 'protocol_txt',

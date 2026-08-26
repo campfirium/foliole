@@ -8,6 +8,8 @@ import {
   type SyncGroupMemberPayload,
   type SyncGroupPayload
 } from '../../../../../lib/platform/syncGroupContract';
+import type { SyncGroupDiscoverySnapshot } from '../../../../../lib/platform/syncGroupDiscoveryContract';
+import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -29,6 +31,10 @@ const PLATFORM_LABELS: Record<string, string> = {
 function platformFor(kind: string) {
   const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
   return key ? PLATFORM_LABELS[key]! : kind;
+}
+
+function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'], 'stopped'>) {
+  return `settings.companionSync.group.discovery.${status}` as const;
 }
 
 function DeviceRow(props: {
@@ -57,8 +63,38 @@ function DeviceRow(props: {
   );
 }
 
+function DiscoveryStatusRow(props: {
+  discovery: SyncGroupDiscoverySnapshot;
+  disabled: boolean;
+  onDiscover(): void;
+}) {
+  const t = useTranslation();
+  const { discovery } = props;
+  if (discovery.status === 'searching') {
+    return <span className="text-ui-sm text-muted-foreground">{t('settings.companionSync.group.discovery.searching')}</span>;
+  }
+  if (discovery.status === 'stopped') {
+    return (
+      <button className="rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+        disabled={props.disabled} onClick={props.onDiscover} type="button">
+        {t('settings.companionSync.group.find')}
+      </button>
+    );
+  }
+  return (
+    <div className="flex w-full items-center justify-between gap-4">
+      <span className="text-ui-sm text-muted-foreground">{t(discoveryMessageKey(discovery.status))}</span>
+      <button className="shrink-0 rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        onClick={props.onDiscover} type="button">
+        {t('settings.companionSync.group.discovery.retry')}
+      </button>
+    </div>
+  );
+}
+
 function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
   const t = useTranslation();
+  const discovery = props.discovery ?? STOPPED_SYNC_GROUP_DISCOVERY;
   const groups = Array.from(new Map(props.candidates.map((candidate) => [candidate.group_id, candidate])).values());
   return (
     <div className="px-settings-panel-x pt-1">
@@ -94,12 +130,14 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
             </button>
           </div>
         ))}
+        {groups.length > 0 && !['results', 'searching', 'stopped'].includes(discovery.status) ? (
+          <div className="border-t border-settings-divider/65 py-2.5 text-ui-sm text-muted-foreground">
+            {t(discoveryMessageKey(discovery.status as Exclude<typeof discovery.status, 'stopped'>))}
+          </div>
+        ) : null}
         {groups.length === 0 ? (
           <div className="flex min-h-14 items-center border-t border-settings-divider/65 py-2.5">
-            <button className="rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-              disabled={props.isBusy} onClick={props.onDiscover} type="button">
-              {t('settings.companionSync.group.find')}
-            </button>
+            <DiscoveryStatusRow discovery={discovery} disabled={props.isBusy} onDiscover={props.onDiscover} />
           </div>
         ) : null}
         {props.joinRequest ? (
@@ -114,6 +152,7 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
 
 export function SettingsSyncGroupRows(props: {
   candidates: DesktopSyncGroupJoinCandidatePayload[];
+  discovery?: SyncGroupDiscoverySnapshot;
   currentHost: { host_name: string; host_platform: string } | null;
   group: SyncGroupPayload | null;
   isBusy: boolean;

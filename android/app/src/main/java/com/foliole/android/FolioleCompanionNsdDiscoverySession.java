@@ -1,0 +1,152 @@
+package com.foliole.android;
+
+import android.content.Context;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
+
+import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
+
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+final class FolioleCompanionNsdDiscoverySession {
+    interface Listener { void onEvent(JSObject event); }
+
+    private final Context context;
+    private final Listener listener;
+    private final NsdManager manager;
+    private final String serviceType;
+    private final Map<String, JSObject> candidates = new LinkedHashMap<>();
+    private boolean started;
+
+    FolioleCompanionNsdDiscoverySession(Context context, Listener listener) throws Exception {
+        this.context = context;
+        this.listener = listener;
+        manager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
+        serviceType = FolioleCompanionNsdDiscovery.qualifiedServiceType(
+            FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context));
+    }
+
+    private final NsdManager.DiscoveryListener discovery = new NsdManager.DiscoveryListener() {
+        @Override public void onDiscoveryStarted(String type) { emit("started", "searching", null); }
+        @Override public void onServiceFound(NsdServiceInfo service) {
+            if (FolioleCompanionNsdDiscovery.sameServiceType(serviceType, service.getServiceType())) resolve(service);
+        }
+        @Override public void onServiceLost(NsdServiceInfo service) {
+            synchronized (candidates) { candidates.remove(service.getServiceName()); }
+            emit("lost", candidates.isEmpty() ? "searching" : "results", null);
+        }
+        @Override public void onDiscoveryStopped(String type) { emit("stopped", "stopped", null); }
+        @Override public void onStartDiscoveryFailed(String type, int code) {
+            started = false;
+            emit("failed", "unavailable", "nsd_start_" + code);
+        }
+        @Override public void onStopDiscoveryFailed(String type, int code) {
+            started = false;
+            emit("failed", "unavailable", "nsd_stop_" + code);
+        }
+    };
+
+    JSObject start() {
+        stop(false);
+        if (manager == null) return emit("failed", "unavailable", "nsd_unavailable");
+        started = true;
+        try {
+            manager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discovery);
+            return event("started", "searching", null);
+        } catch (SecurityException error) {
+            started = false;
+            return emit("failed", "permission_required", "local_network_permission");
+        } catch (RuntimeException error) {
+            started = false;
+            return emit("failed", "unavailable", "nsd_unavailable");
+        }
+    }
+
+    JSObject stop() { return stop(true); }
+
+    private JSObject stop(boolean publish) {
+        if (started && manager != null) {
+            started = false;
+            try { manager.stopServiceDiscovery(discovery); }
+            catch (IllegalArgumentException | SecurityException ignored) {}
+        }
+        synchronized (candidates) { candidates.clear(); }
+        return publish ? emit("stopped", "stopped", null) : event("stopped", "stopped", null);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void resolve(NsdServiceInfo service) {
+        try {
+            manager.resolveService(service, new NsdManager.ResolveListener() {
+                @Override public void onResolveFailed(NsdServiceInfo ignored, int code) {
+                    emit("failed", "unavailable", "nsd_resolve_" + code);
+                }
+                @Override public void onServiceResolved(NsdServiceInfo resolved) { add(resolved); }
+            });
+        } catch (IllegalArgumentException error) {
+            emit("failed", "unavailable", "nsd_resolve_unavailable");
+        }
+    }
+
+    private void add(NsdServiceInfo service) {
+        try {
+            byte[] own = service.getAttributes().get("runtime_instance_id");
+            if (own != null && FolioleCompanionSyncGroupProvider.runtimeInstanceId().equals(
+                new String(own, StandardCharsets.UTF_8))) return;
+            JSObject candidate = candidate(service);
+            boolean changed;
+            synchronized (candidates) {
+                changed = candidates.containsKey(service.getServiceName());
+                candidates.put(service.getServiceName(), candidate);
+            }
+            emit(changed ? "changed" : "found", "results", null);
+        } catch (Exception contractError) {
+            emit("failed", "unavailable", "nsd_candidate_invalid");
+        }
+    }
+
+    private JSObject candidate(NsdServiceInfo service) throws Exception {
+        String host = FolioleCompanionNsdAddresses.endpointHosts(service).stream().findFirst()
+            .orElseThrow(() -> new IllegalStateException("NSD address unavailable"));
+        JSObject result = new JSObject();
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context),
+            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, host, service.getPort()));
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "nsd");
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtCandidateKey(context), protocol(service));
+        return result;
+    }
+
+    private JSObject protocol(NsdServiceInfo service) throws Exception {
+        JSObject result = new JSObject();
+        for (String name : new String[] {"maxSupportedVersion", "minSupportedVersion", "version"}) {
+            String key = FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtKey(context, name);
+            byte[] value = service.getAttributes().get(key);
+            if (value != null) result.put(key, new String(value, StandardCharsets.UTF_8));
+        }
+        return result;
+    }
+
+    private JSObject emit(String change, String status, String error) {
+        JSObject value = event(change, status, error);
+        listener.onEvent(value);
+        return value;
+    }
+
+    private JSObject event(String change, String status, String error) {
+        JSObject value = new JSObject();
+        value.put("change", change); value.put("status", status); value.put("error_code", error);
+        JSArray values = new JSArray();
+        synchronized (candidates) { candidates.values().forEach(values::put); }
+        try {
+            value.put(FolioleCompanionHostBridgeContractDefinitions.networkCandidatesResponseKey(context), values);
+        } catch (Exception contractError) {
+            value.put("candidates", values);
+            value.put("status", "unavailable");
+            value.put("error_code", "bridge_contract_unavailable");
+        }
+        return value;
+    }
+}

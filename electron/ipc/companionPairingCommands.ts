@@ -5,6 +5,7 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { getMainWindow } from '../mainWindowRegistry.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 import {
   resolveCompanionMembershipApproval,
@@ -26,7 +27,7 @@ import {
   resumeDesktopCompanionSync
 } from '../sync/desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from '../sync/desktopCompanionSyncPreference.js';
-import { discoverDesktopSyncGroups } from '../sync/desktopSyncGroupDiscovery.js';
+import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
 import {
   completeDesktopSyncGroupJoin,
   requestDesktopSyncGroupJoin,
@@ -42,6 +43,12 @@ import { leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from '../sync/syn
 import { loadSyncGroupRuntimeInstanceId } from '../sync/syncGroupRuntimeInstance.js';
 
 import { asString } from './commandParsers.js';
+import { IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL } from './contracts.js';
+
+const desktopDiscovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
+  saveDesktopSyncGroupCandidates(snapshot.candidates);
+  getMainWindow()?.webContents.send(IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL, snapshot);
+});
 
 const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadCompanionPairingOverview,
@@ -49,6 +56,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.leaveSyncGroup,
   NATIVE_COMMANDS.removeSyncGroupMember,
   NATIVE_COMMANDS.discoverSyncGroups,
+  NATIVE_COMMANDS.stopDiscoverSyncGroups,
   NATIVE_COMMANDS.requestSyncGroupJoin,
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.enableCompanionSync,
@@ -133,10 +141,10 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
   }
   if (command === NATIVE_COMMANDS.discoverSyncGroups) {
     assertDesktopCompanionSyncParticipating();
-    return discoverDesktopSyncGroups().then((candidates) => {
-      saveDesktopSyncGroupCandidates(candidates);
-      return buildDesktopCompanionPairingOverview();
-    });
+    return desktopDiscovery.start();
+  }
+  if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) {
+    return desktopDiscovery.stop();
   }
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
     assertDesktopCompanionSyncParticipating();

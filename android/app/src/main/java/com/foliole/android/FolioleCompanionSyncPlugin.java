@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
+    private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
     private boolean lifecycleActive = true;
     private FolioleCompanionNsdMonitor serviceMonitor;
@@ -36,6 +37,18 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         } catch (Exception error) {
             call.reject(FolioleCompanionPluginErrors.withCause("Failed to load Sync Group candidates.", error), error);
         }
+    }
+
+    @PluginMethod public void startDiscoverySession(PluginCall call) {
+        try {
+            if (discoverySession == null) discoverySession = new FolioleCompanionNsdDiscoverySession(
+                getContext(), event -> getActivity().runOnUiThread(() -> notifyListeners("syncGroupDiscoveryChanged", event)));
+            call.resolve(discoverySession.start());
+        } catch (Exception error) { call.reject("Sync Group discovery is unavailable.", error); }
+    }
+
+    @PluginMethod public void stopDiscoverySession(PluginCall call) {
+        call.resolve(discoverySession == null ? new JSObject() : discoverySession.stop());
     }
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {

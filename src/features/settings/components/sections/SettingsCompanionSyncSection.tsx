@@ -67,6 +67,7 @@ export function SettingsCompanionSyncSection() {
       />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
+        discovery={state.discovery}
         currentHost={state.overview.current_host ?? null}
         group={state.overview.sync_group ?? null}
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}

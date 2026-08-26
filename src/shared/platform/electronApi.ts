@@ -1,6 +1,7 @@
 import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdateContract';
+import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroupDiscoveryContract';
 
 import type { DiagnosticLogPayload } from './runtimeLogging';
 import type { WorkspaceNodeMutationPatchResult } from './workspaceRuntimeTypes';
@@ -94,6 +95,7 @@ export interface ElectronAPI {
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
+  onSyncGroupDiscoveryChanged?: (handler: (payload: SyncGroupDiscoverySnapshot) => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onAssistantTurnEvent?: (handler: (payload: NativeAssistantTurnEvent) => void) => () => void;
   onDesktopUpdateState?: (handler: (payload: NativeDesktopUpdateState) => void) => () => void;

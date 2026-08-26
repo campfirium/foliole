@@ -4,7 +4,9 @@ import type { DesktopCompanionPairingOverviewPayload } from '../../../../lib/pla
 import {
   completeDesktopSyncGroupJoin,
   discoverDesktopSyncGroups,
-  requestDesktopSyncGroupJoin
+  onDesktopSyncGroupDiscoveryChanged,
+  requestDesktopSyncGroupJoin,
+  stopDiscoveringDesktopSyncGroups
 } from '../desktopCompanionPairingRuntimeRepository';
 
 export function useDesktopSyncGroupJoinActions(args: {
@@ -31,7 +33,21 @@ export function useDesktopSyncGroupJoinActions(args: {
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
   return {
     completeJoin: () => run('complete-sync-group-join', completeDesktopSyncGroupJoin),
-    discoverGroups: () => run('discover-sync-groups', discoverDesktopSyncGroups),
-    requestJoin: (endpointUrl: string) => run('request-sync-group-join', () => requestDesktopSyncGroupJoin(endpointUrl))
+    discoverGroups: async () => {
+      setPendingActionId('discover-sync-groups');
+      try {
+        const snapshot = await discoverDesktopSyncGroups();
+        setError(null);
+        return snapshot;
+      } finally {
+        setPendingActionId(null);
+        setIsLoading(false);
+      }
+    },
+    onDiscoveryChanged: onDesktopSyncGroupDiscoveryChanged,
+    requestJoin: (endpointUrl: string) => run('request-sync-group-join', async () => {
+      await stopDiscoveringDesktopSyncGroups();
+      return requestDesktopSyncGroupJoin(endpointUrl);
+    })
   };
 }

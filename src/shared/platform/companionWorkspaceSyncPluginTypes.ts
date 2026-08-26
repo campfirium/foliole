@@ -4,12 +4,20 @@ import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmen
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
 import type { CompanionPairingSyncPlugin } from './companionPairingSyncPluginTypes';
 
-interface CompanionDiscoveryCandidatesPayload {
-  candidates: Array<{
-    endpoint_url: string;
-    protocol_txt?: Record<string, string>;
-    source: 'direct' | 'nsd';
-  }>;
+export interface CompanionDiscoveryCandidate {
+  endpoint_url: string;
+  protocol_txt?: Record<string, string>;
+  source: 'direct' | 'nsd';
+}
+
+export interface CompanionDiscoveryCandidatesPayload {
+  candidates: CompanionDiscoveryCandidate[];
+}
+
+export interface CompanionNativeDiscoveryEvent extends CompanionDiscoveryCandidatesPayload {
+  change: 'started' | 'found' | 'changed' | 'lost' | 'failed' | 'stopped';
+  error_code: string | null;
+  status: 'searching' | 'results' | 'permission_required' | 'unavailable' | 'stopped';
 }
 
 export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
@@ -34,6 +42,12 @@ export interface CompanionWorkspaceSyncPlugin
     url: string;
   }): Promise<{ body: string; status: number }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
+  startDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
+  stopDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
+  addListener(
+    eventName: 'syncGroupDiscoveryChanged',
+    listener: (event: CompanionNativeDiscoveryEvent) => void
+  ): Promise<import('@capacitor/core').PluginListenerHandle>;
   bindSyncGroupPeerRoute(args: {
     endpoint_url: string;
     local_authorization_id: string;

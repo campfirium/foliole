@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState } from '../../lib/platform/nativeCompanionSyncContract';
+import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
 import { loadCompanionPairingState } from '../shared/platform/companionWorkspaceSync';
 
 import { usePairingActions } from './companionWorkspacePairingActions';
@@ -57,6 +58,53 @@ function useStoredPairingStateLoader(args: {
   }, [args.onError, args.pairingMutationVersionRef, args.setPairingState]);
 }
 
+function mapDiscoveryCandidates(snapshot: Parameters<Parameters<typeof startCompanionSyncGroupDiscoverySession>[0]>[0]) {
+  return snapshot.candidates.map((candidate) => ({
+    appVersion: '',
+    compatibility: { missing_capabilities: [], negotiated_version: null, reason: null, status: 'compatible' as const },
+    desktopHostName: candidate.provider_host_name,
+    desktopName: candidate.group_display_name,
+    desktopPlatform: candidate.provider_host_platform,
+    endpointUrl: candidate.endpoint_url,
+    groupDisplayName: candidate.group_display_name,
+    groupId: candidate.group_id,
+    groupTag: candidate.group_tag,
+    peerId: candidate.provider_authorization_id,
+    timelineId: candidate.timeline_id
+  }));
+}
+
+function useCompanionDiscovery(args: {
+  isPaired: boolean;
+  onError: PairingHookArgs['onError'];
+  setDiscoveries(value: CompanionDesktopDiscovery[]): void;
+  setStatus(value: CompanionPairingStatus): void;
+}) {
+  const stopRef = useRef<null | (() => Promise<void>)>(null);
+  const stop = useCallback(async () => {
+    const current = stopRef.current;
+    stopRef.current = null;
+    await current?.();
+  }, []);
+  const check = useCallback(async (endpointUrl?: string) => {
+    void endpointUrl;
+    await stop();
+    args.setStatus('checking-desktop');
+    args.onError(null);
+    stopRef.current = await startCompanionSyncGroupDiscoverySession((snapshot) => {
+      args.setDiscoveries(mapDiscoveryCandidates(snapshot));
+      const error = ['permission_required', 'unavailable', 'incompatible', 'connection_failed'].includes(snapshot.status)
+        ? `discovery_${snapshot.status}` : null;
+      args.onError(error);
+      args.setStatus(['stopped', 'permission_required', 'unavailable', 'incompatible', 'connection_failed']
+        .includes(snapshot.status) ? 'idle' : 'checking-desktop');
+    });
+  }, [args, stop]);
+  useEffect(() => () => { void stopRef.current?.(); }, []);
+  useEffect(() => { if (args.isPaired) void stop(); }, [args.isPaired, stop]);
+  return { check, stop };
+}
+
 export function useCompanionWorkspacePairing(args: PairingHookArgs) {
   const [pairingState, setPairingState] = useState<NativeCompanionPairingState>(EMPTY_PAIRING_STATE);
   const [desktopDiscoveries, setDesktopDiscoveries] = useState<CompanionDesktopDiscovery[]>([]);
@@ -93,20 +141,27 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
     setPairingStatus,
     setPendingPairRequest
   });
+  const discovery = useCompanionDiscovery({
+    isPaired: pairingState.is_paired, onError: args.onError,
+    setDiscoveries: setDesktopDiscoveries, setStatus: setPairingStatus
+  });
   return {
     desktopDiscovery: desktopDiscoveries.length > 0 ? desktopDiscoveries[0] : null,
     desktopDiscoveries,
     pairingState,
     pairingStatus,
     pendingPairRequest,
-    checkDesktop: actions.checkDesktop,
+    checkDesktop: discovery.check,
     cancelPairing: createCancelPairingAction({ onError: args.onError, setPairingStatus, setPendingPairRequest }),
     completePairing: createCompletePairingOnceAction({
       completePairing: actions.completePairing,
       inFlightRef: completePairingInFlightRef,
       pendingPairRequest
     }),
-    requestPairing: actions.requestPairing,
+    requestPairing: async (endpointUrl: string) => {
+      await discovery.stop();
+      return actions.requestPairing(endpointUrl);
+    },
     refreshPairingState
   };
 }

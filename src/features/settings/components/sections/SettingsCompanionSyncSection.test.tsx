@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import type { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 
@@ -25,6 +26,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     createSyncGroup: vi.fn(),
     completeSyncGroupJoin: vi.fn(),
     discoverSyncGroups: vi.fn(),
+    discovery: STOPPED_SYNC_GROUP_DISCOVERY,
     disableSync: vi.fn(),
     enableSync: vi.fn(),
     error: null,

@@ -13,6 +13,8 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startDiscoverySession", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopDiscoverySession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
@@ -124,6 +126,19 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve([contract.discoveryResponseKeys["candidates"] ?? "invalid.candidates": candidates])
             }
         } catch { call.reject("Failed to load companion discovery candidates: \(error.localizedDescription)") }
+    }
+
+    @objc func startDiscoverySession(_ call: CAPPluginCall) {
+        do {
+            let snapshot = discoveries.startSession(contract: try contract()) { [weak self] event in
+                self?.notifyListeners("syncGroupDiscoveryChanged", data: event)
+            }
+            call.resolve(snapshot)
+        } catch { call.reject("Sync Group discovery is unavailable: \(error.localizedDescription)") }
+    }
+
+    @objc func stopDiscoverySession(_ call: CAPPluginCall) {
+        call.resolve(discoveries.stopSession())
     }
 
     private func resolvePairing(

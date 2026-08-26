@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { DesktopCompanionPairingOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
+import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../lib/platform/syncGroupDiscoveryContract';
 
 import {
   disableDesktopCompanionSync,
@@ -18,8 +19,10 @@ import {
 } from './desktopCompanionPairingOverviewHooks';
 import {
   createDesktopSyncGroup,
+  onDesktopSyncGroupDiscoveryChanged,
   approveDesktopCompanionPairRequest,
-  rejectDesktopCompanionPairRequest
+  rejectDesktopCompanionPairRequest,
+  stopDiscoveringDesktopSyncGroups
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
@@ -117,6 +120,7 @@ function useCreateSyncGroupAction(
   return useCallback(async () => {
     setPendingActionId('create-sync-group');
     try {
+      await stopDiscoveringDesktopSyncGroups();
       const nextOverview = await createDesktopSyncGroup();
       setOverview(nextOverview);
       setError(null);
@@ -147,6 +151,12 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
   const refresh = useCompanionPairingRefresh(state.setOverview, state.setError, state.setIsLoading);
   const actions = usePairingMutationActions(state);
   const join = useDesktopSyncGroupJoinActions(state);
+  const [discovery, setDiscovery] = useState(STOPPED_SYNC_GROUP_DISCOVERY);
+  useEffect(() => onDesktopSyncGroupDiscoveryChanged((snapshot) => {
+    setDiscovery(snapshot);
+    state.setOverview((current) => ({ ...current, join_candidates: snapshot.candidates }));
+  }) ?? undefined, [state.setOverview]);
+  useEffect(() => () => { void stopDiscoveringDesktopSyncGroups(); }, []);
   useCompanionPairingPushRefresh(refresh);
   useCompanionPairingPolling(pollMs, state.setOverview, state.setError, state.setIsLoading);
 
@@ -156,6 +166,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       createSyncGroup: actions.createSyncGroup,
       completeSyncGroupJoin: join.completeJoin,
       discoverSyncGroups: join.discoverGroups,
+      discovery,
       disableSync: () => actions.toggleSync(false),
       enableSync: () => actions.toggleSync(true),
       error: state.error,
@@ -171,7 +182,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       rejectRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'reject'),
       resumeSync: () => actions.togglePause(false)
     }),
-    [actions, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
+    [actions, discovery, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
       state.overview, state.pendingActionId]
   );
 }

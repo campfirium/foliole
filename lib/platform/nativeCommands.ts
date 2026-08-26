@@ -151,6 +151,7 @@ export const NATIVE_COMMANDS = {
   leaveSyncGroup: 'leave_sync_group',
   removeSyncGroupMember: 'remove_sync_group_member',
   discoverSyncGroups: 'discover_sync_groups',
+  stopDiscoverSyncGroups: 'stop_discover_sync_groups',
   requestSyncGroupJoin: 'request_sync_group_join',
   completeSyncGroupJoin: 'complete_sync_group_join',
   enableCompanionSync: 'enable_companion_sync',

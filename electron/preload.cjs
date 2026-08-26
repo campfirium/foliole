@@ -19,13 +19,14 @@ const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
 const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
+const IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL = 'foliole:sync-group-discovery-changed';
 const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 
 const SUBSCRIBABLE_CHANNELS = new Set([
   IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, IPC_MENU_EVENT_CHANNEL, IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, IPC_WINDOW_RESIZED_EVENT_CHANNEL, IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
-  IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL,
+  IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL,
   IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL
 ]);
 
@@ -185,6 +186,10 @@ function subscribe(channel, handler) {
       handler(payload);
       return;
     }
+    if (channel === IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL) {
+      handler(payload);
+      return;
+    }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
       handler({
         scope: payload?.scope === 'workspace' ? 'workspace' : ''
@@ -213,6 +218,7 @@ const electronApi = {
   onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
+  onSyncGroupDiscoveryChanged: (handler) => subscribe(IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL, handler),
   onExternalDocumentFileOpened: (handler) => subscribe(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, handler),
   onAssistantTurnEvent: (handler) => subscribe(IPC_ASSISTANT_TURN_EVENT_CHANNEL, handler),
   onDesktopUpdateState: (handler) => subscribe(IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, handler),
