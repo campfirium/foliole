@@ -33,19 +33,20 @@ it('routes the Internal update script through the MAS development package', () =
 });
 
 it('exports a verified MAS development app only inside task artifacts', async () => {
-  const copy = vi.fn(async () => undefined);
   const makeDirectory = vi.fn(async () => undefined);
+  const run = vi.fn(() => ({ status: 0 }));
   const target = resolveAcceptanceAppOutput([
     'node', 'script', '--acceptance-app-output', '.tmp/artifacts/device-anchor/Foliole.app'
   ], '/repo');
 
-  await exportMasAcceptanceApp('/build/Foliole.app', target, { copy, makeDirectory });
+  await exportMasAcceptanceApp('/build/Foliole.app', target, { makeDirectory, run });
 
   expect(target).toBe('/repo/.tmp/artifacts/device-anchor/Foliole.app');
   expect(makeDirectory).toHaveBeenCalledWith('/repo/.tmp/artifacts/device-anchor', { recursive: true });
-  expect(copy).toHaveBeenCalledWith('/build/Foliole.app', target, {
-    errorOnExist: true, force: false, recursive: true
-  });
+  expect(run.mock.calls.map(([command, args]) => [command, args])).toEqual([
+    ['ditto', ['/build/Foliole.app', target]],
+    ['codesign', ['--verify', '--deep', '--strict', target]]
+  ]);
   expect(() => resolveAcceptanceAppOutput([
     'node', 'script', '--acceptance-app-output', '../Foliole.app'
   ], '/repo')).toThrow('must be an .app child');

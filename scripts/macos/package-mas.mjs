@@ -1,7 +1,7 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
@@ -98,7 +98,11 @@ export function resolveAcceptanceAppOutput(argv = process.argv, root = ROOT) {
 
 export async function exportMasAcceptanceApp(sourcePath, targetPath, options = {}) {
   await (options.makeDirectory ?? mkdir)(path.dirname(targetPath), { recursive: true });
-  await (options.copy ?? cp)(sourcePath, targetPath, { errorOnExist: true, force: false, recursive: true });
+  const run = options.run ?? spawnSync;
+  runStep('export MAS acceptance app', 'ditto', [sourcePath, targetPath], run);
+  runStep('verify exported MAS acceptance app', 'codesign', [
+    '--verify', '--deep', '--strict', targetPath
+  ], run);
 }
 
 export function createMasArtifactName(productName, version, arch = 'arm64') {
