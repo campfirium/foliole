@@ -13,6 +13,19 @@ describe('Android API-level resource contract', () => {
     );
   });
 
+  it('owns multicast reception only for the bounded Android NSD discovery lifecycle', () => {
+    expect(read('android/app/src/main/AndroidManifest.xml')).toContain(
+      'android.permission.CHANGE_WIFI_MULTICAST_STATE'
+    );
+    const discovery = read(
+      'android/app/src/main/java/com/foliole/android/FolioleCompanionNsdDiscovery.java'
+    );
+    expect(discovery).toContain('wifiManager.createMulticastLock("foliole-sync-discovery")');
+    expect(discovery).toContain(
+      'if (multicastLock != null && multicastLock.isHeld()) multicastLock.release()'
+    );
+  });
+
   it('limits the API 27 navigation bar attribute to v27 resources', () => {
     expect(read('android/app/src/main/res/values/styles.xml')).not.toContain('windowLightNavigationBar');
     expect(read('android/app/src/main/res/values-night/styles.xml')).not.toContain('windowLightNavigationBar');

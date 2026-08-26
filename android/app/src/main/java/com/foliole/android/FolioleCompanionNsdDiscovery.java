@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
 
 import com.getcapacitor.JSObject;
 
@@ -25,6 +26,7 @@ public final class FolioleCompanionNsdDiscovery {
         if (nsdManager == null) {
             return new ArrayList<>();
         }
+        WifiManager.MulticastLock multicastLock = acquireMulticastLock(context);
         NsdCollector collector = new NsdCollector(
             context,
             nsdManager,
@@ -32,10 +34,24 @@ public final class FolioleCompanionNsdDiscovery {
                 FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)
             )
         );
-        collector.start();
-        collector.await(FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context));
-        collector.stop();
-        return collector.candidates();
+        try {
+            collector.start();
+            collector.await(FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context));
+            return collector.candidates();
+        } finally {
+            collector.stop();
+            if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
+        }
+    }
+
+    private static WifiManager.MulticastLock acquireMulticastLock(Context context) {
+        Context applicationContext = context.getApplicationContext();
+        WifiManager wifiManager = (WifiManager) applicationContext.getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager == null) return null;
+        WifiManager.MulticastLock lock = wifiManager.createMulticastLock("foliole-sync-discovery");
+        lock.setReferenceCounted(false);
+        lock.acquire();
+        return lock;
     }
 
     static boolean sameServiceType(String requested, String discovered) {
