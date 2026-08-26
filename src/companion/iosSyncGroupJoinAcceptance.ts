@@ -34,7 +34,7 @@ function decodeBase64Url(value: string) {
 }
 
 async function requester() {
-  const keys = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
+  const keys = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
   return { keys, request: {
     contract_version: 1 as const, device: DEVICE,
     ephemeral_public_key: base64Url(await crypto.subtle.exportKey('raw', keys.publicKey)),
@@ -42,15 +42,17 @@ async function requester() {
   } };
 }
 
-async function decryptGroupInfo(envelope: CompanionPairingSecretPayload, privateKey: CryptoKey) {
+export async function decryptGroupInfo(envelope: CompanionPairingSecretPayload, privateKey: CryptoKey) {
   if (envelope.algorithm !== 'ECDH-P256-HKDF-SHA256-AES-GCM') throw new Error('Unexpected join cipher.');
   const serverKey = await crypto.subtle.importKey(
     'raw', decodeBase64Url(envelope.server_public_key), { name: 'ECDH', namedCurve: 'P-256' }, false, []
   );
+  const sharedSecret = await crypto.subtle.deriveBits({ name: 'ECDH', public: serverKey }, privateKey, 256);
+  const keyMaterial = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey(
-    { name: 'ECDH', public: serverKey }, privateKey,
     { name: 'HKDF', hash: 'SHA-256', salt: decodeBase64Url(envelope.salt),
-      info: new TextEncoder().encode('Foliole companion pairing v1') }, false, ['decrypt']
+      info: new TextEncoder().encode('Foliole companion pairing v1') }, keyMaterial,
+    { name: 'AES-GCM', length: 256 }, false, ['decrypt']
   );
   const plaintext = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: decodeBase64Url(envelope.iv) }, key, decodeBase64Url(envelope.ciphertext)
