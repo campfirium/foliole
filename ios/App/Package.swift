@@ -20,6 +20,7 @@ let package = Package(
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
                 "Info.plist", "PrivacyInfo.xcprivacy", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift",
+                "FolioleCompanionSyncGroupJoinPreparePlugin.swift",
                 "config.xml", "public"
             ],
             sources: [
@@ -28,6 +29,9 @@ let package = Package(
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleCompanionDeviceAnchorStore.swift",
+                "FolioleCompanionSyncGroupJoinCrypto.swift",
+                "FolioleCompanionSyncGroupJoinProvider.swift",
+                "FolioleCompanionSyncGroupJoinRequest.swift",
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
                 "FolioleReadOnlySQLite.swift",

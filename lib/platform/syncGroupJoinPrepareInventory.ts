@@ -17,17 +17,19 @@ export const SYNC_GROUP_JOIN_PREPARE_HOSTS = [
   },
   {
     activation: 'inactive',
-    bridge: null,
+    bridge: 'ios/App/App/FolioleCompanionSyncGroupJoinPreparePlugin.swift',
     host: 'ios',
-    provider: null,
-    status: 'pending_explicit_permission'
+    projection: 'src/shared/platform/companion/sync/syncGroupJoinPrepare.ts',
+    provider: 'ios/App/App/FolioleCompanionSyncGroupJoinProvider.swift',
+    status: 'prepared'
   }
 ] as const;
 
 export const SYNC_GROUP_JOIN_REUSED_CRYPTO_HELPERS = [
   'electron/sync/companionPairingEncryption.ts',
   'src/shared/platform/companionPairingEncryption.ts',
-  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupPairCrypto.java'
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupPairCrypto.java',
+  'ios/App/App/FolioleCompanionSyncGroupJoinCrypto.swift'
 ] as const;
 
 export const SYNC_GROUP_JOIN_LEGACY_CONSUMERS = [

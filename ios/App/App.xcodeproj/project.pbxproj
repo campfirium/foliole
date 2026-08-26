@@ -42,6 +42,10 @@
 		50F025141FED79650016851F /* companion-query-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F025041FED79650016851F /* companion-query-definitions.json */; };
 		50F027111FED79650016851F /* FolioleCompanionQueryDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */; };
 		50F029131FED79650016851F /* companion-mutation-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F029031FED79650016851F /* companion-mutation-definitions.json */; };
+		50F030111FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */; };
+		50F030121FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */; };
+		50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */; };
+		50F030141FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */; };
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -81,6 +85,10 @@
 		50F025041FED79650016851F /* companion-query-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-query-definitions.json"; sourceTree = "<group>"; };
 		50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionQueryDefinitions.swift; sourceTree = "<group>"; };
 		50F029031FED79650016851F /* companion-mutation-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-mutation-definitions.json"; sourceTree = "<group>"; };
+		50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinCrypto.swift; sourceTree = "<group>"; };
+		50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinRequest.swift; sourceTree = "<group>"; };
+		50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinProvider.swift; sourceTree = "<group>"; };
+		50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinPreparePlugin.swift; sourceTree = "<group>"; };
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -146,6 +154,10 @@
 				50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */,
 				50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */,
 				50F029031FED79650016851F /* companion-mutation-definitions.json */,
+				50F030011FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift */,
+				50F030021FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift */,
+				50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */,
+				50F030041FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -268,6 +280,10 @@
 				50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */,
 				50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */,
 				50F027111FED79650016851F /* FolioleCompanionQueryDefinitions.swift in Sources */,
+				50F030111FED79650016851F /* FolioleCompanionSyncGroupJoinCrypto.swift in Sources */,
+				50F030121FED79650016851F /* FolioleCompanionSyncGroupJoinRequest.swift in Sources */,
+				50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */,
+				50F030141FED79650016851F /* FolioleCompanionSyncGroupJoinPreparePlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
