@@ -30,9 +30,9 @@ if (isIosBridgeAcceptance) {
       ? import('./iosStateWritebackAcceptance').then(({ runIosStateWritebackAcceptance }) => runIosStateWritebackAcceptance())
     : iosAcceptanceScenario === 'database-upgrade-runtime'
       ? import('./iosDatabaseUpgradeAcceptance').then(({ runIosDatabaseUpgradeAcceptance }) => runIosDatabaseUpgradeAcceptance())
-    : iosAcceptanceScenario === 'sync-group-migration'
-      ? import('./iosSyncGroupMigrationAcceptance').then(({ runIosSyncGroupMigrationAcceptance }) =>
-        runIosSyncGroupMigrationAcceptance())
+    : iosAcceptanceScenario === 'device-identity'
+      ? import('./iosDeviceIdentityAcceptance').then(({ runIosDeviceIdentityAcceptance }) =>
+        runIosDeviceIdentityAcceptance())
     : iosAcceptanceScenario === 'sync-group-authorization'
       ? import('./iosSyncGroupAuthorizationAcceptance').then(({ runIosSyncGroupAuthorizationAcceptance }) =>
         runIosSyncGroupAuthorizationAcceptance())

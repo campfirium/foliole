@@ -21,13 +21,31 @@ extension FolioleBridgeViewController: WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == Self.acceptanceHandler,
-              JSONSerialization.isValidJSONObject(message.body),
-              let data = try? JSONSerialization.data(withJSONObject: message.body, options: [.prettyPrinted, .sortedKeys])
+              let body = prepareAcceptanceBody(message.body),
+              JSONSerialization.isValidJSONObject(body),
+              let data = try? JSONSerialization.data(withJSONObject: body, options: [.prettyPrinted, .sortedKeys])
         else { return }
         let directory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("FolioleBridgeAcceptance", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try? data.write(to: directory.appendingPathComponent("result.json"), options: .atomic)
+    }
+
+    private func prepareAcceptanceBody(_ body: Any) -> [String: Any]? {
+        guard var result = body as? [String: Any] else { return nil }
+        guard result["scenario"] as? String == "device-identity" else { return result }
+        do {
+            result["device_anchor"] = try FolioleCompanionDeviceAnchorStore().loadOrCreate()
+            result["anchor_storage"] = "keychain-after-first-unlock-this-device-only"
+            if let path = result["database_path"] as? String {
+                result["canonical_database_path"] = try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(path)
+            }
+        } catch {
+            result["error"] = error.localizedDescription
+            result["phase"] = "failed"
+            result["status"] = "failed"
+        }
+        return result
     }
 }
 #endif

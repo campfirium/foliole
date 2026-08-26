@@ -56,6 +56,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionContentBlobMultipartBatch.java',
       'FolioleCompanionCredentialBagCipher.java',
       'FolioleCompanionCurrentGroupCredential.java',
+      'FolioleCompanionDeviceAnchorStore.java',
       'FolioleCompanionSyncGroupAdmissionAdapter.java',
       'FolioleCompanionDesktopHttpClient.java',
       'FolioleCompanionHttpRequest.java',

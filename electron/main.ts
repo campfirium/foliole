@@ -15,6 +15,10 @@ import { registerExtDocImageProtocolScheme } from './attachments/extDocImageProt
 import { registerRemoteImageProtocolScheme } from './attachments/remoteImageProtocol.js';
 import { isAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
+import {
+  resolveDesktopDeviceIdentityAcceptance,
+  runDesktopDeviceIdentityAcceptance
+} from './deviceIdentityAcceptance.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
 import { appendBootEvent } from './ipc/boot.js';
@@ -190,12 +194,17 @@ function installInvokeHandler() {
   );
 }
 
-void app.whenReady().then(() => desktopUpdateService.start());
-installMainLifecycle({
-  activateMainWindow: activateRendererInWindow,
-  createMainWindow,
-  installInvokeHandler,
-  loadMainWindow: loadRendererIntoWindow,
-  prepareStartupAppearance: () => prepareStartupRendererAppearance(__dirname, configuredIdentity.userDataPath),
-  runtimeMode
-});
+const deviceIdentityAcceptance = resolveDesktopDeviceIdentityAcceptance();
+if (deviceIdentityAcceptance) {
+  void app.whenReady().then(() => runDesktopDeviceIdentityAcceptance(app, deviceIdentityAcceptance));
+} else {
+  void app.whenReady().then(() => desktopUpdateService.start());
+  installMainLifecycle({
+    activateMainWindow: activateRendererInWindow,
+    createMainWindow,
+    installInvokeHandler,
+    loadMainWindow: loadRendererIntoWindow,
+    prepareStartupAppearance: () => prepareStartupRendererAppearance(__dirname, configuredIdentity.userDataPath),
+    runtimeMode
+  });
+}

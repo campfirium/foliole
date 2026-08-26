@@ -6,7 +6,7 @@ export function resolveAcceptanceScenario(value) {
   if ([
     'content-resource-read', 'database-upgrade-runtime', 'foreground-sync-lifecycle',
     'state-writeback-runtime', 'sync-group-authorization', 'sync-group-lifecycle',
-    'sync-group-migration', 'sync-pack-runtime'
+    'device-identity', 'sync-pack-runtime'
   ].includes(value)) {
     return value;
   }

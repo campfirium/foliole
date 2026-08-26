@@ -1,126 +1,108 @@
-export const UNIFIED_DESKTOP_SCHEMA_VERSION = 78;
-export const UNIFIED_COMPANION_SCHEMA_VERSION = 33;
-export const UNIFIED_MIGRATION_CONTRACT_VERSION = 1;
+export const DEVICE_IDENTITY_CONTRACT_VERSION = 1;
 
-export type UnifiedGroupBindingState = 'active' | 'departed' | 'repair';
-export type UnifiedIdentityState = 'verified' | 'legacy_identity_unverified';
-export type UnifiedMemberRole = 'manager' | 'member';
-export type UnifiedMemberState = 'active' | 'left' | 'repair' | 'revoked';
-export type UnifiedRepairReason =
-  | 'credential_conflict'
-  | 'identity_repair_required'
-  | 'manager_repair_required'
-  | 'route_reauthorization_required';
+export type DevicePathFlavor = 'posix' | 'windows';
 
-export interface LegacyUnifiedMemberSnapshot {
-  authorization_id: string;
-  display_name: string;
-  host_platform: string;
-  joined_at: string;
-  legacy_member_key: string;
-  state: 'active' | 'left' | 'provisioning';
-}
-
-export interface LegacyUnifiedGroupSnapshot {
-  created_at: string;
-  created_by_member_key: string;
-  display_name: string;
+export interface SyncGroupDeviceIdentity {
+  canonical_library_path: string;
+  contract_version: typeof DEVICE_IDENTITY_CONTRACT_VERSION;
+  device_anchor: string;
   group_id: string;
-  members: LegacyUnifiedMemberSnapshot[];
-  timeline_id: string;
+  identity_key: string;
 }
 
-export interface LegacyUnifiedLibrarySnapshot {
-  groups: LegacyUnifiedGroupSnapshot[];
-  library_id: string;
-  singleton_group_id: string | null;
-  user_version: number;
-}
-
-export interface LegacySecureCredentialEvidence {
-  authorization_id: string;
-  credential_fingerprint: string;
+export interface SyncGroupDeviceIdentityInput {
+  device_anchor: string;
   group_id: string;
-  kind: 'local-authorization' | 'peer-route';
-  legacy_member_key: string;
+  library_path: string;
+  path_flavor: DevicePathFlavor;
 }
 
-export interface UnifiedMigrationMemberDecision {
-  authorization_id: string;
-  authorization_epoch: number;
-  display_name: string;
-  identity_state: UnifiedIdentityState;
-  installation_id: string | null;
-  legacy_member_key: string;
-  member_id: string;
-  platform: string;
-  repair_reasons: UnifiedRepairReason[];
-  role: UnifiedMemberRole;
-  state: UnifiedMemberState;
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+
+export function parseDeviceAnchor(value: unknown) {
+  if (typeof value !== 'string' || !UUID_V4_PATTERN.test(value)) {
+    throw new Error('device_anchor_invalid');
+  }
+  return value;
 }
 
-export interface UnifiedMigrationLibraryDecision {
-  binding_state: UnifiedGroupBindingState | null;
-  group_created_at: string | null;
-  group_display_name: string | null;
-  group_id: string | null;
-  library_id: string;
-  local_member_id: string | null;
-  manager_member_id: string | null;
-  members: UnifiedMigrationMemberDecision[];
-  repair_reasons: UnifiedRepairReason[];
-  roster_revision: number;
-  timeline_id: string | null;
+export function canonicalizeLibraryPath(value: unknown, flavor: DevicePathFlavor) {
+  if (typeof value !== 'string' || !value || value.includes('\0')) {
+    throw new Error('library_path_invalid');
+  }
+  return flavor === 'windows' ? canonicalizeWindowsPath(value) : canonicalizePosixPath(value);
 }
 
-export interface UnifiedMigrationDecision {
-  active_binding: UnifiedInstallationBinding | null;
-  contract_version: typeof UNIFIED_MIGRATION_CONTRACT_VERSION;
-  installation_id: string;
-  libraries: UnifiedMigrationLibraryDecision[];
-  secure_credential_count: number;
+export function createSyncGroupDeviceIdentity(
+  input: SyncGroupDeviceIdentityInput
+): SyncGroupDeviceIdentity {
+  const groupId = requiredGroupId(input.group_id);
+  const deviceAnchor = parseDeviceAnchor(input.device_anchor);
+  const canonicalLibraryPath = canonicalizeLibraryPath(input.library_path, input.path_flavor);
+  const identityKey = JSON.stringify([
+    DEVICE_IDENTITY_CONTRACT_VERSION,
+    groupId,
+    deviceAnchor,
+    canonicalLibraryPath
+  ]);
+  return {
+    canonical_library_path: canonicalLibraryPath,
+    contract_version: DEVICE_IDENTITY_CONTRACT_VERSION,
+    device_anchor: deviceAnchor,
+    group_id: groupId,
+    identity_key: identityKey
+  };
 }
 
-export interface UnifiedInstallationBinding {
-  group_id: string;
-  installation_id: string;
-  library_id: string;
-  local_member_id: string;
-  state: 'active';
-  timeline_id: string;
+export function isSameSyncGroupDevice(
+  left: SyncGroupDeviceIdentity,
+  right: SyncGroupDeviceIdentity
+) {
+  return left.identity_key === right.identity_key;
 }
 
-export interface UnifiedSecureStoreSnapshot {
-  credential_count: number;
-  digest: string;
-  sealed_locator: string;
+function requiredGroupId(value: unknown) {
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim() || value.includes('\0')) {
+    throw new Error('group_id_invalid');
+  }
+  return value;
 }
 
-export type UnifiedMigrationJournalPhase =
-  | 'prepared'
-  | 'databases_applied'
-  | 'committed'
-  | 'rolling_back';
-
-export interface UnifiedMigrationJournal {
-  decision_digest: string;
-  journal_id: string;
-  phase: UnifiedMigrationJournalPhase;
-  previous_registry: UnifiedInstallationRegistrySnapshot;
-  secure_snapshot: UnifiedSecureStoreSnapshot;
-  updated_at: string;
+function canonicalizePosixPath(value: string) {
+  if (!value.startsWith('/')) throw new Error('library_path_not_absolute');
+  const segments = normalizeSegments(value.normalize('NFC').split('/'));
+  return segments.length > 0 ? `/${segments.join('/')}` : '/';
 }
 
-export interface UnifiedInstallationRegistrySnapshot {
-  active_binding: UnifiedInstallationBinding | null;
-  installation_id: string | null;
-  journal: UnifiedMigrationJournal | null;
-  revision: number;
+function canonicalizeWindowsPath(value: string) {
+  const normalized = normalizeWindowsNamespace(value.replaceAll('/', '\\'));
+  const drive = normalized.match(/^([a-zA-Z]):\\(.*)$/u);
+  if (drive) {
+    const segments = normalizeSegments((drive[2] ?? '').split('\\'));
+    return `${drive[1]?.toLowerCase()}:\\${segments.join('\\')}`.toLowerCase();
+  }
+  const unc = normalized.match(/^\\\\([^\\]+)\\([^\\]+)(?:\\(.*))?$/u);
+  if (!unc) throw new Error('library_path_not_absolute');
+  const segments = normalizeSegments((unc[3] ?? '').split('\\'));
+  const suffix = segments.length > 0 ? `\\${segments.join('\\')}` : '';
+  return `\\\\${unc[1]}\\${unc[2]}${suffix}`.toLowerCase();
 }
 
-export const EMPTY_UNIFIED_INSTALLATION_REGISTRY: UnifiedInstallationRegistrySnapshot = {
-  active_binding: null,
-  installation_id: null,
-  journal: null,
-  revision: 0
-};
+function normalizeWindowsNamespace(value: string) {
+  if (value.startsWith('\\\\?\\UNC\\')) return `\\\\${value.slice(8)}`;
+  if (value.startsWith('\\\\?\\')) return value.slice(4);
+  return value;
+}
+
+function normalizeSegments(segments: string[]) {
+  const result: string[] = [];
+  for (const segment of segments) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      result.pop();
+      continue;
+    }
+    result.push(segment);
+  }
+  return result;
+}

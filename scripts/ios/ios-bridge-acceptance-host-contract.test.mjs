@@ -17,7 +17,7 @@ describe('iOS bridge acceptance host contract', () => {
     const scenario = fs.readFileSync('src/companion/iosBridgeAcceptance.ts', 'utf8');
     const contentResourceScenario = fs.readFileSync('src/companion/iosContentResourceAcceptance.ts', 'utf8');
     const databaseUpgradeScenario = fs.readFileSync('src/companion/iosDatabaseUpgradeAcceptance.ts', 'utf8');
-    const syncGroupMigrationScenario = fs.readFileSync('src/companion/iosSyncGroupMigrationAcceptance.ts', 'utf8');
+    const deviceIdentityScenario = fs.readFileSync('src/companion/iosDeviceIdentityAcceptance.ts', 'utf8');
     const syncGroupLifecycleScenario = fs.readFileSync('src/companion/iosSyncGroupLifecycleAcceptance.ts', 'utf8');
     const syncPackScenario = fs.readFileSync('src/companion/iosSyncPackAcceptance.ts', 'utf8');
     const stateWritebackScenario = fs.readFileSync('src/companion/iosStateWritebackAcceptance.ts', 'utf8');
@@ -25,7 +25,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'sync-pack-runtime'");
     expect(entry).toContain("iosAcceptanceScenario === 'content-resource-read'");
     expect(entry).toContain("iosAcceptanceScenario === 'database-upgrade-runtime'");
-    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-migration'");
+    expect(entry).toContain("iosAcceptanceScenario === 'device-identity'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-group-authorization'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-group-lifecycle'");
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
@@ -45,8 +45,8 @@ describe('iOS bridge acceptance host contract', () => {
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT === '1'");
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO === 'database-upgrade-runtime'");
     expect(databaseUpgradeScenario).not.toContain('localStorage');
-    expect(syncGroupMigrationScenario).toContain("['none', 'registry', 'database', 'secure-store']");
-    expect(syncGroupMigrationScenario).not.toContain('localStorage');
+    expect(deviceIdentityScenario).toContain('loadCompanionBootstrapState()');
+    expect(deviceIdentityScenario).not.toContain('localStorage');
     expect(syncGroupLifecycleScenario).toContain('persistPreparedJoinIntent(db, {');
     expect(syncGroupLifecycleScenario).toContain('consumePreparedRouteGrant(db, grant, roster, MANAGER_ID, NOW)');
     expect(syncGroupLifecycleScenario).not.toContain('localStorage');
@@ -66,8 +66,8 @@ describe('iOS bridge acceptance host contract', () => {
     expect(bootstrap).toContain('runIosAcceptanceAttempts({');
     expect(standalone).toContain("scenario === 'database-upgrade-runtime'");
     expect(standalone).toContain('runIosDatabaseUpgradeAcceptance(repoRoot, artifactDir)');
-    expect(standalone).toContain("scenario === 'sync-group-migration'");
-    expect(standalone).toContain('runIosSyncGroupMigrationAcceptance(repoRoot, artifactDir)');
+    expect(standalone).toContain("scenario === 'device-identity'");
+    expect(standalone).toContain('runIosDeviceAnchorAcceptance(repoRoot, artifactDir)');
     expect(standalone).toContain('runIosSyncGroupAuthorizationAcceptance(repoRoot, artifactDir)');
     expect(standalone).toContain('runIosSyncGroupLifecycleAcceptance(repoRoot, artifactDir)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');

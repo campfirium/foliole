@@ -27,6 +27,7 @@ let package = Package(
                 "FolioleCompanionAttachmentResourceDownload.swift",
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",
+                "FolioleCompanionDeviceAnchorStore.swift",
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
                 "FolioleReadOnlySQLite.swift",

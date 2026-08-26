@@ -102,7 +102,7 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(resolveAcceptanceScenario('database-upgrade-runtime')).toBe('database-upgrade-runtime');
     expect(resolveAcceptanceScenario('foreground-sync-lifecycle')).toBe('foreground-sync-lifecycle');
     expect(resolveAcceptanceScenario('state-writeback-runtime')).toBe('state-writeback-runtime');
-    expect(resolveAcceptanceScenario('sync-group-migration')).toBe('sync-group-migration');
+    expect(resolveAcceptanceScenario('device-identity')).toBe('device-identity');
     expect(resolveAcceptanceScenario('sync-pack-runtime')).toBe('sync-pack-runtime');
     expect(() => resolveAcceptanceScenario('unknown')).toThrow('Unknown iOS acceptance scenario');
   });
