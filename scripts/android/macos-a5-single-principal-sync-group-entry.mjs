@@ -6,13 +6,16 @@ import path from 'node:path';
 import { openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest } from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
+import {
+  assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
+} from '../sync-group/multi-device-sync-macos-channel.mjs';
 
 const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
 function buildAcceptance(args) {
-  const env = { ...args.env,
+  const env = { ...macosAcceptanceEnv(args.env),
     FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID };
   args.checked('npm', ['run', 'android:web:build'], { cwd: args.paths.buildRoot, env });
   args.checked(args.paths.cap, ['sync', 'android'], { cwd: args.paths.buildRoot, env });
@@ -63,7 +66,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   const session = await openSession({ env, libraryHome: path.join(evidenceRoot, 'macos-library'),
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(evidenceRoot, 'macos-runtime') });
   try {
-    await session.enable();
+    assertMacosAcceptanceSyncGroupServer(await session.enable());
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'
     ]);

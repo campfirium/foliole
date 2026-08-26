@@ -10,6 +10,9 @@ import {
   openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
+import {
+  assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
+} from '../sync-group/multi-device-sync-macos-channel.mjs';
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -40,12 +43,12 @@ async function waitForDeviceCount(session, count, timeoutMs = 120_000) {
 
 export async function runFriSyncGroupProvider({ evidenceRoot, repoRoot = process.cwd() }) {
   const session = await openMacosSyncGroupDesktopSession({
-    libraryHome: path.join(evidenceRoot, 'macos-library'), repoRoot,
+    env: macosAcceptanceEnv(), libraryHome: path.join(evidenceRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(evidenceRoot, 'macos-runtime')
   });
   const receiptPath = path.join(evidenceRoot, 'provider-receipt.json');
   try {
-    const initial = await session.enable();
+    const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
     writeJson(receiptPath, { groupId: initial.sync_group.group_id,
       resultStatus: 'ready', serverStatus: initial.server_status });
     console.log(`[fri-sync-group-provider] ready receipt=${receiptPath}`);

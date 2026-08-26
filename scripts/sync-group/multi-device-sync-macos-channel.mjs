@@ -19,6 +19,17 @@ export function macosAcceptanceSessionOptions(options) {
   return { ...options, env: macosAcceptanceEnv(options.env) };
 }
 
+export function assertMacosAcceptanceSyncGroupServer(overview) {
+  const status = overview?.server_status;
+  if (status?.state !== 'running'
+      || String(status.port) !== MACOS_ACCEPTANCE_SYNC_PORT) {
+    throw Object.assign(new Error('Mac acceptance sync listener is unavailable.'), {
+      serverStatus: status ?? null
+    });
+  }
+  return overview;
+}
+
 export function validateMacosAcceptanceDesktopPreflight(
   overview, session, hostName, desktopAuthorizationFingerprint = null,
   existingPairing = false

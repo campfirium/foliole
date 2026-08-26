@@ -1,8 +1,9 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  closeMacosAcceptanceTransport, MACOS_ACCEPTANCE_SYNC_PORT, macosAcceptanceEnv,
-  openMacosAcceptanceTransport, validateMacosAcceptanceDesktopPreflight
+  assertMacosAcceptanceSyncGroupServer, closeMacosAcceptanceTransport,
+  MACOS_ACCEPTANCE_SYNC_PORT, macosAcceptanceEnv, openMacosAcceptanceTransport,
+  validateMacosAcceptanceDesktopPreflight
 } from './multi-device-sync-macos-channel.mjs';
 
 it('isolates multi-device macOS acceptance from the default product listener', async () => {
@@ -18,6 +19,14 @@ it('isolates multi-device macOS acceptance from the default product listener', a
     [['reverse', 'tcp:38641', 'tcp:38642'], 'pair-sync-transport-open'],
     [['reverse', '--remove', 'tcp:38641'], 'pair-sync-transport-close']
   ]);
+});
+
+it('short-circuits before a Device journey when the isolated listener is unavailable', () => {
+  const running = { server_status: { last_error: null, port: 38642, state: 'running' } };
+  expect(assertMacosAcceptanceSyncGroupServer(running)).toBe(running);
+  expect(() => assertMacosAcceptanceSyncGroupServer({ server_status: {
+    last_error: 'listen EADDRINUSE', port: null, state: 'failed'
+  } })).toThrow('Mac acceptance sync listener is unavailable.');
 });
 
 it('accepts only a live isolated macOS acceptance listener', () => {
