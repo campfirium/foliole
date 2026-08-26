@@ -132,12 +132,11 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
         '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', windowsHost,
         WINDOWS_NODE, WINDOWS_READINESS];
       let output;
-      try { output = await execute('ssh', args, { env }); }
+      try { output = await execute('ssh', args, { env, timeout: 40_000 }); }
       catch (error) {
         const detail = `${error.stdout || ''}${error.stderr || ''}`;
         const missing = /missingFact=([^\s]+)/u.exec(detail)?.[1];
-        const unreachable = /(?:Operation timed out|Connection timed out|No route to host|Connection refused)/u
-          .test(detail);
+        const unreachable = /(?:Operation timed out|Connection timed out|Host is down|Network is unreachable|No route to host|Connection refused)/u.test(detail);
         throw Object.assign(new Error('Windows acceptance readiness command failed.'), {
           lastSuccessfulAction: unreachable ? 'windows_host_resolved' : 'windows_ssh_connected',
           missingFact: missing || (unreachable

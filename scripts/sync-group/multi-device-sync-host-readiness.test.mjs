@@ -15,8 +15,8 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   createIsolatedMacosRoot({ repoRoot, runId: 'run-1' });
   const calls = [];
   const leaseCalls = [];
-  const execute = async (command, args) => {
-    calls.push([command, args]);
+  const execute = async (command, args, options) => {
+    calls.push([command, args, options]);
     if (args.includes('devices')) return '87a33a4b               device product:test\n';
     if (args.includes('power')) return 'mWakefulness=Awake\n';
     if (args.includes('policy')) return 'mIsShowing=false INTERACTIVE_STATE_AWAKE\n';
@@ -38,6 +38,7 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .not.toContain('foliole-android-lab-preview');
   expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
+  expect(calls.find(([command]) => command === 'ssh')[2].timeout).toBe(40_000);
   expect(calls.some(([, args]) => args.includes('am'))).toBe(false);
   expect(leaseCalls).toEqual([[repoRoot]]);
 });
