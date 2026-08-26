@@ -44,14 +44,13 @@ export async function runIosDeviceAnchorAcceptance(repoRoot, artifactDir) {
     const signature = verifyAcceptanceAppSignature(
       captureAllowFailure(options, 'codesign', ['-d', '--verbose=4', app]), BUNDLE_ID);
     run(options, 'xcrun', ['simctl', 'install', owned.udid, app]);
-    const container = capture(options, 'xcrun',
-      ['simctl', 'get_app_container', owned.udid, BUNDLE_ID, 'data']).trim();
-    const resultPath = path.join(container, RESULT_RELATIVE_PATH);
-    const first = await launchAndRead(options, owned.udid, resultPath, 'initial');
+    const initialResultPath = resolveResultPath(options, owned.udid);
+    const first = await launchAndRead(options, owned.udid, initialResultPath, 'initial');
     run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID]);
-    rmSync(resultPath, { force: true });
+    rmSync(initialResultPath, { force: true });
     run(options, 'xcrun', ['simctl', 'install', owned.udid, app]);
-    const second = await launchAndRead(options, owned.udid, resultPath, 'upgrade-restart');
+    const upgradedResultPath = resolveResultPath(options, owned.udid);
+    const second = await launchAndRead(options, owned.udid, upgradedResultPath, 'upgrade-restart');
     const separation = verifyIosDeviceAnchorAcceptance(first, second);
     const receipt = { accepted_tip: revision, first, second, separation,
       signature_identifier: signature, simulator: owned, status: 'passed' };
@@ -94,6 +93,12 @@ function identity(deviceAnchor, libraryPath) {
   return createSyncGroupDeviceIdentity({
     device_anchor: deviceAnchor, group_id: GROUP_ID, library_path: libraryPath, path_flavor: 'posix'
   });
+}
+
+function resolveResultPath(options, udid) {
+  const container = capture(options, 'xcrun',
+    ['simctl', 'get_app_container', udid, BUNDLE_ID, 'data']).trim();
+  return path.join(container, RESULT_RELATIVE_PATH);
 }
 
 function launchAndRead(options, udid, resultPath, label) {

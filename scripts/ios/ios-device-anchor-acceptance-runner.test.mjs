@@ -48,6 +48,8 @@ describe('iOS device anchor acceptance runner', () => {
     expect(source).toContain("['rev-parse', 'origin/dev']");
     expect(source).toContain('createOwnedIosSimulator({');
     expect(source).toContain("run(options, 'codesign', ['--verify', '--deep', '--strict', app])");
+    expect(source).toContain('const initialResultPath = resolveResultPath(options, owned.udid);');
+    expect(source).toContain('const upgradedResultPath = resolveResultPath(options, owned.udid);');
     expect(source).toContain("path.join(artifactDir, 'receipt.json')");
   });
 });
