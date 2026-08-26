@@ -144,10 +144,10 @@ it('keeps desktop Sync and Pause as independent commands', async () => {
   expect(commandMocks.ensureLanWorkspaceSyncServer).not.toHaveBeenCalled();
 });
 
-it('rejects discovery while local participation is inactive', async () => {
+it('keeps discovery available while local sync participation is inactive', async () => {
   commandMocks.enabled = false;
   await expect(handleCompanionPairingCommand('discover_sync_groups', {}))
-    .rejects.toThrow('sync_participation_inactive');
+    .resolves.toMatchObject({ change: 'started', status: 'searching' });
 });
 
 it('keeps discovered Sync Group candidates in the polling overview', async () => {

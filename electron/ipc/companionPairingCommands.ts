@@ -140,7 +140,6 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.discoverSyncGroups) {
-    assertDesktopCompanionSyncParticipating();
     return desktopDiscovery.start();
   }
   if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) {
