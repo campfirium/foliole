@@ -99,9 +99,16 @@ export async function runMacosA5InstrumentationMechanics({
       instrumentation = await instrumentationTask;
     } else {
       if (observeConcurrently) {
-        [instrumentation, observation] = await Promise.all([
-          instrumentationTask, observeWhileTransportOpen?.()
+        const observationTask = observeWhileTransportOpen();
+        const first = await Promise.race([
+          instrumentationTask.then((result) => ({ result, type: 'instrumentation' })),
+          observationTask.then((result) => ({ result, type: 'observation' }))
         ]);
+        if (first.type === 'instrumentation') instrumentation = first.result;
+        else {
+          observation = first.result;
+          instrumentation = await instrumentationTask;
+        }
       } else instrumentation = await instrumentationTask;
       if (instrumentation.code !== 0) throw executionFailure('instrumentation failed', {
         result: instrumentation, stage: 'instrumentation'

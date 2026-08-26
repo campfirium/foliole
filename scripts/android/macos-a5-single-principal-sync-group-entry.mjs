@@ -64,6 +64,10 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(evidenceRoot, 'macos-runtime') });
   try {
     await session.enable();
+    args.checked(args.paths.adb, [
+      '-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'
+    ]);
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'wm', 'dismiss-keyguard']);
     const result = await mechanics({ appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot, execute: args.execute, observeConcurrently: true,
       observeWhileTransportOpen: () => observeAndAccept(session), paths: args.paths,

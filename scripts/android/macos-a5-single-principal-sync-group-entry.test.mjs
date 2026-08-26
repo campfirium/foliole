@@ -12,5 +12,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("['run', 'electron:compile']");
   expect(source).toContain('openMacosSyncGroupDesktopSession');
   expect(source).toContain('observeConcurrently: true');
+  expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
+  expect(source).toContain("'wm', 'dismiss-keyguard'");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
 });
