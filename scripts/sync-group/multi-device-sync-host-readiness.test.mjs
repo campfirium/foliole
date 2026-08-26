@@ -74,6 +74,19 @@ it('blocks macOS readiness while the fixed sync port is occupied', async () => {
   });
 });
 
+it('reports an unreachable fixed Windows host before any runtime checks', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
+  createIsolatedMacosRoot({ repoRoot, runId: 'run-windows-offline' });
+  const execute = async () => { throw Object.assign(new Error('ssh failed'), {
+    stderr: 'ssh: connect to host 192.168.0.11 port 22: Operation timed out\n'
+  }); };
+  const adapters = createHostReadinessAdapters({ execute, repoRoot,
+    runId: 'run-windows-offline' });
+  await expect(adapters['windows-c']()).rejects.toMatchObject({
+    lastSuccessfulAction: 'windows_host_resolved', missingFact: 'windows_ssh_unreachable'
+  });
+});
+
 it('records fixed sync port availability in macOS readiness', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
   createIsolatedMacosRoot({ repoRoot, runId: 'run-port-free' });
