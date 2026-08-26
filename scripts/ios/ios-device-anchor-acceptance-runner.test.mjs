@@ -13,8 +13,8 @@ import {
 const ANCHOR = '11111111-1111-4111-8111-111111111111';
 const RESULT = {
   anchor_storage: 'keychain-after-first-unlock-this-device-only',
-  canonical_database_path: '/data/foliole.db',
-  database_path: '/data/foliole.db',
+  canonical_database_path: '/Library/CapacitorDatabase/foliole.db',
+  database_path: '/containers/first/Library/CapacitorDatabase/foliole.db',
   device_anchor: ANCHOR,
   error: null,
   phase: 'anchor-observed',
@@ -33,8 +33,11 @@ describe('iOS device anchor acceptance runner', () => {
     })).toThrow('anchor did not persist');
     expect(() => verifyIosDeviceAnchorAcceptance(RESULT, {
       ...RESULT, canonical_database_path: '/data/moved/foliole.db',
-      database_path: '/data/moved/foliole.db'
+      database_path: '/containers/second/data/moved/foliole.db'
     })).toThrow('canonical database path changed');
+    expect(() => verifyIosDeviceAnchorAcceptance(RESULT, {
+      ...RESULT, canonical_database_path: '/other/foliole.db'
+    })).toThrow('canonical path evidence is incomplete');
   });
 
   it('isolates task acceptance assets and requires a frozen signed Simulator tip', () => {
@@ -54,6 +57,7 @@ describe('iOS device anchor acceptance runner', () => {
     expect(source).toContain("run(options, 'codesign', ['--verify', '--deep', '--strict', app])");
     expect(source).toContain('const initialResultPath = resolveResultPath(options, owned.udid);');
     expect(source).toContain('const upgradedResultPath = resolveResultPath(options, owned.udid);');
+    expect(source).toContain("writeObservation(artifactDir, 'initial', first);");
     expect(source).toContain("path.join(artifactDir, 'receipt.json')");
   });
 });

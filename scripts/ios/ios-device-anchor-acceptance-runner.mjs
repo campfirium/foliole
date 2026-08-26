@@ -46,11 +46,13 @@ export async function runIosDeviceAnchorAcceptance(repoRoot, artifactDir) {
     run(options, 'xcrun', ['simctl', 'install', owned.udid, app]);
     const initialResultPath = resolveResultPath(options, owned.udid);
     const first = await launchAndRead(options, owned.udid, initialResultPath, 'initial');
+    writeObservation(artifactDir, 'initial', first);
     run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID]);
     rmSync(initialResultPath, { force: true });
     run(options, 'xcrun', ['simctl', 'install', owned.udid, app]);
     const upgradedResultPath = resolveResultPath(options, owned.udid);
     const second = await launchAndRead(options, owned.udid, upgradedResultPath, 'upgrade-restart');
+    writeObservation(artifactDir, 'upgrade-restart', second);
     const separation = verifyIosDeviceAnchorAcceptance(first, second);
     const receipt = { accepted_tip: revision, first, second, separation,
       signature_identifier: signature, simulator: owned, status: 'passed' };
@@ -74,7 +76,7 @@ export function verifyIosDeviceAnchorAcceptance(first, second) {
       throw new Error(result?.error || 'iOS device anchor acceptance evidence is incomplete.');
     }
     if (result.anchor_storage !== 'keychain-after-first-unlock-this-device-only' ||
-        result.database_path !== result.canonical_database_path) {
+        !hasCanonicalSandboxPathEvidence(result)) {
       throw new Error('iOS device anchor storage or canonical path evidence is incomplete.');
     }
   }
@@ -93,6 +95,19 @@ export function verifyIosDeviceAnchorAcceptance(first, second) {
     throw new Error('iOS Device identity did not persist or separate path/device changes.');
   }
   return { moved_identity_key: moved.identity_key, other_device_identity_key: otherDevice.identity_key };
+}
+
+function hasCanonicalSandboxPathEvidence(result) {
+  const databasePath = result.database_path;
+  const canonicalPath = result.canonical_database_path;
+  return typeof databasePath === 'string' && typeof canonicalPath === 'string' &&
+    path.posix.isAbsolute(databasePath) && path.posix.isAbsolute(canonicalPath) &&
+    canonicalPath !== '/' && path.posix.normalize(canonicalPath) === canonicalPath &&
+    databasePath.endsWith(canonicalPath);
+}
+
+function writeObservation(artifactDir, label, value) {
+  writeFileSync(path.join(artifactDir, `${label}-result.json`), `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function identity(deviceAnchor, libraryPath) {
