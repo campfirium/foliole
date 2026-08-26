@@ -42,6 +42,17 @@ it('keeps Windows anchor outside channel-specific Roaming userData', () => {
   expect(resolveDesktopDeviceAnchorFilePath(options)).toBe(expected);
 });
 
+it('keeps desktop test device identity inside the isolated runtime root', () => {
+  expect(resolveDesktopDeviceAnchorFilePath({
+    env: { FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-a' },
+    platform: 'darwin'
+  })).toBe('/tmp/foliole-playwright-a/device-identity/anchor-v1');
+  expect(resolveDesktopDeviceAnchorFilePath({
+    env: { FOLIOLE_ELECTRON_TEST_STATE_ROOT: 'D:\\Temp\\foliole-playwright-a' },
+    platform: 'win32'
+  })).toBe('D:\\Temp\\foliole-playwright-a\\device-identity\\anchor-v1');
+});
+
 it('creates one lowercase UUIDv4 and hydrates it after restart', async () => {
   const root = await temporaryRoot();
   const filePath = path.join(root, 'device-identity', 'anchor-v1');

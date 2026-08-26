@@ -27,6 +27,13 @@ export interface DesktopDeviceAnchorOptions {
 
 export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorOptions = {}) {
   const platform = options.platform ?? process.platform;
+  const env = options.env ?? process.env;
+  const testStateRoot = env.FOLIOLE_ELECTRON_TEST_STATE_ROOT?.trim();
+  if (testStateRoot) {
+    const pathApi = platform === 'win32' ? path.win32 : path.posix;
+    if (!pathApi.isAbsolute(testStateRoot)) throw new Error('device_anchor_test_state_root_invalid');
+    return pathApi.join(testStateRoot, 'device-identity', ANCHOR_FILE);
+  }
   if (platform === 'darwin') {
     const loaded = (options.loadAdapter ?? loadMacosSecurityScopedBookmarkAdapter)(platform);
     if (loaded.status !== 'ready') throw new Error(`device_anchor_store_unavailable:${loaded.status}`);
@@ -35,7 +42,7 @@ export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorO
     return path.posix.join(container.path, 'device-identity', ANCHOR_FILE);
   }
   if (platform === 'win32') {
-    const localAppData = options.env?.LOCALAPPDATA?.trim() ?? process.env.LOCALAPPDATA?.trim();
+    const localAppData = env.LOCALAPPDATA?.trim();
     if (!localAppData || !path.win32.isAbsolute(localAppData)) {
       throw new Error('device_anchor_local_app_data_unavailable');
     }
