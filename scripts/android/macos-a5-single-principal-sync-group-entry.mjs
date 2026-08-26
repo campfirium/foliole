@@ -19,6 +19,8 @@ function buildAcceptance(args) {
   args.checked(args.paths.gradle, [
     '--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'
   ], { cwd: path.join(args.paths.buildRoot, 'android'), env });
+  args.checked('npm', ['run', 'build'], { cwd: args.paths.buildRoot, env });
+  args.checked('npm', ['run', 'electron:compile'], { cwd: args.paths.buildRoot, env });
   if (!fs.existsSync(args.paths.apk)) throw new Error('A5 acceptance APK was not produced.');
   return env;
 }
