@@ -14,19 +14,19 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   fs.writeFileSync(path.join(repoRoot, 'node_modules/.bin/cap'), '');
   createIsolatedMacosRoot({ repoRoot, runId: 'run-1' });
   const calls = [];
-  const launchCalls = [];
+  const leaseCalls = [];
   const execute = async (command, args) => {
     calls.push([command, args]);
     if (args.includes('devices')) return '87a33a4b               device product:test\n';
+    if (args.includes('power')) return 'mWakefulness=Awake\n';
+    if (args.includes('policy')) return 'mIsShowing=false INTERACTIVE_STATE_AWAKE\n';
+    if (args.includes('route')) return '192.168.0.0/24 dev wlan0 src 192.168.0.110\n';
     if (command === 'ssh') return '[multi-device-sync-readiness] status=ready\n';
     return '';
   };
-  const verifyLaunch = async (options) => {
-    launchCalls.push(options);
-    return { ok: true, state: { focusedWindow: 'com.foliole.android/.MainActivity',
-      topActivity: 'com.foliole.android/.MainActivity' } };
-  };
-  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-1', verifyLaunch });
+  const adapters = createHostReadinessAdapters({ execute,
+    networkInterfaces: () => ({ en0: [{ address: '192.168.0.10', family: 'IPv4', internal: false }] }),
+    probeA5Lease: (...args) => leaseCalls.push(args), repoRoot, runId: 'run-1' });
   await adapters['android-b']();
   await adapters['windows-c']();
   expect(calls.some(([, args]) => args.includes('87a33a4b'))).toBe(true);
@@ -38,25 +38,25 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .not.toContain('foliole-android-lab-preview');
   expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
-  expect(launchCalls).toEqual([expect.objectContaining({ appId: 'com.foliole.android',
-    serial: '87a33a4b', stabilitySeconds: 2, timeoutSeconds: 10 })]);
+  expect(calls.some(([, args]) => args.includes('am'))).toBe(false);
+  expect(leaseCalls).toEqual([[repoRoot]]);
 });
 
-it('blocks Android readiness before mutation when Foliole lacks window focus', async () => {
+it('blocks Android readiness before mutation when the fixed A5 is locked', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
   fs.mkdirSync(path.join(repoRoot, 'node_modules/.bin'), { recursive: true });
   fs.writeFileSync(path.join(repoRoot, 'node_modules/.bin/cap'), '');
   createIsolatedMacosRoot({ repoRoot, runId: 'run-2' });
   const execute = async (_command, args) => {
     if (args.includes('devices')) return '87a33a4b device product:test\n';
+    if (args.includes('power')) return 'mWakefulness=Awake\n';
+    if (args.includes('policy')) return 'mIsShowing=true INTERACTIVE_STATE_AWAKE\n';
     return '';
   };
-  const verifyLaunch = async () => ({ ok: false,
-    state: { focusedWindow: 'com.android.systemui/.keyguard', topActivity: null } });
-  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-2', verifyLaunch });
+  const adapters = createHostReadinessAdapters({ execute, probeA5Lease: () => undefined,
+    repoRoot, runId: 'run-2' });
   await expect(adapters['android-b']()).rejects.toMatchObject({
-    lastSuccessfulAction: 'android_activity_started',
-    missingFact: 'android_app_window_focus_missing'
+    lastSuccessfulAction: 'fixed_a5_awake', missingFact: 'fixed_a5_locked'
   });
 });
 

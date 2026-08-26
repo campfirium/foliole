@@ -2,11 +2,15 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createServer } from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
-import { verifyAndroidLaunch } from '../android/verify-android-launch.mjs';
+import { createMacosA5ExecutionContext } from '../android/macos-a5-execution-context.mjs';
+import {
+  acquireMacosA5DeviceLease, releaseMacosA5DeviceLease
+} from '../android/macos-a5-run-lease.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
 import { WINDOWS_DEV_REPO_ROOT_POSIX } from '../windows/windows-dev-paths.mjs';
 import { MACOS_ACCEPTANCE_SYNC_PORT } from './multi-device-sync-macos-channel.mjs';
@@ -15,7 +19,7 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 /* global process */
 
 const exec = promisify(execFile);
-const APP = 'com.foliole.android';
+const ACCEPTANCE_APP = 'com.foliole.android.acceptance';
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = `${WINDOWS_DEV_REPO_ROOT_POSIX}/scripts/windows/windows-multi-device-sync-readiness.mjs`;
 
@@ -43,8 +47,39 @@ function fixedDevice(output) {
   });
 }
 
+function assertA5RuntimeState(power, policy) {
+  if (!/mWakefulness=Awake/u.test(power)) throw Object.assign(new Error('Fixed A5 is asleep.'), {
+    missingFact: 'fixed_a5_asleep', lastSuccessfulAction: 'adb_device_fixed'
+  });
+  if (!/mIsShowing=false/u.test(policy) || !/INTERACTIVE_STATE_AWAKE/u.test(policy)) {
+    throw Object.assign(new Error('Fixed A5 is locked.'), {
+      missingFact: 'fixed_a5_locked', lastSuccessfulAction: 'fixed_a5_awake'
+    });
+  }
+}
+
+function assertA5LanRoute(route, interfaces = os.networkInterfaces()) {
+  const subnet = /\b(\d+\.\d+\.\d+)\.\d+\/24\b/u.exec(route)?.[1];
+  const hostAddresses = Object.values(interfaces).flatMap((entries) => entries ?? [])
+    .filter((entry) => entry.family === 'IPv4' && !entry.internal).map((entry) => entry.address);
+  if (!subnet || !hostAddresses.some((address) => address.startsWith(`${subnet}.`))) {
+    throw Object.assign(new Error('Fixed A5 and Mac do not share the acceptance LAN.'), {
+      missingFact: 'fixed_a5_lan_mismatch', lastSuccessfulAction: 'fixed_a5_unlocked'
+    });
+  }
+}
+
+function probeFixedA5Lease(repoRoot) {
+  const context = createMacosA5ExecutionContext({
+    action: 'multi-device-sync-readiness', repoRoot
+  });
+  const lease = acquireMacosA5DeviceLease(context, 'readonly-lifecycle');
+  releaseMacosA5DeviceLease(lease);
+}
+
 export function createHostReadinessAdapters({ env = process.env, execute = bounded,
-  fsApi = fs, repoRoot, runId, verifyLaunch = verifyAndroidLaunch,
+  fsApi = fs, networkInterfaces = os.networkInterfaces, probeA5Lease = probeFixedA5Lease,
+  repoRoot, runId,
   probeMacosSyncPort = probeTcpPort,
   windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
   const paths = macosA5Paths(repoRoot);
@@ -68,20 +103,27 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
         'macos_sync_port_ready'] };
     },
     'android-b': async () => {
-      const output = await execute(paths.adb, ['start-server'], { env });
-      void output;
-      await execute(paths.adb, ['-s', A5_SERIAL, 'wait-for-device'], { env, timeout: 10_000 });
-      fixedDevice(await execute(paths.adb, ['devices', '-l'], { env }));
-      await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n', `${APP}/.MainActivity`], {
-        env, timeout: 20_000
-      });
-      const launch = await verifyLaunch({ adb: paths.adb, appId: APP,
-        component: `${APP}/.MainActivity`, serial: A5_SERIAL,
-        stabilitySeconds: 2, timeoutSeconds: 10 });
-      if (!launch.ok) throw Object.assign(new Error('Foliole is not stably foregrounded on A5.'), {
-        missingFact: 'android_app_window_focus_missing', lastSuccessfulAction: 'android_activity_started'
-      });
-      return { facts: ['fixed_a5_ready', 'android_workspace_ready'] };
+      probeA5Lease(repoRoot);
+      try {
+        await execute(paths.adb, ['start-server'], { env });
+        await execute(paths.adb, ['-s', A5_SERIAL, 'wait-for-device'], { env, timeout: 10_000 });
+        fixedDevice(await execute(paths.adb, ['devices', '-l'], { env }));
+        const power = await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'dumpsys', 'power'], { env });
+        const policy = await execute(paths.adb,
+          ['-s', A5_SERIAL, 'shell', 'dumpsys', 'window', 'policy'], { env });
+        assertA5RuntimeState(power, policy);
+        const route = await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'ip', 'route'], { env });
+        assertA5LanRoute(route, networkInterfaces());
+        const packages = await execute(paths.adb,
+          ['-s', A5_SERIAL, 'shell', 'pm', 'list', 'packages', ACCEPTANCE_APP], { env });
+        if (packages.includes(ACCEPTANCE_APP)) throw Object.assign(
+          new Error('A5 acceptance package from another run is still installed.'), {
+            missingFact: 'android_acceptance_package_present',
+            lastSuccessfulAction: 'fixed_a5_lan_ready'
+          });
+        return { facts: ['fixed_a5_ready', 'fixed_a5_lease_ready', 'fixed_a5_unlocked',
+          'fixed_a5_lan_ready', 'android_acceptance_isolated'] };
+      } finally { await execute(paths.adb, ['kill-server'], { env }).catch(() => undefined); }
     },
     'windows-c': async () => {
       const key = env.FOLIOLE_WINDOWS_DEV_GIT_SSH_KEY
