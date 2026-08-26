@@ -1,3 +1,4 @@
+import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { beginNativeCompanionSyncRun } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import {
@@ -13,6 +14,7 @@ function hasPersistedManualResult(events: Awaited<ReturnType<typeof loadCompanio
 
 export async function runIosSyncTriggerAcceptance() {
   try {
+    await loadCompanionBootstrapState();
     const before = await loadCompanionWorkspaceSyncState();
     const previousResultRestored = hasPersistedManualResult(before.sync_events);
     const runId = createCompanionSyncRunId();
