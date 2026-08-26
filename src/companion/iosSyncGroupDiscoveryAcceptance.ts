@@ -1,3 +1,4 @@
+import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
@@ -11,6 +12,7 @@ export async function runIosSyncGroupDiscoveryAcceptance() {
   const events: CompanionNativeDiscoveryEvent[] = [];
   let removeListener: (() => Promise<void>) | null = null;
   try {
+    await loadCompanionBootstrapState();
     const handle = await FolioleCompanionSync.addListener('syncGroupDiscoveryChanged', (event) => events.push(event));
     removeListener = () => handle.remove();
     events.push(await FolioleCompanionSync.startDiscoverySession());
