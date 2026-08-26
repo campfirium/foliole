@@ -6,10 +6,6 @@ import { fileURLToPath } from 'node:url';
 import { writeCompanionContractAssets } from '../capacitor/write-companion-contract-assets.mjs';
 import { writeFileIfChanged } from '../lib/write-file-if-changed.mjs';
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
-import {
-  ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS,
-  IOS_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-} from '../../lib/core/database/androidCompanionSyncGroupBridgeContractDefinitions.ts';
 import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
@@ -163,10 +159,6 @@ await Promise.all(
 await writeCompanionContractAssets({
   bridgeDefinitions: ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS,
   repoRoot,
-  syncGroupBridgeDefinitions: {
-    android: ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS,
-    ios: IOS_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-  },
   syncDefinitions: ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS
 });
 await writeFileIfChanged(

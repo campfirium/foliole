@@ -18,7 +18,6 @@ describe('iOS bridge acceptance host contract', () => {
     const contentResourceScenario = fs.readFileSync('src/companion/iosContentResourceAcceptance.ts', 'utf8');
     const databaseUpgradeScenario = fs.readFileSync('src/companion/iosDatabaseUpgradeAcceptance.ts', 'utf8');
     const deviceIdentityScenario = fs.readFileSync('src/companion/iosDeviceIdentityAcceptance.ts', 'utf8');
-    const syncGroupLifecycleScenario = fs.readFileSync('src/companion/iosSyncGroupLifecycleAcceptance.ts', 'utf8');
     const syncPackScenario = fs.readFileSync('src/companion/iosSyncPackAcceptance.ts', 'utf8');
     const stateWritebackScenario = fs.readFileSync('src/companion/iosStateWritebackAcceptance.ts', 'utf8');
     expect(entry).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1'");
@@ -26,8 +25,6 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'content-resource-read'");
     expect(entry).toContain("iosAcceptanceScenario === 'database-upgrade-runtime'");
     expect(entry).toContain("iosAcceptanceScenario === 'device-identity'");
-    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-authorization'");
-    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-lifecycle'");
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
@@ -47,9 +44,6 @@ describe('iOS bridge acceptance host contract', () => {
     expect(databaseUpgradeScenario).not.toContain('localStorage');
     expect(deviceIdentityScenario).toContain('loadCompanionBootstrapState()');
     expect(deviceIdentityScenario).not.toContain('localStorage');
-    expect(syncGroupLifecycleScenario).toContain('persistPreparedJoinIntent(db, {');
-    expect(syncGroupLifecycleScenario).toContain('consumePreparedRouteGrant(db, grant, roster, MANAGER_ID, NOW)');
-    expect(syncGroupLifecycleScenario).not.toContain('localStorage');
     expect(contentResourceScenario).toContain('pullMissingAttachmentResources(endpoint)');
     expect(contentResourceScenario).toContain('searchCompanionFullText(TOKENS.topic)');
     expect(contentResourceScenario).toContain('resolveRuntimeAttachmentResource(`asset://${IDS.valid}.pdf`)');
@@ -68,8 +62,6 @@ describe('iOS bridge acceptance host contract', () => {
     expect(standalone).toContain('runIosDatabaseUpgradeAcceptance(repoRoot, artifactDir)');
     expect(standalone).toContain("scenario === 'device-identity'");
     expect(standalone).toContain('runIosDeviceAnchorAcceptance(repoRoot, artifactDir)');
-    expect(standalone).toContain('runIosSyncGroupAuthorizationAcceptance(repoRoot, artifactDir)');
-    expect(standalone).toContain('runIosSyncGroupLifecycleAcceptance(repoRoot, artifactDir)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');
     expect(runner).toContain('installApp(options, simulator.udid, false)');
     expect(runner).not.toContain('waitForBootstrapSnapshot');

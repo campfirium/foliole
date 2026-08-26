@@ -41,16 +41,13 @@ describe('Android Java SQL surface', () => {
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
       'approveSyncGroupJoinRequest', 'bindSyncGroupPeerRoute',
-      'clearPairingCredentials', 'clearSyncGroupCredentials', 'consumeSyncGroupRouteGrant',
-      'createSyncGroupJoinIntentKey', 'desktopHttpRequest', 'discardSyncGroupJoinIntentKey',
+      'clearPairingCredentials', 'clearSyncGroupCredentials', 'desktopHttpRequest',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupMemberRoute',
-      'loadSyncGroupProviderState', 'loadSyncParticipationState', 'migrateLegacyPairingToMemberRoute',
-      'rejectSyncGroupJoinRequest', 'revokeSyncGroupMemberRoute',
+      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
+      'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
       'savePairingCredentials', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'signSyncGroupMemberRequest',
       'stageAttachmentResourceBatch', 'startSyncGroupProvider', 'stopSyncGroupProvider'
     ].sort());
   });

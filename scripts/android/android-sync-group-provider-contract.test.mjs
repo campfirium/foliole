@@ -27,11 +27,11 @@ it('listens on the same stable port persisted by bidirectional peer pairing', as
 });
 
 it('admits complete nonempty library facts while preserving Sync Group identity checks', async () => {
-  const admission = await readJava('FolioleCompanionSyncGroupAdmissionAdapter.java');
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const facts = await readJava('FolioleCompanionSyncGroupLibraryFacts.java');
-  expect(admission).toContain('sync_group_identity_mismatch');
-  expect(admission).toContain('FolioleCompanionSyncGroupLibraryFacts.valid(facts)');
-  expect(admission).not.toContain('sync_group_requires_empty_library');
+  expect(server).toContain('sync_group_identity_mismatch');
+  expect(server).toContain('FolioleCompanionSyncGroupLibraryFacts.valid(facts)');
+  expect(server).not.toContain('sync_group_requires_empty_library');
   expect(facts).toContain('((Number) value).longValue() < 0');
   expect(facts).not.toContain('== 0');
 });
@@ -47,14 +47,13 @@ it('normalizes the Android NSD trailing-dot service type without changing the re
 it('keeps Android fact-change discovery foreground-bound and excludes its own resolved service', async () => {
   const monitor = await readJava('FolioleCompanionNsdMonitor.java');
   const plugin = await readJava('FolioleCompanionSyncPlugin.java');
-  const lifecycle = await readJava('FolioleCompanionPluginLifecycle.java');
   expect(monitor).toContain('manager.resolveService(service');
   expect(monitor).toContain('FolioleCompanionSyncGroupProvider.runtimeInstanceId()');
   expect(monitor).toContain('ownRuntimeId.equals(new String(runtimeId');
   expect(monitor).toContain('pendingResolutions.offer(service.getServiceName(), service)');
   expect(monitor).toContain('syncGroupProviderServiceHintKey(context, "endpointUrl")');
-  expect(lifecycle).toContain('monitor.start()');
-  expect(lifecycle).toContain('monitor.stop()');
+  expect(plugin).toContain('serviceMonitor.start()');
+  expect(plugin).toContain('serviceMonitor.stop()');
   expect(plugin).toContain('syncGroupProviderServiceHintEvent');
   expect(plugin).toContain('notifyListeners(name, event)');
 });
@@ -188,15 +187,13 @@ it('promotes an approved join only after the new member proves key possession', 
 it('keeps the Android screen awake only around foreground provider activity', async () => {
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
   const plugin = await readJava('FolioleCompanionSyncPlugin.java');
-  const lifecycle = await readJava('FolioleCompanionPluginLifecycle.java');
   const awake = await readJava('FolioleCompanionSyncScreenAwake.java');
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.touch()');
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.clear()');
-  expect(plugin).toContain('lifecycle.pause()');
-  expect(lifecycle).toContain('FolioleCompanionSyncGroupProvider.pause(plugin)');
-  expect(lifecycle).toContain('FolioleCompanionSyncGroupProvider.reconcile(plugin, plugin.getActivity(), isParticipating())');
-  expect(lifecycle).toContain('active = false;');
-  expect(lifecycle).toContain('active = true;');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.pause(this)');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating())');
+  expect(plugin).toContain('lifecycleActive = false;');
+  expect(plugin).toContain('lifecycleActive = true;');
   expect(provider).toContain('if (!participating) stopRuntime();');
   expect(provider).toContain('if (owner != activeOwner) return;');
   expect(awake).toContain('FLAG_KEEP_SCREEN_ON');

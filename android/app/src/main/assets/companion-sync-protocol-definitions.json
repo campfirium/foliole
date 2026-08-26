@@ -67,6 +67,13 @@
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
     "formatVersion": 12,
+    "forbiddenDeviceIdentityKeys": [
+      "canonical_library_path",
+      "device_anchor",
+      "device_identity_key",
+      "device_key",
+      "identity_key"
+    ],
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",

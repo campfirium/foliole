@@ -4,10 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-} from '../../lib/core/database/androidCompanionSyncGroupBridgeContractDefinitions.ts';
-
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PLATFORM_ROOT = path.join(ROOT, 'src/shared/platform');
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
@@ -15,8 +11,7 @@ const TYPES_FILES = [
   'companionWorkspaceSyncPluginTypes.ts',
   'companionAttachmentResourceSyncPluginTypes.ts',
   'companionContentBlobSyncPluginTypes.ts',
-  'companionPairingSyncPluginTypes.ts',
-  'companion/sync/companionSyncGroupAuthorizationPluginTypes.ts'
+  'companionPairingSyncPluginTypes.ts'
 ];
 
 function sortedUnique(values) {
@@ -40,15 +35,11 @@ async function loadTypeScriptMethods() {
 }
 
 describe('FolioleCompanionSync method inventory', () => {
-  it('keeps generated inventory, TypeScript, and Android plugin methods equal', async () => {
-    const inventory = ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-      .methodInventory.folioleCompanionSync;
+  it('keeps TypeScript and Android plugin methods equal', async () => {
     const javaSource = await readFile(path.join(JAVA_ROOT, 'FolioleCompanionSyncPlugin.java'), 'utf8');
     const typeScriptMethods = await loadTypeScriptMethods();
 
-    expect(inventory).toEqual(sortedUnique(inventory));
-    expect(sortedUnique(typeScriptMethods)).toEqual(inventory);
-    expect(sortedUnique(extractJavaPluginMethods(javaSource))).toEqual(inventory);
+    expect(sortedUnique(extractJavaPluginMethods(javaSource))).toEqual(sortedUnique(typeScriptMethods));
   });
 
   it('keeps the Web plugin name wired to the registered Android class', async () => {

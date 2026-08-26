@@ -20,6 +20,9 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     databaseEntry: 'incoming.db.deflate',
     format: 'foliole.sync-pack',
     formatVersion: 12,
+    forbiddenDeviceIdentityKeys: [
+      'canonical_library_path', 'device_anchor', 'device_identity_key', 'device_key', 'identity_key'
+    ],
     manifestTableNames: SYNC_PACK_TABLE_NAMES,
     maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
     minimumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION

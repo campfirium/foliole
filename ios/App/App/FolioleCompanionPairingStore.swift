@@ -27,14 +27,6 @@ final class FolioleCompanionPairingStore {
         return try loadState()
     }
 
-    func migrationCredential() throws -> (authorizationId: String, secret: String) {
-        guard let authorizationId = metadata("authorizationId"),
-              let secret = try secrets.load()?.trimmedNonempty else {
-            throw Self.invalid("legacy pairing authorization")
-        }
-        return (authorizationId, secret)
-    }
-
     func loadState() throws -> [String: Any] {
         defaults.removeObject(forKey: Self.legacyPrimaryDeviceKey)
         try ensureAuthorizationCutover()

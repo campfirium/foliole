@@ -34,19 +34,6 @@ describe('iOS pairing host contract', () => {
     expect(plist).not.toContain('<key>NSAllowsArbitraryLoads</key>');
   });
 
-  it('keeps the inactive member route in Keychain and omits provider verification methods', () => {
-    const keychain = read('ios/App/App/FolioleCompanionPairingSecretStore.swift');
-    const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
-    const asset = JSON.parse(read('ios/App/App/companion-sync-group-bridge-contract-definitions.json'));
-
-    expect(keychain).toContain('FolioleCompanionSyncGroupMemberRouteStore');
-    expect(keychain).toContain('kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly');
-    expect(plugin).toContain('CAPPluginMethod(name: "signSyncGroupMemberRequest"');
-    expect(asset.authorization.prepare.registrationState).toBe('inactive');
-    expect(asset.methodInventory.folioleCompanionSync).not.toContain('resolveSyncGroupDataRequest');
-    expect(asset.methodInventory.folioleCompanionSync).not.toContain('startSyncGroupProvider');
-  });
-
   it('uses generated bridge keys for pairing, discovery and request signing', () => {
     const contract = read('ios/App/App/FolioleCompanionContractStore.swift');
     const discovery = read('ios/App/App/FolioleCompanionBonjourDiscovery.swift');

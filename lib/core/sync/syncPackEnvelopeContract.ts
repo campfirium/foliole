@@ -1,3 +1,5 @@
+import { DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS } from '../../platform/syncGroupDeviceContentBoundary.js';
+
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import {
   SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS,
@@ -64,6 +66,7 @@ export const SYNC_PACK_ENVELOPE_CONTRACT = {
   databaseEntry: SYNC_PACK_DATABASE_ENTRY,
   format: SYNC_PACK_FORMAT,
   formatVersion: SYNC_PACK_FORMAT_VERSION,
+  forbiddenDeviceIdentityKeys: DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS,
   legacyOptionalNodeColumns: [...SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS],
   manifestTableNames: SYNC_PACK_TABLE_NAMES,
   maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,

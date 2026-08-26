@@ -7,26 +7,19 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "consumeSyncGroupRouteGrant", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "createSyncGroupJoinIntentKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "discardSyncGroupJoinIntentKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadSyncGroupMemberRoute", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "migrateLegacyPairingToMemberRoute", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "revokeSyncGroupMemberRoute", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "signSyncGroupMemberRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]
 

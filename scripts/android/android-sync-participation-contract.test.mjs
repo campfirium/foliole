@@ -11,12 +11,11 @@ const JAVA = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
 it('keeps permanent Android choices in private preferences and lifecycle transient', async () => {
   const store = await readFile(path.join(JAVA, 'FolioleCompanionSyncParticipationStore.java'), 'utf8');
   const plugin = await readFile(path.join(JAVA, 'FolioleCompanionSyncPlugin.java'), 'utf8');
-  const lifecycle = await readFile(path.join(JAVA, 'FolioleCompanionPluginLifecycle.java'), 'utf8');
   expect(store).toContain('Context.MODE_PRIVATE');
   expect(store).toContain('.putBoolean(requestKey(context, "syncEnabled"), enabled).apply()');
   expect(store).toContain('.putBoolean(requestKey(context, "syncPaused"), paused).apply()');
-  expect(lifecycle).toContain('active = false;');
-  expect(lifecycle).toContain('active = true;');
+  expect(plugin).toContain('lifecycleActive = false;');
+  expect(plugin).toContain('lifecycleActive = true;');
   expect(plugin).not.toMatch(/setSyncPaused\([^)]*(?:handleOnPause|handleOnResume)/u);
 });
 

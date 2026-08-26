@@ -7,10 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
-import {
-  ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS,
-  IOS_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-} from '../../lib/core/database/androidCompanionSyncGroupBridgeContractDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -51,26 +47,6 @@ describe('iOS companion contract assets', () => {
     expect(pairingStore).not.toContain('currentProtocolVersion =');
   });
 
-  it('generates host-specific Sync Group inventories without claiming an iOS provider', async () => {
-    const fileName = 'companion-sync-group-bridge-contract-definitions.json';
-    const ios = await readJson(path.join(REPO_ROOT, 'ios/App/App', fileName));
-    const iosPublic = await readJson(path.join(REPO_ROOT, 'src/companion/public', fileName));
-    const android = await readJson(path.join(REPO_ROOT, 'android/app/src/main/assets', fileName));
-
-    expect(ios).toEqual(IOS_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS);
-    expect(iosPublic).toEqual(ios);
-    expect(android).toEqual(ANDROID_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS);
-    expect(ios.methodInventory.folioleCompanionSync).not.toContain('startSyncGroupProvider');
-    expect(android.methodInventory.folioleCompanionSync).toContain('startSyncGroupProvider');
-  });
-
-  it('keeps the iOS generated inventory equal to declared plugin methods', async () => {
-    const plugin = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionSyncPlugin.swift'), 'utf8');
-    const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([A-Za-z0-9]+)"/gu)]
-      .map((match) => match[1]).sort();
-    expect(methods).toEqual(IOS_COMPANION_SYNC_GROUP_BRIDGE_CONTRACT_DEFINITIONS
-      .methodInventory.folioleCompanionSync);
-  });
 });
 
 async function readJson(filePath) {

@@ -104,14 +104,6 @@ final class FolioleCompanionPairingStore {
             decryptSecret(context), service, salt, iv, ciphertext);
     }
 
-    static String migrationAuthorizationId(Context context) throws Exception {
-        return requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context));
-    }
-
-    static String migrationCredentialSecret(Context context) throws Exception {
-        return decryptSecret(context);
-    }
-
     private static SharedPreferences prefs(Context context) throws Exception {
         return context.getSharedPreferences(FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context), Context.MODE_PRIVATE);
     }

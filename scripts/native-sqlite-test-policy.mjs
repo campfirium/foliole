@@ -28,10 +28,10 @@ const controlledElectronSqliteTests = [
   'electron/database/migrate.internalSnapshots.test.ts',
   'electron/database/nodeSyncFieldCoverage.contract.test.ts',
   'electron/database/opaqueSyncRefMigration.test.ts',
-  'electron/database/syncGroupLifecycleAuthority.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
   'electron/database/syncDeliveryMigration.test.ts',
+  'electron/database/syncDeviceCopyPreparation.test.ts',
   'electron/database/syncPackGroupRows.test.ts',
   'electron/database/syncPackNodeAttachments.test.ts',
   'electron/database/syncPackSpecialRootApply.test.ts',
@@ -69,7 +69,6 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncNodeVersions.test.ts',
   'src/shared/platform/companionSyncReviewLogApply.test.ts',
   'src/shared/platform/companionSyncGroupStore.test.ts',
-  'src/shared/platform/companion/sync/syncGroupLifecycleCompanionPort.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
