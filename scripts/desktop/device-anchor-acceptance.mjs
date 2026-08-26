@@ -54,11 +54,19 @@ export function resolvePackagedZip(repoRoot = ROOT) {
     `Foliole-macOS-arm64-${metadata.version}.zip`);
 }
 
+export function resolvePackagedChannel(channel = 'github') {
+  if (!['github', 'mas'].includes(channel)) {
+    throw new Error(`Unsupported signed macOS package channel: ${channel}`);
+  }
+  return channel;
+}
+
 export function runDesktopDeviceAnchorAcceptance(options = {}) {
   const repoRoot = options.repoRoot ?? ROOT;
   const artifactRoot = options.artifactRoot ?? ARTIFACT_ROOT;
   const revision = assertFrozenRevision(repoRoot, options.runCapture ?? capture);
   const packageZip = options.packageZip ?? resolvePackagedZip(repoRoot);
+  const packagedChannel = resolvePackagedChannel(options.packagedChannel);
   if (!fs.existsSync(packageZip)) throw new Error(`Signed macOS package is missing: ${packageZip}`);
   fs.rmSync(artifactRoot, { force: true, recursive: true });
   const packageRoot = path.join(artifactRoot, 'packaged');
@@ -79,12 +87,13 @@ export function runDesktopDeviceAnchorAcceptance(options = {}) {
     path.join(repoRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
     [path.join(repoRoot, 'dist/electron/main.js')], commonEnv, 'development');
   const packaged = launchAcceptance(repoRoot,
-    path.join(appPath, 'Contents/MacOS/Foliole'), [], commonEnv, 'github');
+    path.join(appPath, 'Contents/MacOS/Foliole'), [], commonEnv, packagedChannel);
   const separation = verifyDesktopDeviceAnchorAcceptance(development, packaged);
   const receipt = {
     accepted_tip: revision,
     development,
     package_zip: packageZip,
+    packaged_channel: packagedChannel,
     packaged,
     separation,
     status: 'passed'
@@ -134,9 +143,20 @@ function run(repoRoot, command, args) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
   try {
-    runDesktopDeviceAnchorAcceptance();
+    runDesktopDeviceAnchorAcceptance({
+      packageZip: readOption(process.argv, '--package-zip'),
+      packagedChannel: readOption(process.argv, '--packaged-channel')
+    });
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   }
+}
+
+function readOption(argv, name) {
+  const index = argv.indexOf(name);
+  if (index < 0) return undefined;
+  const value = argv[index + 1]?.trim();
+  if (!value) throw new Error(`${name} requires a value`);
+  return value;
 }

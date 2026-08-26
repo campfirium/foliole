@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   parseAcceptanceOutput,
+  resolvePackagedChannel,
   verifyDesktopDeviceAnchorAcceptance
 } from './device-anchor-acceptance.mjs';
 
@@ -17,6 +18,12 @@ it('parses the isolated Electron acceptance marker', () => {
   expect(parseAcceptanceOutput(`noise\nFOLIOLE_DEVICE_IDENTITY_ACCEPTANCE ${JSON.stringify({
     status: 'passed'
   })}\n`)).toEqual({ status: 'passed' });
+});
+
+it('accepts only supported signed package channels', () => {
+  expect(resolvePackagedChannel('mas')).toBe('mas');
+  expect(resolvePackagedChannel()).toBe('github');
+  expect(() => resolvePackagedChannel('development')).toThrow('Unsupported signed macOS package channel');
 });
 
 it('requires DEV and signed package to share one anchor and one Device', () => {
