@@ -38,6 +38,9 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'sync-group-discovery-events'
       ? import('./iosSyncGroupDiscoveryAcceptance').then(({ runIosSyncGroupDiscoveryAcceptance }) =>
         runIosSyncGroupDiscoveryAcceptance())
+    : iosAcceptanceScenario === 'sync-group-join-runtime'
+      ? import('./iosSyncGroupJoinAcceptance').then(({ runIosSyncGroupJoinAcceptance }) =>
+        runIosSyncGroupJoinAcceptance())
     : iosAcceptanceScenario === 'sync-trigger-runtime'
       ? import('./iosSyncTriggerAcceptance').then(({ runIosSyncTriggerAcceptance }) =>
         runIosSyncTriggerAcceptance())

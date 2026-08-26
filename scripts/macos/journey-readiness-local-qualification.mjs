@@ -29,7 +29,9 @@ function runId() {
 export function resolveLocalQualificationScenario(env = process.env) {
   const scenario = env.FOLIOLE_JOURNEY_READINESS_SCENARIO?.trim();
   if (!scenario) return null;
-  if (!['device-identity', 'sync-group-discovery-events', 'sync-trigger-runtime'].includes(scenario)) {
+  if (![
+    'device-identity', 'sync-group-discovery-events', 'sync-group-join-runtime', 'sync-trigger-runtime'
+  ].includes(scenario)) {
     throw new Error(`Unsupported local qualification scenario: ${scenario}`);
   }
   return scenario;
@@ -59,7 +61,9 @@ async function qualify() {
     if (scenario === 'device-identity') {
       await runIosDeviceAnchorAcceptance(REPO_ROOT, path.join(artifactDir, scenario));
     }
-    if (scenario === 'sync-group-discovery-events' || scenario === 'sync-trigger-runtime') {
+    if ([
+      'sync-group-discovery-events', 'sync-group-join-runtime', 'sync-trigger-runtime'
+    ].includes(scenario)) {
       const scenarioRoot = path.join(artifactDir, scenario);
       await runIosAcceptanceAttempts({
         artifactRoot: scenarioRoot,

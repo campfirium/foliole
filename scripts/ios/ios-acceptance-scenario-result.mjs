@@ -2,6 +2,7 @@ import { verifyContentResourceAcceptance } from './ios-content-resource-acceptan
 import { verifyPairingAcceptance } from './ios-pairing-acceptance-runner.mjs';
 import { verifyStateWritebackAcceptance } from './ios-state-writeback-acceptance-runner.mjs';
 import { verifySyncGroupDiscoveryAcceptance } from './ios-sync-group-discovery-acceptance-runner.mjs';
+import { verifySyncGroupJoinAcceptance } from './ios-sync-group-join-acceptance-runner.mjs';
 import { verifySyncPackAcceptance } from './ios-sync-pack-acceptance-runner.mjs';
 import { verifySyncTriggerAcceptance } from './ios-sync-trigger-acceptance-runner.mjs';
 
@@ -11,6 +12,9 @@ export function verifyAcceptanceScenario(args) {
   }
   if (args.scenario === 'sync-trigger-runtime') {
     return { sync_trigger: verifySyncTriggerAcceptance(args.firstBridge, args.secondBridge) };
+  }
+  if (args.scenario === 'sync-group-join-runtime') {
+    return { sync_group_join: verifySyncGroupJoinAcceptance(args.firstBridge, args.secondBridge) };
   }
   if (args.scenario === 'content-resource-read') {
     return { content_resource: verifyContentResourceAcceptance(

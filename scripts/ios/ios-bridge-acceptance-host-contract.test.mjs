@@ -20,6 +20,7 @@ describe('iOS bridge acceptance host contract', () => {
     const deviceIdentityScenario = fs.readFileSync('src/companion/iosDeviceIdentityAcceptance.ts', 'utf8');
     const syncPackScenario = fs.readFileSync('src/companion/iosSyncPackAcceptance.ts', 'utf8');
     const syncTriggerScenario = fs.readFileSync('src/companion/iosSyncTriggerAcceptance.ts', 'utf8');
+    const syncGroupJoinScenario = fs.readFileSync('src/companion/iosSyncGroupJoinAcceptance.ts', 'utf8');
     const stateWritebackScenario = fs.readFileSync('src/companion/iosStateWritebackAcceptance.ts', 'utf8');
     expect(entry).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-pack-runtime'");
@@ -28,6 +29,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'device-identity'");
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
     expect(entry).toContain("iosAcceptanceScenario === 'sync-trigger-runtime'");
+    expect(entry).toContain("iosAcceptanceScenario === 'sync-group-join-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
     expect(scenario).toContain('pairIosAcceptanceCompanion(endpoint, hostName)');
@@ -55,6 +57,9 @@ describe('iOS bridge acceptance host contract', () => {
     expect(syncTriggerScenario).toContain("beginNativeCompanionSyncRun('manual', runId)");
     expect(syncTriggerScenario).toContain("kind: 'run_finished'");
     expect(syncTriggerScenario).toContain('loadCompanionWorkspaceSyncState()');
+    expect(syncGroupJoinScenario).toContain('FolioleSyncGroupJoinPrepare.receiveRequest');
+    expect(syncGroupJoinScenario).toContain('crypto.subtle.deriveKey');
+    expect(syncGroupJoinScenario).toContain("scenario: 'sync-group-join-runtime'");
   });
 
   it('runs expected database upgrade failure without waiting for bootstrap ready', () => {

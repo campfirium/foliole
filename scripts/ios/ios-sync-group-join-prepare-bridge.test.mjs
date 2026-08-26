@@ -17,7 +17,10 @@ it('keeps the iOS join prepare Capacitor bridge complete but inactive', () => {
     expect(plugin).toContain(`@objc func ${method}(`);
   }
   expect(provider).toContain('sync_group_join_provider_unavailable');
-  expect(controller).not.toContain('registerPluginInstance(FolioleCompanionSyncGroupJoinPreparePlugin())');
+  expect(controller).toMatch(
+    /#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment\(simulator\)[\s\S]*registerPluginInstance\(FolioleCompanionSyncGroupJoinPreparePlugin\(\)\)[\s\S]*#endif/u
+  );
+  expect(plugin).toContain('#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)');
 });
 
 it('keeps group delivery in the new provider without old authorization state', () => {

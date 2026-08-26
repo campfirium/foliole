@@ -59,6 +59,9 @@ describe('local journey readiness adapters', () => {
     expect(resolveLocalQualificationScenario({
       FOLIOLE_JOURNEY_READINESS_SCENARIO: 'sync-trigger-runtime'
     })).toBe('sync-trigger-runtime');
+    expect(resolveLocalQualificationScenario({
+      FOLIOLE_JOURNEY_READINESS_SCENARIO: 'sync-group-join-runtime'
+    })).toBe('sync-group-join-runtime');
     expect(() => resolveLocalQualificationScenario({
       FOLIOLE_JOURNEY_READINESS_SCENARIO: 'unregistered'
     })).toThrow('Unsupported local qualification scenario');
