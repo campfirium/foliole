@@ -31,9 +31,15 @@ final class FolioleCompanionDeviceAnchorStore {
         return try create()
     }
 
-    static func canonicalLibraryPath(_ value: String) throws -> String {
-        guard value.hasPrefix("/") else { throw invalid("library_path_not_absolute") }
-        return URL(fileURLWithPath: value).resolvingSymlinksInPath().standardizedFileURL.path
+    static func canonicalLibraryPath(
+        _ value: String,
+        homeDirectory: String = NSHomeDirectory()
+    ) throws -> String {
+        let canonical = try canonicalAbsolutePath(value)
+        let home = try canonicalAbsolutePath(homeDirectory)
+        guard canonical == home || canonical.hasPrefix("\(home)/") else { return canonical }
+        let relative = canonical.dropFirst(home.count)
+        return relative.isEmpty ? "/" : String(relative)
     }
 
     private func create() throws -> String {
@@ -50,6 +56,11 @@ final class FolioleCompanionDeviceAnchorStore {
             throw invalid("device_anchor_invalid")
         }
         return value
+    }
+
+    private static func canonicalAbsolutePath(_ value: String) throws -> String {
+        guard value.hasPrefix("/") else { throw invalid("library_path_not_absolute") }
+        return URL(fileURLWithPath: value).resolvingSymlinksInPath().standardizedFileURL.path
     }
 
     private static func invalid(_ message: String) -> NSError {

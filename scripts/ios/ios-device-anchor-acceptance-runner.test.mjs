@@ -30,7 +30,11 @@ describe('iOS device anchor acceptance runner', () => {
     });
     expect(() => verifyIosDeviceAnchorAcceptance(RESULT, {
       ...RESULT, device_anchor: '33333333-3333-4333-8333-333333333333'
-    })).toThrow('did not persist');
+    })).toThrow('anchor did not persist');
+    expect(() => verifyIosDeviceAnchorAcceptance(RESULT, {
+      ...RESULT, canonical_database_path: '/data/moved/foliole.db',
+      database_path: '/data/moved/foliole.db'
+    })).toThrow('canonical database path changed');
   });
 
   it('isolates task acceptance assets and requires a frozen signed Simulator tip', () => {

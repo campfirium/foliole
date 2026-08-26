@@ -11,10 +11,22 @@ final class FolioleCompanionDeviceAnchorStoreTests: XCTestCase {
         ).loadOrCreate()
 
         XCTAssertEqual(first, restarted)
-        XCTAssertNotEqual(
-            try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath("/library-a/Data/foliole.db"),
-            try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath("/library-b/Data/foliole.db")
+        let beforeUpgrade = try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(
+            "/containers/first/Library/CapacitorDatabase/foliole.db",
+            homeDirectory: "/containers/first"
         )
+        let afterUpgrade = try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(
+            "/containers/second/Library/CapacitorDatabase/foliole.db",
+            homeDirectory: "/containers/second"
+        )
+        let switchedDatabase = try FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(
+            "/containers/second/Library/CapacitorDatabase/other.db",
+            homeDirectory: "/containers/second"
+        )
+
+        XCTAssertEqual(beforeUpgrade, "/Library/CapacitorDatabase/foliole.db")
+        XCTAssertEqual(beforeUpgrade, afterUpgrade)
+        XCTAssertNotEqual(afterUpgrade, switchedDatabase)
     }
 
     func testFreshInstallRetiresAnyPreservedKeychainAnchor() throws {

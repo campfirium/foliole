@@ -82,6 +82,12 @@ export function verifyIosDeviceAnchorAcceptance(first, second) {
   const restarted = identity(second.device_anchor, second.canonical_database_path);
   const moved = identity(first.device_anchor, `${first.canonical_database_path}.copy`);
   const otherDevice = identity(OTHER_ANCHOR, first.canonical_database_path);
+  if (first.device_anchor !== second.device_anchor) {
+    throw new Error('iOS device anchor did not persist across upgrade restart.');
+  }
+  if (first.canonical_database_path !== second.canonical_database_path) {
+    throw new Error('iOS canonical database path changed across upgrade restart.');
+  }
   if (!isSameSyncGroupDevice(initial, restarted) || isSameSyncGroupDevice(initial, moved) ||
       isSameSyncGroupDevice(initial, otherDevice)) {
     throw new Error('iOS Device identity did not persist or separate path/device changes.');
