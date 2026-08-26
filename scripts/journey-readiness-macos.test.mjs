@@ -48,11 +48,14 @@ describe('local journey readiness adapters', () => {
     expect(definition.source.archiveDigest).toHaveLength(64);
   });
 
-  it('routes the device identity runtime through the formal local qualification entry', () => {
+  it('routes reviewed iOS runtime scenarios through the formal local qualification entry', () => {
     expect(resolveLocalQualificationScenario({})).toBeNull();
     expect(resolveLocalQualificationScenario({
       FOLIOLE_JOURNEY_READINESS_SCENARIO: 'device-identity'
     })).toBe('device-identity');
+    expect(resolveLocalQualificationScenario({
+      FOLIOLE_JOURNEY_READINESS_SCENARIO: 'sync-group-discovery-events'
+    })).toBe('sync-group-discovery-events');
     expect(() => resolveLocalQualificationScenario({
       FOLIOLE_JOURNEY_READINESS_SCENARIO: 'unregistered'
     })).toThrow('Unsupported local qualification scenario');

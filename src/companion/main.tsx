@@ -35,6 +35,9 @@ if (isIosBridgeAcceptance) {
         runIosDeviceIdentityAcceptance())
     : iosAcceptanceScenario === 'sync-pack-runtime'
       ? import('./iosSyncPackAcceptance').then(({ runIosSyncPackAcceptance }) => runIosSyncPackAcceptance())
+    : iosAcceptanceScenario === 'sync-group-discovery-events'
+      ? import('./iosSyncGroupDiscoveryAcceptance').then(({ runIosSyncGroupDiscoveryAcceptance }) =>
+        runIosSyncGroupDiscoveryAcceptance())
       : import('./iosBridgeAcceptance').then(({ runIosBridgeAcceptance }) => runIosBridgeAcceptance());
   void module.catch((error) => {
     window.webkit?.messageHandlers?.folioleBridgeAcceptance?.postMessage({

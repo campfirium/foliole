@@ -10,6 +10,8 @@ import { writeReceiptAtomically } from '../journey-readiness-cli.mjs';
 import { runJourneyQualification } from '../journey-readiness-controller.mjs';
 import { withArtifactBatch } from '../diagnostics/local-artifact-cache-production.mjs';
 import { runIosDeviceAnchorAcceptance } from '../ios/ios-device-anchor-acceptance-runner.mjs';
+import { runIosAcceptanceAttempts } from '../ios/ios-acceptance-attempts.mjs';
+import { runIosBootstrapAcceptanceAttempt } from '../ios/ios-bootstrap-acceptance-attempt.mjs';
 import {
   assertConfinedEvidencePath, assertLocalCandidateStillFrozen, cleanupLocalSourceCapsule,
   createLocalDefinition,
@@ -27,7 +29,9 @@ function runId() {
 export function resolveLocalQualificationScenario(env = process.env) {
   const scenario = env.FOLIOLE_JOURNEY_READINESS_SCENARIO?.trim();
   if (!scenario) return null;
-  if (scenario !== 'device-identity') throw new Error(`Unsupported local qualification scenario: ${scenario}`);
+  if (!['device-identity', 'sync-group-discovery-events'].includes(scenario)) {
+    throw new Error(`Unsupported local qualification scenario: ${scenario}`);
+  }
   return scenario;
 }
 
@@ -54,6 +58,14 @@ async function qualify() {
     enforceJourneyReadiness(JSON.parse(readFileSync(receiptPath, 'utf8')), definition);
     if (scenario === 'device-identity') {
       await runIosDeviceAnchorAcceptance(REPO_ROOT, path.join(artifactDir, scenario));
+    }
+    if (scenario === 'sync-group-discovery-events') {
+      const scenarioRoot = path.join(artifactDir, scenario);
+      await runIosAcceptanceAttempts({
+        artifactRoot: scenarioRoot,
+        runAttempt: ({ artifactDir: attemptDir, attemptNumber }) =>
+          runIosBootstrapAcceptanceAttempt(REPO_ROOT, scenario, attemptDir, attemptNumber)
+      });
     }
     assertLocalCandidateStillFrozen(candidate, REPO_ROOT);
     console.log(JSON.stringify({ fingerprint: receipt.fingerprint, locator: receiptPath,

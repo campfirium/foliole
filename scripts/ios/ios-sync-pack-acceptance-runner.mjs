@@ -5,7 +5,7 @@ export function resolveAcceptanceScenario(value) {
   if (!value || value === 'pairing-signed-transport') return 'pairing-signed-transport';
   if ([
     'content-resource-read', 'database-upgrade-runtime', 'foreground-sync-lifecycle',
-    'state-writeback-runtime', 'device-identity', 'sync-pack-runtime'
+    'state-writeback-runtime', 'device-identity', 'sync-pack-runtime', 'sync-group-discovery-events'
   ].includes(value)) {
     return value;
   }
