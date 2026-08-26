@@ -1,7 +1,7 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
@@ -82,6 +82,25 @@ export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
 }
 
+export function resolveAcceptanceAppOutput(argv = process.argv, root = ROOT) {
+  const index = argv.indexOf('--acceptance-app-output');
+  if (index < 0) return null;
+  const value = argv[index + 1]?.trim();
+  if (!value) throw new Error('--acceptance-app-output requires a path');
+  const allowedRoot = path.resolve(root, '.tmp/artifacts');
+  const resolved = path.resolve(root, value);
+  const relative = path.relative(allowedRoot, resolved);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || !resolved.endsWith('.app')) {
+    throw new Error('MAS acceptance app output must be an .app child of .tmp/artifacts');
+  }
+  return resolved;
+}
+
+export async function exportMasAcceptanceApp(sourcePath, targetPath, options = {}) {
+  await (options.makeDirectory ?? mkdir)(path.dirname(targetPath), { recursive: true });
+  await (options.copy ?? cp)(sourcePath, targetPath, { errorOnExist: true, force: false, recursive: true });
+}
+
 export function createMasArtifactName(productName, version, arch = 'arm64') {
   return `${productName}-${version}-mac-${arch}.pkg`;
 }
@@ -133,7 +152,11 @@ async function main() {
   }
   const mode = process.argv.includes('--distribution') ? 'distribution' : 'development';
   const install = resolveInstallMode();
+  const acceptanceAppOutput = resolveAcceptanceAppOutput();
   if (install && mode !== 'development') throw new Error('Only the MAS development package can be installed locally');
+  if (acceptanceAppOutput && mode !== 'development') {
+    throw new Error('Only the MAS development app can be exported for local acceptance');
+  }
   const codexRelease = await loadPinnedCodexHelperRelease();
   const codexPath = await prepareCodexHelper({ release: codexRelease });
   console.log(`[codex-helper] build=${codexRelease.version}`);
@@ -164,6 +187,7 @@ async function main() {
     const channelDirectory = path.join(outputDirectory, `${mode === 'development' ? 'mas-dev' : 'mas'}-arm64`);
     const appPath = path.join(channelDirectory, 'Foliole.app');
     await verifyPackagedMacosApp({ appPath, mode });
+    if (acceptanceAppOutput) await exportMasAcceptanceApp(appPath, acceptanceAppOutput);
     if (install) await installMasDevelopmentApp({ sourcePath: appPath });
     if (mode === 'distribution') {
       await publishArtifactBatch({

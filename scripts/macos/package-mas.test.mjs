@@ -10,8 +10,10 @@ import {
   cleanMasElectronOutput,
   createMasArtifactName,
   createMasBuilderConfig,
+  exportMasAcceptanceApp,
   installMasDevelopmentApp,
   readProvisioningProfileMetadata,
+  resolveAcceptanceAppOutput,
   resolveInstallMode
 } from './package-mas.mjs';
 
@@ -28,6 +30,25 @@ it('routes the Internal update script through the MAS development package', () =
 
   expect(packageJson.scripts['macos:internal:update']).toBe('node scripts/macos/package-mas.mjs --install');
   expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+});
+
+it('exports a verified MAS development app only inside task artifacts', async () => {
+  const copy = vi.fn(async () => undefined);
+  const makeDirectory = vi.fn(async () => undefined);
+  const target = resolveAcceptanceAppOutput([
+    'node', 'script', '--acceptance-app-output', '.tmp/artifacts/device-anchor/Foliole.app'
+  ], '/repo');
+
+  await exportMasAcceptanceApp('/build/Foliole.app', target, { copy, makeDirectory });
+
+  expect(target).toBe('/repo/.tmp/artifacts/device-anchor/Foliole.app');
+  expect(makeDirectory).toHaveBeenCalledWith('/repo/.tmp/artifacts/device-anchor', { recursive: true });
+  expect(copy).toHaveBeenCalledWith('/build/Foliole.app', target, {
+    errorOnExist: true, force: false, recursive: true
+  });
+  expect(() => resolveAcceptanceAppOutput([
+    'node', 'script', '--acceptance-app-output', '../Foliole.app'
+  ], '/repo')).toThrow('must be an .app child');
 });
 
 it('replaces an installed app without merging stale bundle files', async () => {
