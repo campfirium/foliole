@@ -116,7 +116,11 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
                 FolioleCompanionSyncGroupMaintenanceScenario.togglePause(instrumentation, webView);
             }
             waitParticipation(instrumentation, true, false);
-            sendEvidence(instrumentation, webView, new JSONObject().put("activated", true));
+            JSONObject initialSync = FolioleCompanionSyncGroupMaintenanceScenario
+                .awaitInitialAutomaticSync(instrumentation.getTargetContext(), 30_000);
+            sendEvidence(instrumentation, webView, new JSONObject()
+                .put("activated", true).put("initialSyncPersisted", true)
+                .put("lastSyncedAt", initialSync.optString("lastSyncedAt")));
         } finally {
             instrumentation.runOnMainSync(activity::finish);
         }

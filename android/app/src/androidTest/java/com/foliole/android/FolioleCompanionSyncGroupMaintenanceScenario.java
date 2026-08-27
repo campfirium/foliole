@@ -11,6 +11,8 @@ import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupMaintenanceScenario {
+    private static final String DATABASE_NAME = "foliole-companionSQLite.db";
+
     private FolioleCompanionSyncGroupMaintenanceScenario() {}
 
     static JSONObject leave(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -63,8 +65,44 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
             .put("factPersisted", true).put("factText", factText);
     }
 
+    static JSONObject awaitInitialAutomaticSync(Context context, long timeoutMs) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            latest = readInitialSyncState(context);
+            if (latest.optBoolean("inboxPresent")
+                && !latest.optString("lastSyncedAt").isEmpty()) return latest;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Initial automatic sync did not persist: " + latest);
+    }
+
+    private static JSONObject readInitialSyncState(Context context) {
+        JSONObject state = new JSONObject();
+        String path = context.getDatabasePath(DATABASE_NAME).getPath();
+        try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
+            path, null, SQLiteDatabase.OPEN_READONLY
+        )) {
+            state.put("lastSyncedAt", scalar(database,
+                "SELECT value FROM companion_meta WHERE key = 'workspace_sync_last_synced_at' LIMIT 1"));
+            state.put("syncEvents", scalar(database,
+                "SELECT value FROM companion_meta WHERE key = 'workspace_sync_events' LIMIT 1"));
+            state.put("inboxPresent", !scalar(database,
+                "SELECT id FROM nodes WHERE id = 'special-inbox' AND deleted_at IS NULL LIMIT 1").isEmpty());
+        } catch (Exception error) {
+            try { state.put("readError", error.getMessage()); } catch (Exception ignored) {}
+        }
+        return state;
+    }
+
+    private static String scalar(SQLiteDatabase database, String sql) {
+        try (Cursor cursor = database.rawQuery(sql, null)) {
+            return cursor.moveToFirst() && !cursor.isNull(0) ? cursor.getString(0) : "";
+        }
+    }
+
     private static String findFactId(Context context, String factText) {
-        String path = context.getDatabasePath("foliole-companionSQLite.db").getPath();
+        String path = context.getDatabasePath(DATABASE_NAME).getPath();
         try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
             path, null, SQLiteDatabase.OPEN_READONLY
         ); Cursor cursor = database.rawQuery(
