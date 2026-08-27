@@ -38,8 +38,12 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   const physicalTest = read(
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift'
   );
+  const appDelegate = read('ios/App/App/AppDelegate.swift');
 
   expect(physicalTest).toContain('XCUIApplication(bundleIdentifier: "com.apple.springboard")');
   expect(physicalTest).toContain('respondToLocalNetworkPrompt(allow: true, in: app)');
   expect(physicalTest).toContain('["Allow", "允许"]');
+  expect(physicalTest).toContain('"--foliole-physical-acceptance"');
+  expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
+  expect(appDelegate).toContain('application.isIdleTimerDisabled = true');
 });

@@ -7,7 +7,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         installLocalNetworkPermissionHandler(allow: true)
         app.launch()
 
@@ -40,7 +41,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
     func testLocalNetworkDenialIsVisible() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         installLocalNetworkPermissionHandler(allow: false)
         app.launch()
         openSyncSettings(in: app)
