@@ -6,15 +6,20 @@ it('waits for the exact current Sync Group Device provider', async () => {
   let collect;
   const stop = vi.fn();
   const destroy = vi.fn();
+  const options = [];
   const fetchProvider = vi.fn(async () => ({
     json: async () => ({ group_id: 'group-a', provider_device_id: 'device-a5' }), ok: true
   }));
   const waiting = waitForCurrentA5Provider({ deviceId: 'device-a5', groupId: 'group-a' }, {
-    createBonjour: () => ({ destroy, find: (_query, callback) => {
+    createBonjour: (value) => {
+      options.push(value);
+      return { destroy, find: (_query, callback) => {
       collect = callback;
       return { stop };
-    } }),
+      } };
+    },
     fetchProvider,
+    interfaces: { en0: [{ address: '192.168.0.2', family: 'IPv4', internal: false }] },
     timeoutMs: 1_000
   });
   await collect({ addresses: ['192.168.0.7'], port: 38641,
@@ -26,8 +31,9 @@ it('waits for the exact current Sync Group Device provider', async () => {
   await expect(waiting).resolves.toEqual({
     deviceId: 'device-a5', endpointUrl: 'http://192.168.0.8:38641', groupId: 'group-a'
   });
-  expect(stop).toHaveBeenCalledOnce();
-  expect(destroy).toHaveBeenCalledOnce();
+  expect(options).toEqual([undefined, { interface: '192.168.0.2' }]);
+  expect(stop).toHaveBeenCalledTimes(2);
+  expect(destroy).toHaveBeenCalledTimes(2);
 });
 
 it('rejects a discovery payload that belongs to another Device', async () => {
@@ -40,6 +46,7 @@ it('rejects a discovery payload that belongs to another Device', async () => {
     fetchProvider: async () => ({
       json: async () => ({ group_id: 'group-a', provider_device_id: 'old-device' }), ok: true
     }),
+    interfaces: {},
     timeoutMs: 20
   });
   await collect({ addresses: ['192.168.0.8'], port: 38641,

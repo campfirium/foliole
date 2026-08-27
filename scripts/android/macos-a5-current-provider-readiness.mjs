@@ -1,5 +1,7 @@
 /* global AbortSignal, clearTimeout, fetch, setTimeout */
 
+import os from 'node:os';
+
 import { Bonjour } from 'bonjour-service';
 
 function serviceIpv4Candidates(service) {
@@ -27,10 +29,13 @@ async function probeCurrentProvider(service, expected, fetchProvider) {
 }
 
 export async function waitForCurrentA5Provider(expected, {
-  createBonjour = () => new Bonjour(), fetchProvider = fetch, timeoutMs = 30_000
+  createBonjour = (options) => new Bonjour(options), fetchProvider = fetch,
+  interfaces = os.networkInterfaces(), timeoutMs = 30_000
 } = {}) {
-  const bonjour = createBonjour();
-  let browser;
+  const addresses = [...new Set(Object.values(interfaces).flatMap((entries) => entries ?? [])
+    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
+    .map((entry) => entry.address))];
+  const runtimes = [];
   try {
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(
@@ -42,10 +47,16 @@ export async function waitForCurrentA5Provider(expected, {
         clearTimeout(timer);
         resolve({ deviceId: expected.deviceId, endpointUrl, groupId: expected.groupId });
       };
-      browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+      [null, ...addresses].forEach((networkInterface) => {
+        const bonjour = createBonjour(networkInterface ? { interface: networkInterface } : undefined);
+        const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+        runtimes.push({ bonjour, browser });
+      });
     });
   } finally {
-    browser?.stop();
-    bonjour.destroy();
+    runtimes.forEach(({ bonjour, browser }) => {
+      browser.stop();
+      bonjour.destroy();
+    });
   }
 }
