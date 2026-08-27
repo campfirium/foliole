@@ -9,12 +9,11 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        installLocalNetworkPermissionHandler(allow: true)
         app.launch()
 
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        respondToLocalNetworkPrompt(allow: true, in: app)
+        respondToLocalNetworkPrompt(allow: true)
         tapButton(named: "Join", in: app, timeout: 90)
 
         XCTAssertTrue(
@@ -43,11 +42,10 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        installLocalNetworkPermissionHandler(allow: false)
         app.launch()
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        respondToLocalNetworkPrompt(allow: false, in: app)
+        respondToLocalNetworkPrompt(allow: false)
         XCTAssertTrue(
             app.staticTexts["Allow Local Network access to find Sync Groups nearby."]
                 .waitForExistence(timeout: 45),
@@ -71,28 +69,19 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         button.tap()
     }
 
-    private func installLocalNetworkPermissionHandler(allow: Bool) {
-        addUIInterruptionMonitor(withDescription: "Local Network") { alert in
-            let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
-            for label in labels where alert.buttons[label].exists {
-                alert.buttons[label].tap()
-                return true
-            }
-            return false
-        }
-    }
-
-    private func respondToLocalNetworkPrompt(allow: Bool, in app: XCUIApplication) {
+    private func respondToLocalNetworkPrompt(allow: Bool) {
         let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 15), "Missing Local Network alert.")
         for label in labels {
-            let button = springboard.buttons[label]
+            let button = alert.buttons[label]
             if button.waitForExistence(timeout: 5) {
                 button.tap()
                 return
             }
         }
-        app.tap()
+        XCTFail("Missing Local Network decision button.")
     }
 
     private func attachScreenshot(named name: String) {
