@@ -7,6 +7,7 @@ const exec = promisify(execFile);
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_UDID = '00008110-001109A802A0401E';
 const PROBE_ROOT = '/Users/roamer/P/sys/FriXCUITestProbe';
+const PROBE_APP_ID = 'com.chenyaopeng.FriXCUITestProbe';
 const PREPARED_MARKER = 'prepared.json';
 
 async function bounded(command, args, options = {}) {
@@ -74,9 +75,15 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
     '-resultBundlePath', path.join(artifactRoot, 'fri-control-plane.xcresult'),
     '-allowProvisioningUpdates'];
   try {
-    const output = await execute('xcodebuild', args, { cwd: PROBE_ROOT, timeout: 30_000 });
+    const testOutput = await execute('xcodebuild', args, { cwd: PROBE_ROOT, timeout: 30_000 });
+    const launchOutput = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
+      '--device', FRI_COREDEVICE_ID, '--terminate-existing', '--timeout', '30', PROBE_APP_ID], {
+      cwd: PROBE_ROOT, timeout: 40_000
+    });
+    const output = `${testOutput}${launchOutput}`;
     fsApi.writeFileSync(evidencePath, output, 'utf8');
-    return { facts: ['fri_xcuitest_control_plane_ready'], output, status: 'passed' };
+    return { facts: ['fri_xcuitest_control_plane_ready', 'fri_idle_timer_guard_foreground'],
+      output, status: 'passed' };
   } catch (error) {
     const detail = `${error.stdout || ''}${error.stderr || ''}${error.message || ''}`;
     fsApi.writeFileSync(evidencePath, detail, 'utf8');

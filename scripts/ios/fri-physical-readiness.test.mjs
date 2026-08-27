@@ -43,7 +43,9 @@ it('runs the isolated physical XCUITest control-plane probe', async () => {
   const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-cache-'));
   fs.writeFileSync(path.join(cacheRoot, 'prepared.json'), '{}\n');
   await expect(runFriControlPlaneProbe({ artifactRoot, cacheRoot, execute })).resolves
-    .toMatchObject({ facts: ['fri_xcuitest_control_plane_ready'], status: 'passed' });
+    .toMatchObject({ facts: [
+      'fri_xcuitest_control_plane_ready', 'fri_idle_timer_guard_foreground'
+    ], status: 'passed' });
   expect(calls[0][0]).toBe('xcodebuild');
   expect(calls[0][1][0]).toBe('test-without-building');
   expect(calls[0][1]).toEqual(expect.arrayContaining([
@@ -52,6 +54,12 @@ it('runs the isolated physical XCUITest control-plane probe', async () => {
   ]));
   expect(calls[0][1].some((arg) => /Simulator/u.test(arg))).toBe(false);
   expect(calls[0][2].timeout).toBe(30_000);
+  expect(calls[1][0]).toBe('xcrun');
+  expect(calls[1][1]).toEqual([
+    'devicectl', 'device', 'process', 'launch', '--device', FRI_COREDEVICE_ID,
+    '--terminate-existing', '--timeout', '30', 'com.chenyaopeng.FriXCUITestProbe'
+  ]);
+  expect(calls[1][2].timeout).toBe(40_000);
 });
 
 it('records the current Fri lock as a control-plane blocker', async () => {
