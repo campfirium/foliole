@@ -17,10 +17,11 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 
 const execute = promisify(execFile);
 
-function serviceIpv4(service) {
-  const source = service.referer?.address ?? '';
-  if (/^\d+\.\d+\.\d+\.\d+$/u.test(source)) return source;
-  return service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/u.test(value)) ?? null;
+function serviceIpv4Candidates(service) {
+  const advertised = typeof service.txt?.ipv4_addresses === 'string'
+    ? service.txt.ipv4_addresses.split(',') : [];
+  return [...new Set([service.referer?.address, ...(service.addresses ?? []), ...advertised]
+    .filter((value) => /^\d+\.\d+\.\d+\.\d+$/u.test(value ?? '')))];
 }
 
 export async function waitForMacosProvider(groupId, port, {
@@ -34,18 +35,20 @@ export async function waitForMacosProvider(groupId, port, {
         'Mac acceptance provider was not published before Windows discovery.'
       )), timeoutMs);
       const collect = async (service) => {
-        const host = serviceIpv4(service);
-        if (!host || service.port !== Number(port) || service.txt?.group_id !== groupId) return;
-        try {
-          const endpointUrl = `http://${host}:${service.port}`;
-          const response = await fetchProvider(`${endpointUrl}/companion/discovery`, {
-            signal: AbortSignal.timeout(2_000)
-          });
-          const payload = response.ok ? await response.json() : null;
-          if (payload?.group_id !== groupId) return;
-          clearTimeout(timer);
-          resolve({ endpointUrl, serviceName: service.name });
-        } catch { /* Continue waiting for a reachable advertisement. */ }
+        if (service.port !== Number(port) || service.txt?.group_id !== groupId) return;
+        for (const host of serviceIpv4Candidates(service)) {
+          try {
+            const endpointUrl = `http://${host}:${service.port}`;
+            const response = await fetchProvider(`${endpointUrl}/companion/discovery`, {
+              signal: AbortSignal.timeout(2_000)
+            });
+            const payload = response.ok ? await response.json() : null;
+            if (payload?.group_id !== groupId) continue;
+            clearTimeout(timer);
+            resolve({ endpointUrl, serviceName: service.name });
+            return;
+          } catch { /* Try the next address carried by this advertisement. */ }
+        }
       };
       browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
     });

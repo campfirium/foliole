@@ -10,10 +10,13 @@ it('waits for the exact reachable Mac provider before starting Windows discovery
   const browser = { stop: vi.fn() };
   const bonjour = { destroy: vi.fn(), find: vi.fn((_query, collect) => {
     void Promise.resolve().then(() => collect({ name: 'Mac provider', port: 38642,
-      referer: { address: '192.168.0.10' }, txt: { group_id: 'group-a' } }));
+      addresses: ['192.168.0.10'], referer: { address: '169.254.161.89' },
+      txt: { group_id: 'group-a', ipv4_addresses: '192.168.0.10,198.18.0.1' } }));
     return browser;
   }) };
-  const fetchProvider = vi.fn(async () => ({ json: async () => ({ group_id: 'group-a' }), ok: true }));
+  const fetchProvider = vi.fn(async (url) => url.includes('192.168.0.10')
+    ? { json: async () => ({ group_id: 'group-a' }), ok: true }
+    : Promise.reject(new Error('unreachable route')));
   await expect(waitForMacosProvider('group-a', 38642, {
     createBonjour: () => bonjour, fetchProvider, timeoutMs: 100
   })).resolves.toMatchObject({ serviceName: 'Mac provider' });
