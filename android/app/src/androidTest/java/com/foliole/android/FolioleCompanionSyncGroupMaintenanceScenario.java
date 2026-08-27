@@ -56,7 +56,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
             instrumentation, webView, "companion-capture-text", "input", factText
         );
         if (!input.optBoolean("ok")) throw new IllegalStateException(input.toString());
-        click(instrumentation, webView, "companion-capture-save");
+        clickEnabled(instrumentation, webView, "companion-capture-save");
         waitUntilMissing(instrumentation, webView, "companion-capture-save", 30_000);
         String factId = findFactId(instrumentation.getTargetContext(), factText);
         return new JSONObject().put("factId", factId)

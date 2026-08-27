@@ -111,6 +111,7 @@ it('creates journey facts only through the visible Capture product entry', async
     'utf8'
   );
   expect(source).toContain('FolioleCompanionCaptureNavigation.enterBrowseSurface');
+  expect(source).toContain('clickEnabled(instrumentation, webView, "companion-capture-save")');
   expect(source).toContain('"companion-capture-open"');
   expect(source).toContain('"companion-capture-text", "input", factText');
   expect(source).toContain('"companion-capture-save"');
