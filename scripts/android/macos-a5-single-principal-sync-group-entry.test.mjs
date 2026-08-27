@@ -43,3 +43,12 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
 });
+
+it('enters Browse through the visible bottom tab from Settings', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionCaptureNavigation.java',
+    'utf8'
+  );
+  expect(source).toContain('BROWSE_TAB = "companion-tab-browse"');
+  expect(source).toContain('? BROWSE_TAB : TOP_BAR_LEFT_ACTION');
+});
