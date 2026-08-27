@@ -9,6 +9,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
+        resetExistingSyncGroup(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
         XCTAssertTrue(app.staticTexts["Searching..."].waitForExistence(timeout: 30),
@@ -21,6 +22,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.launch()
 
         openSyncSettings(in: app)
+        resetExistingSyncGroup(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
         tapButton(named: "Join", in: app, timeout: 90)
@@ -75,6 +77,17 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
         sync.tap()
+    }
+
+    private func resetExistingSyncGroup(in app: XCUIApplication) {
+        guard app.buttons["Sync Now"].exists else { return }
+        tapButton(named: "Details", in: app, timeout: 15)
+        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
+        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
+        if app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30) { return }
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
+                      "The isolated physical acceptance Sync Group was not reset.")
     }
 
     private func tapButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {

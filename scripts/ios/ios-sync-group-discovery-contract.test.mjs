@@ -48,6 +48,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('Fri-local-network-allow');
   expect(physicalTest).toContain('testPreparesLocalNetworkPermission()');
   expect(physicalTest).toContain('Fri-local-network-ready');
+  expect(physicalTest).toContain('resetExistingSyncGroup(in: app)');
+  expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
