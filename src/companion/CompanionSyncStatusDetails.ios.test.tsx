@@ -10,6 +10,7 @@ it.each(['ios-capacitor', 'ios'])('shows %s Device records as iOS', (deviceKind)
     <CompanionSyncStatusDetails
       endpointUrl="http://192.168.1.10:38641"
       lastSyncedAt={null}
+      onLeaveSyncGroup={vi.fn()}
       onOpenPage={vi.fn()}
       page="syncConnection"
       syncGroup={{

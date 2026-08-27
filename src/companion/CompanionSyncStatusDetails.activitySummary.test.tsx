@@ -11,6 +11,7 @@ function renderActivity(events: ComponentProps<typeof CompanionSyncStatusDetails
     <CompanionSyncStatusDetails
       endpointUrl="http://10.0.2.2:38641"
       lastSyncedAt={null}
+      onLeaveSyncGroup={vi.fn()}
       onOpenPage={vi.fn()}
       page="syncActivity"
       syncGroup={{ created_at: '', devices: [], display_name: 'Studio', group_id: 'group-1', local_device_identity_key: '' }}
