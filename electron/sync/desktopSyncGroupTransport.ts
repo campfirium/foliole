@@ -1,5 +1,5 @@
 import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
@@ -30,14 +30,14 @@ export async function continueDesktopSyncGroupSync(peer?: DesktopSyncGroupPeer) 
 }
 
 async function continuePeerSync(target: DesktopSyncGroupPeer) {
-  const cursor = loadReceiveCursor(target.peer_device_id);
+  const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
-  saveReceiveCursor(target.peer_device_id, nextCursor);
+  await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
   await reportDesktopSyncGroupCursorCommitted({
     cursor: nextCursor, peerAuthorizationId: target.peer_device_id
   });
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
-  const complete = resourcesComplete();
+  const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
   refreshCompanionMdnsAdvertisement();
   return { complete, cursor: nextCursor };
 }

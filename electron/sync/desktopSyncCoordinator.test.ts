@@ -7,6 +7,9 @@ const transport = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/settingsStore.js', () => settings);
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
+}));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
 
 import { loadDesktopSyncTriggerResult, runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';

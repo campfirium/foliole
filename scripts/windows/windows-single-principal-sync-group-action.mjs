@@ -30,9 +30,15 @@ async function waitForJourneyOrigins(page, origins, timeoutMs = 2 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   let snapshot;
   while (Date.now() < deadline) {
-    snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
+    try {
+      snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
+        includePdfOpenings: false
+      });
+    } catch (error) {
+      if (!String(error?.message).includes('sqlite connection is owned')) throw error;
+      await delay(500);
+      continue;
+    }
     if (hasJourneyOrigins(snapshot, origins)) return snapshot;
     await delay(500);
   }
@@ -43,9 +49,15 @@ async function waitForJourneyOriginCount(page, origin, count, timeoutMs = 2 * 60
   const deadline = Date.now() + timeoutMs;
   let snapshot;
   while (Date.now() < deadline) {
-    snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
+    try {
+      snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
+        includePdfOpenings: false
+      });
+    } catch (error) {
+      if (!String(error?.message).includes('sqlite connection is owned')) throw error;
+      await delay(500);
+      continue;
+    }
     if (journeyOriginCount(snapshot, origin) >= count) return snapshot;
     await delay(500);
   }
@@ -68,7 +80,12 @@ async function waitForAutomaticSync(app, previousRunId, timeoutMs = 2 * 60_000) 
   const deadline = Date.now() + timeoutMs;
   let result;
   while (Date.now() < deadline) {
-    result = await loadSyncTriggerResult(app);
+    try { result = await loadSyncTriggerResult(app); }
+    catch (error) {
+      if (!String(error?.message).includes('sqlite connection is owned')) throw error;
+      await delay(500);
+      continue;
+    }
     if (result?.run_id !== previousRunId && result?.reason === 'automatic'
         && result?.status === 'completed') return result;
     await delay(500);

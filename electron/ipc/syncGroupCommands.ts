@@ -106,19 +106,27 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin) {
     await completeDesktopSyncGroupJoin();
-    await activateDesktopCompanionSync(runtimeIdentity());
-    return overview();
+    return runWithDatabaseConnectionOwner(async () => {
+      await activateDesktopCompanionSync(runtimeIdentity());
+      return overview();
+    });
   }
   if (command === NATIVE_COMMANDS.enableCompanionSync) await enableDesktopCompanionSync(runtimeIdentity());
   else if (command === NATIVE_COMMANDS.disableCompanionSync) await disableDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.pauseCompanionSync) await pauseDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(runtimeIdentity());
-  else if (command === NATIVE_COMMANDS.syncCompanionNow) await runDesktopSyncCoordinator('manual');
+  else if (command === NATIVE_COMMANDS.syncCompanionNow) {
+    await runDesktopSyncCoordinator('manual');
+    return runWithDatabaseConnectionOwner(() => overview());
+  }
   else return mutateJoinRequest(command, args);
   return overview();
 }
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
+  if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow) {
+    return handleOwned(command, args);
+  }
   return runWithDatabaseConnectionOwner(() => handleOwned(command, args));
 }

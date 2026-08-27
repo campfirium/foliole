@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
@@ -43,7 +43,7 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   peer: Peer;
 }) {
   const pathWithQuery = `/companion/sync-pack?after_state_seq=${args.after}`;
-  const key = loadDesktopWorkgroupKey(args.peer.group_id);
+  const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(args.peer.group_id));
   if (!key) throw new Error('sync_group_workgroup_key_missing');
   const response = await fetch(`${args.peer.endpoint_url}${pathWithQuery}`, {
     headers: args.createHeaders({ groupId: args.peer.group_id,
@@ -75,12 +75,13 @@ async function applyDownloadedPack(
     expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
   });
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
+  const hostName = await runWithDatabaseConnectionOwner(() => loadOrCreateDesktopHostName());
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   let event;
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: args.after, hostName: loadOrCreateDesktopHostName(),
+      currentCursor: args.after, hostName,
       incomingAlias: 'inc', sourceHostName: sourceDeviceName,
       sourcePeerId: args.peer.peer_device_id
     });

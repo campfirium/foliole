@@ -18,13 +18,17 @@ const JOINED_GROUP = {
 };
 
 const mocks = vi.hoisted(() => ({
-  coordinator: vi.fn(async () => ({ reason: 'initial', status: 'completed' })),
+  coordinator: vi.fn(async () => {
+    if (mocks.ownerDepth !== 0) throw new Error('network sync retained the database owner');
+    return { reason: 'initial', status: 'completed' };
+  }),
   decrypt: vi.fn(async () => JSON.stringify({
     display_name: 'Studio', group_id: 'group-1',
     workgroup_key: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
   })),
   existingGroup: null as typeof JOINED_GROUP | null,
   join: vi.fn(() => JOINED_GROUP),
+  ownerDepth: 0,
   requestJson: vi.fn(async (url: string, init?: { body: string }) => {
     void init;
     return url.endsWith('/join-requests')
@@ -37,7 +41,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db' })
+  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db' }),
+  runWithDatabaseConnectionOwner: async (execute: () => unknown) => {
+    mocks.ownerDepth += 1;
+    try { return await execute(); }
+    finally { mocks.ownerDepth -= 1; }
+  }
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
   joinDesktopSyncGroup: mocks.join, loadDesktopSyncGroup: () => mocks.existingGroup
@@ -66,6 +75,7 @@ import {
 afterEach(() => {
   vi.clearAllMocks();
   mocks.existingGroup = null;
+  mocks.ownerDepth = 0;
   mocks.state = { candidates: [], pending: null };
 });
 

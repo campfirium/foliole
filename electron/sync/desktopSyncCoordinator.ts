@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { SyncTriggerReason, SyncTriggerResult } from '../../lib/platform/syncTriggerContract.js';
 import { syncTriggerError } from '../../lib/platform/syncTriggerContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 import {
@@ -33,23 +34,24 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
   try {
-    const peers = preferredPeer ? [preferredPeer] : loadDesktopSyncGroupPeers();
+    const peers = preferredPeer ? [preferredPeer]
+      : await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupPeers());
     if (peers.length === 0) {
       if (reason === 'manual') throw new Error('sync_group_peer_unavailable');
-      return persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+      return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
         run_id: runId, started_at: startedAt, status: 'skipped' });
     }
     for (const peer of peers) await continueDesktopSyncGroupSync(peer);
-    return persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+    return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'completed' });
   } catch (error) {
-    persistResult({ error: syncTriggerError(error), finished_at: new Date().toISOString(), reason,
+    await persistResult({ error: syncTriggerError(error), finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'failed' });
     throw error;
   }
 }
 
-function persistResult(result: SyncTriggerResult) {
-  saveJsonSetting(RESULT_SETTING_KEY, result);
+async function persistResult(result: SyncTriggerResult) {
+  await runWithDatabaseConnectionOwner(() => saveJsonSetting(RESULT_SETTING_KEY, result));
   return result;
 }

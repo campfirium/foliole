@@ -3,7 +3,7 @@ import {
   SYNC_GROUP_JOIN_CONTRACT_VERSION,
   type SyncGroupJoinAcceptance
 } from '../../lib/platform/syncGroupJoinContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
@@ -72,7 +72,7 @@ export async function completeDesktopSyncGroupJoin() {
 }
 
 async function completeDesktopSyncGroupJoinOnce() {
-  const pending = loadDesktopSyncGroupJoinState().pending;
+  const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
   if (!pending) throw new Error('sync_group_join_not_pending');
   let payload: Record<string, unknown>;
   try {
@@ -92,28 +92,28 @@ async function completeDesktopSyncGroupJoinOnce() {
   );
   const groupInfo = parseSyncGroupJoinGroupInfo(JSON.parse(plaintext));
   if (groupInfo.group_id !== pending.candidate.group_id) throw new Error('sync_group_identity_mismatch');
-  const connection = openDatabaseConnection();
-  const { identity } = await loadDesktopDeviceIdentity({
-    groupId: groupInfo.group_id, libraryPath: connection.dbPath
-  });
-  const group = joinDesktopSyncGroup({
-    device: identity,
-    deviceName: resolveDesktopHostName(),
-    displayName: groupInfo.display_name,
-    platform: process.platform,
-    workgroupKey: groupInfo.workgroup_key
-  });
-  saveDesktopSyncGroupPendingJoin(null);
-  const route = saveDesktopSyncGroupRoute({
-    endpoint_url: pending.candidate.endpoint_url,
-    group_id: groupInfo.group_id,
-    local_device_id: group.local_device_identity_key,
-    peer_device_id: pending.candidate.provider_device_id,
-    peer_device_name: pending.candidate.provider_device_name,
-    peer_platform: pending.candidate.provider_platform
+  const route = await runWithDatabaseConnectionOwner(async () => {
+    const connection = openDatabaseConnection();
+    const { identity } = await loadDesktopDeviceIdentity({
+      groupId: groupInfo.group_id, libraryPath: connection.dbPath
+    });
+    const group = joinDesktopSyncGroup({
+      device: identity, deviceName: resolveDesktopHostName(),
+      displayName: groupInfo.display_name, platform: process.platform,
+      workgroupKey: groupInfo.workgroup_key
+    });
+    saveDesktopSyncGroupPendingJoin(null);
+    return saveDesktopSyncGroupRoute({
+      endpoint_url: pending.candidate.endpoint_url,
+      group_id: groupInfo.group_id,
+      local_device_id: group.local_device_identity_key,
+      peer_device_id: pending.candidate.provider_device_id,
+      peer_device_name: pending.candidate.provider_device_name,
+      peer_platform: pending.candidate.provider_platform
+    });
   });
   await runDesktopSyncCoordinator('initial', route);
-  return loadDesktopSyncGroup();
+  return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
 }
 
 function parseAcceptance(value: Record<string, unknown>, requestId: string): SyncGroupJoinAcceptance {
