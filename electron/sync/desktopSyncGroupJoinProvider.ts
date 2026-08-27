@@ -1,6 +1,7 @@
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { registerSyncGroupDevice, loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
+import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { DesktopSyncGroupJoinProvider } from './syncGroupJoinProvider.js';
 
 let active: { groupId: string; provider: DesktopSyncGroupJoinProvider } | null = null;
@@ -14,7 +15,7 @@ export function loadDesktopSyncGroupJoinProvider() {
   }
   if (active?.groupId === groupInfo.group_id) return active.provider;
   active?.provider.clear();
-  const provider = new DesktopSyncGroupJoinProvider(groupInfo, (device) => {
+  const provider = new DesktopSyncGroupJoinProvider(groupInfo, async (device) => {
     registerSyncGroupDevice({
       device: createSyncGroupDeviceIdentity({
         device_anchor: device.device_anchor,
@@ -25,6 +26,7 @@ export function loadDesktopSyncGroupJoinProvider() {
       deviceName: device.device_name,
       platform: device.platform
     });
+    await refreshCompanionMdnsAdvertisement();
   });
   active = { groupId: groupInfo.group_id, provider };
   return provider;
