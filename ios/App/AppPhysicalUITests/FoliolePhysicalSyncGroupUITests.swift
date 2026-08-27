@@ -5,10 +5,19 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testPreparesLocalNetworkPermission() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
+        waitForLocalNetworkDecision(allow: true)
+        XCTAssertTrue(app.staticTexts["Searching..."].waitForExistence(timeout: 30),
+                      "Local Network discovery did not enter its ready searching state.")
+        attachScreenshot(named: "Fri-local-network-ready")
+    }
+
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["--foliole-physical-acceptance",
-                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        let app = acceptanceApplication()
         app.launch()
 
         openSyncSettings(in: app)
@@ -39,9 +48,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     }
 
     func testLocalNetworkDenialIsVisible() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["--foliole-physical-acceptance",
-                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
@@ -52,6 +59,13 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The physical iPhone did not expose denied Local Network discovery."
         )
         attachScreenshot(named: "Fri-local-network-denied")
+    }
+
+    private func acceptanceApplication() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        return app
     }
 
     private func openSyncSettings(in app: XCUIApplication) {

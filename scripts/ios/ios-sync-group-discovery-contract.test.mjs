@@ -46,6 +46,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('waitForLocalNetworkDecision(allow: true)');
   expect(physicalTest).toContain('NSPredicate(format: "exists == false")');
   expect(physicalTest).toContain('Fri-local-network-allow');
+  expect(physicalTest).toContain('testPreparesLocalNetworkPermission()');
+  expect(physicalTest).toContain('Fri-local-network-ready');
   expect(physicalTest).toContain('["Allow", "允许"]');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
