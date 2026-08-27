@@ -91,6 +91,21 @@ it('continues sync with a saved Device when its provider advertises again', asyn
   expect(runtime.credentialAccess).not.toHaveBeenCalled();
 });
 
+it('publishes the discovered Device route while automatic sync is still active', async () => {
+  const active = deferred<{ complete: boolean; cursor: number }>();
+  runtime.continueSync.mockReturnValueOnce(active.promise);
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
+    addresses: ['192.168.1.12'], port: 43121,
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
+  });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
+    endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
+  })]);
+  active.resolve({ complete: true, cursor: 9 });
+});
+
 it('does not start a session for an advertised v2 Device', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({

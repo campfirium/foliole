@@ -122,7 +122,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       if (suffix === 'initial-manual') {
         args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
         args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-          `${ACCEPTANCE_APP_ID}/.MainActivity`]);
+          `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
       }
     }
     await session.invoke('sync_companion_now');

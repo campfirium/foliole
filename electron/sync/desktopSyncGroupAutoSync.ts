@@ -109,11 +109,14 @@ async function syncAcrossAvailableEndpoints(
   for (const endpoint of args.endpoints) {
     const peer = resolveDiscoveredPeer(group, args, endpoint);
     if (!peer) return;
+    saveDesktopSyncGroupRoute(peer);
     try {
       await runDesktopSyncCoordinator('automatic', peer);
-      saveDesktopSyncGroupRoute(peer);
       return;
-    } catch (error) { lastError = error; }
+    } catch (error) {
+      removeDesktopSyncGroupRoute(peer.peer_device_id);
+      lastError = error;
+    }
   }
   throw lastError;
 }

@@ -139,7 +139,7 @@ export async function runMacosA5InstrumentationMechanics({
     observation ??= concurrentObservationTask
       ? await concurrentObservationTask : await observeWhileTransportOpen?.();
     if (restartApp) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'start', '-n', `${appId}/${APP_ID}.MainActivity`],
+      ['-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/${APP_ID}.MainActivity`],
       options, 'activity restart')).output);
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } finally {
