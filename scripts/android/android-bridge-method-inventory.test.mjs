@@ -10,8 +10,7 @@ const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android
 const TYPES_FILES = [
   'companionWorkspaceSyncPluginTypes.ts',
   'companionAttachmentResourceSyncPluginTypes.ts',
-  'companionContentBlobSyncPluginTypes.ts',
-  'companionPairingSyncPluginTypes.ts'
+  'companionContentBlobSyncPluginTypes.ts'
 ];
 
 function sortedUnique(values) {
