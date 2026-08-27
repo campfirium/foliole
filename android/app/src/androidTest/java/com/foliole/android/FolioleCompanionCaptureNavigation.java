@@ -3,6 +3,8 @@ package com.foliole.android;
 import android.app.Instrumentation;
 import android.webkit.WebView;
 
+import org.json.JSONObject;
+
 final class FolioleCompanionCaptureNavigation {
     private static final String BROWSE_READY = "companion-capture-open";
     private static final String BROWSE_TAB = "companion-tab-browse";
@@ -20,9 +22,12 @@ final class FolioleCompanionCaptureNavigation {
     ) throws Exception {
         if (!hasTestId(instrumentation, webView, BROWSE_READY)) {
             String entry = waitForBrowseEntry(instrumentation, webView, timeoutMs);
-            FolioleCompanionCaptureAnnotationScenario.perform(
+            JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
                 instrumentation, webView, entry, "click", ""
             );
+            if (!receipt.optBoolean("ok") && !"target_missing".equals(receipt.optString("code"))) {
+                throw new IllegalStateException("Browse navigation failed: " + receipt);
+            }
         }
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
             instrumentation, webView, BROWSE_READY, timeoutMs

@@ -82,4 +82,5 @@ it('enters Browse through the visible bottom tab from Settings', () => {
   expect(source).toContain(
     'if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;'
   );
+  expect(source).toContain('!"target_missing".equals(receipt.optString("code"))');
 });
