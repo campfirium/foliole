@@ -42,11 +42,10 @@ it('pins one independent source snapshot to each Device sync-pack cycle', async 
 it('publishes Device discovery facts and waits for NSD retirement', async () => {
   const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
   for (const key of [
-    'group_id', 'group_tag', 'provider_device_id', 'provider_device_name',
-    'provider_platform', 'runtime_instance_id'
+    'device_id', 'group_id', 'group_tag', 'runtime_instance_id'
   ]) expect(advertisement).toContain(`put(info, "${key}"`);
   expect(advertisement).toContain('unregistered.await(5, TimeUnit.SECONDS)');
-  expect(advertisement).not.toMatch(/peer_id|timeline_id|authorization_id/u);
+  expect(advertisement).not.toMatch(/peer_id|provider_device_|timeline_id|authorization_id/u);
 });
 
 it('keeps provider lifecycle state complete and owned by one active bridge', async () => {
