@@ -6,12 +6,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { waitForCurrentA5Provider } from './macos-a5-current-provider-readiness.mjs';
+import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
 import { openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest } from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
+import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 
 const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
@@ -58,13 +60,6 @@ function validateJoin({ args, evidencePath, stdout }) {
       evidenceRef: evidencePath, missingFact: 'a5_device_join_persistence', productError
     });
   }
-}
-
-function inspectJourneyOrigins(database) {
-  const rows = database.prepare(`SELECT title FROM nodes WHERE deleted_at IS NULL
-    AND title GLOB 'Multi-device sync [ABC] fact*'`).all();
-  return rows.map(({ title }) => title.match(/Multi-device sync ([ABC]) fact/u)?.[1])
-    .filter(Boolean).sort();
 }
 
 async function waitForMacFact(session, factId) {
@@ -131,6 +126,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   const session = await openSession({ env, libraryHome: path.join(sharedRoot, 'macos-library'),
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
+    const desktopInitialFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     assertMacosAcceptanceSyncGroupServer(await session.enable());
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'
@@ -146,6 +143,18 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
+    const initialFacts = [{ factId: desktopInitialFact.factId, origin: 'A' }];
+    const initialSnapshot = await collectAndroidDeviceSnapshot({ adb: args.paths.adb,
+      appId: ACCEPTANCE_APP_ID, databaseInspector: (database) =>
+        inspectExpectedJourneyFacts(database, initialFacts), includeAttachments: false,
+      includeEvents: false, serial: args.serial, tables: ['nodes'] });
+    if (!initialSnapshot.database?.inspection
+        || initialSnapshot.database.inspection.missingIds.length) {
+      throw new Error('A5 initial Sync did not receive the desktop business fact.');
+    }
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
+      `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
@@ -153,6 +162,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     const factReceipt = JSON.parse(fs.readFileSync(androidFact.manifestPath, 'utf8')).receipt;
     await waitForMacFact(session, factReceipt.factId);
+    const desktopManualFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
     for (const suffix of ['initial-manual', 'restart-manual']) {
       await runMacosA5SyncGroupMaintenance({
         action: 'sync-now', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
@@ -177,15 +188,19 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await waitForMacFact(session, factReceipt.factId);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
     const snapshot = await collectAndroidDeviceSnapshot({ adb: args.paths.adb,
-      appId: ACCEPTANCE_APP_ID, databaseInspector: inspectJourneyOrigins,
+      appId: ACCEPTANCE_APP_ID, databaseInspector: (database) => inspectExpectedJourneyFacts(
+        database, [...initialFacts, { factId: factReceipt.factId, origin: 'B' },
+          { factId: desktopManualFact.factId, origin: 'A' }]
+      ),
       includeAttachments: false, includeEvents: false, serial: args.serial, tables: ['nodes'] });
-    const journeyOrigins = snapshot.database?.inspection ?? [];
-    if (!['A', 'B', 'C'].every((origin) => journeyOrigins.includes(origin))) {
-      throw new Error(`A5 business facts did not converge: ${journeyOrigins.join(',')}`);
+    const journeyFacts = snapshot.database?.inspection;
+    if (!journeyFacts || journeyFacts.missingIds.length) {
+      throw new Error(`A5 business facts did not converge: ${journeyFacts?.missingIds.join(',') ?? 'snapshot unavailable'}`);
     }
     fs.writeFileSync(path.join(evidenceRoot, 'result.json'), `${JSON.stringify({
       buildIdentity, completedAt: new Date().toISOString(),
-      androidFactId: factReceipt.factId, journeyOrigins, observation: result.observation,
+      androidFactId: factReceipt.factId, journeyFactIds: journeyFacts.foundIds,
+      journeyOrigins: journeyFacts.origins, observation: result.observation,
       resultStatus: 'success', sharedRoot
     }, null, 2)}\n`, 'utf8');
     process.stdout.write(result.output);

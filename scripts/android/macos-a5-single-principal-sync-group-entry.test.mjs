@@ -2,6 +2,8 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
+import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
+
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
   const source = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-sync-group-entry.mjs', 'utf8'
@@ -22,8 +24,12 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");
+  expect(source).toContain('createDesktopSyncGroupJourneyFact');
+  expect(source).toContain("'desktop-initial-fact'");
+  expect(source).toContain('A5 initial Sync did not receive the desktop business fact.');
+  expect(source).toContain("'desktop-manual-fact'");
   expect(source).toContain("action: 'sync-now'");
-  expect(source).toContain("['A', 'B', 'C'].every");
+  expect(source).toContain('journeyFacts.missingIds');
   expect(source).toContain('productError');
   expect(source).toContain("'join-failure-screen.png'");
   expect(source).toContain("'screencap', '-p', remotePath");
@@ -33,6 +39,18 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+});
+
+it('binds A5 convergence to only the exact facts created by the current attempt', () => {
+  const database = { prepare: () => ({ all: (...ids) => ids
+    .filter((id) => id !== 'missing').map((id) => ({ id })) }) };
+  expect(inspectExpectedJourneyFacts(database, [
+    { factId: 'desktop-initial', origin: 'A' },
+    { factId: 'android', origin: 'B' },
+    { factId: 'missing', origin: 'A' }
+  ])).toEqual({
+    foundIds: ['desktop-initial', 'android'], missingIds: ['missing'], origins: ['A', 'B']
+  });
 });
 
 it('short-circuits the physical A5 journey with named product stages', () => {
