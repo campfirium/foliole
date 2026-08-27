@@ -29,13 +29,9 @@ async function checked(execute, command, args, options, stage) {
     host: 'android-b', missingFact: stage, result });
 }
 
-async function createInitialFact({ evidenceRoot, sessionOptions }) {
-  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  try {
-    await session.enable();
-    return createDesktopSyncGroupJourneyFact({ device: 'A',
-      evidenceRoot: path.join(evidenceRoot, 'initial-fact'), session });
-  } finally { await session.close().catch(() => undefined); }
+async function createInitialFact({ evidenceRoot, session }) {
+  return createDesktopSyncGroupJourneyFact({ device: 'A',
+    evidenceRoot: path.join(evidenceRoot, 'initial-fact'), session });
 }
 
 async function restartAndroid(execute, paths, env) {
@@ -58,16 +54,12 @@ export async function performFreshJoinSequence({
 }
 
 async function runFreshJoinInitialSync({
-  buildIdentity, env, evidenceRoot, execute, observe, paths, sessionOptions
+  buildIdentity, env, evidenceRoot, execute, observe, paths
 }) {
-  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  try {
-    await session.enable();
-    const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
-      observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
-    return result.observation;
-  } finally { await session.close().catch(() => undefined); }
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
+    evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
+    observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
+  return result.observation;
 }
 
 function validateJoin({ evidencePath, stdout }) {
@@ -78,24 +70,20 @@ function validateJoin({ evidencePath, stdout }) {
   });
 }
 
-async function joinA5({ buildIdentity, env, evidenceRoot, execute, paths, sessionOptions }) {
-  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  try {
-    await session.enable();
-    return runMacosA5InstrumentationMechanics({ buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
-      observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,
-      validateInstrumentation: validateJoin,
-      observeWhileTransportOpen: async (options) => {
-        const request = await waitForMacosDeviceRequest(session, null, options);
-        await session.accept(request.request_id);
-        const overview = await session.load();
-        if (overview.sync_group?.devices?.length !== 2) {
-          throw new Error('Mac did not persist A5 as the second Device.');
-        }
-        return { groupId: overview.sync_group.group_id, requestId: request.request_id };
-      } });
-  } finally { await session.close().catch(() => undefined); }
+async function joinA5({ buildIdentity, env, evidenceRoot, execute, paths, session }) {
+  return runMacosA5InstrumentationMechanics({ buildIdentity, env,
+    evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
+    observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,
+    validateInstrumentation: validateJoin,
+    observeWhileTransportOpen: async (options) => {
+      const request = await waitForMacosDeviceRequest(session, null, options);
+      await session.accept(request.request_id);
+      const overview = await session.load();
+      if (overview.sync_group?.devices?.length !== 2) {
+        throw new Error('Mac did not persist A5 as the second Device.');
+      }
+      return { groupId: overview.sync_group.group_id, requestId: request.request_id };
+    } });
 }
 
 export async function establishFreshAB({ execute, reportProgress, repoRoot, runId }) {
@@ -109,11 +97,14 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root
   });
-  const journey = await performFreshJoinSequence({
-    createFact: () => createInitialFact({ evidenceRoot, sessionOptions }),
+  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
+  await session.enable();
+  let journey;
+  try { journey = await performFreshJoinSequence({
+    createFact: () => createInitialFact({ evidenceRoot, session }),
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
-        paths, sessionOptions });
+        paths, session });
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },
@@ -121,8 +112,8 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     receiveAfterRestart: (factId) => waitForAndroidJourneyFact(paths, factId),
     restart: () => restartAndroid(execute, paths, env),
     syncNow: (_factId, observe) => runFreshJoinInitialSync({ buildIdentity: runId, env,
-      evidenceRoot, execute, observe, paths, sessionOptions })
-  });
+      evidenceRoot, execute, observe, paths })
+  }); } finally { await session.close().catch(() => undefined); }
   const { mutationFact, pairResult, received, restarted } = journey;
   const mutation = { factId: mutationFact.factId, origin: 'A', runId };
   const proof = assertFreshJoinInitialConvergence({ mutation,
