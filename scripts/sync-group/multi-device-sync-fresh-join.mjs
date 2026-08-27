@@ -2,15 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
+import {
+  runMacosA5InstrumentationMechanics
+} from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
-import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
+import {
+  openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
+} from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import {
-  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
-  openMacosAcceptanceTransport, validateMacosAcceptanceDesktopPreflight
+  macosAcceptanceEnv, macosAcceptanceSessionOptions
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
@@ -18,6 +20,7 @@ import {
 } from './sync-scenario-predicate.mjs';
 
 const APP_ID = 'com.foliole.android';
+const JOIN_TEST = `${APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
 async function checked(execute, command, args, options, stage) {
   const result = await execute(command, args, options);
@@ -27,7 +30,7 @@ async function checked(execute, command, args, options, stage) {
 }
 
 async function createInitialFact({ evidenceRoot, sessionOptions }) {
-  const session = await openMacosPairSyncDesktopSession(sessionOptions);
+  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
   try {
     await session.enable();
     return createDesktopSyncGroupJourneyFact({ device: 'A',
@@ -57,13 +60,41 @@ export async function performFreshJoinSequence({
 async function runFreshJoinInitialSync({
   buildIdentity, env, evidenceRoot, execute, observe, paths, sessionOptions
 }) {
-  const session = await openMacosPairSyncDesktopSession(sessionOptions);
+  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
   try {
     await session.enable();
     const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
       observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
     return result.observation;
+  } finally { await session.close().catch(() => undefined); }
+}
+
+function validateJoin({ evidencePath, stdout }) {
+  if (/folioleSyncGroupJoinReceipt=.*"joined":true.*"restarted":true/u.test(stdout)
+      && /INSTRUMENTATION_CODE: -1/mu.test(stdout)) return;
+  throw Object.assign(new Error('A5 Device join and restart evidence is incomplete.'), {
+    evidenceRef: evidencePath, missingFact: 'a5_device_join_persistence'
+  });
+}
+
+async function joinA5({ buildIdentity, env, evidenceRoot, execute, paths, sessionOptions }) {
+  const session = await openMacosSyncGroupDesktopSession(sessionOptions);
+  try {
+    await session.enable();
+    return runMacosA5InstrumentationMechanics({ buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
+      observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,
+      validateInstrumentation: validateJoin,
+      observeWhileTransportOpen: async (options) => {
+        const request = await waitForMacosDeviceRequest(session, null, options);
+        await session.accept(request.request_id);
+        const overview = await session.load();
+        if (overview.sync_group?.devices?.length !== 2) {
+          throw new Error('Mac did not persist A5 as the second Device.');
+        }
+        return { groupId: overview.sync_group.group_id, requestId: request.request_id };
+      } });
   } finally { await session.close().catch(() => undefined); }
 }
 
@@ -81,22 +112,8 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
   const journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, sessionOptions }),
     pair: async () => {
-      const readiness = resolveMacosA5PairSyncReadiness(paths);
-      if (readiness.existingPairing) {
-        throw Object.assign(new Error('Fresh join requires an unpaired fixed A5 baseline.'), {
-          failureOwner: 'candidate', host: 'android-b', missingFact: 'fresh_join_baseline'
-        });
-      }
-      const result = await runMacosA5PairSync({ buildIdentity: runId,
-        credentialRepairRequired: readiness.credentialRepairRequired,
-        desktopControl: async () => ({ code: 0, output: '' }),
-        desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
-        env, evidenceRoot, execute, hostName: readiness.hostName, existingPairing: false,
-        libraryHome: path.join(owned.root, 'library'), openTransport: openMacosAcceptanceTransport,
-        closeTransport: closeMacosAcceptanceTransport,
-        pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
-        paths, runtimeRoot: owned.root, serial: A5_SERIAL,
-        validateDesktop: validateMacosAcceptanceDesktopPreflight });
+      const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
+        paths, sessionOptions });
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },
@@ -114,7 +131,7 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
   reportProgress('a-b-synced');
   const evidenceRef = path.join(evidenceRoot, 'fresh-join-convergence.json');
   fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),
-    pairEvidenceRef: pairResult.pairSyncRecovery.manifestPath, proof,
+    joinEvidenceRef: pairResult.evidencePath, proof,
     resultStatus: 'success', schemaVersion: 1
   }, null, 2)}\n`, 'utf8');
   return { evidenceRef };

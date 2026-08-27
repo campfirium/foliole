@@ -76,9 +76,11 @@ export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () 
 export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const overview = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
+    const overview = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
     if (overview.sync_group?.group_id === expectedGroupId
-        && overview.sync_group.local_member_state === 'active') return overview;
+        && overview.sync_group.devices.some((device) =>
+          device.device_identity_key === overview.sync_group.local_device_identity_key
+          && device.state === 'active')) return overview;
     await delay(1_000);
   }
   throw new Error('Timed out waiting for ordinary Sync Group synchronization.');
@@ -200,7 +202,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRes
     session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
     try {
-      const overview = await invokeWindowsSyncGroupCommand(session.page, 'load_companion_pairing_overview');
+      const overview = await invokeWindowsSyncGroupCommand(session.page, 'load_sync_group_overview');
       if (overview.sync_group?.group_id !== candidate.group_id) {
         throw new Error('Windows C lost Sync Group membership after restart.');
       }

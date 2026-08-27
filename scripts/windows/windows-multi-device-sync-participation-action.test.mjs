@@ -34,8 +34,9 @@ function facts(overrides = {}) {
 }
 
 function overview(enabled, paused, group = true) {
-  return { paired_authorizations: [], participating: enabled && !paused, sync_enabled: enabled,
-    sync_group: group ? { group_id: 'group-1', local_member_state: 'active' } : null,
+  return { participating: enabled && !paused, sync_enabled: enabled,
+    sync_group: group ? { devices: [{ device_identity_key: 'device-windows', state: 'active' }],
+      group_id: 'group-1', local_device_identity_key: 'device-windows' } : null,
     sync_paused: paused };
 }
 
@@ -60,7 +61,7 @@ it('persists independent controls, catches up, and leaves as the last member', a
       userNodeCount: 4 }));
   const loads = [overview(true, true), overview(false, false), overview(false, false, false)];
   mocks.invoke.mockImplementation(async (_page, command) => {
-    if (command === 'load_companion_pairing_overview') return loads.shift();
+    if (command === 'load_sync_group_overview') return loads.shift();
     if (command === 'pause_companion_sync') return overview(true, true);
     if (command === 'resume_companion_sync' || command === 'enable_companion_sync') {
       return overview(true, false);

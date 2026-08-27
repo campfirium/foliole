@@ -16,7 +16,9 @@ const ACTION = 'multi-device-sync-participation';
 
 function assertParticipation(overview, expected, groupId) {
   if (overview.sync_group?.group_id !== groupId
-      || overview.sync_group.local_member_state !== 'active'
+      || !overview.sync_group.devices.some((device) =>
+        device.device_identity_key === overview.sync_group.local_device_identity_key
+        && device.state === 'active')
       || overview.sync_enabled !== expected.enabled
       || overview.sync_paused !== expected.paused
       || overview.participating !== (expected.enabled && !expected.paused)) {
@@ -62,7 +64,7 @@ async function proveParticipationCycle(options, initial) {
     assertParticipation(paused, { enabled: true, paused: true }, initial.localGroupId);
   });
   await withSession(paths, evidenceRoot, async (page) => {
-    const restarted = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
+    const restarted = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
     assertParticipation(restarted, { enabled: true, paused: true }, initial.localGroupId);
     reportProgress({ factId: 'participation-control', milestone: 'windows-paused' });
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION, repoRoot: paths.repoRoot });
@@ -76,7 +78,7 @@ async function proveParticipationCycle(options, initial) {
     assertParticipation(disabled, { enabled: false, paused: false }, initial.localGroupId);
   });
   return withSession(paths, evidenceRoot, async (page) => {
-    const restarted = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
+    const restarted = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
     assertParticipation(restarted, { enabled: false, paused: false }, initial.localGroupId);
     const enabled = await invokeWindowsSyncGroupCommand(page, 'enable_companion_sync');
     assertParticipation(enabled, { enabled: true, paused: false }, initial.localGroupId);
@@ -100,9 +102,9 @@ async function proveParticipationCycle(options, initial) {
 async function verifyRestartedDeparture(options, initial) {
   const { evidenceRoot, execute, paths } = options;
   return withSession(paths, evidenceRoot, async (page) => {
-    const overview = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
+    const overview = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
     const after = await inspectWindowsSyncGroupDatabase(execute, paths);
-    if (overview.sync_group !== null || overview.paired_authorizations.length !== 0
+    if (overview.sync_group !== null
         || after.localGroupId !== null || after.localMemberState !== null
         || after.activeMemberCount !== 0 || after.syncDeliveryReceiptCount !== 0
         || after.syncPeerCursorCount !== 0) {

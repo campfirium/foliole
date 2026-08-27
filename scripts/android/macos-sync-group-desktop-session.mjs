@@ -101,6 +101,7 @@ export async function openMacosSyncGroupDesktopSession({
       enable: () => ensureMacosDeviceSyncGroup(actions),
       leave: () => invoke(page, 'leave_sync_group'),
       load: actions.load,
+      invoke: (command, args) => invoke(page, command, args),
       sanitize: sanitizeMacosSyncGroupOverview
     };
   } catch (error) {

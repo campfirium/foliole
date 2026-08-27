@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   proveABConvergence, waitForAndroidJourneyFact
@@ -112,7 +112,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       createFact: (session) => createDesktopSyncGroupJourneyFact({
         device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
       }),
-      openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+      openSession: () => openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
         libraryHome: path.join(owned.root, 'library'), repoRoot,
         runtimeRoot: owned.root
       })),
