@@ -24,6 +24,7 @@ type SyncStatusDetailsProps = {
   syncGroup: SyncGroupPayload;
   status: 'idle' | 'loading' | 'syncing';
   page: CompanionSettingsPage;
+  onLeaveSyncGroup(): Promise<unknown>;
   onOpenPage(page: CompanionSettingsPage): void;
 };
 
@@ -92,7 +93,7 @@ function SyncOverview(props: SyncStatusDetailsProps & { provider: ReturnType<typ
 export function CompanionSyncStatusDetails(props: SyncStatusDetailsProps) {
   const provider = useSyncGroupProviderState(props.page !== 'syncGroup');
   if (props.page === 'syncGroup' || props.page === 'syncConnection') {
-    return <CompanionSyncGroupRows group={props.syncGroup} />;
+    return <CompanionSyncGroupRows group={props.syncGroup} onLeave={props.onLeaveSyncGroup} />;
   }
   if (props.page === 'syncActivity') {
     return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;

@@ -35,6 +35,7 @@ beforeEach(() => {
 });
 
 it('shows persistent membership and keeps Leave independent from participation controls', async () => {
+  const onLeave = vi.fn().mockResolvedValue(undefined);
   renderWithLocalization(<CompanionSyncGroupRows group={{
     created_at: '2026-08-08T00:00:00.000Z', display_name: 'Studio', group_id: 'group-1',
     local_device_identity_key: 'device-pixel', devices: [{
@@ -43,7 +44,7 @@ it('shows persistent membership and keeps Leave independent from participation c
       last_seen_at: null, left_at: null, platform: 'android-capacitor', state: 'active',
       updated_at: '2026-08-08T00:00:00.000Z'
     }]
-  }} />);
+  }} onLeave={onLeave} />);
 
   expect(screen.getByText("Studio's Sync Group")).toBeInTheDocument();
   expect(screen.getByText('Pixel')).toBeInTheDocument();
@@ -56,5 +57,6 @@ it('shows persistent membership and keeps Leave independent from participation c
   expect(providerMocks.setPaused).toHaveBeenCalledWith(true);
   fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
   expect(screen.getByText(/Topics and attachments stay on this device/)).toBeInTheDocument();
-  expect(screen.getByTestId('companion-sync-group-leave-confirm')).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId('companion-sync-group-leave-confirm'));
+  await waitFor(() => expect(onLeave).toHaveBeenCalledOnce());
 });

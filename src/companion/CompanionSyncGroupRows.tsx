@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
-import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
 import {
@@ -11,7 +10,7 @@ import {
   useSyncGroupProviderState
 } from './CompanionSyncGroupJoinApproval';
 
-function LeaveSyncGroup() {
+function LeaveSyncGroup(props: { onLeave(): Promise<unknown> }) {
   const t = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -19,8 +18,7 @@ function LeaveSyncGroup() {
   async function leave() {
     setLeaving(true); setErrorCode(null);
     try {
-      await leaveCompanionSyncGroupDevice();
-      window.location.reload();
+      await props.onLeave();
     } catch (error) {
       setLeaving(false);
       setErrorCode(error instanceof Error ? error.message : 'sync_group_departure_failed');
@@ -97,7 +95,7 @@ function SyncGroupDevices(props: {
   );
 }
 
-export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
+export function CompanionSyncGroupRows(props: { group: SyncGroupPayload; onLeave(): Promise<unknown> }) {
   const t = useTranslation();
   const provider = useSyncGroupProviderState();
   function togglePause() {
@@ -110,7 +108,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
         <h2 className="truncate text-base font-semibold text-foreground">
           {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
         </h2>
-        <LeaveSyncGroup />
+        <LeaveSyncGroup onLeave={props.onLeave} />
       </div>
       <CompanionSyncGroupJoinApproval provider={provider} />
       <SyncGroupDevices group={props.group} onTogglePause={togglePause} providerState={provider.state} />

@@ -73,7 +73,8 @@ function ConnectedContent(props: CompanionSyncPanelProps & { endpointUrl: string
       {props.page === 'sync' && isNativeCompanionSyncParticipationRuntime()
         ? <CompanionSyncParticipationControls /> : null}
       <CompanionSyncStatusDetails endpointUrl={props.endpointUrl} lastSyncedAt={props.lastSyncedAt}
-        onOpenPage={props.onOpenSettingsPage} page={props.page} status={props.status}
+        onLeaveSyncGroup={props.onLeaveSyncGroup} onOpenPage={props.onOpenSettingsPage}
+        page={props.page} status={props.status}
         syncConflictCount={props.syncConflictCount} syncEvents={props.syncEvents}
         syncGroup={props.syncGroup} syncProgress={props.syncProgress} />
     </>
