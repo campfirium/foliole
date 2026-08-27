@@ -46,6 +46,13 @@ const pairingMock = vi.hoisted(() => ({
   load: vi.fn(async () => ({
   }))
 }));
+const syncGroupMock = vi.hoisted(() => ({
+  load: vi.fn(async () => ({
+    created_at: '2026-08-27T00:00:00.000Z',
+    devices: [{ device_identity_key: 'android-group-device', state: 'active' }],
+    display_name: 'Studio', group_id: 'group-1', local_device_identity_key: 'android-group-device'
+  }))
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -60,6 +67,7 @@ vi.mock('./companionWorkspacePairing', () => ({ loadCompanionPairingState: pairi
 vi.mock('./companion/sync/pack-apply/iosCompanionSyncPackApply', () => ({
   applyIosCompanionSyncPackPath: iosSyncPackApplyMock.apply
 }));
+vi.mock('./companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: syncGroupMock.load }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -90,13 +98,13 @@ it('downloads desktop packs before applying them through the shared database own
   });
 
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
-    expected_peer_id: 'android-test-device',
+    expected_peer_id: 'android-group-device',
     expected_source_peer_id: 'desktop-test-device',
     headers: { 'X-Authorization-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
-    deviceId: 'android-test-device',
+    deviceId: 'android-group-device',
     hostName: 'Android test host',
     packPath: '/tmp/downloaded-pack.db',
     sourceHostName: 'Desktop Test Host',
@@ -139,7 +147,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
   })).resolves.toEqual({ applied_blob_count: 5, applied_object_count: 6, to_state_seq: 12 });
 
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
-    deviceId: 'ios-test-device',
+    deviceId: 'android-group-device',
     hostName: 'iOS test host',
     packPath: '/tmp/downloaded-pack.db',
     sourceHostName: 'Desktop Test Host',
