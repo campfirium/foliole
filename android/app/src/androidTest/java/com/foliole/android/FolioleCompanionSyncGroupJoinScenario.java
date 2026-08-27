@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.webkit.WebView;
 
 import org.json.JSONObject;
@@ -11,24 +12,31 @@ import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupJoinScenario {
+    private static final String LOG_TAG = "FolioleA5Join";
+
     private FolioleCompanionSyncGroupJoinScenario() {}
 
     static JSONObject run(Instrumentation instrumentation) throws Exception {
         Activity activity = start(instrumentation);
         try {
             waitForFocus(activity, 30_000);
+            Log.i(LOG_TAG, "stage=focused");
             WebView webView = activity.findViewById(R.id.webview);
             FolioleCompanionSettingsNavigation.open(instrumentation, webView);
-            long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
+            Log.i(LOG_TAG, "stage=settings-open");
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
             FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-settings-sync", deadline
             );
+            Log.i(LOG_TAG, "stage=sync-open");
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-join", deadline
             );
+            Log.i(LOG_TAG, "stage=device-visible");
             FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-group-join", deadline
             );
+            Log.i(LOG_TAG, "stage=device-requested");
             long requestDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
             String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
                 instrumentation, webView, requestDeadline,
@@ -42,9 +50,11 @@ final class FolioleCompanionSyncGroupJoinScenario {
                     "Sync Group Device request failed: " + error.optString("value", "unknown")
                 );
             }
+            Log.i(LOG_TAG, "stage=awaiting-approval");
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-now", deadline
             );
+            Log.i(LOG_TAG, "stage=joined");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
             waitForFocus(activity, 30_000);

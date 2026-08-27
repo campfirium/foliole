@@ -14,7 +14,21 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("['run', 'electron:compile']");
   expect(source).toContain('openMacosSyncGroupDesktopSession');
   expect(source).toContain('observeConcurrently: true');
+  expect(source).toContain('observeAndAccept(session, options)');
+  expect(source).toContain('productError');
   expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
   expect(source).toContain("'wm', 'dismiss-keyguard'");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+});
+
+it('short-circuits the physical A5 journey with named product stages', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupJoinScenario.java',
+    'utf8'
+  );
+  expect(source).toContain('TimeUnit.SECONDS.toNanos(30)');
+  expect(source).toContain('stage=settings-open');
+  expect(source).toContain('stage=device-visible');
+  expect(source).toContain('stage=device-requested');
+  expect(source).toContain('stage=awaiting-approval');
 });

@@ -31,14 +31,15 @@ function buildAcceptance(args) {
 function validateJoin({ evidencePath, stdout }) {
   if (!/folioleSyncGroupJoinReceipt=.*"joined":true.*"restarted":true/u.test(stdout)
       || !/INSTRUMENTATION_CODE: -1/mu.test(stdout)) {
+    const productError = stdout.match(/java\.lang\.(?:IllegalStateException|AssertionError): ([^\r\n]+)/u)?.[1];
     throw Object.assign(new Error('A5 Device join and restart evidence is incomplete.'), {
-      evidenceRef: evidencePath, missingFact: 'a5_device_join_persistence'
+      evidenceRef: evidencePath, missingFact: 'a5_device_join_persistence', productError
     });
   }
 }
 
-async function observeAndAccept(session) {
-  const request = await waitForMacosDeviceRequest(session, null);
+async function observeAndAccept(session, options = {}) {
+  const request = await waitForMacosDeviceRequest(session, null, options);
   await session.accept(request.request_id);
   const overview = await session.load();
   if (overview.sync_group?.devices?.length !== 2) {
@@ -73,7 +74,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'wm', 'dismiss-keyguard']);
     const result = await mechanics({ appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot, execute: args.execute, observeConcurrently: true,
-      observeWhileTransportOpen: () => observeAndAccept(session), paths: args.paths,
+      observeWhileTransportOpen: (options) => observeAndAccept(session, options), paths: args.paths,
       serial: args.serial, testClass: TEST_CLASS, validateInstrumentation: validateJoin });
     fs.writeFileSync(path.join(evidenceRoot, 'result.json'), `${JSON.stringify({
       buildIdentity, completedAt: new Date().toISOString(),

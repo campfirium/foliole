@@ -55,6 +55,8 @@ export async function runMacosA5InstrumentationMechanics({
   const options = { env, timeoutCode: 'a5_instrumentation_timeout', timeoutMs: 3 * 60_000 };
   const hostPort = pairSyncHostPort(env);
   const output = [];
+  let concurrentObservationTask;
+  let observationAbort;
   let reverseCreated = false; let testInstalled = false;
   try {
     if (needsTransport) output.push((await checked(execute, paths.adb,
@@ -99,10 +101,11 @@ export async function runMacosA5InstrumentationMechanics({
       instrumentation = await instrumentationTask;
     } else {
       if (observeConcurrently) {
-        const observationTask = observeWhileTransportOpen();
+        observationAbort = new globalThis.AbortController();
+        concurrentObservationTask = observeWhileTransportOpen({ signal: observationAbort.signal });
         const first = await Promise.race([
           instrumentationTask.then((result) => ({ result, type: 'instrumentation' })),
-          observationTask.then((result) => ({ result, type: 'observation' }))
+          concurrentObservationTask.then((result) => ({ result, type: 'observation' }))
         ]);
         if (first.type === 'instrumentation') instrumentation = first.result;
         else {
@@ -133,12 +136,14 @@ export async function runMacosA5InstrumentationMechanics({
       stdout: instrumentation.stdout, testClass
     }, null, 2)}\n`, 'utf8');
     validateInstrumentation?.({ evidencePath, stdout: instrumentation.stdout });
-    observation ??= await observeWhileTransportOpen?.();
+    observation ??= concurrentObservationTask
+      ? await concurrentObservationTask : await observeWhileTransportOpen?.();
     if (restartApp) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'am', 'start', '-n', `${appId}/${APP_ID}.MainActivity`],
       options, 'activity restart')).output);
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } finally {
+    observationAbort?.abort();
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
       options, 'transport cleanup')).output);
