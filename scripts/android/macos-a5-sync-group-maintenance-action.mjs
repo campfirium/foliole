@@ -33,6 +33,26 @@ async function removeOwnedTransport(execute, paths, serial, options) {
   });
 }
 
+async function foregroundInstrumentationTarget(execute, paths, serial, appId, options) {
+  const component = `${appId}/${APP_ID}.MainActivity`;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'input', 'keyevent', 'KEYCODE_BACK'],
+      options, 'system overlay dismissal');
+    await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'am', 'start', '-W', '-n', component],
+      options, 'instrumentation activity foreground');
+    const foreground = await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'dumpsys', 'activity', 'activities'],
+      options, 'instrumentation activity inspection');
+    if (String(foreground.output).includes(component)) return;
+  }
+  throw executionFailure('Foliole did not own the Android foreground before instrumentation.', {
+    executionOwner: 'environment', missingFact: 'android_instrumentation_foreground',
+    stage: 'instrumentation activity foreground'
+  });
+}
+
 export async function runMacosA5InstrumentationMechanics({
   appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
   needsTransport = false, observeConcurrently = false, observeWhileTransportOpen, paths,
@@ -75,6 +95,7 @@ export async function runMacosA5InstrumentationMechanics({
         options, 'transport open')).output);
       reverseCreated = true;
     }
+    await foregroundInstrumentationTarget(execute, paths, serial, appId, options);
     const instrumentationTask = execute(paths.adb, [
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, runner
     ], options, 'instrumentation');
