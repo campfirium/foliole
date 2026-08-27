@@ -31,6 +31,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("'wm', 'dismiss-keyguard'");
   expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
+  expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
 });
 
