@@ -1,3 +1,5 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 import {
   decryptDesktopWorkgroupResponse,
@@ -45,10 +47,11 @@ export async function readDesktopWorkgroupResponse(args: {
   if (args.response.headers.get('content-type') !== WORKGROUP_ENVELOPE_CONTENT_TYPE) {
     throw new Error('workgroup_aead_response_required');
   }
-  return decryptDesktopWorkgroupResponse({
-    body: Buffer.from(await args.response.arrayBuffer()), contentType: args.contentType,
-    groupId: args.groupId, method: args.method, pathWithQuery: args.pathWithQuery
-  });
+  const body = Buffer.from(await args.response.arrayBuffer());
+  return runWithDatabaseConnectionOwner(() => decryptDesktopWorkgroupResponse({
+    body, contentType: args.contentType, groupId: args.groupId,
+    method: args.method, pathWithQuery: args.pathWithQuery
+  }));
 }
 
 export async function postDesktopWorkgroupJson(args: {
