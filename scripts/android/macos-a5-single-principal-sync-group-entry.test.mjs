@@ -23,6 +23,8 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("action: 'sync-now'");
   expect(source).toContain("['A', 'B', 'C'].every");
   expect(source).toContain('productError');
+  expect(source).toContain("'join-failure-screen.png'");
+  expect(source).toContain("'screencap', '-p', remotePath");
   expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
   expect(source).toContain("'wm', 'dismiss-keyguard'");
   expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
