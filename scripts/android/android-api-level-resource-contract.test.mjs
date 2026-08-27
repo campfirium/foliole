@@ -26,6 +26,16 @@ describe('Android API-level resource contract', () => {
     );
   });
 
+  it('serializes Android NSD resolutions across all discovered Device providers', () => {
+    const session = read(
+      'android/app/src/main/java/com/foliole/android/FolioleCompanionNsdDiscoverySession.java'
+    );
+    expect(session).toContain('private final Deque<NsdServiceInfo> pendingResolutions');
+    expect(session).toContain('if (resolving) return;');
+    expect(session).toContain('resolveNext();');
+    expect(session).toContain('pendingResolutions.clear();');
+  });
+
   it('limits the API 27 navigation bar attribute to v27 resources', () => {
     expect(read('android/app/src/main/res/values/styles.xml')).not.toContain('windowLightNavigationBar');
     expect(read('android/app/src/main/res/values-night/styles.xml')).not.toContain('windowLightNavigationBar');

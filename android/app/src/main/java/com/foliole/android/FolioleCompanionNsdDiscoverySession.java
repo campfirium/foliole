@@ -8,6 +8,8 @@ import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -19,6 +21,9 @@ final class FolioleCompanionNsdDiscoverySession {
     private final NsdManager manager;
     private final String serviceType;
     private final Map<String, JSObject> candidates = new LinkedHashMap<>();
+    private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
+    private long discoveryGeneration;
+    private boolean resolving;
     private boolean started;
 
     FolioleCompanionNsdDiscoverySession(Context context, Listener listener) throws Exception {
@@ -73,21 +78,61 @@ final class FolioleCompanionNsdDiscoverySession {
             try { manager.stopServiceDiscovery(discovery); }
             catch (IllegalArgumentException | SecurityException ignored) {}
         }
+        synchronized (pendingResolutions) {
+            discoveryGeneration += 1;
+            pendingResolutions.clear();
+        }
         synchronized (candidates) { candidates.clear(); }
         return publish ? emit("stopped", "stopped", null) : event("stopped", "stopped", null);
     }
 
     @SuppressWarnings("deprecation")
     private void resolve(NsdServiceInfo service) {
+        synchronized (pendingResolutions) {
+            if (!started) return;
+            pendingResolutions.addLast(service);
+            if (resolving) return;
+            resolving = true;
+        }
+        resolveNext();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void resolveNext() {
+        NsdServiceInfo service;
+        long resolutionGeneration;
+        synchronized (pendingResolutions) {
+            service = started ? pendingResolutions.pollFirst() : null;
+            if (service == null) {
+                resolving = false;
+                return;
+            }
+            resolutionGeneration = discoveryGeneration;
+        }
         try {
             manager.resolveService(service, new NsdManager.ResolveListener() {
                 @Override public void onResolveFailed(NsdServiceInfo ignored, int code) {
-                    emit("failed", "unavailable", "nsd_resolve_" + code);
+                    if (isCurrent(resolutionGeneration)) {
+                        emit("failed", "unavailable", "nsd_resolve_" + code);
+                    }
+                    resolveNext();
                 }
-                @Override public void onServiceResolved(NsdServiceInfo resolved) { add(resolved); }
+                @Override public void onServiceResolved(NsdServiceInfo resolved) {
+                    if (isCurrent(resolutionGeneration)) add(resolved);
+                    resolveNext();
+                }
             });
         } catch (IllegalArgumentException error) {
-            emit("failed", "unavailable", "nsd_resolve_unavailable");
+            if (isCurrent(resolutionGeneration)) {
+                emit("failed", "unavailable", "nsd_resolve_unavailable");
+            }
+            resolveNext();
+        }
+    }
+
+    private boolean isCurrent(long resolutionGeneration) {
+        synchronized (pendingResolutions) {
+            return started && discoveryGeneration == resolutionGeneration;
         }
     }
 
