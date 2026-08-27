@@ -61,6 +61,27 @@ function useJoinCompletion(args: {
   }, [args]);
 }
 
+function useJoinCancellation(args: {
+  config: SyncGroupJoinArgs;
+  pendingRequest: PendingSyncGroupJoinRequest | null;
+  pendingRequestRef: React.MutableRefObject<PendingSyncGroupJoinRequest | null>;
+  setPendingRequest(value: PendingSyncGroupJoinRequest | null): void;
+  setStatus(value: CompanionSyncGroupJoinStatus): void;
+}) {
+  return useCallback(() => {
+    if (args.pendingRequest) cancelCompanionSyncGroupJoin(args.pendingRequest.requestId);
+    args.pendingRequestRef.current = null;
+    args.setPendingRequest(null); args.setStatus('idle'); args.config.onError(null);
+  }, [args]);
+}
+
+function usePersistedJoinState(databasePath: string | null, setJoined: (value: boolean) => void) {
+  useEffect(() => {
+    void Promise.resolve().then(() => loadCompanionSyncGroup())
+      .then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
+  }, [databasePath, setJoined]);
+}
+
 export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const [discoveries, setDiscoveries] = useState<CompanionSyncGroupDiscovery[]>([]);
   const [pendingRequest, setPendingRequest] = useState<PendingSyncGroupJoinRequest | null>(null);
@@ -70,6 +91,9 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const stopRef = useRef<null | (() => Promise<void>)>(null);
   const complete = useJoinCompletion({
     config: args, pendingRequest, setJoined, setPendingRequest, setStatus
+  });
+  const cancel = useJoinCancellation({
+    config: args, pendingRequest, pendingRequestRef, setPendingRequest, setStatus
   });
 
   const stopDiscovery = useCallback(async () => {
@@ -98,30 +122,27 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
     const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
     if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
     setStatus('requesting'); args.onError(null);
-    const result = await requestCompanionSyncGroupJoin({
-      databasePath: args.bootstrapState.database_path,
-      endpointUrl: candidate.endpointUrl,
-      groupId: candidate.groupId
-    });
-    const next = { endpointUrl: result.endpoint_url, expiresAt: result.expires_at,
-      groupId: result.group_id, requestId: result.request_id };
-    pendingRequestRef.current = next;
-    setPendingRequest(next); setStatus('awaiting-acceptance');
-    await args.onSaveEndpoint(result.endpoint_url);
-    return result;
+    try {
+      const result = await requestCompanionSyncGroupJoin({
+        databasePath: args.bootstrapState.database_path,
+        endpointUrl: candidate.endpointUrl,
+        groupId: candidate.groupId
+      });
+      const next = { endpointUrl: result.endpoint_url, expiresAt: result.expires_at,
+        groupId: result.group_id, requestId: result.request_id };
+      pendingRequestRef.current = next;
+      setPendingRequest(next); setStatus('awaiting-acceptance');
+      await args.onSaveEndpoint(result.endpoint_url);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus('idle'); args.onError(message);
+      throw error;
+    }
   }, [args, discoveries]);
-
-  const cancel = useCallback(() => {
-    if (pendingRequest) cancelCompanionSyncGroupJoin(pendingRequest.requestId);
-    pendingRequestRef.current = null;
-    setPendingRequest(null); setStatus('idle'); args.onError(null);
-  }, [args, pendingRequest]);
 
   useEffect(() => () => { void stopRef.current?.(); }, []);
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
-  useEffect(() => {
-    void Promise.resolve().then(() => loadCompanionSyncGroup())
-      .then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
-  }, [args.bootstrapState.database_path]);
+  usePersistedJoinState(args.bootstrapState.database_path, setJoined);
   return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };
 }

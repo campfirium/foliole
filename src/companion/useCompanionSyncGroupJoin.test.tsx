@@ -78,3 +78,25 @@ it('completes an accepted request when the active discovery session publishes a 
   });
   expect(result.current.pendingRequest).toBeNull();
 });
+
+it('restores the join action and reports a Device request failure', async () => {
+  const onError = vi.fn();
+  runtime.request.mockRejectedValueOnce(new Error('device_identity_unavailable'));
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError,
+    onSaveEndpoint: vi.fn(async () => undefined)
+  }));
+
+  await act(() => result.current.discover());
+  act(() => runtime.callback?.({
+    candidates: [candidate], change: 'found', error_code: null, status: 'results'
+  }));
+  await waitFor(() => expect(result.current.discoveries).toHaveLength(1));
+  await act(async () => {
+    await expect(result.current.request(candidate.endpoint_url))
+      .rejects.toThrow('device_identity_unavailable');
+  });
+  await waitFor(() => expect(result.current.status).toBe('idle'));
+  expect(onError).toHaveBeenLastCalledWith('device_identity_unavailable');
+});

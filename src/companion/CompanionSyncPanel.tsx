@@ -95,14 +95,16 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           : props.joinRequest
             ? <AwaitingApprovalState expiresAt={props.joinRequest.expiresAt} onCancel={props.onCancelJoin} />
             : searching ? null : <EmptyDiscoveryState disabled={busy} onTryAgain={() => void props.onDiscover()} />}
-        {props.error ? <p className="text-sm text-error">{formatSyncPanelError(props.error, t)}</p> : null}
+        {props.error ? <p className="text-sm text-error" data-error-code={props.error}
+          data-testid="companion-sync-error">{formatSyncPanelError(props.error, t)}</p> : null}
         {props.syncGroup && (props.page === 'sync' || props.page === 'syncHandoff') ? (
           <CompanionHandoffReminderSettingsPanel page={props.page} settings={props.handoffReminderSettings}
             onChange={props.onChangeHandoffReminderSettings} onOpenPage={props.onOpenSettingsPage} />
         ) : null}
         <CompanionSyncDiscoveryDialog devices={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
-          onJoin={(url) => void props.onRequestJoin(url)} onRefresh={() => void props.onDiscover()} />
+          onJoin={(url) => void props.onRequestJoin(url).catch(() => undefined)}
+          onRefresh={() => void props.onDiscover()} />
       </div>
     </section>
   );

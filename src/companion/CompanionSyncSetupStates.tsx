@@ -60,11 +60,12 @@ export function AwaitingApprovalState(props: {
   const { isExpired, remainingMs, remainingSeconds } = useExpiryCountdown(props.expiresAt);
   const progressPct = Math.min(100, Math.max(0, (remainingMs / 45_000) * 100));
   return (
-    <SyncStatusCard
-      detail={t('companion.syncSetup.approval.detail')}
-      title={t('companion.syncSetup.approval.title')}
-    >
-      <div className="space-y-4">
+    <div data-testid="companion-sync-awaiting-approval">
+      <SyncStatusCard
+        detail={t('companion.syncSetup.approval.detail')}
+        title={t('companion.syncSetup.approval.title')}
+      >
+        <div className="space-y-4">
         <div className="flex items-center gap-3 text-sm text-foreground">
           <span aria-hidden className="relative inline-flex h-3 w-3">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-60" />
@@ -82,8 +83,9 @@ export function AwaitingApprovalState(props: {
         >
           {t('common.cancel')}
         </button>
-      </div>
-    </SyncStatusCard>
+        </div>
+      </SyncStatusCard>
+    </div>
   );
 }
 

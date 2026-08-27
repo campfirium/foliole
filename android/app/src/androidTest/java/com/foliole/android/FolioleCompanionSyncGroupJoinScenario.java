@@ -29,6 +29,19 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-group-join", deadline
             );
+            long requestDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+            String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
+                instrumentation, webView, requestDeadline,
+                "companion-sync-awaiting-approval", "companion-sync-error"
+            );
+            if ("companion-sync-error".equals(requestState)) {
+                JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
+                    instrumentation, webView, requestState, "data-error-code"
+                );
+                throw new IllegalStateException(
+                    "Sync Group Device request failed: " + error.optString("value", "unknown")
+                );
+            }
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-now", deadline
             );
