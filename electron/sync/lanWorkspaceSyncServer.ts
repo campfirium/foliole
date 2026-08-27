@@ -1,6 +1,5 @@
 import http from 'node:http';
 
-import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -15,10 +14,10 @@ import {
   WORKSPACE_VERSION_PATH
 } from './companionLanRequestHandler.js';
 import {
-  startCompanionMdnsAdvertisement,
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
 import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
@@ -145,30 +144,14 @@ function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
 }
 
-function advertiseActiveSyncGroup(args: { appVersion: string; deviceId: string; port: number }) {
-  const group = loadDesktopSyncGroup();
-  if (!group) return;
-  const workgroup = loadDesktopWorkgroupKey(group.group_id);
-  if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
-  const local = resolveLocalSyncGroupDevice(group);
-  if (!local) throw new Error('sync_group_local_device_missing');
-  startCompanionMdnsAdvertisement({
-    ...args,
-    deviceId: local.device_identity_key,
-    groupDisplayName: group.display_name,
-    groupId: group.group_id,
-    groupTag: workgroup.group_tag,
-    onWarning: recordMdnsWarning
-  });
-}
-
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return activeStatus;
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
-    if (activeStatus.port) advertiseActiveSyncGroup({ ...args, port: activeStatus.port });
+    if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
+      onWarning: recordMdnsWarning, port: activeStatus.port });
     return activeStatus;
   }
 
@@ -176,12 +159,13 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
   const server = createWorkspaceSyncHttpServer(args);
   try {
     await listenOnSyncPort(server, port);
-    advertiseActiveSyncGroup({ appVersion: args.appVersion, deviceId: args.deviceId, port });
+    await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port);
     logRunningStatus();
     return activeStatus;
   } catch (error) {
+    stopCompanionMdnsAdvertisement();
     server.close();
     activeStatus = {
       advertised_urls: [],

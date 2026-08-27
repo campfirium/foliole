@@ -70,6 +70,33 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
   return publishCompanionMdnsAdvertisement(input);
 }
 
+function waitForPublishedService(service: PublishedBonjourService, timeoutMs: number) {
+  if (service.published) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timer);
+      service.off('up', onUp);
+      service.off('error', onError);
+      if (error) reject(error);
+      else resolve();
+    };
+    const onUp = () => finish();
+    const onError = (error: Error) => finish(error);
+    const timer = setTimeout(() => finish(new Error(
+      'mDNS advertisement did not become available.'
+    )), timeoutMs);
+    service.once('up', onUp);
+    service.once('error', onError);
+  });
+}
+
+export function waitForCompanionMdnsAdvertisement(
+  services: PublishedBonjourService[], timeoutMs = 5_000
+) {
+  return Promise.all(services.map((service) => waitForPublishedService(service, timeoutMs)))
+    .then(() => undefined);
+}
+
 function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   const runtimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const reportWarning = (error: unknown) => {
