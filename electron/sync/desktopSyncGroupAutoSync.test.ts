@@ -128,6 +128,21 @@ it('uses the reachable announcement source before a peer virtual adapter address
   }));
 });
 
+it('falls back to an advertised LAN address when the announcement source cannot sync', async () => {
+  runtime.continueSync.mockRejectedValueOnce(new Error('unreachable route'));
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
+    addresses: ['169.254.161.89'], port: 43122,
+    referer: { address: '169.254.161.89' },
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1',
+      ipv4_addresses: '192.168.0.10,169.254.161.89' })
+  });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(2));
+  expect(runtime.continueSync).toHaveBeenLastCalledWith('automatic', expect.objectContaining({
+    endpoint_url: 'http://192.168.0.10:43122'
+  }));
+});
+
 it('retries the latest advertisement after an interrupted peer sync settles', async () => {
   const first = deferred<{ complete: boolean; cursor: number }>();
   runtime.continueSync.mockReturnValueOnce(first.promise).mockResolvedValue({ complete: true, cursor: 10 });

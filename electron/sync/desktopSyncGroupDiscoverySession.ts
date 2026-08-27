@@ -5,6 +5,7 @@ import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDis
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
+import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const PROBE_TIMEOUT_MS = 2_000;
@@ -98,9 +99,16 @@ export class DesktopSyncGroupDiscoverySession {
 }
 
 async function probeService(fetchDiscovery: typeof fetch, service: Service) {
-  const host = service.referer?.address ?? service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
-  if (!host || !service.port || typeof service.txt.group_id !== 'string') return null;
-  const endpointUrl = `http://${host}:${service.port}`;
+  if (typeof service.txt.group_id !== 'string') return null;
+  const endpoints = resolveCompanionMdnsServiceEndpoints(service);
+  for (const endpointUrl of endpoints) {
+    const result = await probeEndpoint(fetchDiscovery, service, endpointUrl);
+    if (result?.status !== 'connection_failed') return result;
+  }
+  return endpoints.length > 0 ? { status: 'connection_failed' as const } : null;
+}
+
+async function probeEndpoint(fetchDiscovery: typeof fetch, service: Service, endpointUrl: string) {
   try {
     const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
     if (!response.ok) return null;

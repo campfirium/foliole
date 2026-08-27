@@ -71,3 +71,22 @@ it('keeps incompatible and connection failures distinct from empty results', asy
   incompatible.stop();
   expect(snapshots.some(({ status }) => status === 'searching')).toBe(true);
 });
+
+it('tries an advertised LAN address when the announcement source route is unreachable', async () => {
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  const fetchDiscovery = vi.fn(async (url: string | URL | Request) => {
+    if (String(url).includes('169.254.161.89')) throw new Error('unreachable route');
+    return new Response(JSON.stringify({
+      group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+    }));
+  });
+  const session = new DesktopSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot), fetchDiscovery);
+  session.start();
+  runtime.handlers.get('up')?.({ addresses: ['169.254.161.89'], fqdn: 'daily', name: 'Daily', port: 38641,
+    referer: { address: '169.254.161.89' }, txt: { group_id: 'group-1', group_tag: 'tag-1',
+      ipv4_addresses: '192.168.0.10,169.254.161.89', runtime_instance_id: 'remote' } });
+
+  await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('results'));
+  expect(snapshots.at(-1)?.candidates[0]?.endpoint_url).toBe('http://192.168.0.10:38641');
+});

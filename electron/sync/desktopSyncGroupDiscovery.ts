@@ -3,6 +3,7 @@ import { Bonjour } from 'bonjour-service';
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
+import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const DISCOVERY_MS = 1_800;
@@ -18,11 +19,10 @@ export async function discoverDesktopSyncGroups(
   const collect = (service: DiscoveredService) => {
     const txt = service.txt as Record<string, unknown>;
     if (txt.runtime_instance_id === localRuntimeInstanceId) return;
-    const sourceAddress = service.referer?.address ?? '';
-    const host = /^\d+\.\d+\.\d+\.\d+$/.test(sourceAddress) ? sourceAddress :
-      service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
-    if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
-    endpoints.set(`http://${host}:${service.port}`, { name: service.name, txt });
+    if (typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
+    resolveCompanionMdnsServiceEndpoints(service).forEach((endpoint) => {
+      endpoints.set(endpoint, { name: service.name, txt });
+    });
   };
   const runtimes = [null, ...resolveCompanionMdnsIpv4Addresses()].map((networkInterface) => {
     const bonjour = networkInterface

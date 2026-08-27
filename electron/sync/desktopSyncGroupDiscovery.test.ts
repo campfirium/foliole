@@ -89,6 +89,29 @@ describe('desktop Sync Group discovery', () => {
   });
 });
 
+describe('desktop Sync Group route fallback', () => {
+  it('finds a provider through an advertised LAN address after a link-local route fails', async () => {
+    vi.useFakeTimers();
+    const fetchDiscovery = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('169.254.161.89')) throw new Error('unreachable route');
+      return new Response(JSON.stringify({
+        group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
+        provider_device_id: 'device-a', provider_device_name: 'Desktop A',
+        provider_platform: 'darwin', runtime_instance_id: 'runtime-desktop-a'
+      }));
+    });
+    const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
+    runtime.onServices[0]?.({ addresses: ['169.254.161.89'], name: 'Desktop A', port: 38641,
+      referer: { address: '169.254.161.89' }, txt: { device_id: 'device-a', group_id: 'group-1',
+        group_tag: 'tag-1', ipv4_addresses: '192.168.0.10,169.254.161.89' } });
+    await vi.advanceTimersByTimeAsync(1_800);
+
+    await expect(discovery).resolves.toEqual([expect.objectContaining({
+      endpoint_url: 'http://192.168.0.10:38641', provider_device_id: 'device-a'
+    })]);
+  });
+});
+
 describe('desktop Sync Group provider selection', () => {
   it('collapses one group to its stable desktop provider on the discovered LAN path', async () => {
     vi.useFakeTimers();
