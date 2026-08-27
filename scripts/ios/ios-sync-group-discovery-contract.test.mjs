@@ -33,3 +33,13 @@ it('keeps the Bonjour service declaration in the final iOS application plist', (
   expect(plist).toContain('NSBonjourServices');
   expect(plist).toContain('_foliole-sync._tcp');
 });
+
+it('handles the iOS Local Network system card before waiting for a Device candidate', () => {
+  const physicalTest = read(
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift'
+  );
+
+  expect(physicalTest).toContain('XCUIApplication(bundleIdentifier: "com.apple.springboard")');
+  expect(physicalTest).toContain('respondToLocalNetworkPrompt(allow: true, in: app)');
+  expect(physicalTest).toContain('["Allow", "允许"]');
+});

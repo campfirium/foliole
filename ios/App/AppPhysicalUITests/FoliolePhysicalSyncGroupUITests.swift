@@ -13,7 +13,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        dismissLocalNetworkPromptIfNeeded(in: app)
+        respondToLocalNetworkPrompt(allow: true, in: app)
         tapButton(named: "Join", in: app, timeout: 90)
 
         XCTAssertTrue(
@@ -45,7 +45,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.launch()
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        app.tap()
+        respondToLocalNetworkPrompt(allow: false, in: app)
         XCTAssertTrue(
             app.staticTexts["Allow Local Network access to find Sync Groups nearby."]
                 .waitForExistence(timeout: 45),
@@ -80,7 +80,16 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         }
     }
 
-    private func dismissLocalNetworkPromptIfNeeded(in app: XCUIApplication) {
+    private func respondToLocalNetworkPrompt(allow: Bool, in app: XCUIApplication) {
+        let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for label in labels {
+            let button = springboard.buttons[label]
+            if button.waitForExistence(timeout: 5) {
+                button.tap()
+                return
+            }
+        }
         app.tap()
     }
 
