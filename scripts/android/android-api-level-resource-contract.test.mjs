@@ -24,6 +24,11 @@ describe('Android API-level resource contract', () => {
     expect(discovery).toContain(
       'if (multicastLock != null && multicastLock.isHeld()) multicastLock.release()'
     );
+    const session = read(
+      'android/app/src/main/java/com/foliole/android/FolioleCompanionNsdDiscoverySession.java'
+    );
+    expect(session).toContain('createMulticastLock("foliole-sync-discovery-session")');
+    expect(session).toContain('releaseMulticastLock();');
   });
 
   it('serializes Android NSD resolutions across all discovered Device providers', () => {

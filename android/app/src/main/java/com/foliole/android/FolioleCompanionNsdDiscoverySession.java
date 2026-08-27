@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -19,6 +20,7 @@ final class FolioleCompanionNsdDiscoverySession {
     private final Context context;
     private final Listener listener;
     private final NsdManager manager;
+    private final WifiManager.MulticastLock multicastLock;
     private final String serviceType;
     private final Map<String, JSObject> candidates = new LinkedHashMap<>();
     private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
@@ -30,6 +32,11 @@ final class FolioleCompanionNsdDiscoverySession {
         this.context = context;
         this.listener = listener;
         manager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
+        WifiManager wifiManager = (WifiManager) context.getApplicationContext()
+            .getSystemService(Context.WIFI_SERVICE);
+        multicastLock = wifiManager == null ? null
+            : wifiManager.createMulticastLock("foliole-sync-discovery-session");
+        if (multicastLock != null) multicastLock.setReferenceCounted(false);
         serviceType = FolioleCompanionNsdDiscovery.qualifiedServiceType(
             FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context));
     }
@@ -43,13 +50,19 @@ final class FolioleCompanionNsdDiscoverySession {
             synchronized (candidates) { candidates.remove(service.getServiceName()); }
             emit("lost", candidates.isEmpty() ? "searching" : "results", null);
         }
-        @Override public void onDiscoveryStopped(String type) { emit("stopped", "stopped", null); }
+        @Override public void onDiscoveryStopped(String type) {
+            started = false;
+            releaseMulticastLock();
+            emit("stopped", "stopped", null);
+        }
         @Override public void onStartDiscoveryFailed(String type, int code) {
             started = false;
+            releaseMulticastLock();
             emit("failed", "unavailable", "nsd_start_" + code);
         }
         @Override public void onStopDiscoveryFailed(String type, int code) {
             started = false;
+            releaseMulticastLock();
             emit("failed", "unavailable", "nsd_stop_" + code);
         }
     };
@@ -59,13 +72,16 @@ final class FolioleCompanionNsdDiscoverySession {
         if (manager == null) return emit("failed", "unavailable", "nsd_unavailable");
         started = true;
         try {
+            if (multicastLock != null && !multicastLock.isHeld()) multicastLock.acquire();
             manager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discovery);
             return event("started", "searching", null);
         } catch (SecurityException error) {
             started = false;
+            releaseMulticastLock();
             return emit("failed", "permission_required", "local_network_permission");
         } catch (RuntimeException error) {
             started = false;
+            releaseMulticastLock();
             return emit("failed", "unavailable", "nsd_unavailable");
         }
     }
@@ -83,7 +99,12 @@ final class FolioleCompanionNsdDiscoverySession {
             pendingResolutions.clear();
         }
         synchronized (candidates) { candidates.clear(); }
+        releaseMulticastLock();
         return publish ? emit("stopped", "stopped", null) : event("stopped", "stopped", null);
+    }
+
+    private void releaseMulticastLock() {
+        if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
     }
 
     @SuppressWarnings("deprecation")
