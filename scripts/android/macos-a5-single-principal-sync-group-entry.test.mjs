@@ -31,7 +31,11 @@ it('short-circuits the physical A5 journey with named product stages', () => {
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupJoinScenario.java',
     'utf8'
   );
-  expect(source).toContain('TimeUnit.SECONDS.toNanos(30)');
+  expect(source).toContain('STAGE_TIMEOUT_SECONDS = 30');
+  expect(source).toContain('long stageDeadline()');
+  expect(source).not.toContain('long requestDeadline');
+  expect(source).not.toContain('"companion-sync-now", deadline');
+  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(9);
   expect(source).toContain('stage=settings-open');
   expect(source).toContain('"companion-sync-discover"');
   expect(source).toContain('stage=discovery-requested');
