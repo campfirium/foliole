@@ -13,7 +13,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        respondToLocalNetworkPrompt(allow: true)
+        waitForLocalNetworkDecision(allow: true)
         tapButton(named: "Join", in: app, timeout: 90)
 
         XCTAssertTrue(
@@ -45,7 +45,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.launch()
         openSyncSettings(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        respondToLocalNetworkPrompt(allow: false)
+        waitForLocalNetworkDecision(allow: false)
         XCTAssertTrue(
             app.staticTexts["Allow Local Network access to find Sync Groups nearby."]
                 .waitForExistence(timeout: 45),
@@ -69,19 +69,19 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         button.tap()
     }
 
-    private func respondToLocalNetworkPrompt(allow: Bool) {
+    private func waitForLocalNetworkDecision(allow: Bool) {
         let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let alert = springboard.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 15), "Missing Local Network alert.")
-        for label in labels {
-            let button = alert.buttons[label]
-            if button.waitForExistence(timeout: 5) {
-                button.tap()
-                return
-            }
-        }
-        XCTFail("Missing Local Network decision button.")
+        guard alert.waitForExistence(timeout: 8) else { return }
+        XCTAssertTrue(labels.contains { alert.buttons[$0].exists },
+                      "Missing Local Network decision button.")
+        attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: alert
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 180), .completed,
+                       "The Local Network decision was not completed on Fri.")
     }
 
     private func attachScreenshot(named name: String) {

@@ -42,8 +42,10 @@ it('handles the iOS Local Network system card before waiting for a Device candid
 
   expect(physicalTest).toContain('springboard.alerts.firstMatch');
   expect(physicalTest).not.toContain('addUIInterruptionMonitor');
-  expect(physicalTest).not.toContain('app.tap()');
-  expect(physicalTest).toContain('respondToLocalNetworkPrompt(allow: true)');
+  expect(physicalTest).not.toContain('alert.buttons[$0].tap()');
+  expect(physicalTest).toContain('waitForLocalNetworkDecision(allow: true)');
+  expect(physicalTest).toContain('NSPredicate(format: "exists == false")');
+  expect(physicalTest).toContain('Fri-local-network-allow');
   expect(physicalTest).toContain('["Allow", "允许"]');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
