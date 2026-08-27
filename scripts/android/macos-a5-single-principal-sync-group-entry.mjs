@@ -5,6 +5,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
+import { waitForCurrentA5Provider } from './macos-a5-current-provider-readiness.mjs';
 import { openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest } from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
@@ -63,15 +64,23 @@ async function waitForMacFact(session, factId) {
 async function observeAndAccept(session, options = {}) {
   const request = await waitForMacosDeviceRequest(session, null, options);
   const before = await session.load();
+  const previousDeviceIds = new Set(before.sync_group?.devices?.map(
+    (device) => device.device_identity_key
+  ) ?? []);
   const expectedDeviceCount = (before.sync_group?.devices?.length ?? 0) + 1;
   await session.accept(request.request_id);
   const overview = await session.load();
   if (overview.sync_group?.devices?.length !== expectedDeviceCount) {
     throw new Error('Mac did not persist the fixed A5 as the next Device.');
   }
+  const joinedDevice = overview.sync_group.devices.find(
+    (device) => !previousDeviceIds.has(device.device_identity_key)
+  );
+  if (!joinedDevice) throw new Error('Mac did not identify the fixed A5 Device.');
   return { acceptedRequestId: request.request_id,
     deviceCount: overview.sync_group.devices.length,
-    deviceName: request.device_name, groupId: overview.sync_group.group_id,
+    deviceId: joinedDevice.device_identity_key, deviceName: request.device_name,
+    groupId: overview.sync_group.group_id,
     serverPort: overview.server_status.port };
 }
 
@@ -125,6 +134,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
           `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
       }
     }
+    await waitForCurrentA5Provider({
+      deviceId: result.observation.deviceId, groupId: result.observation.groupId
+    });
     await session.invoke('sync_companion_now');
     await waitForMacFact(session, factReceipt.factId);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
