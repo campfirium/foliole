@@ -7,6 +7,7 @@ import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContrac
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
+const COMPANION_SYNC_MDNS_STOP_TIMEOUT_MS = 1_000;
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
@@ -150,9 +151,18 @@ function stopAdvertisement(advertisement: ActiveAdvertisement) {
   });
 }
 
-function stopServices(advertisement: ActiveAdvertisement) {
+function stopServices(advertisement: ActiveAdvertisement,
+  timeoutMs = COMPANION_SYNC_MDNS_STOP_TIMEOUT_MS) {
   return Promise.all(advertisement.runtimes.map(({ service }) => new Promise<void>((resolve) => {
-    service.stop?.(resolve);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    service.stop?.(finish);
   }))).then(() => undefined);
 }
 
