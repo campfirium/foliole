@@ -12,6 +12,7 @@ import {
   backfillNodeAttachments,
   installCompanionSchema,
   migrateExternalFolderOwnership,
+  retireLegacySyncGroupState,
   replaceLegacySyncPushAck,
   migrateSyncObjectStateSequence
 } from './companionDatabaseMigrationActions.js';
@@ -47,7 +48,9 @@ export async function migrateCompanionDatabase(
 ) {
   for (const step of ANDROID_COMPANION_MIGRATION_PLAN) {
     if (currentVersion >= step.beforeVersion) continue;
-    for (const action of step.actions) await runMigrationAction(db, action);
+    for (const action of step.actions) {
+      if (!isRetiredSyncStateMigration(action, targetVersion)) await runMigrationAction(db, action);
+    }
   }
   await repairCompanionDatabase(db);
   await beforeVersionCommit?.();
@@ -80,6 +83,7 @@ async function runMigrationAction(db: DbPort, action: MigrationAction) {
     if ('statementName' in rule) return addColumnIfMissing(db, rule);
   }
   if (action.type === ACTIONS.installSchema) return installCompanionSchema(db);
+  if (action.type === ACTIONS.retireLegacySyncGroupState) return retireLegacySyncGroupState(db);
   if (action.type === ACTIONS.migrateSyncObjectStateSequence) return migrateSyncObjectStateSequence(db);
   if (action.type === ACTIONS.migrateHostPermanentState) return migrateCompanionHostPermanentState(db);
   if (action.type === ACTIONS.migrateAuthorHostSnapshots) return migrateCompanionAuthorHostSnapshots(db);
@@ -98,4 +102,12 @@ async function runMigrationAction(db: DbPort, action: MigrationAction) {
     return;
   }
   throw new Error(`Unsupported companion migration action: ${action.type}`);
+}
+
+function isRetiredSyncStateMigration(action: MigrationAction, targetVersion: number) {
+  if (targetVersion < 33) return false;
+  return action.type === ACTIONS.replaceSyncPushAck ||
+    action.type === ACTIONS.addSyncGroupsWorkgroupKeyIfMissing ||
+    action.type === ACTIONS.migrateSyncGroupHosts ||
+    action.type === ACTIONS.migrateDeliveryAuthorizations;
 }

@@ -1,17 +1,18 @@
 import type Database from 'better-sqlite3';
 
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from '../../lib/core/database/syncDeliveryTriggerStatements.js';
-
 export function installLegacySyncGroupSchema(sqlite: Database.Database) {
   sqlite.exec(`
     DROP TRIGGER IF EXISTS trg_sync_delivery_state_insert;
     DROP TRIGGER IF EXISTS trg_sync_delivery_state_update;
     DROP TRIGGER IF EXISTS trg_sync_delivery_member_leave;
+    DROP TRIGGER IF EXISTS trg_sync_delivery_device_leave;
     DROP TRIGGER IF EXISTS trg_sync_delivery_review_insert;
-    DROP TABLE sync_group_local_state;
-    DROP TABLE sync_group_member_departures;
-    DROP TABLE sync_group_members;
-    DROP TABLE sync_groups;
+    DROP TABLE IF EXISTS sync_group_local_state;
+    DROP TABLE IF EXISTS sync_group_nonce_ledger;
+    DROP TABLE IF EXISTS sync_group_member_departures;
+    DROP TABLE IF EXISTS sync_group_members;
+    DROP TABLE IF EXISTS sync_group_devices;
+    DROP TABLE IF EXISTS sync_groups;
     CREATE TABLE sync_groups (group_id TEXT PRIMARY KEY, display_name TEXT NOT NULL,
       timeline_id TEXT NOT NULL, created_by_device_id TEXT NOT NULL, created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL, workgroup_key TEXT);
@@ -27,7 +28,4 @@ export function installLegacySyncGroupSchema(sqlite: Database.Database) {
       local_device_id TEXT NOT NULL, member_state TEXT NOT NULL, provisioning_cursor INTEGER,
       created_empty_proof_json TEXT, updated_at TEXT NOT NULL);
   `);
-  for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) {
-    sqlite.exec(statement.replaceAll('host_name', 'device_id'));
-  }
 }

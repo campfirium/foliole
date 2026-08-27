@@ -22,6 +22,7 @@
     "addSyncBaseContentHashIfMissing": "addSyncBaseContentHashIfMissing",
     "backfillNodeAttachmentsFromVersions": "backfillNodeAttachmentsFromVersions",
     "installSchema": "installSchema",
+    "retireLegacySyncGroupState": "retireLegacySyncGroupState",
     "replaceSyncPushAck": "replaceSyncPushAck",
     "migrateHostPermanentState": "migrateHostPermanentState",
     "migrateAuthorHostSnapshots": "migrateAuthorHostSnapshots",
@@ -337,6 +338,15 @@
         }
       ],
       "beforeVersion": 32
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to retire legacy Sync Group state.",
+          "type": "retireLegacySyncGroupState"
+        }
+      ],
+      "beforeVersion": 33
     }
   ],
   "planKeys": {

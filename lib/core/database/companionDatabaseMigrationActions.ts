@@ -7,6 +7,7 @@ import {
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS as MUTATIONS } from './androidCompanionMutationDefinitions.js';
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { SINGLE_PRINCIPAL_SYNC_GROUP_CLEANUP_STATEMENTS } from './singlePrincipalSyncGroupCleanupStatements.js';
 import { SYNC_DELIVERY_LEGACY_BACKFILL_SQL } from './syncDeliveryMigrationStatements.js';
 
 interface LegacySyncRow extends DbRow {
@@ -28,11 +29,13 @@ interface AttachmentSnapshotRow extends DbRow {
 export async function installCompanionSchema(db: DbPort) {
   const legacyMembers = await companionColumnExists(db, 'sync_group_members', 'device_id');
   for (const statement of COMPANION_SCHEMA_STATEMENTS) {
-    const compatible = legacyMembers && statement.trimStart().startsWith('CREATE TRIGGER')
-      ? statement.replaceAll('host_name', 'device_id')
-      : statement;
-    await db.run(compatible);
+    if (legacyMembers && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
+    await db.run(statement);
   }
+}
+
+export async function retireLegacySyncGroupState(db: DbPort) {
+  for (const statement of SINGLE_PRINCIPAL_SYNC_GROUP_CLEANUP_STATEMENTS) await db.run(statement);
 }
 
 export async function replaceLegacySyncPushAck(db: DbPort) {

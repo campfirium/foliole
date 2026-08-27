@@ -105,14 +105,10 @@ describe('shared companion database migration executor', () => {
 });
 
 describe('shared companion delivery migration', () => {
-  it('replaces the legacy receipt table without losing dirty facts', async () => {
-    const { port, sqlite } = fixture(23);
+  it('discards retired Sync Group state without losing current business sync facts', async () => {
+    const { port, sqlite } = fixture(32);
+    installLegacySyncGroupSchema(sqlite);
     sqlite.exec(`
-      DROP TRIGGER trg_sync_delivery_state_insert;
-      DROP TRIGGER trg_sync_delivery_state_update;
-      DROP TRIGGER trg_sync_delivery_member_leave;
-      DROP TRIGGER trg_sync_delivery_review_insert;
-      DROP TABLE sync_delivery_receipts;
       CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY, status TEXT NOT NULL);
       INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
       VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
@@ -122,15 +118,38 @@ describe('shared companion delivery migration', () => {
         ('group','peer','mobile','Peer','active','local','auth-peer',NULL,'2026-08-01',NULL,NULL,'2026-08-09');
       INSERT INTO sync_object_state VALUES
         ('setting','user_space:*:*:*:setting-a',7,NULL,'hash-a','local','2026-08-09',NULL,1,NULL);
+      INSERT INTO sync_delivery_receipts VALUES
+        ('peer','state','legacy-op','setting','setting-a','hash-a','7','pending',NULL,NULL,'old','old');
     `);
 
     await bootstrap(port);
 
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_push_ack'").get()).toBeUndefined();
-    expect(sqlite.prepare('SELECT authorization_id, object_id, status FROM sync_delivery_receipts').get())
-      .toEqual({ authorization_id: 'auth-peer', object_id: 'user_space:*:*:*:setting-a', status: 'pending' });
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_group_members'").get()).toBeUndefined();
+    expect(sqlite.prepare('SELECT COUNT(*) FROM sync_groups').pluck().get()).toBe(0);
+    expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_devices').pluck().get()).toBe(0);
+    expect(sqlite.prepare('SELECT COUNT(*) FROM sync_delivery_receipts').pluck().get()).toBe(0);
     expect(sqlite.prepare("SELECT content_hash FROM sync_object_state WHERE object_id = 'user_space:*:*:*:setting-a'").pluck().get())
       .toBe('hash-a');
+    sqlite.close();
+  });
+
+  it('rolls back retired Sync Group cleanup and version on a failed startup', async () => {
+    const { port, sqlite } = fixture(32);
+    installLegacySyncGroupSchema(sqlite);
+    sqlite.exec(`
+      INSERT INTO sync_groups VALUES ('group','Group','timeline','local','old','old',NULL);
+      INSERT INTO sync_group_local_state VALUES (1,'group','local','active',NULL,NULL,'old');
+    `);
+
+    await expect(bootstrap(port, {
+      beforeVersionCommit: () => { throw new Error('injected cleanup failure'); }
+    })).rejects.toThrow('injected cleanup failure');
+
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(32);
+    expect(sqlite.prepare('SELECT group_id FROM sync_groups').pluck().get()).toBe('group');
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_group_devices'").get())
+      .toBeUndefined();
     sqlite.close();
   });
 });

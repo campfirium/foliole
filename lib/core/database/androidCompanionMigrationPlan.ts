@@ -35,6 +35,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
+  retireLegacySyncGroupState: 'retireLegacySyncGroupState',
   replaceSyncPushAck: 'replaceSyncPushAck',
   migrateHostPermanentState: 'migrateHostPermanentState',
   migrateAuthorHostSnapshots: 'migrateAuthorHostSnapshots',
@@ -118,7 +119,8 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(29, 'migrateAuthorHostSnapshots', 'Failed to cut over companion author Host snapshots.'),
   step(30, 'migrateSyncGroupHosts', 'Failed to cut over companion Sync Group Hosts.'),
   ANDROID_COMPANION_DELIVERY_AUTHORIZATION_PLAN_STEP,
-  COMPANION_SOURCE_HOST_OWNERSHIP_PLAN_STEP
+  COMPANION_SOURCE_HOST_OWNERSHIP_PLAN_STEP,
+  step(33, 'retireLegacySyncGroupState', 'Failed to retire legacy Sync Group state.')
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {
