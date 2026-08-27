@@ -56,6 +56,7 @@ export async function runMacosA5InstrumentationMechanics({
   const hostPort = pairSyncHostPort(env);
   const output = [];
   let concurrentObservationTask;
+  let completed;
   let observationAbort;
   let reverseCreated = false; let testInstalled = false;
   try {
@@ -138,10 +139,7 @@ export async function runMacosA5InstrumentationMechanics({
     validateInstrumentation?.({ evidencePath, stdout: instrumentation.stdout });
     observation ??= concurrentObservationTask
       ? await concurrentObservationTask : await observeWhileTransportOpen?.();
-    if (restartApp) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/${APP_ID}.MainActivity`],
-      options, 'activity restart')).output);
-    return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
+    completed = { evidencePath, observation, stdout: instrumentation.stdout };
   } finally {
     observationAbort?.abort();
     if (reverseCreated) output.push((await checked(execute, paths.adb,
@@ -150,4 +148,8 @@ export async function runMacosA5InstrumentationMechanics({
     if (testInstalled) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'uninstall', `${appId}.test`], options, 'test cleanup')).output);
   }
+  if (restartApp) output.push((await checked(execute, paths.adb,
+    ['-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/${APP_ID}.MainActivity`],
+    options, 'activity restart')).output);
+  return { ...completed, output: output.join('') };
 }
