@@ -46,7 +46,7 @@ vi.mock('bonjour-service', () => {
 
 async function resetMocks() {
   const { stopCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
-  stopCompanionMdnsAdvertisement();
+  await stopCompanionMdnsAdvertisement();
   bonjourMock.destroy.mockClear();
   bonjourMock.constructorOptions = [];
   bonjourMock.constructorCallback = null;
@@ -167,6 +167,8 @@ describe('companion mDNS facts hints', () => {
 
     const names = bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name);
     expect(names).toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
+    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
+    expect(bonjourMock.publish).toHaveBeenLastCalledWith(expect.objectContaining({ probe: false }));
   });
 });
 
@@ -241,7 +243,7 @@ describe('companion mDNS lifecycle', () => {
       port: 38683,
 
     });
-    stopCompanionMdnsAdvertisement();
+    await stopCompanionMdnsAdvertisement();
 
     expect(bonjourMock.stop).toHaveBeenCalledTimes(1);
     expect(bonjourMock.destroy).toHaveBeenCalledTimes(1);

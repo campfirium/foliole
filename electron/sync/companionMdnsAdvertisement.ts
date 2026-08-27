@@ -108,23 +108,7 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
   const runtimes = interfaces.map((networkInterface) => {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options, reportWarning);
-    const service = bonjour.publish({
-      host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
-      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
-      port: input.port,
-      protocol: 'tcp',
-      txt: {
-        app_version: input.appVersion,
-        facts_revision: String(factsRevision),
-        group_id: input.groupId,
-        group_tag: input.groupTag,
-        ipv4_addresses: ipv4Addresses.join(','),
-        device_id: input.deviceId,
-        runtime_instance_id: runtimeInstanceId,
-        ...serializeSyncProtocolTxt()
-      },
-      type: COMPANION_SYNC_MDNS_SERVICE_TYPE
-    });
+    const service = publishService(bonjour, input, ipv4Addresses, runtimeInstanceId);
     return { bonjour, service };
   });
   activeAdvertisement = { input, runtimes };
@@ -138,9 +122,17 @@ export function refreshCompanionMdnsAdvertisement() {
     const advertisement = activeAdvertisement;
     if (!advertisement || lifecycleRevision !== expectedLifecycle) return;
     activeAdvertisement = null;
-    await stopAdvertisement(advertisement);
-    if (activeAdvertisement || lifecycleRevision !== expectedLifecycle) return;
-    publishCompanionMdnsAdvertisement(advertisement.input);
+    await stopServices(advertisement);
+    if (activeAdvertisement || lifecycleRevision !== expectedLifecycle) {
+      advertisement.runtimes.forEach(({ bonjour }) => bonjour.destroy());
+      return;
+    }
+    const ipv4Addresses = resolveCompanionMdnsIpv4Addresses();
+    const runtimeInstanceId = loadSyncGroupRuntimeInstanceId();
+    activeAdvertisement = { input: advertisement.input,
+      runtimes: advertisement.runtimes.map(({ bonjour }) => ({ bonjour,
+        service: publishService(bonjour, advertisement.input, ipv4Addresses, runtimeInstanceId, false)
+      })) };
   });
   return refreshQueue;
 }
@@ -149,14 +141,28 @@ export function stopCompanionMdnsAdvertisement() {
   lifecycleRevision += 1;
   const advertisement = activeAdvertisement;
   activeAdvertisement = null;
-  if (advertisement) void stopAdvertisement(advertisement);
+  return advertisement ? stopAdvertisement(advertisement) : Promise.resolve();
 }
 
 function stopAdvertisement(advertisement: ActiveAdvertisement) {
-  return Promise.all(advertisement.runtimes.map(({ bonjour, service }) => new Promise<void>((resolve) => {
-    service.stop?.(() => {
-      bonjour.destroy();
-      resolve();
-    });
+  return stopServices(advertisement).then(() => {
+    advertisement.runtimes.forEach(({ bonjour }) => bonjour.destroy());
+  });
+}
+
+function stopServices(advertisement: ActiveAdvertisement) {
+  return Promise.all(advertisement.runtimes.map(({ service }) => new Promise<void>((resolve) => {
+    service.stop?.(resolve);
   }))).then(() => undefined);
+}
+
+function publishService(bonjour: InstanceType<typeof Bonjour>, input: CompanionMdnsAdvertisementInput,
+  ipv4Addresses: string[], runtimeInstanceId: string, probe?: boolean) {
+  return bonjour.publish({ host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
+    name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId), port: input.port,
+    ...(probe === undefined ? {} : { probe }), protocol: 'tcp', type: COMPANION_SYNC_MDNS_SERVICE_TYPE,
+    txt: { app_version: input.appVersion, device_id: input.deviceId,
+      facts_revision: String(factsRevision), group_id: input.groupId, group_tag: input.groupTag,
+      ipv4_addresses: ipv4Addresses.join(','), runtime_instance_id: runtimeInstanceId,
+      ...serializeSyncProtocolTxt() } });
 }
