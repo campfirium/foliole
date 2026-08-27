@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 import { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
@@ -55,14 +56,16 @@ export {
   SYNC_STATE_PATH
 };
 
-function writeUnhandledRequestError(
+async function writeUnhandledRequestError(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   error: unknown
 ) {
   console.warn('[companion-sync] unhandled LAN request error', { error, url: request.url ?? null });
   if (!response.writableEnded) {
-    writeJson(request, response, 500, { error: 'internal_server_error' });
+    await runWithDatabaseConnectionOwner(() => {
+      if (!response.writableEnded) writeJson(request, response, 500, { error: 'internal_server_error' });
+    });
   }
 }
 
@@ -197,18 +200,22 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, 200, { ok: true });
       return;
     }
-    const auth = authenticateCompanionRequest({ request });
+    const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({ request }));
     if (!auth.ok) {
-      writeJson(request, response, auth.status_code, { error: auth.error });
+      await runWithDatabaseConnectionOwner(() => {
+        writeJson(request, response, auth.status_code, { error: auth.error });
+      });
       return;
     }
-    await handleAuthenticatedGet(request, response, parsedRequestUrl, {
-      ...args,
-      authenticatedDeviceId: auth.device_id,
-      getSyncStatus: args.getSyncStatus ?? (() => null)
-    });
+    await runWithDatabaseConnectionOwner(() => handleAuthenticatedGet(
+      request, response, parsedRequestUrl, {
+        ...args,
+        authenticatedDeviceId: auth.device_id,
+        getSyncStatus: args.getSyncStatus ?? (() => null)
+      }
+    ));
     } catch (error) {
-      writeUnhandledRequestError(request, response, error);
+      await writeUnhandledRequestError(request, response, error);
     }
   };
 }

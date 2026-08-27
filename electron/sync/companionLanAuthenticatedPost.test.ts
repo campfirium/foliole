@@ -3,6 +3,19 @@ import { Readable } from 'node:stream';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
+const databaseOwnerMock = vi.hoisted(() => ({
+  active: false,
+  run: vi.fn(async (execute: () => unknown) => {
+    databaseOwnerMock.active = true;
+    try { return await execute(); }
+    finally { databaseOwnerMock.active = false; }
+  })
+}));
+
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: databaseOwnerMock.run
+}));
+
 const authMock = vi.hoisted(() => ({
   authenticateCompanionRequest: vi.fn(() => ({ ok: true }))
 }));
@@ -49,6 +62,7 @@ import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 
 beforeEach(() => {
   vi.resetAllMocks();
+  databaseOwnerMock.active = false;
   authMock.authenticateCompanionRequest.mockReturnValue({ ok: true });
   contentBlobMock.loadCompanionContentBlobBatch.mockReturnValue({
     body: Buffer.from('multipart-body'),
@@ -62,9 +76,10 @@ beforeEach(() => {
 });
 
 it('binds sync push provenance to the authenticated Host', async () => {
-  authMock.authenticateCompanionRequest.mockReturnValue({
-    device_id: 'device-android', device_name: 'Android A5', ok: true
-  } as never);
+  authMock.authenticateCompanionRequest.mockImplementation(() => {
+    expect(databaseOwnerMock.active).toBe(true);
+    return { device_id: 'device-android', device_name: 'Android A5', ok: true } as never;
+  });
   syncPushMock.handleCompanionSyncPush.mockResolvedValue({ acks: [] });
   const response = createResponse();
   const writeJson = createWriteJson();

@@ -1,5 +1,7 @@
 import type http from 'node:http';
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import {
   acknowledgeCompanionContentBlobs,
   CONTENT_BLOB_ACK_PATH,
@@ -38,7 +40,10 @@ async function readAuthenticatedPostBody(
     return await readCompanionRequestBody(request);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'invalid_request_body';
-    writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message }, 'POST, OPTIONS');
+    await runWithDatabaseConnectionOwner(() => writeJson(
+      request, response, message === 'request_too_large' ? 413 : 400,
+      { error: message }, 'POST, OPTIONS'
+    ));
     return null;
   }
 }
@@ -79,29 +84,37 @@ export async function handleAuthenticatedPost(
 ) {
   const route = resolveAuthenticatedPostRoute(parsedRequestUrl);
   if (route === 'retired-sync-json') {
-    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS');
+    await runWithDatabaseConnectionOwner(() => writeJson(
+      request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS'
+    ));
     return true;
   }
   if (!route) {
-    writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
+    await runWithDatabaseConnectionOwner(() => writeJson(
+      request, response, 404, { error: 'not_found' }, 'POST, OPTIONS'
+    ));
     return true;
   }
   const bodyText = await readAuthenticatedPostBody(request, response, writeJson);
   if (bodyText === null) {
     return true;
   }
-  const auth = authenticateCompanionRequest({ bodyText, request });
-  if (!auth.ok) {
-    writeJson(request, response, auth.status_code, { error: auth.error });
-    return true;
-  }
-  let plaintext: string;
-  try {
-    plaintext = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
-  } catch (error) {
-    writeJson(request, response, 401, { error: error instanceof Error ? error.message : 'workgroup_aead_invalid' });
-    return true;
-  }
-  await handleAuthenticatedRoute({ auth, bodyText: plaintext, request, response, route, writeJson });
+  await runWithDatabaseConnectionOwner(async () => {
+    const auth = authenticateCompanionRequest({ bodyText, request });
+    if (!auth.ok) {
+      writeJson(request, response, auth.status_code, { error: auth.error });
+      return;
+    }
+    let plaintext: string;
+    try {
+      plaintext = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
+    } catch (error) {
+      writeJson(request, response, 401, {
+        error: error instanceof Error ? error.message : 'workgroup_aead_invalid'
+      });
+      return;
+    }
+    await handleAuthenticatedRoute({ auth, bodyText: plaintext, request, response, route, writeJson });
+  });
   return true;
 }

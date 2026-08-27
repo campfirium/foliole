@@ -1,24 +1,13 @@
-import { promises as fs } from 'node:fs';
 import type http from 'node:http';
-import os from 'node:os';
-import path from 'node:path';
-import { PassThrough, Writable } from 'node:stream';
+import { Writable } from 'node:stream';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const workspaceSnapshotMock = vi.hoisted(() => ({
   loadWorkspaceSnapshot: vi.fn(() => null),
   loadWorkspaceVersionMetadata: vi.fn(() => ({
     hasSnapshot: true,
     workspaceVersion: '2026-04-26T00:00:00.000Z'
-  }))
-}));
-const attachmentResourceMock = vi.hoisted(() => ({
-  loadCompanionAttachmentResource: vi.fn(async (): Promise<unknown> => ({
-    contentLength: 0,
-    filePath: '',
-    mimeType: 'image/png',
-    status: 'ready'
   }))
 }));
 const contentBlobResourceMock = vi.hoisted(() => ({
@@ -52,6 +41,13 @@ const diagnosticsMock = vi.hoisted(() => ({
     verdicts: []
   }))
 }));
+const databaseOwnerMock = vi.hoisted(() => ({
+  run: vi.fn(async (execute: () => unknown) => execute())
+}));
+
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: databaseOwnerMock.run
+}));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot,
@@ -63,7 +59,7 @@ vi.mock('./companionRequestAuth.js', () => ({
 }));
 vi.mock('./companionLanAttachmentResources.js', () => ({
   ATTACHMENT_RESOURCE_PATH: '/companion/attachment-resource',
-  loadCompanionAttachmentResource: attachmentResourceMock.loadCompanionAttachmentResource
+  loadCompanionAttachmentResource: vi.fn()
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
@@ -80,36 +76,20 @@ vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
 vi.mock('./workgroupHttpCrypto.js', () => ({
-  createWorkgroupResponseStreamCipher: vi.fn(() => ({
-    authTag: () => Buffer.alloc(0), cipher: new PassThrough(),
-    prefix: Buffer.alloc(0), suffix: Buffer.alloc(0)
-  })),
+  createWorkgroupResponseStreamCipher: vi.fn(),
   encryptWorkgroupResponse: vi.fn(() => Buffer.from('encrypted-resource')),
   WORKGROUP_ENVELOPE_CONTENT_TYPE: 'application/vnd.foliole.workgroup-aead+json'
 }));
 
 import {
-  ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
   WORKSPACE_VERSION_PATH,
   WORKSPACE_SNAPSHOT_PATH
 } from './companionLanRequestHandler.js';
 
-let tempRoot = '';
-let attachmentFilePath = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-lan-request-handler-'));
-  attachmentFilePath = path.join(tempRoot, 'attachment.bin');
-  await fs.writeFile(attachmentFilePath, 'attachment-bytes');
+beforeEach(() => {
   vi.resetAllMocks();
-  attachmentResourceMock.loadCompanionAttachmentResource.mockResolvedValue({
-    contentLength: Buffer.byteLength('attachment-bytes'),
-    filePath: attachmentFilePath,
-    mimeType: 'image/png',
-    status: 'ready'
-  });
   contentBlobResourceMock.loadCompanionContentBlobResource.mockResolvedValue({
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
@@ -137,8 +117,14 @@ beforeEach(async () => {
   });
 });
 
-afterEach(async () => {
-  await fs.rm(tempRoot, { force: true, recursive: true });
+it('keeps authenticated sync-pack preparation and response inside the database owner', async () => {
+  const response = createResponse();
+  await createHandler()({
+    headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0'
+  } as http.IncomingMessage, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
+  expect(databaseOwnerMock.run).toHaveBeenCalledTimes(2);
 });
 
 function createResponse() {
@@ -209,42 +195,6 @@ it('loads lightweight version metadata for the version endpoint', async () => {
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
   expect(workspaceSnapshotMock.loadWorkspaceVersionMetadata).toHaveBeenCalledTimes(1);
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
-});
-
-it('serves signed attachment resources without loading the workspace snapshot', async () => {
-  const response = createResponse();
-  await createHandler()({
-    headers: {},
-    method: 'GET',
-    url: `${ATTACHMENT_RESOURCE_PATH}?attachment_id=att-1&content_hash=hash-1`
-  } as http.IncomingMessage, response);
-
-  expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
-    'X-Foliole-Original-Content-Type': 'image/png'
-  });
-  expect(response.body().toString()).toBe(Buffer.from('attachment-bytes').toString('base64url'));
-  expect(attachmentResourceMock.loadCompanionAttachmentResource).toHaveBeenCalledWith('att-1', 'hash-1');
-  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
-});
-
-it('returns attachment resource errors as json', async () => {
-  attachmentResourceMock.loadCompanionAttachmentResource.mockResolvedValue({
-    error: 'content_hash_mismatch',
-    status: 'error',
-    statusCode: 409
-  });
-  const response = createResponse();
-  await createHandler()({
-    headers: {},
-    method: 'GET',
-    url: `${ATTACHMENT_RESOURCE_PATH}?attachment_id=att-1&content_hash=wrong`
-  } as http.IncomingMessage, response);
-
-  expect(response.writeHead).toHaveBeenCalledWith(409, expect.objectContaining({
-    'Content-Type': 'application/json; charset=utf-8'
-  }));
-  expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'content_hash_mismatch' }));
 });
 
 it('serves signed content body blobs without loading the workspace snapshot', async () => {
