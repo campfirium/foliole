@@ -19,11 +19,7 @@ final class FolioleCompanionCaptureNavigation {
         long timeoutMs
     ) throws Exception {
         if (!hasTestId(instrumentation, webView, BROWSE_READY)) {
-            String entry = hasTestId(instrumentation, webView, BROWSE_TAB)
-                ? BROWSE_TAB : TOP_BAR_LEFT_ACTION;
-            FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-                instrumentation, webView, entry, timeoutMs
-            );
+            String entry = waitForBrowseEntry(instrumentation, webView, timeoutMs);
             FolioleCompanionCaptureAnnotationScenario.perform(
                 instrumentation, webView, entry, "click", ""
             );
@@ -31,6 +27,20 @@ final class FolioleCompanionCaptureNavigation {
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
             instrumentation, webView, BROWSE_READY, timeoutMs
         );
+    }
+
+    private static String waitForBrowseEntry(
+        Instrumentation instrumentation,
+        WebView webView,
+        long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
+        while (System.nanoTime() < deadline) {
+            if (hasTestId(instrumentation, webView, BROWSE_TAB)) return BROWSE_TAB;
+            if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for Browse navigation entry");
     }
 
     static void openDirectorySurface(

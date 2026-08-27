@@ -50,5 +50,9 @@ it('enters Browse through the visible bottom tab from Settings', () => {
     'utf8'
   );
   expect(source).toContain('BROWSE_TAB = "companion-tab-browse"');
-  expect(source).toContain('? BROWSE_TAB : TOP_BAR_LEFT_ACTION');
+  expect(source).toContain('waitForBrowseEntry(instrumentation, webView, timeoutMs)');
+  expect(source).toContain('if (hasTestId(instrumentation, webView, BROWSE_TAB)) return BROWSE_TAB;');
+  expect(source).toContain(
+    'if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;'
+  );
 });
