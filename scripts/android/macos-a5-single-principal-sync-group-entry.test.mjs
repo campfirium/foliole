@@ -17,6 +17,8 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('observeAndAccept(session, options)');
   expect(source).toContain('waitForCurrentA5Provider');
   expect(source).toContain('deviceId: result.observation.deviceId');
+  expect(source).toContain("'provider-failure-logcat.txt'");
+  expect(source).toContain("'logcat', '-d', '--pid', pid");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");

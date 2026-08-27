@@ -79,6 +79,18 @@ async function waitForMacFact(session, factId) {
   throw new Error('Mac did not receive the fixed A5 business fact.');
 }
 
+async function captureAcceptanceProcessLog(args, evidenceRoot) {
+  const pidResult = await args.execute(args.paths.adb, [
+    '-s', args.serial, 'shell', 'pidof', ACCEPTANCE_APP_ID
+  ], { env: args.env });
+  const pid = String(pidResult.stdout ?? '').trim().split(/\s+/u)[0];
+  if (pidResult.code !== 0 || !/^\d+$/u.test(pid)) return;
+  const logcat = await args.execute(args.paths.adb, [
+    '-s', args.serial, 'logcat', '-d', '--pid', pid, '-v', 'threadtime'
+  ], { env: args.env });
+  fs.writeFileSync(path.join(evidenceRoot, 'provider-failure-logcat.txt'), String(logcat.output));
+}
+
 async function observeAndAccept(session, options = {}) {
   const request = await waitForMacosDeviceRequest(session, null, options);
   const before = await session.load();
@@ -153,9 +165,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
           `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
       }
     }
-    await waitForCurrentA5Provider({
-      deviceId: result.observation.deviceId, groupId: result.observation.groupId
-    });
+    try {
+      await waitForCurrentA5Provider({
+        deviceId: result.observation.deviceId, groupId: result.observation.groupId
+      });
+    } catch (error) {
+      await captureAcceptanceProcessLog({ ...args, env }, evidenceRoot).catch(() => undefined);
+      throw error;
+    }
     await session.invoke('sync_companion_now');
     await waitForMacFact(session, factReceipt.factId);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
