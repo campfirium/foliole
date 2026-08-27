@@ -4,7 +4,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  createFriPhysicalReadinessAdapter, FRI_COREDEVICE_ID, FRI_UDID, runFriControlPlaneProbe
+  createFriPhysicalReadinessAdapter, FRI_COREDEVICE_ID, FRI_UDID,
+  prepareFriControlPlaneProbe, runFriControlPlaneProbe
 } from './fri-physical-readiness.mjs';
 
 it('requires the fixed wired physical Fri destination', async () => {
@@ -39,9 +40,12 @@ it('runs the isolated physical XCUITest control-plane probe', async () => {
   const calls = [];
   const execute = async (...args) => { calls.push(args); return 'passed'; };
   const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-readiness-'));
-  await expect(runFriControlPlaneProbe({ artifactRoot, execute })).resolves
+  const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-cache-'));
+  fs.writeFileSync(path.join(cacheRoot, 'prepared.json'), '{}\n');
+  await expect(runFriControlPlaneProbe({ artifactRoot, cacheRoot, execute })).resolves
     .toMatchObject({ facts: ['fri_xcuitest_control_plane_ready'], status: 'passed' });
   expect(calls[0][0]).toBe('xcodebuild');
+  expect(calls[0][1][0]).toBe('test-without-building');
   expect(calls[0][1]).toEqual(expect.arrayContaining([
     '-scheme', 'FriXCUITestProbe', '-destination', `platform=iOS,id=${FRI_UDID}`,
     '-destination-timeout', '5'
@@ -52,11 +56,23 @@ it('runs the isolated physical XCUITest control-plane probe', async () => {
 
 it('records the current Fri lock as a control-plane blocker', async () => {
   const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-readiness-'));
+  const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-cache-'));
+  fs.writeFileSync(path.join(cacheRoot, 'prepared.json'), '{}\n');
   const logPath = path.join(artifactRoot, 'fri-control-plane.log');
   const execute = async () => { throw Object.assign(new Error('probe failed'), {
     stderr: 'Xcode cannot launch tests. Unlock Fri to Continue\n'
   }); };
-  await expect(runFriControlPlaneProbe({ artifactRoot, execute })).resolves.toMatchObject({
+  await expect(runFriControlPlaneProbe({ artifactRoot, cacheRoot, execute })).resolves.toMatchObject({
     evidencePath: logPath, missingFact: 'fri_current_unlock_required', status: 'blocked'
   });
+});
+
+it('prepares the physical control plane outside the readiness probe', async () => {
+  const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-cache-'));
+  const calls = [];
+  const execute = async (...args) => { calls.push(args); return 'built'; };
+  await expect(prepareFriControlPlaneProbe({ cacheRoot, execute })).resolves
+    .toMatchObject({ status: 'prepared' });
+  expect(calls[0][1][0]).toBe('build-for-testing');
+  expect(fs.existsSync(path.join(cacheRoot, 'prepared.json'))).toBe(true);
 });

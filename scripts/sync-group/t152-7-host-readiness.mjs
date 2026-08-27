@@ -6,7 +6,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 import {
-  createFriPhysicalReadinessAdapter, runFriControlPlaneProbe
+  createFriPhysicalReadinessAdapter, prepareFriControlPlaneProbe, runFriControlPlaneProbe
 } from '../ios/fri-physical-readiness.mjs';
 import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import { createHostReadinessAdapters } from './multi-device-sync-host-readiness.mjs';
@@ -42,10 +42,12 @@ export async function runT1527HostReadiness({ repoRoot = process.cwd(), id = run
   adapters['ios-d'] = createFriAdapter();
   const readiness = await collectReadiness({ adapters, hosts: HOSTS });
   const root = path.join(repoRoot, '.tmp', 'artifacts', 't152-7-readiness', id);
+  const cacheRoot = path.join(repoRoot, '.tmp', 'artifacts', 't152-7-readiness',
+    'fri-control-plane-cache');
   fs.mkdirSync(root, { recursive: true });
   let probe = null;
   if (readiness.allReady) {
-    probe = await runFriProbe({ artifactRoot: path.join(root, 'fri-control-plane') });
+    probe = await runFriProbe({ artifactRoot: path.join(root, 'fri-control-plane'), cacheRoot });
   }
   const receipt = { candidate, completedAt: new Date().toISOString(), probe,
     readiness, resultStatus: readiness.allReady && probe?.status === 'passed'
@@ -58,7 +60,14 @@ export async function runT1527HostReadiness({ repoRoot = process.cwd(), id = run
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(
   'scripts/sync-group/t152-7-host-readiness.mjs')) {
-  runT1527HostReadiness().then(({ receipt }) => {
+  const prepareOnly = process.argv.slice(2).join(' ') === '--prepare-fri';
+  const action = prepareOnly
+    ? prepareFriControlPlaneProbe({ cacheRoot: path.join(process.cwd(), '.tmp', 'artifacts',
+      't152-7-readiness', 'fri-control-plane-cache') }).then(() => ({ receipt: {
+      resultStatus: 'ready'
+    } }))
+    : runT1527HostReadiness();
+  action.then(({ receipt }) => {
     if (receipt.resultStatus !== 'ready') process.exitCode = 1;
   }).catch((error) => {
     console.error(`[t152-7-readiness] status=failed message=${error.message}`);

@@ -7,6 +7,7 @@ const exec = promisify(execFile);
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_UDID = '00008110-001109A802A0401E';
 const PROBE_ROOT = '/Users/roamer/P/sys/FriXCUITestProbe';
+const PREPARED_MARKER = 'prepared.json';
 
 async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
@@ -42,16 +43,36 @@ export function createFriPhysicalReadinessAdapter({ execute = bounded } = {}) {
   };
 }
 
-export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
+export async function prepareFriControlPlaneProbe({ cacheRoot, execute = bounded,
   fsApi = fs } = {}) {
+  fsApi.mkdirSync(cacheRoot, { recursive: true });
+  const project = path.join(PROBE_ROOT, 'FriXCUITestProbe.xcodeproj');
+  const output = await execute('xcodebuild', ['build-for-testing', '-project', project,
+    '-scheme', 'FriXCUITestProbe', '-destination', `platform=iOS,id=${FRI_UDID}`,
+    '-destination-timeout', '5', '-derivedDataPath', cacheRoot,
+    '-allowProvisioningUpdates', '-allowProvisioningDeviceRegistration'], {
+    cwd: PROBE_ROOT, timeout: 5 * 60_000
+  });
+  fsApi.writeFileSync(path.join(cacheRoot, PREPARED_MARKER), `${JSON.stringify({
+    preparedAt: new Date().toISOString(), schemaVersion: 1
+  }, null, 2)}\n`, 'utf8');
+  return { output, status: 'prepared' };
+}
+
+export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
+  fsApi = fs, cacheRoot } = {}) {
   fsApi.mkdirSync(artifactRoot, { recursive: true });
   const evidencePath = path.join(artifactRoot, 'fri-control-plane.log');
+  if (!fsApi.existsSync(path.join(cacheRoot, PREPARED_MARKER))) {
+    return { evidencePath: null, lastSuccessfulAction: 'fri_xcode_destination_ready',
+      missingFact: 'fri_control_plane_not_prepared', status: 'blocked' };
+  }
   const project = path.join(PROBE_ROOT, 'FriXCUITestProbe.xcodeproj');
-  const args = ['test', '-project', project, '-scheme', 'FriXCUITestProbe',
+  const args = ['test-without-building', '-project', project, '-scheme', 'FriXCUITestProbe',
     '-destination', `platform=iOS,id=${FRI_UDID}`, '-destination-timeout', '5',
-    '-derivedDataPath', path.join(artifactRoot, 'DerivedData'),
+    '-derivedDataPath', cacheRoot,
     '-resultBundlePath', path.join(artifactRoot, 'fri-control-plane.xcresult'),
-    '-allowProvisioningUpdates', '-allowProvisioningDeviceRegistration'];
+    '-allowProvisioningUpdates'];
   try {
     const output = await execute('xcodebuild', args, { cwd: PROBE_ROOT, timeout: 30_000 });
     fsApi.writeFileSync(evidencePath, output, 'utf8');
