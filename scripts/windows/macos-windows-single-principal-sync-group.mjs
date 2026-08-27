@@ -108,6 +108,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });
     const accepted = await session.accept(request.request_id);
     await waitForOriginCount(session, 'C', 2);
+    await session.invoke('sync_companion_now');
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
     const windows = await windowsWork;
@@ -128,7 +129,6 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (!automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
       throw new Error('Windows automatic sync did not deliver its business fact to Mac.');
     }
-    await session.invoke('sync_companion_now');
     const receipt = { acceptedTip, completedAt: new Date().toISOString(),
       deviceCount: accepted.sync_group?.devices?.length ?? 0,
       groupId: accepted.sync_group?.group_id ?? null,
