@@ -28,6 +28,8 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   );
   expect(source).toContain('TimeUnit.SECONDS.toNanos(30)');
   expect(source).toContain('stage=settings-open');
+  expect(source).toContain('"companion-sync-discover"');
+  expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');

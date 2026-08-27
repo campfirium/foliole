@@ -29,6 +29,10 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-settings-sync", deadline
             );
             Log.i(LOG_TAG, "stage=sync-open");
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, "companion-sync-discover", deadline
+            );
+            Log.i(LOG_TAG, "stage=discovery-requested");
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-join", deadline
             );
