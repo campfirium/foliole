@@ -73,16 +73,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
-        async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.start(
+        async(call, "Failed to start Sync Group provider.", () -> {
+            JSObject result = FolioleCompanionSyncGroupProvider.start(
                 getContext(), getActivity(), call, this, this::dispatchDataRequest,
                 this::dispatchProviderState, isParticipating()
-            ));
+            );
+            reconcileServiceMonitor();
+            return result;
+        });
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
-        async(call, "Failed to stop Sync Group provider.", () ->
-            withParticipation(FolioleCompanionSyncGroupProvider.stop(this)));
+        async(call, "Failed to stop Sync Group provider.", () -> {
+            JSObject result = FolioleCompanionSyncGroupProvider.stop(this);
+            reconcileServiceMonitor();
+            return withParticipation(result);
+        });
     }
 
     @PluginMethod public void loadSyncGroupProviderState(PluginCall call) {
@@ -213,7 +219,9 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     private void reconcileServiceMonitor() throws Exception {
         if (serviceMonitor == null) return;
-        if (isParticipating()) serviceMonitor.start();
+        if (isParticipating() && !FolioleCompanionSyncGroupProvider.activeGroupId().isEmpty()) {
+            serviceMonitor.start();
+        }
         else serviceMonitor.stop();
     }
 

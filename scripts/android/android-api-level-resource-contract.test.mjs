@@ -39,6 +39,15 @@ describe('Android API-level resource contract', () => {
     expect(session).toContain('if (resolving) return;');
     expect(session).toContain('resolveNext();');
     expect(session).toContain('pendingResolutions.clear();');
+    const monitor = read(
+      'android/app/src/main/java/com/foliole/android/FolioleCompanionNsdMonitor.java'
+    );
+    expect(monitor).toContain('synchronized (this)');
+    expect(monitor).not.toContain('private synchronized void resolveNext()');
+    const plugin = read('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java');
+    expect(plugin).toContain('!FolioleCompanionSyncGroupProvider.activeGroupId().isEmpty()');
+    expect(plugin).toMatch(/FolioleCompanionSyncGroupProvider\.start[\s\S]+reconcileServiceMonitor\(\)/u);
+    expect(plugin).toMatch(/FolioleCompanionSyncGroupProvider\.stop[\s\S]+reconcileServiceMonitor\(\)/u);
   });
 
   it('limits the API 27 navigation bar attribute to v27 resources', () => {

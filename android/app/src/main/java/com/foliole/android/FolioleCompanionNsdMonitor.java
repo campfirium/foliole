@@ -46,20 +46,26 @@ final class FolioleCompanionNsdMonitor {
     };
 
     @SuppressWarnings("deprecation")
-    private synchronized void resolve(NsdServiceInfo service) {
-        pendingResolutions.offer(service.getServiceName(), service);
-        if (resolving) return;
-        resolving = true;
+    private void resolve(NsdServiceInfo service) {
+        synchronized (this) {
+            pendingResolutions.offer(service.getServiceName(), service);
+            if (resolving) return;
+            resolving = true;
+        }
         resolveNext();
     }
 
     @SuppressWarnings("deprecation")
-    private synchronized void resolveNext() {
-        NsdServiceInfo service = pendingResolutions.poll();
-        if (service == null) { resolving = false; return; }
-        long generation = ++resolutionGeneration;
-        resolutionTimeout = () -> finishResolution(generation, null);
-        handler.postDelayed(resolutionTimeout, RESOLVE_TIMEOUT_MS);
+    private void resolveNext() {
+        NsdServiceInfo service;
+        long generation;
+        synchronized (this) {
+            service = pendingResolutions.poll();
+            if (service == null) { resolving = false; return; }
+            generation = ++resolutionGeneration;
+            resolutionTimeout = () -> finishResolution(generation, null);
+            handler.postDelayed(resolutionTimeout, RESOLVE_TIMEOUT_MS);
+        }
         try {
             manager.resolveService(service, new NsdManager.ResolveListener() {
                 @Override public void onResolveFailed(NsdServiceInfo ignored, int errorCode) {
@@ -75,11 +81,15 @@ final class FolioleCompanionNsdMonitor {
         }
     }
 
-    private synchronized void finishResolution(long generation, NsdServiceInfo resolved) {
-        if (generation != resolutionGeneration) return;
-        if (resolutionTimeout != null) handler.removeCallbacks(resolutionTimeout);
-        resolutionTimeout = null;
-        if (started && resolved != null) emitRemoteServiceHint(resolved);
+    private void finishResolution(long generation, NsdServiceInfo resolved) {
+        boolean emit;
+        synchronized (this) {
+            if (generation != resolutionGeneration) return;
+            if (resolutionTimeout != null) handler.removeCallbacks(resolutionTimeout);
+            resolutionTimeout = null;
+            emit = started && resolved != null;
+        }
+        if (emit) emitRemoteServiceHint(resolved);
         resolveNext();
     }
 
