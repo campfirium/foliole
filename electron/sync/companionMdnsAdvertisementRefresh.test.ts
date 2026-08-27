@@ -42,6 +42,7 @@ it('re-advertises when the responder does not finish its goodbye callback', asyn
     await refreshed;
 
     expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
-    expect(bonjourMock.publish).toHaveBeenLastCalledWith(expect.objectContaining({ probe: false }));
+    const names = bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name);
+    expect(names[1]).not.toBe(names[0]);
   } finally { vi.useRealTimers(); }
 });

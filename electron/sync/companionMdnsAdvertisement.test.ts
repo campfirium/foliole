@@ -97,7 +97,7 @@ describe('companion mDNS advertisement', () => {
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V-runtimed.local',
-      name: 'V-runtimed',
+      name: expect.stringMatching(/^V-runtimed-r[0-9a-z]+$/u),
       port: 38683,
       protocol: 'tcp',
       txt: {
@@ -155,7 +155,7 @@ describe('companion mDNS facts hints', () => {
     expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
   });
 
-  it('updates one stable service identity through its facts revision', async () => {
+  it('publishes a new service instance for each facts revision', async () => {
     const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
       './companionMdnsAdvertisement.js'
     );
@@ -165,10 +165,14 @@ describe('companion mDNS facts hints', () => {
     });
     await refreshCompanionMdnsAdvertisement();
 
-    const names = bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name);
-    expect(names).toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
+    const published = bonjourMock.publish.mock.calls.map(([input]) => input as {
+      name: string; txt: { device_id: string; runtime_instance_id: string };
+    });
+    expect(published[1]?.name).not.toBe(published[0]?.name);
+    expect(published.map(({ txt }) => txt.device_id)).toEqual(['desktop-local', 'desktop-local']);
+    expect(new Set(published.map(({ txt }) => txt.runtime_instance_id))).toHaveLength(1);
     expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
-    expect(bonjourMock.publish).toHaveBeenLastCalledWith(expect.objectContaining({ probe: false }));
+    expect(bonjourMock.publish).toHaveBeenLastCalledWith(expect.not.objectContaining({ probe: false }));
   });
 });
 

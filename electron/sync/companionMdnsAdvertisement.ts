@@ -58,9 +58,9 @@ export function resolveCompanionMdnsHost(
 }
 
 export function resolveCompanionMdnsServiceName(
-  groupDisplayName: string, runtimeInstanceId: string
+  groupDisplayName: string, runtimeInstanceId: string, revision: number
 ) {
-  const suffix = runtimeSuffix(runtimeInstanceId);
+  const suffix = `${runtimeSuffix(runtimeInstanceId)}-r${revision.toString(36)}`;
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -132,7 +132,7 @@ export function refreshCompanionMdnsAdvertisement() {
     const runtimeInstanceId = loadSyncGroupRuntimeInstanceId();
     activeAdvertisement = { input: advertisement.input,
       runtimes: advertisement.runtimes.map(({ bonjour }) => ({ bonjour,
-        service: publishService(bonjour, advertisement.input, ipv4Addresses, runtimeInstanceId, false)
+        service: publishService(bonjour, advertisement.input, ipv4Addresses, runtimeInstanceId)
       })) };
   });
   return refreshQueue;
@@ -167,10 +167,10 @@ function stopServices(advertisement: ActiveAdvertisement,
 }
 
 function publishService(bonjour: InstanceType<typeof Bonjour>, input: CompanionMdnsAdvertisementInput,
-  ipv4Addresses: string[], runtimeInstanceId: string, probe?: boolean) {
+  ipv4Addresses: string[], runtimeInstanceId: string) {
   return bonjour.publish({ host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
-    name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId), port: input.port,
-    ...(probe === undefined ? {} : { probe }), protocol: 'tcp', type: COMPANION_SYNC_MDNS_SERVICE_TYPE,
+    name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId, factsRevision),
+    port: input.port, protocol: 'tcp', type: COMPANION_SYNC_MDNS_SERVICE_TYPE,
     txt: { app_version: input.appVersion, device_id: input.deviceId,
       facts_revision: String(factsRevision), group_id: input.groupId, group_tag: input.groupTag,
       ipv4_addresses: ipv4Addresses.join(','), runtime_instance_id: runtimeInstanceId,
