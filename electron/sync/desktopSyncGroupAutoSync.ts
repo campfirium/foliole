@@ -111,6 +111,7 @@ async function syncAcrossAvailableEndpoints(
     if (!peer) return;
     try {
       await runDesktopSyncCoordinator('automatic', peer);
+      saveDesktopSyncGroupRoute(peer);
       return;
     } catch (error) { lastError = error; }
   }
@@ -127,12 +128,12 @@ function resolveDiscoveredPeer(
   const remote = group.devices.find((device) =>
     device.device_identity_key === args.peerDeviceId && device.state === 'active');
   if (!local || !remote || remote.device_identity_key === local.device_identity_key) return null;
-  return saveDesktopSyncGroupRoute({
+  return {
     endpoint_url: endpoint,
     group_id: group.group_id,
     local_device_id: local.device_identity_key,
     peer_device_id: remote.device_identity_key,
     peer_device_name: remote.device_name,
     peer_platform: remote.platform
-  });
+  };
 }

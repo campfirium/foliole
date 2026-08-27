@@ -62,6 +62,7 @@ vi.mock('./desktopSyncGroupJoinState.js', () => ({
 }));
 
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
+import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
@@ -141,6 +142,23 @@ it('falls back to an advertised LAN address when the announcement source cannot 
   expect(runtime.continueSync).toHaveBeenLastCalledWith('automatic', expect.objectContaining({
     endpoint_url: 'http://192.168.0.10:43122'
   }));
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
+    endpoint_url: 'http://192.168.0.10:43122'
+  })]);
+});
+
+it('does not restore a withdrawn route when every advertised address fails', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({ addresses: ['192.168.0.11'], port: 43122,
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' }) });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  runtime.continueSync.mockRejectedValue(new Error('provider stopped'));
+  runtime.updateCallbacks.get('down')?.({ addresses: ['169.254.77.104'], port: 43122,
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1',
+      ipv4_addresses: '169.254.77.104,192.168.0.11' }) });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(3));
+
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
 });
 
 it('retries the latest advertisement after an interrupted peer sync settles', async () => {
