@@ -54,6 +54,21 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   }]);
 });
 
+it('uses the accepted group-bound endpoint to bootstrap the first Sync Pack', async () => {
+  runtime.loadGroup.mockResolvedValue({ ...group, devices: [group.devices[0]] });
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
+    endpointUrl: 'http://accepted:38641', groupId: 'group-1'
+  }]);
+  expect(runtime.discover).not.toHaveBeenCalled();
+});
+
+it('does not fall back to the accepted endpoint after remote Device inventory exists', async () => {
+  runtime.discover.mockResolvedValue([]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([]);
+});
+
 it('rejects a target from another Sync Group', async () => {
   await expect(bindCompanionWorkspaceSyncTarget({ endpointUrl: 'http://mac:38641', groupId: 'group-2' }))
     .rejects.toThrow('sync_group_identity_mismatch');

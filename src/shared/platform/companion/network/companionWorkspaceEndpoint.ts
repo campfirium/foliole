@@ -30,8 +30,12 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
+  const remoteDevices = resolveRemoteSyncGroupDevices(group);
+  if (remoteDevices.length === 0) {
+    return [{ endpointUrl: normalized, groupId: group.group_id }];
+  }
   const discovered = await discoverCompanionDesktops(normalized, options).catch(() => []);
-  return resolveRemoteSyncGroupDevices(group).flatMap((device) => {
+  return remoteDevices.flatMap((device) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
       && candidate.discovery.provider_device_id === device.device_identity_key);
