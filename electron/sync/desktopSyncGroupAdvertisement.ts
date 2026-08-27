@@ -30,5 +30,9 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
     onWarning: args.onWarning,
     port: args.port
   });
-  await waitForCompanionMdnsAdvertisement(services);
+  try {
+    await waitForCompanionMdnsAdvertisement(services);
+  } catch (error) {
+    args.onWarning(error);
+  }
 }

@@ -93,6 +93,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   const controller = new AbortController();
+  let windowsWork = null;
   try {
     const macosFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-fact'), session });
@@ -100,7 +101,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const provider = await waitForMacosProvider(
       initial.sync_group.group_id, initial.server_status.port
     );
-    const windowsWork = runWindowsAction(repoRoot, controller.signal);
+    windowsWork = runWindowsAction(repoRoot, controller.signal);
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });
     const accepted = await session.accept(request.request_id);
     await waitForOriginCount(session, 'C', 2);
@@ -141,6 +142,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     return { receipt, receiptPath };
   } catch (error) {
     controller.abort();
+    await windowsWork?.catch(() => undefined);
     throw error;
   } finally { await session.close().catch(() => undefined); }
 }
