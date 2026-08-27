@@ -57,9 +57,9 @@ export function resolveCompanionMdnsHost(
 }
 
 export function resolveCompanionMdnsServiceName(
-  groupDisplayName: string, runtimeInstanceId: string, revision = factsRevision
+  groupDisplayName: string, runtimeInstanceId: string
 ) {
-  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${revision.toString(36)}`;
+  const suffix = runtimeSuffix(runtimeInstanceId);
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -110,7 +110,7 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
       host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
-      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId, factsRevision),
+      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
       port: input.port,
       protocol: 'tcp',
       txt: {

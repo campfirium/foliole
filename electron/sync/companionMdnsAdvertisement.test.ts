@@ -97,7 +97,7 @@ describe('companion mDNS advertisement', () => {
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V-runtimed.local',
-      name: expect.stringMatching(/^V-runtimed-[0-9a-z]+$/u),
+      name: 'V-runtimed',
       port: 38683,
       protocol: 'tcp',
       txt: {
@@ -155,7 +155,7 @@ describe('companion mDNS facts hints', () => {
     expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
   });
 
-  it('versions one device hint while preserving its runtime identity', async () => {
+  it('updates one stable service identity through its facts revision', async () => {
     const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
       './companionMdnsAdvertisement.js'
     );
@@ -166,9 +166,7 @@ describe('companion mDNS facts hints', () => {
     await refreshCompanionMdnsAdvertisement();
 
     const names = bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name);
-    expect(names[0]).toMatch(/^Shared group-runtimed-[0-9a-z]+$/u);
-    expect(names[1]).toMatch(/^Shared group-runtimed-[0-9a-z]+$/u);
-    expect(names[1]).not.toBe(names[0]);
+    expect(names).toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
   });
 });
 
