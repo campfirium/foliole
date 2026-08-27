@@ -120,7 +120,8 @@ function resolveDiscoveredPeer(
 }
 
 function endpointForService(service: { addresses?: string[]; port?: number; referer?: { address?: string } }) {
-  const host = service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value))
-    ?? (/^\d+\.\d+\.\d+\.\d+$/.test(service.referer?.address ?? '') ? service.referer?.address : null);
+  const sourceAddress = service.referer?.address ?? '';
+  const host = /^\d+\.\d+\.\d+\.\d+$/.test(sourceAddress) ? sourceAddress
+    : service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
   return host && service.port ? `http://${host}:${service.port}` : null;
 }

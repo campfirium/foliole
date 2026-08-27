@@ -115,6 +115,19 @@ it('continues a saved Device at its newly advertised endpoint', async () => {
   }));
 });
 
+it('uses the reachable announcement source before a peer virtual adapter address', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
+    addresses: ['192.168.56.1', '192.168.0.11'], port: 43122,
+    referer: { address: '192.168.0.11' },
+    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
+  });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
+    endpoint_url: 'http://192.168.0.11:43122'
+  }));
+});
+
 it('retries the latest advertisement after an interrupted peer sync settles', async () => {
   const first = deferred<{ complete: boolean; cursor: number }>();
   runtime.continueSync.mockReturnValueOnce(first.promise).mockResolvedValue({ complete: true, cursor: 10 });
