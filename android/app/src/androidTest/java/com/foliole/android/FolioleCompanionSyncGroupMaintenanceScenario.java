@@ -77,7 +77,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         throw new IllegalStateException("Initial automatic sync did not persist: " + latest);
     }
 
-    private static JSONObject readInitialSyncState(Context context) {
+    static JSONObject readInitialSyncState(Context context) {
         JSONObject state = new JSONObject();
         String path = context.getDatabasePath(DATABASE_NAME).getPath();
         try (SQLiteDatabase database = SQLiteDatabase.openDatabase(

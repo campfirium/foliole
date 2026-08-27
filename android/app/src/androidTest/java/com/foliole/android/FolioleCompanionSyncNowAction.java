@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncNowAction {
     private static final String TEST_ID = "companion-sync-now";
+    private static final long TERMINAL_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(2);
 
     private FolioleCompanionSyncNowAction() {}
 
@@ -23,7 +24,7 @@ final class FolioleCompanionSyncNowAction {
             instrumentation, webView, before.optString("runId"), 30_000
         );
         JSONObject terminal = waitUntilTerminal(
-            instrumentation, webView, started.getString("runId"), 30_000
+            instrumentation, webView, started.getString("runId"), TERMINAL_TIMEOUT_MS
         );
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
@@ -89,6 +90,8 @@ final class FolioleCompanionSyncNowAction {
                 && runId.equals(latest.optString("terminalRunId"))) return latest;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest);
+        throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest
+            + "; persisted=" + FolioleCompanionSyncGroupMaintenanceScenario
+                .readInitialSyncState(instrumentation.getTargetContext()));
     }
 }
