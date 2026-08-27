@@ -93,6 +93,20 @@ async function waitForAutomaticSync(app, previousRunId, timeoutMs = 2 * 60_000) 
   throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
 }
 
+async function retryWhileDatabaseOwned(action, timeoutMs = 2 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError;
+  while (Date.now() < deadline) {
+    try { return await action(); }
+    catch (error) {
+      if (!String(error?.message).includes('sqlite connection is owned')) throw error;
+      lastError = error;
+      await delay(500);
+    }
+  }
+  throw lastError ?? new Error('Windows database owner did not become available.');
+}
+
 async function completeAcceptedJoin(page, timeoutMs = 10 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
@@ -119,10 +133,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
   let automaticFact;
   let automaticResult;
   try {
-    localFact = await createDesktopSyncGroupJourneyFact({
+    localFact = await retryWhileDatabaseOwned(() => createDesktopSyncGroupJourneyFact({
       device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-fact'),
       session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
-    });
+    }));
     await invokeWindowsSyncGroupCommand(session.page, 'enable_companion_sync');
     candidate = await discoverUniqueGroup(session.page);
     await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', {
@@ -130,11 +144,11 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     });
     console.log(`[windows-dev-action] progress action=single-principal-sync-group milestone=requested group=${candidate.group_id}`);
     firstGroup = assertJoinedWindowsGroup(await completeAcceptedJoin(session.page), candidate.group_id);
-    const beforeAutomatic = await loadSyncTriggerResult(session.app);
-    automaticFact = await createDesktopSyncGroupJourneyFact({
+    const beforeAutomatic = await retryWhileDatabaseOwned(() => loadSyncTriggerResult(session.app));
+    automaticFact = await retryWhileDatabaseOwned(() => createDesktopSyncGroupJourneyFact({
       device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-automatic-fact'),
       session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
-    });
+    }));
     automaticResult = await waitForAutomaticSync(session.app, beforeAutomatic?.run_id);
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     await waitForJourneyOrigins(session.page, ['A', 'C']);
