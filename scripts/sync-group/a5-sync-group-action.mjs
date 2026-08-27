@@ -59,7 +59,7 @@ function validateProductResult(receipt, expected, evidenceRef) {
 }
 
 export async function runMacosA5SyncGroupMaintenance({
-  action, buildIdentity, env, evidenceRoot, execute, installMain = true,
+  action, appId, buildIdentity, env, evidenceRoot, execute, installMain = true,
   mechanics = runMacosA5InstrumentationMechanics, observeWhileTransportOpen, paths, serial
 }) {
   const spec = SPECS[action];
@@ -68,7 +68,7 @@ export async function runMacosA5SyncGroupMaintenance({
   });
   const [method, expected, needsTransport, restartApp, releaseAfterObservation = false] = spec;
   const testClass = `${APP_ID}.FolioleCompanionSyncGroupMaintenanceTest#${method}`;
-  const raw = await mechanics({ buildIdentity, env, evidenceRoot, execute, installMain,
+  const raw = await mechanics({ appId, buildIdentity, env, evidenceRoot, execute, installMain,
     needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
     restartApp, serial, testClass,
     validateInstrumentation: ({ evidencePath, stdout }) => validateProductResult(

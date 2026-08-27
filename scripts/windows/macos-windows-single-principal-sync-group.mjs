@@ -13,6 +13,7 @@ import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
+import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 
 const execute = promisify(execFile);
 
@@ -67,17 +68,34 @@ async function runWindows(repoRoot, signal) {
     });
 }
 
+async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const snapshot = await session.invoke('load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    const matches = Object.values(snapshot?.nodesById ?? {}).filter(({ title }) =>
+      String(title).startsWith(`Multi-device sync ${origin} fact`));
+    if (matches.length >= count) return snapshot;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Mac did not receive ${count} ${origin} business facts.`);
+}
+
 export async function runMacosWindowsSinglePrincipalSyncGroup({
   repoRoot = process.cwd(), runWindowsAction = runWindows
 } = {}) {
   const acceptedTip = await acceptedRevision(repoRoot);
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/t152-7-windows', acceptedTip);
+  const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
-    libraryHome: path.join(evidenceRoot, 'macos-library'), repoRoot,
-    runtimeRoot: path.join(evidenceRoot, 'macos-runtime') });
+    libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
+    runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   const controller = new AbortController();
   try {
+    const macosFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'macos-fact'), session });
     const initial = await session.enable();
     const provider = await waitForMacosProvider(
       initial.sync_group.group_id, initial.server_status.port
@@ -85,6 +103,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const windowsWork = runWindowsAction(repoRoot, controller.signal);
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });
     const accepted = await session.accept(request.request_id);
+    await waitForOriginCount(session, 'C', 2);
+    const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
     const windows = await windowsWork;
     const identity = /\[windows-dev-action\] single-principal-sync-group identity=([A-Za-z0-9.-]+)/u
       .exec(windows.stdout)?.[1];
@@ -97,12 +118,22 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (windowsReceipt.resultStatus !== 'success' || windowsReceipt.localDevicePersisted !== true) {
       throw new Error('Windows did not persist its accepted Device.');
     }
+    const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    if (!automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
+      throw new Error('Windows automatic sync did not deliver its business fact to Mac.');
+    }
+    await session.invoke('sync_companion_now');
     const receipt = { acceptedTip, completedAt: new Date().toISOString(),
       deviceCount: accepted.sync_group?.devices?.length ?? 0,
       groupId: accepted.sync_group?.group_id ?? null,
       macosProviderPort: initial.server_status.port, requestId: request.request_id,
+      journeyFacts: { macos: macosFact.factId, windows: windowsReceipt.journeyFactId,
+        macosAutomatic: macosAutomaticFact.factId,
+        windowsAutomatic: windowsReceipt.automaticFactId },
       providerServiceName: provider.serviceName,
-      resultStatus: 'success', schemaVersion: 2,
+      resultStatus: 'success', schemaVersion: 3, sharedRoot,
       windowsEvidenceRoot };
     const receiptPath = path.join(evidenceRoot, 'receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');

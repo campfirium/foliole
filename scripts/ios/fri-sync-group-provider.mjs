@@ -41,28 +41,62 @@ async function waitForDeviceCount(session, count, timeoutMs = 120_000) {
   throw new Error(`Timed out waiting for ${count} Sync Group Devices.`);
 }
 
-export async function runFriSyncGroupProvider({ evidenceRoot, repoRoot = process.cwd() }) {
+function journeyOrigins(snapshot) {
+  return [...new Set(Object.values(snapshot?.nodesById ?? {}).flatMap(({ title }) => {
+    const match = String(title).match(/^Multi-device sync ([ABCD]) fact/u);
+    return match ? [match[1]] : [];
+  }))].sort();
+}
+
+async function waitForJourneyOrigin(session, origin, timeoutMs = 5 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const snapshot = await session.invoke('load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    const origins = journeyOrigins(snapshot);
+    if (origins.includes(origin)) return origins;
+    await delay(250);
+  }
+  throw new Error(`Timed out waiting for the ${origin} business fact.`);
+}
+
+export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
+  evidenceRoot, repoRoot = process.cwd() }) {
   const session = await openMacosSyncGroupDesktopSession({
-    env: macosAcceptanceEnv(), libraryHome: path.join(evidenceRoot, 'macos-library'), repoRoot,
-    runtimeRoot: path.join(evidenceRoot, 'macos-runtime')
+    env: macosAcceptanceEnv(), libraryHome: path.join(acceptanceRoot, 'macos-library'), repoRoot,
+    runtimeRoot: path.join(acceptanceRoot, 'macos-runtime')
   });
   const receiptPath = path.join(evidenceRoot, 'provider-receipt.json');
   try {
     const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
+    const initialOrigins = journeyOrigins(await session.invoke('load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    }));
+    if (!['A', 'B', 'C'].every((origin) => initialOrigins.includes(origin))) {
+      throw new Error(`Mac provider is missing pre-Fri facts: ${initialOrigins.join(',')}`);
+    }
     writeJson(receiptPath, { groupId: initial.sync_group.group_id,
       resultStatus: 'ready', serverStatus: initial.server_status });
     console.log(`[fri-sync-group-provider] ready receipt=${receiptPath}`);
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 });
     await session.accept(request.request_id);
-    const accepted = await waitForDeviceCount(session, 2);
+    const accepted = await waitForDeviceCount(session, 4);
     writeJson(receiptPath, { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
       groupId: accepted.sync_group.group_id, resultStatus: 'accepted' });
     console.log(`[fri-sync-group-provider] accepted request=${request.request_id}`);
+    const origins = await waitForJourneyOrigin(session, 'D');
+    writeJson(receiptPath, { acceptedDeviceName: request.device_name,
+      acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
+      groupId: accepted.sync_group.group_id, journeyOrigins: origins,
+      resultStatus: 'automatic-converged' });
+    console.log('[fri-sync-group-provider] automatic-converged origin=D');
     const signal = await waitForStop();
     writeJson(receiptPath, { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
-      groupId: accepted.sync_group.group_id, resultStatus: 'success', stoppedBy: signal });
+      groupId: accepted.sync_group.group_id, journeyOrigins: origins,
+      resultStatus: 'success', stoppedBy: signal });
   } finally {
     await session.close();
   }
@@ -72,5 +106,8 @@ export async function runFriSyncGroupProvider({ evidenceRoot, repoRoot = process
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const evidenceRoot = option(process.argv.slice(2), '--evidence-root');
   if (!evidenceRoot) throw new Error('--evidence-root is required');
-  await runFriSyncGroupProvider({ evidenceRoot: path.resolve(evidenceRoot) });
+  const acceptanceRoot = option(process.argv.slice(2), '--acceptance-root');
+  await runFriSyncGroupProvider({ acceptanceRoot: acceptanceRoot
+    ? path.resolve(acceptanceRoot) : path.resolve(evidenceRoot),
+  evidenceRoot: path.resolve(evidenceRoot) });
 }

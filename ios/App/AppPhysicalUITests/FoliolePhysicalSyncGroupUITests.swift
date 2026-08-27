@@ -36,6 +36,15 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             app.buttons["Sync Now"].waitForExistence(timeout: 120),
             "The accepted Sync Group was not activated on the physical iPhone."
         )
+        enableAutomaticSync(in: app)
+        openBrowse(in: app)
+        waitForJourneyFacts(["A", "B", "C"], in: app)
+        captureFriFact(in: app)
+        waitForProviderAutomaticConvergence()
+        openSyncSettings(in: app)
+        tapButton(named: "Sync Now", in: app, timeout: 30)
+        waitForDisappearance(app.staticTexts["Never"], timeout: 45,
+                             message: "The public Sync Now action did not update the last sync result.")
         attachScreenshot(named: "Fri-sync-group-joined")
 
         app.terminate()
@@ -46,6 +55,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The physical iPhone did not restore its Sync Group after relaunch."
         )
         XCTAssertFalse(app.buttons["Connect to Sync Group"].exists)
+        openBrowse(in: app)
+        waitForJourneyFacts(["A", "B", "C", "D"], in: app)
         attachScreenshot(named: "Fri-sync-group-restored")
     }
 
@@ -77,6 +88,60 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
         sync.tap()
+    }
+
+    private func openBrowse(in app: XCUIApplication) {
+        tapButton(named: "Browse", in: app, timeout: 30)
+    }
+
+    private func enableAutomaticSync(in app: XCUIApplication) {
+        let toggle = app.switches["Sync"].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 30), "The automatic Sync switch is unavailable.")
+        if (toggle.value as? String) != "1" { toggle.tap() }
+    }
+
+    private func waitForJourneyFacts(_ origins: [String], in app: XCUIApplication) {
+        for origin in origins {
+            let fact = app.staticTexts.matching(
+                NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
+            ).firstMatch
+            XCTAssertTrue(fact.waitForExistence(timeout: 120),
+                          "Missing \(origin) business fact on Fri.")
+        }
+    }
+
+    private func captureFriFact(in app: XCUIApplication) {
+        tapButton(named: "Capture", in: app, timeout: 30)
+        let editor = app.textViews["Capture text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
+        editor.tap()
+        editor.typeText("Multi-device sync D fact")
+        tapButton(named: "Save", in: app, timeout: 30)
+        waitForDisappearance(editor, timeout: 30, message: "The Fri business fact was not saved.")
+    }
+
+    private func waitForProviderAutomaticConvergence() {
+        guard let path = ProcessInfo.processInfo.environment["FOLIOLE_T152_PROVIDER_RECEIPT_PATH"] else {
+            XCTFail("Missing provider receipt path.")
+            return
+        }
+        let deadline = Date().addingTimeInterval(180)
+        while Date() < deadline {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+               let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               value["resultStatus"] as? String == "automatic-converged" {
+                return
+            }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        XCTFail("Fri automatic sync did not deliver its business fact to Mac.")
+    }
+
+    private func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval, message: String) {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed, message)
     }
 
     private func resetExistingSyncGroup(in app: XCUIApplication) {

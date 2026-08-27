@@ -49,6 +49,10 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('testPreparesLocalNetworkPermission()');
   expect(physicalTest).toContain('Fri-local-network-ready');
   expect(physicalTest).toContain('resetExistingSyncGroup(in: app)');
+  expect(physicalTest).toContain('enableAutomaticSync(in: app)');
+  expect(physicalTest).toContain('captureFriFact(in: app)');
+  expect(physicalTest).toContain('waitForProviderAutomaticConvergence()');
+  expect(physicalTest).toContain('waitForJourneyFacts(["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');

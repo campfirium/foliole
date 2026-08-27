@@ -15,6 +15,11 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('openMacosSyncGroupDesktopSession');
   expect(source).toContain('observeConcurrently: true');
   expect(source).toContain('observeAndAccept(session, options)');
+  expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
+  expect(source).toContain("action: 'activate-participation'");
+  expect(source).toContain("action: 'create-journey-fact'");
+  expect(source).toContain("action: 'sync-now'");
+  expect(source).toContain("['A', 'B', 'C'].every");
   expect(source).toContain('productError');
   expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
   expect(source).toContain("'wm', 'dismiss-keyguard'");

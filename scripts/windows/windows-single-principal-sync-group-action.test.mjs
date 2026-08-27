@@ -22,8 +22,12 @@ it('requires the restarted Windows local Device in the accepted group', () => {
 it('uses only the new request, complete, overview, group and Device production contract', () => {
   const source = fs.readFileSync('scripts/windows/windows-single-principal-sync-group-action.mjs', 'utf8');
   for (const command of [
-    'request_sync_group_join', 'complete_sync_group_join', 'load_sync_group_overview'
+    'request_sync_group_join', 'complete_sync_group_join', 'load_sync_group_overview',
+    'sync_companion_now'
   ]) expect(source).toContain(command);
+  expect(source).toContain("device: 'C'");
+  expect(source).toContain("result?.reason === 'automatic'");
+  expect(source).toContain("waitForJourneyOriginCount(session.page, 'A', 2)");
   for (const retired of [
     'load_companion_pairing_overview', 'sync_group_members', 'paired_authorizations', 'manager'
   ]) expect(source).not.toContain(retired);

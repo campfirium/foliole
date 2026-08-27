@@ -1,4 +1,4 @@
-/* global console */
+/* global console, process */
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,6 +13,68 @@ import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close
 import {
   assertJoinedWindowsGroup
 } from './windows-single-principal-sync-group-contract.mjs';
+import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+
+function hasJourneyOrigins(snapshot, origins) {
+  const titles = Object.values(snapshot?.nodesById ?? {}).map(({ title }) => title);
+  return origins.every((origin) => titles.some((title) =>
+    String(title).startsWith(`Multi-device sync ${origin} fact`)));
+}
+
+function journeyOriginCount(snapshot, origin) {
+  return Object.values(snapshot?.nodesById ?? {}).filter(({ title }) =>
+    String(title).startsWith(`Multi-device sync ${origin} fact`)).length;
+}
+
+async function waitForJourneyOrigins(page, origins, timeoutMs = 2 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let snapshot;
+  while (Date.now() < deadline) {
+    snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    if (hasJourneyOrigins(snapshot, origins)) return snapshot;
+    await delay(500);
+  }
+  throw new Error(`Windows business facts did not converge: ${origins.join(',')}`);
+}
+
+async function waitForJourneyOriginCount(page, origin, count, timeoutMs = 2 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let snapshot;
+  while (Date.now() < deadline) {
+    snapshot = await invokeWindowsSyncGroupCommand(page, 'load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    if (journeyOriginCount(snapshot, origin) >= count) return snapshot;
+    await delay(500);
+  }
+  throw new Error(`Windows did not receive ${count} ${origin} business facts automatically.`);
+}
+
+async function loadSyncTriggerResult(app) {
+  return app.evaluate(({ app: electronApp }) => {
+    const pathApi = process.getBuiltinModule('node:path');
+    const moduleApi = process.getBuiltinModule('node:module');
+    if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
+    const loadModule = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
+    return loadModule(pathApi.join(
+      electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'
+    )).loadDesktopSyncTriggerResult();
+  });
+}
+
+async function waitForAutomaticSync(app, previousRunId, timeoutMs = 2 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let result;
+  while (Date.now() < deadline) {
+    result = await loadSyncTriggerResult(app);
+    if (result?.run_id !== previousRunId && result?.reason === 'automatic'
+        && result?.status === 'completed') return result;
+    await delay(500);
+  }
+  throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
+}
 
 async function completeAcceptedJoin(page, timeoutMs = 10 * 60_000) {
   const deadline = Date.now() + timeoutMs;
@@ -36,7 +98,14 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
   let session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let candidate;
   let firstGroup;
+  let localFact;
+  let automaticFact;
+  let automaticResult;
   try {
+    localFact = await createDesktopSyncGroupJourneyFact({
+      device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-fact'),
+      session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
+    });
     await invokeWindowsSyncGroupCommand(session.page, 'enable_companion_sync');
     candidate = await discoverUniqueGroup(session.page);
     await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', {
@@ -44,6 +113,15 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     });
     console.log(`[windows-dev-action] progress action=single-principal-sync-group milestone=requested group=${candidate.group_id}`);
     firstGroup = assertJoinedWindowsGroup(await completeAcceptedJoin(session.page), candidate.group_id);
+    const beforeAutomatic = await loadSyncTriggerResult(session.app);
+    automaticFact = await createDesktopSyncGroupJourneyFact({
+      device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-automatic-fact'),
+      session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
+    });
+    automaticResult = await waitForAutomaticSync(session.app, beforeAutomatic?.run_id);
+    await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
+    await waitForJourneyOrigins(session.page, ['A', 'C']);
+    await waitForJourneyOriginCount(session.page, 'A', 2);
   } finally { await closeWindowsSyncGroupSession(session); }
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restartedGroup;
@@ -51,6 +129,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     restartedGroup = assertJoinedWindowsGroup(await invokeWindowsSyncGroupCommand(
       session.page, 'load_sync_group_overview'
     ), candidate.group_id);
+    await waitForJourneyOrigins(session.page, ['A', 'C']);
   } finally { await closeWindowsSyncGroupSession(session); }
   const manifestPath = path.join(options.evidenceRoot,
     'single-principal-sync-group-receipt.json');
@@ -60,7 +139,9 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     localDeviceIdentityKey: restartedGroup.local_device_identity_key,
     localDevicePersisted: firstGroup.local_device_identity_key
       === restartedGroup.local_device_identity_key,
-    resultStatus: 'success', schemaVersion: 1
+    automaticFactId: automaticFact.factId, automaticRunId: automaticResult.run_id,
+    journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'],
+    resultStatus: 'success', schemaVersion: 2
   }, null, 2)}\n`, 'utf8');
   return { output: '', singlePrincipalSyncGroup: { manifestPath } };
 }
