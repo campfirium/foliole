@@ -71,7 +71,7 @@ export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () 
     if (candidates.length === 1) return candidates[0];
     await delay(1_000);
   }
-  throw new Error('Timed out discovering the A5 Sync Group.');
+  throw new Error('Timed out discovering a compatible Sync Group.');
 }
 
 export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
