@@ -51,10 +51,14 @@ it('publishes Device discovery facts and waits for NSD retirement', async () => 
 
 it('keeps provider lifecycle state complete and owned by one active bridge', async () => {
   const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
+  const plugin = await readJava('FolioleCompanionSyncPlugin.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
   expect(provider).toContain('bridge.replaceDispatcher(dispatcher)');
   expect(provider).toContain('server = new FolioleCompanionSyncGroupServer');
   expect(provider).toContain('advertisement = FolioleCompanionNsdAdvertisement.start');
   expect(provider).toContain('advertisement = null; server = null;');
   expect(bridge).toContain('private static Object activeOwner;');
+  expect(plugin).toContain('fileExecutor.execute(() -> FolioleCompanionSyncGroupProvider.pause(this))');
+  expect(plugin).toContain('fileExecutor.shutdown();');
+  expect(plugin).not.toContain('fileExecutor.shutdownNow();');
 });

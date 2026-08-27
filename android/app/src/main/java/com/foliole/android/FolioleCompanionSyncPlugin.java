@@ -229,16 +229,18 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @Override protected void handleOnDestroy() {
         lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
-        FolioleCompanionSyncGroupProvider.pause(this);
-        FolioleCompanionSyncGroupDataBridge.uninstall(this);
+        fileExecutor.execute(() -> {
+            FolioleCompanionSyncGroupProvider.pause(this);
+            FolioleCompanionSyncGroupDataBridge.uninstall(this);
+        });
         super.handleOnDestroy();
-        fileExecutor.shutdownNow();
+        fileExecutor.shutdown();
     }
 
     @Override protected void handleOnPause() {
         lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
-        FolioleCompanionSyncGroupProvider.pause(this);
+        fileExecutor.execute(() -> FolioleCompanionSyncGroupProvider.pause(this));
         super.handleOnPause();
     }
 
