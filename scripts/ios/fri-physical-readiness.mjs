@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -6,7 +7,6 @@ const exec = promisify(execFile);
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_UDID = '00008110-001109A802A0401E';
 const PROBE_ROOT = '/Users/roamer/P/sys/FriXCUITestProbe';
-const RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
 
 async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
@@ -42,9 +42,27 @@ export function createFriPhysicalReadinessAdapter({ execute = bounded } = {}) {
   };
 }
 
-export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded } = {}) {
-  const output = await execute(RUNNER, ['--project', path.join(PROBE_ROOT,
-    'FriXCUITestProbe.xcodeproj'), '--scheme', 'FriXCUITestProbe',
-    '--artifacts-dir', artifactRoot], { cwd: PROBE_ROOT, timeout: 10 * 60_000 });
-  return { facts: ['fri_xcuitest_control_plane_ready'], output };
+export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
+  fsApi = fs } = {}) {
+  fsApi.mkdirSync(artifactRoot, { recursive: true });
+  const evidencePath = path.join(artifactRoot, 'fri-control-plane.log');
+  const project = path.join(PROBE_ROOT, 'FriXCUITestProbe.xcodeproj');
+  const args = ['test', '-project', project, '-scheme', 'FriXCUITestProbe',
+    '-destination', `platform=iOS,id=${FRI_UDID}`, '-destination-timeout', '5',
+    '-derivedDataPath', path.join(artifactRoot, 'DerivedData'),
+    '-resultBundlePath', path.join(artifactRoot, 'fri-control-plane.xcresult'),
+    '-allowProvisioningUpdates', '-allowProvisioningDeviceRegistration'];
+  try {
+    const output = await execute('xcodebuild', args, { cwd: PROBE_ROOT, timeout: 30_000 });
+    fsApi.writeFileSync(evidencePath, output, 'utf8');
+    return { facts: ['fri_xcuitest_control_plane_ready'], output, status: 'passed' };
+  } catch (error) {
+    const detail = `${error.stdout || ''}${error.stderr || ''}${error.message || ''}`;
+    fsApi.writeFileSync(evidencePath, detail, 'utf8');
+    const locked = /Unlock Fri to Continue/u.test(detail);
+    return { evidencePath,
+      lastSuccessfulAction: 'fri_xcode_destination_ready',
+      missingFact: locked ? 'fri_current_unlock_required' : 'fri_xcuitest_control_plane_failed',
+      status: 'blocked' };
+  }
 }

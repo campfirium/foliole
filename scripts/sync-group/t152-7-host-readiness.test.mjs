@@ -15,7 +15,8 @@ function options(repoRoot, readiness, probeCalls) {
     createFriAdapter: () => async () => ({ facts: ['fri'] }), createRoot: () => undefined,
     id: 'gate-test', inspectCandidate: () => candidate,
     inspectOrigin: () => ({ ...candidate, sourceRef: 'refs/remotes/origin/dev' }), repoRoot,
-    runFriProbe: async () => { probeCalls.push(true); return { facts: ['fri-probe'] }; } };
+    runFriProbe: async () => { probeCalls.push(true);
+      return { facts: ['fri-probe'], status: 'passed' }; } };
 }
 
 it('short-circuits the physical control-plane probe when any client is blocked', async () => {
@@ -35,6 +36,18 @@ it('runs the physical control-plane probe only after every client is ready', asy
   const result = await runT1527HostReadiness(options(repoRoot, readiness, probeCalls));
   expect(result.receipt.resultStatus).toBe('ready');
   expect(probeCalls).toEqual([true]);
+});
+
+it('keeps the gate blocked when the physical control-plane probe fails', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 't152-readiness-'));
+  const gateOptions = options(repoRoot, { allReady: true, receipts: [], status: 'passed' }, []);
+  gateOptions.runFriProbe = async () => ({
+    missingFact: 'fri_current_unlock_required', status: 'blocked'
+  });
+  const result = await runT1527HostReadiness(gateOptions);
+  expect(result.receipt).toMatchObject({
+    probe: { missingFact: 'fri_current_unlock_required' }, resultStatus: 'blocked'
+  });
 });
 
 it('rejects a candidate that is not frozen at origin/dev', async () => {

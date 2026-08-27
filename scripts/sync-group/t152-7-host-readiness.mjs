@@ -48,7 +48,8 @@ export async function runT1527HostReadiness({ repoRoot = process.cwd(), id = run
     probe = await runFriProbe({ artifactRoot: path.join(root, 'fri-control-plane') });
   }
   const receipt = { candidate, completedAt: new Date().toISOString(), probe,
-    readiness, resultStatus: readiness.allReady && probe ? 'ready' : 'blocked', schemaVersion: 1 };
+    readiness, resultStatus: readiness.allReady && probe?.status === 'passed'
+      ? 'ready' : 'blocked', schemaVersion: 1 };
   const receiptPath = path.join(root, 'receipt.json');
   fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
   console.log(`[t152-7-readiness] status=${receipt.resultStatus} receipt=${receiptPath}`);

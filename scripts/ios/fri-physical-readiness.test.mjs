@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
@@ -35,9 +38,25 @@ it('rejects a wireless Fri before XCUITest', async () => {
 it('runs the isolated physical XCUITest control-plane probe', async () => {
   const calls = [];
   const execute = async (...args) => { calls.push(args); return 'passed'; };
-  await expect(runFriControlPlaneProbe({ artifactRoot: '/evidence', execute })).resolves
-    .toMatchObject({ facts: ['fri_xcuitest_control_plane_ready'] });
+  const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-readiness-'));
+  await expect(runFriControlPlaneProbe({ artifactRoot, execute })).resolves
+    .toMatchObject({ facts: ['fri_xcuitest_control_plane_ready'], status: 'passed' });
+  expect(calls[0][0]).toBe('xcodebuild');
   expect(calls[0][1]).toEqual(expect.arrayContaining([
-    '--scheme', 'FriXCUITestProbe', '--artifacts-dir', '/evidence'
+    '-scheme', 'FriXCUITestProbe', '-destination', `platform=iOS,id=${FRI_UDID}`,
+    '-destination-timeout', '5'
   ]));
+  expect(calls[0][1].some((arg) => /Simulator/u.test(arg))).toBe(false);
+  expect(calls[0][2].timeout).toBe(30_000);
+});
+
+it('records the current Fri lock as a control-plane blocker', async () => {
+  const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-readiness-'));
+  const logPath = path.join(artifactRoot, 'fri-control-plane.log');
+  const execute = async () => { throw Object.assign(new Error('probe failed'), {
+    stderr: 'Xcode cannot launch tests. Unlock Fri to Continue\n'
+  }); };
+  await expect(runFriControlPlaneProbe({ artifactRoot, execute })).resolves.toMatchObject({
+    evidencePath: logPath, missingFact: 'fri_current_unlock_required', status: 'blocked'
+  });
 });
