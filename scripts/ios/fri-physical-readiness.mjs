@@ -9,6 +9,7 @@ export const FRI_UDID = '00008110-001109A802A0401E';
 const PROBE_ROOT = '/Users/roamer/P/sys/FriXCUITestProbe';
 const PROBE_APP_ID = 'com.chenyaopeng.FriXCUITestProbe';
 const PREPARED_MARKER = 'prepared.json';
+const FRI_XCUITEST_TIMEOUT_MS = 2 * 60_000;
 
 async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
@@ -75,7 +76,9 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
     '-resultBundlePath', path.join(artifactRoot, 'fri-control-plane.xcresult'),
     '-allowProvisioningUpdates'];
   try {
-    const testOutput = await execute('xcodebuild', args, { cwd: PROBE_ROOT, timeout: 30_000 });
+    const testOutput = await execute('xcodebuild', args, {
+      cwd: PROBE_ROOT, timeout: FRI_XCUITEST_TIMEOUT_MS
+    });
     const launchOutput = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
       '--device', FRI_COREDEVICE_ID, '--terminate-existing', '--timeout', '30', PROBE_APP_ID], {
       cwd: PROBE_ROOT, timeout: 40_000

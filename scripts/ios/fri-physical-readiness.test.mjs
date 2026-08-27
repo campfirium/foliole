@@ -53,7 +53,7 @@ it('runs the isolated physical XCUITest control-plane probe', async () => {
     '-destination-timeout', '5'
   ]));
   expect(calls[0][1].some((arg) => /Simulator/u.test(arg))).toBe(false);
-  expect(calls[0][2].timeout).toBe(30_000);
+  expect(calls[0][2].timeout).toBe(120_000);
   expect(calls[1][0]).toBe('xcrun');
   expect(calls[1][1]).toEqual([
     'devicectl', 'device', 'process', 'launch', '--device', FRI_COREDEVICE_ID,
