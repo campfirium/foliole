@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { canonicalizeLibraryPath } from '../lib/platform/syncGroupUnifiedContract.js';
+
 import {
   loadDesktopDeviceIdentity,
   loadOrCreateDesktopDeviceAnchor,
@@ -88,7 +90,11 @@ it('uses the real database path before applying the shared composite identity', 
     realpath: fs.realpath
   });
 
-  expect(result.identity.canonical_library_path).toBe(await fs.realpath(libraryPath));
+  const realLibraryPath = await fs.realpath(libraryPath);
+  expect(result.identity.canonical_library_path).toBe(canonicalizeLibraryPath(
+    realLibraryPath,
+    process.platform === 'win32' ? 'windows' : 'posix'
+  ));
   expect(result.identity.device_anchor).toMatch(/^[0-9a-f-]{36}$/u);
 });
 

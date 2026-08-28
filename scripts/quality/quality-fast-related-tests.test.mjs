@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { buildRelatedTestSteps, runRelatedTests } from './quality-fast-related-tests.mjs';
@@ -14,8 +16,8 @@ describe('quality fast related test routing', () => {
     expect(steps).toHaveLength(2);
     expect(steps[0].args).toContain('src/companion/useCompanionWorkspaceAutoSync.ios.test.tsx');
     expect(steps[0].args).not.toContain('scripts/electron-sqlite-runner.mjs');
-    expect(steps[1].args[0]).toMatch(/scripts\/electron-sqlite-runner\.mjs$/);
-    expect(steps[1].args[1]).toMatch(/scripts\/run-vitest-with-summary\.mjs$/);
+    expect(path.basename(steps[1].args[0])).toBe('electron-sqlite-runner.mjs');
+    expect(path.basename(steps[1].args[1])).toBe('run-vitest-with-summary.mjs');
     expect(steps[1].args).toContain('src/companion/companionCaptureTextActions.ios.test.ts');
   });
 
