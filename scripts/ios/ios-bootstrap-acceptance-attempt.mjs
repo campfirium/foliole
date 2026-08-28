@@ -15,7 +15,7 @@ import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-accept
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
-import { startPairingAcceptanceService } from './ios-pairing-acceptance-runner.mjs';
+import { startSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
@@ -66,7 +66,7 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       listAvailable: () => runJson(options, 'xcrun', ['simctl', 'list', 'devices', 'available', '--json']),
       name: iosAcceptanceSimulatorName(scenario, process.pid, attemptNumber)
     });
-    service = startPairingAcceptanceService(repoRoot, artifactDir, scenario);
+    service = startSyncGroupProvider(repoRoot, artifactDir, scenario);
     const serviceInfo = await waitForService(artifactDir);
     prepareApp(options, owned.udid, serviceInfo.endpoint, scenario);
     bootSimulator(options, owned.udid);
@@ -92,15 +92,15 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       terminate: () => run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID])
     });
     const result = verifyBootstrapSnapshots(first, restart.second, owned.name);
-    const pairingObservations = readServiceObservations(artifactDir);
+    const providerObservations = readServiceObservations(artifactDir);
     const secondScenarioSnapshot = readSnapshot(options, scenario, containerPath);
     writeIosAcceptanceAttemptEvidence(artifactDir, { firstBridge, firstContentObservations,
-      firstScenarioSnapshot, pairingObservations, secondBridge: restart.secondBridge,
-      secondContentObservations: pairingObservations, secondScenarioSnapshot });
+      firstScenarioSnapshot, providerObservations, secondBridge: restart.secondBridge,
+      secondContentObservations: providerObservations, secondScenarioSnapshot });
     const scenarioResult = verifyAcceptanceScenario({
       firstBridge, firstContentObservations, firstScenarioSnapshot,
-      pairingObservations, scenario,
-      secondBridge: restart.secondBridge, secondContentObservations: pairingObservations,
+      providerObservations, scenario,
+      secondBridge: restart.secondBridge, secondContentObservations: providerObservations,
       secondScenarioSnapshot,
       syncPackRejections: restart.syncPackRejections
     });
@@ -127,8 +127,8 @@ function createOptions(repoRoot, artifactDir) {
 
 function waitForService(artifactDir) {
   return waitForAcceptanceObservation({
-    accept: (value) => typeof value?.endpoint === 'string', initialObservation: 'pairing service endpoint was not readable',
-    label: 'iOS pairing acceptance service', read: () => JSON.parse(readFileSync(path.join(artifactDir, 'service.json'), 'utf8'))
+    accept: (value) => typeof value?.endpoint === 'string', initialObservation: 'Sync Group provider endpoint was not readable',
+    label: 'iOS Sync Group provider', read: () => JSON.parse(readFileSync(path.join(artifactDir, 'service.json'), 'utf8'))
   });
 }
 
@@ -192,7 +192,7 @@ function readSnapshot(options, scenario, containerPath) {
 }
 
 async function runInitialAcceptanceLaunch(options, scenario, udid, containerPath, bridgeResultPath) {
-  if (scenario !== 'pairing-signed-transport') {
+  if (scenario !== 'sync-group-signed-transport') {
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
     const first = await waitForBootstrapSnapshotOrFailure(
       () => readBootstrapSnapshot(options, databasePath),

@@ -1,17 +1,27 @@
+import { deriveWorkgroupTag } from '../../lib/core/sync/workgroupAead';
 import { resolveRemoteSyncGroupDevices } from '../../lib/platform/syncGroupContract';
-import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
+import { loadCompanionDiscoveryEndpoint } from '../shared/platform/companion/network/companionSyncGroupHttpRequest';
+import {
+  loadCompanionSyncGroup,
+  loadCompanionSyncGroupWorkgroupKey
+} from '../shared/platform/companion/sync/syncGroupStore';
 import {
   completeCompanionSyncGroupJoin,
   requestCompanionSyncGroupJoin
 } from '../shared/platform/companionSyncGroupJoinClient';
-import { discoverCompanionDesktop } from '../shared/platform/companionWorkspaceDiscovery';
 
 export async function joinIosAcceptanceSyncGroup(endpointUrl: string, databasePath: string) {
-  const discovery = await discoverCompanionDesktop(endpointUrl, { allowWhileNotParticipating: true });
+  const discovery = await loadCompanionDiscoveryEndpoint(endpointUrl);
   const pending = await requestCompanionSyncGroupJoin({
-    databasePath, endpointUrl, groupId: discovery.discovery.group_id
+    databasePath, endpointUrl, groupId: discovery.group_id
   });
-  return completeCompanionSyncGroupJoin({ databasePath, endpointUrl, requestId: pending.request_id });
+  const group = await completeCompanionSyncGroupJoin({ databasePath, endpointUrl, requestId: pending.request_id });
+  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+  const groupTag = workgroupKey ? await deriveWorkgroupTag(workgroupKey) : null;
+  if (group.group_id !== discovery.group_id || groupTag !== discovery.group_tag) {
+    throw new Error('sync_group_discovery_identity_mismatch');
+  }
+  return { ...group, group_tag: groupTag };
 }
 
 export async function ensureIosAcceptanceSyncGroup(endpointUrl: string, databasePath: string | null) {

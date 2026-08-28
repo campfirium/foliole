@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 export function resolveAcceptanceScenario(value) {
-  if (!value || value === 'pairing-signed-transport') return 'pairing-signed-transport';
+  if (!value || value === 'sync-group-signed-transport') return 'sync-group-signed-transport';
   if ([
     'content-resource-read', 'database-upgrade-runtime', 'foreground-sync-lifecycle',
     'state-writeback-runtime', 'device-identity', 'sync-pack-runtime', 'sync-group-discovery-events',

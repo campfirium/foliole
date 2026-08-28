@@ -18,14 +18,14 @@ describe('iOS hosted acceptance bucket', () => {
   it('accepts one or two reviewed scenarios in declared order', () => {
     expect(parseHostedAcceptanceBucket('["sync-pack-runtime"]')).toEqual(['sync-pack-runtime']);
     expect(parseHostedAcceptanceBucket(
-      '["pairing-signed-transport","content-resource-read"]'
-    )).toEqual(['pairing-signed-transport', 'content-resource-read']);
+      '["sync-group-signed-transport","content-resource-read"]'
+    )).toEqual(['sync-group-signed-transport', 'content-resource-read']);
   });
 
   it('rejects empty, oversized, duplicate, and unknown buckets', () => {
     for (const value of [
       '[]',
-      '["pairing-signed-transport","content-resource-read","sync-pack-runtime"]',
+      '["sync-group-signed-transport","content-resource-read","sync-pack-runtime"]',
       '["sync-pack-runtime","sync-pack-runtime"]',
       '["database-upgrade-runtime"]',
       '["unknown"]'
@@ -37,12 +37,12 @@ describe('iOS hosted acceptance bucket', () => {
     const failure = new Error('scenario failed');
     const runScenario = vi.fn((scenario) => {
       calls.push(scenario);
-      if (scenario === 'pairing-signed-transport') throw failure;
+      if (scenario === 'sync-group-signed-transport') throw failure;
     });
 
     expect(() => runHostedAcceptanceBucket([
-      'pairing-signed-transport', 'content-resource-read'
+      'sync-group-signed-transport', 'content-resource-read'
     ], runScenario)).toThrow(failure);
-    expect(calls).toEqual(['pairing-signed-transport']);
+    expect(calls).toEqual(['sync-group-signed-transport']);
   });
 });

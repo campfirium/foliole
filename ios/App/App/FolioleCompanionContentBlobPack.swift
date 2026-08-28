@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 
+// sql-surface: ios-isolated-pack-owner
 enum FolioleCompanionContentBlobPack {
     static func create(parts: [FolioleCompanionContentBlobPart]) throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-content-packs", isDirectory: true)

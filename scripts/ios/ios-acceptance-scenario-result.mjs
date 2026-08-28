@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { verifyContentResourceAcceptance } from './ios-content-resource-acceptance-runner.mjs';
-import { verifyPairingAcceptance } from './ios-pairing-acceptance-runner.mjs';
+import { verifySyncGroupTransportAcceptance } from './ios-sync-group-provider-runner.mjs';
 import { verifyStateWritebackAcceptance } from './ios-state-writeback-acceptance-runner.mjs';
 import { verifySyncGroupDiscoveryAcceptance } from './ios-sync-group-discovery-acceptance-runner.mjs';
 import { verifySyncGroupJoinAcceptance } from './ios-sync-group-join-acceptance-runner.mjs';
@@ -24,20 +27,20 @@ export function verifyAcceptanceScenario(args) {
   if (args.scenario === 'sync-pack-runtime') {
     return { sync_pack: verifySyncPackAcceptance(
       args.firstBridge, args.secondBridge, args.firstScenarioSnapshot, args.secondScenarioSnapshot,
-      args.syncPackRejections, args.pairingObservations
+      args.syncPackRejections, args.providerObservations
     ) };
   }
   if (args.scenario === 'state-writeback-runtime') {
     return { state_writeback: verifyStateWritebackAcceptance(
       args.firstBridge, args.secondBridge, args.firstScenarioSnapshot, args.secondScenarioSnapshot,
-      args.pairingObservations
+      args.providerObservations
     ) };
   }
-  return { pairing: verifyPairingAcceptance(args.firstBridge, args.secondBridge, args.pairingObservations) };
+  return { sync_group_transport: verifySyncGroupTransportAcceptance(
+    args.firstBridge, args.secondBridge, args.providerObservations
+  ) };
 }
 
 export function readServiceObservations(artifactDir) {
   return JSON.parse(readFileSync(path.join(artifactDir, 'service-observations.json'), 'utf8'));
 }
-import { readFileSync } from 'node:fs';
-import path from 'node:path';

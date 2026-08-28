@@ -24,9 +24,9 @@ import {
 } from './ios-database-upgrade-acceptance-runner.mjs';
 import { verifyIosDatabaseUpgradeAcceptance } from './ios-database-upgrade-acceptance-snapshot.mjs';
 import {
-  createPairingAcceptanceServiceCompileArgs,
-  createPairingAcceptanceServiceLaunch
-} from './ios-pairing-acceptance-runner.mjs';
+  createSyncGroupProviderCompileArgs,
+  createSyncGroupProviderLaunch
+} from './ios-sync-group-provider-runner.mjs';
 import { parseStateWritebackSnapshot, verifyStateWritebackAcceptance } from './ios-state-writeback-acceptance-runner.mjs';
 import {
   parseSyncPackSnapshot,
@@ -64,15 +64,15 @@ describe('iOS bootstrap acceptance contract', () => {
   });
 
   it('uses the host-native Node service for every fixed-corpus scenario', () => {
-    const pairing = createPairingAcceptanceServiceLaunch('/repo', '/artifacts');
-    const contentResource = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'content-resource-read');
-    const stateWriteback = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'state-writeback-runtime');
-    const foregroundLifecycle = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'foreground-sync-lifecycle');
-    const syncPack = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'sync-pack-runtime');
+    const syncGroup = createSyncGroupProviderLaunch('/repo', '/artifacts');
+    const contentResource = createSyncGroupProviderLaunch('/repo', '/artifacts', 'content-resource-read');
+    const stateWriteback = createSyncGroupProviderLaunch('/repo', '/artifacts', 'state-writeback-runtime');
+    const foregroundLifecycle = createSyncGroupProviderLaunch('/repo', '/artifacts', 'foreground-sync-lifecycle');
+    const syncPack = createSyncGroupProviderLaunch('/repo', '/artifacts', 'sync-pack-runtime');
 
-    expect(pairing.command).toBe(process.execPath);
-    expect(pairing.args.at(-1)).toBe('pairing-signed-transport');
-    expect(pairing.env).toBe(process.env);
+    expect(syncGroup.command).toBe(process.execPath);
+    expect(syncGroup.args.at(-1)).toBe('sync-group-signed-transport');
+    expect(syncGroup.env).toBe(process.env);
     expect(contentResource.command).toBe(process.execPath);
     expect(contentResource.args.at(-1)).toBe('content-resource-read');
     expect(contentResource.env).toBe(process.env);
@@ -87,17 +87,17 @@ describe('iOS bootstrap acceptance contract', () => {
   });
 
   it('compiles the acceptance service before launching host-native Node', () => {
-    const compileArgs = createPairingAcceptanceServiceCompileArgs('/repo', '/artifacts');
-    const launch = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'state-writeback-runtime');
+    const compileArgs = createSyncGroupProviderCompileArgs('/repo', '/artifacts');
+    const launch = createSyncGroupProviderLaunch('/repo', '/artifacts', 'state-writeback-runtime');
 
     expect(compileArgs).toContain('--rewriteRelativeImportExtensions');
     expect(compileArgs).toContain('--noCheck');
-    expect(launch.args[0]).toBe('/artifacts/service-dist/scripts/ios/ios-pairing-acceptance-service.js');
+    expect(launch.args[0]).toBe('/artifacts/service-dist/scripts/ios/ios-sync-group-provider-fixture.js');
     expect(launch.args).not.toContain('--experimental-strip-types');
   });
 
   it('selects only the reviewed acceptance scenarios', () => {
-    expect(resolveAcceptanceScenario()).toBe('pairing-signed-transport');
+    expect(resolveAcceptanceScenario()).toBe('sync-group-signed-transport');
     expect(resolveAcceptanceScenario('content-resource-read')).toBe('content-resource-read');
     expect(resolveAcceptanceScenario('database-upgrade-runtime')).toBe('database-upgrade-runtime');
     expect(resolveAcceptanceScenario('foreground-sync-lifecycle')).toBe('foreground-sync-lifecycle');
@@ -220,11 +220,11 @@ describe('iOS bootstrap acceptance contract', () => {
     )).rejects.toThrow('device identity present=false, required tables=1');
   });
 
-  it('accepts only a passed pairing transport scenario', () => {
+  it('accepts only a passed Sync Group transport scenario', () => {
     const result = {
       error: null,
-      phase: 'paired',
-      scenario: 'pairing-signed-transport',
+      phase: 'join-observed',
+      scenario: 'sync-group-signed-transport',
       status: 'passed'
     };
     expect(verifyBridgeResult(result)).toBe(result);

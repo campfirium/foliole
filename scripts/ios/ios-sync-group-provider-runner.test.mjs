@@ -6,20 +6,20 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { compilePairingAcceptanceService } from './ios-pairing-acceptance-runner.mjs';
+import { compileSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
 
 const RELATIVE_ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 
 it('copies the immutable acceptance corpus beside the compiled service', () => {
-  const outputDirectory = '.tmp/artifacts/ios-pairing-service-distribution-test';
+  const outputDirectory = '.tmp/artifacts/ios-sync-group-provider-distribution-test';
   fs.rmSync(outputDirectory, { force: true, recursive: true });
   try {
-    compilePairingAcceptanceService(process.cwd(), outputDirectory);
+    compileSyncGroupProvider(process.cwd(), outputDirectory);
     const sourceIdentity = readIdentity(RELATIVE_ROOT);
     const distributionRoot = path.join(outputDirectory, 'service-dist');
     const copiedRoot = path.join(distributionRoot, RELATIVE_ROOT);
     expect(fs.existsSync(path.join(
-      distributionRoot, 'scripts/ios/ios-pairing-acceptance-service.js'
+      distributionRoot, 'scripts/ios/ios-sync-group-provider-fixture.js'
     ))).toBe(true);
     expect(readIdentity(copiedRoot)).toEqual(sourceIdentity);
     for (const [relativePath, expectedHash] of Object.entries(sourceIdentity.files)) {

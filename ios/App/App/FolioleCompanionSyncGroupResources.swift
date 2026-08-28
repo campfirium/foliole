@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 
+// sql-surface: ios-isolated-snapshot-owner
 enum FolioleCompanionSyncGroupResources {
     struct Resource { let body: Data; let contentType: String }
 

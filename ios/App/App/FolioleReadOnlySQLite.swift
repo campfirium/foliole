@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 
+// sql-surface: ios-isolated-snapshot-owner
 final class FolioleReadOnlySQLite {
     enum Binding {
         case integer(Int)

@@ -3,11 +3,12 @@ package com.foliole.android;
 import android.content.Context;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.nio.channels.FileLock;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -27,19 +28,22 @@ final class FolioleCompanionDeviceAnchorStore {
         return new File(context.getNoBackupFilesDir(), ANCHOR_FILE);
     }
 
-    static String loadOrCreate(File file) throws IOException {
-        if (file.exists()) return read(file);
+    static synchronized String loadOrCreate(File file) throws IOException {
         File parent = file.getParentFile();
         if (parent == null || (!parent.isDirectory() && !parent.mkdirs())) {
             throw new IOException("device_anchor_directory_unavailable");
         }
-        String anchor = UUID.randomUUID().toString().toLowerCase();
-        try {
-            Files.write(file.toPath(), (anchor + "\n").getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        File lockFile = new File(file.getPath() + ".lock");
+        try (RandomAccessFile lockOwner = new RandomAccessFile(lockFile, "rw");
+             FileLock ignored = lockOwner.getChannel().lock()) {
+            if (file.exists()) return read(file);
+            String anchor = UUID.randomUUID().toString().toLowerCase();
+            if (!file.createNewFile()) return read(file);
+            try (FileOutputStream output = new FileOutputStream(file, false)) {
+                output.write((anchor + "\n").getBytes(StandardCharsets.UTF_8));
+                output.getFD().sync();
+            }
             return anchor;
-        } catch (FileAlreadyExistsException error) {
-            return read(file);
         }
     }
 
@@ -49,7 +53,17 @@ final class FolioleCompanionDeviceAnchorStore {
     }
 
     private static String read(File file) throws IOException {
-        String value = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        byte[] bytes = new byte[(int) file.length()];
+        try (FileInputStream input = new FileInputStream(file)) {
+            int offset = 0;
+            while (offset < bytes.length) {
+                int count = input.read(bytes, offset, bytes.length - offset);
+                if (count < 0) throw new IOException("device_anchor_file_truncated");
+                offset += count;
+            }
+            if (input.read() != -1) throw new IOException("device_anchor_file_changed");
+        }
+        String value = new String(bytes, StandardCharsets.UTF_8);
         if (!value.endsWith("\n") || value.indexOf('\n') != value.length() - 1) {
             throw new IOException("device_anchor_file_invalid");
         }

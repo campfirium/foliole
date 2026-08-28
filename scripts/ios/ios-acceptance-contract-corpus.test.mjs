@@ -23,7 +23,7 @@ const RETIRED_BUILDERS = [
 const SYNC_FORMAL_ROOTS = [
   'scripts/ios/ios-bootstrap-acceptance-attempt.mjs',
   'scripts/ios/ios-foreground-sync-lifecycle-runner.mjs',
-  'scripts/ios/ios-pairing-acceptance-service.ts'
+  'scripts/ios/ios-sync-group-provider-fixture.ts'
 ];
 
 describe('iOS formal acceptance contract corpus', () => {

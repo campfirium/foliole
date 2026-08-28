@@ -114,14 +114,14 @@ jobs:
       scope: full
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-  t6-ios-pairing-content:
-    if: inputs.stage == 't6-ios-pairing-content'
+  t6-ios-sync-group-content:
+    if: inputs.stage == 't6-ios-sync-group-content'
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: release-t7-recheck
       run_contract: false
       scope: full
-      simulator_matrix: '[{"bucket":"pairing-and-content","scenarios":["pairing-signed-transport","content-resource-read"]}]'
+      simulator_matrix: '[{"bucket":"sync-group-and-content","scenarios":["sync-group-signed-transport","content-resource-read"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
   t6-ios-state-writeback:

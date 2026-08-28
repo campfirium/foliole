@@ -103,7 +103,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-acceptance-simulator-identity.test.mjs',
   'scripts/ios/ios-acceptance-restart-runner.test.mjs',
   'scripts/ios/ios-bootstrap-acceptance.test.mjs',
-  'scripts/ios/ios-pairing-acceptance-runner.test.mjs',
+  'scripts/ios/ios-sync-group-provider-runner.test.mjs',
   'scripts/ios/ios-database-upgrade-acceptance-runner.test.mjs',
   'scripts/ios/ios-device-anchor-acceptance-runner.test.mjs',
   'scripts/ios/ios-device-anchor-host-contract.test.mjs',

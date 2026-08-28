@@ -11,7 +11,7 @@ import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const RUNNER = path.join(REPO_ROOT, 'scripts/ios/ios-bootstrap-acceptance.mjs');
 const HOSTED_SCENARIOS = new Set([
-  'pairing-signed-transport',
+  'sync-group-signed-transport',
   'content-resource-read',
   'state-writeback-runtime',
   'sync-pack-runtime',

@@ -24,7 +24,7 @@ on:
           - t6-windows-acceptance
           - t6-android-host
           - t6-ios-contract
-          - t6-ios-pairing-content
+          - t6-ios-sync-group-content
           - t6-ios-state-writeback
           - t6-ios-sync-pack
           - t6-ios-foreground

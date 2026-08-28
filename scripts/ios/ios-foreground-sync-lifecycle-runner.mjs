@@ -13,7 +13,7 @@ import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicat
 import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { createLifecycleBuildEnv, sanitizeIosAcceptanceEnv } from './ios-foreground-sync-lifecycle-build.mjs';
-import { startPairingAcceptanceService } from './ios-pairing-acceptance-runner.mjs';
+import { startSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
   verifyAcceptanceAppSignature,
@@ -54,7 +54,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
       name: iosAcceptanceSimulatorName(SCENARIO, process.pid, attemptNumber)
     });
     const { template, udid } = owned;
-    service = startPairingAcceptanceService(repoRoot, artifactDir, SCENARIO);
+    service = startSyncGroupProvider(repoRoot, artifactDir, SCENARIO);
     const serviceInfo = await waitForJson(options, 'service.json', 'lifecycle service', (value) => Boolean(value.endpoint));
     prepareBuild(options, udid, serviceInfo.endpoint);
     bootAndInstall(options, udid);

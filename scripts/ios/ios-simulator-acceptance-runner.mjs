@@ -108,7 +108,7 @@ export function writeAcceptanceFailure(artifactDir, error) {
   writeFileSync(path.join(artifactDir, 'failure.json'), `${JSON.stringify(failure, null, 2)}\n`);
 }
 
-export function verifyBridgeResult(result, expectedScenario = 'pairing-signed-transport') {
+export function verifyBridgeResult(result, expectedScenario = 'sync-group-signed-transport') {
   if (result?.status !== 'passed') throw new Error(result?.error || 'The WebView bridge scenario failed.');
   if (result.scenario !== expectedScenario) throw new Error('The WebView bridge scenario was unexpected.');
   return result;

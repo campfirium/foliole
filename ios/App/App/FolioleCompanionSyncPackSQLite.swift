@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 
+// sql-surface: ios-isolated-pack-owner
 final class FolioleCompanionSyncPackSQLite {
     private(set) var database: OpaquePointer?
     init(url: URL, create: Bool) throws {

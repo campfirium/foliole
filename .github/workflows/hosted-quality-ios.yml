@@ -25,7 +25,7 @@ on:
         type: boolean
       simulator_matrix:
         required: false
-        default: '[{"bucket":"pairing-and-content","scenarios":["pairing-signed-transport","content-resource-read"]},{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]},{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]},{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
+        default: '[{"bucket":"sync-group-and-content","scenarios":["sync-group-signed-transport","content-resource-read"]},{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]},{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]},{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
         type: string
 
 permissions:
@@ -109,21 +109,21 @@ jobs:
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Run iOS Simulator scenario bucket
         run: node scripts/ios/ios-hosted-acceptance-bucket.mjs
-      - name: Upload pairing transport evidence and logs
-        if: ${{ always() && contains(matrix.scenarios, 'pairing-signed-transport') }}
+      - name: Upload Sync Group transport evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'sync-group-signed-transport') }}
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-pairing-signed-transport-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: ios-simulator-sync-group-signed-transport-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/summary.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/result.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/failure.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/attempt-evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/simulator.log
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/simulator-owned.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/lifecycle-actions.json
-            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/service-observations.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-group-signed-transport/attempt-*/service-observations.json
             .tmp/logs/quality-gate
           if-no-files-found: ignore
           include-hidden-files: true

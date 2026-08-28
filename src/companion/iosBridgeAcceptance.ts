@@ -83,9 +83,14 @@ async function runInitialJoin(databasePath: string) {
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   postResult({
     database_path: databasePath,
+    device_identity_key: group.local_device_identity_key,
+    discovery_exact: typeof group.group_tag === 'string' && group.group_tag.length === 32,
     endpoint_restored: workspace.endpoint_url === endpoint,
     error: null,
     group_id: group.group_id,
+    group_persisted: group.devices.some((device) =>
+      device.device_identity_key === group.local_device_identity_key && device.state === 'active'),
+    group_tag: group.group_tag,
     phase: 'join-observed',
     scenario: 'sync-group-signed-transport',
     signed_request_passed: signed.ok === true,
@@ -95,6 +100,7 @@ async function runInitialJoin(databasePath: string) {
 
 async function runRestartAndLeave(groupId: string) {
   const endpoint = acceptanceEndpoint()!;
+  const restoredGroup = await loadCompanionSyncGroup();
   const workspace = await loadCompanionWorkspaceSyncState();
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   const redirectRejected = await expectHttpStatus('/acceptance/redirect', 302);
@@ -108,6 +114,7 @@ async function runRestartAndLeave(groupId: string) {
     http_error_propagated: httpErrorPropagated,
     identity_restored: groupId.length > 0,
     group_id: groupId,
+    group_restored: restoredGroup?.group_id === groupId,
     endpoint_cleared: clearedWorkspace.endpoint_url === null,
     endpoint_restored: workspace.endpoint_url === endpoint,
     sync_group_left: clearedGroup === null,
@@ -115,7 +122,7 @@ async function runRestartAndLeave(groupId: string) {
     redirect_rejected: redirectRejected,
     scenario: 'sync-group-signed-transport',
     signed_after_restart: signed.ok === true,
-    signing_rejected_after_disconnect: await expectSigningRejected(),
+    signing_rejected_after_leave: await expectSigningRejected(),
     status: 'passed'
   });
 }

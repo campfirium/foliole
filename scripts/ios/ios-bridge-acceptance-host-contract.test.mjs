@@ -92,13 +92,36 @@ describe('iOS bridge acceptance host contract', () => {
     expect(databaseRunner).toMatch(/prepareBuild\(options, simulator\.udid, false\)[\s\S]*bootSimulator\(options\.repoRoot, simulator\)/);
   });
 
-  it('reuses authoritative crypto/auth helpers without loading the Electron pairing store', () => {
-    const service = fs.readFileSync('scripts/ios/ios-pairing-acceptance-service.ts', 'utf8');
+  it('reuses the authoritative Sync Group provider and request-auth helpers', () => {
+    const service = [
+      'scripts/ios/ios-sync-group-provider-fixture.ts',
+      'scripts/ios/ios-sync-group-provider-contract.ts'
+    ].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
     const auth = fs.readFileSync('electron/sync/companionRequestAuth.ts', 'utf8');
-    expect(service).toContain("from '../../electron/sync/desktopSyncGroupJoinCrypto.ts'");
-    expect(service).toContain("from '../../electron/sync/companionRequestSignature.ts'");
-    expect(service).not.toContain('companionPairingStore');
+    expect(service).toContain('DesktopSyncGroupJoinProvider');
+    expect(service).toContain('verifyCompanionRequestSignature');
     expect(auth).toContain("from './companionRequestSignature.js'");
+  });
+
+  it('retires the hosted Pairing fixture, routes, fields, scenario, and workflow assertion', () => {
+    for (const retired of [
+      'scripts/ios/ios-pairing-acceptance-service.ts',
+      'scripts/ios/ios-pairing-acceptance-runner.mjs',
+      'scripts/ios/ios-pairing-acceptance-observations.ts',
+      'scripts/ios/ios-pairing-sync-scenario-service.ts'
+    ]) expect(fs.existsSync(retired), retired).toBe(false);
+    const sources = [
+      'scripts/ios/ios-sync-group-provider-fixture.ts',
+      'scripts/ios/ios-sync-group-provider-contract.ts',
+      'scripts/ios/ios-sync-group-provider-observations.ts',
+      'scripts/ios/ios-sync-group-provider-runner.mjs',
+      'scripts/ios/ios-acceptance-scenario-result.mjs',
+      '.github/workflows/hosted-quality-ios.yml'
+    ].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+    expect(sources).not.toMatch(/pairing-signed-transport|pair_requested|pair_completed|pairing_authorization|\/companion\/pair/u);
+    expect(sources).toContain('sync-group-signed-transport');
+    expect(sources).toContain('/sync-group/join-requests');
+    expect(sources).toContain('/sync-group/join-acceptance');
   });
 
   it('serves the fixed corpus without retired builders or desktop apply imports', () => {
@@ -110,8 +133,8 @@ describe('iOS bridge acceptance host contract', () => {
       'scripts/ios/ios-sync-pack-acceptance-fixture.ts'
     ]) expect(fs.existsSync(retired), retired).toBe(false);
     const serviceFiles = [
-      'scripts/ios/ios-pairing-acceptance-service.ts',
-      'scripts/ios/ios-pairing-sync-scenario-service.ts',
+      'scripts/ios/ios-sync-group-provider-fixture.ts',
+      'scripts/ios/ios-sync-group-scenario-service.ts',
       'scripts/ios/ios-state-writeback-acceptance-service.ts',
       'scripts/ios/ios-sync-pack-acceptance-routes.ts',
       'scripts/ios/ios-content-resource-acceptance-service.ts',

@@ -157,7 +157,7 @@ describe('iOS acceptance attempt orchestration', () => {
     const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
     const simulator = workflow.slice(workflow.indexOf('  simulator:'));
     for (const scenario of [
-      'pairing-signed-transport', 'content-resource-read', 'state-writeback-runtime',
+      'sync-group-signed-transport', 'content-resource-read', 'state-writeback-runtime',
       'sync-pack-runtime', 'foreground-sync-lifecycle'
     ]) {
       expect(simulator).toContain(`name: ios-simulator-${scenario}-`);

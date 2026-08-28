@@ -115,4 +115,46 @@ describe('sql-surface-scan', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('accepts only an explicitly bounded read-only snapshot owner', async () => {
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-scan-'));
+    try {
+      const iosRoot = path.join(tempRoot, 'ios/App/App');
+      await mkdir(iosRoot, { recursive: true });
+      await writeFixture(tempRoot, completeSqlSurface());
+      await writeFile(path.join(iosRoot, 'SnapshotReader.swift'), [
+        '// sql-surface: ios-isolated-snapshot-owner',
+        'sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil)',
+        'defer { sqlite3_close(database) }'
+      ].join('\n'), 'utf8');
+
+      const result = await runScan(tempRoot);
+      expect(result.code).toBe(0);
+      expect(JSON.parse(result.stdout).summary.iosActiveDatabaseOpenings).toEqual([]);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a snapshot marker that can open a writable database', async () => {
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-scan-'));
+    try {
+      const iosRoot = path.join(tempRoot, 'ios/App/App');
+      await mkdir(iosRoot, { recursive: true });
+      await writeFixture(tempRoot, completeSqlSurface());
+      await writeFile(path.join(iosRoot, 'ActiveLibraryStore.swift'), [
+        '// sql-surface: ios-isolated-snapshot-owner',
+        'sqlite3_open_v2(path, &database, SQLITE_OPEN_READWRITE, nil)',
+        'defer { sqlite3_close(database) }'
+      ].join('\n'), 'utf8');
+
+      const result = await runScan(tempRoot);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('iOS formal Swift sources open the active SQLite library');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

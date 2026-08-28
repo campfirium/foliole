@@ -35,7 +35,10 @@ beforeEach(() => {
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db' });
   mocks.loadGroup.mockResolvedValue(null);
   mocks.leaveGroup.mockResolvedValue(undefined);
-  mocks.join.mockResolvedValue({ group_id: 'group-ios-1' });
+  mocks.join.mockResolvedValue({
+    devices: [{ device_identity_key: 'device-ios-1', state: 'active' }],
+    group_id: 'group-ios-1', group_tag: 'a'.repeat(32), local_device_identity_key: 'device-ios-1'
+  });
   mocks.saveEndpoint.mockResolvedValue({ endpoint_url: 'http://127.0.0.1:43123' });
 });
 
@@ -47,12 +50,15 @@ it('joins through the active Sync Group APIs, persists the endpoint, and perform
     'http://127.0.0.1:43123', '/app/Library/CapacitorDatabase/foliole-companionSQLite.db'
   );
   expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-    group_id: 'group-ios-1', phase: 'join-observed', status: 'passed'
+    device_identity_key: 'device-ios-1', discovery_exact: true,
+    group_id: 'group-ios-1', group_persisted: true, phase: 'join-observed', status: 'passed'
   }));
 });
 
 it('restores the Sync Group, propagates HTTP status, and leaves cleanly', async () => {
-  mocks.loadGroup.mockResolvedValueOnce({ group_id: 'group-ios-1' }).mockResolvedValueOnce(null);
+  mocks.loadGroup.mockResolvedValueOnce({ group_id: 'group-ios-1' })
+    .mockResolvedValueOnce({ group_id: 'group-ios-1' })
+    .mockResolvedValueOnce(null);
   mocks.loadWorkspace.mockResolvedValueOnce({ endpoint_url: 'http://127.0.0.1:43123' })
     .mockResolvedValueOnce({ endpoint_url: null });
   mocks.fetchDesktopJson.mockImplementation(async (_endpoint: string, path: string) => {
@@ -65,8 +71,8 @@ it('restores the Sync Group, propagates HTTP status, and leaves cleanly', async 
   await runIosBridgeAcceptance();
   expect(mocks.leaveGroup).toHaveBeenCalledOnce();
   expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_cleared: true, phase: 'disconnected', redirect_rejected: true,
-    signing_rejected_after_disconnect: true, sync_group_left: true
+    endpoint_cleared: true, group_restored: true, phase: 'disconnected', redirect_rejected: true,
+    signing_rejected_after_leave: true, sync_group_left: true
   }));
 });
 

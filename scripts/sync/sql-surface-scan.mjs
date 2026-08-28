@@ -44,8 +44,9 @@ const IOS_RUNTIME_CAPABILITY = 'iosRuntime';
 const IOS_RUNTIME_GATE = 'npm run ios:sync:preflight';
 const IOS_RUNTIME_MARKER = /\biosRuntime\b/;
 const IOS_FORMAL_SWIFT_SOURCE = /(?:^|\/)ios\/App\/App\/[^/]+\.swift$/;
-const IOS_ISOLATED_SQLITE_SOURCE = /(?:FolioleCompanionContentBlobPack|FolioleReadOnlySQLite)\.swift$/;
 const SQLITE_OPEN = /\bsqlite3_open(?:_v2)?\s*\(/;
+const IOS_SNAPSHOT_OWNER = /\/\/ sql-surface: ios-isolated-snapshot-owner\b/;
+const IOS_PACK_OWNER = /\/\/ sql-surface: ios-isolated-pack-owner\b/;
 
 const files = listFiles();
 const findings = [];
@@ -58,7 +59,7 @@ for (const file of files) {
   if (IOS_RUNTIME_MARKER.test(text)) {
     iosRuntimeMarkers.push(relativeFile);
   }
-  if (IOS_FORMAL_SWIFT_SOURCE.test(relativeFile) && !IOS_ISOLATED_SQLITE_SOURCE.test(relativeFile) && SQLITE_OPEN.test(text)) {
+  if (IOS_FORMAL_SWIFT_SOURCE.test(relativeFile) && SQLITE_OPEN.test(text) && !isBoundedIsolatedSqlite(text)) {
     iosActiveDatabaseOpenings.push(relativeFile);
   }
   const sqlFragments = extractSqlFragments(text);
@@ -74,6 +75,16 @@ for (const file of files) {
       sql: compactSql(fragment.sql)
     });
   }
+}
+
+function isBoundedIsolatedSqlite(text) {
+  const closesHandle = /\bsqlite3_close\s*\(/u.test(text);
+  if (IOS_SNAPSHOT_OWNER.test(text)) {
+    return closesHandle && /\bSQLITE_OPEN_READONLY\b/u.test(text) &&
+      !/\bSQLITE_OPEN_(?:CREATE|READWRITE)\b/u.test(text);
+  }
+  return IOS_PACK_OWNER.test(text) && closesHandle &&
+    /\bSQLITE_OPEN_READONLY\b/u.test(text) && /\bSQLITE_OPEN_(?:CREATE|READWRITE)\b/u.test(text);
 }
 
 const summary = summarize(findings);

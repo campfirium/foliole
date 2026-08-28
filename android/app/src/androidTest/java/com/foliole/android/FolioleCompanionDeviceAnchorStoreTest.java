@@ -17,6 +17,10 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionDeviceAnchorStoreTest {
@@ -59,6 +63,22 @@ public class FolioleCompanionDeviceAnchorStoreTest {
         }
 
         assertThrows(Exception.class, () -> FolioleCompanionDeviceAnchorStore.loadOrCreate(anchorFile));
+    }
+
+    @Test
+    public void concurrentCreationReturnsOneCompleteAnchor() throws Exception {
+        File anchorFile = new File(root, "anchor-v1");
+        Callable<String> create = () -> FolioleCompanionDeviceAnchorStore.loadOrCreate(anchorFile);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<String> first = executor.submit(create);
+            Future<String> second = executor.submit(create);
+            assertEquals(first.get(), second.get());
+            assertEquals(37, anchorFile.length());
+            assertEquals(first.get(), FolioleCompanionDeviceAnchorStore.loadOrCreate(anchorFile));
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private static void deleteRecursively(File value) {

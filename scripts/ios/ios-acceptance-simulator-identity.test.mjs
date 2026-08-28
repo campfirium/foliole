@@ -8,6 +8,6 @@ it('binds fixed-corpus scenarios to their reviewed target peer identity', () => 
   ]) {
     expect(iosAcceptanceSimulatorName(scenario, 123, 2)).toBe('ios-acceptance-contract-peer');
   }
-  expect(iosAcceptanceSimulatorName('pairing-signed-transport', 123, 2))
-    .toBe('Foliole pairing-signed-transport 123 2');
+  expect(iosAcceptanceSimulatorName('sync-group-signed-transport', 123, 2))
+    .toBe('Foliole sync-group-signed-transport 123 2');
 });

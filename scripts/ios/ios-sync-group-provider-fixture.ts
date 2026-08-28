@@ -1,17 +1,8 @@
-import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 
-import { verifyCompanionRequestSignature } from '../../electron/sync/companionRequestSignature.ts';
-import { encryptDesktopSyncGroupJoinInfo } from '../../electron/sync/desktopSyncGroupJoinCrypto.ts';
 import {
-  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-  evaluateSyncProtocolCompatibility
-} from '../../lib/platform/syncProtocolContract.ts';
-
-import {
-  IOS_ACCEPTANCE_DESKTOP_PEER_ID,
   IOS_ACCEPTANCE_CONTRACT_PEER_ID,
   loadIosAcceptanceContractCorpus
 } from './ios-acceptance-contract-corpus.ts';
@@ -19,27 +10,25 @@ import {
   type IosContentResourceAcceptanceFixture,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
-import { createIosPairingAcceptanceObservations } from './ios-pairing-acceptance-observations.ts';
-import { createIosPairingSyncScenarioService } from './ios-pairing-sync-scenario-service.ts';
+import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
+import { createIosSyncGroupProviderObservations } from './ios-sync-group-provider-observations.ts';
+import { createIosSyncGroupScenarioService } from './ios-sync-group-scenario-service.ts';
 import {
   type IosSyncPackAcceptanceRoutes
 } from './ios-sync-pack-acceptance-routes.ts';
 
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
-const scenario = process.argv[3] ?? 'pairing-signed-transport';
+const scenario = process.argv[3] ?? 'sync-group-signed-transport';
 const corpusScenario = [
   'content-resource-read', 'foreground-sync-lifecycle', 'state-writeback-runtime', 'sync-pack-runtime'
 ].includes(scenario);
 mkdirSync(artifactDir, { recursive: true });
 
-const observations = createIosPairingAcceptanceObservations();
-let clientPublicKey = '';
-let authorizationId = '';
-let requestId = '';
-const credentialSecret = randomBytes(32).toString('base64url');
+const observations = createIosSyncGroupProviderObservations();
+const provider = createIosSyncGroupProviderContract(observations);
 let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
-let pairingSyncScenarioService: Awaited<ReturnType<typeof createIosPairingSyncScenarioService>> | null = null;
+let scenarioService: Awaited<ReturnType<typeof createIosSyncGroupScenarioService>> | null = null;
 let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
 
 function writeObservations() {
@@ -61,37 +50,8 @@ async function readText(request: IncomingMessage) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function signed(request: IncomingMessage, bodyText = '') {
-  const read = (name: string) => typeof request.headers[name] === 'string' ? request.headers[name] : '';
-  const valid = read('x-authorization-id') === authorizationId
-    && verifyCompanionRequestSignature({
-      bodyText,
-      method: request.method ?? 'GET',
-      nonce: read('x-nonce'),
-      pathWithQuery: request.url ?? '/',
-      secret: credentialSecret,
-      signature: read('x-signature'),
-      timestamp: read('x-timestamp')
-    });
-  observations.signature_headers_valid ||= valid;
-  if (valid) observations.signed_request_count += 1;
-  writeObservations();
-  return valid;
-}
-
-async function handlePairRequestCreate(request: IncomingMessage, response: ServerResponse) {
-  const payload = await readJson(request);
-  const compatibility = evaluateSyncProtocolCompatibility(payload.protocol);
-  clientPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key : '';
-  const hostName = typeof payload.host_name === 'string' ? payload.host_name.trim() : '';
-  const hostPlatform = typeof payload.host_platform === 'string' ? payload.host_platform.trim() : '';
-  if (!hostName || !hostPlatform || !isSupportedSyncGroupJoinPublicKey(clientPublicKey)
-      || compatibility.status !== 'compatible') {
-    send(response, 400, { error: 'invalid_pair_request' });
-    return;
-  }
-  requestId = randomUUID();
-  authorizationId = corpusScenario ? IOS_ACCEPTANCE_CONTRACT_PEER_ID : requestId;
+async function handleJoinRequest(request: IncomingMessage, response: ServerResponse) {
+  const created = await provider.accept(await readJson(request));
   if (scenario === 'sync-pack-runtime') {
     const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
     syncPackService = await createIosSyncPackAcceptanceRoutes({
@@ -100,50 +60,23 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
   } else if (scenario === 'content-resource-read') {
     contentResourceFixture = loadIosAcceptanceContractCorpus().contentResource;
   } else if (scenario === 'state-writeback-runtime' || scenario === 'foreground-sync-lifecycle') {
-    pairingSyncScenarioService = await createIosPairingSyncScenarioService({
+    scenarioService = await createIosSyncGroupScenarioService({
       artifactDir,
       observations,
       scenario,
-      toPeerId: authorizationId
+      toPeerId: corpusScenario ? IOS_ACCEPTANCE_CONTRACT_PEER_ID : provider.discovery.provider_device_id
     });
   }
-  observations.pair_requested = true;
   writeObservations();
-  send(response, 202, {
-    compatibility,
-    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    expires_at: new Date(Date.now() + 120_000).toISOString(),
-    pair_request_id: requestId,
-    status: 'pending'
-  });
+  send(response, 202, created);
 }
 
-async function handlePairCompletion(request: IncomingMessage, response: ServerResponse) {
+async function handleJoinAcceptance(request: IncomingMessage, response: ServerResponse) {
   const payload = await readJson(request);
-  if (payload.pair_request_id !== requestId) {
-    send(response, 404, { error: 'pair_request_not_found' });
-    return;
-  }
-  observations.pair_completed = true;
+  const acceptance = provider.collect(String(payload.request_id ?? ''));
   writeObservations();
-  send(response, 200, {
-    compatibility: evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR),
-    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    authorization_id: authorizationId,
-    encrypted_credential_secret: await encryptDesktopSyncGroupJoinInfo({
-      clientPublicKey, groupInfo: credentialSecret
-    }),
-    host_name: 'Acceptance iPhone',
-    host_platform: 'ios-capacitor',
-    paired_at: new Date().toISOString(),
-    peer_id: IOS_ACCEPTANCE_DESKTOP_PEER_ID
-  });
-}
-
-function isSupportedSyncGroupJoinPublicKey(value: string) {
-  if (!/^[A-Za-z0-9_-]+$/u.test(value)) return false;
-  const decoded = Buffer.from(value, 'base64url');
-  return decoded.length === 65 && decoded[0] === 4 && decoded.toString('base64url') === value;
+  send(response, acceptance ? 200 : 409,
+    acceptance ?? { error: 'sync_group_join_not_accepted' });
 }
 
 async function routeSyncPackRequest(
@@ -169,12 +102,12 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
       return;
     }
     const bodyText = request.method === 'POST' ? await readText(request) : '';
-    if (!signed(request, bodyText)) {
+    if (!provider.authenticate(request, bodyText)) {
       send(response, 401, { error: 'invalid_signature' });
       return;
     }
-    if (pairingSyncScenarioService) {
-      const routed = await pairingSyncScenarioService.route({
+    if (scenarioService) {
+      const routed = await scenarioService.route({
         bodyText,
         method: request.method ?? 'GET',
         url: request.url ?? '/'
@@ -215,10 +148,12 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.method === 'POST' && request.url === '/companion/pair-requests') {
-      await handlePairRequestCreate(request, response);
-    } else if (request.method === 'POST' && request.url === '/companion/pair') {
-      await handlePairCompletion(request, response);
+    if (request.method === 'GET' && request.url === '/companion/discovery') {
+      send(response, 200, provider.discovery);
+    } else if (request.method === 'POST' && request.url === '/sync-group/join-requests') {
+      await handleJoinRequest(request, response);
+    } else if (request.method === 'POST' && request.url === '/sync-group/join-acceptance') {
+      await handleJoinAcceptance(request, response);
     } else {
       await handleSignedRequest(request, response);
     }
@@ -240,7 +175,7 @@ server.listen(0, lifecycleScenario ? '::1' : '127.0.0.1', () => {
 });
 
 process.on('SIGTERM', () => server.close(() => {
-  pairingSyncScenarioService?.close();
+  scenarioService?.close();
   syncPackService?.close();
   process.exit(0);
 }));
