@@ -34,7 +34,7 @@ async function copyRouteFailure({ action, buildScpSpec, env, executeScp, fsApi, 
   const files = ROUTE_FAILURE_FILES.map((relative) => ({
     local: relative, remote: `${evidence.remoteRoot}/${relative}`
   }));
-  if (action === 'desktop-dnssd-route-provider') {
+  if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
     files.push(...ROUTE_INTERACTIVE_FAILURE_FILES.map((relative) => ({
       local: `interactive/${relative}`,
       remote: `${WINDOWS_DEV_REPO_ROOT_POSIX}/.tmp/windows-sync-group-interactive/${relative}`

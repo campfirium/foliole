@@ -130,7 +130,10 @@ it('copies fixed route selfcheck failure diagnostics before preserving the remot
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
     `${remoteRoot}/desktop-dnssd-route-runtime/action.log`,
-    `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`
+    `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`,
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
   ]);
 });
 

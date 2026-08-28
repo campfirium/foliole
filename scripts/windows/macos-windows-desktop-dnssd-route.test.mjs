@@ -41,5 +41,8 @@ it('loads Playwright from the task-owned runtime dependency root', () => {
   expect(makeRequire).toHaveBeenCalledWith(path.join(runtimeRoot, 'package.json'));
   expect(runtimeRequire).toHaveBeenCalledWith('playwright');
   return resolved.launch({ args: ['main.js'], executablePath: 'D:\\fixed\\electron.exe' })
-    .then(() => expect(launcher.launch).toHaveBeenCalledWith({ args: ['main.js'] }));
+    .then(() => expect(launcher.launch).toHaveBeenCalledWith({ args: [
+      '-r', 'D:\\capsules\\attempt\\source\\scripts\\windows\\windows-playwright-electron-bootstrap.cjs',
+      'main.js'
+    ] }));
 });
