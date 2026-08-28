@@ -12,9 +12,9 @@ it('restores lockfile dependencies before compiling the Windows desktop', async 
   const output = await runWindowsDevDesktopBuild(vi.fn(), paths, checked);
 
   expect(checked.mock.calls.map((call) => call[2])).toEqual([
-    ['npm-cli.js', 'ci', '--ignore-scripts'],
+    ['npm-cli.js', 'install', '--ignore-scripts', '--no-audit', '--no-fund'],
     ['npm-cli.js', 'run', 'build'],
     ['npm-cli.js', 'run', 'electron:compile']
   ]);
-  expect(output).toContain('ci --ignore-scripts');
+  expect(output).toContain('install --ignore-scripts');
 });
