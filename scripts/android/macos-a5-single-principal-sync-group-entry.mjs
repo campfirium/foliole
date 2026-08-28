@@ -14,6 +14,7 @@ import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
@@ -67,9 +68,9 @@ function validateJoin({ args, evidencePath, stdout }) {
 async function waitForMacFact(session, factId) {
   const deadline = Date.now() + 2 * 60_000;
   while (Date.now() < deadline) {
-    const snapshot = await session.invoke('load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
+    const snapshot = await readSyncGroupControllerState(() => session.invoke(
+      'load_workspace_list_snapshot', { includePdfOpenings: false }
+    ));
     if (snapshot?.nodesById?.[factId]) return snapshot;
     await delay(500);
   }

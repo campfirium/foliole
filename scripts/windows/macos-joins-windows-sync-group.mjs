@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
@@ -17,7 +18,9 @@ async function waitForFacts(session, counts, timeoutMs = 5 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   let snapshot;
   while (Date.now() < deadline) {
-    snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
+    snapshot = await readSyncGroupControllerState(() => session.invoke(
+      'load_workspace_list_snapshot', { includePdfOpenings: false }
+    ));
     if (Object.entries(counts).every(([origin, count]) => factCount(snapshot, origin) >= count)) {
       return snapshot;
     }
@@ -30,7 +33,7 @@ async function discoverWindows(session, timeoutMs = 2 * 60_000) {
   await session.invoke('discover_sync_groups');
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const overview = await session.load();
+    const overview = await readSyncGroupControllerState(() => session.load());
     const candidates = overview.join_candidates ?? [];
     if (candidates.length > 1) throw new Error('Mac discovered multiple task Sync Groups.');
     if (candidates.length === 1) return candidates[0];

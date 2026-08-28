@@ -14,6 +14,7 @@ import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -35,7 +36,7 @@ function waitForStop() {
 async function waitForDeviceCount(session, count, timeoutMs = 120_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const overview = await session.load();
+    const overview = await readSyncGroupControllerState(() => session.load());
     if (overview.sync_group?.devices?.length >= count) return overview;
     await delay(250);
   }
@@ -52,9 +53,9 @@ function journeyOrigins(snapshot) {
 async function waitForJourneyOrigin(session, origin, count = 1, timeoutMs = 5 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const snapshot = await session.invoke('load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
+    const snapshot = await readSyncGroupControllerState(() => session.invoke(
+      'load_workspace_list_snapshot', { includePdfOpenings: false }
+    ));
     const origins = journeyOrigins(snapshot);
     const matches = Object.values(snapshot?.nodesById ?? {}).filter(({ title }) =>
       String(title).startsWith(`Multi-device sync ${origin} fact`));

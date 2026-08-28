@@ -14,6 +14,7 @@ import {
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -75,9 +76,9 @@ async function runWindows(repoRoot, signal) {
 async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const snapshot = await session.invoke('load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
+    const snapshot = await readSyncGroupControllerState(() => session.invoke(
+      'load_workspace_list_snapshot', { includePdfOpenings: false }
+    ));
     const matches = Object.values(snapshot?.nodesById ?? {}).filter(({ title }) =>
       String(title).startsWith(`Multi-device sync ${origin} fact`));
     if (matches.length >= count) return snapshot;
