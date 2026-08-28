@@ -18,7 +18,7 @@ import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-w
 
 const execute = promisify(execFile);
 const PRODUCT_REVISION = 'a89403c678efc4614b3b7ccbc1c78e12f742a54b';
-const T152_7_REVISION = '154ecf7e1258d7d4c201c8ea17ac92a1b9b1612c';
+const WINDOWS_ROUTE_FIXTURE_REVISION = 'b1daae23aa755088a9bc6cf4d9a5a9ec22b1910a';
 
 async function acceptedTip(repoRoot) {
   const [{ stdout: head }, { stdout: remote }, { stdout: status }] = await Promise.all([
@@ -127,7 +127,8 @@ async function runAttempt({ acceptedTip: revision, attemptId, libraryHome, repoR
 export async function runMacosWindowsDesktopDnsSdRoute({ repoRoot = process.cwd() } = {}) {
   const revision = await acceptedTip(repoRoot);
   const libraryHome = process.env.FOLIOLE_T152_DISCOVERY_LIBRARY_ROOT?.trim()
-    || path.join(repoRoot, '.tmp/artifacts/t152-7-windows', T152_7_REVISION, 'macos-library');
+    || path.join(repoRoot, '.tmp/artifacts/t152-9-matrix', WINDOWS_ROUTE_FIXTURE_REVISION,
+      '01-macos-windows', 'attempt-1', 'macos-library');
   if (!fs.existsSync(path.join(libraryHome, 'Data', 'foliole.db'))) {
     throw new Error('Task-owned T152 desktop discovery library is missing.');
   }

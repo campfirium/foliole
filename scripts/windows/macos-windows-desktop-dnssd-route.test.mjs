@@ -17,6 +17,8 @@ it('runs two independent route-only Mac and Windows restart attempts', () => {
   expect(source).toContain("label: 'restarted'");
   expect(source).toContain('index < 2');
   expect(source).toContain("'.tmp/artifacts/t152-11-desktop-dnssd'");
+  expect(source).toContain("'.tmp/artifacts/t152-9-matrix'");
+  expect(source).toContain("'01-macos-windows', 'attempt-1', 'macos-library'");
   expect(source).toContain('productRevision: PRODUCT_REVISION');
   expect(source).toContain("waitForProgress('fixture-ready')");
   expect(source).toContain('reciprocalDesktopDnsSdRouteIdentity(identity)');
