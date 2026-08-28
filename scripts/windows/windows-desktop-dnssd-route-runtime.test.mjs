@@ -15,7 +15,7 @@ it('builds dependencies, product output, Electron ABI, and DNS-SD probe in one r
     systemNpmCli: 'C:\\Program Files\\nodejs\\npm-cli.js' };
   const commands = routeRuntimeCommands(sourceRoot, paths);
   expect(commands.map(({ stage }) => stage)).toEqual([
-    'dependencies', 'build', 'native-rebuild', 'native-probe'
+    'dependencies', 'electron-runtime', 'build', 'native-rebuild', 'native-probe'
   ]);
   expect(commands.every(({ cwd }) => cwd === sourceRoot)).toBe(true);
   expect(commands.at(-1).bin).toBe(path.join(sourceRoot,

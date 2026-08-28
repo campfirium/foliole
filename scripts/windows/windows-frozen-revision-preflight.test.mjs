@@ -26,6 +26,7 @@ it('uses absolute system Node for npm ci, build, native health, and package smok
   });
   expect(commands.map(({ args, stage }) => [stage, args.join(' ')])).toEqual([
     ['dependencies', 'C:\\npm-cli.js ci'],
+    ['electron-runtime', 'C:\\owned\\source\\node_modules\\electron\\install.js'],
     ['build', 'C:\\npm-cli.js run build'],
     ['native-health', 'C:\\npm-cli.js run electron:native:health'],
     ['package-smoke', 'C:\\npm-cli.js run windows:package']

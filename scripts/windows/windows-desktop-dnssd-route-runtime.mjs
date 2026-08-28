@@ -21,6 +21,8 @@ function writeReceipt(handle, patch) {
 export function routeRuntimeCommands(sourceRoot, paths) {
   return [
     { args: [paths.systemNpmCli, 'ci'], bin: paths.systemNode, stage: 'dependencies' },
+    { args: [path.win32.join(sourceRoot, 'node_modules', 'electron', 'install.js')],
+      bin: paths.systemNode, stage: 'electron-runtime' },
     { args: [paths.systemNpmCli, 'run', 'build'], bin: paths.systemNode, stage: 'build' },
     { args: [paths.systemNpmCli, 'run', 'electron:rebuild:native'],
       bin: paths.systemNode, stage: 'native-rebuild' },

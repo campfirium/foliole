@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseWindowsDevFailureEvidence } from './windows-dev-control-evidence.mjs';
 import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
+
+const ROUTE_SELFCHECK_FAILURE_FILES = [
+  'summary.json',
+  'desktop-dnssd-route-runtime/action.log',
+  'desktop-dnssd-route-runtime/receipt.json'
+];
 
 function parseEvidence(output, action, receiptName) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
@@ -14,15 +21,48 @@ function parseEvidence(output, action, receiptName) {
   return { identity: match[1], remoteRoot };
 }
 
+async function copyRouteSelfcheckFailure({ buildScpSpec, env, executeScp, fsApi, host,
+  output, repoRoot }) {
+  const evidence = parseWindowsDevFailureEvidence(output);
+  const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync',
+    'windows-c', evidence.buildIdentity);
+  fsApi.mkdirSync(localRoot, { recursive: true });
+  const copyFailures = [];
+  for (const relative of ROUTE_SELFCHECK_FAILURE_FILES) {
+    const localPath = path.join(localRoot, relative);
+    fsApi.mkdirSync(path.dirname(localPath), { recursive: true });
+    try {
+      await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${relative}`,
+        localPath, env), { env });
+    } catch (error) {
+      copyFailures.push({ message: error.message, relative });
+    }
+  }
+  return { copyFailures, localRoot };
+}
+
 export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScpSpec,
   buildSshSpec, env, executeGit, executeScp, executeSsh, fsApi = fs, host, repoRoot, stdout,
   action = 'multi-device-sync-c' }) {
   const push = buildPushSpec(host, env);
   await executeGit(push.args, { env: push.env });
   let streamed = false;
-  const output = await executeSsh(buildSshSpec(host, action, env), { env, onOutput: (chunk) => {
-    streamed = true; stdout.write(chunk);
-  } });
+  let output;
+  try {
+    output = await executeSsh(buildSshSpec(host, action, env), { env, onOutput: (chunk) => {
+      streamed = true; stdout.write(chunk);
+    } });
+  } catch (error) {
+    output = error.output || error.message;
+    if (!streamed && output) stdout.write(output);
+    if (action === 'desktop-dnssd-route-selfcheck') {
+      const copied = await copyRouteSelfcheckFailure({ buildScpSpec, env, executeScp,
+        fsApi, host, output, repoRoot });
+      error.evidenceCopyFailures = copied.copyFailures;
+      error.evidenceRoot = copied.localRoot;
+    }
+    throw error;
+  }
   if (!streamed) stdout.write(output);
   const receiptNames = {
     'desktop-dnssd-route-provider': 'desktop-dnssd-route-provider-receipt.json',

@@ -26,6 +26,8 @@ export function windowsFrozenAttemptId(runId) {
 export function windowsFrozenPreflightCommands(sourceRoot, paths, { packageSmoke = false } = {}) {
   const commands = [
     { args: [paths.systemNpmCli, 'ci'], stage: 'dependencies' },
+    { args: [path.win32.join(sourceRoot, 'node_modules', 'electron', 'install.js')],
+      stage: 'electron-runtime' },
     { args: [paths.systemNpmCli, 'run', 'build'], stage: 'build' },
     { args: [paths.systemNpmCli, 'run', 'electron:native:health'], stage: 'native-health' }
   ];
