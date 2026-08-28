@@ -129,6 +129,7 @@ it('copies fixed route selfcheck failure diagnostics before preserving the remot
     'multi-device-sync', 'windows-c', 'run-7'));
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
+    `${remoteRoot}/sync-group-runtime.log`,
     'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
@@ -149,6 +150,7 @@ it('copies route provider summary and nonce terminals before preserving the remo
   })).rejects.toBe(remoteError);
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
+    `${remoteRoot}/sync-group-runtime.log`,
     'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
@@ -171,6 +173,7 @@ it('copies fixed runtime preparation diagnostics and applies the independent tim
   expect(executeSsh.mock.calls[0][1].timeout).toBe(45 * 60_000);
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
+    `${remoteRoot}/sync-group-runtime.log`,
     `${remoteRoot}/desktop-dnssd-route-prepare-receipt.json`,
     `${remoteRoot}/desktop-dnssd-route-prepare.log`
   ]);

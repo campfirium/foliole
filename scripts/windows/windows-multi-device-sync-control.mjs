@@ -7,7 +7,7 @@ import {
 } from './windows-dev-paths.mjs';
 
 const ROUTE_FAILURE_FILES = [
-  'summary.json'
+  'summary.json', 'sync-group-runtime.log'
 ];
 const ROUTE_PREPARE_FAILURE_FILES = [
   'desktop-dnssd-route-prepare-receipt.json', 'desktop-dnssd-route-prepare.log'

@@ -56,7 +56,9 @@ export function startDesktopSyncGroupAutoSync() {
     onService: ({ kind, service }) => {
       if (!isCurrentGroupPeerService(service, localGroup)) {
         logDesktopDnsSdDiagnostic('route_rejected', {
+          deviceDiffers: service.txt.device_id !== localGroup?.local_device_identity_key,
           eventKind: kind, reason: 'not_current_group_peer',
+          groupMatches: service.txt.group_id === localGroup?.group_id,
           ...desktopDnsSdServiceFacts(service)
         });
         return;
