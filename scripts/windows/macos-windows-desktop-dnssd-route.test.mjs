@@ -2,7 +2,11 @@
 
 import fs from 'node:fs';
 
-import { expect, it } from 'vitest';
+import path from 'node:path';
+
+import { expect, it, vi } from 'vitest';
+import { resolveWindowsDesktopRouteElectronLauncher } from
+  './windows-desktop-dnssd-route-action.mjs';
 
 it('runs two independent route-only Mac and Windows restart attempts', () => {
   const source = fs.readFileSync(
@@ -26,4 +30,14 @@ it('keeps the Windows provider on the existing short-lived action lifecycle', ()
   expect(source).toContain("factId: 'desktop-dnssd-route'");
   expect(source).not.toMatch(/create_sync_group|request_sync_group_join|sync_companion_now/u);
   expect(source).not.toMatch(/endpoint_url|bonjour-service|multicast-dns/u);
+});
+
+it('loads Playwright from the task-owned runtime dependency root', () => {
+  const launcher = { launch: () => undefined };
+  const runtimeRequire = vi.fn(() => ({ _electron: launcher }));
+  const makeRequire = vi.fn(() => runtimeRequire);
+  const runtimeRoot = 'D:\\capsules\\attempt\\source';
+  expect(resolveWindowsDesktopRouteElectronLauncher(runtimeRoot, makeRequire)).toBe(launcher);
+  expect(makeRequire).toHaveBeenCalledWith(path.join(runtimeRoot, 'package.json'));
+  expect(runtimeRequire).toHaveBeenCalledWith('playwright');
 });

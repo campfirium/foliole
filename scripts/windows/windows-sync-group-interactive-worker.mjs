@@ -18,7 +18,8 @@ const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const state = syncGroupInteractivePaths(repoRoot);
 
 async function main() {
-  const request = validateSyncGroupInteractiveRequest(readJson(state.request), repoRoot);
+  const request = validateSyncGroupInteractiveRequest(readJson(state.request), repoRoot,
+    windowsDevPaths({ repoRoot }).capsulesRoot);
   const progress = [];
   const reportProgress = (value) => {
     progress.push(validateSyncGroupInteractiveProgress(value, request.action));
@@ -28,14 +29,18 @@ async function main() {
   };
   writeJsonAtomic(state.status, {
     nonce: request.nonce, progress, schemaVersion: 1,
-    startedAt: new Date().toISOString(), state: 'running'
+    startedAt: new Date().toISOString(), state: 'running', workerPid: process.pid
   });
   let completed;
   try {
+    const runtimePaths = windowsDevPaths({ repoRoot: request.runtimeRepoRoot ?? repoRoot });
+    runtimePaths.acceptanceRepoRoot = repoRoot;
+    runtimePaths.controlRepoRoot = repoRoot;
     const actionResult = await runWindowsSyncGroupDeviceAction({
       action: request.action, buildIdentity: request.buildIdentity,
       evidenceRoot: request.evidenceRoot, execute: executeBounded,
-      paths: windowsDevPaths({ repoRoot }), reportProgress
+      paths: runtimePaths, reportProgress,
+      selfcheckMode: request.selfcheckMode
     });
     completed = { actionResult, exitCode: 0, nonce: request.nonce, workerPid: process.pid,
       progress, schemaVersion: 1, state: 'completed' };

@@ -112,6 +112,38 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   });
 });
 
+it('accepts only a task-owned runtime source under the capsule root', () => {
+  const { evidenceRoot, paths } = fixture();
+  const capsulesRoot = path.join(paths.repoRoot, 'capsules');
+  const request = { action: 'desktop-dnssd-route-provider', evidenceRoot,
+    nonce: '12345678-1234-1234-1234-123456789abc',
+    runtimeRepoRoot: path.join(capsulesRoot, 'attempt-1', 'source'), schemaVersion: 1 };
+  expect(validateSyncGroupInteractiveRequest(request, paths.repoRoot, capsulesRoot))
+    .toMatchObject({ runtimeRepoRoot: request.runtimeRepoRoot });
+  expect(() => validateSyncGroupInteractiveRequest({
+    ...request, runtimeRepoRoot: path.join(paths.repoRoot, 'node_modules')
+  }, paths.repoRoot, capsulesRoot)).toThrow('invalid');
+});
+
+it('ends a running scheduled worker and writes a terminal controller failure', async () => {
+  const options = { action: 'desktop-dnssd-route-provider', buildIdentity: 'candidate-1',
+    execute: vi.fn(async () => ({ code: 0 })), ...fixture() };
+  const interactive = syncGroupInteractivePaths(options.paths.repoRoot);
+  const waitForResult = vi.fn(async (_paths, nonce) => {
+    fs.writeFileSync(interactive.status, JSON.stringify({ nonce, progress: [],
+      schemaVersion: 1, state: 'running', workerPid: 4321 }));
+    throw new Error('result timed out');
+  });
+  await expect(runWindowsSyncGroupInteractiveAction(options, {
+    installTask: vi.fn(), waitForResult, waitForWorkerExit: vi.fn()
+  })).rejects.toThrow('result timed out');
+  expect(options.execute).toHaveBeenCalledWith('schtasks.exe',
+    ['/End', '/TN', 'FolioleNativeClient'], expect.any(Object));
+  expect(readJson(interactive.result)).toMatchObject({
+    error: 'result timed out', exitCode: 1, state: 'completed', workerPid: 4321
+  });
+});
+
 it('streams the created C fact as nonce-bound provider progress', async () => {
   const options = { action: 'multi-device-sync-a-leave', buildIdentity: 'candidate-1',
     execute: vi.fn(async () => ({ code: 0 })), stdout: { write: vi.fn() }, ...fixture() };

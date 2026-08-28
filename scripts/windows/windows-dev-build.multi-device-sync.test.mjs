@@ -22,34 +22,39 @@ function fixture() {
     sha256: createHash('sha256').update('keystore').digest('hex')
   }));
   return { root, paths: { repoRoot, signingHome, signingKeystore, signingManifest,
+    gitPath: path.join(root, 'git.exe'), tarPath: path.join(root, 'tar.exe'),
     systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js') } };
 }
 
-it('stops route acceptance before the interactive task when native health fails', async () => {
+it('routes desktop DNS-SD acceptance through the task-owned runtime controller', async () => {
   const { paths, root } = fixture();
-  fs.writeFileSync(paths.systemNode, 'node');
-  fs.writeFileSync(paths.systemNpmCli, 'npm');
+  for (const filePath of [paths.systemNode, paths.systemNpmCli, paths.gitPath, paths.tarPath]) {
+    fs.writeFileSync(filePath, 'tool');
+  }
   const execute = vi.fn(async (command) => {
     if (command === 'powershell.exe') {
       return { code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' };
     }
-    if (command.endsWith('electron.exe')) {
-      return { code: 1, lines: ['native probe failed'], output: '',
-        stderr: 'native probe failed', stdout: '' };
-    }
     return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
   });
   const deviceAction = vi.fn();
+  const runRouteController = vi.fn(async () => ({
+    desktopDnsSdRouteProvider: { manifestPath: 'route.json' },
+    desktopDnsSdRouteRuntime: { receiptPath: 'runtime.json' }, output: ''
+  }));
 
   const result = await runWindowsDevBuild({
     action: 'desktop-dnssd-route-provider', deviceAction, execute, paths,
-    platform: 'win32', prepareHost: vi.fn()
+    platform: 'win32', prepareHost: vi.fn(), runRouteController
   });
 
   expect(result).toMatchObject({
-    exitCode: 74, summary: { failureStage: 'desktop-native-health', resultStatus: 'failure' }
+    exitCode: 0, summary: { desktopDnsSdRouteProvider: { manifestPath: 'route.json' },
+      desktopDnsSdRouteRuntime: { receiptPath: 'runtime.json' }, resultStatus: 'success' }
   });
+  expect(runRouteController).toHaveBeenCalledOnce();
   expect(deviceAction).not.toHaveBeenCalled();
+  expect(execute.mock.calls.some(([command]) => command === paths.systemNode)).toBe(false);
   fs.rmSync(root, { force: true, recursive: true });
 });
 

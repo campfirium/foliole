@@ -6,7 +6,7 @@ import {
 import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-contract.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
-  'desktop-dnssd-route-provider',
+  'desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-from-zero', 'multi-device-sync-participation',
   'single-principal-sync-group', 'two-device-sync-provider'
@@ -25,15 +25,25 @@ export function syncGroupInteractivePaths(repoRoot) {
   };
 }
 
-export function validateSyncGroupInteractiveRequest(request, repoRoot) {
+export function validateSyncGroupInteractiveRequest(request, repoRoot, capsulesRoot) {
   const evidenceRoot = path.resolve(String(request?.evidenceRoot ?? ''));
   const allowedRoot = path.resolve(repoRoot, '.tmp', 'artifacts', 'windows-dev-action');
+  const runtimeRepoRoot = request?.runtimeRepoRoot
+    ? path.resolve(String(request.runtimeRepoRoot)) : null;
+  const allowedRuntimeRoot = capsulesRoot ? path.resolve(capsulesRoot) : null;
+  const runtimeAllowed = !runtimeRepoRoot || !allowedRuntimeRoot || (allowedRuntimeRoot
+    && runtimeRepoRoot.startsWith(`${allowedRuntimeRoot}${path.sep}`)
+    && path.basename(runtimeRepoRoot) === 'source');
+  const selfcheckAllowed = request?.action === 'desktop-dnssd-route-selfcheck'
+    ? ['missing-runtime', 'native-probe'].includes(request.selfcheckMode)
+    : request?.selfcheckMode === undefined;
   if (request?.schemaVersion !== 1 || !WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS.has(request.action)
       || !/^[0-9a-f-]{36}$/u.test(request.nonce || '')
-      || !evidenceRoot.startsWith(`${allowedRoot}${path.sep}`)) {
+      || !evidenceRoot.startsWith(`${allowedRoot}${path.sep}`)
+      || !runtimeAllowed || !selfcheckAllowed) {
     throw new Error('invalid Sync Group interactive request');
   }
-  return { ...request, evidenceRoot };
+  return { ...request, evidenceRoot, ...(runtimeRepoRoot ? { runtimeRepoRoot } : {}) };
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {

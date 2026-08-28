@@ -1,5 +1,5 @@
 export const WINDOWS_SYNC_GROUP_ACTIONS = [
-  'desktop-dnssd-route-provider',
+  'desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
   'single-principal-sync-group', 'two-device-sync-provider'
@@ -16,6 +16,7 @@ export function preparesWindowsSyncGroupCandidate(action) {
 export function attachSyncGroupResult(summary, result) {
   for (const key of [
     'desktopDnsSdRouteProvider',
+    'desktopDnsSdRouteControllerSelfcheck',
     'multiDeviceSyncALeave', 'multiDeviceSyncARejoin', 'multiDeviceSyncC', 'multiDeviceSyncCandidate',
     'multiDeviceSyncFromZero', 'multiDeviceSyncParticipation', 'singlePrincipalSyncGroup',
     'twoDeviceSyncProvider'
@@ -27,6 +28,7 @@ export function attachSyncGroupResult(summary, result) {
 export function printSyncGroupResult(stream, summary) {
   const values = [
     ['desktopDnsSdRouteProvider', 'desktop-dnssd-route-provider', 'manifestPath'],
+    ['desktopDnsSdRouteControllerSelfcheck', 'desktop-dnssd-route-selfcheck', 'manifestPath'],
     ['multiDeviceSyncALeave', 'multi-device-sync-a-leave', 'manifestPath'],
     ['multiDeviceSyncARejoin', 'multi-device-sync-a-rejoin', 'manifestPath'],
     ['multiDeviceSyncC', 'multi-device-sync-c', 'manifestPath'],

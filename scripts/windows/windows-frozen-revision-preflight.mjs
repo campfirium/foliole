@@ -11,8 +11,11 @@ import {
 import {
   assertFrozenRuntimeOccupied, startFrozenRuntimeOccupancy, stopFrozenRuntimeOccupancy
 } from './windows-frozen-runtime-occupancy.mjs';
+import {
+  cleanupWindowsFrozenTaskCopy, createWindowsFrozenTaskCopy,
+  inspectWindowsFrozenSource, windowsFrozenTaskCopyPaths
+} from './windows-frozen-task-copy.mjs';
 
-const OWNER_FILE = 'owner.json';
 const COMMAND_TIMEOUT_MS = 20 * 60_000;
 const PACKAGE_TIMEOUT_MS = 30 * 60_000;
 
@@ -32,10 +35,8 @@ export function windowsFrozenPreflightCommands(sourceRoot, paths, { packageSmoke
 }
 
 export function windowsFrozenPreflightPaths(paths, _revision, attemptId, evidenceRoot) {
-  const taskRoot = path.win32.join(paths.capsulesRoot, attemptId);
-  return { archivePath: path.win32.join(taskRoot, 'source.tar'), evidenceRoot,
-    logPath: path.join(evidenceRoot, 'action.log'), sourceRoot: path.win32.join(taskRoot, 'source'),
-    taskRoot };
+  return { ...windowsFrozenTaskCopyPaths(paths, attemptId), evidenceRoot,
+    logPath: path.join(evidenceRoot, 'action.log') };
 }
 
 async function checked(execute, command, fsApi, logPath, manager) {
@@ -53,35 +54,6 @@ async function checked(execute, command, fsApi, logPath, manager) {
   return result;
 }
 
-async function sourceIdentity(execute, paths) {
-  const git = async (args, stage) => {
-    const result = await execute(paths.gitPath, ['-C', paths.repoRoot, ...args], {
-      cwd: paths.repoRoot, timeoutCode: `${stage}_timeout`, timeoutMs: COMMAND_TIMEOUT_MS,
-      windowsHide: true
-    });
-    if (result.code !== 0) throw Object.assign(
-      new Error(`${stage} failed with exit ${result.code}`), { exitCode: result.code, stage }
-    );
-    return result.stdout.trim();
-  };
-  const revision = await git(['rev-parse', 'HEAD'], 'source-revision');
-  const tree = await git(['rev-parse', 'HEAD^{tree}'], 'source-tree');
-  const branch = await git(['branch', '--show-current'], 'source-branch');
-  const status = await git(['status', '--porcelain', '--untracked-files=all'], 'source-status');
-  if (branch !== 'dev' || status) throw Object.assign(
-    new Error('Windows frozen source is not clean dev.'), { stage: 'source-status' }
-  );
-  return { revision, tree };
-}
-
-function writeOwner(runPaths, source, attemptId, fsApi) {
-  fsApi.mkdirSync(runPaths.taskRoot);
-  fsApi.mkdirSync(runPaths.sourceRoot);
-  fsApi.writeFileSync(path.win32.join(runPaths.taskRoot, OWNER_FILE), `${JSON.stringify({
-    attemptId, pid: process.pid, revision: source.revision
-  }, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
-}
-
 async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwnerPid,
   packageSmoke = false, paths, source }) {
   const evidenceRoot = path.join(aggregateRoot, 'attempts', attemptId);
@@ -93,18 +65,13 @@ async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwne
   const attempt = { manager, runPaths, source };
   let stage = 'task-copy';
   try {
-    fsApi.mkdirSync(paths.capsulesRoot, { recursive: true });
-    writeOwner(runPaths, source, attemptId, fsApi);
-    await checked(execute, { args: ['-C', paths.repoRoot, 'archive', '--format=tar',
-      `--output=${runPaths.archivePath}`, source.revision], bin: paths.gitPath,
-    cwd: paths.repoRoot, stage: 'archive' }, fsApi, runPaths.logPath, manager);
-    const archiveDigest = sha256(fsApi.readFileSync(runPaths.archivePath));
-    await checked(execute, { args: ['-xf', runPaths.archivePath, '-C', runPaths.sourceRoot],
-      bin: paths.tarPath, cwd: runPaths.taskRoot, stage: 'extract' }, fsApi, runPaths.logPath, manager);
-    fsApi.unlinkSync(runPaths.archivePath);
+    const prepared = await createWindowsFrozenTaskCopy({
+      attemptId, execute, fsApi, logPath: runPaths.logPath, paths, source
+    });
+    Object.assign(runPaths, prepared);
     updateFrozenPreflightReceipt(manager, { resourceLock: {
       ownerPid: lockOwnerPid, path: paths.buildLock, resultStatus: 'held-by-entry'
-    }, taskCopy: { root: runPaths.taskRoot, sourceArchiveDigest: archiveDigest } });
+    }, taskCopy: { root: runPaths.taskRoot, sourceArchiveDigest: prepared.archiveDigest } });
     for (const command of windowsFrozenPreflightCommands(runPaths.sourceRoot, paths, { packageSmoke })) {
       stage = command.stage;
       await checked(execute, command, fsApi, runPaths.logPath, manager);
@@ -129,12 +96,7 @@ async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwne
 
 function cleanAttempt(attempt, fsApi) {
   const { manager, runPaths, source } = attempt;
-  const owner = JSON.parse(fsApi.readFileSync(path.win32.join(runPaths.taskRoot, OWNER_FILE), 'utf8'));
-  if (owner.attemptId !== manager.receipt.attemptId || owner.pid !== process.pid
-      || owner.revision !== source.revision) {
-    throw new Error('Refusing to clean a frozen Windows task copy owned by another attempt.');
-  }
-  fsApi.rmSync(runPaths.taskRoot, { recursive: true });
+  cleanupWindowsFrozenTaskCopy({ ...runPaths, attemptId: manager.receipt.attemptId, source }, fsApi);
   updateFrozenPreflightReceipt(manager, { cleanup: { resultStatus: 'complete' } });
   return completeFrozenPreflightReceipt(manager);
 }
@@ -158,7 +120,7 @@ export async function runWindowsFrozenRevisionPreflight({
   if (!Number.isSafeInteger(lockOwnerPid) || lockOwnerPid <= 0) {
     throw new Error('Windows frozen revision preflight requires the fixed action lock.');
   }
-  const source = await sourceIdentity(execute, paths);
+  const source = await inspectWindowsFrozenSource(execute, paths);
   fsApi.mkdirSync(evidenceRoot);
   const aggregatePath = path.join(evidenceRoot, 'receipt.json');
   const attempts = [];
@@ -182,7 +144,7 @@ export async function runWindowsFrozenRevisionPreflight({
         stage: 'fixed-runtime'
       });
     }
-    const stableSource = await sourceIdentity(execute, paths);
+    const stableSource = await inspectWindowsFrozenSource(execute, paths);
     if (stableSource.revision !== source.revision || stableSource.tree !== source.tree) {
       throw Object.assign(new Error('Windows source moved during frozen preflight.'), {
         stage: 'source-stable'

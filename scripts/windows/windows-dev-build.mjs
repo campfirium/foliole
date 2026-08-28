@@ -14,6 +14,11 @@ import {
   formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
 } from './windows-dev-build-support.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
+import { runWindowsDesktopDnsSdRouteController } from
+  './windows-desktop-dnssd-route-controller.mjs';
+import {
+  requiresWindowsDevDesktopBuild, windowsDevRequiredTools
+} from './windows-dev-build-preflight.mjs';
 import { WINDOWS_DEV_BUILD_ACTIONS } from './windows-dev-build-actions.mjs';
 import { runWindowsDevGradleBuild } from './windows-dev-gradle-build.mjs';
 import {
@@ -26,21 +31,14 @@ import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-acti
 import {
   runWindowsSyncGroupJoinPrepareAcceptance
 } from './windows-sync-group-join-prepare-action.mjs';
-import {
-  attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
-} from './windows-sync-group-build-routing.mjs';
-
-
+import { attachSyncGroupResult, isWindowsSyncGroupAction,
+  preparesWindowsSyncGroupCandidate, printSyncGroupResult } from './windows-sync-group-build-routing.mjs';
 function parseJson(text, label) {
   try { return JSON.parse(text.replace(/^\uFEFF/u, '')); }
   catch { throw failure(`${label} is not valid JSON`, 64, 'preflight'); }
 }
 
 const failure = windowsDevFailure;
-const DESKTOP_SYNC_GROUP_BUILD_ACTIONS = new Set([
-  'desktop-dnssd-route-provider', 'single-principal-sync-group', 'two-device-sync-provider'
-]);
-
 async function checked(execute, command, args, options, stage, exitCode = 74) {
   const result = await execute(command, args, options);
   if (result.code !== 0) {
@@ -77,7 +75,8 @@ export async function runWindowsDevBuild({
   action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
   fsApi = fs, id = randomUUID, inspectCandidate = currentAcceptanceCandidate,
   now = () => new Date(), paths = windowsDevPaths(),
-  platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost
+  platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost,
+  runRouteController = runWindowsDesktopDnsSdRouteController
 } = {}) {
   const action = normalizeWindowsDevAction(requestedAction);
   const startedAt = now().toISOString();
@@ -87,16 +86,7 @@ export async function runWindowsDevBuild({
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
     if (!WINDOWS_DEV_BUILD_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
-    const requiredTools = [paths.systemNode,
-      ...(['build', 'capture-annotation', 'deploy'].includes(action)
-        || action === 'device-profile' || action === 'sync-group-join-prepare'
-        || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
-        || preparesWindowsSyncGroupCandidate(action)
-        || action === 'frozen-revision-preflight' ? [paths.systemNpmCli] : []),
-      ...(action === 'frozen-revision-preflight' ? [paths.gitPath, paths.tarPath] : []),
-      ...(['build', 'device-profile', 'frozen-revision-preflight', 'sync-group-join-prepare'].includes(action)
-        || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
-    for (const filePath of requiredTools) {
+    for (const filePath of windowsDevRequiredTools(action, paths)) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
     const residualBefore = await snapshotProcesses(execute, paths);
@@ -127,14 +117,14 @@ export async function runWindowsDevBuild({
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (['device-profile', 'sync-group-join-prepare'].includes(action)
-        || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
-        || preparesWindowsSyncGroupCandidate(action)) {
+    if (requiresWindowsDevDesktopBuild(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked, {
         verifyDesktopDnsSd: action === 'desktop-dnssd-route-provider'
       });
     }
-    let actionResult = null;
+    let actionResult = await runRouteController({
+      action, deviceAction, evidenceRoot: context.root, execute, paths
+    });
     if (action === 'frozen-revision-preflight') {
       const preflight = await runWindowsFrozenRevisionPreflight({
         aggregateAttemptId: windowsFrozenAttemptId(context.runId),
@@ -159,7 +149,7 @@ export async function runWindowsDevBuild({
     } else if (desktopDeviceProfile) {
       output += desktopDeviceProfile.output;
       actionResult = { desktopDeviceProfile: desktopDeviceProfile.evidence };
-    } else if (!['build', 'frozen-revision-preflight'].includes(action)) {
+    } else if (!actionResult && !['build', 'frozen-revision-preflight'].includes(action)) {
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         ...(candidate ? { candidate } : {}),
@@ -184,6 +174,9 @@ export async function runWindowsDevBuild({
     if (actionResult?.frozenRevisionPreflight) {
       summary.frozenRevisionPreflight = actionResult.frozenRevisionPreflight;
     }
+    if (actionResult?.desktopDnsSdRouteRuntime) {
+      summary.desktopDnsSdRouteRuntime = actionResult.desktopDnsSdRouteRuntime;
+    }
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
@@ -199,6 +192,9 @@ export async function runWindowsDevBuild({
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
       ...(error.receiptPath ? { frozenRevisionPreflight: {
         aggregateAttemptId: error.aggregateAttemptId, receiptPath: error.receiptPath
+      } } : {}),
+      ...(error.routeRuntimeReceipt ? { desktopDnsSdRouteRuntime: {
+        receipt: error.routeRuntime, receiptPath: error.routeRuntimeReceipt
       } } : {}),
       ...(error.readiness ? {
         captureAnnotationReadiness: error.readiness

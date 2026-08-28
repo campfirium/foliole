@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { waitForDesktopRoute } from '../desktop/desktop-dnssd-route-observation.mjs';
@@ -9,6 +10,11 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 
 const ACTION = 'desktop-dnssd-route-provider';
+
+export function resolveWindowsDesktopRouteElectronLauncher(repoRoot, makeRequire = createRequire) {
+  const requireFromRuntime = makeRequire(path.join(repoRoot, 'package.json'));
+  return requireFromRuntime('playwright')._electron;
+}
 
 function joinedRouteIdentity(overview) {
   const group = overview.sync_group;
@@ -23,7 +29,8 @@ function joinedRouteIdentity(overview) {
 }
 
 export async function runWindowsDesktopDnsSdRouteProvider(options) {
-  const session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
+  const launcher = resolveWindowsDesktopRouteElectronLauncher(options.paths.repoRoot);
+  const session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot, launcher);
   const processId = session.app.process().pid;
   let identity;
   let route;
@@ -34,7 +41,7 @@ export async function runWindowsDesktopDnsSdRouteProvider(options) {
     route = await waitForDesktopRoute(session.app, identity.groupId, identity.peerDeviceId);
     options.reportProgress({ factId: 'desktop-dnssd-route', milestone: 'route-ready' });
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
-      repoRoot: options.paths.repoRoot });
+      repoRoot: options.paths.controlRepoRoot ?? options.paths.repoRoot });
   } finally {
     await closeWindowsSyncGroupSession(session);
   }

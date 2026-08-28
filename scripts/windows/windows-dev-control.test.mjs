@@ -30,6 +30,8 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'capture-annotation' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'frozen-revision-preflight'], {}))
     .toMatchObject({ action: 'frozen-revision-preflight' });
+  expect(parseWindowsDevControlArgs(['desktop-dnssd-route-selfcheck'], {}))
+    .toMatchObject({ action: 'desktop-dnssd-route-selfcheck' });
   expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
     .toThrow('only accepts a registered fixed action');
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-candidate'], {}))

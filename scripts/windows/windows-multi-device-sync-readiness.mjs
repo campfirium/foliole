@@ -17,7 +17,8 @@ function failure(message, missingFact, lastSuccessfulAction) {
 }
 
 export function windowsAcceptanceRoot(paths) {
-  return path.win32.join(paths.repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'windows-c');
+  return path.win32.join(paths.acceptanceRepoRoot ?? paths.repoRoot,
+    '.tmp', 'artifacts', 'multi-device-sync', 'windows-c');
 }
 
 export function provisionWindowsAcceptanceRoot({ fsApi = fs, paths = windowsDevPaths() } = {}) {

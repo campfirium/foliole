@@ -26,6 +26,7 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   if (!streamed) stdout.write(output);
   const receiptNames = {
     'desktop-dnssd-route-provider': 'desktop-dnssd-route-provider-receipt.json',
+    'desktop-dnssd-route-selfcheck': 'desktop-dnssd-route-controller-selfcheck-receipt.json',
     'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
     'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',
     'multi-device-sync-c': 'sync-group-recovery-receipt.json',
@@ -43,5 +44,14 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   const manifestPath = path.join(localRoot, `${action}-receipt.json`);
   await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${receiptName}`,
     manifestPath, env), { env });
+  if (action === 'desktop-dnssd-route-selfcheck') {
+    for (const relative of ['selfcheck-negative-error.json', 'selfcheck-native-probe.log',
+      'desktop-dnssd-route-runtime/action.log', 'desktop-dnssd-route-runtime/receipt.json']) {
+      const localPath = path.join(localRoot, relative);
+      fsApi.mkdirSync(path.dirname(localPath), { recursive: true });
+      await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${relative}`,
+        localPath, env), { env });
+    }
+  }
   return { action, evidenceRoot: localRoot, manifestPath };
 }

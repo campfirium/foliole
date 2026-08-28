@@ -11,7 +11,7 @@ import { WINDOWS_NATIVE_CLIENT_TASK } from './windows-client-native-interactive-
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 import { processAlive } from './windows-process-alive.mjs';
 import {
-  syncGroupInteractivePaths, WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS,
+  readJson, syncGroupInteractivePaths, WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS,
   validateSyncGroupInteractiveProgress, writeJsonAtomic
 } from './windows-sync-group-interactive-state.mjs';
 
@@ -36,7 +36,7 @@ export async function waitForInteractiveWorkerExit(workerPid, {
   throw new Error('Sync Group interactive worker did not exit after publishing its result.');
 }
 
-export async function runWindowsSyncGroupInteractiveAction(options, {
+export async function runWindowsSyncGroupInteractiveEnvelope(options, {
   installTask = installInteractiveTask, waitForResult = waitForInteractiveResult,
   waitForWorkerExit = waitForInteractiveWorkerExit
 } = {}) {
@@ -53,26 +53,52 @@ export async function runWindowsSyncGroupInteractiveAction(options, {
   const request = {
     action: options.action, buildIdentity: options.buildIdentity,
     createdAt: new Date().toISOString(), evidenceRoot: options.evidenceRoot,
-    nonce: randomUUID(), schemaVersion: 1
+    nonce: randomUUID(), schemaVersion: 1,
+    ...(options.runtimeRepoRoot ? { runtimeRepoRoot: options.runtimeRepoRoot } : {}),
+    ...(options.selfcheckMode ? { selfcheckMode: options.selfcheckMode } : {})
   };
   fs.rmSync(paths.providerRelease, { force: true });
   writeJsonAtomic(paths.request, request);
   writeJsonAtomic(paths.status, { nonce: request.nonce, schemaVersion: 1, state: 'pending' });
-  const launch = await options.execute('schtasks.exe', ['/Run', '/TN', WINDOWS_NATIVE_CLIENT_TASK], {
-    cwd: options.paths.repoRoot, timeoutCode: 'sync_group_interactive_start_timeout',
-    timeoutMs: 30_000, windowsHide: true
-  });
-  if (launch.code !== 0) throw new Error('Sync Group interactive task launch failed.');
-  const result = await waitForResult(paths, request.nonce, {
-    onProgress: (value) => {
-      const progress = validateSyncGroupInteractiveProgress(value, request.action);
-      const line = `[windows-dev-action] progress action=${request.action} nonce=${request.nonce}`
-        + ` milestone=${progress.milestone} fact=${progress.factId}\n`;
-      (options.stdout ?? process.stdout).write(line);
-    },
-    resultTimeoutMs: RESULT_TIMEOUT_MS, startTimeoutMs: 30_000
-  });
-  await waitForWorkerExit(result.workerPid);
+  try {
+    const launch = await options.execute('schtasks.exe', ['/Run', '/TN', WINDOWS_NATIVE_CLIENT_TASK], {
+      cwd: options.paths.repoRoot, timeoutCode: 'sync_group_interactive_start_timeout',
+      timeoutMs: 30_000, windowsHide: true
+    });
+    if (launch.code !== 0) throw new Error('Sync Group interactive task launch failed.');
+    const result = await waitForResult(paths, request.nonce, {
+      onProgress: (value) => {
+        const progress = validateSyncGroupInteractiveProgress(value, request.action);
+        const line = `[windows-dev-action] progress action=${request.action} nonce=${request.nonce}`
+          + ` milestone=${progress.milestone} fact=${progress.factId}\n`;
+        (options.stdout ?? process.stdout).write(line);
+      },
+      resultTimeoutMs: RESULT_TIMEOUT_MS, startTimeoutMs: 30_000
+    });
+    await waitForWorkerExit(result.workerPid);
+    return result;
+  } catch (error) {
+    const lifecycle = readJson(paths.status);
+    const workerPid = lifecycle?.nonce === request.nonce ? lifecycle.workerPid : null;
+    if (lifecycle?.state === 'running' && Number.isInteger(workerPid) && workerPid > 0) {
+      await options.execute('schtasks.exe', ['/End', '/TN', WINDOWS_NATIVE_CLIENT_TASK], {
+        cwd: options.paths.repoRoot, timeoutCode: 'sync_group_interactive_stop_timeout',
+        timeoutMs: 30_000, windowsHide: true
+      });
+      await waitForWorkerExit(workerPid);
+    }
+    const completed = { completedAt: new Date().toISOString(), error: error.message,
+      exitCode: 1, nonce: request.nonce, progress: lifecycle?.progress ?? [],
+      schemaVersion: 1, state: 'completed', workerPid: workerPid ?? 0 };
+    writeJsonAtomic(paths.result, completed);
+    writeJsonAtomic(paths.status, completed);
+    throw Object.assign(error, { interactiveTerminal: completed });
+  }
+}
+
+export async function runWindowsSyncGroupInteractiveAction(options, dependencies) {
+  const result = await runWindowsSyncGroupInteractiveEnvelope(options, dependencies);
+  if (!result) return null;
   if (result.exitCode !== 0) throw new Error(result.error || `interactive ${options.action} failed`);
   return result.actionResult;
 }

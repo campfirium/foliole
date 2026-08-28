@@ -112,11 +112,12 @@ async function verify(execute, paths, env) {
 export async function runWindowsDevDeviceAction({
   action, buildIdentity, candidate, evidenceRoot, execute, paths,
   phase = 'execute',
+  runtimeRepoRoot,
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
   runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({
-    action, buildIdentity, evidenceRoot, execute, paths
+    action, buildIdentity, evidenceRoot, execute, paths, runtimeRepoRoot
   });
   if (interactiveSyncGroup) return interactiveSyncGroup;
   const syncGroupAction = await runWindowsSyncGroupDeviceAction({
