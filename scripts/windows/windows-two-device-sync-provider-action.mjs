@@ -136,7 +136,6 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
         && value.sync_group.devices.length === 2, 'restarted two-Device Sync Group');
     const beforeRepeat = await waitForOrigins(session.page, ['A', 'B']);
     const beforeRestartAutomatic = await loadSyncTriggerResult(session.app);
-    await invokeWindowsSyncGroupCommand(session.page, 'discover_sync_groups');
     await waitForAutomaticSync(session.app, beforeRestartAutomatic?.run_id);
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');

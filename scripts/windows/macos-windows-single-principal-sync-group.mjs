@@ -14,7 +14,10 @@ import {
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import {
+  readSyncGroupControllerState,
+  waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -139,6 +142,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     }
     const factIds = Object.values(automaticSnapshot.nodesById).filter(({ title }) =>
       /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
+    const beforeRestartAutomatic = await readSyncGroupControllerState(
+      () => session.loadSyncTriggerResult()
+    );
     await session.close();
     session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
       libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
@@ -147,6 +153,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (restarted.sync_group?.group_id !== initial.sync_group.group_id) {
       throw new Error('Mac did not restore its two-Device Sync Group.');
     }
+    await waitForSyncGroupAutomaticRun(
+      () => session.loadSyncTriggerResult(), beforeRestartAutomatic?.run_id
+    );
     await session.invoke('sync_companion_now');
     const repeated = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false

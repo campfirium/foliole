@@ -4,7 +4,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import {
+  readSyncGroupControllerState,
+  waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
@@ -90,11 +93,18 @@ export async function runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot,
     await waitForFacts(session, { A: 2, B: 2 });
     await session.invoke('sync_companion_now');
     await session.invoke('sync_companion_now');
+    const beforeRestartAutomatic = await readSyncGroupControllerState(
+      () => session.loadSyncTriggerResult()
+    );
     await session.close(); session = await openSession(repoRoot, sharedRoot);
     const restarted = await session.load();
     if (restarted.sync_group?.group_id !== candidate.group_id) {
       throw new Error('Mac did not restore the Windows-created Sync Group.');
     }
+    await waitForSyncGroupAutomaticRun(
+      () => session.loadSyncTriggerResult(), beforeRestartAutomatic?.run_id
+    );
+    await session.invoke('sync_companion_now');
     await waitForFacts(session, { A: 2, B: 2 });
     await provider.release('consumer_complete');
     const windows = await provider.finish(); providerSettled = true;

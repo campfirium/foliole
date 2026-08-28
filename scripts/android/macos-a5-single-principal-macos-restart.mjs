@@ -1,10 +1,16 @@
-import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import {
+  readSyncGroupControllerState,
+  waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 
 export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, repoRoot,
   session, sharedRoot }) {
   const beforeRestart = await readSyncGroupControllerState(() => session.invoke(
     'load_workspace_list_snapshot', { includePdfOpenings: false }
   ));
+  const beforeRestartAutomatic = await readSyncGroupControllerState(
+    () => session.loadSyncTriggerResult()
+  );
   await session.close();
   const restartedSession = await openSession({ env,
     libraryHome: `${sharedRoot}/macos-library`, repoRoot,
@@ -14,6 +20,9 @@ export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, 
     if (restarted.sync_group?.group_id !== expectedGroupId) {
       throw new Error('Mac did not restore its A5 Sync Group.');
     }
+    await waitForSyncGroupAutomaticRun(
+      () => restartedSession.loadSyncTriggerResult(), beforeRestartAutomatic?.run_id
+    );
     await restartedSession.invoke('sync_companion_now');
     await restartedSession.invoke('sync_companion_now');
     const afterRestart = await readSyncGroupControllerState(() => restartedSession.invoke(

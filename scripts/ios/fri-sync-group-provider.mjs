@@ -14,7 +14,10 @@ import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import {
+  readSyncGroupControllerState,
+  waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -104,12 +107,18 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       const beforeRestart = await session.invoke('load_workspace_list_snapshot', {
         includePdfOpenings: false
       });
+      const beforeRestartAutomatic = await readSyncGroupControllerState(
+        () => session.loadSyncTriggerResult()
+      );
       await session.close();
       session = await openSession();
       const restarted = await session.load();
       if (restarted.sync_group?.group_id !== accepted.sync_group.group_id) {
         throw new Error('Mac did not restore its Fri Sync Group.');
       }
+      await waitForSyncGroupAutomaticRun(
+        () => session.loadSyncTriggerResult(), beforeRestartAutomatic?.run_id
+      );
       await session.invoke('sync_companion_now');
       await session.invoke('sync_companion_now');
       const afterRestart = await session.invoke('load_workspace_list_snapshot', {

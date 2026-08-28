@@ -12,7 +12,7 @@ it('creates and accepts one equal Device through fixed Windows product commands'
   expect(source).toContain("JSON.stringify(request).includes('workgroup_key')");
   expect(source).toContain("waitForAutomaticSync(session.app");
   expect(source).toContain("waitForWindowsSyncGroupProviderRelease({ action: ACTION");
-  expect(source).toContain("'discover_sync_groups'");
+  expect(source).not.toContain("'discover_sync_groups'");
   expect(source).toContain('beforeRestartAutomatic');
   expect(source).toContain("['A', 'B'], { B: 2 }");
   expect(source).not.toMatch(/manager|member|pairing|authorization|DELETE FROM|UPDATE sync_/u);

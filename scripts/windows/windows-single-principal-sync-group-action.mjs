@@ -164,7 +164,6 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     const beforeRestartAutomatic = await retryWhileDatabaseOwned(
       () => loadSyncTriggerResult(session.app)
     );
-    await invokeWindowsSyncGroupCommand(session.page, 'discover_sync_groups');
     await waitForAutomaticSync(session.app, beforeRestartAutomatic?.run_id);
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);

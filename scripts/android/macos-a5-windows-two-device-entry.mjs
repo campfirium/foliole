@@ -37,6 +37,8 @@ async function waitForCounts(args, expected, timeoutMs = 3 * 60_000) {
     latest = await snapshot(args);
     const counts = latest.database?.inspection?.originCounts ?? {};
     if (Object.entries(expected).every(([origin, count]) => (counts[origin] ?? 0) >= count)) {
+      args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
+        `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
       return latest;
     }
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',

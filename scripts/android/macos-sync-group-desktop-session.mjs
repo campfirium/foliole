@@ -20,6 +20,18 @@ async function invoke(page, command, args) {
   }, { commandArgs: args, commandName: command });
 }
 
+function loadSyncTriggerResult(app) {
+  return app.evaluate(({ app: electronApp }) => {
+    const pathApi = process.getBuiltinModule('node:path');
+    const moduleApi = process.getBuiltinModule('node:module');
+    if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
+    const loadModule = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
+    return loadModule(pathApi.join(
+      electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'
+    )).loadDesktopSyncTriggerResult();
+  });
+}
+
 export function sanitizeMacosSyncGroupOverview(overview) {
   return {
     currentDevice: overview.current_device ?? null,
@@ -101,6 +113,7 @@ export async function openMacosSyncGroupDesktopSession({
       enable: () => ensureMacosDeviceSyncGroup(actions),
       leave: () => invoke(page, 'leave_sync_group'),
       load: actions.load,
+      loadSyncTriggerResult: () => loadSyncTriggerResult(app),
       invoke: (command, args) => invoke(page, command, args),
       sanitize: sanitizeMacosSyncGroupOverview
     };
