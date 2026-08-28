@@ -12,6 +12,7 @@ it('does not load node_modules native binaries before fixed runtime preparation'
   const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
     cwd: repoRoot, encoding: 'utf8'
   });
-  const loaded = JSON.parse(output).filter((filePath) => filePath.includes('node_modules'));
+  const loaded = JSON.parse(output).filter((filePath) =>
+    filePath.includes('node_modules') && filePath.toLowerCase().endsWith('.node'));
   expect(loaded).toEqual([]);
 });

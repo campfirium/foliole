@@ -89,7 +89,8 @@ it('requests a Device-scoped join without retired library or authorization metad
     device: {
       canonical_library_path: DEVICE.canonical_library_path,
       device_anchor: DEVICE.device_anchor,
-      device_name: 'Desktop B', path_flavor: 'posix', platform: process.platform
+      device_name: 'Desktop B', path_flavor: process.platform === 'win32' ? 'windows' : 'posix',
+      platform: process.platform
     },
     ephemeral_public_key: 'public', group_id: 'group-1'
   });

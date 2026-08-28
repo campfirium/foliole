@@ -12,7 +12,9 @@ const appState = vi.hoisted(() => ({
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: capacitorState,
-  registerPlugin: () => ({})
+  registerPlugin: () => ({
+    addListener: vi.fn(async () => ({ remove: vi.fn(async () => undefined) }))
+  })
 }));
 vi.mock('@capacitor/app', () => ({ App: appState }));
 

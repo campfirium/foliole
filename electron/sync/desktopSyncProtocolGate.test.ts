@@ -9,7 +9,7 @@ import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
 it('accepts only the current protocol generation from discovery', () => {
   expect(evaluateDiscoveredSyncProtocol(serializeSyncProtocolTxt()))
-    .toMatchObject({ negotiated_version: 3, status: 'compatible' });
+    .toMatchObject({ negotiated_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version, status: 'compatible' });
   expect(evaluateDiscoveredSyncProtocol(serializeSyncProtocolTxt({
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     max_supported_version: 2,

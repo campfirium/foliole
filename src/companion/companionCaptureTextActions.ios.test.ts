@@ -38,6 +38,9 @@ vi.mock('@capacitor-community/sqlite', () => ({
 vi.mock('../shared/platform/companionDesktopSyncHttp', () => ({
   postDesktopJson: runtimeState.postDesktopJson
 }));
+vi.mock('../shared/platform/companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-peer')
+}));
 
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => runtimeState.owner
@@ -136,12 +139,12 @@ function expectPushedCapture(db: Database.Database, nodeId: string) {
     })] }
   );
   expect(db.prepare(`
-    SELECT authorization_id, stream_name, operation_id, object_id, status
+    SELECT peer_id, stream_name, operation_id, object_id, status
     FROM sync_delivery_receipts WHERE object_id = ?
   `).get(nodeId)).toEqual({
     object_id: nodeId,
     operation_id: 'node:ver_00000000-0000-4000-8000-000000000021',
-    authorization_id: 'desktop-peer',
+    peer_id: 'desktop-peer',
     status: 'confirmed',
     stream_name: 'node_version'
   });

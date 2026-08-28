@@ -152,7 +152,7 @@ run_related_tests_if_needed() {
     "quality-gate-fast" \
     "test" \
     "test (related)" \
-    node "${SCRIPT_DIR}/../run-vitest-with-summary.mjs" .tmp/vitest/related.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism "${test_array[@]}"
+    node "${SCRIPT_DIR}/quality-fast-related-tests.mjs" "${test_array[@]}"
 }
 
 run_critical_tests_if_needed() {

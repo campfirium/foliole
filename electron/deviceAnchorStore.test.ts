@@ -61,8 +61,10 @@ it('creates one lowercase UUIDv4 and hydrates it after restart', async () => {
   expect(await loadOrCreateDesktopDeviceAnchor(filePath, () => { throw new Error('must not regenerate'); }))
     .toBe(ANCHOR_A);
   expect(await fs.readFile(filePath, 'utf8')).toBe(`${ANCHOR_A}\n`);
-  expect((await fs.stat(path.dirname(filePath))).mode & 0o777).toBe(0o700);
-  expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
+  if (process.platform !== 'win32') {
+    expect((await fs.stat(path.dirname(filePath))).mode & 0o777).toBe(0o700);
+    expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
+  }
 });
 
 it('fails closed for a corrupt shared anchor instead of changing Device identity', async () => {
@@ -80,7 +82,7 @@ it('uses the real database path before applying the shared composite identity', 
   await fs.writeFile(libraryPath, 'fixture');
   const anchorFile = path.join(root, 'shared', 'anchor-v1');
   const result = await loadDesktopDeviceIdentity({
-    anchorOptions: { loadAdapter: () => ({ adapter: { appGroupContainerPath: () => ({ ok: true, path: path.dirname(anchorFile) }) }, status: 'ready' }), platform: 'darwin' },
+    anchorOptions: { loadAdapter: () => ({ adapter: { appGroupContainerPath: () => ({ ok: true, path: path.dirname(anchorFile) }) }, status: 'ready' }), platform: process.platform === 'win32' ? 'win32' : 'darwin' },
     groupId: 'group-a',
     libraryPath,
     realpath: fs.realpath

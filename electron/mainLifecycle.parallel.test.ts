@@ -99,6 +99,7 @@ vi.mock('./sync/desktopCompanionSyncParticipation.js', () => ({
   reconcileDesktopCompanionSyncRuntime: mocks.reconcileDesktopCompanionSyncRuntime
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
+  setLanWorkspaceSyncJoinRequestHandler: vi.fn(),
   setLanWorkspaceSyncPairRequestHandler: vi.fn(),
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));

@@ -13,6 +13,9 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
     workspaceVersion: '2026-04-26T00:00:00.000Z'
   }))
 }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+}));
 vi.mock('./companionLanAuthenticatedPost.js', () => ({
   handleAuthenticatedPost: authenticatedPostMock.handleAuthenticatedPost
 }));
