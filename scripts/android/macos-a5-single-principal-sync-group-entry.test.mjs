@@ -8,38 +8,43 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   const source = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-sync-group-entry.mjs', 'utf8'
   );
-  expect(source).toContain("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID");
-  expect(source).toContain('macosAcceptanceEnv(args.env)');
+  const buildSource = fs.readFileSync('scripts/android/a5-two-device-build.mjs', 'utf8');
+  const joinEvidence = fs.readFileSync('scripts/android/a5-two-device-join-evidence.mjs', 'utf8');
+  expect(source).toContain('buildA5TwoDeviceAcceptance(args)');
+  expect(buildSource).toContain("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID");
+  expect(buildSource).toContain('macosAcceptanceEnv(args.env)');
   expect(source).toContain('assertMacosAcceptanceSyncGroupServer(await session.enable())');
-  expect(source).toContain("'--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'");
-  expect(source).toContain("['run', 'build']");
-  expect(source).toContain("['run', 'electron:compile']");
+  expect(buildSource).toContain("'--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'");
+  expect(buildSource).toContain("['run', 'build']");
+  expect(buildSource).toContain("['run', 'electron:compile']");
   expect(source).toContain('openMacosSyncGroupDesktopSession');
   expect(source).toContain('observeConcurrently: true');
   expect(source).toContain('observeAndAccept(session, options)');
-  expect(source).toContain('waitForCurrentA5Provider');
-  expect(source).toContain('deviceId: result.observation.deviceId');
-  expect(source).toContain("'provider-failure-logcat.txt'");
-  expect(source).toContain("'logcat', '-d', '--pid', pid");
+  expect(source).not.toContain('waitForCurrentA5Provider');
+  expect(source).not.toContain('macos-a5-current-provider-readiness');
+  expect(source).toContain("eventName: 'onWorkspaceSyncApplied'");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("FOLIOLE_T152_SYNC_CREATOR === 'windows'");
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");
+  expect(source).toContain('observeA5JourneyFacts(args, buildIdentity, env');
   expect(source).toContain('createDesktopSyncGroupJourneyFact');
   expect(source).toContain("'desktop-initial-fact'");
-  expect(source).toContain('A5 initial Sync did not receive the desktop business fact.');
+  expect(source).toContain("'initial-union'");
   expect(source).toContain("'desktop-manual-fact'");
   expect(source).toContain("action: 'sync-now'");
-  expect(source).toContain('journeyFacts.missingIds');
-  expect(source).toContain('productError');
-  expect(source).toContain("'join-failure-screen.png'");
-  expect(source).toContain("'screencap', '-p', remotePath");
+  expect(source).not.toMatch(/collectAndroidDeviceSnapshot|databaseInspector|tables: \['nodes'/u);
+  expect(joinEvidence).toContain('productError');
+  expect(joinEvidence).toContain("'join-failure-screen.png'");
+  expect(joinEvidence).toContain("'screencap', '-p', remotePath");
   expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
   expect(source).toContain("'wm', 'dismiss-keyguard'");
   expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+  expect(source).not.toContain("protectData('backup'");
+  expect(source).not.toContain('deviceBackupRoot');
 });
 
 it('creates the fixed A5 nonempty fact before requesting either desktop-created group', () => {
@@ -49,12 +54,14 @@ it('creates the fixed A5 nonempty fact before requesting either desktop-created 
   );
   expect(source.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.createFact'))
     .toBeLessThan(source.indexOf('companion-sync-discover'));
-  expect(source).toContain('prejoinFactId');
+  expect(source).toContain('prejoinFactText');
   const reverse = fs.readFileSync('scripts/android/macos-a5-windows-two-device-entry.mjs', 'utf8');
-  expect(reverse).toContain("tables: ['nodes', 'sync_group_devices']");
+  expect(reverse).toContain("action: 'observe-journey-facts'");
   expect(reverse).toContain("{ A: 2, B: 2 }");
   expect(reverse).toContain("action: 'sync-now'");
+  expect(reverse).not.toMatch(/collectAndroidDeviceSnapshot|waitForCounts|database/u);
   expect(reverse).not.toMatch(/pm.*clear|DELETE FROM|UPDATE sync_/u);
+  expect(reverse).not.toContain("protectData('backup'");
 });
 
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {
@@ -78,9 +85,13 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('long stageDeadline()');
   expect(source).not.toContain('long requestDeadline');
   expect(source).not.toContain('"companion-sync-now", deadline');
-  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(9);
+  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(8);
   expect(source).toContain('stage=settings-open');
   expect(source).toContain('"companion-sync-discover"');
+  expect(source).toContain('expectedGroupId');
+  expect(source).toContain('expectedGroupTag');
+  expect(source).toContain('acceptance_group_identity_not_unique');
+  expect(source).toContain('clickUniqueVisibleMatchingAttribute');
   expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('stage=device-requested');

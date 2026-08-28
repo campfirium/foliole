@@ -55,3 +55,13 @@ it('publishes cumulative diagnostic output without treating it as semantic progr
   expect(result.code).toBe(0);
   expect(observed.at(-1)).toBe('signed-receipt');
 });
+
+it('supports a bounded in-memory controller release through child stdin', async () => {
+  const { execute } = executor();
+  const result = await execute(process.execPath, ['-e',
+    'process.stdin.once("data", value => process.stdout.write(value, () => process.exit(0)))'], {
+    action: 'release', hardDeadlineMs: 500, host: 'android-b',
+    onSpawn: ({ writeInput }) => writeInput('consumer_complete\n'), stage: 'test'
+  });
+  expect(result).toMatchObject({ code: 0, stdout: 'consumer_complete\n' });
+});

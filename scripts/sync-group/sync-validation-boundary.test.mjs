@@ -49,8 +49,6 @@ it('keeps system entry and product ownership outside host adapters', () => {
 it('keeps pairing proof scoped to saved signable credentials', () => {
   const pairing = join([
     'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js',
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryEvidenceWaiter.java',
     'scripts/sync-group/pair-sync-feature-contract.mjs'
   ]);
   for (const forbidden of [

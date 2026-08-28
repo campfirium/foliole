@@ -55,6 +55,8 @@ export async function runWindowsSyncGroupInteractiveEnvelope(options, {
     action: options.action, buildIdentity: options.buildIdentity,
     createdAt: new Date().toISOString(), evidenceRoot: options.evidenceRoot,
     nonce: randomUUID(), schemaVersion: 1,
+    ...(options.expectedGroupId ? { expectedGroupId: options.expectedGroupId } : {}),
+    ...(options.expectedGroupTag ? { expectedGroupTag: options.expectedGroupTag } : {}),
     ...(options.selfcheckMode ? { selfcheckMode: options.selfcheckMode } : {})
   };
   fs.rmSync(paths.providerRelease, { force: true });
@@ -72,6 +74,11 @@ export async function runWindowsSyncGroupInteractiveEnvelope(options, {
         const line = `[windows-dev-action] progress action=${request.action} nonce=${request.nonce}`
           + ` milestone=${progress.milestone} fact=${progress.factId}\n`;
         (options.stdout ?? process.stdout).write(line);
+        if (progress.groupId) {
+          (options.stdout ?? process.stdout).write(
+            `[windows-dev-action] provider-ready group=${progress.groupId} tag=${progress.groupTag}\n`
+          );
+        }
       },
       resultTimeoutMs: RESULT_TIMEOUT_MS, startTimeoutMs: 30_000
     });

@@ -8,12 +8,18 @@
       <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO">
         <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="50F100071FED79650016851F" BuildableName="AppPhysicalUITests.xctest" BlueprintName="AppPhysicalUITests" ReferencedContainer="container:App.xcodeproj"/>
       </BuildActionEntry>
+      <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO">
+        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="50F110071FED79650016851F" BuildableName="AppAcceptanceProjectionTests.xctest" BlueprintName="AppAcceptanceProjectionTests" ReferencedContainer="container:App.xcodeproj"/>
+      </BuildActionEntry>
     </BuildActionEntries>
   </BuildAction>
   <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
     <Testables>
       <TestableReference skipped="NO">
         <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="50F100071FED79650016851F" BuildableName="AppPhysicalUITests.xctest" BlueprintName="AppPhysicalUITests" ReferencedContainer="container:App.xcodeproj"/>
+      </TestableReference>
+      <TestableReference skipped="NO">
+        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="50F110071FED79650016851F" BuildableName="AppAcceptanceProjectionTests.xctest" BlueprintName="AppAcceptanceProjectionTests" ReferencedContainer="container:App.xcodeproj"/>
       </TestableReference>
     </Testables>
   </TestAction>

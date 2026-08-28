@@ -13,8 +13,8 @@ it('creates journey facts only through the visible Capture product entry', async
   expect(source).toContain('"companion-capture-text", "input", factText');
   expect(source).toContain('"companion-capture-save"');
   expect(source).toContain('put("factPersisted", true)');
-  expect(source).toContain('put("factId", factId)');
-  expect(source).toContain('SQLiteDatabase.OPEN_READONLY');
+  expect(source).toContain('put("factText", factText)');
+  expect(source).not.toMatch(/SQLiteDatabase|rawQuery|SELECT /u);
   const capture = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionCaptureAnnotationScenario.java',
     'utf8'
@@ -25,6 +25,18 @@ it('creates journey facts only through the visible Capture product entry', async
   );
   expect(capture).toContain('FolioleCompanionWebViewSemanticAdapter.tryEvaluateBoolean');
   expect(adapter).toContain('catch (WebViewEvaluationTimeoutException timeout)');
+});
+
+it('observes journey convergence through a bounded visible product expectation', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceJourneyFactsTest.java',
+    'utf8'
+  );
+  expect(source).toContain('FolioleCompanionCaptureNavigation.enterBrowseSurface');
+  expect(source).toContain('expectedJourneyCounts');
+  expect(source).toContain('journeyFactsObserved');
+  expect(source).toContain('document.querySelectorAll');
+  expect(source).not.toMatch(/SQLiteDatabase|rawQuery|SELECT /u);
 });
 
 it('activates persisted Sync participation through visible product controls', async () => {
@@ -93,4 +105,13 @@ it('observes Leave through durable host state after the visible confirmation', (
   expect(scenario).toContain('put("workgroupKeyRemoved", true)');
   expect(test).toContain('sendDepartureEvidence(instrumentation, receipt)');
   expect(test).toContain('put("bindingPresent", false)');
+});
+
+it('rebuilds only the task-owned acceptance application from a fresh container', () => {
+  const source = fs.readFileSync(
+    'scripts/android/macos-a5-sync-group-maintenance-action.mjs', 'utf8'
+  );
+  expect(source).toContain('appId !== APP_ID');
+  expect(source).toContain("['-s', serial, 'uninstall', appId]");
+  expect(source).not.toMatch(/pm.*clear/u);
 });

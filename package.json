@@ -78,6 +78,7 @@
     "check:release-candidate": "node scripts/quality/quality-command-contracts.mjs allow check:release-candidate && node scripts/check-release-candidate.mjs",
     "preview:diag": "node scripts/preview/preview-dedupe-diagnostics.mjs",
     "multi-device-sync": "node scripts/sync-group/multi-device-sync-cli.mjs",
+    "t152:two-device-matrix": "node scripts/acceptance/t152-two-device-matrix-orchestrator.mjs",
     "windows:native:preflight": "node scripts/windows/windows-native-pilot-preflight.mjs",
     "windows:native:check": "node scripts/windows/windows-native-check.mjs",
     "windows:client:native": "node scripts/windows/windows-client-native.mjs",

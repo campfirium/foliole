@@ -1,9 +1,6 @@
 package com.foliole.android;
 
 import android.app.Instrumentation;
-import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.webkit.WebView;
 
 import org.json.JSONObject;
@@ -11,8 +8,6 @@ import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupMaintenanceScenario {
-    private static final String DATABASE_NAME = "foliole-companionSQLite.db";
-
     private FolioleCompanionSyncGroupMaintenanceScenario() {}
 
     static JSONObject leave(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -50,7 +45,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     }
 
     static JSONObject createFact(Instrumentation instrumentation, WebView webView) throws Exception {
-        String factText = "T121 B fact " + System.currentTimeMillis();
+        String factText = "Multi-device sync B fact " + System.currentTimeMillis();
         FolioleCompanionCaptureNavigation.enterBrowseSurface(instrumentation, webView, 30_000);
         click(instrumentation, webView, "companion-capture-open");
         waitUntilVisible(instrumentation, webView, "companion-capture-text", 30_000);
@@ -60,59 +55,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         if (!input.optBoolean("ok")) throw new IllegalStateException(input.toString());
         clickEnabled(instrumentation, webView, "companion-capture-save");
         waitUntilMissing(instrumentation, webView, "companion-capture-save", 30_000);
-        String factId = findFactId(instrumentation.getTargetContext(), factText);
-        return new JSONObject().put("factId", factId)
-            .put("factPersisted", true).put("factText", factText);
-    }
-
-    static JSONObject awaitInitialAutomaticSync(Context context, long timeoutMs) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
-        JSONObject latest = new JSONObject();
-        while (System.nanoTime() < deadline) {
-            latest = readInitialSyncState(context);
-            if (latest.optBoolean("inboxPresent")
-                && !latest.optString("lastSyncedAt").isEmpty()) return latest;
-            Thread.sleep(100);
-        }
-        throw new IllegalStateException("Initial automatic sync did not persist: " + latest);
-    }
-
-    static JSONObject readInitialSyncState(Context context) {
-        JSONObject state = new JSONObject();
-        String path = context.getDatabasePath(DATABASE_NAME).getPath();
-        try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
-            path, null, SQLiteDatabase.OPEN_READONLY
-        )) {
-            state.put("lastSyncedAt", scalar(database,
-                "SELECT value FROM companion_meta WHERE key = 'workspace_sync_last_synced_at' LIMIT 1"));
-            state.put("syncEvents", scalar(database,
-                "SELECT value FROM companion_meta WHERE key = 'workspace_sync_events' LIMIT 1"));
-            state.put("inboxPresent", !scalar(database,
-                "SELECT id FROM nodes WHERE id = 'special-inbox' AND deleted_at IS NULL LIMIT 1").isEmpty());
-        } catch (Exception error) {
-            try { state.put("readError", error.getMessage()); } catch (Exception ignored) {}
-        }
-        return state;
-    }
-
-    private static String scalar(SQLiteDatabase database, String sql) {
-        try (Cursor cursor = database.rawQuery(sql, null)) {
-            return cursor.moveToFirst() && !cursor.isNull(0) ? cursor.getString(0) : "";
-        }
-    }
-
-    private static String findFactId(Context context, String factText) {
-        String path = context.getDatabasePath(DATABASE_NAME).getPath();
-        try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
-            path, null, SQLiteDatabase.OPEN_READONLY
-        ); Cursor cursor = database.rawQuery(
-            "SELECT id FROM nodes WHERE deleted_at IS NULL AND (title = ? OR content = ?) " +
-                "ORDER BY updated_at DESC LIMIT 1",
-            new String[] { factText, factText }
-        )) {
-            if (cursor.moveToFirst()) return cursor.getString(0);
-        }
-        throw new IllegalStateException("Captured Topic identity is missing.");
+        return new JSONObject().put("factPersisted", true).put("factText", factText);
     }
 
     private static void openSettings(Instrumentation instrumentation, WebView webView) throws Exception {

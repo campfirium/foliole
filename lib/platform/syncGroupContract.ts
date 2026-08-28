@@ -19,6 +19,7 @@ export interface SyncGroupPayload {
   devices: SyncGroupDevicePayload[];
   display_name: string;
   group_id: string;
+  group_tag?: string;
   local_device_identity_key: string;
 }
 

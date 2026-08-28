@@ -120,7 +120,9 @@ export async function runWindowsDevDeviceAction({
   runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({
-    action, buildIdentity, evidenceRoot, execute, paths
+    action, buildIdentity, evidenceRoot, execute,
+    expectedGroupId: process.env.FOLIOLE_T152_EXPECTED_GROUP_ID,
+    expectedGroupTag: process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG, paths
   });
   if (interactiveSyncGroup) return interactiveSyncGroup;
   const syncGroupAction = await runWindowsSyncGroupDeviceAction({

@@ -59,10 +59,20 @@
 		50F044111FED79650016851F /* companion-sync-pack-provider-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F044011FED79650016851F /* companion-sync-pack-provider-definitions.json */; };
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 		50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */; };
+		50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */; };
+		50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */; };
+		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		50F100091FED79650016851F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 504EC3031FED79650016851F;
+			remoteInfo = App;
+		};
+		50F110091FED79650016851F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
 			proxyType = 1;
@@ -124,7 +134,11 @@
 		50F044011FED79650016851F /* companion-sync-pack-provider-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-sync-pack-provider-definitions.json"; sourceTree = "<group>"; };
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITests.swift; sourceTree = "<group>"; };
+		50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITestSupport.swift; sourceTree = "<group>"; };
 		50F100031FED79650016851F /* AppPhysicalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppPhysicalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceSyncEventProjectionTests.swift; sourceTree = "<group>"; };
+		50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceGroupDiscoveryTests.swift; sourceTree = "<group>"; };
+		50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppAcceptanceProjectionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -145,6 +159,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		50F110041FED79650016851F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -154,6 +175,7 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				50F100081FED79650016851F /* AppPhysicalUITests */,
+				50F110081FED79650016851F /* AppAcceptanceProjectionTests */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -163,6 +185,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				50F100031FED79650016851F /* AppPhysicalUITests.xctest */,
+				50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -227,9 +250,19 @@
 		50F100081FED79650016851F /* AppPhysicalUITests */ = {
 			isa = PBXGroup;
 			children = (
+				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
 				50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */,
 			);
 			path = AppPhysicalUITests;
+			sourceTree = "<group>";
+		};
+		50F110081FED79650016851F /* AppAcceptanceProjectionTests */ = {
+			isa = PBXGroup;
+			children = (
+				50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */,
+				50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */,
+			);
+			path = AppAcceptanceProjectionTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -274,6 +307,24 @@
 			productReference = 50F100031FED79650016851F /* AppPhysicalUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		50F110071FED79650016851F /* AppAcceptanceProjectionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50F1100D1FED79650016851F /* Build configuration list for PBXNativeTarget "AppAcceptanceProjectionTests" */;
+			buildPhases = (
+				50F110051FED79650016851F /* Sources */,
+				50F110041FED79650016851F /* Frameworks */,
+				50F110061FED79650016851F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				50F1100A1FED79650016851F /* PBXTargetDependency */,
+			);
+			name = AppAcceptanceProjectionTests;
+			productName = AppAcceptanceProjectionTests;
+			productReference = 50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -289,6 +340,11 @@
 						ProvisioningStyle = Automatic;
 					};
 					50F100071FED79650016851F = {
+						CreatedOnToolsVersion = 26.6;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 504EC3031FED79650016851F;
+					};
+					50F110071FED79650016851F = {
 						CreatedOnToolsVersion = 26.6;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 504EC3031FED79650016851F;
@@ -314,6 +370,7 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				50F100071FED79650016851F /* AppPhysicalUITests */,
+				50F110071FED79650016851F /* AppAcceptanceProjectionTests */,
 			);
 		};
 /* End PBXProject section */
@@ -339,6 +396,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		50F100061FED79650016851F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50F110061FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -396,7 +460,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
 				50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50F110051FED79650016851F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */,
+				50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -407,6 +481,11 @@
 			isa = PBXTargetDependency;
 			target = 504EC3031FED79650016851F /* App */;
 			targetProxy = 50F100091FED79650016851F /* PBXContainerItemProxy */;
+		};
+		50F1100A1FED79650016851F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 504EC3031FED79650016851F /* App */;
+			targetProxy = 50F110091FED79650016851F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -617,6 +696,40 @@
 			};
 			name = Release;
 		};
+		50F1100B1FED79650016851F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V589TQH334;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App";
+			};
+			name = Debug;
+		};
+		50F1100C1FED79650016851F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V589TQH334;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -643,6 +756,15 @@
 			buildConfigurations = (
 				50F1000B1FED79650016851F /* Debug */,
 				50F1000C1FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		50F1100D1FED79650016851F /* Build configuration list for PBXNativeTarget "AppAcceptanceProjectionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50F1100B1FED79650016851F /* Debug */,
+				50F1100C1FED79650016851F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -53,7 +53,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForDecorationText(instrumentation, webView, ".cm-md-cloze", CLOZE_TEXT, timeoutMs);
     }
 
-    private static void createNote(
+    static void createNote(
         Instrumentation instrumentation,
         WebView webView,
         String token,
@@ -79,7 +79,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForDecorationText(instrumentation, webView, ".cm-md-cloze", CLOZE_TEXT, timeoutMs);
     }
 
-    private static void navigateToCapturedTopic(
+    static void navigateToCapturedTopic(
         Instrumentation instrumentation,
         WebView webView,
         String token,
@@ -171,7 +171,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         throw new IllegalStateException("Timed out waiting for annotation decoration " + text + " page=" + page);
     }
 
-    private static void waitForText(
+    static void waitForText(
         Instrumentation instrumentation,
         WebView webView,
         String text,
@@ -235,7 +235,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
             "return JSON.stringify({ok:false,code:'text_missing'});})()";
     }
 
-    private static void assertToken(String token) {
+    static void assertToken(String token) {
         if (!token.matches("[A-Za-z0-9._-]{8,80}")) {
             throw new IllegalArgumentException("capture annotation token is invalid");
         }

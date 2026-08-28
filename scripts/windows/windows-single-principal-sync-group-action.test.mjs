@@ -27,9 +27,11 @@ it('uses only the new request, complete, overview, group and Device production c
   ]) expect(source).toContain(command);
   expect(source).toContain("device: 'C'");
   expect(source).toContain("result?.reason === 'automatic'");
-  expect(source).toContain("includes('sqlite connection is owned')");
-  expect(source).not.toContain("'discover_sync_groups'");
-  expect(source).toContain('beforeRestartAutomatic');
+  expect(source).toContain("eventName: 'onSyncGroupDiscoveryChanged'");
+  expect(source).toContain("triggerCommand: 'discover_sync_groups'");
+  expect(source).not.toContain("includes('sqlite connection is owned')");
+  expect(source).not.toMatch(/while \(Date\.now\(\) < deadline\)/u);
+  expect(source).toContain('automaticResult?.run_id');
   expect(source).toContain("report(options.reportProgress, 'restarted')");
   expect(source).toContain("action: 'single-principal-sync-group'");
   expect(source).toContain('waitForWindowsSyncGroupProviderRelease');

@@ -90,8 +90,6 @@ final class FolioleCompanionSyncNowAction {
                 && runId.equals(latest.optString("terminalRunId"))) return latest;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest
-            + "; persisted=" + FolioleCompanionSyncGroupMaintenanceScenario
-                .readInitialSyncState(instrumentation.getTargetContext()));
+        throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest);
     }
 }

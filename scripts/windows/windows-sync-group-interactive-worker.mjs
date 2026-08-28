@@ -36,6 +36,7 @@ async function main() {
     const actionResult = await runWindowsSyncGroupDeviceAction({
       action: request.action, buildIdentity: request.buildIdentity,
       evidenceRoot: request.evidenceRoot, execute: executeBounded,
+      expectedGroupId: request.expectedGroupId, expectedGroupTag: request.expectedGroupTag,
       paths: runtimePaths, reportProgress,
       selfcheckMode: request.selfcheckMode
     });

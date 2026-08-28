@@ -1,7 +1,5 @@
-import {
-  readSyncGroupControllerState,
-  waitForSyncGroupAutomaticRun
-} from '../desktop/sync-group-controller-read.mjs';
+import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import { waitForMacosAutomaticRun } from './macos-sync-group-desktop-session.mjs';
 
 export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, repoRoot,
   session, sharedRoot }) {
@@ -20,18 +18,17 @@ export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, 
     if (restarted.sync_group?.group_id !== expectedGroupId) {
       throw new Error('Mac did not restore its A5 Sync Group.');
     }
-    await waitForSyncGroupAutomaticRun(
-      () => restartedSession.loadSyncTriggerResult(), beforeRestartAutomatic?.run_id
+    const automaticRun = await waitForMacosAutomaticRun(
+      restartedSession, beforeRestartAutomatic?.run_id
     );
-    await restartedSession.invoke('sync_companion_now');
-    await restartedSession.invoke('sync_companion_now');
+    const manualRun = await restartedSession.invoke('sync_companion_now');
     const afterRestart = await readSyncGroupControllerState(() => restartedSession.invoke(
       'load_workspace_list_snapshot', { includePdfOpenings: false }
     ));
     if (Object.keys(afterRestart.nodesById).length !== Object.keys(beforeRestart.nodesById).length) {
       throw new Error('Repeated Mac and A5 sync was not idempotent.');
     }
-    return restartedSession;
+    return { automaticRun, manualRun, session: restartedSession };
   } catch (error) {
     await restartedSession.close().catch(() => undefined);
     throw error;

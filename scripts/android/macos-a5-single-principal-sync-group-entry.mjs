@@ -2,19 +2,21 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 
-import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
-import { waitForCurrentA5Provider } from './macos-a5-current-provider-readiness.mjs';
-import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
+import { captureA5SyncRun } from './a5-sync-event-proof.mjs';
+import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
+import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
+import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
+import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession,
-  waitForMacosDeviceRequest } from './macos-sync-group-desktop-session.mjs';
+  waitForMacosAutomaticRun, waitForMacosDeviceRequest
+} from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
-import {
-  assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
-} from '../sync-group/multi-device-sync-macos-channel.mjs';
+import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
+import {
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict
+} from '../desktop/sync-group-conflict-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
@@ -23,70 +25,11 @@ const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
-function buildAcceptance(args) {
-  const env = { ...macosAcceptanceEnv(args.env),
-    FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID };
-  args.checked('npm', ['run', 'android:web:build'], { cwd: args.paths.buildRoot, env });
-  args.checked(args.paths.cap, ['sync', 'android'], { cwd: args.paths.buildRoot, env });
-  args.checked(args.paths.gradle, [
-    '--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'
-  ], { cwd: path.join(args.paths.buildRoot, 'android'), env });
-  args.checked('npm', ['run', 'build'], { cwd: args.paths.buildRoot, env });
-  args.checked('npm', ['run', 'electron:compile'], { cwd: args.paths.buildRoot, env });
-  if (!fs.existsSync(args.paths.apk)) throw new Error('A5 acceptance APK was not produced.');
-  return env;
-}
-
-function captureJoinFailure(args, evidencePath) {
-  const localPath = path.join(path.dirname(evidencePath), 'join-failure-screen.png');
-  const remotePath = '/sdcard/Download/foliole-a5-join-failure-screen.png';
-  try {
-    args.checked(args.paths.adb, [
-      '-s', args.serial, 'shell', 'screencap', '-p', remotePath
-    ]);
-    args.checked(args.paths.adb, ['-s', args.serial, 'pull', remotePath, localPath]);
-  } catch (error) {
-    fs.writeFileSync(`${localPath}.error.txt`, `${error instanceof Error ? error.message : error}\n`);
-  } finally {
-    try {
-      args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'rm', '-f', remotePath]);
-    } catch { /* Preserve the original join failure. */ }
-  }
-}
-
-function validateJoin({ args, evidencePath, stdout }) {
-  if (!/folioleSyncGroupJoinReceipt=.*"joined":true.*"restarted":true/u.test(stdout)
-      || !/INSTRUMENTATION_CODE: -1/mu.test(stdout)) {
-    captureJoinFailure(args, evidencePath);
-    const productError = stdout.match(/java\.lang\.(?:IllegalStateException|AssertionError): ([^\r\n]+)/u)?.[1];
-    throw Object.assign(new Error('A5 Device join and restart evidence is incomplete.'), {
-      evidenceRef: evidencePath, missingFact: 'a5_device_join_persistence', productError
-    });
-  }
-}
-
-async function waitForMacFact(session, factId) {
-  const deadline = Date.now() + 2 * 60_000;
-  while (Date.now() < deadline) {
-    const snapshot = await readSyncGroupControllerState(() => session.invoke(
-      'load_workspace_list_snapshot', { includePdfOpenings: false }
-    ));
-    if (snapshot?.nodesById?.[factId]) return snapshot;
-    await delay(500);
-  }
-  throw new Error('Mac did not receive the fixed A5 business fact.');
-}
-
-async function captureAcceptanceProcessLog(args, evidenceRoot) {
-  const pidResult = await args.execute(args.paths.adb, [
-    '-s', args.serial, 'shell', 'pidof', ACCEPTANCE_APP_ID
-  ], { env: args.env });
-  const pid = String(pidResult.stdout ?? '').trim().split(/\s+/u)[0];
-  if (pidResult.code !== 0 || !/^\d+$/u.test(pid)) return;
-  const logcat = await args.execute(args.paths.adb, [
-    '-s', args.serial, 'logcat', '-d', '--pid', pid, '-v', 'threadtime'
-  ], { env: args.env });
-  fs.writeFileSync(path.join(evidenceRoot, 'provider-failure-logcat.txt'), String(logcat.output));
+async function waitForMacFact(session) {
+  return session.waitForState({ command: 'load_workspace_list_snapshot',
+    commandArgs: { includePdfOpenings: false }, condition: {
+      counts: { 'Multi-device sync B fact': 1 }, kind: 'fact-prefix-counts'
+    }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
 }
 
 async function observeAndAccept(session, options = {}) {
@@ -116,107 +59,154 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   const mechanics = dependencies.mechanics ?? runMacosA5InstrumentationMechanics;
   const openSession = dependencies.openSession ?? openMacosSyncGroupDesktopSession;
   args.assertFixed();
-  const env = buildAcceptance(args);
+  const env = buildA5TwoDeviceAcceptance(args);
   const buildIdentity = args.buildIdentity();
   const evidenceRoot = path.join(
     args.paths.artifactsRoot, 'a5-single-principal-sync-group', buildIdentity
   );
   const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
-  const backupRoot = path.join(args.paths.deviceBackupRoot, buildIdentity);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   if (process.env.FOLIOLE_T152_SYNC_CREATOR === 'windows') {
     return runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env, evidenceRoot });
   }
   args.markMutationBoundary?.();
-  await args.protectData('backup', path.join(evidenceRoot, 'product-baseline.json'), backupRoot);
-  let session = await openSession({ env, libraryHome: path.join(sharedRoot, 'macos-library'),
+  const macosLibrary = path.join(sharedRoot, 'macos-library');
+  if (process.env.FOLIOLE_T152_CELL_ID && fs.existsSync(macosLibrary)) {
+    throw new Error('The T152 Mac task library locator was already used.');
+  }
+  let cellProofInput;
+  let session = await openSession({ env, libraryHome: macosLibrary,
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
-    const desktopInitialFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+    await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
-    assertMacosAcceptanceSyncGroupServer(await session.enable());
+    const conflictSeed = await createDesktopSyncConflictSeed({
+      evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session
+    });
+    const providerOverview = assertMacosAcceptanceSyncGroupServer(await session.enable());
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'
     ]);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'wm', 'dismiss-keyguard']);
     const result = await mechanics({ appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot, execute: args.execute, observeConcurrently: true,
+      expectedGroupId: providerOverview.sync_group.group_id,
+      expectedGroupTag: providerOverview.sync_group.group_tag,
       observeWhileTransportOpen: (options) => observeAndAccept(session, options), paths: args.paths,
       serial: args.serial, testClass: TEST_CLASS,
-      validateInstrumentation: (evidence) => validateJoin({ ...evidence, args }) });
+      validateInstrumentation: (evidence) => validateA5TwoDeviceJoin({ ...evidence, args }) });
     await runMacosA5SyncGroupMaintenance({
       action: 'activate-participation', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
-    const initialFacts = [{ factId: desktopInitialFact.factId, origin: 'A' }];
-    const initialSnapshot = await collectAndroidDeviceSnapshot({ adb: args.paths.adb,
-      appId: ACCEPTANCE_APP_ID, databaseInspector: (database) =>
-        inspectExpectedJourneyFacts(database, initialFacts), includeAttachments: false,
-      includeEvents: false, serial: args.serial, tables: ['nodes'] });
-    if (!initialSnapshot.database?.inspection
-        || initialSnapshot.database.inspection.missingIds.length) {
-      throw new Error('A5 initial Sync did not receive the desktop business fact.');
-    }
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-      `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
+    await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
+    const macosBeforeAutomatic = await session.loadSyncTriggerResult();
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
     const factReceipt = JSON.parse(fs.readFileSync(androidFact.manifestPath, 'utf8')).receipt;
-    await waitForMacFact(session, factReceipt.factId);
-    const desktopManualFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
+    await waitForMacFact(session);
+    const macosAutomaticBeforeRestart = await waitForMacosAutomaticRun(
+      session, macosBeforeAutomatic?.run_id
+    );
+    await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
-    for (const suffix of ['initial-manual', 'restart-manual']) {
-      await runMacosA5SyncGroupMaintenance({
-        action: 'sync-now', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
-        evidenceRoot: path.join(evidenceRoot, suffix), execute: args.execute,
-        installMain: false, paths: args.paths, serial: args.serial
-      });
-      args.checked(args.paths.adb, [
-        '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
-      ]);
-      args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-        `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
-    }
-    try {
-      await waitForCurrentA5Provider({
-        deviceId: result.observation.deviceId, groupId: result.observation.groupId
-      });
-    } catch (error) {
-      await captureAcceptanceProcessLog({ ...args, env }, evidenceRoot).catch(() => undefined);
-      throw error;
-    }
-    await session.invoke('sync_companion_now');
-    await waitForMacFact(session, factReceipt.factId);
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
-    const snapshot = await collectAndroidDeviceSnapshot({ adb: args.paths.adb,
-      appId: ACCEPTANCE_APP_ID, databaseInspector: (database) => inspectExpectedJourneyFacts(
-        database, [...initialFacts, { factId: factReceipt.factId, origin: 'B' },
-          { factId: desktopManualFact.factId, origin: 'A' }]
-      ),
-      includeAttachments: false, includeEvents: false, serial: args.serial, tables: ['nodes'] });
-    const journeyFacts = snapshot.database?.inspection;
-    if (!journeyFacts || journeyFacts.missingIds.length) {
-      throw new Error(`A5 business facts did not converge: ${journeyFacts?.missingIds.join(',') ?? 'snapshot unavailable'}`);
-    }
-    session = await verifyMacosA5Restart({ env, expectedGroupId: result.observation.groupId,
-      openSession, repoRoot: args.paths.buildRoot, session, sharedRoot });
+    await waitForMacFact(session);
+    await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'automatic-union'), { A: 2, B: 2 });
+    const a5AutomaticBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'automatic-run') }, 'automatic', [a5Initial.run]);
+    await session.invoke('pause_companion_sync');
+    await runMacosA5SyncGroupMaintenance({ action: 'pause-participation',
+      appId: ACCEPTANCE_APP_ID, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'a5-pause-for-conflict'), execute: args.execute,
+      installMain: false, paths: args.paths, serial: args.serial });
+    await forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session });
+    await runMacosA5SyncGroupMaintenance({ action: 'fork-conflict',
+      appId: ACCEPTANCE_APP_ID, buildIdentity, conflictToken: conflictSeed.token, env,
+      evidenceRoot: path.join(evidenceRoot, 'a5-conflict-fork'), execute: args.execute,
+      installMain: false, paths: args.paths, serial: args.serial });
+    await runMacosA5SyncGroupMaintenance({ action: 'resume-participation',
+      appId: ACCEPTANCE_APP_ID, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'a5-resume-after-conflict'), execute: args.execute,
+      installMain: false, paths: args.paths, serial: args.serial });
+    await session.invoke('resume_companion_sync');
+    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+      buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
+      execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
+    const a5ManualBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') }, 'manual');
+    const macosManualBeforeRestart = await session.invoke('sync_companion_now');
+    const conflicts = await session.waitForState({ command: 'load_sync_node_conflicts',
+      commandArgs: { objectIds: [conflictSeed.nodeId] },
+      condition: { count: 1, kind: 'sync-conflict-count' },
+      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
+    const conflict = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
+      silentOverwrite: false, visible: true };
+    args.checked(args.paths.adb, [
+      '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
+    ]);
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
+      `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
+    const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
+    [a5Initial.run, a5AutomaticBeforeRestart.run]);
+    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+      buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-after-restart'),
+      execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
+    const a5ManualAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-after-restart-run') }, 'manual',
+    [a5ManualBeforeRestart.run]);
+    const macosRestart = await verifyMacosA5Restart({ env,
+      expectedGroupId: result.observation.groupId, openSession,
+      repoRoot: args.paths.buildRoot, session, sharedRoot });
+    session = macosRestart.session;
+    const journeyFacts = await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'final-union'), { A: 2, B: 2 });
     fs.writeFileSync(path.join(evidenceRoot, 'result.json'), `${JSON.stringify({
       buildIdentity, completedAt: new Date().toISOString(),
-      androidFactId: factReceipt.factId, journeyFactIds: journeyFacts.foundIds,
-      idempotent: true, journeyOrigins: journeyFacts.origins, macosRestarted: true,
+      androidFactText: factReceipt.factText, journeyFacts: journeyFacts.facts,
+      idempotent: true, journeyOrigins: Object.keys(journeyFacts.counts), macosRestarted: true,
       observation: result.observation,
+      conflict,
+      runs: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
+        automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
+        manualAfterRestart: a5ManualAfterRestart.run,
+        manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
+        automaticAfterRestart: macosRestart.automaticRun,
+        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        manualAfterRestart: macosRestart.manualRun,
+        manualBeforeRestart: macosManualBeforeRestart } },
       resultStatus: 'success', sharedRoot
     }, null, 2)}\n`, 'utf8');
+    cellProofInput = { automaticBeforeRestartHost: 'macos',
+      business: { idempotent: true, twoWayUnion: true }, conflict,
+      devices: { a5: { identity: result.observation.deviceId },
+        macos: { identity: providerOverview.sync_group.local_device_identity_key } },
+      failureLocator: evidenceRoot, groupId: providerOverview.sync_group.group_id,
+      groupTag: providerOverview.sync_group.group_tag,
+      rawRuns: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
+        automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
+        manualAfterRestart: a5ManualAfterRestart.run,
+        manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
+        automaticAfterRestart: macosRestart.automaticRun,
+        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        manualAfterRestart: macosRestart.manualRun,
+        manualBeforeRestart: macosManualBeforeRestart } } };
     process.stdout.write(result.output);
   } finally {
     await session.close().catch(() => undefined);
     args.checked(args.paths.adb, ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID]);
   }
-  await args.protectData('check', path.join(evidenceRoot, 'product-baseline.json'), backupRoot);
+  if (process.env.FOLIOLE_T152_CELL_ID) {
+    writeMacosA5CellReceipt({ buildIdentity, evidenceRoot, input: cellProofInput,
+      macosLibrary });
+  }
   console.log(`[macos-a5-dev] single-principal-sync-group evidence=${evidenceRoot}`);
 }

@@ -35,9 +35,10 @@ it('keeps the Bonjour service declaration in the final iOS application plist', (
 });
 
 it('handles the iOS Local Network system card before waiting for a Device candidate', () => {
-  const physicalTest = read(
-    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift'
-  );
+  const physicalTest = [
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift',
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift'
+  ].map(read).join('\n');
   const appDelegate = read('ios/App/App/AppDelegate.swift');
 
   expect(physicalTest).toContain('springboard.alerts.firstMatch');
@@ -51,9 +52,15 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('resetExistingSyncGroup(in: app)');
   expect(physicalTest).toContain('enableAutomaticSync(in: app)');
   expect(physicalTest).toContain('captureFriFact(in: app)');
-  expect(physicalTest).toContain('waitForProviderAutomaticConvergence()');
+  expect(physicalTest).not.toContain('Data(contentsOf: URL(fileURLWithPath:');
+  expect(physicalTest).not.toContain('Thread.sleep(forTimeInterval:');
   expect(physicalTest).toContain('FOLIOLE_T152_TWO_DEVICE');
   expect(physicalTest).toContain('waitForJourneyFactCount("A", count: 2');
+  expect(physicalTest).toContain('[foliole-fri] t152-conflict-fork-ready');
+  expect(physicalTest).toContain('"Pause Sync"');
+  expect(physicalTest).toContain('"Resume Sync"');
+  expect(physicalTest).toContain('"Issues to resolve"');
+  expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now"');
   expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');

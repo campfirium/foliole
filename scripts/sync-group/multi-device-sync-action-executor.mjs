@@ -26,15 +26,17 @@ function terminationCode(reason, code) {
 export function createActionExecutor({ logPath, progressPath, spawnImpl = spawn }) {
   return (command, args, options = {}) => new Promise((resolve, reject) => {
     const { action = command, hardDeadlineMs = options.timeoutMs, host = 'unknown',
-      onOutput, signal, stage = 'unknown' } = options;
+      onOutput, onSpawn, signal, stage = 'unknown' } = options;
     const spawnOptions = { ...options };
-    for (const key of ['action', 'hardDeadlineMs', 'host', 'onOutput', 'signal', 'stage', 'timeoutMs']) {
+    for (const key of ['action', 'hardDeadlineMs', 'host', 'onOutput', 'onSpawn', 'signal',
+      'stage', 'timeoutMs']) {
       delete spawnOptions[key];
     }
     if (!Number.isFinite(hardDeadlineMs) || hardDeadlineMs <= 0) {
       reject(new Error(`Action ${action} requires a positive hard deadline.`)); return;
     }
-    const child = spawnImpl(command, args, { ...spawnOptions, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawnImpl(command, args, { ...spawnOptions, stdio: ['pipe', 'pipe', 'pipe'] });
+    onSpawn?.({ writeInput: (value) => child.stdin.write(value) });
     let output = ''; let stderr = ''; let stdout = ''; let terminationReason = null;
     progressRecord(progressPath, { action, event: 'started', hardDeadlineMs, host, stage });
     const terminate = (reason) => {

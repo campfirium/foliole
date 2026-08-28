@@ -1,0 +1,143 @@
+import XCTest
+
+extension FoliolePhysicalSyncGroupUITests {
+    func acceptanceApplication() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        return app
+    }
+
+    func openSyncSettings(in app: XCUIApplication) {
+        tapButton(named: "Settings", in: app, timeout: 45)
+        let sync = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Sync ")
+        ).firstMatch
+        XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
+        sync.tap()
+    }
+
+    func openBrowse(in app: XCUIApplication) {
+        tapButton(named: "Browse", in: app, timeout: 30)
+    }
+
+    func enableAutomaticSync(in app: XCUIApplication) {
+        let toggle = app.switches["Sync"].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 30), "The automatic Sync switch is unavailable.")
+        if (toggle.value as? String) != "1" { toggle.tap() }
+    }
+
+    func waitForJourneyFacts(_ origins: [String], in app: XCUIApplication) {
+        for origin in origins {
+            let fact = app.staticTexts.matching(
+                NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
+            ).firstMatch
+            XCTAssertTrue(fact.waitForExistence(timeout: 120),
+                          "Missing \(origin) business fact on Fri.")
+        }
+    }
+
+    func waitForJourneyFactCount(_ origin: String, count: Int, in app: XCUIApplication) {
+        let facts = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
+        )
+        let enough = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "count >= %d", count), object: facts
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [enough], timeout: 120), .completed,
+                       "Missing repeated \(origin) automatic-sync facts on Fri.")
+    }
+
+    func captureFriFact(in app: XCUIApplication) {
+        tapButton(named: "Capture", in: app, timeout: 30)
+        let editor = app.textViews["Capture text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
+        editor.tap()
+        editor.typeText("Multi-device sync \(isTwoDeviceJourney ? "B" : "D") fact")
+        tapButton(named: "Save", in: app, timeout: 30)
+        waitForDisappearance(editor, timeout: 30, message: "The Fri business fact was not saved.")
+    }
+
+    func forkVisibleConflictSeed(in app: XCUIApplication) {
+        openBrowse(in: app)
+        let topics = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "T152 conflict t152-conflict-")
+        )
+        XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
+                      "Fri did not receive the conflict seed through product sync.")
+        XCTAssertEqual(topics.count, 1, "Fri must fork exactly one attempt conflict seed.")
+        topics.firstMatch.tap()
+        tapButton(named: "Edit topic", in: app, timeout: 30)
+        let editor = app.textViews["Topic body"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 30),
+                      "The public topic editor is unavailable on Fri.")
+        editor.tap()
+        editor.typeText("\n\nFri conflict fork")
+        tapButton(named: "Done", in: app, timeout: 30)
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Fri conflict fork")
+        ).firstMatch.waitForExistence(timeout: 30), "Fri conflict fork was not visibly saved.")
+        tapButton(named: "Exit", in: app, timeout: 30)
+    }
+
+    var isTwoDeviceJourney: Bool {
+        ProcessInfo.processInfo.environment["FOLIOLE_T152_TWO_DEVICE"] == "1"
+    }
+
+    func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval, message: String) {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed, message)
+    }
+
+    func resetExistingSyncGroup(in app: XCUIApplication) {
+        guard app.buttons["Sync Now"].exists else { return }
+        tapButton(named: "Details", in: app, timeout: 15)
+        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
+        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
+        if app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30) { return }
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
+                      "The isolated physical acceptance Sync Group was not reset.")
+    }
+
+    func tapButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
+        let button = app.buttons[name]
+        XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
+        button.tap()
+    }
+
+    func tapEnabledButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
+        let button = app.buttons[name]
+        XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
+        let enabled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"), object: button
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: timeout), .completed,
+                       "Button did not become enabled: \(name)")
+        button.tap()
+    }
+
+    func waitForLocalNetworkDecision(allow: Bool) {
+        let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.firstMatch
+        guard alert.waitForExistence(timeout: 8) else { return }
+        XCTAssertTrue(labels.contains { alert.buttons[$0].exists },
+                      "Missing Local Network decision button.")
+        attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: alert
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 180), .completed,
+                       "The Local Network decision was not completed on Fri.")
+    }
+
+    func attachScreenshot(named name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}

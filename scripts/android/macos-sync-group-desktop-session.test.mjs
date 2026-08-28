@@ -5,6 +5,7 @@ import { expect, it, vi } from 'vitest';
 import {
   ensureMacosDeviceSyncGroup,
   sanitizeMacosSyncGroupOverview,
+  waitForMacosAutomaticRun,
   waitForMacosDeviceRequest
 } from './macos-sync-group-desktop-session.mjs';
 
@@ -13,6 +14,16 @@ const overview = (overrides = {}) => ({
   join_requests: [], server_status: { last_error: null, port: 38641, state: 'running' },
   sync_enabled: true, sync_group: { devices: [{ device_identity_key: 'device-mac' }],
     group_id: 'group-1' }, sync_paused: false, ...overrides
+});
+
+it('uses a product apply event when a new automatic run is not yet durable', async () => {
+  const waitForEvent = vi.fn(async () => undefined);
+  const loadSyncTriggerResult = vi.fn()
+    .mockResolvedValueOnce({ reason: 'automatic', run_id: 'old', status: 'completed' })
+    .mockResolvedValue({ reason: 'automatic', run_id: 'new', status: 'completed' });
+  await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult, waitForEvent }, 'old'))
+    .resolves.toMatchObject({ run_id: 'new' });
+  expect(waitForEvent).toHaveBeenCalledWith('onWorkspaceSyncApplied', { timeoutMs: 90_000 });
 });
 
 it('sanitizes only Device/request facts from the active Sync Group overview', () => {
@@ -39,13 +50,13 @@ it('creates, resumes, or enables the single Device group without a legacy select
 
 it('binds acceptance to the fixed A5 Device request id', async () => {
   const request = { device_name: 'A5', request_id: 'request-a5' };
-  const load = vi.fn()
-    .mockResolvedValueOnce(overview())
-    .mockResolvedValue(overview({ join_requests: [request] }));
-  await expect(waitForMacosDeviceRequest({ load }, 'A5', {
-    now: (() => { let value = 0; return () => value += 10; })(), timeoutMs: 100,
-    wait: async () => undefined
+  const waitForState = vi.fn(async () => overview({ join_requests: [request] }));
+  await expect(waitForMacosDeviceRequest({ waitForState }, 'A5', {
+    timeoutMs: 100
   })).resolves.toBe(request);
+  expect(waitForState).toHaveBeenCalledWith({ command: 'load_sync_group_overview',
+    condition: { count: 1, kind: 'join-request-count' },
+    eventName: 'onSyncGroupJoinRequestsChanged', timeoutMs: 100 });
 });
 
 it('observes automatic sync from the source-bound hidden Electron main path', () => {

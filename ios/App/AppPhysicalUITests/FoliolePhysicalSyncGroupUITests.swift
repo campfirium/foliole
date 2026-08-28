@@ -21,9 +21,15 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
 
-        if isTwoDeviceJourney { captureFriFact(in: app) }
         openSyncSettings(in: app)
-        resetExistingSyncGroup(in: app)
+        if isTwoDeviceJourney {
+            XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
+                          "The attempt-specific Fri acceptance container was not fresh.")
+            captureFriFact(in: app)
+            openSyncSettings(in: app)
+        } else {
+            resetExistingSyncGroup(in: app)
+        }
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
         tapButton(named: "Join", in: app, timeout: 90)
@@ -42,12 +48,15 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C"], in: app)
         if isTwoDeviceJourney { waitForJourneyFactCount("A", count: 2, in: app) }
         captureFriFact(in: app)
-        waitForProviderAutomaticConvergence()
+        if isTwoDeviceJourney {
+            attachScreenshot(named: "Fri-two-device-joined-ready")
+            print("[foliole-fri] t152-joined-ready")
+            return
+        }
         openSyncSettings(in: app)
         tapButton(named: "Sync Now", in: app, timeout: 30)
         waitForDisappearance(app.staticTexts["Never"], timeout: 45,
                              message: "The public Sync Now action did not update the last sync result.")
-        tapButton(named: "Sync Now", in: app, timeout: 30)
         attachScreenshot(named: "Fri-sync-group-joined")
 
         app.terminate()
@@ -58,9 +67,40 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The physical iPhone did not restore its Sync Group after relaunch."
         )
         XCTAssertFalse(app.buttons["Connect to Sync Group"].exists)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         openBrowse(in: app)
         waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"], in: app)
         attachScreenshot(named: "Fri-sync-group-restored")
+    }
+
+    func testCompletesTwoDeviceConflictAndRestart() throws {
+        XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+                      "Fri did not retain the accepted attempt Sync Group.")
+        tapButton(named: "Details", in: app, timeout: 30)
+        tapButton(named: "Pause Sync", in: app, timeout: 30)
+        forkVisibleConflictSeed(in: app)
+        print("[foliole-fri] t152-conflict-fork-ready")
+        openSyncSettings(in: app)
+        tapButton(named: "Details", in: app, timeout: 30)
+        tapButton(named: "Resume Sync", in: app, timeout: 30)
+        openSyncSettings(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
+                      "Fri did not expose the concurrent business conflict.")
+
+        app.terminate()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+                      "Fri did not restore its attempt Sync Group after relaunch.")
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        openBrowse(in: app)
+        waitForJourneyFacts(["A", "B"], in: app)
+        attachScreenshot(named: "Fri-two-device-conflict-restored")
     }
 
     func testLocalNetworkDenialIsVisible() throws {
@@ -77,127 +117,4 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-local-network-denied")
     }
 
-    private func acceptanceApplication() -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += ["--foliole-physical-acceptance",
-                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        return app
-    }
-
-    private func openSyncSettings(in app: XCUIApplication) {
-        tapButton(named: "Settings", in: app, timeout: 45)
-        let sync = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Sync ")
-        ).firstMatch
-        XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
-        sync.tap()
-    }
-
-    private func openBrowse(in app: XCUIApplication) {
-        tapButton(named: "Browse", in: app, timeout: 30)
-    }
-
-    private func enableAutomaticSync(in app: XCUIApplication) {
-        let toggle = app.switches["Sync"].firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 30), "The automatic Sync switch is unavailable.")
-        if (toggle.value as? String) != "1" { toggle.tap() }
-    }
-
-    private func waitForJourneyFacts(_ origins: [String], in app: XCUIApplication) {
-        for origin in origins {
-            let fact = app.staticTexts.matching(
-                NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
-            ).firstMatch
-            XCTAssertTrue(fact.waitForExistence(timeout: 120),
-                          "Missing \(origin) business fact on Fri.")
-        }
-    }
-
-    private func waitForJourneyFactCount(_ origin: String, count: Int, in app: XCUIApplication) {
-        let facts = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
-        )
-        let enough = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "count >= %d", count), object: facts
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [enough], timeout: 120), .completed,
-                       "Missing repeated \(origin) automatic-sync facts on Fri.")
-    }
-
-    private func captureFriFact(in app: XCUIApplication) {
-        tapButton(named: "Capture", in: app, timeout: 30)
-        let editor = app.textViews["Capture text"]
-        XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
-        editor.tap()
-        editor.typeText("Multi-device sync \(isTwoDeviceJourney ? "B" : "D") fact")
-        tapButton(named: "Save", in: app, timeout: 30)
-        waitForDisappearance(editor, timeout: 30, message: "The Fri business fact was not saved.")
-    }
-
-    private var isTwoDeviceJourney: Bool {
-        ProcessInfo.processInfo.environment["FOLIOLE_T152_TWO_DEVICE"] == "1"
-    }
-
-    private func waitForProviderAutomaticConvergence() {
-        guard let path = ProcessInfo.processInfo.environment["FOLIOLE_T152_PROVIDER_RECEIPT_PATH"] else {
-            XCTFail("Missing provider receipt path.")
-            return
-        }
-        let deadline = Date().addingTimeInterval(180)
-        while Date() < deadline {
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-               let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               value["resultStatus"] as? String == "automatic-converged" {
-                return
-            }
-            Thread.sleep(forTimeInterval: 0.25)
-        }
-        XCTFail("Fri automatic sync did not deliver its business fact to Mac.")
-    }
-
-    private func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval, message: String) {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"), object: element
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed, message)
-    }
-
-    private func resetExistingSyncGroup(in app: XCUIApplication) {
-        guard app.buttons["Sync Now"].exists else { return }
-        tapButton(named: "Details", in: app, timeout: 15)
-        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
-        tapButton(named: "Leave Sync Group", in: app, timeout: 15)
-        if app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30) { return }
-        openSyncSettings(in: app)
-        XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
-                      "The isolated physical acceptance Sync Group was not reset.")
-    }
-
-    private func tapButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
-        let button = app.buttons[name]
-        XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
-        button.tap()
-    }
-
-    private func waitForLocalNetworkDecision(allow: Bool) {
-        let labels = allow ? ["Allow", "允许"] : ["Don’t Allow", "不允许"]
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let alert = springboard.alerts.firstMatch
-        guard alert.waitForExistence(timeout: 8) else { return }
-        XCTAssertTrue(labels.contains { alert.buttons[$0].exists },
-                      "Missing Local Network decision button.")
-        attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
-        let dismissed = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"), object: alert
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 180), .completed,
-                       "The Local Network decision was not completed on Fri.")
-    }
-
-    private func attachScreenshot(named name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
-    }
 }

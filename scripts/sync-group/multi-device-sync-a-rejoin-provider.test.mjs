@@ -74,6 +74,25 @@ it('holds the joined Windows C provider until Android consumes its fact', async 
   expect(reportProgress).toHaveBeenCalledWith('c-provider-ready');
 });
 
+it('publishes the exact Windows-created group before product discovery', async () => {
+  const execute = vi.fn((_command, _args, options) => {
+    options.onOutput({ stdout: '[windows-dev-action] provider-ready '
+      + 'group=group-12345678-1234-1234-1234-123456789abc '
+      + 'tag=0123456789abcdef0123456789abcdef\n'
+      + '[windows-dev-action] progress action=two-device-sync-provider '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=provider-ready '
+      + 'fact=two-device-sync\n' });
+    return new Promise(() => {});
+  });
+  const provider = startWindowsSyncGroupProvider({
+    action: 'two-device-sync-provider', execute, repoRoot: process.cwd()
+  });
+  await expect(provider.waitForGroupIdentity()).resolves.toEqual({
+    groupId: 'group-12345678-1234-1234-1234-123456789abc',
+    groupTag: '0123456789abcdef0123456789abcdef'
+  });
+});
+
 it('starts the local identity deadline only after Windows C creates its fact', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const created = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");

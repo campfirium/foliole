@@ -33,6 +33,15 @@ async function removeOwnedTransport(execute, paths, serial, options) {
   });
 }
 
+async function removeOwnedAcceptanceApplication(execute, paths, serial, appId, options) {
+  const result = await execute(paths.adb, ['-s', serial, 'uninstall', appId], options);
+  if (result.code === 0 || /not installed|unknown package|failure \[delete_failed_internal_error\]/iu
+    .test(String(result.output))) return result;
+  throw executionFailure('acceptance application cleanup failed', {
+    result, stage: 'acceptance application cleanup'
+  });
+}
+
 async function foregroundInstrumentationTarget(execute, paths, serial, appId, options) {
   const component = `${appId}/${APP_ID}.MainActivity`;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -55,6 +64,7 @@ async function foregroundInstrumentationTarget(execute, paths, serial, appId, op
 
 export async function runMacosA5InstrumentationMechanics({
   appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
+  expectedGroupId, expectedGroupTag, instrumentationArgs = [],
   needsTransport = false, observeConcurrently = false, observeWhileTransportOpen, paths,
   releaseAfterObservation = false, restartApp = false, serial, testClass,
   testClassPrefix = APP_ID, validateInstrumentation
@@ -83,6 +93,9 @@ export async function runMacosA5InstrumentationMechanics({
     if (needsTransport) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'am', 'force-stop', appId],
       options, 'transport app stop')).output);
+    if (installMain && appId !== APP_ID) output.push((await removeOwnedAcceptanceApplication(
+      execute, paths, serial, appId, options
+    )).output);
     if (installMain) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
     output.push((await checked(execute, paths.adb,
@@ -96,8 +109,19 @@ export async function runMacosA5InstrumentationMechanics({
       reverseCreated = true;
     }
     await foregroundInstrumentationTarget(execute, paths, serial, appId, options);
+    const identityArgs = expectedGroupId && expectedGroupTag
+      ? ['-e', 'expectedGroupId', expectedGroupId, '-e', 'expectedGroupTag', expectedGroupTag] : [];
+    if ((expectedGroupId || expectedGroupTag)
+        && (!/^group-[0-9a-f-]{36}$/u.test(expectedGroupId ?? '')
+          || !/^[0-9a-f]{32}$/u.test(expectedGroupTag ?? ''))) {
+      throw executionFailure('Android acceptance group identity is invalid.', {
+        missingFact: 'sync_group_identity'
+      });
+    }
     const instrumentationTask = execute(paths.adb, [
-      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, runner
+      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', ...identityArgs,
+      ...instrumentationArgs,
+      '-e', 'class', testClass, runner
     ], options, 'instrumentation');
     let observation;
     let instrumentation;

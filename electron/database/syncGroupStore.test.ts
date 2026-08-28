@@ -45,11 +45,13 @@ it('persists one Group with stable local and remote Device identities', () => {
   registerSyncGroupDevice({ device: remote, deviceName: 'A5', platform: 'android-capacitor' });
   expect(loadDesktopSyncGroup()).toMatchObject({
     group_id: group.group_id, local_device_identity_key: local.identity_key,
+    group_tag: '648aa5c579fb30f38af744d97d6ec840',
     devices: expect.arrayContaining([
       expect.objectContaining({ device_identity_key: local.identity_key, state: 'active' }),
       expect.objectContaining({ device_identity_key: remote.identity_key, state: 'active' })
     ])
   });
+  expect(loadDesktopSyncGroup()).not.toHaveProperty('workgroup_key');
   expect(loadDesktopSyncGroupWorkgroupKey(group.group_id)).toBe(Buffer.alloc(32, 3).toString('base64url'));
   expect(consumeDesktopSyncGroupNonce(group.group_id, 'nonce-1', 100, 200)).toBe(true);
   expect(consumeDesktopSyncGroupNonce(group.group_id, 'nonce-1', 100, 200)).toBe(false);

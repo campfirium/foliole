@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -11,6 +12,7 @@ interface GroupRow {
   display_name: string;
   group_id: string;
   local_device_identity_key: string;
+  workgroup_key: string;
 }
 
 interface DeviceRow extends Omit<SyncGroupDevicePayload, 'contract_version'> {
@@ -20,7 +22,8 @@ interface DeviceRow extends Omit<SyncGroupDevicePayload, 'contract_version'> {
 export function loadDesktopSyncGroup(): SyncGroupPayload | null {
   const driver = openDatabaseConnection().driver;
   const row = driver.queryOne<GroupRow>(
-    `SELECT g.group_id, g.display_name, g.created_at, l.local_device_identity_key
+    `SELECT g.group_id, g.display_name, g.created_at, g.workgroup_key,
+            l.local_device_identity_key
      FROM sync_groups g JOIN sync_group_local_state l ON l.group_id = g.group_id
      WHERE l.singleton_id = 1 AND l.state = 'active' LIMIT 1`
   );
@@ -32,7 +35,8 @@ export function loadDesktopSyncGroup(): SyncGroupPayload | null {
      ORDER BY joined_at, device_identity_key`,
     [row.group_id]
   ).map((device) => ({ ...device, contract_version: 1 as const }));
-  return { ...row, devices };
+  const { workgroup_key: workgroupKey, ...publicRow } = row;
+  return { ...publicRow, devices, group_tag: desktopWorkgroupTag(workgroupKey) };
 }
 
 export function loadDesktopSyncGroupInfo() {

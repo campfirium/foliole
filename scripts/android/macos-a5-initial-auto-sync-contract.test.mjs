@@ -2,17 +2,17 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
-it('keeps activation alive until the initial automatic sync is persisted', () => {
+it('keeps activation separate from the isolated initial-run projection', () => {
   const test = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceTest.java',
     'utf8'
   );
-  const scenario = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+  expect(test).not.toContain('awaitInitialAutomaticSync');
+  expect(test).toContain('.put("activated", true)');
+  const projection = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceSyncEventProjection.java',
     'utf8'
   );
-  expect(test).toContain('.awaitInitialAutomaticSync(instrumentation.getTargetContext(), 30_000)');
-  expect(test).toContain('.put("initialSyncPersisted", true)');
-  expect(scenario).toContain("key = 'workspace_sync_last_synced_at'");
-  expect(scenario).toContain("id = 'special-inbox'");
+  expect(projection).toContain('"trigger_reason"');
+  expect(projection).toContain('"run_id"');
 });

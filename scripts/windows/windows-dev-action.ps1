@@ -1,7 +1,10 @@
 param(
   [Parameter(Mandatory = $true)]
   [ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]
-  [string]$Action
+  [string]$Action,
+  [ValidatePattern("^group-[0-9a-f-]{36}$")]
+  [string]$ExpectedGroupId = "",
+  [string]$ExpectedGroupTag = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +48,13 @@ try {
 
 try {
   $env:FOLIOLE_WINDOWS_DEV_LOCK_OWNER = [string]$PID
+  if ($ExpectedGroupId) {
+    $env:FOLIOLE_T152_EXPECTED_GROUP_ID = $ExpectedGroupId
+    $env:FOLIOLE_T152_EXPECTED_GROUP_TAG = $ExpectedGroupTag
+  } else {
+    Remove-Item Env:FOLIOLE_T152_EXPECTED_GROUP_ID -ErrorAction SilentlyContinue
+    Remove-Item Env:FOLIOLE_T152_EXPECTED_GROUP_TAG -ErrorAction SilentlyContinue
+  }
   & $systemNode $puller
   $runnerExit = $LASTEXITCODE
   if ($runnerExit -eq 0) {

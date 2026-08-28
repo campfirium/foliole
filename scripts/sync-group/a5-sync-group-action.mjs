@@ -11,10 +11,13 @@ const SPECS = Object.freeze({
   'clear-app-data': ['clearsAppDataThroughProduct', 'appDataCleared', false, false],
   'control-participation': ['controlsSyncParticipationThroughProduct', 'resumed', false, true],
   'create-journey-fact': ['createsJourneyFactThroughProduct', 'factPersisted', false, true],
+  'fork-conflict': ['forksConflictThroughProduct', 'conflictForkPersisted', false, false],
   'leave-sync-group': ['leavesSyncGroupThroughProduct', 'departurePersisted', true, false],
+  'observe-journey-facts': ['observesJourneyFactsThroughProduct', 'journeyFactsObserved', false, false],
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
   'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
+  'read-sync-events': ['projectsSyncEventsForAcceptance', 'syncEventsProjected', false, false],
   'sync-now': ['syncsNowThroughProduct', 'terminalRunId', true, false]
 });
 
@@ -60,16 +63,24 @@ function validateProductResult(receipt, expected, evidenceRef) {
 
 export async function runMacosA5SyncGroupMaintenance({
   action, appId, buildIdentity, env, evidenceRoot, execute, installMain = true,
-  mechanics = runMacosA5InstrumentationMechanics, observeWhileTransportOpen, paths, serial
+  conflictToken, expectedJourneyCounts, mechanics = runMacosA5InstrumentationMechanics,
+  observeWhileTransportOpen, paths, serial
 }) {
   const spec = SPECS[action];
   if (!spec) throw proofFailure('Unsupported sync group action', {
     missingFact: 'scenario_action_binding'
   });
   const [method, expected, needsTransport, restartApp, releaseAfterObservation = false] = spec;
-  const testClass = `${APP_ID}.FolioleCompanionSyncGroupMaintenanceTest#${method}`;
+  const className = action === 'read-sync-events'
+    ? 'FolioleAcceptanceSyncEventProjectionTest' : action === 'observe-journey-facts'
+      ? 'FolioleAcceptanceJourneyFactsTest' : action === 'fork-conflict'
+        ? 'FolioleAcceptanceConflictForkTest' : 'FolioleCompanionSyncGroupMaintenanceTest';
+  const testClass = `${APP_ID}.${className}#${method}`;
+  const instrumentationArgs = action === 'observe-journey-facts'
+    ? ['-e', 'expectedJourneyCounts', JSON.stringify(expectedJourneyCounts ?? {})]
+    : action === 'fork-conflict' ? ['-e', 'conflictToken', conflictToken ?? ''] : [];
   const raw = await mechanics({ appId, buildIdentity, env, evidenceRoot, execute, installMain,
-    needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
+    instrumentationArgs, needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
     restartApp, serial, testClass,
     validateInstrumentation: ({ evidencePath, stdout }) => validateProductResult(
       bundle(stdout, 'folioleActionReceipt'), expected, evidencePath

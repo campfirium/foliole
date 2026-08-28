@@ -37,6 +37,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
       || !selfcheckAllowed) {
     throw new Error('invalid Sync Group interactive request');
   }
+  const expectedAllowed = request.action === 'single-principal-sync-group'
+    ? /^group-[0-9a-f-]{36}$/u.test(request.expectedGroupId ?? '')
+      && /^[0-9a-f]{32}$/u.test(request.expectedGroupTag ?? '')
+    : request.expectedGroupId === undefined && request.expectedGroupTag === undefined;
+  if (!expectedAllowed) throw new Error('invalid Sync Group interactive request');
   return { ...request, evidenceRoot };
 }
 
@@ -57,7 +62,17 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
       && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted']
         .includes(progress?.milestone)
       && progress.factId === 'two-device-sync') {
-    return { factId: progress.factId, milestone: progress.milestone };
+    if (progress.milestone === 'provider-ready'
+        && (!/^group-[0-9a-f-]{36}$/u.test(progress.groupId ?? '')
+          || !/^[0-9a-f]{32}$/u.test(progress.groupTag ?? ''))) {
+      throw new Error('invalid Sync Group interactive progress');
+    }
+    if (progress.milestone !== 'provider-ready'
+        && (progress.groupId !== undefined || progress.groupTag !== undefined)) {
+      throw new Error('invalid Sync Group interactive progress');
+    }
+    return { factId: progress.factId, milestone: progress.milestone,
+      ...(progress.groupId ? { groupId: progress.groupId, groupTag: progress.groupTag } : {}) };
   }
   if (action === 'multi-device-sync-c' && progress?.milestone === 'c-provider-ready'
       && /^multi-device-sync-c-\d{17}$/u.test(progress.factId || '')) {

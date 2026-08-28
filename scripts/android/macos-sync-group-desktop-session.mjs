@@ -3,7 +3,6 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import {
@@ -14,6 +13,9 @@ import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-elect
 import { resolveFrozenRendererUrl } from './macos-pair-sync-desktop-session.mjs';
 import { loadDesktopRoutePeerIds } from '../desktop/desktop-dnssd-route-observation.mjs';
 import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
+import {
+  waitForDesktopProductEvent, waitForDesktopProductState
+} from '../acceptance/desktop-product-event.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -121,6 +123,8 @@ export async function openMacosSyncGroupDesktopSession({
       loadSyncTriggerResult: () => loadSyncTriggerResult(app),
       processId: app.process().pid,
       invoke: (command, args) => invoke(page, command, args),
+      waitForEvent: (eventName, options) => waitForDesktopProductEvent(page, eventName, options),
+      waitForState: (options) => waitForDesktopProductState(page, options),
       sanitize: sanitizeMacosSyncGroupOverview
     };
   } catch (error) {
@@ -130,22 +134,35 @@ export async function openMacosSyncGroupDesktopSession({
   }
 }
 
-export async function waitForMacosDeviceRequest(session, expectedDeviceName, {
-  now = Date.now, signal, timeoutMs = 90_000,
-  wait = (ms, options) => delay(ms, undefined, options)
+function completedAutomaticRun(result, previousRunId) {
+  return result?.run_id !== previousRunId && result?.reason === 'automatic'
+    && result?.status === 'completed';
+}
+
+export async function waitForMacosAutomaticRun(session, previousRunId, {
+  timeoutMs = 90_000
 } = {}) {
-  const deadline = now() + timeoutMs;
-  while (now() < deadline) {
-    signal?.throwIfAborted();
-    const requests = (await session.load()).join_requests;
-    if (requests.length > 1) throw new Error('Conflicting Device join requests.');
-    if (requests.length === 1) {
-      if (expectedDeviceName && requests[0].device_name !== expectedDeviceName) {
-        throw new Error('Join request belongs to another Device.');
-      }
-      return requests[0];
-    }
-    await wait(250, { signal });
+  const current = await session.loadSyncTriggerResult();
+  if (completedAutomaticRun(current, previousRunId)) return current;
+  await session.waitForEvent('onWorkspaceSyncApplied', { timeoutMs });
+  const result = await session.loadSyncTriggerResult();
+  if (!completedAutomaticRun(result, previousRunId)) {
+    throw new Error(`Mac automatic sync did not complete: ${JSON.stringify(result)}`);
   }
-  throw new Error('Timed out waiting for the fixed A5 Device request.');
+  return result;
+}
+
+export async function waitForMacosDeviceRequest(session, expectedDeviceName, {
+  signal, timeoutMs = 90_000
+} = {}) {
+  signal?.throwIfAborted();
+  const overview = await session.waitForState({ command: 'load_sync_group_overview',
+    condition: { count: 1, kind: 'join-request-count' },
+    eventName: 'onSyncGroupJoinRequestsChanged', timeoutMs });
+  const requests = overview.join_requests;
+  if (requests.length !== 1) throw new Error('Conflicting Device join requests.');
+  if (expectedDeviceName && requests[0].device_name !== expectedDeviceName) {
+    throw new Error('Join request belongs to another Device.');
+  }
+  return requests[0];
 }

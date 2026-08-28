@@ -41,14 +41,15 @@ const PROVIDER_ACTIONS = Object.freeze({
     controllerAction: 'windows-two-device-joiner', label: 'two-Device joiner',
     missingPrefix: 'windows_two_device_joiner', progressFactPattern: 'single-principal-sync-group',
     progressMilestone: 'requested', progressMilestones: [
-      'requested', 'automatic-converged', 'restarted'
+      'requested', 'automatic-converged', 'conflict-fork-ready', 'restarted'
     ]
   },
   'two-device-sync-provider': {
     controllerAction: 'windows-two-device-provider', label: 'two-Device',
     missingPrefix: 'windows_two_device', progressFactPattern: 'two-device-sync',
     progressMilestone: 'provider-ready', progressMilestones: [
-      'provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted'
+      'provider-ready', 'request-pending', 'accepted', 'automatic-converged',
+      'conflict-fork-ready', 'restarted'
     ]
   }
 });
@@ -97,8 +98,13 @@ function receiptFromResult(result, repoRoot, action, spec) {
   return { evidenceRef, receipt: JSON.parse(fs.readFileSync(evidenceRef, 'utf8')) };
 }
 
-export function startWindowsSyncGroupProvider({ action, execute, reportProgress = () => {}, repoRoot }) {
+export function startWindowsSyncGroupProvider({
+  action, execute, expectedGroupId, expectedGroupTag, reportProgress = () => {}, repoRoot
+}) {
   const spec = actionSpec(action);
+  let resolveGroupIdentity;
+  const groupIdentityReady = new Promise((resolve) => { resolveGroupIdentity = resolve; });
+  let groupIdentity = null;
   const milestones = spec.progressMilestones ?? (spec.progressMilestone ? [spec.progressMilestone] : []);
   const progress = new Map(milestones.map((milestone) => {
     let resolve;
@@ -107,7 +113,16 @@ export function startWindowsSyncGroupProvider({ action, execute, reportProgress 
   }));
   const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
     action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
+    ...(expectedGroupId ? { env: { ...process.env,
+      FOLIOLE_T152_EXPECTED_GROUP_ID: expectedGroupId,
+      FOLIOLE_T152_EXPECTED_GROUP_TAG: expectedGroupTag } } : {}),
     onOutput: ({ stdout }) => {
+      if (action === 'two-device-sync-provider' && !groupIdentity) {
+        const match = /^\[windows-dev-action\] provider-ready group=([A-Za-z0-9-]{1,128}) tag=([0-9a-f]{32})$/mu
+          .exec(stdout);
+        groupIdentity = match ? { groupId: match[1], groupTag: match[2] } : null;
+        if (groupIdentity) resolveGroupIdentity(groupIdentity);
+      }
       for (const [milestone, state] of progress) {
         if (state.factId) continue;
         const expression = new RegExp(`^\\[windows-dev-action\\] progress action=${action}`
@@ -172,5 +187,17 @@ export function startWindowsSyncGroupProvider({ action, execute, reportProgress 
     throw failure || controllerFailure(`Windows C ${spec.label} ended before progress.`,
       `${spec.missingPrefix}_progress_missing`);
     })]);
-  return { cancelAndSettle, confirmProgress, finish, raceConsumer, release, waitForProgress };
+  const waitForGroupIdentity = () => {
+    if (action !== 'two-device-sync-provider') {
+      throw controllerFailure('Windows provider group identity is unavailable for this action.',
+        `${spec.missingPrefix}_group_identity_invalid`);
+    }
+    return Promise.race([groupIdentityReady, work.then((result) => {
+      const failure = providerFailure(result, spec);
+      throw failure || controllerFailure('Windows provider did not publish its group identity.',
+        `${spec.missingPrefix}_group_identity_missing`);
+    })]);
+  };
+  return { cancelAndSettle, confirmProgress, finish, raceConsumer, release,
+    waitForGroupIdentity, waitForProgress };
 }

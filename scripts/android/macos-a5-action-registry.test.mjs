@@ -41,10 +41,16 @@ it('marks only desktop-session actions for capsule Electron materialization', ()
   expect(assertRegisteredMacosA5Action('deploy').requiresHiddenDesktopRuntime).toBe(false);
 });
 
+it('keeps two-device acceptance isolated from the installed product application', () => {
+  const action = assertRegisteredMacosA5Action('single-principal-sync-group');
+  expect(action.deviceLeaseMode).toBe('mutation');
+  expect(action.mutatesFixedA5).toBe(false);
+});
+
 it.each([
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials',
-  'single-principal-sync-group', 'system-entry-sync', 'sync-existing',
+  'system-entry-sync', 'sync-existing',
   'sync-group-join-prepare', 'sync-group-rejoin',
   'sync-group-rejoin-recover', 'sync-group-stopped-status'
 ])('requires the fixed A5 mutation lease for %s', (action) => {

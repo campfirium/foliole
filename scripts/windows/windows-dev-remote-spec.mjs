@@ -15,10 +15,20 @@ function sshKey(env, home) {
 }
 
 export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir()) {
+  const expectedGroupId = env.FOLIOLE_T152_EXPECTED_GROUP_ID?.trim();
+  const expectedGroupTag = env.FOLIOLE_T152_EXPECTED_GROUP_TAG?.trim();
+  if (expectedGroupId && !/^group-[0-9a-f-]{36}$/u.test(expectedGroupId)) {
+    throw new Error('T152 expected Sync Group id is invalid.');
+  }
+  if (expectedGroupId && !/^[0-9a-f]{32}$/u.test(expectedGroupTag ?? '')) {
+    throw new Error('T152 expected Sync Group tag is invalid.');
+  }
   return ['-T', '-i', sshKey(env, home), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
     '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', host,
     'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', REMOTE_ACTION, toWindowsDevWireAction(action)];
+    '-File', REMOTE_ACTION, toWindowsDevWireAction(action),
+    ...(expectedGroupId ? ['-ExpectedGroupId', expectedGroupId,
+      '-ExpectedGroupTag', expectedGroupTag] : [])];
 }
 
 export function windowsDevScpSpec(host, remotePath, localPath,
