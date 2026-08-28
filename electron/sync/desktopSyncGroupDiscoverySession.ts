@@ -6,6 +6,7 @@ import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtoc
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
+import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const PROBE_TIMEOUT_MS = 2_000;
@@ -16,7 +17,8 @@ type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { 
 export class DesktopSyncGroupDiscoverySession {
   private readonly services = new Map<string, Service>();
   private readonly candidates = new Map<string, DesktopSyncGroupJoinCandidatePayload>();
-  private runtimes: Array<{ bonjour: InstanceType<typeof Bonjour>; browser: Browser }> = [];
+  private runtimes: Array<{ bonjour: InstanceType<typeof Bonjour>; browser: Browser;
+    query: ReturnType<typeof maintainContinuousMdnsQuery> }> = [];
   private stopped = true;
 
   constructor(
@@ -37,8 +39,12 @@ export class DesktopSyncGroupDiscoverySession {
         browser.on('up', (service) => void this.upsert(service, 'found'));
         browser.on('txt-update', (service) => void this.upsert(service, 'changed'));
         browser.on('srv-update', (service) => void this.upsert(service, 'changed'));
-        browser.on('down', (service) => this.remove(service));
-        return { bonjour, browser };
+        const query = maintainContinuousMdnsQuery(browser);
+        browser.on('down', (service) => {
+          this.remove(service);
+          query.refresh();
+        });
+        return { bonjour, browser, query };
       });
     } catch (error) {
       this.fail('discovery_unavailable', error);
@@ -48,7 +54,8 @@ export class DesktopSyncGroupDiscoverySession {
 
   stop(emit = true) {
     this.stopped = true;
-    this.runtimes.forEach(({ bonjour, browser }) => {
+    this.runtimes.forEach(({ bonjour, browser, query }) => {
+      query.stop();
       browser.stop();
       bonjour.destroy();
     });

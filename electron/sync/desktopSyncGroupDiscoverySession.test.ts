@@ -6,7 +6,8 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 const runtime = vi.hoisted(() => ({
   destroy: vi.fn(),
   handlers: new Map<string, (service: Record<string, unknown>) => void>(),
-  stop: vi.fn()
+  stop: vi.fn(),
+  update: vi.fn()
 }));
 
 vi.mock('bonjour-service', () => ({
@@ -18,7 +19,8 @@ vi.mock('bonjour-service', () => ({
           runtime.handlers.set(name, handler);
           return this;
         },
-        stop: runtime.stop
+        stop: runtime.stop,
+        update: runtime.update
       };
     }
   }
@@ -31,6 +33,7 @@ import { DesktopSyncGroupDiscoverySession } from './desktopSyncGroupDiscoverySes
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.handlers.clear();
+  runtime.update.mockClear();
 });
 
 it('publishes found, changed, and lost until explicitly stopped', async () => {

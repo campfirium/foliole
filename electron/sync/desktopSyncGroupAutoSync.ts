@@ -4,6 +4,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
+import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import {
@@ -17,6 +18,7 @@ type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { 
 type AutoSyncRuntime = {
   bonjour: InstanceType<typeof Bonjour>;
   browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
+  query: ReturnType<typeof maintainContinuousMdnsQuery>;
 };
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 
@@ -51,13 +53,14 @@ export function startDesktopSyncGroupAutoSync() {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
-    const runtime = { bonjour, browser };
+    const query = maintainContinuousMdnsQuery(browser);
+    const runtime = { bonjour, browser, query };
     browser.on('down', (service) => {
       const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
       if (deviceId) removeDesktopSyncGroupRoute(deviceId);
       const work = handleService(service);
       void Promise.resolve(work).finally(() => {
-        if (runtimes.includes(runtime)) browser.update();
+        if (runtimes.includes(runtime)) query.refresh();
       });
     });
     browser.on('txt-update', consumeService);
@@ -69,7 +72,8 @@ export function startDesktopSyncGroupAutoSync() {
 export function stopDesktopSyncGroupAutoSync() {
   const activeRuntimes = runtimes;
   runtimes = [];
-  activeRuntimes.forEach(({ bonjour, browser }) => {
+  activeRuntimes.forEach(({ bonjour, browser, query }) => {
+    query.stop();
     browser.stop();
     bonjour.destroy();
   });
