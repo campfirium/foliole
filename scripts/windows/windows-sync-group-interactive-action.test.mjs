@@ -105,6 +105,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   }, 'two-device-sync-provider')).toEqual({
     factId: 'two-device-sync', milestone: 'automatic-converged'
   });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'single-principal-sync-group', milestone: 'restarted'
+  }, 'single-principal-sync-group')).toEqual({
+    factId: 'single-principal-sync-group', milestone: 'restarted'
+  });
 });
 
 it('streams the created C fact as nonce-bound provider progress', async () => {

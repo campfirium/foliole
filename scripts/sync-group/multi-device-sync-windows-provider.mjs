@@ -30,6 +30,13 @@ const PROVIDER_ACTIONS = Object.freeze({
       'windows-paused', 'macos-departure-observed'
     ]
   },
+  'single-principal-sync-group': {
+    controllerAction: 'windows-two-device-joiner', label: 'two-Device joiner',
+    missingPrefix: 'windows_two_device_joiner', progressFactPattern: 'single-principal-sync-group',
+    progressMilestone: 'requested', progressMilestones: [
+      'requested', 'automatic-converged', 'restarted'
+    ]
+  },
   'two-device-sync-provider': {
     controllerAction: 'windows-two-device-provider', label: 'two-Device',
     missingPrefix: 'windows_two_device', progressFactPattern: 'two-device-sync',

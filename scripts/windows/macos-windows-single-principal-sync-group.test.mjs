@@ -37,11 +37,14 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
   expect(source).toContain("'.tmp/artifacts/t152-7-windows'");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("creator === 'windows'");
+  expect(source).toContain("action: 'single-principal-sync-group'");
+  expect(source).toContain("windowsProvider.waitForProgress('restarted')");
+  expect(source).toContain("windowsProvider.release('consumer_complete')");
   expect(source).toContain("device: 'A'");
   expect(source).toContain("waitForOriginCount(session, 'C', 2)");
   expect(source).toContain("session.invoke('sync_companion_now')");
   expect(source.indexOf("session.invoke('sync_companion_now')"))
-    .toBeLessThan(source.indexOf('const windows = await windowsWork'));
+    .toBeLessThan(source.indexOf("windowsProvider.release('consumer_complete')"));
   expect(source).not.toMatch(/pm.*clear|load_companion_pairing_overview|paired_authorizations/u);
 });
 

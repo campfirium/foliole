@@ -10,6 +10,7 @@ import {
   windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
+import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
   assertJoinedWindowsGroup
 } from './windows-single-principal-sync-group-contract.mjs';
@@ -120,6 +121,10 @@ async function completeAcceptedJoin(page, timeoutMs = 10 * 60_000) {
   throw new Error(`Windows Device acceptance timed out: ${lastError?.message ?? 'unknown'}`);
 }
 
+function report(reportProgress, milestone) {
+  reportProgress({ factId: 'single-principal-sync-group', milestone });
+}
+
 export async function runWindowsSinglePrincipalSyncGroup(options) {
   provisionWindowsAcceptanceRoot({ paths: options.paths });
   const client = windowsSyncGroupClientPaths(options.paths);
@@ -142,7 +147,8 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', {
       endpoint_url: candidate.endpoint_url
     });
-    console.log(`[windows-dev-action] progress action=single-principal-sync-group milestone=requested group=${candidate.group_id}`);
+    console.log(`[windows-dev-action] requested group=${candidate.group_id}`);
+    report(options.reportProgress, 'requested');
     firstGroup = assertJoinedWindowsGroup(await completeAcceptedJoin(session.page), candidate.group_id);
     const beforeAutomatic = await retryWhileDatabaseOwned(() => loadSyncTriggerResult(session.app));
     automaticFact = await retryWhileDatabaseOwned(() => createDesktopSyncGroupJourneyFact({
@@ -150,6 +156,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
     }));
     automaticResult = await waitForAutomaticSync(session.app, beforeAutomatic?.run_id);
+    report(options.reportProgress, 'automatic-converged');
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     await waitForJourneyOrigins(session.page, ['A', 'C']);
     await waitForJourneyOriginCount(session.page, 'A', 2);
@@ -170,6 +177,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
       throw new Error('Repeated Windows sync was not idempotent.');
     }
+    report(options.reportProgress, 'restarted');
+    await waitForWindowsSyncGroupProviderRelease({
+      action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
+    });
   } finally { await closeWindowsSyncGroupSession(session); }
   const manifestPath = path.join(options.evidenceRoot,
     'single-principal-sync-group-receipt.json');

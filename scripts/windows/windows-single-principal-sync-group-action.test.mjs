@@ -30,6 +30,9 @@ it('uses only the new request, complete, overview, group and Device production c
   expect(source).toContain("includes('sqlite connection is owned')");
   expect(source).not.toContain("'discover_sync_groups'");
   expect(source).toContain('beforeRestartAutomatic');
+  expect(source).toContain("report(options.reportProgress, 'restarted')");
+  expect(source).toContain("action: 'single-principal-sync-group'");
+  expect(source).toContain('waitForWindowsSyncGroupProviderRelease');
   expect(source).toContain("waitForJourneyOriginCount(session.page, 'A', 2)");
   for (const retired of [
     'load_companion_pairing_overview', 'sync_group_members', 'paired_authorizations', 'manager'

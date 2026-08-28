@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global AbortController, AbortSignal, clearTimeout, console, fetch, process, setTimeout */
+/* global AbortSignal, clearTimeout, console, fetch, process, setTimeout */
 
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
@@ -18,6 +18,8 @@ import {
   readSyncGroupControllerState,
   waitForSyncGroupAutomaticRun
 } from '../desktop/sync-group-controller-read.mjs';
+import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
+import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -68,14 +70,6 @@ async function acceptedRevision(repoRoot) {
   return stdout.trim();
 }
 
-async function runWindows(repoRoot, signal) {
-  return execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'single-principal-sync-group'], {
-      cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
-      signal, timeout: 20 * 60_000
-    });
-}
-
 async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -91,7 +85,7 @@ async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000
 }
 
 export async function runMacosWindowsSinglePrincipalSyncGroup({
-  creator = 'macos', repoRoot = process.cwd(), runWindowsAction = runWindows
+  creator = 'macos', repoRoot = process.cwd()
 } = {}) {
   const acceptedTip = await acceptedRevision(repoRoot);
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/t152-7-windows', acceptedTip,
@@ -105,8 +99,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
   let session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
     libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
-  const controller = new AbortController();
-  let windowsWork = null;
+  let windowsProvider;
+  let windowsSettled = false;
   try {
     const macosFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-fact'), session });
@@ -114,7 +108,14 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const provider = await waitForMacosProvider(
       initial.sync_group.group_id, initial.server_status.port
     );
-    windowsWork = runWindowsAction(repoRoot, controller.signal);
+    const runWindowsAction = createActionExecutor({
+      logPath: path.join(evidenceRoot, 'windows-action.log'),
+      progressPath: path.join(evidenceRoot, 'windows-progress.jsonl')
+    });
+    windowsProvider = startWindowsSyncGroupProvider({
+      action: 'single-principal-sync-group', execute: runWindowsAction, repoRoot
+    });
+    await windowsProvider.waitForProgress('requested');
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });
     const accepted = await session.accept(request.request_id);
     await waitForOriginCount(session, 'C', 2);
@@ -122,24 +123,10 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     await session.invoke('sync_companion_now');
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
-    const windows = await windowsWork;
-    const identity = /\[windows-dev-action\] single-principal-sync-group identity=([A-Za-z0-9.-]+)/u
-      .exec(windows.stdout)?.[1];
-    if (!identity) throw new Error('Windows did not report fixed Device evidence.');
-    const windowsEvidenceRoot = path.join(
-      repoRoot, '.tmp/artifacts/multi-device-sync/windows-c', identity
-    );
-    const windowsReceipt = JSON.parse(fs.readFileSync(path.join(windowsEvidenceRoot,
-      'single-principal-sync-group-receipt.json'), 'utf8'));
-    if (windowsReceipt.resultStatus !== 'success' || windowsReceipt.localDevicePersisted !== true) {
-      throw new Error('Windows did not persist its accepted Device.');
-    }
+    await windowsProvider.waitForProgress('restarted');
     const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     });
-    if (!automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
-      throw new Error('Windows automatic sync did not deliver its business fact to Mac.');
-    }
     const factIds = Object.values(automaticSnapshot.nodesById).filter(({ title }) =>
       /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
     const beforeRestartAutomatic = await readSyncGroupControllerState(
@@ -165,6 +152,14 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (JSON.stringify(repeatedIds) !== JSON.stringify(factIds)) {
       throw new Error('Repeated Mac sync was not idempotent.');
     }
+    await windowsProvider.release('consumer_complete');
+    const windows = await windowsProvider.finish(); windowsSettled = true;
+    const windowsReceipt = windows.receipt;
+    const windowsEvidenceRoot = path.dirname(windows.evidenceRef);
+    if (windowsReceipt.resultStatus !== 'success' || windowsReceipt.localDevicePersisted !== true
+        || !automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
+      throw new Error('Windows did not persist and automatically sync its accepted Device.');
+    }
     const receipt = { acceptedTip, completedAt: new Date().toISOString(),
       deviceCount: accepted.sync_group?.devices?.length ?? 0,
       groupId: accepted.sync_group?.group_id ?? null,
@@ -180,11 +175,10 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
     console.log(`[macos-windows-single-principal] status=success receipt=${receiptPath}`);
     return { receipt, receiptPath };
-  } catch (error) {
-    controller.abort();
-    await windowsWork?.catch(() => undefined);
-    throw error;
-  } finally { await session.close().catch(() => undefined); }
+  } finally {
+    await session.close().catch(() => undefined);
+    if (windowsProvider && !windowsSettled) await windowsProvider.cancelAndSettle();
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
