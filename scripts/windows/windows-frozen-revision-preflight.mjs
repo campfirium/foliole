@@ -14,17 +14,21 @@ import {
 
 const OWNER_FILE = 'owner.json';
 const COMMAND_TIMEOUT_MS = 20 * 60_000;
+const PACKAGE_TIMEOUT_MS = 30 * 60_000;
 
 export function windowsFrozenAttemptId(runId) {
   return `${runId.slice(0, 8)}T${runId.slice(8)}`;
 }
 
-export function windowsFrozenPreflightCommands(sourceRoot, paths) {
-  return [
+export function windowsFrozenPreflightCommands(sourceRoot, paths, { packageSmoke = false } = {}) {
+  const commands = [
     { args: [paths.systemNpmCli, 'ci'], stage: 'dependencies' },
     { args: [paths.systemNpmCli, 'run', 'build'], stage: 'build' },
     { args: [paths.systemNpmCli, 'run', 'electron:native:health'], stage: 'native-health' }
-  ].map((command) => ({ ...command, bin: paths.systemNode, cwd: sourceRoot }));
+  ];
+  if (packageSmoke) commands.push({ args: [paths.systemNpmCli, 'run', 'windows:package'],
+    stage: 'package-smoke', timeoutMs: PACKAGE_TIMEOUT_MS });
+  return commands.map((command) => ({ ...command, bin: paths.systemNode, cwd: sourceRoot }));
 }
 
 export function windowsFrozenPreflightPaths(paths, _revision, attemptId, evidenceRoot) {
@@ -37,7 +41,8 @@ export function windowsFrozenPreflightPaths(paths, _revision, attemptId, evidenc
 async function checked(execute, command, fsApi, logPath, manager) {
   updateFrozenPreflightReceipt(manager, { exit: { code: null, stage: command.stage } });
   const result = await execute(command.bin, command.args, {
-    cwd: command.cwd, timeoutCode: `${command.stage}_timeout`, timeoutMs: COMMAND_TIMEOUT_MS,
+    cwd: command.cwd, timeoutCode: `${command.stage}_timeout`,
+    timeoutMs: command.timeoutMs ?? COMMAND_TIMEOUT_MS,
     windowsHide: true
   });
   fsApi.appendFileSync(logPath, `\n[${command.stage}]\n${result.output ?? ''}`, 'utf8');
@@ -78,7 +83,7 @@ function writeOwner(runPaths, source, attemptId, fsApi) {
 }
 
 async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwnerPid,
-  paths, source }) {
+  packageSmoke = false, paths, source }) {
   const evidenceRoot = path.join(aggregateRoot, 'attempts', attemptId);
   fsApi.mkdirSync(path.dirname(evidenceRoot), { recursive: true });
   const manager = openFrozenPreflightReceipt({ attemptId, evidenceRoot,
@@ -100,7 +105,7 @@ async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwne
     updateFrozenPreflightReceipt(manager, { resourceLock: {
       ownerPid: lockOwnerPid, path: paths.buildLock, resultStatus: 'held-by-entry'
     }, taskCopy: { root: runPaths.taskRoot, sourceArchiveDigest: archiveDigest } });
-    for (const command of windowsFrozenPreflightCommands(runPaths.sourceRoot, paths)) {
+    for (const command of windowsFrozenPreflightCommands(runPaths.sourceRoot, paths, { packageSmoke })) {
       stage = command.stage;
       await checked(execute, command, fsApi, runPaths.logPath, manager);
       if (stage === 'dependencies') updateFrozenPreflightReceipt(manager, { dependencies: {
@@ -110,6 +115,9 @@ async function buildAttempt({ aggregateRoot, attemptId, execute, fsApi, lockOwne
       if (stage === 'build') updateFrozenPreflightReceipt(manager, { build: { resultStatus: 'complete' } });
       if (stage === 'native-health') updateFrozenPreflightReceipt(manager, {
         nativeHealth: { resultStatus: 'complete' }
+      });
+      if (stage === 'package-smoke') updateFrozenPreflightReceipt(manager, {
+        packageSmoke: { resultStatus: 'complete' }
       });
     }
     return attempt;
@@ -163,7 +171,8 @@ export async function runWindowsFrozenRevisionPreflight({
       fsApi, nodeBin: paths.systemNode
     });
     const second = await buildAttempt({ aggregateRoot: evidenceRoot,
-      attemptId: createFrozenAttemptId(), execute, fsApi, lockOwnerPid, paths, source });
+      attemptId: createFrozenAttemptId(), execute, fsApi, lockOwnerPid,
+      packageSmoke: true, paths, source });
     attempts.push(second);
     const firstRuntimePid = occupancy.pid;
     const firstFingerprint = assertFrozenRuntimeOccupied(occupancy, fsApi);

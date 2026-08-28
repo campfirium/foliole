@@ -18,11 +18,12 @@ it('uses a unique task copy outside the active runtime and a matching evidence r
   expect(first.evidenceRoot).toContain(path.join(source.revision, 'macos'));
 });
 
-it('installs and builds only inside the task copy before native health', () => {
+it('builds, checks native health, and signs a development package in the task copy', () => {
   const commands = macosFrozenPreflightCommands('/owned/source');
   expect(commands.map(({ args, stage }) => [stage, args.join(' ')])).toEqual([
     ['dependencies', 'ci'], ['build', 'run build'],
-    ['native-health', 'run electron:native:health']
+    ['native-health', 'run electron:native:health'],
+    ['package-sign', 'scripts/macos/package-mas.mjs']
   ]);
   expect(commands.every(({ cwd }) => cwd === '/owned/source')).toBe(true);
 });

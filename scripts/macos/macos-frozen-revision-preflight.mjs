@@ -19,7 +19,8 @@ export function macosFrozenPreflightCommands(sourceRoot) {
   return [
     { args: ['ci'], bin: 'npm', stage: 'dependencies' },
     { args: ['run', 'build'], bin: 'npm', stage: 'build' },
-    { args: ['run', 'electron:native:health'], bin: 'npm', stage: 'native-health' }
+    { args: ['run', 'electron:native:health'], bin: 'npm', stage: 'native-health' },
+    { args: ['scripts/macos/package-mas.mjs'], bin: 'node', stage: 'package-sign' }
   ].map((command) => ({ ...command, cwd: sourceRoot }));
 }
 
@@ -119,6 +120,9 @@ export function runMacosFrozenRevisionPreflight({
       if (stage === 'build') updateFrozenPreflightReceipt(manager, { build: { resultStatus: 'complete' } });
       if (stage === 'native-health') updateFrozenPreflightReceipt(manager, {
         nativeHealth: { resultStatus: 'complete' }
+      });
+      if (stage === 'package-sign') updateFrozenPreflightReceipt(manager, {
+        packageSign: { mode: 'mas-development', resultStatus: 'complete' }
       });
     }
     assertSourceStable(repoRoot, source);

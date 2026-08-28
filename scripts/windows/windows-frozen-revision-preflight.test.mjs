@@ -19,13 +19,16 @@ it('routes dependency and native work into a unique disposable Windows task copy
   expect(first.logPath).toBe(path.join('D:\\evidence\\one', 'action.log'));
 });
 
-it('uses absolute system Node for npm ci, build, and native health in the task copy', () => {
+it('uses absolute system Node for npm ci, build, native health, and package smoke', () => {
   const paths = { systemNode: 'C:\\node.exe', systemNpmCli: 'C:\\npm-cli.js' };
-  const commands = windowsFrozenPreflightCommands('C:\\owned\\source', paths);
+  const commands = windowsFrozenPreflightCommands('C:\\owned\\source', paths, {
+    packageSmoke: true
+  });
   expect(commands.map(({ args, stage }) => [stage, args.join(' ')])).toEqual([
     ['dependencies', 'C:\\npm-cli.js ci'],
     ['build', 'C:\\npm-cli.js run build'],
-    ['native-health', 'C:\\npm-cli.js run electron:native:health']
+    ['native-health', 'C:\\npm-cli.js run electron:native:health'],
+    ['package-smoke', 'C:\\npm-cli.js run windows:package']
   ]);
   expect(commands.every(({ bin, cwd }) => bin === paths.systemNode && cwd === 'C:\\owned\\source')).toBe(true);
 });
