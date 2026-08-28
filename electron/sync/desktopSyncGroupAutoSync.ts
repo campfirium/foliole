@@ -7,13 +7,13 @@ import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndp
 import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
+import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
 import {
   clearDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute,
   saveDesktopSyncGroupRoute
 } from './desktopSyncGroupRoutes.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
-import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 type AutoSyncRuntime = {
@@ -30,8 +30,7 @@ const retryAfterFlight = new Map<string, AvailablePeer>();
 
 export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
-  const localGroupId = loadDesktopSyncGroup()?.group_id;
-  const localRuntimeId = loadSyncGroupRuntimeInstanceId();
+  const localGroup = loadDesktopSyncGroup();
   const handleService = (service: DiscoveredService) => {
     if (!isDesktopCompanionSyncParticipating()) return;
     const endpoints = resolveCompanionMdnsServiceEndpoints(service);
@@ -57,8 +56,7 @@ export function startDesktopSyncGroupAutoSync() {
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
     const query = maintainContinuousMdnsQuery(browser, (service) =>
-      service.txt.group_id === localGroupId
-      && service.txt.runtime_instance_id !== localRuntimeId);
+      isCurrentGroupPeerService(service, localGroup));
     const runtime = { bonjour, browser, query };
     browser.on('down', (service) => {
       const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
