@@ -21,14 +21,15 @@ async function invoke(page, command, args) {
 }
 
 function loadSyncTriggerResult(app) {
-  return app.evaluate(({ app: electronApp }) => {
+  return app.evaluate(() => {
     const pathApi = process.getBuiltinModule('node:path');
     const moduleApi = process.getBuiltinModule('node:module');
     if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
-    const loadModule = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
-    return loadModule(pathApi.join(
-      electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'
-    )).loadDesktopSyncTriggerResult();
+    const mainPath = process.env.FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH;
+    if (!mainPath) throw new Error('Hidden Electron main path is unavailable.');
+    const loadModule = moduleApi.createRequire(mainPath);
+    return loadModule(pathApi.join(pathApi.dirname(mainPath),
+      'sync', 'desktopSyncCoordinator.js')).loadDesktopSyncTriggerResult();
   });
 }
 

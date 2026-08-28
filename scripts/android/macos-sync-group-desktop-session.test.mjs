@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -44,4 +46,10 @@ it('binds acceptance to the fixed A5 Device request id', async () => {
     now: (() => { let value = 0; return () => value += 10; })(), timeoutMs: 100,
     wait: async () => undefined
   })).resolves.toBe(request);
+});
+
+it('observes automatic sync from the source-bound hidden Electron main path', () => {
+  const source = fs.readFileSync('scripts/android/macos-sync-group-desktop-session.mjs', 'utf8');
+  expect(source).toContain('FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH');
+  expect(source).not.toContain("electronApp.getAppPath(), 'sync'");
 });
