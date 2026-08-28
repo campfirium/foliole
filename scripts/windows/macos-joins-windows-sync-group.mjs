@@ -78,6 +78,7 @@ export async function runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot,
     session = await openSession(repoRoot, sharedRoot);
     const initialFact = await createDesktopSyncGroupJourneyFact({ device: 'B',
       evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session });
+    await session.invoke('enable_companion_sync');
     const candidate = await discoverWindows(session);
     await session.invoke('request_sync_group_join', { endpoint_url: candidate.endpoint_url });
     const pending = (await session.load()).join_request;

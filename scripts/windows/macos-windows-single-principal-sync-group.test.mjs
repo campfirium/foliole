@@ -51,6 +51,8 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
 it('keeps the reverse desktop role on the same fixed Windows provider control plane', () => {
   const source = fs.readFileSync('scripts/windows/macos-joins-windows-sync-group.mjs', 'utf8');
   expect(source).toContain("action: 'two-device-sync-provider'");
+  expect(source.indexOf("session.invoke('enable_companion_sync')"))
+    .toBeLessThan(source.indexOf("session.invoke('request_sync_group_join'"));
   expect(source).toContain("session.invoke('request_sync_group_join'");
   expect(source).toContain("session.invoke('complete_sync_group_join')");
   expect(source).toContain("device: 'B'");
