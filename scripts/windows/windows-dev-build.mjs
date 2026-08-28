@@ -21,9 +21,7 @@ import {
 } from './windows-frozen-revision-preflight.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
-import {
-  allowsSyncGroupNativeClient, requireTrustedNativeClient
-} from './windows-dev-residual-process.mjs';
+import { allowsSyncGroupNativeClient } from './windows-dev-residual-process.mjs';
 import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import {
   runWindowsSyncGroupJoinPrepareAcceptance
@@ -102,8 +100,6 @@ export async function runWindowsDevBuild({
     if (residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
-    const trustedRuntime = action === 'frozen-revision-preflight'
-      ? requireTrustedNativeClient(residualBefore, paths) : null;
     const signing = action === 'frozen-revision-preflight'
       ? { sha256: null } : verifyWindowsDevSigningIdentity(paths, fsApi);
     const candidate = preparesWindowsSyncGroupCandidate(action)
@@ -136,9 +132,9 @@ export async function runWindowsDevBuild({
     let actionResult = null;
     if (action === 'frozen-revision-preflight') {
       const preflight = await runWindowsFrozenRevisionPreflight({
-        attemptId: windowsFrozenAttemptId(context.runId),
+        aggregateAttemptId: windowsFrozenAttemptId(context.runId),
         evidenceRoot: path.join(context.root, 'frozen-revision-preflight'), execute, fsApi, paths,
-        snapshotRuntime: () => snapshotProcesses(execute, paths), trustedRuntime
+        fixedRuntimeBefore: residualBefore, snapshotRuntime: () => snapshotProcesses(execute, paths)
       });
       output += preflight.output;
       actionResult = { frozenRevisionPreflight: preflight };
@@ -196,7 +192,9 @@ export async function runWindowsDevBuild({
       message: error.message,
       resultStatus: error.resultStatus || 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
-      ...(error.receiptPath ? { frozenRevisionPreflight: { receiptPath: error.receiptPath } } : {}),
+      ...(error.receiptPath ? { frozenRevisionPreflight: {
+        aggregateAttemptId: error.aggregateAttemptId, receiptPath: error.receiptPath
+      } } : {}),
       ...(error.readiness ? {
         captureAnnotationReadiness: error.readiness
       } : {}),
@@ -222,7 +220,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   }
   if (result.summary.frozenRevisionPreflight) {
     const preflight = result.summary.frozenRevisionPreflight;
-    stream(`[windows-dev-action] frozen-revision-preflight identity=${preflight.receipt?.attemptId ?? result.summary.runId} receipt=${preflight.receiptPath}`);
+    stream(`[windows-dev-action] frozen-revision-preflight identity=${preflight.receipt?.aggregateAttemptId ?? preflight.aggregateAttemptId ?? result.summary.runId} receipt=${preflight.receiptPath}`);
   }
   printSyncGroupResult(stream, result.summary);
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);

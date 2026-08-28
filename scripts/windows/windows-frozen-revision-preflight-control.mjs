@@ -28,14 +28,32 @@ export async function copyWindowsFrozenPreflightEvidence({
   fsApi.mkdirSync(localRoot, { recursive: true });
   const remoteRoot = path.posix.dirname(remote.receiptPath);
   const actionRoot = path.posix.dirname(remoteRoot);
-  for (const [remotePath, name] of [
-    [remote.receiptPath, 'receipt.json'],
-    [`${remoteRoot}/action.log`, 'action.log'],
-    [`${actionRoot}/summary.json`, 'summary.json']
-  ]) await copyFile(remotePath, path.join(localRoot, name));
+  await copyFile(remote.receiptPath, path.join(localRoot, 'receipt.json'));
   const receipt = JSON.parse(fsApi.readFileSync(path.join(localRoot, 'receipt.json'), 'utf8'));
-  if (!remoteError) assertCompleteFrozenPreflightReceipt(receipt, source);
-  else if (receipt.resultStatus !== 'failed') {
+  if (receipt.aggregateAttemptId !== remote.attemptId || receipt.source?.revision !== source.revision
+      || receipt.source?.tree !== source.tree || !Array.isArray(receipt.attempts)
+      || receipt.attempts.length === 0) {
+    throw new Error('Windows aggregate preflight receipt does not match the accepted source.');
+  }
+  for (const attempt of receipt.attempts) {
+    const attemptRoot = path.join(localRoot, 'attempts', attempt.attemptId);
+    fsApi.mkdirSync(attemptRoot, { recursive: true });
+    await copyFile(attempt.receiptPath, path.join(attemptRoot, 'receipt.json'));
+    await copyFile(`${attempt.evidenceRoot.replaceAll('\\', '/')}/action.log`,
+      path.join(attemptRoot, 'action.log'));
+    const attemptReceipt = JSON.parse(fsApi.readFileSync(path.join(attemptRoot, 'receipt.json'), 'utf8'));
+    if (!remoteError) assertCompleteFrozenPreflightReceipt(attemptReceipt, source);
+    else if (attemptReceipt.resultStatus !== 'failed') {
+      throw new Error('Windows failed attempt did not preserve a failed receipt.');
+    }
+  }
+  await copyFile(`${actionRoot}/summary.json`, path.join(localRoot, 'summary.json'));
+  if (!remoteError && (receipt.resultStatus !== 'complete' || receipt.attempts.length !== 2
+      || receipt.isolation?.distinctTaskCopies !== true
+      || new Set(receipt.attempts.map(({ taskCopyRoot }) => taskCopyRoot)).size !== 2)) {
+    throw new Error('Windows aggregate preflight isolation evidence is incomplete.');
+  }
+  if (remoteError && receipt.resultStatus !== 'failed') {
     throw new Error('Windows failed preflight did not preserve a failed receipt.');
   }
   return { attemptReceipt: receipt, evidenceRoot: localRoot,

@@ -20,20 +20,34 @@ it('accepts only the fixed Windows action evidence root', () => {
 
 it('copies and validates a complete revision-bound Windows receipt', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-frozen-control-'));
-  const attemptId = '20260828T010203456-12345678';
+  const aggregateAttemptId = '20260828T010203456-12345678';
   const revision = 'a'.repeat(40);
   const tree = 'b'.repeat(40);
   const remoteRoot = `D:/C/foliole/.tmp/artifacts/windows-dev-action/run-1/frozen-revision-preflight`;
-  const receipt = { attemptId, build: { resultStatus: 'complete' },
-    cleanup: { resultStatus: 'complete' }, dependencies: { resultStatus: 'complete' },
-    evidence: { root: `D:\\remote\\${attemptId}` }, exit: { code: 0 },
-    nativeHealth: { resultStatus: 'complete' }, resultStatus: 'complete',
+  const attemptIds = ['20260828T010203457-11111111', '20260828T010203458-22222222'];
+  const attempts = attemptIds.map((attemptId, index) => ({
+    attemptId, evidenceRoot: `${remoteRoot}/attempts/${attemptId}`,
+    receiptPath: `${remoteRoot}/attempts/${attemptId}/receipt.json`,
+    taskCopyRoot: `D:\\C\\foliole-state\\capsules\\${index}`
+  }));
+  const aggregate = { aggregateAttemptId, attempts,
+    cleanup: { resultStatus: 'complete' }, exit: { code: 0 },
+    isolation: { distinctTaskCopies: true }, resultStatus: 'complete',
     source: { revision, tree } };
-  const copyFile = async (remote, local) => fs.writeFileSync(local,
-    remote.endsWith('receipt.json') ? JSON.stringify(receipt) : 'evidence');
+  const attemptReceipts = new Map(attempts.map(({ attemptId, receiptPath }) => [receiptPath, {
+    attemptId, build: { resultStatus: 'complete' }, cleanup: { resultStatus: 'complete' },
+    dependencies: { resultStatus: 'complete' }, evidence: {
+      root: `${remoteRoot}/attempts/${attemptId}`
+    }, exit: { code: 0 }, nativeHealth: { resultStatus: 'complete' },
+    resultStatus: 'complete', source: { revision, tree }
+  }]));
+  const copyFile = async (remote, local) => {
+    const value = remote === `${remoteRoot}/receipt.json` ? aggregate : attemptReceipts.get(remote);
+    fs.writeFileSync(local, value ? JSON.stringify(value) : 'evidence');
+  };
   const copied = await copyWindowsFrozenPreflightEvidence({ copyFile,
     localCandidate: { revision, treeDigest: tree },
-    output: `[windows-dev-action] frozen-revision-preflight identity=${attemptId} receipt=${remoteRoot}/receipt.json\n`,
+    output: `[windows-dev-action] frozen-revision-preflight identity=${aggregateAttemptId} receipt=${remoteRoot}/receipt.json\n`,
     repoRoot });
   expect(copied.attemptReceipt.resultStatus).toBe('complete');
   expect(fs.existsSync(path.join(copied.evidenceRoot, 'summary.json'))).toBe(true);

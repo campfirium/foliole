@@ -23,10 +23,3 @@ export function allowsSyncGroupNativeClient(action, residual, paths) {
     && residual.length === 1
     && isTrustedNativeClientWrapper(residual[0], paths);
 }
-
-export function requireTrustedNativeClient(residual, paths) {
-  if (residual.length !== 1 || !isTrustedNativeClientWrapper(residual[0], paths)) {
-    throw new Error('Frozen revision preflight requires one trusted active Windows runtime.');
-  }
-  return residual[0];
-}
