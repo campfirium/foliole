@@ -10,8 +10,10 @@ import {
 const PROVIDER_ACTIONS = Object.freeze({
   'desktop-dnssd-route-provider': {
     controllerAction: 'windows-desktop-dnssd-route', label: 'desktop DNS-SD route',
-    missingPrefix: 'windows_desktop_dnssd_route', progressFactPattern: 'desktop-dnssd-route',
-    progressMilestone: 'route-ready', timeoutMs: 25 * 60_000
+    missingPrefix: 'windows_desktop_dnssd_route',
+    progressFactPattern: '(?:[0-9a-f]{64}|desktop-dnssd-route)',
+    progressMilestone: 'route-ready', progressMilestones: ['fixture-ready', 'route-ready'],
+    timeoutMs: 25 * 60_000
   },
   'multi-device-sync-c': {
     controllerAction: 'windows-c-join', label: 'join', missingPrefix: 'windows_c',

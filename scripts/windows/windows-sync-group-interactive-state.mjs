@@ -42,8 +42,10 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
   if (action === 'desktop-dnssd-route-provider'
-      && progress?.milestone === 'route-ready'
-      && progress.factId === 'desktop-dnssd-route') {
+      && ((progress?.milestone === 'fixture-ready'
+          && /^[0-9a-f]{64}$/u.test(progress.factId || ''))
+        || (progress?.milestone === 'route-ready'
+          && progress.factId === 'desktop-dnssd-route'))) {
     return { factId: progress.factId, milestone: progress.milestone };
   }
   if (action === 'single-principal-sync-group'

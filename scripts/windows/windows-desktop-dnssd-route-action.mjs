@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { desktopDnsSdRouteFixtureFact } from '../desktop/desktop-dnssd-route-identity.mjs';
 import { waitForDesktopRoute } from '../desktop/desktop-dnssd-route-observation.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
@@ -21,9 +22,10 @@ function joinedRouteIdentity(overview) {
   const localDeviceId = group?.local_device_identity_key;
   const peer = group?.devices?.filter(({ state }) => state === 'active')
     .find(({ device_identity_key: deviceId }) => deviceId !== localDeviceId);
-  if (!overview.sync_enabled || !group?.group_id || !localDeviceId || !peer
+  if (!overview.sync_enabled || overview.sync_paused !== false
+      || !group?.group_id || !localDeviceId || !peer
       || group.devices.filter(({ state }) => state === 'active').length !== 2) {
-    throw new Error('Windows route acceptance requires one enabled two-Device Sync Group.');
+    throw new Error('Windows route acceptance requires one enabled, unpaused two-Device Sync Group.');
   }
   return { groupId: group.group_id, localDeviceId, peerDeviceId: peer.device_identity_key };
 }
@@ -38,6 +40,8 @@ export async function runWindowsDesktopDnsSdRouteProvider(options) {
     identity = joinedRouteIdentity(await invokeWindowsSyncGroupCommand(
       session.page, 'load_sync_group_overview'
     ));
+    options.reportProgress({ factId: desktopDnsSdRouteFixtureFact(identity),
+      milestone: 'fixture-ready' });
     route = await waitForDesktopRoute(session.app, identity.groupId, identity.peerDeviceId);
     options.reportProgress({ factId: 'desktop-dnssd-route', milestone: 'route-ready' });
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION,

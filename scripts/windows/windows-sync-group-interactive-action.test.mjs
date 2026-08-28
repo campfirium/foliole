@@ -110,6 +110,20 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   }, 'single-principal-sync-group')).toEqual({
     factId: 'single-principal-sync-group', milestone: 'restarted'
   });
+  const fixtureFact = 'a'.repeat(64);
+  expect(validateSyncGroupInteractiveProgress({
+    factId: fixtureFact, milestone: 'fixture-ready'
+  }, 'desktop-dnssd-route-provider')).toEqual({
+    factId: fixtureFact, milestone: 'fixture-ready'
+  });
+  expect(() => validateSyncGroupInteractiveProgress({
+    factId: 'not-a-fixture', milestone: 'fixture-ready'
+  }, 'desktop-dnssd-route-provider')).toThrow('invalid');
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'desktop-dnssd-route', milestone: 'route-ready'
+  }, 'desktop-dnssd-route-provider')).toEqual({
+    factId: 'desktop-dnssd-route', milestone: 'route-ready'
+  });
 });
 
 it('accepts only the registered route selfcheck modes', () => {

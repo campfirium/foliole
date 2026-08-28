@@ -9,6 +9,9 @@ import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
 import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
+import {
+  desktopDnsSdRouteFixtureFact, reciprocalDesktopDnsSdRouteIdentity
+} from '../desktop/desktop-dnssd-route-identity.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
@@ -34,9 +37,10 @@ function routeIdentity(overview) {
   const localDeviceId = group?.local_device_identity_key;
   const peers = group?.devices?.filter(({ state, device_identity_key: deviceId }) =>
     state === 'active' && deviceId !== localDeviceId) ?? [];
-  if (!overview.sync_enabled || !group?.group_id || !localDeviceId || peers.length !== 1
+  if (!overview.sync_enabled || overview.sync_paused !== false
+      || !group?.group_id || !localDeviceId || peers.length !== 1
       || group.devices.filter(({ state }) => state === 'active').length !== 2) {
-    throw new Error('Mac route acceptance requires one enabled two-Device Sync Group.');
+    throw new Error('Mac route acceptance requires one enabled, unpaused two-Device Sync Group.');
   }
   return { groupId: group.group_id, localDeviceId,
     peerDeviceId: peers[0].device_identity_key };
@@ -77,6 +81,13 @@ async function runPhase({ evidenceRoot, label, libraryHome, repoRoot, runtimeRoo
   let settled = false;
   try {
     const identity = routeIdentity(await session.load());
+    const windowsFixture = await provider.waitForProgress('fixture-ready');
+    const expectedWindowsFixture = desktopDnsSdRouteFixtureFact(
+      reciprocalDesktopDnsSdRouteIdentity(identity)
+    );
+    if (windowsFixture !== expectedWindowsFixture) {
+      throw new Error('Windows route fixture is not the reciprocal Mac Device pair.');
+    }
     await provider.waitForProgress('route-ready');
     await waitForMacRoute(session, identity);
     await provider.release('consumer_complete');
