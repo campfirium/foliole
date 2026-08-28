@@ -25,6 +25,9 @@ import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-contr
 import {
   copyWindowsSyncGroupJoinPrepareEvidence
 } from './windows-sync-group-join-prepare-control.mjs';
+import {
+  copyWindowsFrozenPreflightEvidence
+} from './windows-frozen-revision-preflight-control.mjs';
 
 export {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
@@ -37,6 +40,7 @@ export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
+  'frozen-revision-preflight',
   'sync-group-join-prepare',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
@@ -130,7 +134,7 @@ export async function runWindowsDevControl({
     host, repoRoot, stdout
   });
   if (syncGroup) return syncGroup;
-  const localCandidate = action === 'multi-device-sync-candidate'
+  const localCandidate = ['frozen-revision-preflight', 'multi-device-sync-candidate'].includes(action)
     ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
   const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef);
   await executeGit(spec.args, { env: spec.env });
@@ -151,6 +155,15 @@ export async function runWindowsDevControl({
     Object.assign(result, await collectWindowsCandidateControl({ fsApi, localCandidate,
       output: remoteOutput, repoRoot, sourceRef, stdout, copyFile: (remote, local) => executeScp(
         windowsDevScpSpec(host, remote, local, env), { env }) }));
+  }
+  if (action === 'frozen-revision-preflight') {
+    const reported = remoteOutput.includes('[windows-dev-action] frozen-revision-preflight');
+    if (!reported && remoteError) throw remoteError;
+    Object.assign(result, await copyWindowsFrozenPreflightEvidence({
+      fsApi, localCandidate, output: remoteOutput, remoteError, repoRoot,
+      copyFile: (remote, local) => executeScp(
+        windowsDevScpSpec(host, remote, local, env), { env })
+    }));
   }
   if (action === 'capture-annotation') {
     let evidence;

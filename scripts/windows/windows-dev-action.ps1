@@ -44,6 +44,7 @@ try {
 }
 
 try {
+  $env:FOLIOLE_WINDOWS_DEV_LOCK_OWNER = [string]$PID
   & $systemNode $puller
   $runnerExit = $LASTEXITCODE
   if ($runnerExit -eq 0) {

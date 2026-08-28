@@ -14,26 +14,24 @@ import {
   formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
 } from './windows-dev-build-support.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
+import { WINDOWS_DEV_BUILD_ACTIONS } from './windows-dev-build-actions.mjs';
+import { runWindowsDevGradleBuild } from './windows-dev-gradle-build.mjs';
+import {
+  runWindowsFrozenRevisionPreflight, windowsFrozenAttemptId
+} from './windows-frozen-revision-preflight.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
-import { allowsSyncGroupNativeClient } from './windows-dev-residual-process.mjs';
+import {
+  allowsSyncGroupNativeClient, requireTrustedNativeClient
+} from './windows-dev-residual-process.mjs';
 import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import {
   runWindowsSyncGroupJoinPrepareAcceptance
 } from './windows-sync-group-join-prepare-action.mjs';
 import {
   attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
-  WINDOWS_SYNC_GROUP_ACTIONS
 } from './windows-sync-group-build-routing.mjs';
 
-const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
-const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest';
-const BUILD_TIMEOUT_MS = 20 * 60_000;
-const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'secondary',
-  'sync-group-join-prepare',
-  ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
-];
 
 function parseJson(text, label) {
   try { return JSON.parse(text.replace(/^\uFEFF/u, '')); }
@@ -72,21 +70,6 @@ function writeJson(fsApi, filePath, value) {
   fsApi.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-async function runGradleBuild(execute, paths, platform, command) {
-  let directChildPid = null;
-  const build = await execute('cmd.exe', ['/d', '/s', '/c', command], {
-    cwd: path.join(paths.repoRoot, 'android'),
-    env: { ...process.env, ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
-      ANDROID_USER_HOME: paths.signingHome, JAVA_HOME: paths.javaHome },
-    onSpawn: (child) => { directChildPid = child.pid; }, platform,
-    timeoutCode: 'build_timeout', timeoutMs: BUILD_TIMEOUT_MS, windowsHide: true
-  });
-  if (build.code !== 0 || !build.output.includes('BUILD SUCCESSFUL')) {
-    throw Object.assign(failure('Gradle did not reach BUILD SUCCESSFUL', 74, 'build'), { result: build });
-  }
-  return { directChildPid, output: build.output };
-}
-
 export { formatWindowsDevFailure } from './windows-dev-build-support.mjs';
 
 export async function runWindowsDevBuild({
@@ -101,15 +84,16 @@ export async function runWindowsDevBuild({
   let directChildPid = null;
   try {
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
-    if (!WINDOWS_DEV_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
+    if (!WINDOWS_DEV_BUILD_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy'].includes(action)
         || action === 'device-profile' || action === 'sync-group-join-prepare'
         || ['single-principal-sync-group', 'two-device-sync-provider'].includes(action)
         || preparesWindowsSyncGroupCandidate(action)
-        ? [paths.systemNpmCli] : []),
-      ...(['build', 'device-profile', 'sync-group-join-prepare'].includes(action)
+        || action === 'frozen-revision-preflight' ? [paths.systemNpmCli] : []),
+      ...(action === 'frozen-revision-preflight' ? [paths.gitPath, paths.tarPath] : []),
+      ...(['build', 'device-profile', 'frozen-revision-preflight', 'sync-group-join-prepare'].includes(action)
         || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
@@ -118,7 +102,10 @@ export async function runWindowsDevBuild({
     if (residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
-    const signing = verifyWindowsDevSigningIdentity(paths, fsApi);
+    const trustedRuntime = action === 'frozen-revision-preflight'
+      ? requireTrustedNativeClient(residualBefore, paths) : null;
+    const signing = action === 'frozen-revision-preflight'
+      ? { sha256: null } : verifyWindowsDevSigningIdentity(paths, fsApi);
     const candidate = preparesWindowsSyncGroupCandidate(action)
       ? inspectCandidate(paths.repoRoot, 'diagnostic') : null;
     if (candidate && !candidate.clean) {
@@ -147,11 +134,17 @@ export async function runWindowsDevBuild({
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = null;
+    if (action === 'frozen-revision-preflight') {
+      const preflight = await runWindowsFrozenRevisionPreflight({
+        attemptId: windowsFrozenAttemptId(context.runId),
+        evidenceRoot: path.join(context.root, 'frozen-revision-preflight'), execute, fsApi, paths,
+        snapshotRuntime: () => snapshotProcesses(execute, paths), trustedRuntime
+      });
+      output += preflight.output;
+      actionResult = { frozenRevisionPreflight: preflight };
+    }
     if (['build', 'capture-annotation'].includes(action)) {
-      const build = await runGradleBuild(
-        execute, paths, platform,
-        action === 'capture-annotation' ? CAPTURE_BUILD_COMMAND : BUILD_COMMAND
-      );
+      const build = await runWindowsDevGradleBuild(execute, paths, platform, action);
       directChildPid = build.directChildPid;
       output += build.output;
     }
@@ -165,7 +158,7 @@ export async function runWindowsDevBuild({
     } else if (desktopDeviceProfile) {
       output += desktopDeviceProfile.output;
       actionResult = { desktopDeviceProfile: desktopDeviceProfile.evidence };
-    } else if (action !== 'build') {
+    } else if (!['build', 'frozen-revision-preflight'].includes(action)) {
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         ...(candidate ? { candidate } : {}),
@@ -187,6 +180,9 @@ export async function runWindowsDevBuild({
     if (actionResult?.desktopSyncGroupJoinPrepare) {
       summary.desktopSyncGroupJoinPrepare = actionResult.desktopSyncGroupJoinPrepare;
     }
+    if (actionResult?.frozenRevisionPreflight) {
+      summary.frozenRevisionPreflight = actionResult.frozenRevisionPreflight;
+    }
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
@@ -200,6 +196,7 @@ export async function runWindowsDevBuild({
       message: error.message,
       resultStatus: error.resultStatus || 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
+      ...(error.receiptPath ? { frozenRevisionPreflight: { receiptPath: error.receiptPath } } : {}),
       ...(error.readiness ? {
         captureAnnotationReadiness: error.readiness
       } : {}),
@@ -222,6 +219,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   }
   if (result.summary.captureAnnotation) {
     stream(`[windows-dev-action] capture-annotation identity=${result.summary.captureAnnotation.buildIdentity} manifest=${result.summary.captureAnnotation.manifestPath}`);
+  }
+  if (result.summary.frozenRevisionPreflight) {
+    const preflight = result.summary.frozenRevisionPreflight;
+    stream(`[windows-dev-action] frozen-revision-preflight identity=${preflight.receipt?.attemptId ?? result.summary.runId} receipt=${preflight.receiptPath}`);
   }
   printSyncGroupResult(stream, result.summary);
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);

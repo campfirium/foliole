@@ -8,7 +8,7 @@ function normalizePath(value) {
   return normalize(value).replaceAll('/', '\\');
 }
 
-function isTrustedNativeClientWrapper(processEntry, paths) {
+export function isTrustedNativeClientWrapper(processEntry, paths) {
   const commandLine = normalize(processEntry?.CommandLine);
   const nativeScript = normalizePath(path.join(paths.repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs'));
   const expectedSuffix = `/d /c ""${normalizePath(paths.systemNode)}" "${nativeScript}""`;
@@ -18,8 +18,15 @@ function isTrustedNativeClientWrapper(processEntry, paths) {
 export function allowsSyncGroupNativeClient(action, residual, paths) {
   return ['multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
     'multi-device-sync-from-zero', 'multi-device-sync-participation',
-    'sync-group-baseline-reset',
+    'frozen-revision-preflight', 'sync-group-baseline-reset',
     'sync-group-recover', 'sync-group-task3', 'sync-group-task3-protect'].includes(action)
     && residual.length === 1
     && isTrustedNativeClientWrapper(residual[0], paths);
+}
+
+export function requireTrustedNativeClient(residual, paths) {
+  if (residual.length !== 1 || !isTrustedNativeClientWrapper(residual[0], paths)) {
+    throw new Error('Frozen revision preflight requires one trusted active Windows runtime.');
+  }
+  return residual[0];
 }

@@ -212,6 +212,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(actionSource).toContain('[ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]');
   expect(actionSource).not.toContain('ValidateSet');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
+  expect(actionSource).toContain('FOLIOLE_WINDOWS_DEV_LOCK_OWNER');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
   expect(actionSource).toContain('& $systemNode $runner $Action');
 });

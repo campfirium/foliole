@@ -29,6 +29,7 @@ export function windowsDevPaths({
     authorizedKeys: 'C:\\ProgramData\\ssh\\administrators_authorized_keys',
     bareRepository: path.win32.join(gitRoot, 'repository.git'),
     buildLock: path.win32.join(appData, 'Foliole', 'windows-dev-control', 'build.lock'),
+    capsulesRoot: path.win32.join(appData, 'Foliole', 'windows-dev-control', 'capsules'),
     gitPath: path.win32.join(profile, 'scoop', 'apps', 'git', 'current', 'cmd', 'git.exe'),
     gitRoot,
     javaHome: path.win32.join(appData, 'Programs', 'Android Studio', 'jbr'),
@@ -42,6 +43,7 @@ export function windowsDevPaths({
     signingKeystore: path.win32.join(oldLabRoot, 'signing', 'android-user-home', 'debug.keystore'),
     signingManifest: path.win32.join(oldLabRoot, 'signing', 'identity.json'),
     systemNode: WINDOWS_DEV_SYSTEM_NODE,
-    systemNpmCli: WINDOWS_DEV_SYSTEM_NPM_CLI
+    systemNpmCli: WINDOWS_DEV_SYSTEM_NPM_CLI,
+    tarPath: 'C:\\Windows\\System32\\tar.exe'
   };
 }
