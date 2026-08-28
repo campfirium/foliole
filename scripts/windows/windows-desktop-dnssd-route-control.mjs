@@ -1,6 +1,8 @@
 import {
   assertWindowsDesktopDnsSdFixedRuntime, prepareWindowsDesktopDnsSdFixedRuntime
 } from './windows-desktop-dnssd-fixed-runtime.mjs';
+import { runWindowsDesktopDnsSdRouteSelfcheck } from
+  './windows-desktop-dnssd-route-selfcheck.mjs';
 import { controlWindowsNativeClient } from './windows-sync-group-recovery-action.mjs';
 import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
@@ -22,6 +24,7 @@ export async function runWindowsDesktopDnsSdRouteControl(options, {
   control = controlWindowsNativeClient,
   prepare = prepareWindowsDesktopDnsSdFixedRuntime,
   restore = restoreWindowsNativeClient,
+  runSelfcheck = runWindowsDesktopDnsSdRouteSelfcheck,
   suspend = suspendWindowsNativeClient
 } = {}) {
   if (!WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(options.action)) return null;
@@ -31,9 +34,12 @@ export async function runWindowsDesktopDnsSdRouteControl(options, {
   try {
     const residual = await options.snapshotRuntime();
     if (residual.length > 0) throw occupiedRuntimeError(residual);
-    result = options.action === 'desktop-dnssd-route-prepare'
-      ? await prepare(options)
-      : (await assertPrepared(options), await options.deviceAction(options));
+    if (options.action === 'desktop-dnssd-route-prepare') result = await prepare(options);
+    else {
+      await assertPrepared(options);
+      result = options.action === 'desktop-dnssd-route-selfcheck'
+        ? await runSelfcheck(options) : await options.deviceAction(options);
+    }
   } catch (error) {
     primaryError = error;
   }

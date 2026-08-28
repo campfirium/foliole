@@ -27,12 +27,22 @@ it('stops the fixed client, prepares once, and restores its prior state', async 
 it('reuses the prepared runtime before starting the mature product action', async () => {
   const route = options('desktop-dnssd-route-selfcheck');
   const assertPrepared = vi.fn(async () => ({ resultStatus: 'success' }));
+  const runSelfcheck = vi.fn(async () => ({ output: 'selfcheck' }));
   const result = await runWindowsDesktopDnsSdRouteControl(route, {
-    assertPrepared, restore: vi.fn(), suspend: vi.fn(async () => false)
+    assertPrepared, restore: vi.fn(), runSelfcheck, suspend: vi.fn(async () => false)
   });
   expect(assertPrepared).toHaveBeenCalledWith(route);
+  expect(runSelfcheck).toHaveBeenCalledWith(route);
+  expect(route.deviceAction).not.toHaveBeenCalled();
+  expect(result).toEqual({ output: 'selfcheck' });
+});
+
+it('routes provider execution through the existing device action', async () => {
+  const route = options('desktop-dnssd-route-provider');
+  await runWindowsDesktopDnsSdRouteControl(route, {
+    assertPrepared: vi.fn(), restore: vi.fn(), suspend: vi.fn(async () => false)
+  });
   expect(route.deviceAction).toHaveBeenCalledWith(route);
-  expect(result).toEqual({ output: 'route' });
 });
 
 it('rejects remaining occupants before any runtime write and still restores', async () => {
