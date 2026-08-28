@@ -15,6 +15,12 @@ std::wstring DnsSdWide(const std::string& value) {
   return result;
 }
 
+std::wstring DnsSdWindowsName(const std::string& value) {
+  std::wstring result = DnsSdWide(value);
+  if (result.ends_with(L'.')) result.pop_back();
+  return result;
+}
+
 std::string DnsSdUtf8(const wchar_t* value) {
   if (!value || !*value) return {};
   int length = static_cast<int>(wcslen(value));

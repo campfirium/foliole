@@ -74,6 +74,7 @@ std::shared_ptr<NativeOperation> CreateResolve(
 #include <windows.h>
 #include <windns.h>
 std::wstring DnsSdWide(const std::string& value);
+std::wstring DnsSdWindowsName(const std::string& value);
 std::string DnsSdUtf8(const wchar_t* value);
 DnsSdService DnsSdServiceFromInstance(PDNS_SERVICE_INSTANCE instance);
 #endif

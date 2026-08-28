@@ -8,12 +8,19 @@
 
 namespace {
 
+std::wstring RegistrationHost(const std::string& requested) {
+  if (!requested.empty()) return DnsSdWindowsName(requested);
+  wchar_t value[MAX_COMPUTERNAME_LENGTH + 1] = {};
+  DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
+  return GetComputerNameW(value, &size) ? std::wstring(value, size) : std::wstring();
+}
+
 class WindowsRegistration final : public NativeOperation {
  public:
   WindowsRegistration(const DnsSdInput& input, std::shared_ptr<EventSink> sink)
       : NativeOperation(std::move(sink)), input_(input),
-        name_(DnsSdWide(input.name + "." + input.type + "." + input.domain)),
-        host_(DnsSdWide(input.host)) {
+        name_(DnsSdWindowsName(input.name + "." + input.type + "." + input.domain)),
+        host_(RegistrationHost(input.host)) {
     for (const auto& [key, value] : input.txt) {
       keys_.push_back(DnsSdWide(key));
       values_.push_back(DnsSdWide(value));
@@ -27,8 +34,12 @@ class WindowsRegistration final : public NativeOperation {
   }
 
   void Start() override {
+    if (host_.empty()) {
+      Finish(ERROR_INVALID_DATA, nullptr);
+      return;
+    }
     instance_ = DnsServiceConstructInstance(name_.c_str(),
-      host_.empty() ? nullptr : host_.c_str(), nullptr, nullptr, input_.port,
+      host_.c_str(), nullptr, nullptr, input_.port,
       0, 0, key_ptrs_.size(), key_ptrs_.data(), value_ptrs_.data());
     if (!instance_) {
       Finish(ERROR_INVALID_DATA, nullptr);

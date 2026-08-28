@@ -17,7 +17,7 @@ class WindowsBrowse final : public NativeOperation {
  public:
   WindowsBrowse(const DnsSdInput& input, std::shared_ptr<EventSink> sink)
       : NativeOperation(std::move(sink)), input_(input),
-        query_(DnsSdWide(input.type + "." + input.domain)) {}
+        query_(DnsSdWindowsName(input.type + "." + input.domain)) {}
 
   void Start() override {
     self_keep_ = shared_from_this();

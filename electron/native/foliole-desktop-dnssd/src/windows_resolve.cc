@@ -10,7 +10,7 @@ namespace {
 
 std::wstring QueryName(const DnsSdInput& input) {
   std::string suffix = "." + input.type + "." + input.domain;
-  return DnsSdWide(input.name.ends_with(suffix) ? input.name : input.name + suffix);
+  return DnsSdWindowsName(input.name.ends_with(suffix) ? input.name : input.name + suffix);
 }
 
 class WindowsResolve final : public NativeOperation {
