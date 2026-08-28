@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -11,19 +10,6 @@ import { resolveElectronDevInvocation } from '../run-electron-dev.mjs';
 import { resolveElectronNativeHealthInvocation } from '../run-electron-native-health.mjs';
 
 describe('desktop platform adapters', () => {
-  it('keeps every desktop Sync Group discovery path on the OS DNS-SD adapter', async () => {
-    const sources = await Promise.all([
-      'electron/sync/companionMdnsAdvertisement.ts',
-      'electron/sync/desktopSyncGroupAutoSync.ts',
-      'electron/sync/desktopSyncGroupDiscovery.ts',
-      'electron/sync/desktopSyncGroupDiscoverySession.ts'
-    ].map((file) => readFile(file, 'utf8')));
-    const combined = sources.join('\n');
-
-    expect(combined).toContain("from './desktopDnsSd.js'");
-    expect(combined).not.toMatch(/bonjour-service|multicast-dns|continuousMdnsQuery/u);
-  });
-
   it('dispatches development and native health by host platform', () => {
     expect(resolveElectronDevInvocation('darwin', 'node').args)
       .toEqual(['scripts/macos/macos-electron-dev.mjs', 'start']);
@@ -77,11 +63,8 @@ describe('desktop platform adapters', () => {
       cwd: '/repo/foliole', homeDir: '/Users/tester', nodeBin: 'node', platform: 'darwin'
     });
     expect(commands.map(({ args, bin }) => ({ args, bin }))).toEqual([
-      { args: ['run', 'electron:rebuild:native'], bin: 'npm' },
       { args: ['run', 'macos:security-bookmarks:build'], bin: 'npm' },
       { args: ['run', 'electron:compile'], bin: 'npm' },
-      { args: ['scripts/desktop/desktop-dnssd-native-probe.cjs'],
-        bin: '/repo/foliole/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron' },
       { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: 'node' }
     ]);
     expect(() => createMacosNativePreflightCommands({ platform: 'linux' })).toThrow('requires a darwin host');

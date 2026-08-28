@@ -1,21 +1,24 @@
+import { Bonjour } from 'bonjour-service';
+
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
+import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
-import {
-  startDesktopDnsSdBrowse,
-  type DesktopDnsSdEvent,
-  type DesktopDnsSdService
-} from './desktopDnsSd.js';
+import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const PROBE_TIMEOUT_MS = 2_000;
+type Browser = ReturnType<InstanceType<typeof Bonjour>['find']>;
+type Service = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 
 export class DesktopSyncGroupDiscoverySession {
-  private readonly services = new Map<string, DesktopDnsSdService>();
+  private readonly services = new Map<string, Service>();
   private readonly candidates = new Map<string, DesktopSyncGroupJoinCandidatePayload>();
-  private runtime: ReturnType<typeof startDesktopDnsSdBrowse> | null = null;
+  private runtimes: Array<{ bonjour: InstanceType<typeof Bonjour>; browser: Browser;
+    query: ReturnType<typeof maintainContinuousMdnsQuery> }> = [];
   private stopped = true;
 
   constructor(
@@ -28,7 +31,25 @@ export class DesktopSyncGroupDiscoverySession {
     this.stopped = false;
     this.emitSnapshot('started');
     try {
-      this.runtime = startDesktopDnsSdBrowse((event) => this.consume(event));
+      const localRuntimeId = loadSyncGroupRuntimeInstanceId();
+      this.runtimes = [null, ...resolveCompanionMdnsIpv4Addresses()].map((networkInterface) => {
+        const bonjour = networkInterface
+          ? new Bonjour({ interface: networkInterface } as BonjourOptions)
+          : new Bonjour();
+        const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' });
+        browser.on('up', (service) => void this.upsert(service, 'found'));
+        browser.on('txt-update', (service) => void this.upsert(service, 'changed'));
+        browser.on('srv-update', (service) => void this.upsert(service, 'changed'));
+        const query = maintainContinuousMdnsQuery(browser, (service) =>
+          service.txt.runtime_instance_id !== localRuntimeId
+          && this.candidates.has(service.fqdn),
+        (services) => services.forEach((service) => void this.upsert(service, 'changed')));
+        browser.on('down', (service) => {
+          this.remove(service);
+          query.refresh();
+        });
+        return { bonjour, browser, query };
+      });
     } catch (error) {
       this.fail('discovery_unavailable', error);
     }
@@ -37,8 +58,12 @@ export class DesktopSyncGroupDiscoverySession {
 
   stop(emit = true) {
     this.stopped = true;
-    this.runtime?.stop();
-    this.runtime = null;
+    this.runtimes.forEach(({ bonjour, browser, query }) => {
+      query.stop();
+      browser.stop();
+      bonjour.destroy();
+    });
+    this.runtimes = [];
     this.services.clear();
     this.candidates.clear();
     const snapshot = this.snapshot('stopped');
@@ -46,20 +71,7 @@ export class DesktopSyncGroupDiscoverySession {
     return snapshot;
   }
 
-  private consume(event: DesktopDnsSdEvent) {
-    if (this.stopped) return;
-    if (event.kind === 'error') {
-      this.fail(event.code, new Error(event.message));
-      return;
-    }
-    if (event.kind === 'lost') {
-      this.remove(event.service);
-      return;
-    }
-    void this.upsert(event.service, event.kind);
-  }
-
-  private async upsert(service: DesktopDnsSdService, change: 'found' | 'changed') {
+  private async upsert(service: Service, change: 'found' | 'changed') {
     if (this.stopped || service.txt.runtime_instance_id === loadSyncGroupRuntimeInstanceId()) return;
     this.services.set(service.fqdn, service);
     const result = await probeService(this.fetchDiscovery, service);
@@ -73,7 +85,7 @@ export class DesktopSyncGroupDiscoverySession {
     this.emitSnapshot(change);
   }
 
-  private remove(service: DesktopDnsSdService) {
+  private remove(service: Service) {
     this.services.delete(service.fqdn);
     if (this.candidates.delete(service.fqdn)) this.emitSnapshot('lost');
   }
@@ -97,7 +109,7 @@ export class DesktopSyncGroupDiscoverySession {
   }
 }
 
-async function probeService(fetchDiscovery: typeof fetch, service: DesktopDnsSdService) {
+async function probeService(fetchDiscovery: typeof fetch, service: Service) {
   if (typeof service.txt.group_id !== 'string') return null;
   const endpoints = resolveCompanionMdnsServiceEndpoints(service);
   for (const endpointUrl of endpoints) {
@@ -107,7 +119,7 @@ async function probeService(fetchDiscovery: typeof fetch, service: DesktopDnsSdS
   return endpoints.length > 0 ? { status: 'connection_failed' as const } : null;
 }
 
-async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSdService, endpointUrl: string) {
+async function probeEndpoint(fetchDiscovery: typeof fetch, service: Service, endpointUrl: string) {
   try {
     const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
     if (!response.ok) return null;

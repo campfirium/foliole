@@ -12,7 +12,6 @@
   "asar": true,
   "asarUnpack": [
     "**/node_modules/better-sqlite3/build/Release/*.node",
-    "**/node_modules/@foliole/desktop-dnssd/build/Release/*.node",
     "**/node_modules/@foliole/macos-security-bookmarks/build/Release/*.node"
   ],
   "extraResources": [

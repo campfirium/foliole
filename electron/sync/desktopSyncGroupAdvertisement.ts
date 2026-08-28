@@ -21,16 +21,16 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
   const local = resolveLocalSyncGroupDevice(group);
   if (!local) throw new Error('sync_group_local_device_missing');
+  const services = startCompanionMdnsAdvertisement({
+    appVersion: args.appVersion,
+    deviceId: local.device_identity_key,
+    groupDisplayName: group.display_name,
+    groupId: group.group_id,
+    groupTag: workgroup.group_tag,
+    onWarning: args.onWarning,
+    port: args.port
+  });
   try {
-    const services = startCompanionMdnsAdvertisement({
-      appVersion: args.appVersion,
-      deviceId: local.device_identity_key,
-      groupDisplayName: group.display_name,
-      groupId: group.group_id,
-      groupTag: workgroup.group_tag,
-      onWarning: args.onWarning,
-      port: args.port
-    });
     await waitForCompanionMdnsAdvertisement(services);
   } catch (error) {
     args.onWarning(error);

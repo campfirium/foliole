@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   group: {
@@ -26,10 +26,6 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
 
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 it('keeps the sync provider available when mDNS publication reports a warning', async () => {
   const onWarning = vi.fn();
 
@@ -40,19 +36,5 @@ it('keeps the sync provider available when mDNS publication reports a warning', 
   expect(runtime.start).toHaveBeenCalledOnce();
   expect(onWarning).toHaveBeenCalledWith(expect.objectContaining({
     message: 'mDNS advertisement did not become available.'
-  }));
-});
-
-it('fails closed without crashing the provider when the OS capability cannot start', async () => {
-  const onWarning = vi.fn();
-  runtime.start.mockImplementationOnce(() => { throw new Error('desktop_dnssd_unavailable'); });
-
-  await expect(advertiseDesktopSyncGroup({
-    appVersion: '1.0.0', deviceId: 'desktop-a', onWarning, port: 38641
-  })).resolves.toBeUndefined();
-
-  expect(runtime.wait).not.toHaveBeenCalled();
-  expect(onWarning).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'desktop_dnssd_unavailable'
   }));
 });

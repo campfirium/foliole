@@ -17,8 +17,10 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('openMacosSyncGroupDesktopSession');
   expect(source).toContain('observeConcurrently: true');
   expect(source).toContain('observeAndAccept(session, options)');
-  expect(source).not.toContain('macos-a5-current-provider-readiness');
-  expect(source).not.toContain('bonjour-service');
+  expect(source).toContain('waitForCurrentA5Provider');
+  expect(source).toContain('deviceId: result.observation.deviceId');
+  expect(source).toContain("'provider-failure-logcat.txt'");
+  expect(source).toContain("'logcat', '-d', '--pid', pid");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("FOLIOLE_T152_SYNC_CREATOR === 'windows'");
   expect(source).toContain("action: 'activate-participation'");

@@ -2,7 +2,7 @@
 
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { browse as startSystemBrowse } from '@foliole/desktop-dnssd';
+import { Bonjour } from 'bonjour-service';
 
 import {
   fingerprintSecretFreeCandidate, T132_A5_AUTHORIZATION, T132_GROUP_ID, T132_TIMELINE_ID
@@ -11,6 +11,8 @@ import {
 const SERVICE_TYPE = 'foliole-sync';
 
 function serviceHost(service) {
+  const source = service.referer?.address ?? '';
+  if (/^\d+\.\d+\.\d+\.\d+$/u.test(source)) return source;
   return service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/u.test(value)) ?? null;
 }
 
@@ -45,21 +47,21 @@ async function probeA5Provider(service, fetchProvider) {
 }
 
 export async function observeT132A5Provider({
-  durationMs = 5_000, fetchProvider = fetch, startBrowse = startSystemBrowse
+  durationMs = 5_000, fetchProvider = fetch
 } = {}) {
   let proof = null;
   const probes = new Set();
-  const collect = (event) => {
-    if (event.kind !== 'found' && event.kind !== 'changed') return;
-    const service = event.service;
+  const collect = (service) => {
     const probe = probeA5Provider(service, fetchProvider).then((candidate) => {
       if (candidate) proof = candidate;
     }).finally(() => probes.delete(probe));
     probes.add(probe);
   };
-  const browser = startBrowse({ domain: 'local.', type: `_${SERVICE_TYPE}._tcp` }, collect);
+  const bonjour = new Bonjour();
+  const browser = bonjour.find({ protocol: 'tcp', type: SERVICE_TYPE }, collect);
   await delay(durationMs);
   browser.stop();
+  bonjour.destroy();
   await Promise.allSettled([...probes]);
   return proof;
 }

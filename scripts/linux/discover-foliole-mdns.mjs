@@ -3,7 +3,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
-import { Bonjour } from '@foliole/desktop-dnssd/linux.cjs';
+import { Bonjour } from 'bonjour-service';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

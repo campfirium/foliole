@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-/* global console, process, setTimeout */
+/* global AbortSignal, clearTimeout, console, fetch, process, setTimeout */
 
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
+
+import { Bonjour } from 'bonjour-service';
 
 import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
@@ -21,6 +23,47 @@ import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-w
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
+
+function serviceIpv4Candidates(service) {
+  const advertised = typeof service.txt?.ipv4_addresses === 'string'
+    ? service.txt.ipv4_addresses.split(',') : [];
+  return [...new Set([service.referer?.address, ...(service.addresses ?? []), ...advertised]
+    .filter((value) => /^\d+\.\d+\.\d+\.\d+$/u.test(value ?? '')))];
+}
+
+export async function waitForMacosProvider(groupId, port, {
+  createBonjour = () => new Bonjour(), fetchProvider = fetch, timeoutMs = 30_000
+} = {}) {
+  const bonjour = createBonjour();
+  let browser;
+  try {
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(
+        'Mac acceptance provider was not published before Windows discovery.'
+      )), timeoutMs);
+      const collect = async (service) => {
+        if (service.port !== Number(port) || service.txt?.group_id !== groupId) return;
+        for (const host of serviceIpv4Candidates(service)) {
+          try {
+            const endpointUrl = `http://${host}:${service.port}`;
+            const response = await fetchProvider(`${endpointUrl}/companion/discovery`, {
+              signal: AbortSignal.timeout(2_000)
+            });
+            const payload = response.ok ? await response.json() : null;
+            if (payload?.group_id !== groupId) continue;
+            clearTimeout(timer);
+            resolve({ endpointUrl, serviceName: service.name });
+            return;
+          } catch { /* Try the next address carried by this advertisement. */ }
+        }
+      };
+      browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+    });
+  } finally {
+    browser?.stop();
+    bonjour.destroy();
+  }
+}
 
 async function acceptedRevision(repoRoot) {
   const { stdout } = await execute('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
@@ -62,6 +105,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const macosFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-fact'), session });
     const initial = await session.enable();
+    const provider = await waitForMacosProvider(
+      initial.sync_group.group_id, initial.server_status.port
+    );
     const runWindowsAction = createActionExecutor({
       logPath: path.join(evidenceRoot, 'windows-action.log'),
       progressPath: path.join(evidenceRoot, 'windows-progress.jsonl')
@@ -121,7 +167,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       journeyFacts: { macos: macosFact.factId, windows: windowsReceipt.journeyFactId,
         macosAutomatic: macosAutomaticFact.factId,
         windowsAutomatic: windowsReceipt.automaticFactId },
-      providerServiceName: null,
+      providerServiceName: provider.serviceName,
       idempotent: true, macosRestarted: true,
       resultStatus: 'success', schemaVersion: 4, sharedRoot,
       windowsEvidenceRoot };
