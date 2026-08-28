@@ -64,8 +64,14 @@ describe('desktop platform adapters', () => {
     });
     expect(commands.map(({ args, bin }) => ({ args, bin }))).toEqual([
       { args: ['run', 'macos:security-bookmarks:build'], bin: 'npm' },
+      { args: ['run', 'electron:rebuild:native'], bin: 'npm' },
       { args: ['run', 'electron:compile'], bin: 'npm' },
-      { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: 'node' }
+      { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: 'node' },
+      {
+        args: ['scripts/desktop/desktop-dnssd-native-probe.cjs'],
+        bin: path.join('/repo/foliole', 'node_modules', 'electron', 'dist',
+          'Electron.app', 'Contents', 'MacOS', 'Electron')
+      }
     ]);
     expect(() => createMacosNativePreflightCommands({ platform: 'linux' })).toThrow('requires a darwin host');
   });

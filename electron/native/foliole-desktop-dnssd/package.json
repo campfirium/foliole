@@ -1,0 +1,12 @@
+{
+  "name": "@foliole/desktop-dnssd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Foliole desktop operating-system DNS-SD adapter.",
+  "main": "index.cjs",
+  "types": "index.d.ts",
+  "gypfile": true,
+  "dependencies": {
+    "node-addon-api": "8.5.0"
+  }
+}

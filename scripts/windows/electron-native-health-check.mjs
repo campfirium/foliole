@@ -127,6 +127,10 @@ async function main() {
   const rebuild = npmRunCommand('electron:rebuild:native');
   await runChecked(rebuild.command, rebuild.args, 'restore electron native ABI', { shell: rebuild.shell });
   await runChecked(process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 'verify electron sqlite ABI');
+  if (process.platform === 'win32') {
+    await runChecked(resolveElectronExecutablePath(repoRoot),
+      ['scripts/desktop/desktop-dnssd-native-probe.cjs'], 'verify desktop DNS-SD host');
+  }
   if (!canRunGuiHealth()) {
     console.log('[electron-native-health] status: ABI_READY gui=SKIPPED reason=headless-non-windows-host');
     return;

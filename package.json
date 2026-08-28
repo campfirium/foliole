@@ -99,7 +99,7 @@
     "macos:dev:stop": "node scripts/macos/macos-electron-dev.mjs stop",
     "macos:preview:reset": "node scripts/macos/macos-electron-dev.mjs reset-preview",
     "macos:security-bookmarks:build": "electron-rebuild -f -w @foliole/macos-security-bookmarks",
-    "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3,@foliole/desktop-dnssd",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "macos:internal:dispatch": "node scripts/macos/launch-internal-update.mjs",
     "macos:internal:prepare-runtime": "node scripts/macos/mas-electron-runtime.mjs",
@@ -231,6 +231,7 @@
     "zustand": "^5.0.14"
   },
   "optionalDependencies": {
+    "@foliole/desktop-dnssd": "file:electron/native/foliole-desktop-dnssd",
     "@foliole/macos-security-bookmarks": "file:electron/native/foliole-macos-security-bookmarks"
   },
   "devDependencies": {
