@@ -26,15 +26,18 @@ it('copies and validates a complete revision-bound Windows receipt', async () =>
   const remoteRoot = `D:/C/foliole/.tmp/artifacts/windows-dev-action/run-1/frozen-revision-preflight`;
   const attemptIds = ['20260828T010203457-11111111', '20260828T010203458-22222222'];
   const attempts = attemptIds.map((attemptId, index) => ({
-    attemptId, evidenceRoot: `${remoteRoot}/attempts/${attemptId}`,
-    receiptPath: `${remoteRoot}/attempts/${attemptId}/receipt.json`,
+    attemptId, evidenceRoot: `${remoteRoot}/attempts/${attemptId}`.replaceAll('/', '\\'),
+    receiptPath: `${remoteRoot}/attempts/${attemptId}/receipt.json`.replaceAll('/', '\\'),
     taskCopyRoot: `D:\\C\\foliole-state\\capsules\\${index}`
   }));
+  const normalizedAttempts = attempts.map((attempt) => ({ ...attempt,
+    evidenceRoot: attempt.evidenceRoot.replaceAll('\\', '/'),
+    receiptPath: attempt.receiptPath.replaceAll('\\', '/') }));
   const aggregate = { aggregateAttemptId, attempts,
     cleanup: { resultStatus: 'complete' }, exit: { code: 0 },
     isolation: { distinctTaskCopies: true }, resultStatus: 'complete',
     source: { revision, tree } };
-  const attemptReceipts = new Map(attempts.map(({ attemptId, receiptPath }) => [receiptPath, {
+  const attemptReceipts = new Map(normalizedAttempts.map(({ attemptId, receiptPath }) => [receiptPath, {
     attemptId, build: { resultStatus: 'complete' }, cleanup: { resultStatus: 'complete' },
     dependencies: { resultStatus: 'complete' }, evidence: {
       root: `${remoteRoot}/attempts/${attemptId}`

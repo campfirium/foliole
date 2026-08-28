@@ -37,9 +37,11 @@ export async function copyWindowsFrozenPreflightEvidence({
   }
   for (const attempt of receipt.attempts) {
     const attemptRoot = path.join(localRoot, 'attempts', attempt.attemptId);
+    const remoteAttemptReceipt = attempt.receiptPath.replaceAll('\\', '/');
+    const remoteAttemptRoot = attempt.evidenceRoot.replaceAll('\\', '/');
     fsApi.mkdirSync(attemptRoot, { recursive: true });
-    await copyFile(attempt.receiptPath, path.join(attemptRoot, 'receipt.json'));
-    await copyFile(`${attempt.evidenceRoot.replaceAll('\\', '/')}/action.log`,
+    await copyFile(remoteAttemptReceipt, path.join(attemptRoot, 'receipt.json'));
+    await copyFile(`${remoteAttemptRoot}/action.log`,
       path.join(attemptRoot, 'action.log'));
     const attemptReceipt = JSON.parse(fsApi.readFileSync(path.join(attemptRoot, 'receipt.json'), 'utf8'));
     if (!remoteError) assertCompleteFrozenPreflightReceipt(attemptReceipt, source);
