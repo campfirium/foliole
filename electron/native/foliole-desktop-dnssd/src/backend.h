@@ -70,6 +70,8 @@ std::shared_ptr<NativeOperation> CreateResolve(
   const DnsSdInput& input, std::shared_ptr<EventSink> sink);
 
 #ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
 #include <windns.h>
 std::wstring DnsSdWide(const std::string& value);
 std::string DnsSdUtf8(const wchar_t* value);
