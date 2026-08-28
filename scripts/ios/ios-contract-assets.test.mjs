@@ -37,14 +37,15 @@ describe('iOS companion contract assets', () => {
     expect(ios).toEqual(android);
   });
 
-  it('makes the iOS pairing store consume the generated protocol version', async () => {
+  it('makes iOS Sync Group discovery and signing consume generated contract keys', async () => {
     const contractStore = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionContractStore.swift'), 'utf8');
-    const pairingStore = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionPairingStore.swift'), 'utf8');
+    const signing = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionSyncGroupSigning.swift'), 'utf8');
 
     expect(contractStore).toContain('protocolVersion: try integer(path: ["syncProtocol", "version"], root: sync)');
-    expect(pairingStore).toContain('negotiatedVersion == contract.protocolVersion');
-    expect(pairingStore).toContain('negotiatedProtocolVersion == contract.protocolVersion');
-    expect(pairingStore).not.toContain('currentProtocolVersion =');
+    expect(contractStore).toContain('["syncGroupSecurity", "signature", "headerKeys"]');
+    expect(contractStore).toContain('["hostApi", "syncGroupProvider"]');
+    expect(signing).toContain('contract.signatureHeaderKeys["deviceId"]');
+    expect(signing).not.toContain('Pairing');
   });
 
 });

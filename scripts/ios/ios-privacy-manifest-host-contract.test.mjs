@@ -75,7 +75,6 @@ describe('iOS privacy manifest host contract', () => {
 
     expect(() => validatePrivacyContract(manifest, sources)).not.toThrow();
     expect(combinedSource).toMatch(/\bUserDefaults\.standard\b/);
-    expect(combinedSource).toMatch(/\bUserDefaults\s*\(\s*suiteName\s*:/);
   });
 
   it('fails when all app-owned UserDefaults usage is removed', () => {

@@ -103,9 +103,11 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
     }
     const bodyText = request.method === 'POST' ? await readText(request) : '';
     if (!provider.authenticate(request, bodyText)) {
+      writeObservations();
       send(response, 401, { error: 'invalid_signature' });
       return;
     }
+    writeObservations();
     if (scenarioService) {
       const routed = await scenarioService.route({
         bodyText,

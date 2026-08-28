@@ -6,42 +6,33 @@ import { describe, expect, it } from 'vitest';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-describe('iOS pairing host contract', () => {
-  it('registers the same native pairing bridge without exposing the secret in loaded state', () => {
+describe('iOS Sync Group host contract', () => {
+  it('registers the native Sync Group provider, discovery, and signed transport bridge', () => {
     const controller = read('ios/App/App/FolioleBridgeViewController.swift');
     const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
-    const store = read('ios/App/App/FolioleCompanionPairingStore.swift');
 
     expect(controller).toContain('registerPluginInstance(FolioleCompanionSyncPlugin())');
     expect(plugin).toContain('public let jsName = "FolioleCompanionSync"');
     for (const method of [
-      'clearPairingCredentials', 'desktopHttpRequest', 'loadDiscoveryCandidates', 'loadPairingState',
-      'savePairingCredentials', 'signCompanionSyncRequest'
+      'acceptSyncGroupJoinRequest', 'loadDiscoveryCandidates', 'loadSyncGroupProviderState',
+      'rejectSyncGroupJoinRequest', 'signCompanionSyncRequest', 'startSyncGroupProvider',
+      'stopSyncGroupProvider'
     ]) {
       expect(plugin).toContain(`CAPPluginMethod(name: "${method}"`);
     }
-    expect(store).not.toMatch(/stateKey\("deviceSecret"\)/);
+    expect(plugin).not.toContain('PairingCredentials');
   });
 
-  it('keeps the pairing secret in Keychain and declares local-network privacy', () => {
-    const keychain = read('ios/App/App/FolioleCompanionPairingSecretStore.swift');
+  it('uses generated Sync Group keys and declares local-network privacy', () => {
+    const contract = read('ios/App/App/FolioleCompanionContractStore.swift');
     const plist = read('ios/App/App/Info.plist');
 
-    expect(keychain).toContain('kSecClassGenericPassword');
-    expect(keychain).toContain('kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly');
+    expect(contract).toContain('["syncGroupSecurity", "signature", "headerKeys"]');
+    expect(contract).toContain('["hostApi", "syncGroupProvider"]');
+    expect(contract).toContain('["hostApi", "network", "discoveryCandidateKeys"]');
     expect(plist).toContain('<key>NSLocalNetworkUsageDescription</key>');
     expect(plist).toContain('<string>_foliole-sync._tcp</string>');
     expect(plist).not.toContain('<key>NSAllowsArbitraryLoads</key>');
-  });
-
-  it('uses generated bridge keys for pairing, discovery and request signing', () => {
-    const contract = read('ios/App/App/FolioleCompanionContractStore.swift');
-    const discovery = read('ios/App/App/FolioleCompanionBonjourDiscovery.swift');
-
-    expect(contract).toContain('["pairingPlugin", "credentialRequestKeys"]');
-    expect(contract).toContain('["pairingPlugin", "signature", "headerKeys"]');
-    expect(contract).toContain('["hostApi", "network", "discoveryCandidateKeys"]');
-    expect(discovery).toContain('contract.discoveryCandidateKeys[name]');
   });
 
   it('browses Bonjour with Network.framework and resolves services on the main queue', () => {

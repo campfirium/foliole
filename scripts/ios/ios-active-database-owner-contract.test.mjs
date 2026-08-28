@@ -5,10 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
 const APP = path.join(ROOT, 'ios/App/App');
-const ISOLATED_SQLITE_SOURCES = new Set([
-  'FolioleCompanionContentBlobPack.swift',
-  'FolioleReadOnlySQLite.swift'
-]);
+const ISOLATED_SQLITE_MARKER = /sql-surface: ios-isolated-(?:pack|snapshot)-owner/;
 const RETIRED_ACTIVE_DATABASE_TOKENS = [
   'FolioleCompanionLearningWriteDatabase',
   'FolioleCompanionGeneratedReadQueryRunner',
@@ -19,25 +16,26 @@ const RETIRED_ACTIVE_DATABASE_TOKENS = [
 describe('iOS active database ownership', () => {
   it('keeps active-library SQLite out of the formal Swift target', async () => {
     const names = (await readdir(APP)).filter((name) => name.endsWith('.swift'));
-    const formalSources = names.filter((name) => !ISOLATED_SQLITE_SOURCES.has(name));
-    const source = await Promise.all(formalSources.map((name) => readFile(path.join(APP, name), 'utf8')));
+    const sources = await Promise.all(names.map((name) => readFile(path.join(APP, name), 'utf8')));
+    const source = sources.filter((value) => !ISOLATED_SQLITE_MARKER.test(value));
 
     expect(source.join('\n')).not.toContain('sqlite3_open');
     expect(source.join('\n')).not.toContain('CapacitorDatabase/foliole-companion');
     for (const token of RETIRED_ACTIVE_DATABASE_TOKENS) expect(source.join('\n')).not.toContain(token);
   });
 
-  it('exposes only keychain, member-route, network, discovery, file, and staged-pack methods from Swift', async () => {
+  it('exposes only Sync Group, network, discovery, file, and staged-pack methods from Swift', async () => {
     const plugin = await readFile(path.join(APP, 'FolioleCompanionSyncPlugin.swift'), 'utf8');
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
     expect(methods).toEqual([
-      'beginSyncRun', 'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncParticipationState',
-      'resolveAttachmentResource', 'savePairingCredentials',
-      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch', 'startDiscoverySession', 'stopDiscoverySession'
+      'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
+      'loadSyncParticipationState', 'rejectSyncGroupJoinRequest', 'resolveAttachmentResource',
+      'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
+      'stopDiscoverySession', 'stopSyncGroupProvider'
     ].sort());
   });
 
