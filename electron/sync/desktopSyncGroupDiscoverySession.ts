@@ -41,7 +41,9 @@ export class DesktopSyncGroupDiscoverySession {
         browser.on('txt-update', (service) => void this.upsert(service, 'changed'));
         browser.on('srv-update', (service) => void this.upsert(service, 'changed'));
         const query = maintainContinuousMdnsQuery(browser, (service) =>
-          service.txt.runtime_instance_id !== localRuntimeId);
+          service.txt.runtime_instance_id !== localRuntimeId
+          && this.candidates.has(service.fqdn),
+        (services) => services.forEach((service) => void this.upsert(service, 'changed')));
         browser.on('down', (service) => {
           this.remove(service);
           query.refresh();

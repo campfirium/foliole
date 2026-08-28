@@ -10,6 +10,7 @@ import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
 import {
   clearDesktopSyncGroupRoutes,
+  loadDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute,
   saveDesktopSyncGroupRoute
 } from './desktopSyncGroupRoutes.js';
@@ -55,8 +56,11 @@ export function startDesktopSyncGroupAutoSync() {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
-    const query = maintainContinuousMdnsQuery(browser, (service) =>
-      isCurrentGroupPeerService(service, localGroup));
+    const query = maintainContinuousMdnsQuery(browser, (service) => {
+      if (!isCurrentGroupPeerService(service, localGroup) || !localGroup) return false;
+      return loadDesktopSyncGroupRoutes(localGroup.group_id).some((route) =>
+        route.peer_device_id === service.txt?.device_id);
+    }, (services) => services.forEach(consumeService));
     const runtime = { bonjour, browser, query };
     browser.on('down', (service) => {
       const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;

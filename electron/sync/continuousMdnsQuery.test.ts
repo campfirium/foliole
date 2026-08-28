@@ -42,12 +42,14 @@ it('suppresses known answers and restarts promptly after service withdrawal', ()
 it('keeps querying when the browser has only an irrelevant local service', () => {
   vi.useFakeTimers();
   const browser = { services: [{ runtime: 'local' }], update: vi.fn() };
+  const retryUnresolved = vi.fn();
   const query = maintainContinuousMdnsQuery(
-    browser, (service) => service.runtime === 'remote'
+    browser, (service) => service.runtime === 'remote', retryUnresolved
   );
 
   vi.advanceTimersByTime(1_000);
   expect(browser.update).toHaveBeenCalledOnce();
+  expect(retryUnresolved).toHaveBeenCalledWith(browser.services);
   browser.services.push({ runtime: 'remote' });
   vi.advanceTimersByTime(2_000);
   expect(browser.update).toHaveBeenCalledOnce();

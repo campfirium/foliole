@@ -2,7 +2,7 @@ const INITIAL_QUERY_DELAY_MS = 1_000;
 const MAX_QUERY_DELAY_MS = 60 * 60_000;
 
 type MdnsBrowser<Service> = {
-  services: Service[];
+  services?: Service[];
   update(): void;
 };
 
@@ -14,6 +14,7 @@ type TimerApi = {
 export function maintainContinuousMdnsQuery<Service>(
   browser: MdnsBrowser<Service>,
   isRelevant: (service: Service) => boolean = () => true,
+  retryUnresolved: (services: Service[]) => void = () => undefined,
   timerApi: TimerApi = { clearTimeout, setTimeout }
 ) {
   let delayMs = INITIAL_QUERY_DELAY_MS;
@@ -24,7 +25,11 @@ export function maintainContinuousMdnsQuery<Service>(
     timer = timerApi.setTimeout(() => {
       timer = null;
       if (stopped) return;
-      if (!browser.services.some(isRelevant)) browser.update();
+      const services = browser.services ?? [];
+      if (!services.some(isRelevant)) {
+        browser.update();
+        retryUnresolved(services);
+      }
       delayMs = Math.min(delayMs * 2, MAX_QUERY_DELAY_MS);
       schedule();
     }, delayMs);
@@ -34,6 +39,7 @@ export function maintainContinuousMdnsQuery<Service>(
     if (timer) timerApi.clearTimeout(timer);
     delayMs = INITIAL_QUERY_DELAY_MS;
     browser.update();
+    retryUnresolved(browser.services ?? []);
     schedule();
   };
   const stop = () => {
