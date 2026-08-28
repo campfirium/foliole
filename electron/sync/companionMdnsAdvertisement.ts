@@ -56,7 +56,9 @@ export function resolveCompanionMdnsServiceName(
 
 export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   stopCompanionMdnsAdvertisement();
-  return beginAdvertisement(input, lifecycleRevision);
+  const registered = beginAdvertisement(input, lifecycleRevision);
+  refreshQueue = registered.catch(() => undefined);
+  return registered;
 }
 
 function registrationError(event: Extract<DesktopDnsSdEvent, { kind: 'error' }>) {
@@ -113,13 +115,18 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
 
 export function refreshCompanionMdnsAdvertisement() {
   factsRevision += 1;
+  const targetLifecycle = activeAdvertisement?.lifecycle;
   refreshQueue = refreshQueue.then(() => {
+    if (targetLifecycle === undefined
+        || activeAdvertisement?.lifecycle !== targetLifecycle) return;
     const input = activeAdvertisement?.input;
     if (!input) return;
     stopCompanionMdnsAdvertisement();
     return beginAdvertisement(input, lifecycleRevision);
   });
-  return refreshQueue;
+  const refreshed = refreshQueue;
+  refreshQueue = refreshed.catch(() => undefined);
+  return refreshed;
 }
 
 export function stopCompanionMdnsAdvertisement() {

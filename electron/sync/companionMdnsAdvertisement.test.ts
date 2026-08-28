@@ -85,6 +85,22 @@ describe('desktop OS DNS-SD advertisement', () => {
     expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 
+  it('waits for startup registration before superseding it with refreshed facts', async () => {
+    const ready = startCompanionMdnsAdvertisement(input);
+    const refreshed = refreshCompanionMdnsAdvertisement();
+
+    await Promise.resolve();
+    expect(runtime.register).toHaveBeenCalledOnce();
+    expect(runtime.cancel).not.toHaveBeenCalled();
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+    await vi.waitFor(() => expect(runtime.register).toHaveBeenCalledTimes(2));
+    runtime.callbacks[1]?.({ kind: 'registered', service: {} });
+    await refreshed;
+
+    expect(runtime.cancel).toHaveBeenCalledOnce();
+  });
+
   it('cancels exactly the active system registration when stopped', async () => {
     const ready = startCompanionMdnsAdvertisement(input);
     runtime.callbacks[0]?.({ kind: 'registered', service: {} });
