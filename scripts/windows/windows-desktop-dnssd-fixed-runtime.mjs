@@ -25,15 +25,15 @@ export function fixedRuntimePaths(paths) {
 }
 
 export async function inspectFixedRuntimeSource(execute, paths) {
-  const [branch, revision, remoteRevision, status, tree] = await Promise.all([
+  const [branch, revision, fetchedRevision, status, tree] = await Promise.all([
     gitValue(execute, paths, ['branch', '--show-current'], 'source-branch'),
     gitValue(execute, paths, ['rev-parse', 'HEAD'], 'source-revision'),
-    gitValue(execute, paths, ['rev-parse', 'origin/dev'], 'source-remote-revision'),
+    gitValue(execute, paths, ['rev-parse', 'FETCH_HEAD'], 'source-fetched-revision'),
     gitValue(execute, paths, ['status', '--porcelain', '--untracked-files=all'], 'source-status'),
     gitValue(execute, paths, ['rev-parse', 'HEAD^{tree}'], 'source-tree')
   ]);
-  if (branch !== 'dev' || status || revision !== remoteRevision) {
-    throw Object.assign(new Error('Windows fixed runtime requires clean dev at origin/dev.'), {
+  if (branch !== 'dev' || status || revision !== fetchedRevision) {
+    throw Object.assign(new Error('Windows fixed runtime requires clean dev at FETCH_HEAD.'), {
       stage: 'source-state'
     });
   }

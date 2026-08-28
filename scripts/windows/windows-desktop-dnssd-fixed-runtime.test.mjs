@@ -25,7 +25,7 @@ function successfulExecute(stages) {
     if (command === 'git.exe') {
       const request = args.slice(2).join(' ');
       const values = { 'branch --show-current': 'dev', 'rev-parse HEAD': 'revision-1',
-        'rev-parse origin/dev': 'revision-1', 'rev-parse HEAD^{tree}': 'tree-1',
+        'rev-parse FETCH_HEAD': 'revision-1', 'rev-parse HEAD^{tree}': 'tree-1',
         'status --porcelain --untracked-files=all': '' };
       return { code: 0, output: `${values[request]}\n`, stderr: '', stdout: `${values[request]}\n` };
     }
