@@ -13,6 +13,7 @@ import {
 import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
+import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -48,32 +49,39 @@ function journeyOrigins(snapshot) {
   }))].sort();
 }
 
-async function waitForJourneyOrigin(session, origin, timeoutMs = 5 * 60_000) {
+async function waitForJourneyOrigin(session, origin, count = 1, timeoutMs = 5 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const snapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     });
     const origins = journeyOrigins(snapshot);
-    if (origins.includes(origin)) return origins;
+    const matches = Object.values(snapshot?.nodesById ?? {}).filter(({ title }) =>
+      String(title).startsWith(`Multi-device sync ${origin} fact`));
+    if (matches.length >= count) return origins;
     await delay(250);
   }
   throw new Error(`Timed out waiting for the ${origin} business fact.`);
 }
 
 export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
-  evidenceRoot, repoRoot = process.cwd() }) {
-  const session = await openMacosSyncGroupDesktopSession({
+  evidenceRoot, repoRoot = process.cwd(), twoDevice = false,
+  waitForRelease = waitForStop }) {
+  const openSession = () => openMacosSyncGroupDesktopSession({
     env: macosAcceptanceEnv(), libraryHome: path.join(acceptanceRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(acceptanceRoot, 'macos-runtime')
   });
+  let session = await openSession();
   const receiptPath = path.join(evidenceRoot, 'provider-receipt.json');
   try {
+    const initialFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session }) : null;
     const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
     const initialOrigins = journeyOrigins(await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     }));
-    if (!['A', 'B', 'C'].every((origin) => initialOrigins.includes(origin))) {
+    const requiredInitial = twoDevice ? ['A'] : ['A', 'B', 'C'];
+    if (!requiredInitial.every((origin) => initialOrigins.includes(origin))) {
       throw new Error(`Mac provider is missing pre-Fri facts: ${initialOrigins.join(',')}`);
     }
     writeJson(receiptPath, { groupId: initial.sync_group.group_id,
@@ -81,21 +89,50 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
     console.log(`[fri-sync-group-provider] ready receipt=${receiptPath}`);
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 });
     await session.accept(request.request_id);
-    const accepted = await waitForDeviceCount(session, 4);
+    const accepted = await waitForDeviceCount(session, twoDevice ? 2 : 4);
+    const automaticFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',
+      evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session }) : null;
     writeJson(receiptPath, { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
       groupId: accepted.sync_group.group_id, resultStatus: 'accepted' });
     console.log(`[fri-sync-group-provider] accepted request=${request.request_id}`);
-    const origins = await waitForJourneyOrigin(session, 'D');
+    const origins = await waitForJourneyOrigin(session, twoDevice ? 'B' : 'D', twoDevice ? 2 : 1);
+    let macosRestarted = false;
+    let idempotent = false;
+    if (twoDevice) {
+      const beforeRestart = await session.invoke('load_workspace_list_snapshot', {
+        includePdfOpenings: false
+      });
+      await session.close();
+      session = await openSession();
+      const restarted = await session.load();
+      if (restarted.sync_group?.group_id !== accepted.sync_group.group_id) {
+        throw new Error('Mac did not restore its Fri Sync Group.');
+      }
+      await session.invoke('sync_companion_now');
+      await session.invoke('sync_companion_now');
+      const afterRestart = await session.invoke('load_workspace_list_snapshot', {
+        includePdfOpenings: false
+      });
+      if (Object.keys(afterRestart.nodesById).length !== Object.keys(beforeRestart.nodesById).length) {
+        throw new Error('Repeated Mac and Fri sync was not idempotent.');
+      }
+      macosRestarted = true;
+      idempotent = true;
+    }
     writeJson(receiptPath, { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
-      groupId: accepted.sync_group.group_id, journeyOrigins: origins,
+      groupId: accepted.sync_group.group_id, idempotent, journeyOrigins: origins,
+      journeyFactIds: twoDevice ? [initialFact.factId, automaticFact.factId] : undefined,
+      macosRestarted,
       resultStatus: 'automatic-converged' });
-    console.log('[fri-sync-group-provider] automatic-converged origin=D');
-    const signal = await waitForStop();
+    console.log(`[fri-sync-group-provider] automatic-converged origin=${twoDevice ? 'B' : 'D'}`);
+    const signal = await waitForRelease();
     writeJson(receiptPath, { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
-      groupId: accepted.sync_group.group_id, journeyOrigins: origins,
+      groupId: accepted.sync_group.group_id, idempotent, journeyOrigins: origins,
+      journeyFactIds: twoDevice ? [initialFact.factId, automaticFact.factId] : undefined,
+      macosRestarted,
       resultStatus: 'success', stoppedBy: signal });
   } finally {
     await session.close();
@@ -109,5 +146,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const acceptanceRoot = option(process.argv.slice(2), '--acceptance-root');
   await runFriSyncGroupProvider({ acceptanceRoot: acceptanceRoot
     ? path.resolve(acceptanceRoot) : path.resolve(evidenceRoot),
-  evidenceRoot: path.resolve(evidenceRoot) });
+  evidenceRoot: path.resolve(evidenceRoot),
+  twoDevice: process.env.FOLIOLE_T152_TWO_DEVICE === '1' });
 }

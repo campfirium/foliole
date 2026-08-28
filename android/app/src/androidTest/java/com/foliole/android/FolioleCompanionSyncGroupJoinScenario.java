@@ -23,6 +23,10 @@ final class FolioleCompanionSyncGroupJoinScenario {
             waitForFocus(activity, 30_000);
             Log.i(LOG_TAG, "stage=focused");
             WebView webView = activity.findViewById(R.id.webview);
+            JSONObject prejoinFact = FolioleCompanionSyncGroupMaintenanceScenario.createFact(
+                instrumentation, webView
+            );
+            Log.i(LOG_TAG, "stage=prejoin-fact-created");
             FolioleCompanionSettingsNavigation.open(instrumentation, webView);
             Log.i(LOG_TAG, "stage=settings-open");
             FolioleCompanionSemanticActions.clickVisible(
@@ -70,7 +74,8 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );
             return new JSONObject().put("ok", true).put("targetTestId", "sync-group-device-join")
-                .put("joined", true).put("restarted", true);
+                .put("joined", true).put("restarted", true)
+                .put("prejoinFactId", prejoinFact.getString("factId"));
         } finally {
             Activity finalActivity = activity;
             instrumentation.runOnMainSync(finalActivity::finish);

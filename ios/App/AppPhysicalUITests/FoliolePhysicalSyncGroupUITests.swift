@@ -21,6 +21,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
 
+        if isTwoDeviceJourney { captureFriFact(in: app) }
         openSyncSettings(in: app)
         resetExistingSyncGroup(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
@@ -38,13 +39,15 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         )
         enableAutomaticSync(in: app)
         openBrowse(in: app)
-        waitForJourneyFacts(["A", "B", "C"], in: app)
+        waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C"], in: app)
+        if isTwoDeviceJourney { waitForJourneyFactCount("A", count: 2, in: app) }
         captureFriFact(in: app)
         waitForProviderAutomaticConvergence()
         openSyncSettings(in: app)
         tapButton(named: "Sync Now", in: app, timeout: 30)
         waitForDisappearance(app.staticTexts["Never"], timeout: 45,
                              message: "The public Sync Now action did not update the last sync result.")
+        tapButton(named: "Sync Now", in: app, timeout: 30)
         attachScreenshot(named: "Fri-sync-group-joined")
 
         app.terminate()
@@ -56,7 +59,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         )
         XCTAssertFalse(app.buttons["Connect to Sync Group"].exists)
         openBrowse(in: app)
-        waitForJourneyFacts(["A", "B", "C", "D"], in: app)
+        waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"], in: app)
         attachScreenshot(named: "Fri-sync-group-restored")
     }
 
@@ -110,14 +113,29 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         }
     }
 
+    private func waitForJourneyFactCount(_ origin: String, count: Int, in app: XCUIApplication) {
+        let facts = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
+        )
+        let enough = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "count >= %d", count), object: facts
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [enough], timeout: 120), .completed,
+                       "Missing repeated \(origin) automatic-sync facts on Fri.")
+    }
+
     private func captureFriFact(in app: XCUIApplication) {
         tapButton(named: "Capture", in: app, timeout: 30)
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
         editor.tap()
-        editor.typeText("Multi-device sync D fact")
+        editor.typeText("Multi-device sync \(isTwoDeviceJourney ? "B" : "D") fact")
         tapButton(named: "Save", in: app, timeout: 30)
         waitForDisappearance(editor, timeout: 30, message: "The Fri business fact was not saved.")
+    }
+
+    private var isTwoDeviceJourney: Bool {
+        ProcessInfo.processInfo.environment["FOLIOLE_T152_TWO_DEVICE"] == "1"
     }
 
     private func waitForProviderAutomaticConvergence() {

@@ -22,6 +22,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("'provider-failure-logcat.txt'");
   expect(source).toContain("'logcat', '-d', '--pid', pid");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
+  expect(source).toContain("FOLIOLE_T152_SYNC_CREATOR === 'windows'");
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");
   expect(source).toContain('createDesktopSyncGroupJourneyFact');
@@ -39,6 +40,21 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+});
+
+it('creates the fixed A5 nonempty fact before requesting either desktop-created group', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupJoinScenario.java',
+    'utf8'
+  );
+  expect(source.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.createFact'))
+    .toBeLessThan(source.indexOf('companion-sync-discover'));
+  expect(source).toContain('prejoinFactId');
+  const reverse = fs.readFileSync('scripts/android/macos-a5-windows-two-device-entry.mjs', 'utf8');
+  expect(reverse).toContain("tables: ['nodes', 'sync_group_devices']");
+  expect(reverse).toContain("{ A: 2, B: 2 }");
+  expect(reverse).toContain("action: 'sync-now'");
+  expect(reverse).not.toMatch(/pm.*clear|DELETE FROM|UPDATE sync_/u);
 });
 
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {

@@ -62,6 +62,7 @@ describe('Windows Android DEV helper boundary', () => {
       'internal-install',
       'internal-open',
       'multi-device-sync-candidate',
+      'two-device-sync-provider',
       ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
       'verify'
     ]));

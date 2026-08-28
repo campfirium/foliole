@@ -15,6 +15,8 @@ import {
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
+import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
+import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
 
 const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
@@ -121,9 +123,12 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
   const backupRoot = path.join(args.paths.deviceBackupRoot, buildIdentity);
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  if (process.env.FOLIOLE_T152_SYNC_CREATOR === 'windows') {
+    return runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env, evidenceRoot });
+  }
   args.markMutationBoundary?.();
   await args.protectData('backup', path.join(evidenceRoot, 'product-baseline.json'), backupRoot);
-  const session = await openSession({ env, libraryHome: path.join(sharedRoot, 'macos-library'),
+  let session = await openSession({ env, libraryHome: path.join(sharedRoot, 'macos-library'),
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
     const desktopInitialFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
@@ -197,10 +202,13 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     if (!journeyFacts || journeyFacts.missingIds.length) {
       throw new Error(`A5 business facts did not converge: ${journeyFacts?.missingIds.join(',') ?? 'snapshot unavailable'}`);
     }
+    session = await verifyMacosA5Restart({ env, expectedGroupId: result.observation.groupId,
+      openSession, repoRoot: args.paths.buildRoot, session, sharedRoot });
     fs.writeFileSync(path.join(evidenceRoot, 'result.json'), `${JSON.stringify({
       buildIdentity, completedAt: new Date().toISOString(),
       androidFactId: factReceipt.factId, journeyFactIds: journeyFacts.foundIds,
-      journeyOrigins: journeyFacts.origins, observation: result.observation,
+      idempotent: true, journeyOrigins: journeyFacts.origins, macosRestarted: true,
+      observation: result.observation,
       resultStatus: 'success', sharedRoot
     }, null, 2)}\n`, 'utf8');
     process.stdout.write(result.output);

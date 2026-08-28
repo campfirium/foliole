@@ -29,6 +29,13 @@ const PROVIDER_ACTIONS = Object.freeze({
     progressMilestone: 'windows-paused', progressMilestones: [
       'windows-paused', 'macos-departure-observed'
     ]
+  },
+  'two-device-sync-provider': {
+    controllerAction: 'windows-two-device-provider', label: 'two-Device',
+    missingPrefix: 'windows_two_device', progressFactPattern: 'two-device-sync',
+    progressMilestone: 'provider-ready', progressMilestones: [
+      'provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted'
+    ]
   }
 });
 

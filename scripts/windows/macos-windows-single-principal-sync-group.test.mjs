@@ -36,10 +36,22 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
   expect(source).toContain('waitForMacosProvider');
   expect(source).toContain("'.tmp/artifacts/t152-7-windows'");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
+  expect(source).toContain("creator === 'windows'");
   expect(source).toContain("device: 'A'");
   expect(source).toContain("waitForOriginCount(session, 'C', 2)");
   expect(source).toContain("session.invoke('sync_companion_now')");
   expect(source.indexOf("session.invoke('sync_companion_now')"))
     .toBeLessThan(source.indexOf('const windows = await windowsWork'));
   expect(source).not.toMatch(/pm.*clear|load_companion_pairing_overview|paired_authorizations/u);
+});
+
+it('keeps the reverse desktop role on the same fixed Windows provider control plane', () => {
+  const source = fs.readFileSync('scripts/windows/macos-joins-windows-sync-group.mjs', 'utf8');
+  expect(source).toContain("action: 'two-device-sync-provider'");
+  expect(source).toContain("session.invoke('request_sync_group_join'");
+  expect(source).toContain("session.invoke('complete_sync_group_join')");
+  expect(source).toContain("device: 'B'");
+  expect(source).toContain("provider.release('consumer_complete')");
+  expect(source).toContain("session.invoke('sync_companion_now')");
+  expect(source).not.toMatch(/pm.*clear|workgroup_key\s*:/u);
 });

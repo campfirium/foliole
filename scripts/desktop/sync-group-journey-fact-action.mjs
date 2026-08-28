@@ -18,7 +18,7 @@ const JOURNEY_PNG_BASE64 = Object.freeze({
 
 export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, now = () => new Date(),
   session, withAttachment = false }) {
-  if (!['A', 'C'].includes(device)) throw new Error('Desktop journey fact device is invalid.');
+  if (!['A', 'B', 'C'].includes(device)) throw new Error('Desktop journey fact device is invalid.');
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   if (!Array.isArray(snapshot?.nodeOrder)) throw new Error('Desktop workspace snapshot is unavailable.');
   const payload = factPayload(device, snapshot, now);

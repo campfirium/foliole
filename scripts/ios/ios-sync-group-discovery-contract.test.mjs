@@ -52,7 +52,9 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('enableAutomaticSync(in: app)');
   expect(physicalTest).toContain('captureFriFact(in: app)');
   expect(physicalTest).toContain('waitForProviderAutomaticConvergence()');
-  expect(physicalTest).toContain('waitForJourneyFacts(["A", "B", "C", "D"]');
+  expect(physicalTest).toContain('FOLIOLE_T152_TWO_DEVICE');
+  expect(physicalTest).toContain('waitForJourneyFactCount("A", count: 2');
+  expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');

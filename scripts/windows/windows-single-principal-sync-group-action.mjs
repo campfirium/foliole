@@ -160,7 +160,12 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     restartedGroup = assertJoinedWindowsGroup(await invokeWindowsSyncGroupCommand(
       session.page, 'load_sync_group_overview'
     ), candidate.group_id);
-    await waitForJourneyOrigins(session.page, ['A', 'C']);
+    const beforeRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
+    await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
+    const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
+    if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
+      throw new Error('Repeated Windows sync was not idempotent.');
+    }
   } finally { await closeWindowsSyncGroupSession(session); }
   const manifestPath = path.join(options.evidenceRoot,
     'single-principal-sync-group-receipt.json');
@@ -171,7 +176,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     localDevicePersisted: firstGroup.local_device_identity_key
       === restartedGroup.local_device_identity_key,
     automaticFactId: automaticFact.factId, automaticRunId: automaticResult.run_id,
-    journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'],
+    idempotent: true, journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'],
     resultStatus: 'success', schemaVersion: 2
   }, null, 2)}\n`, 'utf8');
   return { output: '', singlePrincipalSyncGroup: { manifestPath } };

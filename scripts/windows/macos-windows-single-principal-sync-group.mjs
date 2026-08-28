@@ -14,6 +14,7 @@ import {
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
 
@@ -86,13 +87,18 @@ async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000
 }
 
 export async function runMacosWindowsSinglePrincipalSyncGroup({
-  repoRoot = process.cwd(), runWindowsAction = runWindows
+  creator = 'macos', repoRoot = process.cwd(), runWindowsAction = runWindows
 } = {}) {
   const acceptedTip = await acceptedRevision(repoRoot);
-  const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/t152-7-windows', acceptedTip);
+  const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/t152-7-windows', acceptedTip,
+    creator === 'windows' ? 'windows-creates' : 'macos-creates');
   const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
+  if (creator === 'windows') {
+    return runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot, repoRoot, sharedRoot });
+  }
+  if (creator !== 'macos') throw new Error('Desktop creator must be macos or windows.');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
+  let session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
     libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   const controller = new AbortController();
@@ -108,6 +114,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });
     const accepted = await session.accept(request.request_id);
     await waitForOriginCount(session, 'C', 2);
+    await session.invoke('sync_companion_now');
     await session.invoke('sync_companion_now');
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
@@ -129,6 +136,25 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (!automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
       throw new Error('Windows automatic sync did not deliver its business fact to Mac.');
     }
+    const factIds = Object.values(automaticSnapshot.nodesById).filter(({ title }) =>
+      /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
+    await session.close();
+    session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
+      libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
+      runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
+    const restarted = await session.load();
+    if (restarted.sync_group?.group_id !== initial.sync_group.group_id) {
+      throw new Error('Mac did not restore its two-Device Sync Group.');
+    }
+    await session.invoke('sync_companion_now');
+    const repeated = await session.invoke('load_workspace_list_snapshot', {
+      includePdfOpenings: false
+    });
+    const repeatedIds = Object.values(repeated.nodesById).filter(({ title }) =>
+      /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
+    if (JSON.stringify(repeatedIds) !== JSON.stringify(factIds)) {
+      throw new Error('Repeated Mac sync was not idempotent.');
+    }
     const receipt = { acceptedTip, completedAt: new Date().toISOString(),
       deviceCount: accepted.sync_group?.devices?.length ?? 0,
       groupId: accepted.sync_group?.group_id ?? null,
@@ -137,7 +163,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
         macosAutomatic: macosAutomaticFact.factId,
         windowsAutomatic: windowsReceipt.automaticFactId },
       providerServiceName: provider.serviceName,
-      resultStatus: 'success', schemaVersion: 3, sharedRoot,
+      idempotent: true, macosRestarted: true,
+      resultStatus: 'success', schemaVersion: 4, sharedRoot,
       windowsEvidenceRoot };
     const receiptPath = path.join(evidenceRoot, 'receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
@@ -151,7 +178,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  runMacosWindowsSinglePrincipalSyncGroup().catch((error) => {
+  const creatorIndex = process.argv.indexOf('--creator');
+  const creator = creatorIndex >= 0 ? process.argv[creatorIndex + 1] : 'macos';
+  runMacosWindowsSinglePrincipalSyncGroup({ creator }).catch((error) => {
     console.error(`[macos-windows-single-principal] status=failed message=${error.message}`);
     process.exitCode = 1;
   });

@@ -106,7 +106,7 @@ export async function runWindowsDevBuild({
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy'].includes(action)
         || action === 'device-profile' || action === 'sync-group-join-prepare'
-        || action === 'single-principal-sync-group'
+        || ['single-principal-sync-group', 'two-device-sync-provider'].includes(action)
         || preparesWindowsSyncGroupCandidate(action)
         ? [paths.systemNpmCli] : []),
       ...(['build', 'device-profile', 'sync-group-join-prepare'].includes(action)
@@ -141,7 +141,8 @@ export async function runWindowsDevBuild({
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (['device-profile', 'sync-group-join-prepare', 'single-principal-sync-group'].includes(action)
+    if (['device-profile', 'sync-group-join-prepare', 'single-principal-sync-group',
+      'two-device-sync-provider'].includes(action)
         || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }

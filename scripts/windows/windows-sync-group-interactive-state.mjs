@@ -7,7 +7,7 @@ import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-co
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
-  'multi-device-sync-from-zero', 'multi-device-sync-participation'
+  'multi-device-sync-from-zero', 'multi-device-sync-participation', 'two-device-sync-provider'
 ]);
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
 const WINDOWS_A_REJOIN_PROGRESS = [
@@ -35,6 +35,12 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'two-device-sync-provider'
+      && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted']
+        .includes(progress?.milestone)
+      && progress.factId === 'two-device-sync') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'multi-device-sync-c' && progress?.milestone === 'c-provider-ready'
       && /^multi-device-sync-c-\d{17}$/u.test(progress.factId || '')) {
     return { factId: progress.factId, milestone: progress.milestone };
