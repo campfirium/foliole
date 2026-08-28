@@ -6,7 +6,9 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { allocateTwoDeviceAttempts } from './t152-two-device-matrix-orchestrator.mjs';
+import {
+  allocateTwoDeviceAttempts, readTwoDeviceAttempts, runTwoDeviceMatrix
+} from './t152-two-device-matrix-orchestrator.mjs';
 import { writeT152TwoDeviceCellReceipt } from './t152-two-device-cell-receipt.mjs';
 import {
   TWO_DEVICE_CELLS, validateTwoDeviceMatrix
@@ -54,6 +56,51 @@ it('preallocates six ordered, isolated attempts', () => {
   expect(manifest.cells.map(({ id }) => id)).toEqual(TWO_DEVICE_CELLS.map(({ id }) => id));
   expect(new Set(manifest.cells.map(({ attemptId }) => attemptId)).size).toBe(6);
   expect(fs.existsSync(path.join(root, 'attempts.json'))).toBe(true);
+});
+
+it('stops before Fri and resumes the same ordered attempts', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 't152-two-device-repo-'));
+  const frozen = { revision: 'a'.repeat(40), tree: 'c'.repeat(40) };
+  const root = path.join(repoRoot, '.tmp', 'matrix');
+  const manifest = allocateTwoDeviceAttempts(root, frozen);
+  const calls = [];
+  const runCell = async (cell) => {
+    calls.push(cell.id);
+    const index = TWO_DEVICE_CELLS.findIndex(({ id }) => id === cell.id);
+    const value = { ...receipt(root, cell, index),
+      attemptId: cell.attemptId };
+    fs.mkdirSync(path.dirname(cell.receiptPath), { recursive: true });
+    fs.writeFileSync(cell.receiptPath, `${JSON.stringify(value)}\n`);
+    return value;
+  };
+  const freeze = async () => frozen;
+  const first = await runTwoDeviceMatrix({ inspectFri: async () => {
+    throw Object.assign(new Error('wire required'), { lastSuccessfulAction: 'fri_details_read',
+      missingFact: 'fri_not_wired' });
+  }, repoRoot, resumePath: path.join(root, 'attempts.json'), runCell,
+  freezeCandidate: freeze });
+  expect(first.status).toBe('waiting-for-fri-wired');
+  expect(calls).toEqual(TWO_DEVICE_CELLS.slice(0, 4).map(({ id }) => id));
+  expect(JSON.parse(fs.readFileSync(first.gatePath, 'utf8'))).toMatchObject({
+    completedCellIds: calls, missingFact: 'fri_not_wired', resultStatus: 'waiting'
+  });
+  const second = await runTwoDeviceMatrix({ inspectFri: async () => ({ facts: ['fri_wired'] }),
+    repoRoot, resumePath: path.join(root, 'attempts.json'), runCell,
+    freezeCandidate: freeze });
+  expect(second.status).toBe('success');
+  expect(calls).toEqual(TWO_DEVICE_CELLS.map(({ id }) => id));
+  expect(JSON.parse(fs.readFileSync(second.receiptPath, 'utf8')).resultStatus).toBe('success');
+  expect(readTwoDeviceAttempts(path.join(root, 'attempts.json'), frozen).manifest)
+    .toEqual(manifest);
+});
+
+it('rejects a resume manifest from another candidate', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 't152-two-device-'));
+  const attemptsPath = path.join(root, 'attempts.json');
+  allocateTwoDeviceAttempts(root, { revision: 'a'.repeat(40), tree: 'c'.repeat(40) });
+  expect(() => readTwoDeviceAttempts(attemptsPath, {
+    revision: 'b'.repeat(40), tree: 'c'.repeat(40)
+  })).toThrow('candidate revision or tree changed');
 });
 
 it('accepts only a complete same-revision six-cell matrix', () => {

@@ -8,8 +8,9 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
+import { createFriPhysicalReadinessAdapter } from '../ios/fri-physical-readiness.mjs';
 import {
-  TWO_DEVICE_CELLS, validateTwoDeviceMatrix
+  TWO_DEVICE_CELLS, validateTwoDeviceCell, validateTwoDeviceMatrix
 } from './t152-two-device-matrix-validator.mjs';
 
 const execute = promisify(execFile);
@@ -41,7 +42,9 @@ export async function freezeTwoDeviceCandidate(repoRoot = process.cwd()) {
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const temporary = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  fs.renameSync(temporary, filePath);
 }
 
 export function allocateTwoDeviceAttempts(root, frozen) {
@@ -52,6 +55,69 @@ export function allocateTwoDeviceAttempts(root, frozen) {
     resultStatus: 'allocated', schemaVersion: 1, ...frozen };
   writeJson(path.join(root, 'attempts.json'), manifest);
   return manifest;
+}
+
+function requireManifest(condition, message) {
+  if (!condition) throw new Error(`T152-12 resume rejected: ${message}`);
+}
+
+export function readTwoDeviceAttempts(attemptsPath, frozen) {
+  const resolved = path.resolve(attemptsPath);
+  const root = path.dirname(resolved);
+  const manifest = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+  requireManifest(manifest.schemaVersion === 1 && manifest.resultStatus === 'allocated',
+    'attempt manifest is invalid.');
+  requireManifest(manifest.revision === frozen.revision && manifest.tree === frozen.tree,
+    'candidate revision or tree changed.');
+  requireManifest(manifest.cells?.length === TWO_DEVICE_CELLS.length,
+    'attempt manifest does not contain six cells.');
+  for (const [index, expected] of TWO_DEVICE_CELLS.entries()) {
+    const cell = manifest.cells[index];
+    requireManifest(cell?.id === expected.id && cell.creator === expected.creator
+      && cell.joiner === expected.joiner, 'cell order or roles changed.');
+    requireManifest(typeof cell.attemptId === 'string' && cell.attemptId.length > 0,
+      `${expected.id} attempt is missing.`);
+    requireManifest(path.resolve(cell.evidenceRoot) === path.join(root, expected.id)
+      && path.resolve(cell.receiptPath) === path.join(root, expected.id, 'cell-receipt.json'),
+    `${expected.id} evidence paths are not bound to this manifest.`);
+  }
+  requireManifest(new Set(manifest.cells.map(({ attemptId }) => attemptId)).size
+    === TWO_DEVICE_CELLS.length, 'attempt identities are not unique.');
+  return { manifest, resolved, root };
+}
+
+function validateBoundReceipt(receipt, cell, frozen, index) {
+  const checked = validateTwoDeviceCell(receipt, TWO_DEVICE_CELLS[index]);
+  requireManifest(checked.attemptId === cell.attemptId && checked.revision === frozen.revision
+    && checked.tree === frozen.tree, `${cell.id} receipt binding changed.`);
+  return checked;
+}
+
+function readCompletedPrefix(allocated, frozen) {
+  const receipts = [];
+  let missing = false;
+  for (const [index, cell] of allocated.cells.entries()) {
+    if (!fs.existsSync(cell.receiptPath)) { missing = true; continue; }
+    requireManifest(!missing, `${cell.id} receipt follows an incomplete cell.`);
+    receipts.push(validateBoundReceipt(JSON.parse(fs.readFileSync(cell.receiptPath, 'utf8')),
+      cell, frozen, index));
+  }
+  return receipts;
+}
+
+async function waitForFri(root, frozen, receipts, inspectFri) {
+  try {
+    await inspectFri();
+    return null;
+  } catch (error) {
+    const gatePath = path.join(root, 'fri-wired-gate.json');
+    writeJson(gatePath, { attemptsPath: path.join(root, 'attempts.json'),
+      checkedAt: new Date().toISOString(), completedCellIds: receipts.map(({ cellId }) => cellId),
+      lastSuccessfulAction: error.lastSuccessfulAction ?? null,
+      missingFact: error.missingFact ?? 'fri_readiness_failed', resultStatus: 'waiting',
+      revision: frozen.revision, schemaVersion: 1, tree: frozen.tree });
+    return gatePath;
+  }
 }
 
 async function defaultRunCell(cell, frozen, repoRoot) {
@@ -72,25 +138,44 @@ async function defaultRunCell(cell, frozen, repoRoot) {
   return JSON.parse(fs.readFileSync(cell.receiptPath, 'utf8'));
 }
 
-export async function runTwoDeviceMatrix({ repoRoot = process.cwd(), runCell = defaultRunCell } = {}) {
-  const frozen = await freezeTwoDeviceCandidate(repoRoot);
-  const root = path.join(repoRoot, '.tmp', 'artifacts', 't152-12-two-device', frozen.revision,
-    new Date().toISOString().replace(/[-:.TZ]/gu, ''));
-  const allocated = allocateTwoDeviceAttempts(root, frozen);
-  const receipts = [];
-  for (const cell of allocated.cells) receipts.push(await runCell(cell, frozen, repoRoot));
+export async function runTwoDeviceMatrix({ inspectFri = createFriPhysicalReadinessAdapter(),
+  repoRoot = process.cwd(), resumePath = null, runCell = defaultRunCell,
+  freezeCandidate = freezeTwoDeviceCandidate } = {}) {
+  const frozen = await freezeCandidate(repoRoot);
+  const freshRoot = path.join(repoRoot, '.tmp', 'artifacts', 't152-12-two-device',
+    frozen.revision, new Date().toISOString().replace(/[-:.TZ]/gu, ''));
+  const resumed = resumePath ? readTwoDeviceAttempts(resumePath, frozen) : null;
+  const root = resumed?.root ?? freshRoot;
+  const allocated = resumed?.manifest ?? allocateTwoDeviceAttempts(root, frozen);
+  const receipts = readCompletedPrefix(allocated, frozen);
+  const firstMissingIndex = receipts.length;
+  for (const [offset, cell] of allocated.cells.slice(firstMissingIndex).entries()) {
+    if (cell.id === 'macos-fri') {
+      const gatePath = await waitForFri(root, frozen, receipts, inspectFri);
+      if (gatePath) return { attemptsPath: path.join(root, 'attempts.json'), gatePath,
+        receiptPath: null, root, status: 'waiting-for-fri-wired' };
+    }
+    const index = firstMissingIndex + offset;
+    await runCell(cell, frozen, repoRoot);
+    receipts.push(validateBoundReceipt(JSON.parse(fs.readFileSync(cell.receiptPath, 'utf8')),
+      cell, frozen, index));
+  }
   const checked = validateTwoDeviceMatrix(receipts);
   const receiptPath = path.join(root, 'receipt.json');
   writeJson(receiptPath, { attempts: checked.map(({ attemptId }) => attemptId),
     completedAt: new Date().toISOString(), groups: checked.map(({ groupId, groupTag }) =>
       ({ groupId, groupTag })),
     resultStatus: 'success', revision: frozen.revision, schemaVersion: 1, tree: frozen.tree });
-  return { receiptPath, root };
+  return { attemptsPath: path.join(root, 'attempts.json'), receiptPath, root, status: 'success' };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  runTwoDeviceMatrix().then(({ receiptPath }) => {
-    console.log(`[t152-two-device-matrix] status=success receipt=${receiptPath}`);
+  const resumeIndex = process.argv.indexOf('--resume');
+  const resumePath = resumeIndex >= 0 ? process.argv[resumeIndex + 1] : null;
+  if (resumeIndex >= 0 && !resumePath) throw new Error('--resume requires an attempts.json path.');
+  runTwoDeviceMatrix({ resumePath }).then((result) => {
+    const locator = result.receiptPath ?? result.gatePath;
+    console.log(`[t152-two-device-matrix] status=${result.status} locator=${locator}`);
   }).catch((error) => {
     console.error(`[t152-two-device-matrix] status=failed message=${error.message}`);
     process.exitCode = 1;
