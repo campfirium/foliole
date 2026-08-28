@@ -41,6 +41,7 @@ export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
   'frozen-revision-preflight',
+  'desktop-dnssd-route-provider',
   'sync-group-join-prepare',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',

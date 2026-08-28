@@ -25,6 +25,7 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   } });
   if (!streamed) stdout.write(output);
   const receiptNames = {
+    'desktop-dnssd-route-provider': 'desktop-dnssd-route-provider-receipt.json',
     'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
     'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',
     'multi-device-sync-c': 'sync-group-recovery-receipt.json',

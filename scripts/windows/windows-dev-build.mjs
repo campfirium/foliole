@@ -37,6 +37,9 @@ function parseJson(text, label) {
 }
 
 const failure = windowsDevFailure;
+const DESKTOP_SYNC_GROUP_BUILD_ACTIONS = new Set([
+  'desktop-dnssd-route-provider', 'single-principal-sync-group', 'two-device-sync-provider'
+]);
 
 async function checked(execute, command, args, options, stage, exitCode = 74) {
   const result = await execute(command, args, options);
@@ -87,7 +90,7 @@ export async function runWindowsDevBuild({
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy'].includes(action)
         || action === 'device-profile' || action === 'sync-group-join-prepare'
-        || ['single-principal-sync-group', 'two-device-sync-provider'].includes(action)
+        || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
         || preparesWindowsSyncGroupCandidate(action)
         || action === 'frozen-revision-preflight' ? [paths.systemNpmCli] : []),
       ...(action === 'frozen-revision-preflight' ? [paths.gitPath, paths.tarPath] : []),
@@ -124,8 +127,8 @@ export async function runWindowsDevBuild({
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (['device-profile', 'sync-group-join-prepare', 'single-principal-sync-group',
-      'two-device-sync-provider'].includes(action)
+    if (['device-profile', 'sync-group-join-prepare'].includes(action)
+        || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
         || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }

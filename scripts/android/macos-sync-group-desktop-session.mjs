@@ -12,6 +12,7 @@ import {
 } from '../desktop/macos-hidden-electron-credential-session.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 import { resolveFrozenRendererUrl } from './macos-pair-sync-desktop-session.mjs';
+import { loadDesktopRoutePeerIds } from '../desktop/desktop-dnssd-route-observation.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -114,7 +115,9 @@ export async function openMacosSyncGroupDesktopSession({
       enable: () => ensureMacosDeviceSyncGroup(actions),
       leave: () => invoke(page, 'leave_sync_group'),
       load: actions.load,
+      loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
       loadSyncTriggerResult: () => loadSyncTriggerResult(app),
+      processId: app.process().pid,
       invoke: (command, args) => invoke(page, command, args),
       sanitize: sanitizeMacosSyncGroupOverview
     };

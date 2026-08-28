@@ -6,6 +6,7 @@ import {
 import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-contract.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
+  'desktop-dnssd-route-provider',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-from-zero', 'multi-device-sync-participation',
   'single-principal-sync-group', 'two-device-sync-provider'
@@ -36,6 +37,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'desktop-dnssd-route-provider'
+      && progress?.milestone === 'route-ready'
+      && progress.factId === 'desktop-dnssd-route') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'single-principal-sync-group'
       && ['requested', 'automatic-converged', 'restarted'].includes(progress?.milestone)
       && progress.factId === 'single-principal-sync-group') {

@@ -11,6 +11,10 @@ import {
 } from './windows-multi-device-sync-participation-action.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
+  if (options.action === 'desktop-dnssd-route-provider') {
+    return (await import('./windows-desktop-dnssd-route-action.mjs'))
+      .runWindowsDesktopDnsSdRouteProvider(options);
+  }
   if (options.action === 'two-device-sync-provider') {
     return (await import('./windows-two-device-sync-provider-action.mjs'))
       .runWindowsTwoDeviceSyncProvider(options);
