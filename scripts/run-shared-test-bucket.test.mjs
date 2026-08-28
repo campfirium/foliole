@@ -99,7 +99,7 @@ describe('run-shared-test-bucket', () => {
     );
 
     expect(rootBuckets.length).toBeGreaterThan(1);
-    expect(rootBuckets.every((bucket) => bucket.targets.length <= 32)).toBe(true);
+    expect(rootBuckets.every((bucket) => bucket.targets.length <= 8)).toBe(true);
   });
 
   it('uses short-lived Electron-as-Node children under the Node bucket owner', async () => {

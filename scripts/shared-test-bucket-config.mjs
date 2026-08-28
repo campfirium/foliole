@@ -64,7 +64,7 @@ export const SHARED_TEST_BUCKETS = [
     platformCompanionTests,
     'shared-platform-companion-root',
     'shared-src-platform-companion-root',
-    32
+    8
   ),
   ...directoryBuckets(
     'src/shared/platform/companion',
