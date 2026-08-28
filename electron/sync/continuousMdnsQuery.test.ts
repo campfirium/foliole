@@ -38,3 +38,20 @@ it('suppresses known answers and restarts promptly after service withdrawal', ()
   query.stop();
   vi.useRealTimers();
 });
+
+it('keeps querying when the browser has only an irrelevant local service', () => {
+  vi.useFakeTimers();
+  const browser = { services: [{ runtime: 'local' }], update: vi.fn() };
+  const query = maintainContinuousMdnsQuery(
+    browser, (service) => service.runtime === 'remote'
+  );
+
+  vi.advanceTimersByTime(1_000);
+  expect(browser.update).toHaveBeenCalledOnce();
+  browser.services.push({ runtime: 'remote' });
+  vi.advanceTimersByTime(2_000);
+  expect(browser.update).toHaveBeenCalledOnce();
+
+  query.stop();
+  vi.useRealTimers();
+});

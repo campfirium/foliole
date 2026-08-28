@@ -31,6 +31,7 @@ export class DesktopSyncGroupDiscoverySession {
     this.stopped = false;
     this.emitSnapshot('started');
     try {
+      const localRuntimeId = loadSyncGroupRuntimeInstanceId();
       this.runtimes = [null, ...resolveCompanionMdnsIpv4Addresses()].map((networkInterface) => {
         const bonjour = networkInterface
           ? new Bonjour({ interface: networkInterface } as BonjourOptions)
@@ -39,7 +40,8 @@ export class DesktopSyncGroupDiscoverySession {
         browser.on('up', (service) => void this.upsert(service, 'found'));
         browser.on('txt-update', (service) => void this.upsert(service, 'changed'));
         browser.on('srv-update', (service) => void this.upsert(service, 'changed'));
-        const query = maintainContinuousMdnsQuery(browser);
+        const query = maintainContinuousMdnsQuery(browser, (service) =>
+          service.txt.runtime_instance_id !== localRuntimeId);
         browser.on('down', (service) => {
           this.remove(service);
           query.refresh();
