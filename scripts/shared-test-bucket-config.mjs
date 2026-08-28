@@ -29,6 +29,19 @@ function directoryBuckets(directory, labelPrefix, reportPrefix) {
   });
 }
 
+function fileBuckets(targets, labelPrefix, reportPrefix, maximumFiles) {
+  const buckets = [];
+  for (let index = 0; index < targets.length; index += maximumFiles) {
+    const suffix = Math.floor(index / maximumFiles) + 1;
+    buckets.push({
+      label: `${labelPrefix}-${suffix}`,
+      report: `.tmp/vitest/${reportPrefix}-${suffix}.json`,
+      targets: targets.slice(index, index + maximumFiles)
+    });
+  }
+  return buckets;
+}
+
 const platformRootTests = immediateTestTargets('src/shared/platform');
 const platformCompanionTests = platformRootTests.filter(
   (target) => path.posix.basename(target).startsWith('companion')
@@ -47,11 +60,12 @@ export const SHARED_TEST_BUCKETS = [
       ...immediateDirectoryTargets('src/shared', ['platform', 'ui'])
     ]
   },
-  {
-    label: 'shared-platform-companion-root',
-    report: '.tmp/vitest/shared-src-platform-companion-root.json',
-    targets: platformCompanionTests
-  },
+  ...fileBuckets(
+    platformCompanionTests,
+    'shared-platform-companion-root',
+    'shared-src-platform-companion-root',
+    32
+  ),
   ...directoryBuckets(
     'src/shared/platform/companion',
     'shared-platform-companion',

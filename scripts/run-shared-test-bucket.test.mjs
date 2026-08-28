@@ -93,6 +93,15 @@ describe('run-shared-test-bucket', () => {
     expect(new Set(reports).size).toBe(reports.length);
   });
 
+  it('bounds companion root buckets to short-lived Windows Electron children', () => {
+    const rootBuckets = SHARED_TEST_BUCKETS.filter(
+      (bucket) => bucket.label.startsWith('shared-platform-companion-root-')
+    );
+
+    expect(rootBuckets.length).toBeGreaterThan(1);
+    expect(rootBuckets.every((bucket) => bucket.targets.length <= 32)).toBe(true);
+  });
+
   it('uses short-lived Electron-as-Node children under the Node bucket owner', async () => {
     const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
     expect(packageJson.scripts['test:release:shared']).toContain(

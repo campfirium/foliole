@@ -36,4 +36,12 @@ describe('electron sqlite runner package scripts', () => {
       expect(command.startsWith(RUNNER_PREFIX)).toBe(true);
     }
   });
+
+  it('gives the hosted Android aggregate bounded headroom on slower Windows runners', async () => {
+    const manifest = JSON.parse(await readFile(PACKAGE_PATH, 'utf8'));
+    const command = manifest.scripts['test:release:android'];
+
+    expect(command).toContain('--testTimeout=45000');
+    expect(command).toContain('--hookTimeout=30000');
+  });
 });
