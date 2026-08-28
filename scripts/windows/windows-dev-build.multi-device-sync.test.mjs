@@ -22,8 +22,36 @@ function fixture() {
     sha256: createHash('sha256').update('keystore').digest('hex')
   }));
   return { root, paths: { repoRoot, signingHome, signingKeystore, signingManifest,
-    systemNode: path.join(root, 'node.exe') } };
+    systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js') } };
 }
+
+it('stops route acceptance before the interactive task when native health fails', async () => {
+  const { paths, root } = fixture();
+  fs.writeFileSync(paths.systemNode, 'node');
+  fs.writeFileSync(paths.systemNpmCli, 'npm');
+  const execute = vi.fn(async (command) => {
+    if (command === 'powershell.exe') {
+      return { code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' };
+    }
+    if (command.endsWith('electron.exe')) {
+      return { code: 1, lines: ['native probe failed'], output: '',
+        stderr: 'native probe failed', stdout: '' };
+    }
+    return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+  });
+  const deviceAction = vi.fn();
+
+  const result = await runWindowsDevBuild({
+    action: 'desktop-dnssd-route-provider', deviceAction, execute, paths,
+    platform: 'win32', prepareHost: vi.fn()
+  });
+
+  expect(result).toMatchObject({
+    exitCode: 74, summary: { failureStage: 'desktop-native-health', resultStatus: 'failure' }
+  });
+  expect(deviceAction).not.toHaveBeenCalled();
+  fs.rmSync(root, { force: true, recursive: true });
+});
 
 it('allows only the trusted native client for provider-backed sync actions', () => {
   const paths = { repoRoot: 'D:\\C\\foliole', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };

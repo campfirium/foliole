@@ -130,7 +130,9 @@ export async function runWindowsDevBuild({
     if (['device-profile', 'sync-group-join-prepare'].includes(action)
         || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
         || preparesWindowsSyncGroupCandidate(action)) {
-      output += await runWindowsDevDesktopBuild(execute, paths, checked);
+      output += await runWindowsDevDesktopBuild(execute, paths, checked, {
+        verifyDesktopDnsSd: action === 'desktop-dnssd-route-provider'
+      });
     }
     let actionResult = null;
     if (action === 'frozen-revision-preflight') {

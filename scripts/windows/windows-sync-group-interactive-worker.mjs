@@ -10,7 +10,8 @@ import { runWindowsSyncGroupDeviceAction } from './windows-sync-group-device-act
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 import {
   readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveRequest,
-  validateSyncGroupInteractiveProgress, WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV, writeJsonAtomic
+  validateSyncGroupInteractiveProgress, WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV,
+  writeJsonAtomic, writeSyncGroupInteractiveFatal
 } from './windows-sync-group-interactive-state.mjs';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -49,7 +50,19 @@ async function main() {
 
 process.env[WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV] = '1';
 process.env[WINDOWS_NATIVE_CLIENT_WORKER_ENV] = '1';
+let fatalHandled = false;
+function handleFatal(error) {
+  if (fatalHandled) return;
+  fatalHandled = true;
+  try { writeSyncGroupInteractiveFatal(state, error, process.pid); }
+  catch (writeError) {
+    console.error(`[windows-sync-group-interactive] fatal receipt failed: ${writeError.message}`);
+  }
+  console.error(`[windows-sync-group-interactive] ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
+process.once('uncaughtException', handleFatal);
+process.once('unhandledRejection', handleFatal);
 main().catch((error) => {
-  console.error(`[windows-sync-group-interactive] ${error.message}`);
-  process.exitCode = 1;
+  handleFatal(error);
 });

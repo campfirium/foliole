@@ -80,4 +80,17 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
   return { factId: progress.factId, milestone: progress.milestone };
 }
 
+export function writeSyncGroupInteractiveFatal(paths, error, workerPid) {
+  const request = readJson(paths.request);
+  const completed = {
+    completedAt: new Date().toISOString(),
+    error: error instanceof Error ? error.message : String(error),
+    exitCode: 1, nonce: request?.nonce, progress: [], schemaVersion: 1,
+    state: 'completed', workerPid
+  };
+  writeJsonAtomic(paths.result, completed);
+  writeJsonAtomic(paths.status, completed);
+  return completed;
+}
+
 export { readJson, writeJsonAtomic };
