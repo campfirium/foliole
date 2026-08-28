@@ -161,6 +161,11 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       session.page, 'load_sync_group_overview'
     ), candidate.group_id);
     const beforeRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
+    const beforeRestartAutomatic = await retryWhileDatabaseOwned(
+      () => loadSyncTriggerResult(session.app)
+    );
+    await invokeWindowsSyncGroupCommand(session.page, 'discover_sync_groups');
+    await waitForAutomaticSync(session.app, beforeRestartAutomatic?.run_id);
     await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
     if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {

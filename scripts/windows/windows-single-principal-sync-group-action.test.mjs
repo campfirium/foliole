@@ -28,6 +28,8 @@ it('uses only the new request, complete, overview, group and Device production c
   expect(source).toContain("device: 'C'");
   expect(source).toContain("result?.reason === 'automatic'");
   expect(source).toContain("includes('sqlite connection is owned')");
+  expect(source).toContain("'discover_sync_groups'");
+  expect(source).toContain('beforeRestartAutomatic');
   expect(source).toContain("waitForJourneyOriginCount(session.page, 'A', 2)");
   for (const retired of [
     'load_companion_pairing_overview', 'sync_group_members', 'paired_authorizations', 'manager'
