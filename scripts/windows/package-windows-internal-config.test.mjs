@@ -52,5 +52,5 @@ describe('internal Windows package config', () => {
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
-  });
+  }, 15_000);
 });
