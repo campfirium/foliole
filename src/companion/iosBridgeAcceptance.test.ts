@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  fetchDesktopJson: vi.fn(), join: vi.fn(), leaveGroup: vi.fn(), loadBootstrap: vi.fn(),
+  discover: vi.fn(), fetchDesktopJson: vi.fn(), join: vi.fn(), leaveGroup: vi.fn(), loadBootstrap: vi.fn(),
   loadGroup: vi.fn(), loadWorkspace: vi.fn(), postMessage: vi.fn(), saveEndpoint: vi.fn(), sign: vi.fn()
 }));
 
@@ -22,7 +22,9 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionWorkspaceSyncState: mocks.loadWorkspace,
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
-vi.mock('./iosAcceptanceSyncGroup', () => ({ joinIosAcceptanceSyncGroup: mocks.join }));
+vi.mock('./iosAcceptanceSyncGroup', () => ({
+  discoverIosHostedProvider: mocks.discover, joinIosAcceptanceSyncGroup: mocks.join
+}));
 
 import { DesktopSyncHttpError } from '../shared/platform/companionDesktopSyncHttp';
 
@@ -30,14 +32,15 @@ import { runIosBridgeAcceptance } from './iosBridgeAcceptance';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT', 'http://127.0.0.1:43123');
   window.webkit = { messageHandlers: { folioleBridgeAcceptance: { postMessage: mocks.postMessage } } };
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db' });
   mocks.loadGroup.mockResolvedValue(null);
   mocks.leaveGroup.mockResolvedValue(undefined);
-  mocks.join.mockResolvedValue({
+  mocks.discover.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123' });
+  mocks.join.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123', group: {
     devices: [{ device_identity_key: 'device-ios-1', state: 'active' }],
     group_id: 'group-ios-1', group_tag: 'a'.repeat(32), local_device_identity_key: 'device-ios-1'
+  }
   });
   mocks.saveEndpoint.mockResolvedValue({ endpoint_url: 'http://127.0.0.1:43123' });
 });
@@ -46,9 +49,7 @@ it('joins through the active Sync Group APIs, persists the endpoint, and perform
   mocks.sign.mockRejectedValue(new Error('sync_group_not_joined'));
   mocks.fetchDesktopJson.mockResolvedValue({ ok: true });
   await runIosBridgeAcceptance();
-  expect(mocks.join).toHaveBeenCalledWith(
-    'http://127.0.0.1:43123', '/app/Library/CapacitorDatabase/foliole-companionSQLite.db'
-  );
+  expect(mocks.join).toHaveBeenCalledWith('/app/Library/CapacitorDatabase/foliole-companionSQLite.db');
   expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
     device_identity_key: 'device-ios-1', discovery_exact: true,
     group_id: 'group-ios-1', group_persisted: true, phase: 'join-observed', status: 'passed'

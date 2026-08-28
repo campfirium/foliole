@@ -2,6 +2,7 @@
 import { expect, it } from 'vitest';
 
 import { verifyContentResourceAcceptance } from './ios-content-resource-acceptance-runner.mjs';
+import { hostedProviderRegistrationEvidence } from './ios-hosted-provider-test-evidence.mjs';
 
 function bridge(phase, resourceSync) {
   return {
@@ -31,6 +32,7 @@ function observations() {
       content_batch_requests: 1,
       content_requested_hashes: [['a', 'b', 'c', 'd']]
     },
+    registration: hostedProviderRegistrationEvidence(),
     signature_headers_valid: true
   };
 }

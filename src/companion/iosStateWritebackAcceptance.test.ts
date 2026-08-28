@@ -28,10 +28,7 @@ vi.mock('../shared/platform/companionSyncStateWriters', () => ({
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
-vi.mock('./iosBridgeAcceptance', () => ({
-  acceptanceEndpoint: () => 'http://127.0.0.1:43123',
-  postResult: mocks.postResult
-}));
+vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({ ensureIosAcceptanceSyncGroup: mocks.ensureGroup }));
 
 import { runIosStateWritebackAcceptance } from './iosStateWritebackAcceptance';
@@ -40,7 +37,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.loadGroup.mockResolvedValue(null);
-  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
+  mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
+    group: { group_id: 'group-1' }, joined: true });
   mocks.sync.mockResolvedValue({ pushedObjectIds: [] });
 });
 

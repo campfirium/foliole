@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
+
 const SHARED_TYPES = "'node_reading', 'node_review', 'setting'";
 
 export function parseStateWritebackSnapshot(output) {
@@ -55,7 +57,8 @@ function snapshotPassed(snapshot) {
 export function verifyStateWritebackAcceptance(first, second, firstSnapshot, secondSnapshot, observations) {
   const state = observations.state_writeback ?? {};
   const pushedTypes = [...(state.pushed_object_types ?? [])].sort();
-  const servicePassed = state.push_requests === 1 && state.pack_requests === 3 &&
+  const servicePassed = hostedProviderLifecyclePassed(observations) &&
+    state.push_requests === 1 && state.pack_requests === 3 &&
     JSON.stringify(pushedTypes) === JSON.stringify(['node_reading', 'node_review', 'review_log', 'setting']) &&
     state.ack_statuses?.length === 4 && state.ack_statuses.every((status) => status === 'accepted');
   const verdicts = {

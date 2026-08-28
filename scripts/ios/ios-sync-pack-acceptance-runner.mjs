@@ -1,6 +1,8 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
+import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
+
 export function resolveAcceptanceScenario(value) {
   if (!value || value === 'sync-group-signed-transport') return 'sync-group-signed-transport';
   if ([
@@ -72,7 +74,8 @@ export function verifySyncPackAcceptance(
   const rejectionSnapshotsStable = rejections.every(({ before, after }) =>
     JSON.stringify(before) === JSON.stringify(firstSnapshot) && JSON.stringify(after) === JSON.stringify(firstSnapshot));
   const service = observations.sync_pack ?? {};
-  const serviceObserved = service.push_requests === 1 && service.ack_statuses?.length === 2 &&
+  const serviceObserved = hostedProviderLifecyclePassed(observations) &&
+    service.push_requests === 1 && service.ack_statuses?.length === 2 &&
     service.ack_statuses.every((status) => status === 'accepted') &&
     service.pushed_node_ids?.includes('ios-acceptance-restore') &&
     service.pushed_node_ids?.includes(service.capture_node_id);

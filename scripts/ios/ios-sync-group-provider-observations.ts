@@ -14,6 +14,15 @@ export function createIosSyncGroupProviderObservations() {
     group_key_absent_before_accept: false,
     last_error: null as string | null,
     redirect_target_hits: 0,
+    registration: {
+      cancelled: false,
+      closed: false,
+      error: null as string | null,
+      port: null as number | null,
+      registered: false,
+      runtime_instance_id: null as string | null,
+      service_name: null as string | null
+    },
     request_statuses: [] as string[],
     signed_request_count: 0,
     signature_headers_valid: false,

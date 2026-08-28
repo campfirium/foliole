@@ -1,6 +1,13 @@
 import { deriveWorkgroupTag } from '../../lib/core/sync/workgroupAead';
-import { resolveRemoteSyncGroupDevices } from '../../lib/platform/syncGroupContract';
-import { loadCompanionDiscoveryEndpoint } from '../shared/platform/companion/network/companionSyncGroupHttpRequest';
+import {
+  IOS_HOSTED_DISCOVERY_TXT_KEYS,
+  IOS_HOSTED_PROVIDER_DEVICE_ID,
+  IOS_HOSTED_SYNC_GROUP_ID
+} from '../../lib/platform/iosHostedSyncGroupContract';
+import {
+  parseSyncProtocolTxt,
+  syncProtocolVersionHintMatchesDescriptor
+} from '../../lib/platform/syncProtocolContract';
 import {
   loadCompanionSyncGroup,
   loadCompanionSyncGroupWorkgroupKey
@@ -9,32 +16,82 @@ import {
   completeCompanionSyncGroupJoin,
   requestCompanionSyncGroupJoin
 } from '../shared/platform/companionSyncGroupJoinClient';
+import {
+  loadCompanionDiscoveryCandidates,
+  type DiscoveryCandidate
+} from '../shared/platform/companionWorkspaceDiscovery';
+import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-export async function joinIosAcceptanceSyncGroup(endpointUrl: string, databasePath: string) {
-  const discovery = await loadCompanionDiscoveryEndpoint(endpointUrl);
-  const pending = await requestCompanionSyncGroupJoin({
-    databasePath, endpointUrl, groupId: discovery.group_id
-  });
-  const group = await completeCompanionSyncGroupJoin({ databasePath, endpointUrl, requestId: pending.request_id });
-  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
-  const groupTag = workgroupKey ? await deriveWorkgroupTag(workgroupKey) : null;
-  if (group.group_id !== discovery.group_id || groupTag !== discovery.group_tag) {
-    throw new Error('sync_group_discovery_identity_mismatch');
-  }
-  return { ...group, group_tag: groupTag };
+export async function discoverIosHostedProvider() {
+  const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
+  const candidates = (payload.candidates ?? []).filter((candidate) => candidate.source === 'nsd')
+    .map((candidate) => ({
+      endpointUrl: candidate.endpoint_url,
+      protocolTxt: candidate.protocol_txt ?? null,
+      source: candidate.source
+    } satisfies DiscoveryCandidate));
+  const discovered = await loadCompanionDiscoveryCandidates(candidates);
+  const exact = discovered.filter((result) => matchesHostedIdentity(
+    candidates.find((candidate) => candidate.endpointUrl === result.endpointUrl)?.protocolTxt ?? null,
+    result.discovery
+  ));
+  if (exact.length !== 1) throw new Error(`ios_hosted_sync_group_discovery_count_${exact.length}`);
+  return exact[0]!;
 }
 
-export async function ensureIosAcceptanceSyncGroup(endpointUrl: string, databasePath: string | null) {
+export async function joinIosAcceptanceSyncGroup(databasePath: string) {
+  const discovered = await discoverIosHostedProvider();
+  const pending = await requestCompanionSyncGroupJoin({
+    databasePath, endpointUrl: discovered.endpointUrl, groupId: discovered.discovery.group_id
+  });
+  const group = await completeCompanionSyncGroupJoin({
+    databasePath, endpointUrl: discovered.endpointUrl, requestId: pending.request_id
+  });
+  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+  const groupTag = workgroupKey ? await deriveWorkgroupTag(workgroupKey) : null;
+  if (group.group_id !== discovered.discovery.group_id || groupTag !== discovered.discovery.group_tag) {
+    throw new Error('sync_group_discovery_identity_mismatch');
+  }
+  return { endpointUrl: discovered.endpointUrl, group: { ...group, group_tag: groupTag } };
+}
+
+export async function ensureIosAcceptanceSyncGroup(databasePath: string | null) {
+  const discovered = await discoverIosHostedProvider();
   const existing = await loadCompanionSyncGroup();
-  if (existing) return { group: existing, joined: false };
+  if (existing) {
+    const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+    const groupTag = workgroupKey ? await deriveWorkgroupTag(workgroupKey) : null;
+    if (existing.group_id !== discovered.discovery.group_id || groupTag !== discovered.discovery.group_tag) {
+      throw new Error('sync_group_identity_mismatch');
+    }
+    return { endpointUrl: discovered.endpointUrl, group: { ...existing, group_tag: groupTag }, joined: false };
+  }
   if (!databasePath) throw new Error('iOS acceptance database is unavailable.');
-  return { group: await joinIosAcceptanceSyncGroup(endpointUrl, databasePath), joined: true };
+  const joined = await joinIosAcceptanceSyncGroup(databasePath);
+  return { ...joined, joined: true };
 }
 
 export async function loadIosAcceptanceSyncPeer() {
-  const group = await loadCompanionSyncGroup();
-  if (!group) throw new Error('sync_group_not_joined');
-  const device = resolveRemoteSyncGroupDevices(group)[0];
-  if (!device) throw new Error('sync_pack_source_device_unavailable');
-  return { sourceHostName: device.device_name, sourcePeerId: device.device_identity_key };
+  const discovered = await discoverIosHostedProvider();
+  return {
+    sourceHostName: discovered.discovery.provider_device_name,
+    sourcePeerId: discovered.discovery.provider_device_id
+  };
+}
+
+function matchesHostedIdentity(protocolTxt: Record<string, string> | null, discovery: {
+  group_id: string;
+  group_tag: string;
+  protocol: unknown;
+  provider_device_id: string;
+  runtime_instance_id: string;
+}) {
+  if (!protocolTxt || discovery.group_id !== IOS_HOSTED_SYNC_GROUP_ID ||
+      discovery.provider_device_id !== IOS_HOSTED_PROVIDER_DEVICE_ID) return false;
+  return protocolTxt[IOS_HOSTED_DISCOVERY_TXT_KEYS.deviceId] === discovery.provider_device_id &&
+    protocolTxt[IOS_HOSTED_DISCOVERY_TXT_KEYS.groupId] === discovery.group_id &&
+    protocolTxt[IOS_HOSTED_DISCOVERY_TXT_KEYS.groupTag] === discovery.group_tag &&
+    protocolTxt[IOS_HOSTED_DISCOVERY_TXT_KEYS.runtimeInstanceId] === discovery.runtime_instance_id &&
+    /^[0-9a-f]{32}$/u.test(discovery.group_tag) &&
+    syncProtocolVersionHintMatchesDescriptor(parseSyncProtocolTxt(protocolTxt), discovery.protocol);
 }

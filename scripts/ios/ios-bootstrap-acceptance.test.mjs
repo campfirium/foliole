@@ -28,11 +28,7 @@ import {
   createSyncGroupProviderLaunch
 } from './ios-sync-group-provider-runner.mjs';
 import { parseStateWritebackSnapshot, verifyStateWritebackAcceptance } from './ios-state-writeback-acceptance-runner.mjs';
-import {
-  parseSyncPackSnapshot,
-  resolveAcceptanceScenario,
-  verifySyncPackAcceptance
-} from './ios-sync-pack-acceptance-runner.mjs';
+import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
 
 describe('iOS bootstrap acceptance contract', () => {
   it('isolates Simulator evidence and DerivedData by acceptance scenario', () => {
@@ -63,30 +59,31 @@ describe('iOS bootstrap acceptance contract', () => {
     )).toThrow('Unexpected acceptance signature identifier');
   });
 
-  it('uses the host-native Node service for every fixed-corpus scenario', () => {
+  it('uses one Electron main provider harness for every fixed-corpus scenario', () => {
     const syncGroup = createSyncGroupProviderLaunch('/repo', '/artifacts');
     const contentResource = createSyncGroupProviderLaunch('/repo', '/artifacts', 'content-resource-read');
     const stateWriteback = createSyncGroupProviderLaunch('/repo', '/artifacts', 'state-writeback-runtime');
     const foregroundLifecycle = createSyncGroupProviderLaunch('/repo', '/artifacts', 'foreground-sync-lifecycle');
     const syncPack = createSyncGroupProviderLaunch('/repo', '/artifacts', 'sync-pack-runtime');
 
-    expect(syncGroup.command).toBe(process.execPath);
+    expect(syncGroup.command).toBe('/repo/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
     expect(syncGroup.args.at(-1)).toBe('sync-group-signed-transport');
-    expect(syncGroup.env).toBe(process.env);
-    expect(contentResource.command).toBe(process.execPath);
+    expect(syncGroup.env).not.toBe(process.env);
+    expect(syncGroup.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(contentResource.command).toBe(syncGroup.command);
     expect(contentResource.args.at(-1)).toBe('content-resource-read');
-    expect(contentResource.env).toBe(process.env);
-    expect(stateWriteback.command).toBe(process.execPath);
+    expect(contentResource.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(stateWriteback.command).toBe(syncGroup.command);
     expect(stateWriteback.args.at(-1)).toBe('state-writeback-runtime');
-    expect(stateWriteback.env).toBe(process.env);
-    expect(foregroundLifecycle.command).toBe(process.execPath);
-    expect(foregroundLifecycle.env).toBe(process.env);
-    expect(syncPack.command).toBe(process.execPath);
+    expect(stateWriteback.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(foregroundLifecycle.command).toBe(syncGroup.command);
+    expect(foregroundLifecycle.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(syncPack.command).toBe(syncGroup.command);
     expect(syncPack.args.at(-1)).toBe('sync-pack-runtime');
-    expect(syncPack.env).toBe(process.env);
+    expect(syncPack.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
   });
 
-  it('compiles the acceptance service before launching host-native Node', () => {
+  it('compiles the provider before launching Electron main without endpoint injection', () => {
     const compileArgs = createSyncGroupProviderCompileArgs('/repo', '/artifacts');
     const launch = createSyncGroupProviderLaunch('/repo', '/artifacts', 'state-writeback-runtime');
 
@@ -94,6 +91,7 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(compileArgs).toContain('--noCheck');
     expect(launch.args[0]).toBe('/artifacts/service-dist/scripts/ios/ios-sync-group-provider-fixture.js');
     expect(launch.args).not.toContain('--experimental-strip-types');
+    expect(launch.args.join(' ')).not.toContain('endpoint');
   });
 
   it('selects only the reviewed acceptance scenarios', () => {
@@ -119,47 +117,6 @@ describe('iOS bootstrap acceptance contract', () => {
       failed: { status: 'passed' }, failedSnapshot: {}, first: {}, firstSnapshot: {},
       recovered: {}, recoveredSnapshot: {}, second: {}, secondSnapshot: {}
     }, (value) => value)).toThrow();
-  });
-
-  it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', () => {
-    const snapshot = parseSyncPackSnapshot(JSON.stringify([{
-      capture_current: 'acceptance-desktop#1', capture_versions: 2, confirmed_node_delivery_count: 2,
-      cursor: '3', dirty_count: 0, push_ack_count: 0, restore_current: 'ios-device#restore',
-      restore_deleted_at: null, restore_versions: 2, tombstone_count: 0
-    }]));
-    const gates = Object.fromEntries([
-      'existing-highlight-edit', 'quick-capture', 'selection-annotation', 'topic-content-edit', 'trash-restore'
-    ].map((key) => [key, false]));
-    const first = {
-      apply: { to_state_seq: 1 }, phase: 'applied',
-      roundtrip: { gates, push: { pushedObjectIds: ['node:capture', 'node:restore'] } }
-    };
-    const second = { phase: 'reapplied', roundtrip: { gates, push: { pushedObjectIds: [] } } };
-    const rejections = [
-      'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
-    ].map((rejection) => ({
-      after: snapshot, before: snapshot, bridge: { phase: 'rejected', rejection }
-    }));
-    const observations = { sync_pack: {
-      ack_statuses: ['accepted', 'accepted'], capture_node_id: 'capture',
-      push_requests: 1, pushed_node_ids: ['capture', 'ios-acceptance-restore']
-    } };
-
-    expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, rejections, observations)).toMatchObject({
-      first_snapshot: { cache_entries: [], capture_versions: 2, cursor: 3, restore_versions: 2 },
-      second_snapshot: { cache_entries: [], capture_versions: 2, cursor: 3, restore_versions: 2 }
-    });
-    expect(() => verifySyncPackAcceptance(
-      first, second, snapshot, { ...snapshot, capture_versions: 3 }, rejections, observations
-    ))
-      .toThrow('evidence is incomplete');
-  });
-
-  it('reads Sync Pack progress from the peer-scoped receive cursor', () => {
-    const source = fs.readFileSync('scripts/ios/ios-sync-pack-acceptance-runner.mjs', 'utf8');
-    expect(source).toContain("FROM sync_peer_cursors");
-    expect(source).toContain("stream_name = 'sync-pack-receive'");
-    expect(source).not.toContain("key = 'sync_pack_cursor'");
   });
 
   it('rejects state writeback evidence without confirmation cleanup', () => {

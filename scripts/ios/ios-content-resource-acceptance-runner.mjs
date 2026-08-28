@@ -1,3 +1,5 @@
+import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
+
 const IDS = {
   corrupt: 'ios-acceptance-corrupt-attachment',
   external: 'ios-external:orchid.md',
@@ -11,7 +13,8 @@ const TOKENS = { external: 'external-orchid-token', pdf: 'pdf-cobalt-token', top
 export function verifyContentResourceAcceptance(first, second, firstObservations, secondObservations) {
   const firstPassed = first?.phase === 'resources-synced' && first?.resource_sync && evidencePassed(first.evidence);
   const secondPassed = second?.phase === 'resources-restored' && second?.resource_sync === null && evidencePassed(second.evidence);
-  const observationsPassed = firstObservations?.signature_headers_valid && firstObservations?.content_resource &&
+  const observationsPassed = hostedProviderLifecyclePassed(secondObservations) &&
+    firstObservations?.signature_headers_valid && firstObservations?.content_resource &&
     observationCountsPassed(firstObservations.content_resource) &&
     JSON.stringify(firstObservations.content_resource) === JSON.stringify(secondObservations?.content_resource);
   if (!firstPassed || !secondPassed || !observationsPassed) {

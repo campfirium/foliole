@@ -30,9 +30,12 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'sync-trigger-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
-    expect(scenario).toContain('joinIosAcceptanceSyncGroup(endpoint, databasePath)');
+    expect(scenario).toContain('joinIosAcceptanceSyncGroup(databasePath)');
     expect(acceptanceSyncGroup).toContain('requestCompanionSyncGroupJoin({');
     expect(acceptanceSyncGroup).toContain('completeCompanionSyncGroupJoin({');
+    expect(acceptanceSyncGroup).toContain('FolioleCompanionSync.loadDiscoveryCandidates()');
+    expect(acceptanceSyncGroup).toContain('loadCompanionDiscoveryCandidates(candidates)');
+    expect(acceptanceSyncGroup).not.toContain('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
     expect(syncPackScenario).toContain(

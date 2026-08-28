@@ -107,6 +107,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Prepare Electron DNS-SD host
+        run: npm run electron:rebuild:native
       - name: Run iOS Simulator scenario bucket
         run: node scripts/ios/ios-hosted-acceptance-bucket.mjs
       - name: Upload Sync Group transport evidence and logs

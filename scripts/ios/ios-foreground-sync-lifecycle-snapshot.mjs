@@ -22,7 +22,8 @@ export function verifyForegroundSyncLifecycleAcceptance(args) {
   const countsPassed = phases['endpoint-ready'] === 2 && phases['resume-single-flight'] === 1 &&
     phases['failed-resume'] === 1 + backgroundRetryCount && phases['recovered-resume'] === 1 &&
     (phases.restart === 1 || phases.restart === 2);
-  const requestPassed = countsPassed && observations.max_concurrency === 1 &&
+  const requestPassed = hostedProviderLifecyclePassed(args.observations) && countsPassed &&
+    observations.max_concurrency === 1 &&
     observations.active_requests === 0 && observations.failed_requests === 1 + backgroundRetryCount &&
     observations.completed_requests === 5 + restartExtraCount &&
     observations.request_count === 6 + backgroundRetryCount + restartExtraCount;
@@ -88,3 +89,4 @@ function parseJson(value, fallback) {
 function stringOrNull(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
+import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';

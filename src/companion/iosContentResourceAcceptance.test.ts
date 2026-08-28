@@ -23,9 +23,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
 vi.mock('../shared/platform/companionReadableArticle', () => ({ resolveReadableCompanionArticleByNodeId: mocks.resolveArticle }));
-vi.mock('./iosBridgeAcceptance', () => ({
-  acceptanceEndpoint: () => 'http://127.0.0.1:43123', postResult: mocks.postResult
-}));
+vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({
   ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
 }));
@@ -36,7 +34,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.loadGroup.mockResolvedValue(null);
-  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
+  mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
+    group: { group_id: 'group-1' }, joined: true });
   mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });

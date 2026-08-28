@@ -5,7 +5,7 @@ import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncP
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
-import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
+import { postResult } from './iosBridgeAcceptance';
 import {
   rerunIosNodeVersionRoundtripAcceptance,
   runIosNodeVersionRoundtripAcceptance
@@ -25,11 +25,12 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
   'wrong-target': 'sync_pack_target_mismatch'
 };
 
-async function prepareSyncGroup(endpoint: string, databasePath: string | null) {
+async function prepareSyncGroup(databasePath: string | null) {
   await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
-  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
-  await saveCompanionWorkspaceSyncEndpoint(endpoint);
+  const joined = await ensureIosAcceptanceSyncGroup(databasePath);
+  await saveCompanionWorkspaceSyncEndpoint(joined.endpointUrl);
+  return joined.endpointUrl;
 }
 
 function loadPhase(): AcceptancePhase {
@@ -79,10 +80,8 @@ async function runPhase(endpoint: string, phase: AcceptancePhase) {
 
 export async function runIosSyncPackAcceptance() {
   try {
-    const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS Sync Pack acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    await prepareSyncGroup(endpoint, bootstrap.database_path);
+    const endpoint = await prepareSyncGroup(bootstrap.database_path);
     const phase = loadPhase();
     const result = await runPhase(endpoint, phase);
     advancePhase(phase);

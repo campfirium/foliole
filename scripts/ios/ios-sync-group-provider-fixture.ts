@@ -1,6 +1,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createRequire } from 'node:module';
 import path from 'node:path';
+
+import { app } from 'electron';
 
 import {
   IOS_ACCEPTANCE_CONTRACT_PEER_ID,
@@ -11,7 +14,16 @@ import {
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
+import {
+  readProviderJson,
+  readProviderText,
+  sendProviderResponse
+} from './ios-sync-group-provider-http.ts';
 import { createIosSyncGroupProviderObservations } from './ios-sync-group-provider-observations.ts';
+import {
+  hostedRegistrationInput,
+  registerHostedProvider
+} from './ios-sync-group-provider-registration.ts';
 import { createIosSyncGroupScenarioService } from './ios-sync-group-scenario-service.ts';
 import {
   type IosSyncPackAcceptanceRoutes
@@ -27,31 +39,22 @@ mkdirSync(artifactDir, { recursive: true });
 
 const observations = createIosSyncGroupProviderObservations();
 const provider = createIosSyncGroupProviderContract(observations);
+const require = createRequire(import.meta.url);
+const dnsSd = require(path.join(process.cwd(), 'scripts/desktop/desktop-dnssd-harness-loader.cjs')) as {
+  register: Parameters<typeof registerHostedProvider>[0];
+};
 let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
 let scenarioService: Awaited<ReturnType<typeof createIosSyncGroupScenarioService>> | null = null;
 let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
+let registration: ReturnType<typeof registerHostedProvider> | null = null;
+let stopping = false;
 
 function writeObservations() {
   writeFileSync(path.join(artifactDir, 'service-observations.json'), `${JSON.stringify(observations, null, 2)}\n`);
 }
 
-function send(response: ServerResponse, status: number, payload: unknown, headers: Record<string, string> = {}) {
-  response.writeHead(status, { 'Content-Type': 'application/json', ...headers });
-  response.end(JSON.stringify(payload));
-}
-
-async function readJson(request: IncomingMessage) {
-  return JSON.parse(await readText(request)) as Record<string, unknown>;
-}
-
-async function readText(request: IncomingMessage) {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks).toString('utf8');
-}
-
 async function handleJoinRequest(request: IncomingMessage, response: ServerResponse) {
-  const created = await provider.accept(await readJson(request));
+  const created = await provider.accept(await readProviderJson(request));
   if (scenario === 'sync-pack-runtime') {
     const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
     syncPackService = await createIosSyncPackAcceptanceRoutes({
@@ -68,14 +71,14 @@ async function handleJoinRequest(request: IncomingMessage, response: ServerRespo
     });
   }
   writeObservations();
-  send(response, 202, created);
+  sendProviderResponse(response, 202, created);
 }
 
 async function handleJoinAcceptance(request: IncomingMessage, response: ServerResponse) {
-  const payload = await readJson(request);
+  const payload = await readProviderJson(request);
   const acceptance = provider.collect(String(payload.request_id ?? ''));
   writeObservations();
-  send(response, acceptance ? 200 : 409,
+  sendProviderResponse(response, acceptance ? 200 : 409,
     acceptance ?? { error: 'sync_group_join_not_accepted' });
 }
 
@@ -98,13 +101,13 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
     if (request.url === '/acceptance/redirect-target') {
       observations.redirect_target_hits += 1;
       writeObservations();
-      send(response, 200, { reached: true });
+      sendProviderResponse(response, 200, { reached: true });
       return;
     }
-    const bodyText = request.method === 'POST' ? await readText(request) : '';
+    const bodyText = request.method === 'POST' ? await readProviderText(request) : '';
     if (!provider.authenticate(request, bodyText)) {
       writeObservations();
-      send(response, 401, { error: 'invalid_signature' });
+      sendProviderResponse(response, 401, { error: 'invalid_signature' });
       return;
     }
     writeObservations();
@@ -138,20 +141,20 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
       }
     }
     if (request.url === '/acceptance/redirect') {
-      send(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
+      sendProviderResponse(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
       return;
     }
     if (request.url === '/acceptance/error') {
-      send(response, 503, { error: 'acceptance_failure' });
+      sendProviderResponse(response, 503, { error: 'acceptance_failure' });
       return;
     }
-    send(response, 200, { ok: true });
+    sendProviderResponse(response, 200, { ok: true });
 }
 
 const server = createServer(async (request, response) => {
   try {
     if (request.method === 'GET' && request.url === '/companion/discovery') {
-      send(response, 200, provider.discovery);
+      sendProviderResponse(response, 200, provider.discovery);
     } else if (request.method === 'POST' && request.url === '/sync-group/join-requests') {
       await handleJoinRequest(request, response);
     } else if (request.method === 'POST' && request.url === '/sync-group/join-acceptance') {
@@ -163,21 +166,67 @@ const server = createServer(async (request, response) => {
     const message = error instanceof Error ? error.message : String(error);
     observations.last_error = message;
     writeObservations();
-    send(response, 500, { error: message });
+    sendProviderResponse(response, 500, { error: message });
   }
 });
 
-const lifecycleScenario = scenario === 'foreground-sync-lifecycle';
-const endpointHost = lifecycleScenario ? '[::1]' : '127.0.0.1';
-server.listen(0, lifecycleScenario ? '::1' : '127.0.0.1', () => {
+async function start() {
+  await app.whenReady();
+  server.listen(0, () => void registerListener());
+}
+
+async function registerListener() {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Acceptance server address is unavailable.');
+  const input = hostedRegistrationInput(provider.discovery, address.port);
+  observations.registration.port = address.port;
+  observations.registration.runtime_instance_id = provider.discovery.runtime_instance_id;
+  observations.registration.service_name = input.name;
   writeObservations();
-  writeFileSync(path.join(artifactDir, 'service.json'), `${JSON.stringify({ endpoint: `http://${endpointHost}:${address.port}` })}\n`);
-});
+  registration = registerHostedProvider(dnsSd.register, input, failRegistration);
+  try {
+    await registration.ready;
+    observations.registration.registered = true;
+    writeObservations();
+    writeFileSync(path.join(artifactDir, 'service.json'), `${JSON.stringify({
+      registered: true,
+      runtime_instance_id: provider.discovery.runtime_instance_id,
+      service_name: input.name
+    })}\n`);
+    process.send?.({ kind: 'registered', runtime_instance_id: provider.discovery.runtime_instance_id });
+  } catch (error) {
+    failRegistration(error instanceof Error ? error : new Error(String(error)));
+  }
+}
 
-process.on('SIGTERM', () => server.close(() => {
+function failRegistration(error: Error) {
+  observations.last_error = error.message;
+  observations.registration.error = error.message;
+  writeObservations();
+  process.send?.({ code: error.message, kind: 'error' });
+  void stop(1);
+}
+
+async function stop(exitCode: number) {
+  if (stopping) return;
+  stopping = true;
+  registration?.cancel();
+  observations.registration.cancelled = registration !== null;
+  await new Promise<void>((resolve) => {
+    if (!server.listening) return resolve();
+    server.close(() => resolve());
+  });
+  observations.registration.closed = true;
+  writeObservations();
   scenarioService?.close();
   syncPackService?.close();
-  process.exit(0);
-}));
+  process.send?.({ kind: 'stopped' });
+  app.exit(exitCode);
+}
+
+server.on('error', (error) => failRegistration(error));
+process.on('message', (message) => {
+  if ((message as { kind?: string })?.kind === 'stop') void stop(0);
+});
+process.on('SIGTERM', () => void stop(0));
+void start().catch((error) => failRegistration(error instanceof Error ? error : new Error(String(error))));

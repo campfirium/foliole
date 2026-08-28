@@ -18,6 +18,7 @@ import {
   parseForegroundSyncLifecycleSnapshot,
   verifyForegroundSyncLifecycleAcceptance
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
+import { hostedProviderRegistrationEvidence } from './ios-hosted-provider-test-evidence.mjs';
 import {
   createIosForegroundSyncLifecycleObservations,
   createIosForegroundSyncLifecycleService
@@ -44,7 +45,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'foreground-sync-lifecycle'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(shell).toContain('useCompanionWorkspaceSync(bootstrap)');
-    expect(shell).toContain('ensureIosAcceptanceSyncGroup(endpoint, bootstrap.database_path)');
+    expect(shell).toContain('ensureIosAcceptanceSyncGroup(bootstrap.database_path)');
     expect(shell).toContain('workspaceSync.pullFromDesktop(endpoint)');
     expect(shell).toContain('workspaceSync.state.last_synced_at !== null');
     expect(runner).toContain("waitForRequestPhase(options, 'endpoint-ready', 2)");
@@ -61,10 +62,9 @@ describe('iOS foreground sync lifecycle acceptance', () => {
   it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {
     const ambient = { KEEP: 'yes', VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: 'ambient' };
     expect(sanitizeIosAcceptanceEnv(ambient)).toEqual({ KEEP: 'yes' });
-    expect(createLifecycleBuildEnv(ambient, 'http://127.0.0.1:1')).toMatchObject({
+    expect(createLifecycleBuildEnv(ambient)).toMatchObject({
       KEEP: 'yes',
       VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1',
-      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT: 'http://127.0.0.1:1',
       VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: 'foreground-sync-lifecycle'
     });
   });
@@ -108,7 +108,8 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       'endpoint-ready', 'resume-single-flight', 'failed-resume', 'recovered-resume', 'restart'
     ].map((phase) => [phase, 1]));
     phase_requests['endpoint-ready'] = 2;
-    const observations = { foreground_sync_lifecycle: {
+    const registration = hostedProviderRegistrationEvidence();
+    const observations = { registration, foreground_sync_lifecycle: {
       active_requests: 0, completed_requests: 5, failed_requests: 1, max_concurrency: 1,
       phase_requests, request_count: 6, requests: []
     } };
@@ -116,7 +117,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations
     })).toMatchObject({ background_request_deltas: [0, 0, 0], background_retry_request_count: 0 });
-    const opportunistic = { foreground_sync_lifecycle: {
+    const opportunistic = { registration, foreground_sync_lifecycle: {
       ...observations.foreground_sync_lifecycle,
       failed_requests: 2,
       phase_requests: { ...phase_requests, 'failed-resume': 2 },
@@ -126,7 +127,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations: opportunistic
     })).toMatchObject({ background_retry_request_count: 1 });
-    const restartDoubleActive = { foreground_sync_lifecycle: {
+    const restartDoubleActive = { registration, foreground_sync_lifecycle: {
       ...observations.foreground_sync_lifecycle,
       completed_requests: 6,
       phase_requests: { ...phase_requests, restart: 2 },
@@ -155,7 +156,9 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(() => verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 },
-      observations: { foreground_sync_lifecycle: { ...observations.foreground_sync_lifecycle, max_concurrency: 2 } }
+      observations: { registration, foreground_sync_lifecycle: {
+        ...observations.foreground_sync_lifecycle, max_concurrency: 2
+      } }
     })).toThrow('evidence is incomplete');
   });
 });

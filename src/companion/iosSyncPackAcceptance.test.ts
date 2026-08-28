@@ -23,10 +23,7 @@ vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesk
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
-vi.mock('./iosBridgeAcceptance', () => ({
-  acceptanceEndpoint: () => 'http://127.0.0.1:43123',
-  postResult: mocks.postResult
-}));
+vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({
   ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
 }));
@@ -43,7 +40,8 @@ beforeEach(() => {
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.leaveGroup.mockResolvedValue(undefined);
-  mocks.ensureGroup.mockResolvedValue({ group: { group_id: 'group-1' }, joined: true });
+  mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
+    group: { group_id: 'group-1' }, joined: true });
   mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
   mocks.rerunRoundtrip.mockResolvedValue({ push: { pushedObjectIds: [] } });
@@ -53,7 +51,7 @@ beforeEach(() => {
 it('joins and applies the identity-bound legal pack on the first launch', async () => {
   await runIosSyncPackAcceptance();
 
-  expect(mocks.ensureGroup).toHaveBeenCalledWith('http://127.0.0.1:43123', '/app/foliole.db');
+  expect(mocks.ensureGroup).toHaveBeenCalledWith('/app/foliole.db');
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
     sourceHostName: 'Acceptance Desktop',

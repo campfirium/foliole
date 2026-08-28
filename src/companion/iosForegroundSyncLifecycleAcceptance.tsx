@@ -7,7 +7,7 @@ import { loadCompanionBootstrapState } from '../shared/platform/companionBootstr
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
-import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
+import { postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
@@ -52,9 +52,9 @@ function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) 
   });
 }
 
-async function prepareAcceptanceGroup(bootstrap: NativeCompanionBootstrapState, endpoint: string) {
-  await ensureIosAcceptanceSyncGroup(endpoint, bootstrap.database_path);
-  await saveCompanionWorkspaceSyncEndpoint(endpoint);
+async function prepareAcceptanceGroup(bootstrap: NativeCompanionBootstrapState) {
+  const joined = await ensureIosAcceptanceSyncGroup(bootstrap.database_path);
+  await saveCompanionWorkspaceSyncEndpoint(joined.endpointUrl);
 }
 
 async function installLifecycleEvidence() {
@@ -83,10 +83,8 @@ async function installLifecycleEvidence() {
 
 export async function runIosForegroundSyncLifecycleAcceptance(rootElement: HTMLElement) {
   try {
-    const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS foreground sync lifecycle acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
-    await prepareAcceptanceGroup(bootstrap, endpoint);
+    await prepareAcceptanceGroup(bootstrap);
     await installLifecycleEvidence();
     ReactDOM.createRoot(rootElement).render(<ForegroundSyncLifecycleShell bootstrap={bootstrap} />);
   } catch (error) {

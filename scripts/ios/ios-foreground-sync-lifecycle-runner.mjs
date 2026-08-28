@@ -13,7 +13,11 @@ import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicat
 import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { createLifecycleBuildEnv, sanitizeIosAcceptanceEnv } from './ios-foreground-sync-lifecycle-build.mjs';
-import { startSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
+import {
+  startSyncGroupProvider,
+  stopSyncGroupProvider,
+  waitForSyncGroupProviderReady
+} from './ios-sync-group-provider-runner.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
   verifyAcceptanceAppSignature,
@@ -55,8 +59,8 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     });
     const { template, udid } = owned;
     service = startSyncGroupProvider(repoRoot, artifactDir, SCENARIO);
-    const serviceInfo = await waitForJson(options, 'service.json', 'lifecycle service', (value) => Boolean(value.endpoint));
-    prepareBuild(options, udid, serviceInfo.endpoint);
+    await waitForSyncGroupProviderReady(service);
+    prepareBuild(options, udid);
     bootAndInstall(options, udid);
     const containerPath = resolveContainer(options, udid);
     const resultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
@@ -101,6 +105,8 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     const afterRestart = await waitForForegroundSyncLifecycleSnapshot({
       databasePath, previousRunId: beforeRestart.latestFinished.runId, repoRoot: options.repoRoot
     });
+    await stopSyncGroupProvider(service);
+    service = null;
     const observations = readObservations(options);
     const evidence = { afterRestart, backgroundDeltas, beforeRestart, lifecycle, observations };
     writeFileSync(path.join(artifactDir, 'evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`);
@@ -118,7 +124,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     try {
       if (owned) cleanupSimulator(options, owned.udid);
     } finally {
-      service?.kill('SIGTERM');
+      if (service) await stopSyncGroupProvider(service);
     }
   }
 }
@@ -130,8 +136,8 @@ function prepareArtifactDirectory(artifactDir) {
   }
 }
 
-function prepareBuild(options, udid, endpoint) {
-  runHeavy(options, 'npm', ['run', 'android:web:build'], { env: createLifecycleBuildEnv(process.env, endpoint) });
+function prepareBuild(options, udid) {
+  runHeavy(options, 'npm', ['run', 'android:web:build'], { env: createLifecycleBuildEnv(process.env) });
   run(options, 'npx', ['--no-install', 'cap', 'copy', 'ios']);
   try {
     runHeavy(options, 'xcodebuild', createSimulatorAcceptanceBuildArgs({
@@ -189,11 +195,6 @@ function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
   return waitForIosBridgeResult({ accept, describe: (value) => `phase=${value?.phase ?? 'missing'}`,
     initialObservation: `${label} result was not readable`, label,
     resultPath, timeoutMs });
-}
-
-function waitForJson(options, name, label, accept) {
-  return waitForAcceptanceObservation({ accept, describe: () => `${label} incomplete`, initialObservation: `${label} missing`,
-    label, read: () => JSON.parse(readFileSync(path.join(options.artifactDir, name), 'utf8')) });
 }
 
 function readObservations(options) {

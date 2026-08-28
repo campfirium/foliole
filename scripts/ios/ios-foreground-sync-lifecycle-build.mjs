@@ -9,11 +9,10 @@ export function sanitizeIosAcceptanceEnv(env) {
   return sanitized;
 }
 
-export function createLifecycleBuildEnv(env, endpoint) {
+export function createLifecycleBuildEnv(env) {
   return {
     ...sanitizeIosAcceptanceEnv(env),
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1',
-    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT: endpoint,
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: 'foreground-sync-lifecycle'
   };
 }

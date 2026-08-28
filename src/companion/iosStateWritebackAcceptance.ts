@@ -11,15 +11,10 @@ import {
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
-import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
+import { postResult } from './iosBridgeAcceptance';
 
 const NODE_ID = 'ios-state-node';
 const REVIEWED_AT = '2026-07-21T00:01:00.000Z';
-
-async function prepareGroup(endpoint: string, databasePath: string | null) {
-  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
-  await saveCompanionWorkspaceSyncEndpoint(endpoint);
-}
 
 async function writeAcceptanceState() {
   await saveCompanionSyncActiveViewState(NODE_ID);
@@ -70,12 +65,11 @@ async function syncWithoutResources(endpoint: string) {
 
 export async function runIosStateWritebackAcceptance() {
   try {
-    const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS state writeback acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
     const group = await loadCompanionSyncGroup();
+    const endpoint = (await ensureIosAcceptanceSyncGroup(bootstrap.database_path)).endpointUrl;
     if (!group) {
-      await prepareGroup(endpoint, bootstrap.database_path);
+      await saveCompanionWorkspaceSyncEndpoint(endpoint);
       await syncWithoutResources(endpoint);
       await writeAcceptanceState();
     }

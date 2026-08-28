@@ -10,7 +10,7 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
-import { joinIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
+import { discoverIosHostedProvider, joinIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 
 export type AcceptanceResult = {
   error: string | null;
@@ -33,10 +33,6 @@ declare global {
   }
 }
 
-export function acceptanceEndpoint() {
-  return import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT as string | undefined;
-}
-
 export function postResult(result: AcceptanceResult) {
   const receiver = window.webkit?.messageHandlers?.folioleBridgeAcceptance;
   if (!receiver) throw new Error('iOS bridge acceptance receiver is unavailable.');
@@ -52,10 +48,9 @@ async function expectSigningRejected() {
   }
 }
 
-async function expectHttpStatus(path: string, status: number) {
-  const endpoint = acceptanceEndpoint();
+async function expectHttpStatus(endpoint: string, path: string, status: number) {
   try {
-    await fetchDesktopJson(endpoint!, path);
+    await fetchDesktopJson(endpoint, path);
     return false;
   } catch (error) {
     return error instanceof DesktopSyncHttpError && error.status === status;
@@ -74,18 +69,17 @@ async function bestEffortClearAcceptanceState() {
 }
 
 async function runInitialJoin(databasePath: string) {
-  const endpoint = acceptanceEndpoint()!;
   await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
   if (!await expectSigningRejected()) throw new Error('Preflight Sync Group cleanup did not remove signing ability.');
-  const group = await joinIosAcceptanceSyncGroup(endpoint, databasePath);
-  const workspace = await saveCompanionWorkspaceSyncEndpoint(endpoint!);
-  const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
+  const { endpointUrl, group } = await joinIosAcceptanceSyncGroup(databasePath);
+  const workspace = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+  const signed = await fetchDesktopJson<{ ok: boolean }>(endpointUrl, '/acceptance/signed');
   postResult({
     database_path: databasePath,
     device_identity_key: group.local_device_identity_key,
     discovery_exact: typeof group.group_tag === 'string' && group.group_tag.length === 32,
-    endpoint_restored: workspace.endpoint_url === endpoint,
+    endpoint_restored: workspace.endpoint_url === endpointUrl,
     error: null,
     group_id: group.group_id,
     group_persisted: group.devices.some((device) =>
@@ -99,12 +93,12 @@ async function runInitialJoin(databasePath: string) {
 }
 
 async function runRestartAndLeave(groupId: string) {
-  const endpoint = acceptanceEndpoint()!;
+  const { endpointUrl } = await discoverIosHostedProvider();
   const restoredGroup = await loadCompanionSyncGroup();
   const workspace = await loadCompanionWorkspaceSyncState();
-  const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
-  const redirectRejected = await expectHttpStatus('/acceptance/redirect', 302);
-  const httpErrorPropagated = await expectHttpStatus('/acceptance/error', 503);
+  const signed = await fetchDesktopJson<{ ok: boolean }>(endpointUrl, '/acceptance/signed');
+  const redirectRejected = await expectHttpStatus(endpointUrl, '/acceptance/redirect', 302);
+  const httpErrorPropagated = await expectHttpStatus(endpointUrl, '/acceptance/error', 503);
   await leaveCompanionSyncGroupDevice();
   await saveCompanionWorkspaceSyncEndpoint('');
   const clearedGroup = await loadCompanionSyncGroup();
@@ -116,7 +110,7 @@ async function runRestartAndLeave(groupId: string) {
     group_id: groupId,
     group_restored: restoredGroup?.group_id === groupId,
     endpoint_cleared: clearedWorkspace.endpoint_url === null,
-    endpoint_restored: workspace.endpoint_url === endpoint,
+    endpoint_restored: workspace.endpoint_url === endpointUrl,
     sync_group_left: clearedGroup === null,
     phase: 'disconnected',
     redirect_rejected: redirectRejected,
@@ -129,8 +123,6 @@ async function runRestartAndLeave(groupId: string) {
 
 export async function runIosBridgeAcceptance() {
   try {
-    const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS Sync Group acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
     const group = await loadCompanionSyncGroup();
     if (group) await runRestartAndLeave(group.group_id);

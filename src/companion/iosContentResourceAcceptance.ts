@@ -12,7 +12,7 @@ import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncP
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
-import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
+import { postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
 const IDS = {
@@ -28,11 +28,6 @@ const TOKENS = {
   pdf: 'pdf-cobalt-token',
   topic: 'topic-amber-token'
 } as const;
-
-async function prepareGroup(endpoint: string, databasePath: string | null) {
-  await ensureIosAcceptanceSyncGroup(endpoint, databasePath);
-  await saveCompanionWorkspaceSyncEndpoint(endpoint);
-}
 
 async function applyStructure(endpoint: string) {
   const peer = await loadIosAcceptanceSyncPeer();
@@ -80,13 +75,12 @@ async function loadReadEvidence() {
 
 export async function runIosContentResourceAcceptance() {
   try {
-    const endpoint = acceptanceEndpoint();
-    if (!endpoint) throw new Error('iOS content resource acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
     const group = await loadCompanionSyncGroup();
+    const endpoint = (await ensureIosAcceptanceSyncGroup(bootstrap.database_path)).endpointUrl;
     let resourceSync = null;
     if (!group) {
-      await prepareGroup(endpoint, bootstrap.database_path);
+      await saveCompanionWorkspaceSyncEndpoint(endpoint);
       await applyStructure(endpoint);
       resourceSync = {
         content: await pullMissingContentBlobs(endpoint),

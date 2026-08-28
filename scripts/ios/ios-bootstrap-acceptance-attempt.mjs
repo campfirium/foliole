@@ -1,6 +1,6 @@
 /* global console, process */
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -15,7 +15,8 @@ import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-accept
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
-import { startSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
+import { startSyncGroupProvider, stopSyncGroupProvider,
+  waitForSyncGroupProviderReady } from './ios-sync-group-provider-runner.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
@@ -23,7 +24,6 @@ import {
   readBridgeFailure,
   verifyAcceptanceAppSignature,
   verifyBridgeResult,
-  waitForAcceptanceObservation,
   waitForBootstrapSnapshotOrFailure,
   waitForBootstrapSnapshot,
   writeAcceptanceFailure
@@ -67,8 +67,8 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       name: iosAcceptanceSimulatorName(scenario, process.pid, attemptNumber)
     });
     service = startSyncGroupProvider(repoRoot, artifactDir, scenario);
-    const serviceInfo = await waitForService(artifactDir);
-    prepareApp(options, owned.udid, serviceInfo.endpoint, scenario);
+    await waitForSyncGroupProviderReady(service);
+    prepareApp(options, owned.udid, scenario);
     bootSimulator(options, owned.udid);
     const signatureIdentifier = installFreshAcceptanceApp(options, owned.udid);
     const containerPath = resolveContainerPath(options, owned.udid);
@@ -92,6 +92,8 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       terminate: () => run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID])
     });
     const result = verifyBootstrapSnapshots(first, restart.second, owned.name);
+    await stopSyncGroupProvider(service);
+    service = null;
     const providerObservations = readServiceObservations(artifactDir);
     const secondScenarioSnapshot = readSnapshot(options, scenario, containerPath);
     writeIosAcceptanceAttemptEvidence(artifactDir, { firstBridge, firstContentObservations,
@@ -115,7 +117,7 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
     try {
       if (owned) cleanupSimulator(options, artifactDir, owned.udid);
     } finally {
-      service?.kill('SIGTERM');
+      if (service) await stopSyncGroupProvider(service);
     }
   }
 }
@@ -125,16 +127,9 @@ function createOptions(repoRoot, artifactDir) {
   return { artifactDir, repoRoot, resourceMode };
 }
 
-function waitForService(artifactDir) {
-  return waitForAcceptanceObservation({
-    accept: (value) => typeof value?.endpoint === 'string', initialObservation: 'Sync Group provider endpoint was not readable',
-    label: 'iOS Sync Group provider', read: () => JSON.parse(readFileSync(path.join(artifactDir, 'service.json'), 'utf8'))
-  });
-}
-
-function prepareApp(options, udid, endpoint, scenario) {
+function prepareApp(options, udid, scenario) {
   runHeavy(options, 'npm', ['run', 'android:web:build'], { env: { ...process.env,
-    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1', VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT: endpoint,
+    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1',
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: scenario } });
   run(options, 'npx', ['--no-install', 'cap', 'copy', 'ios']);
   try { runHeavy(options, 'xcodebuild', createAcceptanceBuildArgs(udid, options)); }

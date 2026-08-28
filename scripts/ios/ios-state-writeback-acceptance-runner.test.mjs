@@ -7,6 +7,7 @@ import {
   parseStateWritebackSnapshot,
   verifyStateWritebackAcceptance
 } from './ios-state-writeback-acceptance-runner.mjs';
+import { hostedProviderRegistrationEvidence } from './ios-hosted-provider-test-evidence.mjs';
 
 function snapshot() {
   return parseStateWritebackSnapshot(JSON.stringify([{
@@ -25,6 +26,7 @@ function snapshot() {
 
 function observations() {
   return {
+    registration: hostedProviderRegistrationEvidence(),
     state_writeback: {
       ack_statuses: ['accepted', 'accepted', 'accepted', 'accepted'],
       last_push_items: [],
@@ -34,6 +36,7 @@ function observations() {
     }
   };
 }
+
 
 it('accepts confirmed shared state while preserving device-private state after restart', () => {
   const first = {
