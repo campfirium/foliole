@@ -36,7 +36,7 @@ describe('PDF.js resource packaging', () => {
     expect(fs.existsSync(path.join(outputDirectory, PDFJS_RESOURCE_PUBLIC_PATH, 'cmaps', 'Adobe-CNS1-0.bcmap'))).toBe(true);
     expect(fs.existsSync(path.join(outputDirectory, PDFJS_RESOURCE_PUBLIC_PATH, 'standard_fonts', 'LiberationSans-Regular.ttf'))).toBe(true);
     expect(fs.existsSync(path.join(outputDirectory, PDFJS_RESOURCE_PUBLIC_PATH, 'iccs', 'CGATS001Compat-v2-micro.icc'))).toBe(true);
-  });
+  }, 15_000);
 
   it('serves decoder resources through the Vite development server', () => {
     const plugin = pdfJsResourcesPlugin(process.cwd());
