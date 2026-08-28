@@ -40,7 +40,7 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <appearance|build|capture-annotation|deploy|desktop-preview|live|secondary|verify>` 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，再覆盖固定 `D:\C\foliole` 单仓并执行固定前台动作；同步专项只使用同一 registry 已登记的 `multi-device-sync-*` 机械动作，旧 `pair-sync-recover` 明确 unsupported。Windows 不决定候选；验收控制面可读取 trusted runtime revision 证明产品 runtime 等价，但最终验收源码 revision 仍取 controller 已同步到固定 Windows 仓库的当前 Mac 完整提交，并让 macOS Internal 从该提交的 Git archive 构建。不得据此从 Windows 回传或合并源码。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作，将 Mac `dev` 精确覆盖到 LAN Git 同名镜像，再覆盖固定 `D:\C\foliole`。registry 是动作清单的机械真相，AGENTS 不复制枚举。Windows 不决定候选；trusted runtime revision 只证明产品 runtime 等价，最终验收源码 revision 仍取 controller 已同步的当前 Mac 完整提交。不得从 Windows 回传或合并源码。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
@@ -63,20 +63,10 @@
 
 ## Validation
 
-- 桌面验收先按当前原生宿主路由：macOS 会话用 macOS Hidden / Visible Native 或 `npm run electron:dev` 人工预览完成本轮主验收；Windows 原生会话用对应 Windows Native 入口。只有用户明确要求、行为命中另一平台专属边界、发布 / 安装包验收或任务承诺跨宿主一致性时，才追加另一宿主验证，不得把普通桌面任务默认挂到未来 Windows 验收。
-- macOS 与 Windows 的日常 Electron 自动验收共用 `test:e2e:desktop:native:hidden` / `test:e2e:desktop:native:visible` 能力名、共享 harness、隔离 state root 和 resource gate；hidden 必须保持屏外可渲染且不抢焦点，visible 必须显式传入当前任务 spec。成功截图写入 `.tmp/artifacts/desktop-acceptance/`，失败继续保留 diagnostics 与 trace。
-- macOS 开发预览使用 `npm run electron:dev`，该入口必须默认进入仓库 `.tmp` 下的 preview sandbox；macOS native preflight 使用 `npm run electron:native:health`，只验证 compile 与 Electron ABI，不得复用 Windows GUI health、真实 userData、Windows marker 或 renderer reload 语义。
-- macOS hidden / visible 与人工 preview 只能证明 macOS Electron 宿主行为，不得声明 Windows 主数据库、Windows ABI、native shell、dialog、tray、notification、安装包或发布链路已验收。
-- 当前原生桌面宿主的本地快检统一使用 `npm run quality:fast`：macOS / Linux 进入共享 fast kernel，Windows 进入 Windows Native T0 adapter。该检查不启动真实 Electron 窗口，也不自动运行 hosted-only 综合质量入口。
-- 凡本轮改动会进入当前桌面宿主运行时或改变桌面用户可见行为，必须先完成本轮相关前置验证并运行 `npm run quality:fast`，再完成一次 T1 / T2 / T3 检查。首选 T1 隐藏检查：新增或复用本轮任务相关 spec，并运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；若行为不适合 hidden-capable 自动化，再升级到 T2 可见检查 `npm run test:e2e:desktop:native:visible -- <spec>` 或 T3 人工检查。命中根 `AGENTS.md` 的非运行时改动豁免时，可跳过桌面 T0 / T1 / T2 / T3，并在最终汇报写明原因。
-- 桌面相关改动仍应先执行覆盖本轮能力闭环的 local-quick 前置验证；需要综合质量时由 GitHub-hosted workflow 执行对应 `quality:desktop`、`quality:shared`、`quality:android`、`quality:full` 或 `quality:release`，不得从本地快检升级进去。
-- Windows 原生 Codex 会话执行 Windows 桌面人工预览时使用 `npm run windows:preview:native`。桌面人工预览只在用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时执行；不再读取持久 preview flag 自动升级日常桌面可见改动。
-- Agent 日常 T1 / T2 自动化验收先按验收目标选入口：纯 renderer / Web UI 行为若属于桌面产品表面，仍优先使用 `npm run test:e2e:desktop:native:hidden -- <spec>` 覆盖真实 Electron renderer；只有非桌面表面才使用 headless browser。Windows 原生 Codex 会话必须运行本轮任务相关的 hidden-capable Playwright spec，不得用无参 hidden health 替代功能验收。
-- Desktop Playwright 命令选择默认锁定 Hidden Native：凡验收目标不依赖真实桌面焦点、菜单栏、系统 dialog、拖拽 / 窗口移动、tray、notification、installer / updater 或用户明确点名的可见预览，一律运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；不得直接运行裸 `playwright test` 或 `node_modules/playwright/cli.js test` 来绕过 hidden runner。只有命中上述真实前台 / OS 交互条件时，才升级到 `npm run test:e2e:desktop:native:visible -- <spec>`，并在 commentary 先说明会短暂抢占桌面焦点。
-- Hidden Native 是不打扰用户的桌面 Electron 执行模式，不是固定测试内容；无显式 spec 时 `npm run test:e2e:desktop:native:hidden` 只运行 hidden mode health，用来证明 runner / 窗口呈现链路可用，不构成本轮功能验收。
-- T1 隐藏检查只覆盖 renderer / preload bridge / IPC / 临时 sqlite / navigation / layout 等不依赖真实桌面 focus 的当前任务行为；本轮若存在适合长期锁定的 hidden-capable 产品 contract，必须新增或复用 targeted spec 并运行，但“当前 DOM 或画面可以被查询”本身不构成新增断言的理由。涉及用户可见 UI / layout / 空白页 / 视觉回归的 T1 必须同时产出至少一张当前任务页面截图或 Playwright trace 附件，截图默认写入 `.tmp/artifacts/`，最终汇报必须给出可点击截图路径或可见证据；不得用 DOM 顺序、坐标或文本存在断言替代视觉证据。若本轮没有 hidden-capable 桌面行为，最终汇报说明跳过 T1 的原因；若行为依赖 focus、窗口拖拽、系统 dialog、tray、notification、installer / updater、真实菜单栏，则必须升级到 T2 可见检查、T3 人工检查或发布专项验收。
-- T2 可见检查使用 `npm run test:e2e:desktop:native:visible -- <spec>`，必须显式传入当前任务相关 spec；它会短暂打扰桌面，但仍是自动化断言，不得汇报成人工验收，也不得复用 `windows:preview:native` 人工预览入口。
-- 桌面 Electron Playwright 在共享工作区内默认串行执行；若 `desktopSession` setup 卡住且发现另一条桌面 Playwright / 预览正在持有运行资源，必须等待或清理 stale 进程后重跑，不得把并发抢占汇报为产品失败。hidden native 入口必须通过 resource gate 或等价串行保护。
-- Desktop Playwright 只把稳定的用户行为 contract 转成具体断言，不把当前排版、DOM 结构或实现路径改写成测试 contract；测试前置状态优先用页面内事件、debug bridge 或命令入口建立，避免把导航和面板点击噪声混进主断言。只有验收目标本身是鼠标点击、命中区域、菜单/面板可达性、拖拽、物理键盘快捷键或普通用户路径完整性时，才把真实 UI 操作作为主动作。最终汇报必须说明 Playwright 断言覆盖的用户效果和未覆盖的人工观察点。
-- Windows 侧 Electron Playwright、Windows 预览和 Windows 桌面脚本链路只用于 Windows 专属验收：用户明确要求 Windows 预览、阶段 / 最终人工验收、发布 / 安装包、Windows 路径或 `app.getPath` 语义、`better-sqlite3` Windows ABI、Windows 原生 shell / dialog / tray / notification、Windows 主数据库路径、preload sandbox / IPC 在 Windows 上的边界风险、以及其他必须证明 Windows 客户端真实行为的任务。Linux Electron + Xvfb 不得宣称为 Windows 专属行为已验收。
-- `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。
+- 桌面验收以当前原生宿主为主；只有用户明确要求、目标命中另一平台专属边界、发布/安装包或方案承诺跨宿主一致性时，才追加另一宿主。任何宿主的证据不得外推为另一宿主结论。
+- 当前宿主先运行 `npm run quality:fast`，再按目标选择 T1 Hidden Native、T2 Visible Native 或 T3 人工检查。默认使用 `npm run test:e2e:desktop:native:hidden -- <spec>`；无显式 spec 的 hidden health 只证明 runner 可用，不构成功能验收。
+- 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。
+- Hidden/Visible spec 只断言稳定用户行为。UI、layout、空白页或视觉回归还必须产出截图或 trace 到 `.tmp/artifacts/`；不得用 DOM 顺序、坐标或文本存在代替视觉证据。最终汇报说明自动断言覆盖的用户效果与未覆盖观察点。
+- Desktop Playwright 使用共享 harness、隔离 state root 与 resource gate，并在共享工作区串行执行；并发占用是资源冲突，不得报告为产品失败。不得绕开 runner 直接运行裸 Playwright CLI。
+- macOS preview 使用 `npm run electron:dev` 的 `.tmp` sandbox，native preflight 使用 `npm run electron:native:health`。Windows 人工预览使用 `npm run windows:preview:native`，仅在 Windows 专属触发成立时执行。
+- Windows 专属证据覆盖 Windows path/`app.getPath`、ABI、native shell/dialog/tray/notification、主数据库、installer/updater 与 Windows preload/IPC 边界；Linux Electron + Xvfb 或 macOS preview 不得替代。

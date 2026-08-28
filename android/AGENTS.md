@@ -18,7 +18,7 @@
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
 - Mac 是 Android 日常开发主机：源码、companion 构建、Capacitor sync、Gradle、固定 A5 的 ADB 安装 / 启动 / 日志与 instrumentation 必须在同一 Mac 工作区闭环，并使用 `node scripts/android/macos-a5-dev.mjs <registered-action>` 及 `scripts/android/macos-a5-action-registry.mjs` 当前登记的具名动作。该入口只接受内建 A5 serial，不卸载主应用、不清数据、不扫描或猜测设备，并在动作结束后停止本轮 ADB server；`device-profile` 只在可恢复基线成立后保留数据覆盖安装，证明系统命名档案与内容保持；配对凭据只由 `pair-credentials` 功能入口持有，初始或既有同步只由对应具名 scenario 持有。Android Studio 与模拟器不进入日常路径。
-- Mac desktop DEV runtime 的明确测试 library 是固定 A5 的日常产品同步对象；源码、构建、ADB 与产品同步虽然是独立链路，但共同留在 Mac 当前工作区缩短开发内循环。Windows 只保留 Windows desktop 专属行为、Windows library 联动与最终跨宿主验收；不得把 Windows 当前库或 Windows controller 作为普通 Android 真机验收的前置。
+- Mac desktop DEV runtime 的明确测试 library 是固定 A5 的日常产品同步对象；源码、构建、ADB 与产品同步虽是独立链路，仍共同留在 Mac 当前工作区缩短内循环。Windows 不作为普通 Android 真机验收的前置；确需 Windows library 或跨宿主结论时按 `electron/AGENTS.md` 路由。
 - Foliole Android 日常自动化默认不得使用 Computer Use；Mac 本地 CLI 与固定 A5 证据足够时不得打开 Android Studio、Windows App 或可见终端。只有目标依赖真实可见交互且现有固定入口无法表达时，才重新评估可见操作。
 
 ## Legacy E-Reader Compatibility
@@ -44,19 +44,19 @@
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
 - Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
-- Mac 本地 A5 日常开发动作直接消费当前工作区源码，不要求先提交或 push。动作承担闭环最终宿主验收时，先提交候选并使用 `node scripts/android/macos-a5-dev.mjs <action> --formal`；build-bearing formal 动作从开始时冻结的完整 `refs/heads/dev^{commit}` 导出一次性可写 Git archive capsule，在其中执行 `npm ci`、Web/Capacitor/Gradle 构建并生成 durable provenance receipt；需要 hidden desktop 的 formal 动作还必须在同一 capsule 内按锁文件显式物化 Electron runtime 并记录版本与 executable digest，不得读取当前工作区依赖或回退。只有 complete receipt 才向 stdout 投影 accepted tip，失败 receipt 不得声明 accepted tip；当前工作区的未提交、ignored、依赖与生成物既不阻塞也不进入候选。controller 必须显式区分源码/构建、controller state、证据、设备备份、hidden desktop runtime 与固定 DEV library；设备或资料库 mutation 动作由 ordinary/formal 共用的固定 A5 排他 lease 保护，并发 owner 直接拒绝且只在能证明旧 owner 已退出时恢复，不等待、轮询、偷锁或递归清理其他 run。`status` 只取得保护 ADB 启停的 read-only lifecycle lease，不取得 mutation lease，也不声明设备既有安装属于 accepted tip；`build` 不取得 device lease，也不启停 ADB。Windows 跨宿主动作继续使用普通本地 `dev` Git 仓库：Mac controller 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，Windows 只在工作区干净时精确跟随该镜像并运行固定 adapter；Windows 不提交或推送源码上游。
+- Mac 本地 A5 日常开发动作直接消费当前工作区源码，不要求先提交或 push。动作承担闭环最终宿主验收时，先提交候选并使用 `node scripts/android/macos-a5-dev.mjs <action> --formal`；build-bearing formal 动作从开始时冻结的完整 `refs/heads/dev^{commit}` 导出一次性可写 Git archive capsule，在其中执行 `npm ci`、Web/Capacitor/Gradle 构建并生成 durable provenance receipt；需要 hidden desktop 的 formal 动作还必须在同一 capsule 内按锁文件显式物化 Electron runtime 并记录版本与 executable digest，不得读取当前工作区依赖或回退。只有 complete receipt 才向 stdout 投影 accepted tip，失败 receipt 不得声明 accepted tip；当前工作区的未提交、ignored、依赖与生成物既不阻塞也不进入候选。controller 必须显式区分源码/构建、controller state、证据、设备备份、hidden desktop runtime 与固定 DEV library；设备或资料库 mutation 动作由 ordinary/formal 共用的固定 A5 排他 lease 保护，并发 owner 直接拒绝且只在能证明旧 owner 已退出时恢复，不等待、轮询、偷锁或递归清理其他 run。`status` 只取得保护 ADB 启停的 read-only lifecycle lease，不取得 mutation lease，也不声明设备既有安装属于 accepted tip；`build` 不取得 device lease，也不启停 ADB。
 - 固定 ADB port 是 device adapter 的命令 contract，不是常驻 server contract；普通 SSH 动作必须在同一前台生命周期内以固定 port 和显式 serial 完成冷启动、设备操作与收口，不得要求 ADB server 跨 SSH 会话存活，也不得为保活引入 detached process、logon task、service、broker、无线或 GUI fallback。
-- Mac A5 日常动作必须机械分流：`status` 只读取固定设备、应用与 workspace readiness；`build` 完成 companion web build、Capacitor sync 与无 daemon debug / androidTest APK 构建；`deploy` 先执行同一 build，再用 `adb install -r` 保留数据覆盖安装、冷启动并复核 readiness。任一阶段失败必须按原阶段失败，不得卸载、清数据、使用 install cache 掩盖 stale assets 或隐式回退 Windows。Windows `live|appearance|build|deploy` 只保留对应跨宿主验收语义。
-- `capture-annotation` 由 Mac 固定入口运行 Capture/Cloze/Note 重启验收：同轮准备 Web/Capacitor 产物并构建、保留数据替换主 APK、安装匹配测试 APK、执行唯一方法、只读审计后清理测试包；不得接受外部测试类或 ADB 参数，不得清数据、卸载主包、选择设备、启动后台服务或隐式 fallback。Windows 同名 action 只保留跨宿主验收兼容入口，并复用 `scripts/android/android-a5-capture-annotation-*` 共享核心。
+- Mac A5 日常动作必须机械分流：`status` 只读取固定设备、应用与 workspace readiness；`build` 完成 companion web build、Capacitor sync 与无 daemon debug / androidTest APK 构建；`deploy` 先执行同一 build，再用 `adb install -r` 保留数据覆盖安装、冷启动并复核 readiness。任一阶段失败必须按原阶段失败，不得卸载、清数据、使用 install cache 掩盖 stale assets 或隐式回退其他宿主。
+- `capture-annotation` 由 Mac 固定入口运行 Capture/Cloze/Note 重启验收：同轮准备 Web/Capacitor 产物并构建、保留数据替换主 APK、安装匹配测试 APK、执行唯一方法、只读审计后清理测试包；不得接受外部测试类或 ADB 参数，不得清数据、卸载主包、选择设备、启动后台服务或隐式 fallback。跨宿主兼容入口按 `electron/AGENTS.md` 路由，并复用 `scripts/android/android-a5-capture-annotation-*` 共享核心。
 - 日常 credential/join/sync 切换只允许由 Mac 固定入口的 `pair-credentials`、具名同步 scenario 与 lifecycle action 把 A5 连接到显式锁定的 Mac desktop DEV 测试 library：先以只读预检拒绝多库、多设备、未同步数据、既有 endpoint、未证明的配对凭据/peer 或外来请求，再经产品已有发现、申请、批准和 workspace sync 路径完成。旧 `pair-sync` 与 Windows `pair-sync-recover` 明确 unsupported，不得兼容转发；现有入口不得接受自由参数、清数据、直接写数据库或配对偏好、读取或输出凭据、使用 reverse，亦不得把审批歧义降级成自动选择。
 
 ## Validation
 
 - Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收由 Mac 固定本地入口执行，CI 级 clean / bundled / release-like 终检只在发布、T6/T7 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 hosted `quality:android`、`quality:shared` 或 `quality:release`。
 - 固定 A5 验收若在 mutation 前创建保护备份或数据库快照，必须由当前数据库 owner 产生一致快照，或先正常停止应用写入并按 SQLite 语义完整携带相关 WAL / SHM；不得把运行中只复制主 `.db` 文件当成可恢复备份或验收证据。快照必须先通过完整性与预期 identity / group / timeline / 数据计数检查，失败时不得继续安装、配对、清理或同步动作。
-- 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在设备上暴露，必须在 Mac 固定 A5 上完成适用的本地动作；目标同时依赖 Windows desktop / library 时，再追加 Windows fixed action。现有固定入口无法表达的清数据、模拟器或可见 UI 验收必须停下重新评估，不得绕过入口直接执行。
-- Android 设备 serial、安装、启动、截图、logcat 与数据保护由 Mac 固定入口解析和执行，不接受调用方设备选择或“唯一 ready 设备”推断；Windows 跨宿主验收继续由 Windows adapter 持有自己的 fixed serial / port。
+- 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装/启动链路，或问题只会在设备上暴露，必须在 Mac 固定 A5 上完成适用的本地动作；目标同时依赖 Windows desktop/library 时，再按 `electron/AGENTS.md` 追加对应 fixed action。现有固定入口无法表达的清数据、模拟器或可见 UI 验收必须停下重新评估，不得绕过入口直接执行。
+- Android 设备 serial、安装、启动、截图、logcat 与数据保护由 Mac 固定入口解析和执行，不接受调用方设备选择或“唯一 ready 设备”推断。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。
 - `npm run android:web:dev` 是跨宿主前台 companion Web 诊断入口，不具备真机、SQLite 或 Capacitor 宿主验收语义，也不得后台化。
 - hosted Linux 的 `android:sync`、`android:host:lint`、`android:host:test` 只服务 GitHub T6 原生宿主质量检查，不是 Windows 或 A5 设备入口。
-- Mac 与 Windows fixed adapter 都只调用具名、显式 serial 的 purpose-specific helpers；日常使用固定入口，不口头推荐散落的裸 Gradle、ADB 或 Capacitor 命令。`deploy` 成功必须同时证明覆盖安装、Activity、workspace readiness 与数据保留，不能只证明 activity 前台。
+- Mac fixed adapter 只调用具名、显式 serial 的 purpose-specific helpers；日常使用固定入口，不口头推荐散落的裸 Gradle、ADB 或 Capacitor 命令。`deploy` 成功必须同时证明覆盖安装、Activity、workspace readiness 与数据保留，不能只证明 activity 前台。
