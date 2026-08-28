@@ -2,7 +2,6 @@
 
 import path from 'node:path';
 
-import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
 import { runWindowsSyncGroupDeviceAction } from './windows-sync-group-device-actions.mjs';
 import {
   captureAnnotationFailure, parseCaptureAnnotationReadiness
@@ -21,6 +20,11 @@ async function runDefaultCaptureAnnotation(options) {
 async function runDefaultSyncGroupInteractive(options) {
   const { runWindowsSyncGroupInteractiveAction } = await import('./windows-sync-group-interactive-action.mjs');
   return runWindowsSyncGroupInteractiveAction(options);
+}
+
+async function runDefaultLiveReload(options) {
+  const { runWindowsA5LiveReload } = await import('./windows-a5-live-reload-action.mjs');
+  return runWindowsA5LiveReload(options);
 }
 
 async function runCaptureAnnotationReadiness(execute, paths, env) {
@@ -112,7 +116,7 @@ async function verify(execute, paths, env) {
 export async function runWindowsDevDeviceAction({
   action, buildIdentity, candidate, evidenceRoot, execute, paths,
   phase = 'execute',
-  runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
+  runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runDefaultLiveReload,
   runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({

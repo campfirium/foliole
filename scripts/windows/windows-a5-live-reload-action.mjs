@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  startWindowsA5LiveReloadServer, WINDOWS_A5_LIVE_RELOAD_PORT
-} from './windows-a5-live-reload-server.mjs';
+import { WINDOWS_A5_LIVE_RELOAD_PORT } from './windows-a5-live-reload-contract.mjs';
+import { startWindowsA5LiveReloadServer } from './windows-a5-live-reload-server.mjs';
 import { captureWindowsA5Screenshot } from './windows-a5-screenshot.mjs';
 
 const APP_ID = 'com.foliole.android';

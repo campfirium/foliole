@@ -5,9 +5,12 @@ import path from 'node:path';
 import { createServer } from 'vite';
 
 import { buildA5SecondaryAcceptanceScript } from './windows-a5-secondary-acceptance-script.mjs';
+import {
+  WINDOWS_A5_LIVE_RELOAD_PORT, WINDOWS_A5_LIVE_RELOAD_URL
+} from './windows-a5-live-reload-contract.mjs';
 
-export const WINDOWS_A5_LIVE_RELOAD_PORT = 24605;
-export const WINDOWS_A5_LIVE_RELOAD_URL = `http://127.0.0.1:${WINDOWS_A5_LIVE_RELOAD_PORT}`;
+export { WINDOWS_A5_LIVE_RELOAD_PORT, WINDOWS_A5_LIVE_RELOAD_URL } from
+  './windows-a5-live-reload-contract.mjs';
 
 const LOADED_PATH = '/__foliole_a5_dev_loaded__';
 const ERROR_PATH = '/__foliole_a5_dev_error__';

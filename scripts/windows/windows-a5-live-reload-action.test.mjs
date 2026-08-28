@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { isAndroidImeVisible, runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
-import { WINDOWS_A5_LIVE_RELOAD_PORT } from './windows-a5-live-reload-server.mjs';
+import { WINDOWS_A5_LIVE_RELOAD_PORT } from './windows-a5-live-reload-contract.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));

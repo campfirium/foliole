@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { WINDOWS_A5_LIVE_RELOAD_URL } from './windows-a5-live-reload-server.mjs';
+import { WINDOWS_A5_LIVE_RELOAD_URL } from './windows-a5-live-reload-contract.mjs';
 
 function failure(message, stage) {
   return Object.assign(new Error(message), { exitCode: 74, stage });
