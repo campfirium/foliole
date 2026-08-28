@@ -18,6 +18,7 @@ it('publishes the same dynamic HTTP provider through Electron main and native OS
   expect(runner).toContain("delete env.ELECTRON_RUN_AS_NODE");
   expect(runner).toContain("stdio: ['ignore', 'ignore', 'inherit', 'ipc']");
   expect(runner).toContain("service.send({ kind: 'stop' })");
+  expect(workflow).toContain('node node_modules/electron/install.js');
   expect(workflow).toContain('npm run electron:rebuild:native');
 });
 

@@ -168,10 +168,14 @@ describe('iOS acceptance attempt orchestration', () => {
     expect(workflow).not.toMatch(/^\s+.*DerivedData.*$/mu);
   });
 
-  it('keeps Simulator host observation independent from an Electron runtime', () => {
+  it('prepares the Electron main DNS-SD host before Simulator acceptance', () => {
     const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
     const simulator = workflow.slice(workflow.indexOf('  simulator:'));
-    expect(simulator).not.toContain('node node_modules/electron/install.js');
-    expect(simulator).not.toContain('npm run electron:rebuild:native');
+    const install = simulator.indexOf('node node_modules/electron/install.js');
+    const rebuild = simulator.indexOf('npm run electron:rebuild:native');
+    const acceptance = simulator.indexOf('node scripts/ios/ios-hosted-acceptance-bucket.mjs');
+    expect(install).toBeGreaterThan(-1);
+    expect(install).toBeLessThan(rebuild);
+    expect(rebuild).toBeLessThan(acceptance);
   });
 });

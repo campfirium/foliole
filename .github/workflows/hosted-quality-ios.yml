@@ -107,6 +107,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Prepare Electron DNS-SD host
         run: npm run electron:rebuild:native
       - name: Run iOS Simulator scenario bucket
