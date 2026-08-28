@@ -16,9 +16,8 @@ export function resolveWindowsDesktopRouteElectronLauncher(repoRoot, makeRequire
   const launcher = requireFromRuntime('playwright')._electron;
   return { launch(options) {
     const runtimeOptions = { ...options };
-    delete runtimeOptions.executablePath;
     runtimeOptions.args = ['-r', path.win32.join(repoRoot, 'scripts', 'windows',
-      'windows-playwright-electron-bootstrap.cjs'), ...(runtimeOptions.args ?? [])];
+      'windows-playwright-electron-loader.cjs'), ...(runtimeOptions.args ?? [])];
     return launcher.launch(runtimeOptions);
   } };
 }
