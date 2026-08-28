@@ -65,7 +65,7 @@ export function canRunGuiHealth(env = process.env, platform = process.platform) 
 
 async function runChecked(command, args, label, options = {}) {
   console.log(`[electron-native-health] ${label}`);
-  const child = run(command, args, { shell: options.shell, stdio: 'inherit' });
+  const child = run(command, args, { env: options.env, shell: options.shell, stdio: 'inherit' });
   await new Promise((resolve, reject) => {
     child.on('exit', (code) => {
       if (code === 0) {
@@ -126,6 +126,8 @@ async function main() {
   await runChecked(compile.command, compile.args, 'compile electron', { shell: compile.shell });
   const rebuild = npmRunCommand('electron:rebuild:native');
   await runChecked(rebuild.command, rebuild.args, 'restore electron native ABI', { shell: rebuild.shell });
+  await runChecked(resolveElectronExecutablePath(), ['scripts/desktop/desktop-dnssd-native-probe.cjs'],
+    'verify desktop DNS-SD native lifecycle', { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
   await runChecked(process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 'verify electron sqlite ABI');
   if (!canRunGuiHealth()) {
     console.log('[electron-native-health] status: ABI_READY gui=SKIPPED reason=headless-non-windows-host');

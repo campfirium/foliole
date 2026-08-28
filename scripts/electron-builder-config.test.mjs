@@ -42,6 +42,7 @@ describe('electron-builder release packaging config', () => {
     expect(config.asar).toBe(true);
     expect(config.extraMetadata.folioleBuildChannel).toBe('github');
     expect(config.asarUnpack).toContain('**/node_modules/better-sqlite3/build/Release/*.node');
+    expect(config.asarUnpack).toContain('**/node_modules/@foliole/desktop-dnssd/build/Release/*.node');
   });
 
   it('trims bundled desktop app content to runtime dependencies and selected Electron locales', async () => {

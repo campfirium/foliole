@@ -1,38 +1,24 @@
-import { Bonjour } from 'bonjour-service';
-
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
-import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { startDesktopDnsSdBrowse, type DesktopDnsSdService } from './desktopDnsSd.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
-import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
 import {
   clearDesktopSyncGroupRoutes,
-  loadDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute,
   saveDesktopSyncGroupRoute
 } from './desktopSyncGroupRoutes.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
-type AutoSyncRuntime = {
-  bonjour: InstanceType<typeof Bonjour>;
-  browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
-  query: ReturnType<typeof maintainContinuousMdnsQuery>;
-};
-type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
-
-let runtimes: AutoSyncRuntime[] = [];
+let runtime: ReturnType<typeof startDesktopDnsSdBrowse> | null = null;
 const inFlight = new Map<string, Promise<unknown>>();
 type AvailablePeer = { endpoints: string[]; groupId: string; peerDeviceId: string };
 const retryAfterFlight = new Map<string, AvailablePeer>();
 
 export function startDesktopSyncGroupAutoSync() {
-  if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
-  const localGroup = loadDesktopSyncGroup();
-  const handleService = (service: DiscoveredService) => {
+  if (!isDesktopCompanionSyncParticipating() || runtime) return;
+  const handleService = (service: DesktopDnsSdService) => {
     if (!isDesktopCompanionSyncParticipating()) return;
     const endpoints = resolveCompanionMdnsServiceEndpoints(service);
     const txt = service.txt as Record<string, unknown>;
@@ -49,41 +35,31 @@ export function startDesktopSyncGroupAutoSync() {
     if (endpoints.length === 0 || !groupId || !peerDeviceId) return null;
     return syncAvailablePeer({ endpoints, groupId, peerDeviceId });
   };
-  const consumeService = (service: DiscoveredService) => { void handleService(service); };
-  const addresses = resolveCompanionMdnsIpv4Addresses();
-  const interfaces = [null, ...addresses];
-  runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
-    const bonjour = new Bonjour(options);
-    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
-    const query = maintainContinuousMdnsQuery(browser, (service) => {
-      if (!isCurrentGroupPeerService(service, localGroup) || !localGroup) return false;
-      return loadDesktopSyncGroupRoutes(localGroup.group_id).some((route) =>
-        route.peer_device_id === service.txt?.device_id);
-    }, (services) => services.forEach(consumeService));
-    const runtime = { bonjour, browser, query };
-    browser.on('down', (service) => {
-      const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
-      if (deviceId) removeDesktopSyncGroupRoute(deviceId);
-      const work = handleService(service);
-      void Promise.resolve(work).finally(() => {
-        if (runtimes.includes(runtime)) query.refresh();
-      });
+  try {
+    runtime = startDesktopDnsSdBrowse((event) => {
+      if (event.kind === 'error') {
+        console.info('[sync-group] system DNS-SD unavailable', event);
+        stopDesktopSyncGroupAutoSync();
+        return;
+      }
+      if (event.kind === 'lost') {
+        const deviceId = typeof event.service.txt.device_id === 'string'
+          ? event.service.txt.device_id : null;
+        if (deviceId) removeDesktopSyncGroupRoute(deviceId);
+        return;
+      }
+      void handleService(event.service);
     });
-    browser.on('txt-update', consumeService);
-    browser.on('srv-update', consumeService);
-    return runtime;
-  });
+  } catch (error) {
+    console.info('[sync-group] system DNS-SD unavailable', error);
+    stopDesktopSyncGroupAutoSync();
+  }
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  const activeRuntimes = runtimes;
-  runtimes = [];
-  activeRuntimes.forEach(({ bonjour, browser, query }) => {
-    query.stop();
-    browser.stop();
-    bonjour.destroy();
-  });
+  const activeRuntime = runtime;
+  runtime = null;
+  activeRuntime?.stop();
   retryAfterFlight.clear();
   clearDesktopSyncGroupRoutes();
 }

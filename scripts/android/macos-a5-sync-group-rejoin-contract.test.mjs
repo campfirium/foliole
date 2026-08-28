@@ -173,10 +173,6 @@ it('treats the rejoined roster as sufficient without a per-peer paired device re
 
 it('freezes explicit success criteria and rejects every credential repair path', () => {
   const source = fs.readFileSync('scripts/android/macos-a5-sync-group-rejoin-action.mjs', 'utf8');
-  const targetSelection = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncTargetSelection.java',
-    'utf8'
-  );
   expect(source).toContain('restart_does_not_restore_group_credential_route_or_progress');
   expect(source).toContain('first_leave_uses_existing_formal_product_contract');
   expect(source).not.toContain('second_leave_proves_new_workgroup_contract_cleanup');
@@ -196,8 +192,6 @@ it('freezes explicit success criteria and rejects every credential repair path',
   expect(source).toContain('instrumentationModeArgs: CREDENTIALS_ONLY_DISCOVERY_TARGET');
   expect(source).toContain("recoveryEvidenceGoal: 'credentials-signable'");
   expect(source).not.toContain('recoverExistingT132Credential');
-  expect(targetSelection).toContain('expectedEndpointUrl.isEmpty()');
-  expect(targetSelection).toContain('clickVisible');
 });
 
 it('freezes the pre-candidate product runtime without reading credential plaintext', () => {

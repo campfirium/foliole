@@ -24,9 +24,14 @@ export function createMacosNativePreflightCommands({
     ...env,
     FOLIOLE_ELECTRON_TEST_STATE_ROOT: sandboxRoot
   }, { homeDir, platform });
+  const electronBin = path.join(appRoot, 'node_modules', 'electron', 'dist',
+    'Electron.app', 'Contents', 'MacOS', 'Electron');
   return [
+    { args: ['run', 'electron:rebuild:native'], bin: npmBin(platform), cwd: appRoot, env },
     { args: ['run', 'macos:security-bookmarks:build'], bin: npmBin(platform), cwd: appRoot, env },
     { args: ['run', 'electron:compile'], bin: npmBin(platform), cwd: appRoot, env },
+    { args: ['scripts/desktop/desktop-dnssd-native-probe.cjs'], bin: electronBin, cwd: appRoot,
+      env: { ...env, ELECTRON_RUN_AS_NODE: '1' } },
     { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: nodeBin, cwd: appRoot, env }
   ];
 }
