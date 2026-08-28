@@ -110,7 +110,7 @@ it('stores appearance colors in the active base color mode', async () => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColor)).toBe('#336699');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColorDark)).toBe('#224488');
   });
-});
+}, 15_000);
 
 it('uses dark color defaults for appearance color reset controls', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);

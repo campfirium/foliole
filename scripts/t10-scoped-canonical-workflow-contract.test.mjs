@@ -118,7 +118,7 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
     expect(ios.jobs.simulator.strategy.matrix.include).toBe('${{ fromJSON(inputs.simulator_matrix) }}');
     const buckets = JSON.parse(ios.on.workflow_call.inputs.simulator_matrix.default);
     expect(buckets).toEqual([
-      { bucket: 'pairing-and-content', scenarios: ['pairing-signed-transport', 'content-resource-read'] },
+      { bucket: 'sync-group-and-content', scenarios: ['sync-group-signed-transport', 'content-resource-read'] },
       { bucket: 'state-writeback-runtime', scenarios: ['state-writeback-runtime'] },
       { bucket: 'sync-pack-runtime', scenarios: ['sync-pack-runtime'] },
       { bucket: 'foreground-sync-lifecycle', scenarios: ['foreground-sync-lifecycle'] }

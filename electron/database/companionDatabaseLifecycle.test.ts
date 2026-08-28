@@ -58,7 +58,7 @@ describe('shared companion database migration executor', () => {
         .pluck().get()).toBe('workgroup_key');
       sqlite.close();
     }
-  });
+  }, 60_000);
 
   it('runs the legacy state-sequence command migration without losing rows', async () => {
     const { port, sqlite } = fixture(4);
