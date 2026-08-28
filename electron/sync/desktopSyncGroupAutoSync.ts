@@ -5,6 +5,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
+import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
 import {
@@ -53,12 +54,21 @@ export function startDesktopSyncGroupAutoSync() {
       clearDesktopSyncGroupRoutes();
     },
     onService: ({ kind, service }) => {
-      if (!isCurrentGroupPeerService(service, localGroup)) return;
+      if (!isCurrentGroupPeerService(service, localGroup)) {
+        logDesktopDnsSdDiagnostic('route_rejected', {
+          eventKind: kind, reason: 'not_current_group_peer',
+          ...desktopDnsSdServiceFacts(service)
+        });
+        return;
+      }
       if (kind === 'lost') {
         const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
         if (deviceId) removeDesktopSyncGroupRoute(deviceId);
         return;
       }
+      logDesktopDnsSdDiagnostic('route_candidate', {
+        eventKind: kind, ...desktopDnsSdServiceFacts(service)
+      });
       void handleService(service);
     }
   });

@@ -6,6 +6,8 @@ import {
   type DesktopDnsSdService
 } from '@foliole/desktop-dnssd';
 
+import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
+
 const SERVICE = { domain: 'local.', type: '_foliole-sync._tcp' } as const;
 
 export type DesktopDnsSdServiceChange = {
@@ -26,7 +28,10 @@ type SessionState = {
   pending: Map<string, ResolveToken>;
   resolved: Map<string, DesktopDnsSdService>;
   stopped: boolean;
+  sessionId: number;
 };
+
+let sessionRevision = 0;
 
 function serviceKey(service: DesktopDnsSdService) {
   return `${service.interfaceIndex}:${service.fqdn || service.name}`;
@@ -35,6 +40,7 @@ function serviceKey(service: DesktopDnsSdService) {
 function stopSession(state: SessionState) {
   if (state.stopped) return;
   state.stopped = true;
+  logDesktopDnsSdDiagnostic('browse_stopped', { sessionId: state.sessionId });
   state.browser?.cancel();
   state.pending.forEach(({ handle }) => handle?.cancel());
   state.pending.clear();
@@ -42,6 +48,9 @@ function stopSession(state: SessionState) {
 }
 
 function failSession(state: SessionState, event: Extract<DesktopDnsSdEvent, { kind: 'error' }>) {
+  logDesktopDnsSdDiagnostic('session_error', {
+    code: event.code, message: event.message, sessionId: state.sessionId
+  });
   stopSession(state);
   state.callbacks.onError(new Error(`${event.code}: ${event.message}`));
 }
@@ -51,6 +60,9 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
   state.pending.get(key)?.handle?.cancel();
   const token: ResolveToken = { handle: null };
   state.pending.set(key, token);
+  logDesktopDnsSdDiagnostic('resolve_started', {
+    fqdn: service.fqdn, interfaceIndex: service.interfaceIndex, sessionId: state.sessionId
+  });
   const handle = resolve({ ...SERVICE, interfaceIndex: service.interfaceIndex,
     name: service.name }, (event) => {
     if (state.stopped || state.pending.get(key) !== token) return;
@@ -60,6 +72,9 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
       return;
     }
     if (event.kind !== 'found' && event.kind !== 'changed') return;
+    logDesktopDnsSdDiagnostic('resolve_completed', {
+      ...desktopDnsSdServiceFacts(event.service), sessionId: state.sessionId
+    });
     state.pending.delete(key);
     const kind = state.resolved.has(key) ? 'changed' : 'found';
     state.resolved.set(key, event.service);
@@ -73,6 +88,10 @@ function consumeBrowseEvent(state: SessionState, event: DesktopDnsSdEvent) {
   if (state.stopped) return;
   if (event.kind === 'error') return failSession(state, event);
   if (event.kind === 'registered') return;
+  logDesktopDnsSdDiagnostic('browse_service', {
+    eventKind: event.kind, ...desktopDnsSdServiceFacts(event.service),
+    sessionId: state.sessionId
+  });
   const key = serviceKey(event.service);
   if (event.kind !== 'lost') return beginResolve(state, event.service);
   state.pending.get(key)?.handle?.cancel();
@@ -83,9 +102,12 @@ function consumeBrowseEvent(state: SessionState, event: DesktopDnsSdEvent) {
 }
 
 export function startDesktopDnsSdSession(callbacks: SessionCallbacks): DesktopDnsSdSession {
+  const sessionId = ++sessionRevision;
   const state: SessionState = {
-    browser: null, callbacks, pending: new Map(), resolved: new Map(), stopped: false
+    browser: null, callbacks, pending: new Map(), resolved: new Map(), sessionId, stopped: false
   };
+  logDesktopDnsSdDiagnostic('browse_started', { domain: SERVICE.domain, sessionId,
+    type: SERVICE.type });
   state.browser = browse(SERVICE, (event) => consumeBrowseEvent(state, event));
   if (state.stopped) state.browser.cancel();
   return Object.freeze({ stop: () => stopSession(state) });

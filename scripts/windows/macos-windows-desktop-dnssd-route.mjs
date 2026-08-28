@@ -67,6 +67,7 @@ async function runPhase({ evidenceRoot, label, libraryHome, repoRoot, runtimeRoo
   fs.mkdirSync(phaseRoot, { recursive: true });
   const session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
     libraryHome, operationId: `${path.basename(evidenceRoot)}-${label}`, repoRoot,
+    runtimeLogPath: path.join(phaseRoot, 'macos-runtime.log'),
     runtimeRoot: path.join(runtimeRoot, label) });
   const executor = createActionExecutor({ logPath: path.join(phaseRoot, 'windows-action.log'),
     progressPath: path.join(phaseRoot, 'windows-progress.jsonl') });

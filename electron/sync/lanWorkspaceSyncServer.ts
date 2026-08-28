@@ -17,6 +17,7 @@ import {
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
@@ -159,6 +160,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
   const server = createWorkspaceSyncHttpServer(args);
   try {
     await listenOnSyncPort(server, port);
+    logDesktopDnsSdDiagnostic('http_listener_ready', { port });
     await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port);

@@ -8,6 +8,7 @@ import {
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
+import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const REGISTRATION_TIMEOUT_MS = 5_000;
@@ -64,6 +65,11 @@ function registrationError(event: Extract<DesktopDnsSdEvent, { kind: 'error' }>)
 
 function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: number) {
   const runtimeId = loadSyncGroupRuntimeInstanceId();
+  const addresses = resolveCompanionMdnsIpv4Addresses();
+  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, factsRevision);
+  logDesktopDnsSdDiagnostic('register_started', {
+    addresses, lifecycle, name, port: input.port, type: SERVICE.type
+  });
   const registered = new Promise<void>((resolve, reject) => {
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -74,17 +80,24 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
       if (error) reject(error); else resolve();
     };
     const handle = register({ ...SERVICE,
-      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, factsRevision),
+      name,
       port: input.port,
       txt: { app_version: input.appVersion, device_id: input.deviceId,
         facts_revision: String(factsRevision), group_id: input.groupId,
         group_tag: input.groupTag,
-        ipv4_addresses: resolveCompanionMdnsIpv4Addresses().join(','),
+        ipv4_addresses: addresses.join(','),
         runtime_instance_id: runtimeId, ...serializeSyncProtocolTxt() }
     }, (event) => {
       if (lifecycle !== lifecycleRevision) return;
-      if (event.kind === 'error') finish(registrationError(event));
-      else if (event.kind === 'registered') finish();
+      if (event.kind === 'error') {
+        logDesktopDnsSdDiagnostic('register_error', {
+          code: event.code, lifecycle, message: event.message, name
+        });
+        finish(registrationError(event));
+      } else if (event.kind === 'registered') {
+        logDesktopDnsSdDiagnostic('register_completed', { lifecycle, name, port: input.port });
+        finish();
+      }
     });
     activeAdvertisement = { finish, handle, input, lifecycle };
     timer = setTimeout(() => finish(new Error(
@@ -111,6 +124,11 @@ export function refreshCompanionMdnsAdvertisement() {
 
 export function stopCompanionMdnsAdvertisement() {
   lifecycleRevision += 1;
+  if (activeAdvertisement) {
+    logDesktopDnsSdDiagnostic('register_stopped', {
+      lifecycle: activeAdvertisement.lifecycle
+    });
+  }
   activeAdvertisement?.finish(new Error('desktop_dnssd_registration_cancelled'));
   activeAdvertisement?.handle.cancel();
   activeAdvertisement = null;

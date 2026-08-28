@@ -13,6 +13,7 @@ import {
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 import { resolveFrozenRendererUrl } from './macos-pair-sync-desktop-session.mjs';
 import { loadDesktopRoutePeerIds } from '../desktop/desktop-dnssd-route-observation.mjs';
+import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -72,7 +73,7 @@ export async function openMacosSyncGroupDesktopSession({
   acquireCredentialSession = acquireMacosHiddenCredentialSessionLock,
   env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
   operationId = randomUUID(), prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
-  rendererExists = fs.existsSync, repoRoot, runtimeRoot,
+  rendererExists = fs.existsSync, repoRoot, runtimeLogPath, runtimeRoot,
   resolveCredentialSession = resolveMacosHiddenCredentialSession, timeoutMs = 20_000
 }) {
   void operationId;
@@ -90,6 +91,7 @@ export async function openMacosSyncGroupDesktopSession({
     app = await launcher.launch(launchOptions(
       repoRoot, env, credentialSession, libraryHome, runtime, rendererUrl
     ));
+    if (runtimeLogPath) captureSyncRuntimeLog(app.process(), runtimeLogPath);
     const page = await app.firstWindow({ timeout: timeoutMs });
     await page.waitForURL(rendererUrl, { timeout: timeoutMs });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
