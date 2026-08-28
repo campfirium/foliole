@@ -1,9 +1,41 @@
+/* global process */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
 import {
   runWindowsSyncGroupInteractiveEnvelope
 } from './windows-sync-group-interactive-action.mjs';
+import { WINDOWS_NATIVE_CLIENT_TASK } from './windows-client-native-interactive-state.mjs';
+
+const XML_ENTITIES = new Map([
+  ['&amp;', '&'], ['&apos;', "'"], ['&gt;', '>'], ['&lt;', '<'], ['&quot;', '"']
+]);
+
+function xmlValue(xml, tag) {
+  const match = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'u').exec(xml);
+  if (!match) throw new Error(`FolioleNativeClient task XML omitted ${tag}`);
+  return match[1].replace(/&(amp|apos|gt|lt|quot);/gu, (entity) => XML_ENTITIES.get(entity));
+}
+
+export async function inspectRouteSelfcheckTaskAction(options) {
+  const queried = await options.execute('schtasks.exe',
+    ['/Query', '/TN', WINDOWS_NATIVE_CLIENT_TASK, '/XML'], {
+      cwd: options.paths.repoRoot, timeoutCode: 'sync_group_interactive_query_timeout',
+      timeoutMs: 30_000, windowsHide: true
+    });
+  if (queried.code !== 0) throw new Error('FolioleNativeClient task query failed.');
+  const expectedWorker = path.join(options.paths.repoRoot, 'scripts', 'windows',
+    'windows-sync-group-interactive-worker.mjs');
+  const taskAction = { arguments: xmlValue(queried.output, 'Arguments'),
+    command: xmlValue(queried.output, 'Command'),
+    workingDirectory: xmlValue(queried.output, 'WorkingDirectory') };
+  if (taskAction.command !== process.execPath || taskAction.arguments !== `"${expectedWorker}"`
+      || taskAction.workingDirectory !== options.paths.repoRoot) {
+    throw new Error('FolioleNativeClient task action is not the formal interactive worker.');
+  }
+  return { ...taskAction, resultStatus: 'verified', workerScript: expectedWorker };
+}
 
 function assertTerminal(envelope, expectedExitCode, label) {
   if (envelope?.state !== 'completed' || envelope.exitCode !== expectedExitCode
@@ -22,6 +54,7 @@ export async function runWindowsDesktopDnsSdRouteSelfcheck(options, dependencies
   if (!negative.error) throw new Error('desktop DNS-SD route negative selfcheck lost its error');
   const positiveEnvelope = await dispatch('native-probe');
   const positive = assertTerminal(positiveEnvelope, 0, 'positive');
+  const taskAction = await inspectRouteSelfcheckTaskAction(options);
   const actionResult = positiveEnvelope.actionResult;
   const manifestPath = path.join(options.evidenceRoot,
     'desktop-dnssd-route-controller-selfcheck-receipt.json');
@@ -30,7 +63,7 @@ export async function runWindowsDesktopDnsSdRouteSelfcheck(options, dependencies
       negativeError: 'selfcheck-negative-error.json',
       runtimeLog: 'desktop-dnssd-route-runtime/action.log',
       runtimeReceipt: 'desktop-dnssd-route-runtime/receipt.json' },
-    completedAt: new Date().toISOString(), negative, positive,
+    completedAt: new Date().toISOString(), negative, positive, taskAction,
     resultStatus: 'success', runtimeRoot: options.runtimeRepoRoot, schemaVersion: 1
   }, null, 2)}\n`, 'utf8');
   return { ...actionResult, desktopDnsSdRouteControllerSelfcheck: { manifestPath }, output: '' };
