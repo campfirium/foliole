@@ -22,7 +22,7 @@ function fakeBackend() {
   return { backend, handles };
 }
 
-describe('desktop DNS-SD prepare-only capability', () => {
+describe('desktop DNS-SD capability', () => {
   it('exposes typed browse, resolve, register, and idempotent cancellation', () => {
     const { _createCapability } = require(modulePath);
     const { backend, handles } = fakeBackend();
@@ -110,14 +110,25 @@ describe('desktop DNS-SD prepare-only capability', () => {
     expect(handles[0].cancel).not.toHaveBeenCalled();
   });
 
-  it('keeps production Electron entry points on the accepted adapter', () => {
+  it('statically cuts every desktop production discovery path to OS DNS-SD', () => {
     const roots = ['electron/main.ts', ...fs.readdirSync('electron/sync')
       .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
       .map((name) => path.join('electron/sync', name))];
     const productionSource = roots.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
 
-    expect(productionSource).not.toContain('@foliole/desktop-dnssd');
-    expect(productionSource).not.toContain('foliole-desktop-dnssd');
-    expect(productionSource).toContain('bonjour-service');
+    expect(productionSource).toContain('@foliole/desktop-dnssd');
+    expect(productionSource).not.toContain('bonjour-service');
+    expect(productionSource).not.toContain('multicast-dns');
+    expect(productionSource).not.toContain('maintainContinuousMdnsQuery');
+  });
+
+  it('keeps native DNS-SD out of the sandboxed preload and public IPC contract', () => {
+    const preload = fs.readFileSync('electron/preload.cjs', 'utf8');
+    const ipc = fs.readFileSync('electron/ipc/contracts.ts', 'utf8');
+
+    expect(preload).not.toContain('desktop-dnssd');
+    expect(preload).not.toContain('DNS-SD');
+    expect(ipc).not.toContain('desktop-dnssd');
+    expect(ipc).not.toContain('DNS-SD');
   });
 });

@@ -22,7 +22,7 @@ import {
   resumeDesktopCompanionSync
 } from '../sync/desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from '../sync/desktopCompanionSyncPreference.js';
-import { runDesktopSyncCoordinator } from '../sync/desktopSyncCoordinator.js';
+import { runDesktopManualSyncWithDiscovery } from '../sync/desktopSyncGroupAutoSync.js';
 import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
@@ -116,7 +116,7 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   else if (command === NATIVE_COMMANDS.pauseCompanionSync) await pauseDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(runtimeIdentity());
   else if (command === NATIVE_COMMANDS.syncCompanionNow) {
-    await runDesktopSyncCoordinator('manual');
+    await runDesktopManualSyncWithDiscovery();
     return runWithDatabaseConnectionOwner(() => overview());
   }
   else return mutateJoinRequest(command, args);

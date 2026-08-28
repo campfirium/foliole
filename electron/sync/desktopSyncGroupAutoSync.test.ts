@@ -3,12 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({
-  callback: null as null | ((service: unknown) => void),
-  constructorOptions: [] as unknown[],
-  credentialAccess: vi.fn(() => { throw new Error('credential store should stay closed'); }),
-  updateCallbacks: new Map<string, (service: unknown) => void>(),
   continueSync: vi.fn(),
-  destroy: vi.fn(),
   group: {
     devices: [
       { device_identity_key: 'desktop-a', device_name: 'Desktop', platform: 'darwin', state: 'active' },
@@ -16,9 +11,10 @@ const runtime = vi.hoisted(() => ({
     ],
     group_id: 'group-1', local_device_identity_key: 'desktop-a'
   },
-  stop: vi.fn(),
-  update: vi.fn(),
-  refreshPending: vi.fn(() => false)
+  onError: null as null | ((error: Error) => void),
+  onService: null as null | ((event: Record<string, unknown>) => void),
+  participating: true,
+  stop: vi.fn()
 }));
 
 function deferred<T>() {
@@ -27,214 +23,152 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function currentTxt(extra: Record<string, string> = {}) {
-  return { ...serializeSyncProtocolTxt(), ...extra };
-}
-
-vi.mock('bonjour-service', () => ({
-  Bonjour: class {
-    destroy = runtime.destroy;
-    constructor(options: unknown) { runtime.constructorOptions.push(options); }
-    find(_query: unknown, callback: (service: unknown) => void) {
-      runtime.callback = callback;
-      return {
-        on: (event: string, handler: (service: unknown) => void) => {
-          runtime.updateCallbacks.set(event, handler);
-        },
-        stop: runtime.stop,
-        update: runtime.update
-      };
-    }
+vi.mock('./desktopDnsSd.js', () => ({
+  startDesktopDnsSdSession: (callbacks: typeof runtime) => {
+    runtime.onError = callbacks.onError;
+    runtime.onService = callbacks.onService;
+    return { stop: runtime.stop };
   }
 }));
-vi.mock('./companionMdnsAdvertisement.js', () => ({
-  resolveCompanionMdnsIpv4Addresses: () => ['192.168.1.10', '10.0.0.10']
-}));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncParticipating: () => true
+  isDesktopCompanionSyncParticipating: () => runtime.participating
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
 vi.mock('./desktopSyncCoordinator.js', () => ({
   runDesktopSyncCoordinator: runtime.continueSync
 }));
-vi.mock('./desktopSyncGroupJoinState.js', () => ({
-  refreshDesktopSyncGroupPendingJoinEndpoint: runtime.refreshPending
-}));
 
-import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
+import {
+  runDesktopManualSyncWithDiscovery,
+  startDesktopSyncGroupAutoSync,
+  stopDesktopSyncGroupAutoSync
+} from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
+
+function service(extra: Record<string, string> = {}, addresses = ['192.168.1.12']) {
+  return {
+    addresses, domain: 'local.', fqdn: 'a5._foliole-sync._tcp.local.',
+    host: 'a5.local.', interfaceIndex: 1, name: 'A5', port: 43121,
+    txt: { ...serializeSyncProtocolTxt(), device_id: 'android-b', group_id: 'group-1', ...extra },
+    type: '_foliole-sync._tcp'
+  };
+}
 
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
-  runtime.callback = null;
-  runtime.constructorOptions = [];
-  runtime.updateCallbacks.clear();
+  runtime.onError = null;
+  runtime.onService = null;
+  runtime.participating = true;
   runtime.continueSync.mockResolvedValue({ complete: true, cursor: 9 });
-  runtime.refreshPending.mockReturnValue(false);
 });
 
-it('continues sync with a saved Device when its provider advertises again', async () => {
+it('discovers a transient route for manual sync while automatic sync is disabled', async () => {
+  runtime.participating = false;
+  const manual = runDesktopManualSyncWithDiscovery();
+  runtime.onService?.({ kind: 'found', service: service() });
+
+  await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
+  expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
+    endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
+  }));
+  expect(runtime.stop).toHaveBeenCalledOnce();
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
+});
+
+it('lets manual sync consume the active automatic discovery session', async () => {
   startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
+  const manual = runDesktopManualSyncWithDiscovery();
+  runtime.onService?.({ kind: 'found', service: service() });
+
+  await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
+  expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
+    peer_device_id: 'android-b'
+  }));
+  expect(loadDesktopSyncGroupRoutes('group-1')).toHaveLength(1);
+});
+
+it('cancels pending on-demand discovery with the desktop discovery lifecycle', async () => {
+  runtime.participating = false;
+  const manual = runDesktopManualSyncWithDiscovery();
+  stopDesktopSyncGroupAutoSync();
+
+  await expect(manual).rejects.toThrow('desktop_dnssd_session_stopped');
+  expect(runtime.stop).toHaveBeenCalledOnce();
+});
+
+it('automatically syncs a saved Device at its resolved OS DNS-SD route', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.onService?.({ kind: 'found', service: service() });
+
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  expect(runtime.constructorOptions).toEqual([
-    undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
-  ]);
   expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', local_device_id: 'desktop-a',
     peer_device_id: 'android-b', peer_device_name: 'A5'
   }));
-  expect(runtime.credentialAccess).not.toHaveBeenCalled();
-});
-
-it('publishes the discovered Device route while automatic sync is still active', async () => {
-  const active = deferred<{ complete: boolean; cursor: number }>();
-  runtime.continueSync.mockReturnValueOnce(active.promise);
-  startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
   })]);
-  active.resolve({ complete: true, cursor: 9 });
 });
 
-it('does not start a session for an advertised v2 Device', async () => {
+it('rejects an incompatible discovered Device before transport', async () => {
   startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({
-      device_id: 'android-b', group_id: 'group-1', protocol_max_version: '2',
-      protocol_min_version: '2', protocol_version: '2'
-    })
-  });
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  runtime.onService?.({ kind: 'found', service: service({
+    protocol_max_version: '2', protocol_min_version: '2', protocol_version: '2'
+  }) });
+  await Promise.resolve();
+
   expect(runtime.continueSync).not.toHaveBeenCalled();
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
 });
 
-it('continues a saved Device at its newly advertised endpoint', async () => {
-  startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43122,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
-    endpoint_url: 'http://192.168.1.12:43122', peer_device_id: 'android-b'
-  }));
-});
-
-it('uses the reachable announcement source before a peer virtual adapter address', async () => {
-  startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.56.1', '192.168.0.11'], port: 43122,
-    referer: { address: '192.168.0.11' },
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
-    endpoint_url: 'http://192.168.0.11:43122'
-  }));
-});
-
-it('falls back to an advertised LAN address when the announcement source cannot sync', async () => {
+it('tries each resolved address and keeps only the successful transient route', async () => {
   runtime.continueSync.mockRejectedValueOnce(new Error('unreachable route'));
   startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['169.254.161.89'], port: 43122,
-    referer: { address: '169.254.161.89' },
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1',
-      ipv4_addresses: '192.168.0.10,169.254.161.89' })
-  });
+  runtime.onService?.({ kind: 'found', service: service({
+    ipv4_addresses: '192.168.0.10,169.254.161.89'
+  }, ['169.254.161.89']) });
+
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(2));
   expect(runtime.continueSync).toHaveBeenLastCalledWith('automatic', expect.objectContaining({
-    endpoint_url: 'http://192.168.0.10:43122'
+    endpoint_url: 'http://192.168.0.10:43121'
   }));
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
-    endpoint_url: 'http://192.168.0.10:43122'
+    endpoint_url: 'http://192.168.0.10:43121'
   })]);
 });
 
-it('does not restore a withdrawn route when every advertised address fails', async () => {
+it('removes a route when the system DNS-SD service is lost', async () => {
   startDesktopSyncGroupAutoSync();
-  runtime.callback?.({ addresses: ['192.168.0.11'], port: 43122,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' }) });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  runtime.continueSync.mockRejectedValue(new Error('provider stopped'));
-  runtime.updateCallbacks.get('down')?.({ addresses: ['169.254.77.104'], port: 43122,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1',
-      ipv4_addresses: '169.254.77.104,192.168.0.11' }) });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(3));
+  const peer = service();
+  runtime.onService?.({ kind: 'found', service: peer });
+  await vi.waitFor(() => expect(loadDesktopSyncGroupRoutes('group-1')).toHaveLength(1));
+  runtime.onService?.({ kind: 'lost', service: peer });
 
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
 });
 
-it('retries the latest advertisement after an interrupted peer sync settles', async () => {
-  const first = deferred<{ complete: boolean; cursor: number }>();
-  runtime.continueSync.mockReturnValueOnce(first.promise).mockResolvedValue({ complete: true, cursor: 10 });
+it('fails closed and clears routes when the OS discovery host fails', async () => {
   startDesktopSyncGroupAutoSync();
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  runtime.callback?.({
-    addresses: ['192.168.1.12'], port: 43122,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
+  runtime.onService?.({ kind: 'found', service: service() });
+  await vi.waitFor(() => expect(loadDesktopSyncGroupRoutes('group-1')).toHaveLength(1));
+  runtime.onError?.(new Error('desktop_dnssd_browse_failed'));
 
-  first.resolve({ complete: false, cursor: 9 });
+  expect(runtime.stop).toHaveBeenCalledOnce();
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
+});
+
+it('retries the newest changed service after an in-flight sync settles', async () => {
+  const first = deferred<{ complete: boolean; cursor: number }>();
+  runtime.continueSync.mockReturnValueOnce(first.promise);
+  startDesktopSyncGroupAutoSync();
+  runtime.onService?.({ kind: 'found', service: service() });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  runtime.onService?.({ kind: 'changed', service: { ...service(), port: 43122 } });
+  first.resolve({ complete: true, cursor: 9 });
+
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(2));
   expect(runtime.continueSync).toHaveBeenLastCalledWith('automatic', expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43122'
   }));
-});
-
-it('continues sync when an existing service publishes a newer facts revision', async () => {
-  startDesktopSyncGroupAutoSync();
-  runtime.updateCallbacks.get('txt-update')?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', facts_revision: '2', group_id: 'group-1' })
-  });
-
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-});
-
-it('requeries the replacement instance after withdrawal-triggered sync settles', async () => {
-  const first = deferred<{ complete: boolean; cursor: number }>();
-  runtime.continueSync.mockReturnValueOnce(first.promise);
-  startDesktopSyncGroupAutoSync();
-  runtime.updateCallbacks.get('down')?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  expect(runtime.update).not.toHaveBeenCalled();
-  first.resolve({ complete: true, cursor: 9 });
-  await vi.waitFor(() => expect(runtime.update).toHaveBeenCalledOnce());
-});
-
-it('does not requery a replacement after automatic sync stops', async () => {
-  const first = deferred<{ complete: boolean; cursor: number }>();
-  runtime.continueSync.mockReturnValueOnce(first.promise);
-  startDesktopSyncGroupAutoSync();
-  runtime.updateCallbacks.get('down')?.({
-    addresses: ['192.168.1.12'], port: 43121,
-    txt: currentTxt({ device_id: 'android-b', group_id: 'group-1' })
-  });
-  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-
-  stopDesktopSyncGroupAutoSync();
-  first.resolve({ complete: true, cursor: 9 });
-  await first.promise;
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(runtime.update).not.toHaveBeenCalled();
 });

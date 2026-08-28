@@ -2,254 +2,96 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
-const bonjourMock = vi.hoisted(() => ({
-  constructorOptions: [] as unknown[],
-  constructorCallback: null as ((error: unknown) => void) | null,
-  destroy: vi.fn(),
+const runtime = vi.hoisted(() => ({
+  callbacks: [] as Array<(event: Record<string, unknown>) => void>,
+  cancel: vi.fn(),
   networkInterfaces: vi.fn(),
-  publish: vi.fn(),
-  stop: vi.fn((callback?: () => void) => callback?.())
+  register: vi.fn()
 }));
 
 vi.mock('node:os', () => ({
-  default: {
-    hostname: () => 'V',
-    networkInterfaces: bonjourMock.networkInterfaces
+  default: { networkInterfaces: runtime.networkInterfaces }
+}));
+vi.mock('@foliole/desktop-dnssd', () => ({
+  register: (input: unknown, callback: (event: Record<string, unknown>) => void) => {
+    runtime.register(input);
+    runtime.callbacks.push(callback);
+    return { cancel: runtime.cancel, stop: runtime.cancel };
   }
 }));
-
 vi.mock('./syncGroupRuntimeInstance.js', () => ({
   loadSyncGroupRuntimeInstanceId: () => 'runtime-desktop-v'
 }));
 
-vi.mock('bonjour-service', () => {
-  class MockBonjour {
-    constructor(options: unknown, callback: (error: unknown) => void) {
-      bonjourMock.constructorOptions.push(options);
-      bonjourMock.constructorCallback = callback;
-    }
+import {
+  refreshCompanionMdnsAdvertisement,
+  startCompanionMdnsAdvertisement,
+  stopCompanionMdnsAdvertisement
+} from './companionMdnsAdvertisement.js';
 
-    publish(opts: unknown) {
-      bonjourMock.publish(opts);
-      return { stop: bonjourMock.stop };
-    }
+const input = {
+  appVersion: '0.1.0-test', deviceId: 'desktop-local', groupDisplayName: 'V',
+  groupId: 'group-1', groupTag: 'tag-1', port: 38683
+};
 
-    destroy() {
-      bonjourMock.destroy();
-    }
-  }
-  return {
-    Bonjour: MockBonjour,
-    default: MockBonjour
-  };
-});
-
-async function resetMocks() {
-  const { stopCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
-  await stopCompanionMdnsAdvertisement();
-  bonjourMock.destroy.mockClear();
-  bonjourMock.constructorOptions = [];
-  bonjourMock.constructorCallback = null;
-  bonjourMock.networkInterfaces.mockReset();
-  bonjourMock.networkInterfaces.mockReturnValue({
+beforeEach(() => {
+  stopCompanionMdnsAdvertisement();
+  vi.clearAllMocks();
+  runtime.callbacks = [];
+  runtime.networkInterfaces.mockReturnValue({
     ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }]
   });
-  bonjourMock.publish.mockClear();
-  bonjourMock.stop.mockClear();
-}
+});
 
-describe('companion mDNS advertisement', () => {
-  beforeEach(resetMocks);
+describe('desktop OS DNS-SD advertisement', () => {
+  it('registers one system service with the existing service and TXT contract', async () => {
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
 
-  it('reports responder warnings to the sync status owner', async () => {
+    expect(runtime.register).toHaveBeenCalledOnce();
+    expect(runtime.register).toHaveBeenCalledWith({
+      domain: 'local.', name: expect.stringMatching(/^V-runtimed-r[0-9a-z]+$/u),
+      port: 38683, type: '_foliole-sync._tcp',
+      txt: { app_version: '0.1.0-test', device_id: 'desktop-local',
+        facts_revision: expect.any(String), group_id: 'group-1', group_tag: 'tag-1',
+        ipv4_addresses: '192.168.0.11', runtime_instance_id: 'runtime-desktop-v',
+        ...serializeSyncProtocolTxt() }
+    });
+  });
+
+  it('fails closed and withdraws registration when the host reports an error', async () => {
     const onWarning = vi.fn();
-    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
+    const ready = startCompanionMdnsAdvertisement({ ...input, onWarning });
+    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'host unavailable' });
 
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test',
-      groupDisplayName: 'V',
-      groupId: 'group-1',
-      groupTag: 'tag-1',
-      onWarning,
-      deviceId: 'desktop-local',
-      port: 38683,
-
-    });
-    bonjourMock.constructorCallback?.(new Error('multicast unavailable'));
-
-    expect(onWarning).toHaveBeenCalledWith(expect.objectContaining({ message: 'multicast unavailable' }));
+    await expect(ready).rejects.toThrow('desktop_dnssd_register_failed');
+    expect(onWarning).toHaveBeenCalledOnce();
+    expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 
-  it('publishes the Foliole sync service with peer metadata', async () => {
-    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
-
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test',
-      groupDisplayName: 'V',
-      groupId: 'group-1',
-      groupTag: 'tag-1',
-      deviceId: 'desktop-local',
-      port: 38683,
-
-    });
-
-    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
-
-    expect(bonjourMock.publish).toHaveBeenCalledWith({
-      host: 'V-runtimed.local',
-      name: expect.stringMatching(/^V-runtimed-r[0-9a-z]+$/u),
-      port: 38683,
-      protocol: 'tcp',
-      txt: {
-        app_version: '0.1.0-test',
-        facts_revision: expect.any(String),
-        group_id: 'group-1',
-        group_tag: 'tag-1',
-        ipv4_addresses: '192.168.0.11',
-        device_id: 'desktop-local',
-        runtime_instance_id: expect.any(String),
-        ...serializeSyncProtocolTxt()
-      },
-      type: 'foliole-sync'
-    });
-  });
-
-});
-
-describe('companion mDNS facts hints', () => {
-  beforeEach(resetMocks);
-
-  it('re-advertises a newer transient facts revision after committed data changes', async () => {
-    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
-      './companionMdnsAdvertisement.js'
-    );
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      deviceId: 'desktop-local', port: 38683,
-    });
-    const initial = (bonjourMock.publish.mock.calls[0]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
-    await refreshCompanionMdnsAdvertisement();
-    const refreshed = (bonjourMock.publish.mock.calls[1]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
-    expect(Number(refreshed)).toBe(Number(initial) + 1);
-    expect(bonjourMock.stop).toHaveBeenCalledOnce();
-  });
-
-  it('waits for the old service goodbye before publishing its replacement', async () => {
-    let finishGoodbye = () => {};
-    bonjourMock.stop.mockImplementationOnce((callback?: () => void) => {
-      finishGoodbye = () => callback?.();
-    });
-    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
-      './companionMdnsAdvertisement.js'
-    );
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      deviceId: 'desktop-local', port: 38683,
-    });
-
+  it('withdraws the old registration before publishing refreshed facts', async () => {
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
     const refreshed = refreshCompanionMdnsAdvertisement();
-    await Promise.resolve();
-    expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
-    finishGoodbye();
+    await vi.waitFor(() => expect(runtime.register).toHaveBeenCalledTimes(2));
+    runtime.callbacks[1]?.({ kind: 'registered', service: {} });
     await refreshed;
-    expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
+
+    const names = runtime.register.mock.calls.map(([entry]) => (entry as { name: string }).name);
+    expect(names[1]).not.toBe(names[0]);
+    expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 
-  it('publishes a new service instance for each facts revision', async () => {
-    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
-      './companionMdnsAdvertisement.js'
-    );
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1', groupTag: 'tag-1',
-      deviceId: 'desktop-local', port: 38683,
-    });
-    await refreshCompanionMdnsAdvertisement();
+  it('cancels exactly the active system registration when stopped', async () => {
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+    stopCompanionMdnsAdvertisement();
+    stopCompanionMdnsAdvertisement();
 
-    const published = bonjourMock.publish.mock.calls.map(([input]) => input as {
-      name: string; txt: { device_id: string; runtime_instance_id: string };
-    });
-    expect(published[1]?.name).not.toBe(published[0]?.name);
-    expect(published.map(({ txt }) => txt.device_id)).toEqual(['desktop-local', 'desktop-local']);
-    expect(new Set(published.map(({ txt }) => txt.runtime_instance_id))).toHaveLength(1);
-    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
-    expect(bonjourMock.publish).toHaveBeenLastCalledWith(expect.not.objectContaining({ probe: false }));
-  });
-});
-
-describe('companion mDNS routing', () => {
-  beforeEach(resetMocks);
-
-  it('separates SRV hosts when two desktops share one OS hostname', async () => {
-    const { resolveCompanionMdnsHost } = await import('./companionMdnsAdvertisement.js');
-
-    expect(resolveCompanionMdnsHost('Maci', 'aaaaaaaa-desktop-a'))
-      .not.toBe(resolveCompanionMdnsHost('Maci', 'bbbbbbbb-desktop-c'));
-  });
-
-  it('publishes every external IPv4 route without loopback addresses', async () => {
-    const { resolveCompanionMdnsIpv4Addresses } = await import('./companionMdnsAdvertisement.js');
-
-    expect(resolveCompanionMdnsIpv4Addresses({
-      ethernet: [
-        { address: '192.168.0.11', cidr: '192.168.0.11/24', family: 'IPv4', internal: false,
-          mac: '00:00:00:00:00:01', netmask: '255.255.255.0' },
-        { address: '127.0.0.1', cidr: '127.0.0.1/8', family: 'IPv4', internal: true,
-          mac: '00:00:00:00:00:00', netmask: '255.0.0.0' }
-      ]
-    })).toEqual(['192.168.0.11']);
-  });
-});
-
-describe('companion mDNS lifecycle', () => {
-  beforeEach(resetMocks);
-
-  it('advertises once through the system multicast route', async () => {
-    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
-
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      deviceId: 'desktop-local', port: 38683,
-    });
-
-    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
-    expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
-  });
-
-  it('advertises on every external IPv4 interface', async () => {
-    bonjourMock.networkInterfaces.mockReturnValue({
-      ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }],
-      vpn: [{ address: '198.18.0.1', family: 'IPv4', internal: false }]
-    });
-    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
-
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
-      deviceId: 'desktop-local', port: 38683,
-    });
-
-    expect(bonjourMock.constructorOptions).toEqual([
-      { interface: '192.168.0.11' }, { interface: '198.18.0.1' }
-    ]);
-    expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
-  });
-
-  it('stops the advertised service and destroys the responder', async () => {
-    const { startCompanionMdnsAdvertisement, stopCompanionMdnsAdvertisement } = await import(
-      './companionMdnsAdvertisement.js'
-    );
-
-    startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test',
-      groupDisplayName: 'V',
-      groupId: 'group-1',
-      groupTag: 'tag-1',
-      deviceId: 'desktop-local',
-      port: 38683,
-
-    });
-    await stopCompanionMdnsAdvertisement();
-
-    expect(bonjourMock.stop).toHaveBeenCalledTimes(1);
-    expect(bonjourMock.destroy).toHaveBeenCalledTimes(1);
+    expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 });

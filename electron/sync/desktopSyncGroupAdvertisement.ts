@@ -2,8 +2,7 @@ import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContrac
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
-  startCompanionMdnsAdvertisement,
-  waitForCompanionMdnsAdvertisement
+  startCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -21,7 +20,7 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
   const local = resolveLocalSyncGroupDevice(group);
   if (!local) throw new Error('sync_group_local_device_missing');
-  const services = startCompanionMdnsAdvertisement({
+  await startCompanionMdnsAdvertisement({
     appVersion: args.appVersion,
     deviceId: local.device_identity_key,
     groupDisplayName: group.display_name,
@@ -30,9 +29,4 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
     onWarning: args.onWarning,
     port: args.port
   });
-  try {
-    await waitForCompanionMdnsAdvertisement(services);
-  } catch (error) {
-    args.onWarning(error);
-  }
 }

@@ -1,41 +1,32 @@
-import { Bonjour } from 'bonjour-service';
-
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
-import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
+import { startDesktopDnsSdSession } from './desktopDnsSd.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const DISCOVERY_MS = 1_800;
 const DISCOVERY_PROBE_MS = 2_000;
-type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
-
 export async function discoverDesktopSyncGroups(
   fetchDiscovery: typeof fetch = fetch
 ) {
   const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const endpoints = new Map<string, { name: string; txt: Record<string, unknown> }>();
-  const collect = (service: DiscoveredService) => {
-    const txt = service.txt as Record<string, unknown>;
-    if (txt.runtime_instance_id === localRuntimeInstanceId) return;
-    if (typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
-    resolveCompanionMdnsServiceEndpoints(service).forEach((endpoint) => {
-      endpoints.set(endpoint, { name: service.name, txt });
-    });
-  };
-  const runtimes = [null, ...resolveCompanionMdnsIpv4Addresses()].map((networkInterface) => {
-    const bonjour = networkInterface
-      ? new Bonjour({ interface: networkInterface } as BonjourOptions)
-      : new Bonjour();
-    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
-    return { bonjour, browser };
+  let failure: Error | null = null;
+  const runtime = startDesktopDnsSdSession({
+    onError: (error) => { failure = error; },
+    onService: ({ kind, service }) => {
+      if (kind === 'lost') return;
+      const txt = service.txt as Record<string, unknown>;
+      if (txt.runtime_instance_id === localRuntimeInstanceId) return;
+      if (typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
+      resolveCompanionMdnsServiceEndpoints(service).forEach((endpoint) => {
+        endpoints.set(endpoint, { name: service.name, txt });
+      });
+    }
   });
   await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  runtimes.forEach(({ bonjour, browser }) => {
-    browser.stop();
-    bonjour.destroy();
-  });
+  runtime.stop();
+  if (failure) throw failure;
   const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
     probeCandidate(fetchDiscovery, endpointUrl, service, localRuntimeInstanceId)
   ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);

@@ -70,3 +70,14 @@ it('updates the local Device name and locally leaving removes only the active bi
   expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_delivery_receipts').get()).toEqual({ value: 0 });
   expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_peer_cursors').get()).toEqual({ value: 0 });
 });
+
+it('keeps discovered routes and native DNS-SD handles out of SQLite', () => {
+  const schema = sqlite.prepare(`SELECT sql FROM sqlite_master
+    WHERE type IN ('table', 'index', 'trigger') AND sql IS NOT NULL`).pluck().all()
+    .join('\n').toLowerCase();
+
+  expect(schema).not.toContain('endpoint_url');
+  expect(schema).not.toContain('native_handle');
+  expect(schema).not.toContain('dns_sd');
+  expect(schema).not.toContain('dns-sd');
+});

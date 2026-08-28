@@ -1,11 +1,10 @@
-import { Bonjour } from 'bonjour-service';
+import type { DesktopDnsSdService } from '@foliole/desktop-dnssd';
 
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
-import { maintainContinuousMdnsQuery } from './continuousMdnsQuery.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
 import {
@@ -16,76 +15,106 @@ import {
 } from './desktopSyncGroupRoutes.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
-type AutoSyncRuntime = {
-  bonjour: InstanceType<typeof Bonjour>;
-  browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
-  query: ReturnType<typeof maintainContinuousMdnsQuery>;
-};
-type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
-
-let runtimes: AutoSyncRuntime[] = [];
-const inFlight = new Map<string, Promise<unknown>>();
 type AvailablePeer = { endpoints: string[]; groupId: string; peerDeviceId: string };
+
+let runtime: DesktopDnsSdSession | null = null;
+let manualRuntime: DesktopDnsSdSession | null = null;
+let manualRun: Promise<unknown> | null = null;
+let rejectManualRun: ((error: Error) => void) | null = null;
+let resolveManualPeer: ((peer: AvailablePeer) => void) | null = null;
+const inFlight = new Map<string, Promise<unknown>>();
 const retryAfterFlight = new Map<string, AvailablePeer>();
 
+function readAvailablePeer(service: DesktopDnsSdService): AvailablePeer | null {
+  const endpoints = resolveCompanionMdnsServiceEndpoints(service);
+  const txt = service.txt as Record<string, unknown>;
+  if (evaluateDiscoveredSyncProtocol(txt).status === 'incompatible') return null;
+  const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
+  const peerDeviceId = typeof txt.device_id === 'string' ? txt.device_id : null;
+  return endpoints.length > 0 && groupId && peerDeviceId ? { endpoints, groupId, peerDeviceId } : null;
+}
+
 export function startDesktopSyncGroupAutoSync() {
-  if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
+  if (!isDesktopCompanionSyncParticipating() || runtime) return;
   const localGroup = loadDesktopSyncGroup();
-  const handleService = (service: DiscoveredService) => {
+  const handleService = (service: DesktopDnsSdService) => {
     if (!isDesktopCompanionSyncParticipating()) return;
-    const endpoints = resolveCompanionMdnsServiceEndpoints(service);
-    const txt = service.txt as Record<string, unknown>;
-    const protocol = evaluateDiscoveredSyncProtocol(txt);
-    if (protocol.status === 'incompatible') {
-      console.info('[sync-group] sync stopped for incompatible discovered peer', {
-        reason: protocol.reason,
-        serviceName: service.name
-      });
-      return null;
-    }
-    const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
-    const peerDeviceId = typeof txt.device_id === 'string' ? txt.device_id : null;
-    if (endpoints.length === 0 || !groupId || !peerDeviceId) return null;
-    return syncAvailablePeer({ endpoints, groupId, peerDeviceId });
+    const peer = readAvailablePeer(service);
+    if (!peer) return null;
+    resolveManualPeer?.(peer);
+    return syncAvailablePeer(peer);
   };
-  const consumeService = (service: DiscoveredService) => { void handleService(service); };
-  const addresses = resolveCompanionMdnsIpv4Addresses();
-  const interfaces = [null, ...addresses];
-  runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
-    const bonjour = new Bonjour(options);
-    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
-    const query = maintainContinuousMdnsQuery(browser, (service) => {
-      if (!isCurrentGroupPeerService(service, localGroup) || !localGroup) return false;
-      return loadDesktopSyncGroupRoutes(localGroup.group_id).some((route) =>
-        route.peer_device_id === service.txt?.device_id);
-    }, (services) => services.forEach(consumeService));
-    const runtime = { bonjour, browser, query };
-    browser.on('down', (service) => {
-      const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
-      if (deviceId) removeDesktopSyncGroupRoute(deviceId);
-      const work = handleService(service);
-      void Promise.resolve(work).finally(() => {
-        if (runtimes.includes(runtime)) query.refresh();
-      });
-    });
-    browser.on('txt-update', consumeService);
-    browser.on('srv-update', consumeService);
-    return runtime;
+  runtime = startDesktopDnsSdSession({
+    onError: (error) => {
+      console.warn('[sync-group] OS DNS-SD discovery unavailable', error);
+      rejectManualRun?.(error);
+      runtime?.stop();
+      runtime = null;
+      clearDesktopSyncGroupRoutes();
+    },
+    onService: ({ kind, service }) => {
+      if (!isCurrentGroupPeerService(service, localGroup)) return;
+      if (kind === 'lost') {
+        const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
+        if (deviceId) removeDesktopSyncGroupRoute(deviceId);
+        return;
+      }
+      void handleService(service);
+    }
   });
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  const activeRuntimes = runtimes;
-  runtimes = [];
-  activeRuntimes.forEach(({ bonjour, browser, query }) => {
-    query.stop();
-    browser.stop();
-    bonjour.destroy();
-  });
+  rejectManualRun?.(new Error('desktop_dnssd_session_stopped'));
+  runtime?.stop();
+  runtime = null;
+  manualRuntime?.stop();
+  manualRuntime = null;
   retryAfterFlight.clear();
   clearDesktopSyncGroupRoutes();
+}
+
+export function runDesktopManualSyncWithDiscovery() {
+  if (manualRun) return manualRun;
+  const group = loadDesktopSyncGroup();
+  if (!group || loadDesktopSyncGroupRoutes(group.group_id).length > 0) {
+    return runDesktopSyncCoordinator('manual');
+  }
+  manualRun = new Promise((resolve, reject) => {
+    rejectManualRun = reject;
+    resolveManualPeer = (peer) => {
+      resolveManualPeer = null;
+      void continueManualRun(peer).then(resolve, reject);
+    };
+    if (runtime) return;
+    manualRuntime = startDesktopDnsSdSession({
+      onError: reject,
+      onService: ({ kind, service }) => {
+        if (kind === 'lost' || !isCurrentGroupPeerService(service, group)) return;
+        const peer = readAvailablePeer(service);
+        if (peer) resolveManualPeer?.(peer);
+      }
+    });
+  }).finally(() => {
+    manualRuntime?.stop();
+    manualRuntime = null;
+    manualRun = null;
+    rejectManualRun = null;
+    resolveManualPeer = null;
+  });
+  return manualRun;
+}
+
+async function continueManualRun(peer: AvailablePeer) {
+  if (!manualRun) return;
+  const ownsRoute = Boolean(manualRuntime);
+  manualRuntime?.stop();
+  manualRuntime = null;
+  try {
+    return await syncAcrossAvailableEndpoints(loadDesktopSyncGroup(), peer, 'manual');
+  } finally {
+    if (ownsRoute) removeDesktopSyncGroupRoute(peer.peerDeviceId);
+  }
 }
 
 async function syncAvailablePeer(args: AvailablePeer) {
@@ -114,16 +143,17 @@ async function syncAvailablePeer(args: AvailablePeer) {
 }
 
 async function syncAcrossAvailableEndpoints(
-  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>, args: AvailablePeer
+  group: ReturnType<typeof loadDesktopSyncGroup>, args: AvailablePeer,
+  reason: 'automatic' | 'manual' = 'automatic'
 ) {
+  if (!group || group.group_id !== args.groupId) return;
   let lastError: unknown;
   for (const endpoint of args.endpoints) {
     const peer = resolveDiscoveredPeer(group, args, endpoint);
     if (!peer) return;
     saveDesktopSyncGroupRoute(peer);
     try {
-      await runDesktopSyncCoordinator('automatic', peer);
-      return;
+      return await runDesktopSyncCoordinator(reason, peer);
     } catch (error) {
       removeDesktopSyncGroupRoute(peer.peer_device_id);
       lastError = error;

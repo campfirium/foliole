@@ -4,36 +4,26 @@ import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDis
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({
-  destroy: vi.fn(),
-  handlers: new Map<string, (service: Record<string, unknown>) => void>(),
-  stop: vi.fn(),
-  update: vi.fn()
+  onError: null as null | ((error: Error) => void),
+  onService: null as null | ((event: Record<string, unknown>) => void),
+  stop: vi.fn()
 }));
 
-vi.mock('bonjour-service', () => ({
-  Bonjour: class {
-    destroy() { runtime.destroy(); }
-    find() {
-      return {
-        on(name: string, handler: (service: Record<string, unknown>) => void) {
-          runtime.handlers.set(name, handler);
-          return this;
-        },
-        stop: runtime.stop,
-        update: runtime.update
-      };
-    }
+vi.mock('./desktopDnsSd.js', () => ({
+  startDesktopDnsSdSession: (callbacks: typeof runtime) => {
+    runtime.onError = callbacks.onError;
+    runtime.onService = callbacks.onService;
+    return { stop: runtime.stop };
   }
 }));
-vi.mock('./companionMdnsAdvertisement.js', () => ({ resolveCompanionMdnsIpv4Addresses: () => [] }));
 vi.mock('./syncGroupRuntimeInstance.js', () => ({ loadSyncGroupRuntimeInstanceId: () => 'runtime-local' }));
 
 import { DesktopSyncGroupDiscoverySession } from './desktopSyncGroupDiscoverySession.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.handlers.clear();
-  runtime.update.mockClear();
+  runtime.onError = null;
+  runtime.onService = null;
 });
 
 it('publishes found, changed, and lost until explicitly stopped', async () => {
@@ -48,16 +38,15 @@ it('publishes found, changed, and lost until explicitly stopped', async () => {
     txt: { group_id: 'group-1', group_tag: 'tag-1', runtime_instance_id: 'remote' } };
 
   session.start();
-  runtime.handlers.get('up')?.(service);
+  runtime.onService?.({ kind: 'found', service });
   await vi.waitFor(() => expect(snapshots.some(({ change }) => change === 'found')).toBe(true));
-  runtime.handlers.get('txt-update')?.(service);
+  runtime.onService?.({ kind: 'changed', service });
   await vi.waitFor(() => expect(snapshots.some(({ change }) => change === 'changed')).toBe(true));
-  runtime.handlers.get('down')?.(service);
+  runtime.onService?.({ kind: 'lost', service });
   session.stop();
 
   expect(snapshots.map(({ change }) => change)).toEqual(['started', 'found', 'changed', 'lost', 'stopped']);
   expect(runtime.stop).toHaveBeenCalledOnce();
-  expect(runtime.destroy).toHaveBeenCalledOnce();
 });
 
 it('keeps incompatible and connection failures distinct from empty results', async () => {
@@ -67,8 +56,10 @@ it('keeps incompatible and connection failures distinct from empty results', asy
       group_id: 'group-1', group_tag: 'tag-1', protocol: null
     }))));
   incompatible.start();
-  runtime.handlers.get('up')?.({ addresses: ['192.168.0.12'], fqdn: 'old', name: 'Old', port: 1,
-    txt: { group_id: 'group-1', group_tag: 'tag-1', runtime_instance_id: 'remote' } });
+  runtime.onService?.({ kind: 'found', service: { addresses: ['192.168.0.12'],
+    domain: 'local.', fqdn: 'old', host: 'old.local.', interfaceIndex: 1,
+    name: 'Old', port: 1, type: '_foliole-sync._tcp',
+    txt: { group_id: 'group-1', group_tag: 'tag-1', runtime_instance_id: 'remote' } } });
   await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('incompatible'));
 
   incompatible.stop();
@@ -86,9 +77,11 @@ it('tries an advertised LAN address when the announcement source route is unreac
   });
   const session = new DesktopSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot), fetchDiscovery);
   session.start();
-  runtime.handlers.get('up')?.({ addresses: ['169.254.161.89'], fqdn: 'daily', name: 'Daily', port: 38641,
-    referer: { address: '169.254.161.89' }, txt: { group_id: 'group-1', group_tag: 'tag-1',
-      ipv4_addresses: '192.168.0.10,169.254.161.89', runtime_instance_id: 'remote' } });
+  runtime.onService?.({ kind: 'found', service: { addresses: ['169.254.161.89'],
+    domain: 'local.', fqdn: 'daily', host: 'daily.local.', interfaceIndex: 1,
+    name: 'Daily', port: 38641, type: '_foliole-sync._tcp',
+    txt: { group_id: 'group-1', group_tag: 'tag-1',
+      ipv4_addresses: '192.168.0.10,169.254.161.89', runtime_instance_id: 'remote' } } });
 
   await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('results'));
   expect(snapshots.at(-1)?.candidates[0]?.endpoint_url).toBe('http://192.168.0.10:38641');
