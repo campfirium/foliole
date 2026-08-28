@@ -12,7 +12,8 @@ std::wstring RegistrationHost(const std::string& requested) {
   if (!requested.empty()) return DnsSdWindowsName(requested);
   wchar_t value[MAX_COMPUTERNAME_LENGTH + 1] = {};
   DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
-  return GetComputerNameW(value, &size) ? std::wstring(value, size) : std::wstring();
+  return GetComputerNameW(value, &size)
+    ? std::wstring(value, size) + L".local" : std::wstring();
 }
 
 class WindowsRegistration final : public NativeOperation {
