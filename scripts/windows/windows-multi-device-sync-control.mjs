@@ -7,11 +7,20 @@ import {
 } from './windows-dev-paths.mjs';
 
 const ROUTE_FAILURE_FILES = [
-  'summary.json',
-  'desktop-dnssd-route-runtime/action.log',
-  'desktop-dnssd-route-runtime/receipt.json'
+  'summary.json'
+];
+const ROUTE_PREPARE_FAILURE_FILES = [
+  'desktop-dnssd-route-prepare-receipt.json', 'desktop-dnssd-route-prepare.log'
 ];
 const ROUTE_INTERACTIVE_FAILURE_FILES = ['request.json', 'status.json', 'result.json'];
+
+function routeSshTimeout(action) {
+  if (action === 'desktop-dnssd-route-prepare') return 45 * 60_000;
+  if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
+    return 25 * 60_000;
+  }
+  return undefined;
+}
 
 function parseEvidence(output, action, receiptName) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
@@ -34,6 +43,11 @@ async function copyRouteFailure({ action, buildScpSpec, env, executeScp, fsApi, 
   const files = ROUTE_FAILURE_FILES.map((relative) => ({
     local: relative, remote: `${evidence.remoteRoot}/${relative}`
   }));
+  if (action === 'desktop-dnssd-route-prepare') {
+    files.push(...ROUTE_PREPARE_FAILURE_FILES.map((relative) => ({
+      local: relative, remote: `${evidence.remoteRoot}/${relative}`
+    })));
+  }
   if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
     files.push(...ROUTE_INTERACTIVE_FAILURE_FILES.map((relative) => ({
       local: `interactive/${relative}`,
@@ -61,13 +75,16 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   let streamed = false;
   let output;
   try {
-    output = await executeSsh(buildSshSpec(host, action, env), { env, onOutput: (chunk) => {
+    output = await executeSsh(buildSshSpec(host, action, env), {
+      env, onOutput: (chunk) => {
       streamed = true; stdout.write(chunk);
-    } });
+      }, ...(routeSshTimeout(action) ? { timeout: routeSshTimeout(action) } : {})
+    });
   } catch (error) {
     output = error.output || error.message;
     if (!streamed && output) stdout.write(output);
-    if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
+    if (['desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
+      'desktop-dnssd-route-selfcheck'].includes(action)) {
       const copied = await copyRouteFailure({ action, buildScpSpec, env, executeScp,
         fsApi, host, output, repoRoot });
       error.evidenceCopyFailures = copied.copyFailures;
@@ -77,6 +94,7 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   }
   if (!streamed) stdout.write(output);
   const receiptNames = {
+    'desktop-dnssd-route-prepare': 'desktop-dnssd-route-prepare-receipt.json',
     'desktop-dnssd-route-provider': 'desktop-dnssd-route-provider-receipt.json',
     'desktop-dnssd-route-selfcheck': 'desktop-dnssd-route-controller-selfcheck-receipt.json',
     'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
@@ -97,13 +115,17 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${receiptName}`,
     manifestPath, env), { env });
   if (action === 'desktop-dnssd-route-selfcheck') {
-    for (const relative of ['selfcheck-negative-error.json', 'selfcheck-product-launch.json',
-      'desktop-dnssd-route-runtime/action.log', 'desktop-dnssd-route-runtime/receipt.json']) {
+    for (const relative of ['selfcheck-negative-error.json', 'selfcheck-product-launch.json']) {
       const localPath = path.join(localRoot, relative);
       fsApi.mkdirSync(path.dirname(localPath), { recursive: true });
       await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${relative}`,
         localPath, env), { env });
     }
+  }
+  if (action === 'desktop-dnssd-route-prepare') {
+    const logPath = path.join(localRoot, 'desktop-dnssd-route-prepare.log');
+    await executeScp(buildScpSpec(host,
+      `${evidence.remoteRoot}/desktop-dnssd-route-prepare.log`, logPath, env), { env });
   }
   return { action, evidenceRoot: localRoot, manifestPath };
 }

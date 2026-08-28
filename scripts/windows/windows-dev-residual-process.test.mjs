@@ -12,5 +12,7 @@ it('allows one exact trusted runtime to remain untouched during frozen preflight
   const runtime = { CommandLine: `/d /c ""${paths.systemNode}" "${script}""`,
     Name: 'cmd.exe', ProcessId: 42 };
   expect(allowsSyncGroupNativeClient('frozen-revision-preflight', [runtime], paths)).toBe(true);
+  expect(allowsSyncGroupNativeClient('desktop-dnssd-route-prepare', [runtime], paths)).toBe(true);
+  expect(allowsSyncGroupNativeClient('desktop-dnssd-route-provider', [runtime], paths)).toBe(true);
   expect(allowsSyncGroupNativeClient('frozen-revision-preflight', [], paths)).toBe(false);
 });

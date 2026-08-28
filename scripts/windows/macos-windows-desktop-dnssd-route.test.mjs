@@ -32,17 +32,16 @@ it('keeps the Windows provider on the existing short-lived action lifecycle', ()
   expect(source).not.toMatch(/endpoint_url|bonjour-service|multicast-dns/u);
 });
 
-it('loads Playwright from the task-owned runtime dependency root', () => {
+it('uses Playwright from the fixed runtime without wrapping its Electron launcher', async () => {
   const launcher = { launch: vi.fn(async () => 'launched') };
   const runtimeRequire = vi.fn(() => ({ _electron: launcher }));
   const makeRequire = vi.fn(() => runtimeRequire);
-  const runtimeRoot = 'D:\\capsules\\attempt\\source';
+  const runtimeRoot = 'D:\\C\\foliole';
   const resolved = resolveWindowsDesktopRouteElectronLauncher(runtimeRoot, makeRequire);
   expect(makeRequire).toHaveBeenCalledWith(path.join(runtimeRoot, 'package.json'));
   expect(runtimeRequire).toHaveBeenCalledWith('playwright');
-  return resolved.launch({ args: ['main.js'], executablePath: 'D:\\fixed\\electron.exe' })
-    .then(() => expect(launcher.launch).toHaveBeenCalledWith({ args: [
-      '-r', 'D:\\capsules\\attempt\\source\\scripts\\windows\\windows-playwright-electron-loader.cjs',
-      'main.js'
-    ], executablePath: 'D:\\fixed\\electron.exe' }));
+  expect(resolved).toBe(launcher);
+  await resolved.launch({ args: ['main.js'], executablePath: 'D:\\fixed\\electron.exe' });
+  expect(launcher.launch).toHaveBeenCalledWith({ args: ['main.js'],
+    executablePath: 'D:\\fixed\\electron.exe' });
 });

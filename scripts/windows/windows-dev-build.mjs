@@ -14,8 +14,8 @@ import {
   formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
 } from './windows-dev-build-support.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
-import { runWindowsDesktopDnsSdRouteController } from
-  './windows-desktop-dnssd-route-controller.mjs';
+import { runWindowsDesktopDnsSdRouteControl } from
+  './windows-desktop-dnssd-route-control.mjs';
 import {
   requiresWindowsDevDesktopBuild, windowsDevRequiredTools
 } from './windows-dev-build-preflight.mjs';
@@ -76,7 +76,7 @@ export async function runWindowsDevBuild({
   fsApi = fs, id = randomUUID, inspectCandidate = currentAcceptanceCandidate,
   now = () => new Date(), paths = windowsDevPaths(),
   platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost,
-  runRouteController = runWindowsDesktopDnsSdRouteController
+  runRouteControl = runWindowsDesktopDnsSdRouteControl
 } = {}) {
   const action = normalizeWindowsDevAction(requestedAction);
   const startedAt = now().toISOString();
@@ -118,12 +118,11 @@ export async function runWindowsDevBuild({
       });
     }
     if (requiresWindowsDevDesktopBuild(action)) {
-      output += await runWindowsDevDesktopBuild(execute, paths, checked, {
-        verifyDesktopDnsSd: action === 'desktop-dnssd-route-provider'
-      });
+      output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
-    let actionResult = await runRouteController({
-      action, deviceAction, evidenceRoot: context.root, execute, paths
+    let actionResult = await runRouteControl({
+      action, buildIdentity: context.runId, deviceAction, evidenceRoot: context.root,
+      execute, fsApi, paths, snapshotRuntime: () => snapshotProcesses(execute, paths)
     });
     if (action === 'frozen-revision-preflight') {
       const preflight = await runWindowsFrozenRevisionPreflight({
@@ -174,9 +173,6 @@ export async function runWindowsDevBuild({
     if (actionResult?.frozenRevisionPreflight) {
       summary.frozenRevisionPreflight = actionResult.frozenRevisionPreflight;
     }
-    if (actionResult?.desktopDnsSdRouteRuntime) {
-      summary.desktopDnsSdRouteRuntime = actionResult.desktopDnsSdRouteRuntime;
-    }
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
@@ -193,9 +189,9 @@ export async function runWindowsDevBuild({
       ...(error.receiptPath ? { frozenRevisionPreflight: {
         aggregateAttemptId: error.aggregateAttemptId, receiptPath: error.receiptPath
       } } : {}),
-      ...(error.routeRuntimeReceipt ? { desktopDnsSdRouteRuntime: {
-        receipt: error.routeRuntime, receiptPath: error.routeRuntimeReceipt
-      } } : {}),
+      ...(error.desktopDnsSdRoutePrepare ? {
+        desktopDnsSdRoutePrepare: error.desktopDnsSdRoutePrepare
+      } : {}),
       ...(error.readiness ? {
         captureAnnotationReadiness: error.readiness
       } : {}),

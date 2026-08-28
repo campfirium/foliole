@@ -92,25 +92,25 @@ it('streams progress and copies only the fixed sync-from-zero receipt', async ()
   expect(stdout.write.mock.calls.map(([value]) => value).join('')).toBe(`${progress}${receipt}`);
 });
 
-it('copies the route controller selfcheck receipt, logs, and terminal diagnostics', async () => {
+it('copies the route controller selfcheck receipt and product diagnostics', async () => {
   const executeScp = vi.fn(async () => 'copied');
   const receipt = '[windows-dev-action] desktop-dnssd-route-selfcheck '
     + 'identity=run-6 manifest=D:\\C\\foliole\\.tmp\\artifacts\\windows-dev-action\\run-6\\'
     + 'desktop-dnssd-route-controller-selfcheck-receipt.json\n';
+  const executeSsh = vi.fn(async () => receipt);
   const result = await runWindowsMultiDeviceSyncControl({ action: 'desktop-dnssd-route-selfcheck',
     buildPushSpec: () => ({ args: ['push'], env: {} }),
     buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
     env: {}, executeGit: vi.fn(async () => ''), executeScp,
-    executeSsh: vi.fn(async () => receipt), fsApi: { mkdirSync: vi.fn() },
+    executeSsh, fsApi: { mkdirSync: vi.fn() },
     host: 'user@host', repoRoot: '/repo', stdout: { write: vi.fn() } });
   expect(result.manifestPath).toContain('desktop-dnssd-route-selfcheck-receipt.json');
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     expect.stringContaining('desktop-dnssd-route-controller-selfcheck-receipt.json'),
     expect.stringContaining('selfcheck-negative-error.json'),
-    expect.stringContaining('selfcheck-product-launch.json'),
-    expect.stringContaining('desktop-dnssd-route-runtime/action.log'),
-    expect.stringContaining('desktop-dnssd-route-runtime/receipt.json')
+    expect.stringContaining('selfcheck-product-launch.json')
   ]);
+  expect(executeSsh.mock.calls[0][1].timeout).toBe(25 * 60_000);
 });
 
 it('copies fixed route selfcheck failure diagnostics before preserving the remote error', async () => {
@@ -129,15 +129,13 @@ it('copies fixed route selfcheck failure diagnostics before preserving the remot
     'multi-device-sync', 'windows-c', 'run-7'));
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
-    `${remoteRoot}/desktop-dnssd-route-runtime/action.log`,
-    `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`,
     'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
   ]);
 });
 
-it('copies route provider runtime and nonce terminals before preserving the remote error', async () => {
+it('copies route provider summary and nonce terminals before preserving the remote error', async () => {
   const executeScp = vi.fn(async () => 'copied');
   const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-8';
   const output = `[windows-dev-action] status: FAILED exit=125 evidence=${remoteRoot}/summary.json\n`;
@@ -151,10 +149,29 @@ it('copies route provider runtime and nonce terminals before preserving the remo
   })).rejects.toBe(remoteError);
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     `${remoteRoot}/summary.json`,
-    `${remoteRoot}/desktop-dnssd-route-runtime/action.log`,
-    `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`,
     'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
     'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
+  ]);
+});
+
+it('copies fixed runtime preparation diagnostics and applies the independent timeout', async () => {
+  const executeScp = vi.fn(async () => 'copied');
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-9';
+  const output = `[windows-dev-action] status: FAILED exit=125 evidence=${remoteRoot}/summary.json\n`;
+  const remoteError = Object.assign(new Error('prepare failed'), { output });
+  const executeSsh = vi.fn(async () => { throw remoteError; });
+  await expect(runWindowsMultiDeviceSyncControl({ action: 'desktop-dnssd-route-prepare',
+    buildPushSpec: () => ({ args: ['push'], env: {} }),
+    buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
+    env: {}, executeGit: vi.fn(async () => ''), executeScp, executeSsh,
+    fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo',
+    stdout: { write: vi.fn() }
+  })).rejects.toBe(remoteError);
+  expect(executeSsh.mock.calls[0][1].timeout).toBe(45 * 60_000);
+  expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
+    `${remoteRoot}/summary.json`,
+    `${remoteRoot}/desktop-dnssd-route-prepare-receipt.json`,
+    `${remoteRoot}/desktop-dnssd-route-prepare.log`
   ]);
 });

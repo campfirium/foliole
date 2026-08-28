@@ -39,7 +39,7 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
   await expect(runWindowsSyncGroupInteractiveAction(options, {
     installTask, waitForResult, waitForWorkerExit
   })).resolves.toEqual(actionResult);
-  expect(installTask).toHaveBeenCalledWith(expect.objectContaining({ executionTimeLimitMinutes: 20 }));
+  expect(installTask).toHaveBeenCalledWith(expect.objectContaining({ executionTimeLimitMinutes: 21 }));
   expect(options.execute).toHaveBeenCalledWith('schtasks.exe',
     ['/Run', '/TN', 'FolioleNativeClient'], expect.any(Object));
   expect(waitForResult).toHaveBeenCalledWith(expect.any(Object), expect.any(String),
@@ -112,17 +112,16 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   });
 });
 
-it('accepts only a task-owned runtime source under the capsule root', () => {
+it('accepts only the registered route selfcheck modes', () => {
   const { evidenceRoot, paths } = fixture();
-  const capsulesRoot = path.join(paths.repoRoot, 'capsules');
-  const request = { action: 'desktop-dnssd-route-provider', evidenceRoot,
+  const request = { action: 'desktop-dnssd-route-selfcheck', evidenceRoot,
     nonce: '12345678-1234-1234-1234-123456789abc',
-    runtimeRepoRoot: path.join(capsulesRoot, 'attempt-1', 'source'), schemaVersion: 1 };
-  expect(validateSyncGroupInteractiveRequest(request, paths.repoRoot, capsulesRoot))
-    .toMatchObject({ runtimeRepoRoot: request.runtimeRepoRoot });
+    selfcheckMode: 'product-launch', schemaVersion: 1 };
+  expect(validateSyncGroupInteractiveRequest(request, paths.repoRoot))
+    .toMatchObject({ selfcheckMode: 'product-launch' });
   expect(() => validateSyncGroupInteractiveRequest({
-    ...request, runtimeRepoRoot: path.join(paths.repoRoot, 'node_modules')
-  }, paths.repoRoot, capsulesRoot)).toThrow('invalid');
+    ...request, selfcheckMode: 'native-probe'
+  }, paths.repoRoot)).toThrow('invalid');
 });
 
 it('ends a running scheduled worker and writes a terminal controller failure', async () => {

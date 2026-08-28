@@ -60,11 +60,9 @@ export async function runWindowsDesktopDnsSdRouteSelfcheck(options, dependencies
     'desktop-dnssd-route-controller-selfcheck-receipt.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ buildIdentity: options.buildIdentity,
     artifacts: { productLaunch: 'selfcheck-product-launch.json',
-      negativeError: 'selfcheck-negative-error.json',
-      runtimeLog: 'desktop-dnssd-route-runtime/action.log',
-      runtimeReceipt: 'desktop-dnssd-route-runtime/receipt.json' },
+      negativeError: 'selfcheck-negative-error.json' },
     completedAt: new Date().toISOString(), negative, positive, taskAction,
-    resultStatus: 'success', runtimeRoot: options.runtimeRepoRoot, schemaVersion: 1
+    resultStatus: 'success', runtimeRoot: options.paths.repoRoot, schemaVersion: 1
   }, null, 2)}\n`, 'utf8');
   return { ...actionResult, desktopDnsSdRouteControllerSelfcheck: { manifestPath }, output: '' };
 }

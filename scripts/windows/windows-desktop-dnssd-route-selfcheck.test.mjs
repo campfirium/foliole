@@ -26,7 +26,7 @@ it('requires separate nonce-bound negative and positive worker terminals', async
     : { code: 0 });
   const result = await runWindowsDesktopDnsSdRouteSelfcheck({
     buildIdentity: 'build-1', evidenceRoot, execute,
-    paths: { repoRoot: evidenceRoot }, runtimeRepoRoot: 'owned/source'
+    paths: { repoRoot: evidenceRoot }
   }, { installTask: vi.fn(), waitForResult, waitForWorkerExit: vi.fn() });
   const receipt = JSON.parse(fs.readFileSync(
     result.desktopDnsSdRouteControllerSelfcheck.manifestPath, 'utf8'

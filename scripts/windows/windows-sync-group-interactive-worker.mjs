@@ -18,8 +18,7 @@ const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const state = syncGroupInteractivePaths(repoRoot);
 
 async function main() {
-  const request = validateSyncGroupInteractiveRequest(readJson(state.request), repoRoot,
-    windowsDevPaths({ repoRoot }).capsulesRoot);
+  const request = validateSyncGroupInteractiveRequest(readJson(state.request), repoRoot);
   const progress = [];
   const reportProgress = (value) => {
     progress.push(validateSyncGroupInteractiveProgress(value, request.action));
@@ -33,9 +32,7 @@ async function main() {
   });
   let completed;
   try {
-    const runtimePaths = windowsDevPaths({ repoRoot: request.runtimeRepoRoot ?? repoRoot });
-    runtimePaths.acceptanceRepoRoot = repoRoot;
-    runtimePaths.controlRepoRoot = repoRoot;
+    const runtimePaths = windowsDevPaths({ repoRoot });
     const actionResult = await runWindowsSyncGroupDeviceAction({
       action: request.action, buildIdentity: request.buildIdentity,
       evidenceRoot: request.evidenceRoot, execute: executeBounded,

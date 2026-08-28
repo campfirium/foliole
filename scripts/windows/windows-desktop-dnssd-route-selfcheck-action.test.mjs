@@ -8,7 +8,7 @@ import { expect, it, vi } from 'vitest';
 import { runWindowsDesktopDnsSdRouteSelfcheckAction } from
   './windows-desktop-dnssd-route-selfcheck-action.mjs';
 
-it('launches the real product with task-owned empty state for the positive selfcheck', async () => {
+it('launches the real product from the prepared fixed runtime for the positive selfcheck', async () => {
   const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'route-product-launch-'));
   const app = { process: () => ({ pid: 42 }) };
   const closeSession = vi.fn(async () => undefined);
@@ -18,9 +18,8 @@ it('launches the real product with task-owned empty state for the positive selfc
     buildIdentity: 'build-1', evidenceRoot, paths: { repoRoot: 'D:\\C\\foliole' },
     selfcheckMode: 'product-launch'
   }, { closeSession, openSession, resolveLauncher: vi.fn(() => launcher) });
-  expect(openSession).toHaveBeenCalledWith(expect.objectContaining({
-    acceptanceRepoRoot: evidenceRoot
-  }), evidenceRoot, launcher);
+  expect(openSession).toHaveBeenCalledWith({ repoRoot: 'D:\\C\\foliole' },
+    evidenceRoot, launcher);
   expect(closeSession).toHaveBeenCalledWith({ app });
   expect(result.desktopDnsSdRouteSelfcheck.manifestPath).toContain(ACTION_RECEIPT);
   expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot,

@@ -16,6 +16,7 @@ import {
 } from './windows-sync-group-interactive-state.mjs';
 
 const RESULT_TIMEOUT_MS = 20 * 60_000;
+const TASK_TIMEOUT_MINUTES = 21;
 const WORKER_EXIT_TIMEOUT_MS = 10_000;
 
 function pause(ms) {
@@ -44,7 +45,7 @@ export async function runWindowsSyncGroupInteractiveEnvelope(options, {
   const native = resolveWindowsNativePaths(options.paths.repoRoot);
   const paths = syncGroupInteractivePaths(options.paths.repoRoot);
   await installTask({
-    executionTimeLimitMinutes: 20,
+    executionTimeLimitMinutes: TASK_TIMEOUT_MINUTES,
     installScript: native.nativeTaskInstallScript,
     repoRoot: options.paths.repoRoot,
     workerScript: path.join(options.paths.repoRoot, 'scripts', 'windows',
@@ -54,7 +55,6 @@ export async function runWindowsSyncGroupInteractiveEnvelope(options, {
     action: options.action, buildIdentity: options.buildIdentity,
     createdAt: new Date().toISOString(), evidenceRoot: options.evidenceRoot,
     nonce: randomUUID(), schemaVersion: 1,
-    ...(options.runtimeRepoRoot ? { runtimeRepoRoot: options.runtimeRepoRoot } : {}),
     ...(options.selfcheckMode ? { selfcheckMode: options.selfcheckMode } : {})
   };
   fs.rmSync(paths.providerRelease, { force: true });

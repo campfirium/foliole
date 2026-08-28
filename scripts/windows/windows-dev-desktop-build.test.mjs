@@ -1,11 +1,10 @@
 // @vitest-environment node
 
-import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
 
-it('rebuilds and probes desktop DNS-SD before route acceptance starts', async () => {
+it('keeps the ordinary desktop build free of route-specific native work', async () => {
   const paths = {
     repoRoot: 'D:\\C\\foliole',
     systemNode: 'C:\\Program Files\\nodejs\\node.exe',
@@ -16,7 +15,7 @@ it('rebuilds and probes desktop DNS-SD before route acceptance starts', async ()
     output: `${stage}:${command}:${args.join(' ')}:${options.timeoutCode}\n`
   }));
 
-  await runWindowsDevDesktopBuild(execute, paths, checked, { verifyDesktopDnsSd: true });
+  await runWindowsDevDesktopBuild(execute, paths, checked);
 
   expect(checked.mock.calls.map(([, command, args, , stage]) => ({ args, command, stage })))
     .toEqual([
@@ -24,10 +23,5 @@ it('rebuilds and probes desktop DNS-SD before route acceptance starts', async ()
         stage: 'desktop-build' },
       { args: [paths.systemNpmCli, 'run', 'electron:compile'], command: paths.systemNode,
         stage: 'desktop-build' },
-      { args: [paths.systemNpmCli, 'run', 'electron:rebuild:native'], command: paths.systemNode,
-        stage: 'desktop-build' },
-      { args: [path.join(paths.repoRoot, 'scripts', 'desktop',
-        'desktop-dnssd-native-probe.cjs')], command: path.join(paths.repoRoot,
-        'node_modules', 'electron', 'dist', 'electron.exe'), stage: 'desktop-native-health' }
     ]);
 });

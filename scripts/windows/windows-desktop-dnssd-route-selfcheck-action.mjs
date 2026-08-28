@@ -28,8 +28,7 @@ async function runMissingRuntime(options) {
 
 async function runProductLaunch(options, { closeSession, openSession, resolveLauncher }) {
   const launcher = resolveLauncher(options.paths.repoRoot);
-  const paths = { ...options.paths, acceptanceRepoRoot: options.evidenceRoot };
-  const session = await openSession(paths, options.evidenceRoot, launcher);
+  const session = await openSession(options.paths, options.evidenceRoot, launcher);
   try {
     const receipt = { completedAt: new Date().toISOString(), mode: options.selfcheckMode,
       processId: session.app.process().pid, resultStatus: 'success', schemaVersion: 1 };

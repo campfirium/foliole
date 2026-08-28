@@ -25,25 +25,19 @@ export function syncGroupInteractivePaths(repoRoot) {
   };
 }
 
-export function validateSyncGroupInteractiveRequest(request, repoRoot, capsulesRoot) {
+export function validateSyncGroupInteractiveRequest(request, repoRoot) {
   const evidenceRoot = path.resolve(String(request?.evidenceRoot ?? ''));
   const allowedRoot = path.resolve(repoRoot, '.tmp', 'artifacts', 'windows-dev-action');
-  const runtimeRepoRoot = request?.runtimeRepoRoot
-    ? path.resolve(String(request.runtimeRepoRoot)) : null;
-  const allowedRuntimeRoot = capsulesRoot ? path.resolve(capsulesRoot) : null;
-  const runtimeAllowed = !runtimeRepoRoot || !allowedRuntimeRoot || (allowedRuntimeRoot
-    && runtimeRepoRoot.startsWith(`${allowedRuntimeRoot}${path.sep}`)
-    && path.basename(runtimeRepoRoot) === 'source');
   const selfcheckAllowed = request?.action === 'desktop-dnssd-route-selfcheck'
     ? ['missing-runtime', 'product-launch'].includes(request.selfcheckMode)
     : request?.selfcheckMode === undefined;
   if (request?.schemaVersion !== 1 || !WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS.has(request.action)
       || !/^[0-9a-f-]{36}$/u.test(request.nonce || '')
       || !evidenceRoot.startsWith(`${allowedRoot}${path.sep}`)
-      || !runtimeAllowed || !selfcheckAllowed) {
+      || !selfcheckAllowed) {
     throw new Error('invalid Sync Group interactive request');
   }
-  return { ...request, evidenceRoot, ...(runtimeRepoRoot ? { runtimeRepoRoot } : {}) };
+  return { ...request, evidenceRoot };
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {

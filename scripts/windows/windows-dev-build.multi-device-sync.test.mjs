@@ -26,7 +26,7 @@ function fixture() {
     systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js') } };
 }
 
-it('routes desktop DNS-SD acceptance through the task-owned runtime controller', async () => {
+it('routes desktop DNS-SD acceptance through the fixed runtime control', async () => {
   const { paths, root } = fixture();
   for (const filePath of [paths.systemNode, paths.systemNpmCli, paths.gitPath, paths.tarPath]) {
     fs.writeFileSync(filePath, 'tool');
@@ -38,21 +38,20 @@ it('routes desktop DNS-SD acceptance through the task-owned runtime controller',
     return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
   });
   const deviceAction = vi.fn();
-  const runRouteController = vi.fn(async () => ({
-    desktopDnsSdRouteProvider: { manifestPath: 'route.json' },
-    desktopDnsSdRouteRuntime: { receiptPath: 'runtime.json' }, output: ''
+  const runRouteControl = vi.fn(async () => ({
+    desktopDnsSdRouteProvider: { manifestPath: 'route.json' }, output: ''
   }));
 
   const result = await runWindowsDevBuild({
     action: 'desktop-dnssd-route-provider', deviceAction, execute, paths,
-    platform: 'win32', prepareHost: vi.fn(), runRouteController
+    platform: 'win32', prepareHost: vi.fn(), runRouteControl
   });
 
   expect(result).toMatchObject({
     exitCode: 0, summary: { desktopDnsSdRouteProvider: { manifestPath: 'route.json' },
-      desktopDnsSdRouteRuntime: { receiptPath: 'runtime.json' }, resultStatus: 'success' }
+      resultStatus: 'success' }
   });
-  expect(runRouteController).toHaveBeenCalledOnce();
+  expect(runRouteControl).toHaveBeenCalledOnce();
   expect(deviceAction).not.toHaveBeenCalled();
   expect(execute.mock.calls.some(([command]) => command === paths.systemNode)).toBe(false);
   fs.rmSync(root, { force: true, recursive: true });

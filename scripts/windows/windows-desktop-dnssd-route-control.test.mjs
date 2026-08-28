@@ -1,0 +1,48 @@
+// @vitest-environment node
+
+import { expect, it, vi } from 'vitest';
+
+import { runWindowsDesktopDnsSdRouteControl } from
+  './windows-desktop-dnssd-route-control.mjs';
+
+function options(action) {
+  return { action, deviceAction: vi.fn(async () => ({ output: 'route' })),
+    execute: vi.fn(), paths: {}, snapshotRuntime: vi.fn(async () => []) };
+}
+
+it('stops the fixed client, prepares once, and restores its prior state', async () => {
+  const route = options('desktop-dnssd-route-prepare');
+  const prepare = vi.fn(async () => ({ output: 'prepared' }));
+  const suspend = vi.fn(async () => true);
+  const restore = vi.fn(async () => {});
+  const result = await runWindowsDesktopDnsSdRouteControl(route, {
+    prepare, restore, suspend
+  });
+  expect(result).toEqual({ output: 'prepared' });
+  expect(prepare).toHaveBeenCalledWith(route);
+  expect(route.deviceAction).not.toHaveBeenCalled();
+  expect(restore).toHaveBeenCalledWith(expect.objectContaining({ suspended: true }));
+});
+
+it('reuses the prepared runtime before starting the mature product action', async () => {
+  const route = options('desktop-dnssd-route-selfcheck');
+  const assertPrepared = vi.fn(async () => ({ resultStatus: 'success' }));
+  const result = await runWindowsDesktopDnsSdRouteControl(route, {
+    assertPrepared, restore: vi.fn(), suspend: vi.fn(async () => false)
+  });
+  expect(assertPrepared).toHaveBeenCalledWith(route);
+  expect(route.deviceAction).toHaveBeenCalledWith(route);
+  expect(result).toEqual({ output: 'route' });
+});
+
+it('rejects remaining occupants before any runtime write and still restores', async () => {
+  const route = options('desktop-dnssd-route-prepare');
+  route.snapshotRuntime.mockResolvedValue([{ Name: 'electron.exe' }]);
+  const prepare = vi.fn();
+  const restore = vi.fn(async () => {});
+  await expect(runWindowsDesktopDnsSdRouteControl(route, {
+    prepare, restore, suspend: vi.fn(async () => true)
+  })).rejects.toMatchObject({ exitCode: 73, stage: 'runtime-occupied' });
+  expect(prepare).not.toHaveBeenCalled();
+  expect(restore).toHaveBeenCalledWith(expect.objectContaining({ suspended: true }));
+});
