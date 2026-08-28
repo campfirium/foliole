@@ -13,6 +13,9 @@ vi.mock('@capacitor/core', () => ({
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 
 function createReadingProfile() {
   return {

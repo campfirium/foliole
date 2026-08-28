@@ -33,9 +33,9 @@ it('shows a failure that occurs before any member sync run can start', async () 
   const actions = createWorkspaceSnapshotActions({ ...callbacks, state });
 
   await expect(actions.pullFromDesktop('http://desktop:38641'))
-    .rejects.toThrow('No reachable Sync Group member is available.');
+    .rejects.toThrow('Manual sync did not complete.');
 
   expect(callbacks.setStatus).toHaveBeenLastCalledWith('idle');
   expect(callbacks.setSyncProgress).toHaveBeenLastCalledWith(null);
-  expect(callbacks.setError).toHaveBeenLastCalledWith('No reachable Sync Group member is available.');
+  expect(callbacks.setError).toHaveBeenLastCalledWith('Manual sync did not complete.');
 });

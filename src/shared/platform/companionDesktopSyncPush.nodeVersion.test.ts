@@ -24,7 +24,11 @@ const httpMock = vi.hoisted(() => ({
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopSyncHttp', () => httpMock);
 vi.mock('./companion/sync/syncGroupStore', () => ({
-  loadCompanionSyncGroup: vi.fn(async () => null)
+  loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
+}));
+vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-peer'),
+  resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop')
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   loadCompanionPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))

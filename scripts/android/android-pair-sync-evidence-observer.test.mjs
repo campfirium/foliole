@@ -10,58 +10,13 @@ const read = (name) => fs.readFileSync(name, 'utf8');
 const observerPath = 'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js';
 
 it('keeps Android pair-sync evidence action-local and attributable', () => {
-  const source = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java');
-  const automation = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewAutomationTest.java');
-  const launcher = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionActivityLauncher.java');
-  const waiter = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryEvidenceWaiter.java');
-  const evidence = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairRequestEvidence.java');
-  const adapter = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewSemanticAdapter.java');
-  const recoveryEvidence = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncEvidence.java');
-  const targetSelection = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncTargetSelection.java');
+  const source = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupJoinScenario.java');
   const observer = read(observerPath);
-  expect(source.indexOf('installPairSyncObserver')).toBeLessThan(
-    source.indexOf('FolioleCompanionPairSyncTargetSelection.click')
-  );
-  expect(targetSelection).toContain('"data-sync-endpoint",');
-  expect(targetSelection).toContain('expectedEndpointUrl, deadline');
-  expect(source).toContain('FolioleCompanionSemanticActions.clickVisible(');
-  const rePairGuard = source.indexOf('if (existingPairing && forceRePair)');
-  const disconnect = source.indexOf('"companion-sync-disconnect"');
-  expect(disconnect).toBeGreaterThan(rePairGuard);
-  expect(disconnect).toBeLessThan(source.indexOf('throw new IllegalStateException', rePairGuard));
-  expect(source).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
-  expect(source).not.toContain('__actionAccepted');
-  expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
-  expect(adapter).not.toContain("document.querySelector('.text-error')");
-  expect(adapter).toContain('webView.post(() -> webView.evaluateJavascript');
-  expect(adapter).not.toContain('runOnMainSync(() -> webView.evaluateJavascript');
-  expect(automation).toContain('activity.runOnUiThread(activity::finish);');
-  expect(automation).toContain('FolioleCompanionActivityLauncher.start(instrumentation, 30_000)');
-  expect(automation.indexOf('"test-started"')).toBeLessThan(
-    automation.indexOf('FolioleCompanionActivityLauncher.start')
-  );
-  expect(launcher).toContain('waitForMonitorWithTimeout(monitor, timeoutMs)');
-  expect(launcher).not.toContain('startActivitySync');
-  expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
-  expect(waiter).not.toContain('awaitAfterStructureApplied');
-  expect(waiter).toContain('"saved_signable".equals');
-  expect(waiter).not.toContain('verifyCredentials');
-  expect(recoveryEvidence).not.toContain('verifyCredentials');
-  for (const method of ['desktopHttpRequest', 'savePairingCredentials', 'signCompanionSyncRequest',
-    'bindSyncGroupPeerRoute']) {
-    expect(observer).toContain(method);
-  }
-  expect(observer).not.toContain("pluginName === 'FolioleCompanionSyncPackTransfer'");
-  expect(observer).not.toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
-  expect(recoveryEvidence).not.toContain('resetExistingSync');
-  expect(source).not.toContain('awaitAutomatic');
+  expect(source).toContain('expectedGroupId');
+  expect(source).toContain('expectedGroupTag');
+  expect(source).toContain('acceptance_group_identity_not_unique');
+  expect(source).not.toContain('FolioleCompanionPairSyncRecoveryScenario');
   expect(observer).not.toContain("'data-sync-run-id'");
-  expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
-  expect(observer).toContain("algorithm.name === 'ECDH'");
-  expect(observer).not.toContain('pair_request_id');
-  expect(observer).not.toContain('__folioleVerifyPairSyncCredentials');
-  expect(observer).not.toContain('args.workgroup_key');
-  expect(observer).not.toMatch(/\bworkgroup_key\s*:/u);
 });
 
 it('only observes the product signing request after workgroup membership persistence', async () => {

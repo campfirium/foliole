@@ -55,6 +55,7 @@ const signedRequestMock = {
     'X-Authorization-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
   })),
+  prepareNativeCompanionWorkgroupRequestIfPresent: vi.fn(async () => null)
 };
 
 export const capacitorMock = {
@@ -86,7 +87,8 @@ vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
   resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-test-device')
 }));
 vi.mock('./companion/network/signedRequest', () => ({
-  createSignedRequestHeaders: signedRequestMock.createSignedRequestHeaders
+  createSignedRequestHeaders: signedRequestMock.createSignedRequestHeaders,
+  prepareNativeCompanionWorkgroupRequestIfPresent: signedRequestMock.prepareNativeCompanionWorkgroupRequestIfPresent
 }));
 vi.mock('@capacitor/core', () => ({
   Capacitor: {

@@ -33,12 +33,12 @@ describe('shared companion Host handling', () => {
   it('preserves same-Host sync markers after renaming local Host state', async () => {
     const identity = fixture();
     identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-      VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
-      UPDATE sync_groups SET workgroup_key = 'copied-workgroup-key' WHERE group_id = 'group';
-      INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active',NULL,NULL,'2026-08-01');
-      INSERT INTO sync_group_members VALUES
-        ('group','fixture-device','ios','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
+      INSERT INTO sync_groups VALUES
+        ('group','Group','copied-workgroup-key','2026-08-01','2026-08-01');
+      INSERT INTO sync_group_devices VALUES
+        ('group','fixture-device','anchor','/acceptance/library','fixture-device','ios','active',
+         '2026-08-01',NULL,'2026-08-01','2026-08-01');
+      INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active','2026-08-01');
       INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
         ('node-1','Preserved','content','2026-08-01','2026-08-01');
       INSERT INTO review_log (
@@ -53,8 +53,8 @@ describe('shared companion Host handling', () => {
 
     const first = await bootstrap(identity.port, 'iPhone', '2026-08-11T00:00:00Z');
     expect(first).toMatchObject({ deviceId: 'fixture-device', hostName: 'iPhone' });
-    expect(identity.sqlite.prepare('SELECT host_name, authorization_id FROM sync_group_members').get())
-      .toEqual({ authorization_id: 'auth', host_name: 'iPhone' });
+    expect(identity.sqlite.prepare('SELECT device_identity_key, device_name FROM sync_group_devices').get())
+      .toEqual({ device_identity_key: 'fixture-device', device_name: 'iPhone' });
     expect(identity.sqlite.prepare('SELECT host_name FROM review_log').pluck().get()).toBe('fixture-device');
     expect(identity.sqlite.prepare('SELECT workgroup_key FROM sync_groups').pluck().get())
       .toBe('copied-workgroup-key');
@@ -71,11 +71,11 @@ describe('shared companion Host handling', () => {
     const identity = fixture();
     identity.sqlite.prepare("UPDATE companion_meta SET value = 'iPhone 2' WHERE key = 'device_id'").run();
     identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-      VALUES ('group','Group','timeline','iPhone 2','2026-08-01','2026-08-01');
-      INSERT INTO sync_group_local_state VALUES (1,'group','iPhone 2','active',NULL,NULL,'2026-08-01');
-      INSERT INTO sync_group_members VALUES
-        ('group','iPhone 2','ios','active','iPhone 2','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
+      INSERT INTO sync_groups VALUES ('group','Group','workgroup-key','2026-08-01','2026-08-01');
+      INSERT INTO sync_group_devices VALUES
+        ('group','iPhone 2','anchor','/acceptance/library','iPhone 2','ios','active',
+         '2026-08-01',NULL,'2026-08-01','2026-08-01');
+      INSERT INTO sync_group_local_state VALUES (1,'group','iPhone 2','active','2026-08-01');
     `);
     await expect(bootstrap(identity.port, 'iPhone', '2026-08-11T00:00:00Z'))
       .resolves.toMatchObject({ deviceId: 'iPhone 2', hostName: 'iPhone' });

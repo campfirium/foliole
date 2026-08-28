@@ -2,10 +2,12 @@ import {
   mapDeliveryRowsToAuthorizations,
   type DeliveryMigrationRow
 } from './deliveryAuthorizationMigrationModel.js';
+import {
+  createLegacyAuthorizationDeliveryTableStatement,
+  LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS
+} from './legacyHostSyncGroupSchemaStatements.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { tableExists } from './numberedMigrationHelpers.js';
-import { createSyncDeliveryTableStatement } from './syncDeliverySchemaStatements.js';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 
 const TRIGGERS = [
   'trg_sync_delivery_state_insert', 'trg_sync_delivery_state_update',
@@ -27,13 +29,13 @@ export function migrateDeliveryAuthorizations(sqlite: DatabaseMigrationTarget) {
   rebuildCursors(sqlite, result.cursors);
   sqlite.exec('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
   if (tableExists(sqlite, 'sync_object_state')) {
-    for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+    for (const statement of LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
   }
 }
 
 function rebuildReceipts(sqlite: DatabaseMigrationTarget, receipts: DeliveryMigrationRow[]) {
   sqlite.exec('DROP TABLE IF EXISTS sync_delivery_receipts_next');
-  sqlite.exec(createSyncDeliveryTableStatement('sync_delivery_receipts_next'));
+  sqlite.exec(createLegacyAuthorizationDeliveryTableStatement('sync_delivery_receipts_next'));
   const insert = sqlite.prepare(`INSERT INTO sync_delivery_receipts_next (
     authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
     local_position, status, remote_position, issue_reason, created_at, updated_at

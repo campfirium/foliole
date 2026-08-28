@@ -83,6 +83,19 @@ function mockFloatingBar() {
   return { revealBar };
 }
 
+function createPairingState(isPaired = true) {
+  return {
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Android companion',
+    is_paired: isPaired,
+    negotiated_protocol_version: isPaired ? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version : undefined,
+    paired_at: isPaired ? '2026-04-22T09:00:00.000Z' : null,
+    remote_protocol: isPaired ? CURRENT_SYNC_PROTOCOL_DESCRIPTOR : undefined,
+    sync_usable: isPaired
+  };
+}
+
 function mockWorkspaceSync(args: {
   isPaired?: boolean;
   snapshot?: WorkspaceSnapshot | null;
@@ -104,18 +117,18 @@ function mockWorkspaceSync(args: {
     desktopDiscovery: null,
     error: null,
     isWorkspaceSyncStateReady: true,
+    syncGroupDiscoveries: [],
+    pendingJoinRequest: null,
+    joinStatus: 'idle',
+    manualSyncAction: null,
+    syncConflictCount: 0,
+    syncProgress: null,
+    cancelJoin: vi.fn(),
+    discoverSyncGroups: vi.fn(),
+    leaveSyncGroup: vi.fn(),
+    requestSyncGroupJoin: vi.fn(),
     pairingRequest: null,
-    pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: args.isPaired ?? true,
-      negotiated_protocol_version: args.isPaired === false
-        ? undefined : CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-      paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z',
-      remote_protocol: args.isPaired === false ? undefined : CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      sync_usable: args.isPaired !== false
-    },
+    pairingState: createPairingState(args.isPaired ?? true),
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),
     readableArticle: null,
@@ -210,10 +223,8 @@ describe('CompanionShell review surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sync content and view sync status/ }));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Sync' })).toBeInTheDocument();
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.getByText('Activity')).toBeInTheDocument();
-    expect(screen.getByText('Paired device')).toBeInTheDocument();
-    expect(screen.getByText('No activity')).toBeInTheDocument();
+    expect(screen.getByText('Connect to a Sync Group')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-sync-discover')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);

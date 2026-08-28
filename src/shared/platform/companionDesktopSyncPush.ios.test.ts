@@ -47,7 +47,11 @@ vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => storeMock)
 }));
 vi.mock('./companion/sync/syncGroupStore', () => ({
-  loadCompanionSyncGroup: vi.fn(async () => null)
+  loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
+}));
+vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-peer'),
+  resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop')
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   loadCompanionPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))

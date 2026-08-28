@@ -26,6 +26,7 @@ const controlledElectronSqliteTests = [
   'electron/database/libraryDataMigration.test.ts',
   'electron/database/mainFtsCleanup.test.ts',
   'electron/database/migrate.internalSnapshots.test.ts',
+  'electron/database/singlePrincipalSyncGroupCleanup.test.ts',
   'electron/database/nodeSyncFieldCoverage.contract.test.ts',
   'electron/database/opaqueSyncRefMigration.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',

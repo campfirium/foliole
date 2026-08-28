@@ -2,8 +2,10 @@ import { allocateSyncGroupHostName } from '../../platform/syncGroupDeviceProfile
 import type { DbPort, DbRow, DbValue } from '../sync/dbPort.js';
 
 import { buildLegacyDeliveryAuthorizationAliases } from './deliveryAuthorizationMigrationModel.js';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+import {
+  LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS,
+  LEGACY_HOST_SYNC_GROUP_SCHEMA_STATEMENTS
+} from './legacyHostSyncGroupSchemaStatements.js';
 
 export async function migrateCompanionSyncGroupHosts(db: DbPort) {
   if (!(await columnPresent(db, 'sync_group_members', 'device_id'))) return;
@@ -16,12 +18,16 @@ export async function migrateCompanionSyncGroupHosts(db: DbPort) {
   await preserveDeliveryAliases(db, members, hostNames);
   for (const table of ['sync_group_local_state', 'sync_group_member_departures',
     'sync_group_members', 'sync_groups']) await db.run(`DROP TABLE IF EXISTS ${table}`);
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) await db.run(statement);
+  for (const statement of LEGACY_HOST_SYNC_GROUP_SCHEMA_STATEMENTS) await db.run(statement);
   await insertGroups(db, groups, hostNames);
   await insertMembers(db, members, hostNames);
   await insertLocals(db, locals, hostNames);
   await insertDepartures(db, departures, hostNames);
-  for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) await db.run(statement);
+  for (const statement of LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS) {
+    if (statement.includes(' ON sync_object_state') && !(await tablePresent(db, 'sync_object_state'))) continue;
+    if (statement.includes(' ON review_log') && !(await tablePresent(db, 'review_log'))) continue;
+    await db.run(statement);
+  }
 }
 
 async function preserveDeliveryAliases(db: DbPort, members: DbRow[], names: Map<string, string>) {

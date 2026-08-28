@@ -1,9 +1,17 @@
 import { vi } from 'vitest';
 
 import './commands.settings.reviewSchedulerMocks.testSupport.js';
+import type { NativeSyncPeer } from '../../lib/platform/nativeStorageContract.js';
 import { resetDatabaseReadinessForTests } from '../database/databaseReadiness.js';
 
 const globalClipShortcutMocks = vi.hoisted(() => ({ refreshGlobalClipShortcutFromSettings: vi.fn() }));
+const syncPeerMocks = vi.hoisted(() => ({
+  loadSyncPeers: vi.fn(() => [{ last_seen_version_cursor: 'desktop-1#42',
+    last_synced_at: '2026-04-21T16:30:00.000Z', peer_id: 'android-1', status: 'paired',
+    updated_at: '2026-04-21T16:30:00.000Z' }]),
+  saveSyncPeers: vi.fn((peers: NativeSyncPeer[]) => peers.map((peer) => ({ ...peer,
+    updated_at: '2026-04-21T16:35:00.000Z' })))
+}));
 
 vi.mock('electron', () => ({
   BrowserWindow: {
@@ -34,6 +42,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
+vi.mock('../database/syncPeers.js', () => syncPeerMocks);
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
@@ -77,6 +86,7 @@ vi.mock('./storage.js', () => ({
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock('./libraryPaths.js', () => ({
+  ensureLibraryPathLayout: vi.fn(),
   loadLibraryPathSettings: vi.fn().mockResolvedValue({
     assets_dir: '/library/Assets',
     data_dir: '/library/Data',

@@ -3,9 +3,10 @@ import { expect, it } from 'vitest';
 
 import { migrateCompanionDeliveryAuthorizations } from '../../lib/core/database/companionDeliveryAuthorizationMigration.js';
 import { migrateDeliveryAuthorizations } from '../../lib/core/database/numberedMigrationDeliveryAuthorizations.js';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
+import { migrateSyncGroupHosts } from '../../lib/core/database/numberedMigrationSyncGroupHosts.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installLegacySyncGroupSchema } from './companionSyncGroupLegacyTestSchema.js';
 
 it('moves receipts and cursors from Host aliases to the active authorization', () => {
   const sqlite = fixture();
@@ -70,9 +71,6 @@ it('ignores proven historical group rows without letting duplicate Host names po
     INSERT INTO sync_group_members VALUES
       ('history','Phone 2','mobile','active','Phone 2','auth-history',NULL,
        '2026-07-01','2026-07-01',NULL,'2026-07-02');
-    CREATE TABLE delivery_authorization_migration_aliases (
-      group_id TEXT NOT NULL, peer_key TEXT NOT NULL, authorization_id TEXT NOT NULL,
-      PRIMARY KEY (group_id, peer_key, authorization_id));
     INSERT INTO delivery_authorization_migration_aliases VALUES
       ('history','device-history','auth-history');
     INSERT INTO sync_delivery_receipts VALUES
@@ -105,7 +103,8 @@ it('fails closed for an unclassified peer key in the active migration scope', ()
 function fixture() {
   const sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  installLegacySyncGroupSchema(sqlite);
+  migrateSyncGroupHosts(sqlite);
   sqlite.exec(`
     CREATE TABLE sync_object_state (
       object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL,

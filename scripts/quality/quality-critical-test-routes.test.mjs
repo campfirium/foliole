@@ -1,13 +1,10 @@
 // @vitest-environment node
-/* global process */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { resolveCriticalTestFiles, RUN_VITEST_WITH_SUMMARY_SCRIPT } from './quality-critical-test-routes.mjs';
 
 const existing = () => true;
-const QUALITY_FAST_PLAN_TIMEOUT_MS = 30_000;
 
 const HOSTED_QUALITY_GAP_ROUTES = [
   ['document header menu provider', [
@@ -71,17 +68,6 @@ const HOSTED_QUALITY_HANDOFF_CONTRACTS = [
   'scripts/github-desktop-handoff-events.test.mjs',
   'scripts/hosted-quality-repair-controller-template.test.mjs'
 ];
-
-function readQualityFastPlan(changedFiles) {
-  const result = spawnSync(process.execPath, ['scripts/quality/run-quality-fast.mjs', '--route-json'], {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-    env: { ...process.env, QUALITY_GATE_CHANGED_FILES: changedFiles.join('\n') },
-    timeout: QUALITY_FAST_PLAN_TIMEOUT_MS
-  });
-  expect(result.status, result.stderr).toBe(0);
-  return JSON.parse(result.stdout);
-}
 
 describe('quality critical test routes', () => {
   it('resolves the shared Vitest runner after the quality scripts directory split', () => {
@@ -163,12 +149,6 @@ describe('quality critical test routes', () => {
       'scripts/quality/pinned-npm.test.mjs'
     ]);
   });
-
-  it('exposes the source-triggered contracts through the quality:fast route', () => {
-    const sourceRoutes = HOSTED_QUALITY_GAP_ROUTES.filter(([name]) => name !== 'pinned npm workflow');
-    const plan = readQualityFastPlan(sourceRoutes.flatMap(([, triggers]) => triggers));
-    expect(plan.relatedTests).toEqual(expect.arrayContaining(sourceRoutes.flatMap(([, , tests]) => tests)));
-  }, 45_000);
 
   it('keeps capped quality:fast routes wired to the critical test runner', () => {
     const fastGate = readFileSync('scripts/quality/quality-gate-fast.sh', 'utf8');

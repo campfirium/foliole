@@ -1,8 +1,10 @@
 import type { DbPort, DbRow, DbValue } from '../sync/dbPort.js';
 
 import { mapDeliveryRowsToAuthorizations } from './deliveryAuthorizationMigrationModel.js';
-import { createSyncDeliveryTableStatement } from './syncDeliverySchemaStatements.js';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
+import {
+  createLegacyAuthorizationDeliveryTableStatement,
+  LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS
+} from './legacyHostSyncGroupSchemaStatements.js';
 
 const TRIGGERS = [
   'trg_sync_delivery_state_insert', 'trg_sync_delivery_state_update',
@@ -23,12 +25,12 @@ export async function migrateCompanionDeliveryAuthorizations(db: DbPort) {
   await rebuildReceipts(db, result.receipts);
   await rebuildCursors(db, result.cursors);
   await db.run('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
-  for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) await db.run(statement);
+  for (const statement of LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS) await db.run(statement);
 }
 
 async function rebuildReceipts(db: DbPort, receipts: DbRow[]) {
   await db.run('DROP TABLE IF EXISTS sync_delivery_receipts_next');
-  await db.run(createSyncDeliveryTableStatement('sync_delivery_receipts_next'));
+  await db.run(createLegacyAuthorizationDeliveryTableStatement('sync_delivery_receipts_next'));
   for (const row of receipts) await db.run(`INSERT INTO sync_delivery_receipts_next (
     authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
     local_position, status, remote_position, issue_reason, created_at, updated_at

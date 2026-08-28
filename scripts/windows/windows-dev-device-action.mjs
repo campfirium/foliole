@@ -2,7 +2,6 @@
 
 import path from 'node:path';
 
-import { runWindowsSyncGroupDeviceAction } from './windows-sync-group-device-actions.mjs';
 import {
   captureAnnotationFailure, parseCaptureAnnotationReadiness
 } from './windows-a5-capture-annotation-contract.mjs';
@@ -20,6 +19,11 @@ async function runDefaultCaptureAnnotation(options) {
 async function runDefaultSyncGroupInteractive(options) {
   const { runWindowsSyncGroupInteractiveAction } = await import('./windows-sync-group-interactive-action.mjs');
   return runWindowsSyncGroupInteractiveAction(options);
+}
+
+async function runDefaultSyncGroupDevice(options) {
+  const { runWindowsSyncGroupDeviceAction } = await import('./windows-sync-group-device-actions.mjs');
+  return runWindowsSyncGroupDeviceAction(options);
 }
 
 async function runDefaultLiveReload(options) {
@@ -117,6 +121,7 @@ export async function runWindowsDevDeviceAction({
   action, buildIdentity, candidate, evidenceRoot, execute, paths,
   phase = 'execute',
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runDefaultLiveReload,
+  runSyncGroupDevice = runDefaultSyncGroupDevice,
   runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({
@@ -125,7 +130,7 @@ export async function runWindowsDevDeviceAction({
     expectedGroupTag: process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG, paths
   });
   if (interactiveSyncGroup) return interactiveSyncGroup;
-  const syncGroupAction = await runWindowsSyncGroupDeviceAction({
+  const syncGroupAction = await runSyncGroupDevice({
     action, buildIdentity, candidate, evidenceRoot, execute, paths
   });
   if (syncGroupAction) return syncGroupAction;

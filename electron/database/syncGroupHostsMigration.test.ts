@@ -8,6 +8,7 @@ import { migrateCompanionSyncGroupHosts } from '../../lib/core/database/companio
 import { migrateSyncGroupHosts } from '../../lib/core/database/numberedMigrationSyncGroupHosts.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installLegacySyncGroupSchema } from './companionSyncGroupLegacyTestSchema.js';
 
 let sqlite: Database.Database;
 
@@ -16,29 +17,8 @@ afterEach(() => sqlite?.close());
 function fixture() {
   sqlite = new Database(':memory:');
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  installLegacySyncGroupSchema(sqlite);
   sqlite.exec(`
-    DROP TRIGGER trg_sync_delivery_state_insert;
-    DROP TRIGGER trg_sync_delivery_state_update;
-    DROP TRIGGER trg_sync_delivery_member_leave;
-    DROP TRIGGER trg_sync_delivery_review_insert;
-    DROP TABLE sync_group_local_state;
-    DROP TABLE sync_group_member_departures;
-    DROP TABLE sync_group_members;
-    DROP TABLE sync_groups;
-    CREATE TABLE sync_groups (group_id TEXT PRIMARY KEY, display_name TEXT NOT NULL,
-      timeline_id TEXT NOT NULL, created_by_device_id TEXT NOT NULL, created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL, workgroup_key TEXT);
-    CREATE TABLE sync_group_members (group_id TEXT NOT NULL, device_id TEXT NOT NULL,
-      device_kind TEXT NOT NULL, device_name TEXT NOT NULL, state TEXT NOT NULL,
-      approved_by_device_id TEXT NOT NULL, authorization_id TEXT NOT NULL UNIQUE,
-      provisioning_cursor INTEGER, joined_at TEXT NOT NULL, activated_at TEXT,
-      left_at TEXT, updated_at TEXT NOT NULL, PRIMARY KEY (group_id, device_id));
-    CREATE TABLE sync_group_member_departures (group_id TEXT NOT NULL, device_id TEXT NOT NULL,
-      authorized_by_device_id TEXT NOT NULL, authorization_id TEXT NOT NULL UNIQUE,
-      left_at TEXT NOT NULL, PRIMARY KEY (group_id, device_id));
-    CREATE TABLE sync_group_local_state (singleton_id INTEGER PRIMARY KEY, group_id TEXT,
-      local_device_id TEXT NOT NULL, member_state TEXT NOT NULL, provisioning_cursor INTEGER,
-      created_empty_proof_json TEXT, updated_at TEXT NOT NULL);
     INSERT INTO sync_groups VALUES
       ('group','Studio','timeline','device-a','2026-08-01','2026-08-03','secret');
     INSERT INTO sync_group_members VALUES

@@ -58,6 +58,11 @@ export const SHARED_TEST_BUCKETS = [
     'shared-src-platform-companion'
   ),
   {
+    label: 'shared-platform-companion-top',
+    report: '.tmp/vitest/shared-src-platform-companion-top.json',
+    targets: immediateTestTargets('src/shared/platform/companion')
+  },
+  {
     label: 'shared-platform-core',
     report: '.tmp/vitest/shared-src-platform-core.json',
     targets: [

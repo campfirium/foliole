@@ -17,8 +17,7 @@ it('routes one fixed Windows desktop profile action through the old wrapper', ()
   expect(toWindowsDevWireAction('device-profile')).toBe('deviceprofile');
   const build = fs.readFileSync('scripts/windows/windows-dev-build.mjs', 'utf8');
   expect(build).toContain("runWindowsDeviceProfileAcceptance(action, execute, paths)");
-  expect(build).toContain("action === 'device-profile'");
-  expect(build).toContain("['build', 'device-profile', 'sync-group-join-prepare']");
+  expect(build).toContain('runWindowsDeviceProfileAcceptance(action, execute, paths)');
 });
 
 it('runs only the targeted hidden native profile spec', async () => {

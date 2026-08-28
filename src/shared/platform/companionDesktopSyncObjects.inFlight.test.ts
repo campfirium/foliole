@@ -18,6 +18,7 @@ const syncBridgeMock = vi.hoisted(() => ({
 
 const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' })),
+  prepareNativeCompanionWorkgroupRequestIfPresent: vi.fn(async () => null),
   loadCompanionPairingState: vi.fn(async () => ({
     authorization_id: 'authorization-android-test',
     device_kind: 'android',
@@ -28,7 +29,11 @@ const pairingMock = vi.hoisted(() => ({
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companion/sync/syncGroupStore', () => ({
-  loadCompanionSyncGroup: vi.fn(async () => null)
+  loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
+}));
+vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerId: vi.fn(async () => 'authorization-desktop-test'),
+  resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop')
 }));
 vi.mock('./companionDesktopSyncSummary', () => ({
   loadCompanionDesktopSyncSummary: vi.fn(async () => ({
@@ -48,7 +53,7 @@ vi.mock('./companionDesktopSyncSummary', () => ({
     remainingStructureChangeCount: null
   }))
 }));
-vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/network/signedRequest', () => pairingMock);
 
 beforeEach(() => {
   vi.resetAllMocks();

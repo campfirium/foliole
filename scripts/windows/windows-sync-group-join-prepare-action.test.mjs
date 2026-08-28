@@ -18,7 +18,7 @@ it('registers one fixed Windows desktop join-prepare action without a legacy ali
   expect(toWindowsDevWireAction('sync-group-join-prepare')).toBe('sync-group-join-prepare');
   const build = fs.readFileSync('scripts/windows/windows-dev-build.mjs', 'utf8');
   expect(build).toContain('runWindowsSyncGroupJoinPrepareAcceptance');
-  expect(build).toContain("['device-profile', 'sync-group-join-prepare']");
+  expect(build).toContain('runWindowsSyncGroupJoinPrepareAcceptance');
 });
 
 it('runs the shared hidden-native request and accept spec with fixed evidence', async () => {

@@ -12,7 +12,7 @@ it('exposes stable Device request states to physical-host acceptance', () => {
   expect(panel).toContain('data-testid="companion-sync-error"');
   expect(panel).toContain('data-error-code={props.error}');
   expect(states).toContain('data-testid="companion-sync-awaiting-approval"');
-  expect(scenario).toContain('TimeUnit.SECONDS.toNanos(15)');
+  expect(scenario).toContain('TimeUnit.SECONDS.toNanos(STAGE_TIMEOUT_SECONDS)');
   expect(scenario).toContain('"companion-sync-awaiting-approval", "companion-sync-error"');
   expect(scenario).toContain('"Sync Group Device request failed: "');
 });

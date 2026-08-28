@@ -48,7 +48,7 @@ vi.mock('./companionSyncObjects', () => syncObjectsMock);
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
-vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/network/signedRequest', () => pairingMock);
 vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
   commitStagedCompanionAttachmentBatch: databaseMock.commit
 }));

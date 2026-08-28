@@ -1,10 +1,12 @@
 import { allocateSyncGroupHostName } from '../../platform/syncGroupDeviceProfile.js';
 
 import { buildLegacyDeliveryAuthorizationAliases } from './deliveryAuthorizationMigrationModel.js';
+import {
+  LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS,
+  LEGACY_HOST_SYNC_GROUP_SCHEMA_STATEMENTS
+} from './legacyHostSyncGroupSchemaStatements.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { columnExists, tableExists } from './numberedMigrationHelpers.js';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 type Row = Record<string, unknown>;
 
@@ -21,12 +23,16 @@ export function migrateSyncGroupHosts(sqlite: DatabaseMigrationTarget) {
   preserveDeliveryAliases(sqlite, members, hostNames);
   for (const table of ['sync_group_local_state', 'sync_group_member_departures',
     'sync_group_members', 'sync_groups']) sqlite.exec(`DROP TABLE IF EXISTS ${table}`);
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  for (const statement of LEGACY_HOST_SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   insertGroups(sqlite, groups, hostNames);
   insertMembers(sqlite, members, hostNames);
   insertLocals(sqlite, locals, hostNames);
   insertDepartures(sqlite, departures, hostNames);
-  for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+  for (const statement of LEGACY_HOST_SYNC_DELIVERY_TRIGGER_STATEMENTS) {
+    if (statement.includes(' ON sync_object_state') && !tableExists(sqlite, 'sync_object_state')) continue;
+    if (statement.includes(' ON review_log') && !tableExists(sqlite, 'review_log')) continue;
+    sqlite.exec(statement);
+  }
 }
 
 function preserveDeliveryAliases(

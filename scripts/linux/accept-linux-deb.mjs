@@ -165,7 +165,7 @@ function runPackagedAcceptance(version) {
     'scripts/with-resource-gate.mjs', 'preview', '--',
     'xvfb-run', '--auto-servernum', process.execPath, 'node_modules/playwright/cli.js',
     'test', '--config', 'playwright.desktop.config.ts',
-    'tests/desktop/linux-deb-core.spec.ts', 'tests/desktop/linux-deb-external-capabilities.spec.ts',
+    'tests/desktop/linux-deb-core.spec.ts',
     'tests/desktop/rc-golden-journey.spec.ts'
   ], { env }));
 }

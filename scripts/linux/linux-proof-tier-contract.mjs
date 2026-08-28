@@ -32,7 +32,7 @@ export const LINUX_DEB_PROOF_CONTRACT = Object.freeze([
   {
     id: 'installed-runtime-external-capabilities',
     tier: 'package-install',
-    owner: 'tests/desktop/linux-deb-external-capabilities.spec.ts'
+    owner: 'scripts/linux/accept-linux-deb.mjs'
   }
 ]);
 

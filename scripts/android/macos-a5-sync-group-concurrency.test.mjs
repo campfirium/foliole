@@ -9,9 +9,14 @@ import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-mainte
 
 it('aborts host observation when physical A5 instrumentation fails first', async () => {
   const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'artifacts', 'a5-race-'));
-  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
-    code: 0, output: 'INSTRUMENTATION_CODE: -1', stdout: 'INSTRUMENTATION_CODE: -1'
-  } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
+  const execute = vi.fn(async (_command, args) => {
+    if (args.includes('instrument')) return {
+      code: 0, output: 'INSTRUMENTATION_CODE: -1', stdout: 'INSTRUMENTATION_CODE: -1'
+    };
+    const output = args.includes('dumpsys')
+      ? 'com.foliole.android.acceptance/com.foliole.android.MainActivity' : 'Success\n';
+    return { code: 0, output, stdout: output };
+  });
   const observer = vi.fn(({ signal }) => new Promise((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(signal.reason), { once: true });
   }));

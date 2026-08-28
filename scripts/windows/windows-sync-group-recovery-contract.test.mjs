@@ -50,7 +50,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain('closeWindowsSyncGroupSession');
   expect(remote).toContain("FOLIOLE_ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT: '1'");
   expect(cursorCommit).toContain("env[ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT] !== '1'");
-  expect(runtimeProgress).toContain('fs.appendFileSync(logPath');
+  expect(runtimeProgress).toContain('captureSyncRuntimeLog(child, logPath');
   expect(runtimeProgress).toContain('RECEIVE_CURSOR_COMMITTED_EVENT');
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
