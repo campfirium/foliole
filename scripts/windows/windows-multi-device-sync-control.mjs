@@ -2,13 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { parseWindowsDevFailureEvidence } from './windows-dev-control-evidence.mjs';
-import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
+import {
+  WINDOWS_DEV_EVIDENCE_PREFIX, WINDOWS_DEV_REPO_ROOT_POSIX
+} from './windows-dev-paths.mjs';
 
-const ROUTE_SELFCHECK_FAILURE_FILES = [
+const ROUTE_FAILURE_FILES = [
   'summary.json',
   'desktop-dnssd-route-runtime/action.log',
   'desktop-dnssd-route-runtime/receipt.json'
 ];
+const ROUTE_INTERACTIVE_FAILURE_FILES = ['request.json', 'status.json', 'result.json'];
 
 function parseEvidence(output, action, receiptName) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
@@ -21,19 +24,28 @@ function parseEvidence(output, action, receiptName) {
   return { identity: match[1], remoteRoot };
 }
 
-async function copyRouteSelfcheckFailure({ buildScpSpec, env, executeScp, fsApi, host,
+async function copyRouteFailure({ action, buildScpSpec, env, executeScp, fsApi, host,
   output, repoRoot }) {
   const evidence = parseWindowsDevFailureEvidence(output);
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync',
     'windows-c', evidence.buildIdentity);
   fsApi.mkdirSync(localRoot, { recursive: true });
   const copyFailures = [];
-  for (const relative of ROUTE_SELFCHECK_FAILURE_FILES) {
+  const files = ROUTE_FAILURE_FILES.map((relative) => ({
+    local: relative, remote: `${evidence.remoteRoot}/${relative}`
+  }));
+  if (action === 'desktop-dnssd-route-provider') {
+    files.push(...ROUTE_INTERACTIVE_FAILURE_FILES.map((relative) => ({
+      local: `interactive/${relative}`,
+      remote: `${WINDOWS_DEV_REPO_ROOT_POSIX}/.tmp/windows-sync-group-interactive/${relative}`
+    })));
+  }
+  for (const file of files) {
+    const relative = file.local;
     const localPath = path.join(localRoot, relative);
     fsApi.mkdirSync(path.dirname(localPath), { recursive: true });
     try {
-      await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${relative}`,
-        localPath, env), { env });
+      await executeScp(buildScpSpec(host, file.remote, localPath, env), { env });
     } catch (error) {
       copyFailures.push({ message: error.message, relative });
     }
@@ -55,8 +67,8 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   } catch (error) {
     output = error.output || error.message;
     if (!streamed && output) stdout.write(output);
-    if (action === 'desktop-dnssd-route-selfcheck') {
-      const copied = await copyRouteSelfcheckFailure({ buildScpSpec, env, executeScp,
+    if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
+      const copied = await copyRouteFailure({ action, buildScpSpec, env, executeScp,
         fsApi, host, output, repoRoot });
       error.evidenceCopyFailures = copied.copyFailures;
       error.evidenceRoot = copied.localRoot;
@@ -85,7 +97,7 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${receiptName}`,
     manifestPath, env), { env });
   if (action === 'desktop-dnssd-route-selfcheck') {
-    for (const relative of ['selfcheck-negative-error.json', 'selfcheck-native-probe.log',
+    for (const relative of ['selfcheck-negative-error.json', 'selfcheck-product-launch.json',
       'desktop-dnssd-route-runtime/action.log', 'desktop-dnssd-route-runtime/receipt.json']) {
       const localPath = path.join(localRoot, relative);
       fsApi.mkdirSync(path.dirname(localPath), { recursive: true });

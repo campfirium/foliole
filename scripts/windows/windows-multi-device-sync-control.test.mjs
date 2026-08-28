@@ -107,7 +107,7 @@ it('copies the route controller selfcheck receipt, logs, and terminal diagnostic
   expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
     expect.stringContaining('desktop-dnssd-route-controller-selfcheck-receipt.json'),
     expect.stringContaining('selfcheck-negative-error.json'),
-    expect.stringContaining('selfcheck-native-probe.log'),
+    expect.stringContaining('selfcheck-product-launch.json'),
     expect.stringContaining('desktop-dnssd-route-runtime/action.log'),
     expect.stringContaining('desktop-dnssd-route-runtime/receipt.json')
   ]);
@@ -131,5 +131,27 @@ it('copies fixed route selfcheck failure diagnostics before preserving the remot
     `${remoteRoot}/summary.json`,
     `${remoteRoot}/desktop-dnssd-route-runtime/action.log`,
     `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`
+  ]);
+});
+
+it('copies route provider runtime and nonce terminals before preserving the remote error', async () => {
+  const executeScp = vi.fn(async () => 'copied');
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-8';
+  const output = `[windows-dev-action] status: FAILED exit=125 evidence=${remoteRoot}/summary.json\n`;
+  const remoteError = Object.assign(new Error('provider failed'), { output });
+  await expect(runWindowsMultiDeviceSyncControl({ action: 'desktop-dnssd-route-provider',
+    buildPushSpec: () => ({ args: ['push'], env: {} }),
+    buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
+    env: {}, executeGit: vi.fn(async () => ''), executeScp,
+    executeSsh: vi.fn(async () => { throw remoteError; }), fsApi: { mkdirSync: vi.fn() },
+    host: 'user@host', repoRoot: '/repo', stdout: { write: vi.fn() }
+  })).rejects.toBe(remoteError);
+  expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
+    `${remoteRoot}/summary.json`,
+    `${remoteRoot}/desktop-dnssd-route-runtime/action.log`,
+    `${remoteRoot}/desktop-dnssd-route-runtime/receipt.json`,
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
   ]);
 });

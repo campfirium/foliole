@@ -13,7 +13,12 @@ const ACTION = 'desktop-dnssd-route-provider';
 
 export function resolveWindowsDesktopRouteElectronLauncher(repoRoot, makeRequire = createRequire) {
   const requireFromRuntime = makeRequire(path.join(repoRoot, 'package.json'));
-  return requireFromRuntime('playwright')._electron;
+  const launcher = requireFromRuntime('playwright')._electron;
+  return { launch(options) {
+    const runtimeOptions = { ...options };
+    delete runtimeOptions.executablePath;
+    return launcher.launch(runtimeOptions);
+  } };
 }
 
 function joinedRouteIdentity(overview) {

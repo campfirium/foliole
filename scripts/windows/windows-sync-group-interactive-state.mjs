@@ -35,7 +35,7 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot, capsulesR
     && runtimeRepoRoot.startsWith(`${allowedRuntimeRoot}${path.sep}`)
     && path.basename(runtimeRepoRoot) === 'source');
   const selfcheckAllowed = request?.action === 'desktop-dnssd-route-selfcheck'
-    ? ['missing-runtime', 'native-probe'].includes(request.selfcheckMode)
+    ? ['missing-runtime', 'product-launch'].includes(request.selfcheckMode)
     : request?.selfcheckMode === undefined;
   if (request?.schemaVersion !== 1 || !WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS.has(request.action)
       || !/^[0-9a-f-]{36}$/u.test(request.nonce || '')

@@ -33,11 +33,13 @@ it('keeps the Windows provider on the existing short-lived action lifecycle', ()
 });
 
 it('loads Playwright from the task-owned runtime dependency root', () => {
-  const launcher = { launch: () => undefined };
+  const launcher = { launch: vi.fn(async () => 'launched') };
   const runtimeRequire = vi.fn(() => ({ _electron: launcher }));
   const makeRequire = vi.fn(() => runtimeRequire);
   const runtimeRoot = 'D:\\capsules\\attempt\\source';
-  expect(resolveWindowsDesktopRouteElectronLauncher(runtimeRoot, makeRequire)).toBe(launcher);
+  const resolved = resolveWindowsDesktopRouteElectronLauncher(runtimeRoot, makeRequire);
   expect(makeRequire).toHaveBeenCalledWith(path.join(runtimeRoot, 'package.json'));
   expect(runtimeRequire).toHaveBeenCalledWith('playwright');
+  return resolved.launch({ args: ['main.js'], executablePath: 'D:\\fixed\\electron.exe' })
+    .then(() => expect(launcher.launch).toHaveBeenCalledWith({ args: ['main.js'] }));
 });

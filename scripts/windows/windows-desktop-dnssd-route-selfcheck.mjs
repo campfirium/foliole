@@ -52,14 +52,14 @@ export async function runWindowsDesktopDnsSdRouteSelfcheck(options, dependencies
   }, dependencies);
   const negative = assertTerminal(await dispatch('missing-runtime'), 1, 'negative');
   if (!negative.error) throw new Error('desktop DNS-SD route negative selfcheck lost its error');
-  const positiveEnvelope = await dispatch('native-probe');
+  const positiveEnvelope = await dispatch('product-launch');
   const positive = assertTerminal(positiveEnvelope, 0, 'positive');
   const taskAction = await inspectRouteSelfcheckTaskAction(options);
   const actionResult = positiveEnvelope.actionResult;
   const manifestPath = path.join(options.evidenceRoot,
     'desktop-dnssd-route-controller-selfcheck-receipt.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ buildIdentity: options.buildIdentity,
-    artifacts: { nativeProbeLog: 'selfcheck-native-probe.log',
+    artifacts: { productLaunch: 'selfcheck-product-launch.json',
       negativeError: 'selfcheck-negative-error.json',
       runtimeLog: 'desktop-dnssd-route-runtime/action.log',
       runtimeReceipt: 'desktop-dnssd-route-runtime/receipt.json' },
