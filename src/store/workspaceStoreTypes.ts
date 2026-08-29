@@ -1,10 +1,6 @@
 import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import type {
-  EditorOperationHistoryEntry,
-  EditorOperationHistoryState,
-  EditorTextEditOperationEntry
-} from '../features/editor/model/editorOperationHistory';
+import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup, PdfAnchorLocator } from '../features/nodes/model/nodeTypes';
@@ -53,11 +49,7 @@ export interface WorkspaceState {
   setBrowseRootNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
-  updateNodeContent: (
-    nodeId: string,
-    content: string,
-    options?: { preserveTitle?: boolean; publishLocal?: boolean }
-  ) => Promise<boolean>;
+  updateNodeContent: (nodeId: string, content: string, options?: { preserveTitle?: boolean; publishLocal?: boolean }) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
@@ -76,11 +68,7 @@ export interface WorkspaceState {
   deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   undoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
   redoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
-  settleEditorAnnotationCreation: (args: {
-    annotationNodeIds: string[];
-    nodeId: string;
-    succeeded: boolean;
-  }) => void;
+  settleEditorAnnotationCreation: (args: { annotationNodeIds: string[]; nodeId: string; succeeded: boolean }) => void;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean;
   continueReviewSessionReading: (now?: string) => boolean;
@@ -102,48 +90,14 @@ export interface WorkspaceState {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   createRootNode: (content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
-  createVirtualNode: (options?: {
-    mode?: 'manual' | 'saved-search';
-    parentNodeId?: string;
-  }) => Promise<string | null>;
-  createHighlightNodeFromSelection: (
-    parentNodeId: string,
-    content: string,
-    anchorId?: string,
-    anchorLink?: NodeAnchorLink,
-    imageRegions?: NodeImageRegionGroup[] | null
-  ) => Promise<string | null>;
-  createPdfImageExcerpt?: (
-    parentNodeId: string,
-    page: number,
-    locator: PdfAnchorLocator,
-    attachmentId: string,
-    bytesBase64: string
-  ) => Promise<string | null>;
-  createQANodeFromSelection: (
-    parentNodeId: string,
-    promptContent: string,
-    answerContent: string,
-    anchorId?: string,
-    anchorLink?: NodeAnchorLink
-  ) => Promise<string | null>;
-  createImageClozeNodes: (
-    parentNodeId: string,
-    attachmentId: string,
-    sourcePayload: ImageClozeSourcePayload,
-    regions: ImageClozeDraftRegion[]
-  ) => Promise<string[]>;
-  createFormulaClozeNode: (
-    parentNodeId: string,
-    payload: FormulaClozeCreatePayload,
-    sourcePayload: FormulaClozeSourcePayload
-  ) => Promise<string | null>;
+  createVirtualNode: (options?: { mode?: 'manual' | 'saved-search'; parentNodeId?: string }) => Promise<string | null>;
+  createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string, anchorLink?: NodeAnchorLink, imageRegions?: NodeImageRegionGroup[] | null) => Promise<string | null>;
+  createPdfImageExcerpt?: (parentNodeId: string, page: number, locator: PdfAnchorLocator, attachmentId: string, bytesBase64: string, content?: string) => Promise<string | null>;
+  createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string, anchorId?: string, anchorLink?: NodeAnchorLink) => Promise<string | null>;
+  createImageClozeNodes: (parentNodeId: string, attachmentId: string, sourcePayload: ImageClozeSourcePayload, regions: ImageClozeDraftRegion[]) => Promise<string[]>;
+  createFormulaClozeNode: (parentNodeId: string, payload: FormulaClozeCreatePayload, sourcePayload: FormulaClozeSourcePayload) => Promise<string | null>;
   moveNode: (nodeId: string, nextParentNodeId: string | null) => Promise<boolean>;
-  moveNodes: (
-    nodeIds: string[],
-    targetNodeId: string | null,
-    intent: 'before' | 'after' | 'child' | 'root'
-  ) => Promise<boolean>;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => Promise<boolean>;
 }
 
 export interface EditorOperationApplyContext {

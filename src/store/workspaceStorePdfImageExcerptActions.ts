@@ -7,21 +7,26 @@ import { applyCreatedNode, buildAnnotationCreatePatch } from './workspaceStoreCr
 type WorkspaceSet = (partial: Partial<WorkspaceState> | WorkspaceState | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 const EXCERPT_TITLE_PATTERN = /^Excerpt (\d+)$/;
 
-function createExcerptNode(args: {
-  attachmentId: string;
-  locator: PdfAnchorLocator;
-  nodeId: string;
-  parentNodeId: string;
-  timestamp: string;
-  title: string;
-}): WorkspaceState['nodesById'][string] {
+function createExcerptNode(args: { attachmentId: string; content?: string; locator: PdfAnchorLocator; nodeId: string; parentNodeId: string; timestamp: string; title: string }): WorkspaceState['nodesById'][string] {
   return {
-    id: args.nodeId, parentNodeId: args.parentNodeId, kind: 'topic',
-    title: args.title, isTitleManual: false, hasContent: true,
-    content: `![Image excerpt](asset://${args.attachmentId}.png)`,
-    anchorLink: { id: `anchor-${crypto.randomUUID()}`, kind: 'image-excerpt', locator: args.locator },
-    imageRegions: null, hasReveal: false, reveal: null, review: null,
-    createdAt: args.timestamp, updatedAt: args.timestamp
+    id: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    kind: 'topic',
+    title: args.title,
+    isTitleManual: false,
+    hasContent: true,
+    content: args.content ?? `![Image excerpt](asset://${args.attachmentId}.png)`,
+    anchorLink: {
+      id: `anchor-${crypto.randomUUID()}`,
+      kind: 'image-excerpt',
+      locator: args.locator
+    },
+    imageRegions: null,
+    hasReveal: false,
+    reveal: null,
+    review: null,
+    createdAt: args.timestamp,
+    updatedAt: args.timestamp
   };
 }
 
@@ -44,17 +49,10 @@ function resolveExcerptTitleState(parentNodeId: string, state: WorkspaceState) {
 
 export function createPdfImageExcerptAction(
   set: WorkspaceSet,
-  syncCreation: (args: {
-    activeNodeId: string;
-    attachmentId: string;
-    bytesBase64: string;
-    node: WorkspaceState['nodesById'][string];
-    nodeOrder: string[];
-    position: number;
-  }) => Promise<WorkspaceNodeMutationPatchResult | null>,
+  syncCreation: (args: { activeNodeId: string; attachmentId: string; bytesBase64: string; node: WorkspaceState['nodesById'][string]; nodeOrder: string[]; position: number }) => Promise<WorkspaceNodeMutationPatchResult | null>,
   get?: () => WorkspaceState
 ): NonNullable<WorkspaceState['createPdfImageExcerpt']> {
-  return async (parentNodeId, page, locator, attachmentId, bytesBase64) => {
+  return async (parentNodeId, page, locator, attachmentId, bytesBase64, content) => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let node: WorkspaceState['nodesById'][string] | null = null;
@@ -62,7 +60,15 @@ export function createPdfImageExcerptAction(
     set((state) => {
       if (!state.nodesById[parentNodeId]) return state;
       const titleState = resolveExcerptTitleState(parentNodeId, state);
-      node = createExcerptNode({ attachmentId, locator, nodeId, parentNodeId, timestamp, title: titleState.title });
+      node = createExcerptNode({
+        attachmentId,
+        ...(content ? { content } : {}),
+        locator,
+        nodeId,
+        parentNodeId,
+        timestamp,
+        title: titleState.title
+      });
       const next = buildAnnotationCreatePatch({
         createdNode: node,
         parentNodeId,
@@ -75,14 +81,15 @@ export function createPdfImageExcerptAction(
     const handlers = {
       syncNodeContent: () => undefined,
       syncNodeOrder: () => undefined,
-      syncNodeCreation: async (createdNode: NonNullable<typeof node>, order: string[] = []) => syncCreation({
-        activeNodeId: parentNodeId,
-        attachmentId,
-        bytesBase64,
-        node: createdNode,
-        nodeOrder: order,
-        position: order.indexOf(createdNode.id)
-      })
+      syncNodeCreation: async (createdNode: NonNullable<typeof node>, order: string[] = []) =>
+        syncCreation({
+          activeNodeId: parentNodeId,
+          attachmentId,
+          bytesBase64,
+          node: createdNode,
+          nodeOrder: order,
+          position: order.indexOf(createdNode.id)
+        })
     };
     return applyCreatedNode({
       activeNodeId: parentNodeId,

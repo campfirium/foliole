@@ -12,6 +12,7 @@ export function resolveExistingExcerptNode(
   });
   return {
     canAdjustRange: options.canAdjustRange,
+    content: node.content,
     kind: node.anchorLink?.kind ?? 'highlight',
     nodeId: node.id,
     note: parsed.note,

@@ -10,6 +10,7 @@ import { expect, test } from './harness/fixtures';
 
 const FIXTURE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/pdf-user-journey.pdf');
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/pdf-image-excerpt-text-visible.png');
+const ANNOTATED_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/pdf-annotated-image-excerpt-visible.png');
 
 function pdfObject(number: number, body: Buffer | string) {
   return Buffer.concat([Buffer.from(`${number} 0 obj\n`), Buffer.from(body), Buffer.from('\nendobj\n')]);
@@ -77,6 +78,50 @@ async function selectExcerptOutline(desktopWindow: Page, nodeId?: string) {
   await expect(toolbar).toBeVisible();
   await expect(toolbar.getByRole('button', { name: /^(Add Comment|添加批注)$/ })).toBeVisible();
 }
+
+async function requestPdfAnnotationFromPalette(desktopWindow: Page) {
+  const ribbon = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
+  await ribbon.getByRole('button', { name: /Command Palette|命令面板/ }).click();
+  const palette = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
+  await palette.getByRole('textbox', { name: /Search commands|搜索命令/ }).fill('annotation');
+  await palette.locator('button[aria-label="Annotate Selection"], button[aria-label="批注所选内容"]').click();
+}
+
+test('PDF annotation command @pdf creates one annotated image excerpt after a visual selection', async ({
+  desktopApp,
+  desktopWindow
+}) => {
+  const fixturePath = path.resolve('.tmp/artifacts/pdf-annotated-image-excerpt.pdf');
+  createVisualPdfFixture(fixturePath, null);
+  const parentNodeId = await importPdf(desktopApp, desktopWindow, fixturePath);
+
+  await requestPdfAnnotationFromPalette(desktopWindow);
+  await dragExcerptRegion(desktopWindow);
+  const noteInput = desktopWindow.getByRole('textbox', { name: /Add a comment|添加批注/ });
+  await expect(noteInput).toBeVisible();
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ })).toHaveCount(0);
+  await noteInput.fill('Diagram thought');
+  await desktopWindow.screenshot({ path: ANNOTATED_SCREENSHOT_PATH });
+  await desktopWindow.getByRole('button', { name: /Save|保存/, exact: true }).click();
+
+  const excerptNode = desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ });
+  await expect(excerptNode).toBeVisible();
+  const excerptNodeId = await excerptNode.getAttribute('data-node-id');
+  if (!excerptNodeId) throw new Error('Annotated PDF image excerpt node has no id');
+  await expect(desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${excerptNodeId}"]`)).toBeVisible();
+  await expect.poll(() => desktopWindow.evaluate((nodeId) => (
+    window.__folioleWorkspaceDebug?.getNode?.(nodeId)?.content ?? null
+  ), excerptNodeId)).toMatch(/asset:\/\/[^)]+\.png\)\n※ Diagram thought$/);
+
+  await desktopWindow.reload();
+  await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), parentNodeId);
+  await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
+  await expect(desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${excerptNodeId}"]`)).toBeVisible();
+  await selectExcerptOutline(desktopWindow, excerptNodeId);
+  await desktopWindow.locator('[data-annotation-toolbar="true"]')
+    .getByRole('button', { name: /^(Add Comment|添加批注)$/ }).click();
+  await expect(desktopWindow.getByRole('textbox', { name: /Add a comment|添加批注/ })).toHaveValue('Diagram thought');
+});
 
 test('PDF image excerpt @pdf creates a normal image and opens it from the source outline', async ({
   desktopApp,

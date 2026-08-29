@@ -37,7 +37,7 @@ export function createExistingHighlightHandlers(args: ExistingHighlightHandlerAr
       }
       args.flushPendingEditorDraft();
       return args.updateNodeContent(existingHighlight.nodeId, replaceExcerptAnnotation({
-        content: node.content,
+        content: existingHighlight.content,
         note,
         notePrefix: getHighlightAnnotationPrefix()
       }), { preserveTitle: true });

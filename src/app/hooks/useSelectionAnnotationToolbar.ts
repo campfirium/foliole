@@ -126,7 +126,7 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       const pdfTarget = getPdfHighlightTarget(event.target) ??
         findPdfHighlightTargetAtPoint(event.clientX, event.clientY);
       if (pdfTarget) {
-        openPdfExcerptToolbar(args, event, pdfTarget);
+        void openPdfExcerptToolbar(args, event, pdfTarget);
       }
       return;
     }
@@ -168,7 +168,11 @@ function createPdfHighlightKeyDownHandler(args: SelectionAnnotationToolbarArgs) 
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2
     });
-    if (openPdfExcerptToolbar(args, mouseEvent, target)) {
+    const opened = openPdfExcerptToolbar(args, mouseEvent, target);
+    if (opened instanceof Promise) {
+      event.preventDefault();
+      void opened;
+    } else if (opened) {
       event.preventDefault();
     }
   };

@@ -1,7 +1,11 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
+import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { resolveWholeImageExistingExcerpt } from './existingExcerptTarget';
-import { resolvePdfExistingHighlight } from './pdfExistingHighlightTarget';
+import { resolveExistingExcerptNode, resolveWholeImageExistingExcerpt } from './existingExcerptTarget';
+import { resolvePdfExistingHighlightNode } from './pdfExistingHighlightTarget';
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
 interface ExistingExcerptToolbarArgs {
@@ -29,7 +33,7 @@ function openResolvedExcerpt(
   args: ExistingExcerptToolbarArgs,
   event: MouseEvent,
   target: HTMLElement,
-  match: ReturnType<typeof resolvePdfExistingHighlight>
+  match: ReturnType<typeof resolveExistingExcerptNode> | null
 ) {
   if (!match) return false;
   const position = resolveSelectionToolbarPosition(event, target);
@@ -49,12 +53,31 @@ function openResolvedExcerpt(
 }
 
 export function openPdfExcerptToolbar(args: ExistingExcerptToolbarArgs, event: MouseEvent, target: HTMLElement) {
-  return openResolvedExcerpt(args, event, target, resolvePdfExistingHighlight({
+  const node = resolvePdfExistingHighlightNode({
     activeNodeId: args.activeNodeId ?? '',
     nodesById: args.nodesById,
     target,
     trashedNodeIds: args.trashedNodeIds
-  }));
+  });
+  if (!node) return false;
+  if (isNodeDocumentLoaded(node) || !hasWorkspaceRuntimeRepository()) {
+    return openResolvedExcerpt(args, event, target, resolveExistingExcerptNode(node, { canAdjustRange: false }));
+  }
+  return ensureWorkspaceNodeDocumentReady(node.id, { keepWarm: true }).then(() => {
+    const currentNodesById = useWorkspaceStore.getState().nodesById;
+    const preparedNode = resolvePdfExistingHighlightNode({
+      activeNodeId: args.activeNodeId ?? '',
+      nodesById: currentNodesById,
+      target,
+      trashedNodeIds: args.trashedNodeIds
+    });
+    return openResolvedExcerpt(
+      { ...args, nodesById: currentNodesById },
+      event,
+      target,
+      preparedNode ? resolveExistingExcerptNode(preparedNode, { canAdjustRange: false }) : null
+    );
+  });
 }
 
 export function openWholeImageExcerptToolbar(args: ExistingExcerptToolbarArgs, event: MouseEvent, target: HTMLElement) {

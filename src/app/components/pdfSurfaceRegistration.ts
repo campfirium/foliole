@@ -4,7 +4,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { registerPdfSystem, unregisterPdfSystem } from '../../features/pdf/model/pdfSystemRegistry';
 
 export type PdfSelectionAnnotationKind = 'cloze' | 'highlight' | 'note';
-type PdfVisualSelectionKind = Exclude<PdfSelectionAnnotationKind, 'note'>;
+export type PdfVisualSelectionKind = PdfSelectionAnnotationKind;
 
 let activePdfSelectionAnnotationRequest: ((kind: PdfSelectionAnnotationKind) => boolean) | null = null;
 const PDF_VISUAL_SELECTION_EVENT = 'foliole:pdf-visual-selection';

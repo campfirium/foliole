@@ -36,12 +36,12 @@ function usePdfSelectionMenuState() {
     setNoteOpen(false);
     setNoteDraft('');
   };
-  const openSelectionToolbar = (
-    selection: PdfSelectionSnapshot,
-    position: { left: number; top: number },
-    showOverlay = false
-  ) => {
-    setSelectionMenuState({ ...position, locator: selection.locator, selectionText: selection.selectionText });
+  const openSelectionToolbar = (selection: PdfSelectionSnapshot, position: { left: number; top: number }, showOverlay = false) => {
+    setSelectionMenuState({
+      ...position,
+      locator: selection.locator,
+      selectionText: selection.selectionText
+    });
     setSelectionOverlayLocator(showOverlay ? selection.locator : undefined);
   };
   useTrackPdfSelection(surfaceRef, preservedSelectionRef);
@@ -58,17 +58,21 @@ function usePdfSelectionMenuState() {
     openSelectionToolbar(fallbackSelection, position, true);
   };
   return {
-    closeSelectionMenu, handleContextMenu, noteDraft, noteOpen, openSelectionToolbar,
-    preservedSelectionRef, selectionMenuState, selectionOverlayLocator,
-    setNoteDraft, setNoteOpen, surfaceRef
+    closeSelectionMenu,
+    handleContextMenu,
+    noteDraft,
+    noteOpen,
+    openSelectionToolbar,
+    preservedSelectionRef,
+    selectionMenuState,
+    selectionOverlayLocator,
+    setNoteDraft,
+    setNoteOpen,
+    surfaceRef
   };
 }
 
-function usePdfSelectionAnnotationActions(args: {
-  menu: ReturnType<typeof usePdfSelectionMenuState>;
-  nodeId: string | null;
-  onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined;
-}) {
+function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdfSelectionMenuState>; nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined }) {
   const createHighlight = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
   const createCloze = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const { menu } = args;
@@ -83,14 +87,22 @@ function usePdfSelectionAnnotationActions(args: {
     const selection = menu.selectionMenuState ?? resolveContextMenuSelection(menu.surfaceRef.current, menu.preservedSelectionRef.current);
     if (!selection?.selectionText || !args.nodeId) return false;
     const anchorId = `pdf-${crypto.randomUUID()}`;
-    const anchorLink = { id: anchorId, kind: kind === 'cloze' ? 'cloze' as const : 'highlight' as const, locator: selection.locator };
+    const anchorLink = {
+      id: anchorId,
+      kind: kind === 'cloze' ? ('cloze' as const) : ('highlight' as const),
+      locator: selection.locator
+    };
     if (kind === 'highlight') {
       finishCreation(args.onCreateHighlightFromSelection?.(selection.selectionText, selection.locator) ?? false);
     } else if (kind === 'cloze') {
       void createCloze(args.nodeId, '[...]', selection.selectionText, anchorId, anchorLink);
       finishCreation(true);
     } else {
-      const content = formatHighlightCardContent({ note, notePrefix: getHighlightAnnotationPrefix(), text: selection.selectionText });
+      const content = formatHighlightCardContent({
+        note,
+        notePrefix: getHighlightAnnotationPrefix(),
+        text: selection.selectionText
+      });
       void createHighlight(args.nodeId, content, anchorId, anchorLink);
       finishCreation(true);
     }
@@ -104,19 +116,13 @@ function usePdfSelectionAnnotationActions(args: {
       else applySelectionAnnotation(kind);
       return true;
     }
-    if (kind === 'highlight' || kind === 'cloze') {
-      setPdfVisualSelectionKind(kind);
-      return true;
-    }
-    return false;
+    setPdfVisualSelectionKind(kind);
+    return true;
   };
   return { applySelectionAnnotation, requestAnnotation };
 }
 
-export function usePdfSelectionContextMenu(args: {
-  nodeId: string | null;
-  onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined;
-}) {
+export function usePdfSelectionContextMenu(args: { nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined }) {
   const menu = usePdfSelectionMenuState();
   const annotations = usePdfSelectionAnnotationActions({ ...args, menu });
 
@@ -155,13 +161,7 @@ export function PdfSelectionContextMenu({
 
   return createPortal(
     <>
-      <div
-        className="fixed z-floating"
-        data-annotation-toolbar="true"
-        onContextMenu={(event) => event.preventDefault()}
-        onPointerDown={(event) => event.stopPropagation()}
-        style={{ left: state.left, top: state.top }}
-      >
+      <div className="fixed z-floating" data-annotation-toolbar="true" onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()} style={{ left: state.left, top: state.top }}>
         <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 px-1.5 py-1')} role="toolbar" style={{ opacity: 'var(--app-selection-toolbar-opacity)' }}>
           <AnnotationToolbarButton label={t('desktop.pdf.selection.highlight')} onClick={onCreateHighlight}>
             <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
@@ -174,8 +174,7 @@ export function PdfSelectionContextMenu({
           </AnnotationToolbarButton>
         </div>
       </div>
-      {noteOpen ? <AnnotationNotePanel draft={noteDraft} left={state.left} onCancel={() => setNoteOpen(false)}
-        onChange={setNoteDraft} onSave={onCreateNote} top={state.top + 42} /> : null}
+      {noteOpen ? <AnnotationNotePanel draft={noteDraft} left={state.left} onCancel={() => setNoteOpen(false)} onChange={setNoteDraft} onSave={onCreateNote} top={state.top + 42} /> : null}
     </>,
     document.body
   );

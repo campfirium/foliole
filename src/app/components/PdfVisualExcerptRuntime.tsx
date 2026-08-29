@@ -1,14 +1,25 @@
 import type { PDFPageProxy } from 'pdfjs-dist';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 
+import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
+import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { rotatePdfNormalizedRect, unrotatePdfNormalizedRect, type PdfNormalizedRect } from './pdfVisualExcerptGeometry';
 import { renderPdfVisualExcerpt } from './pdfVisualExcerptRenderer';
 
-interface PdfVisualExcerptRequest { page: number; rect: PdfNormalizedRect }
-export interface PdfVisualExcerptSelection { nodeId: string; page: number; x: number; y: number }
+interface PdfVisualExcerptRequest {
+  note?: string;
+  page: number;
+  rect: PdfNormalizedRect;
+}
+export interface PdfVisualExcerptSelection {
+  nodeId: string;
+  page: number;
+  x: number;
+  y: number;
+}
 
 interface PdfVisualExcerptRuntimeValue {
   creating: boolean;
@@ -17,12 +28,15 @@ interface PdfVisualExcerptRuntimeValue {
   pending: PdfVisualExcerptRequest | null;
   rotation: number;
   selectedOutline: PdfVisualExcerptSelection | null;
+  surfaceKey: string;
   clearOutlineSelection: () => void;
-  createDisplayedRect: (page: number, rect: PdfNormalizedRect) => Promise<void>;
+  clearCreationError: () => void;
+  createDisplayedRect: (page: number, rect: PdfNormalizedRect) => Promise<boolean>;
+  createAnnotatedDisplayedRect: (page: number, rect: PdfNormalizedRect, note: string) => Promise<boolean>;
   deleteSelectedOutline: () => void;
   openExcerpt: (nodeId: string) => void;
   registerPage: (pageNumber: number, page: PDFPageProxy) => void;
-  retry: () => Promise<void>;
+  retry: () => Promise<boolean>;
   selectOutline: (selection: PdfVisualExcerptSelection) => void;
 }
 
@@ -48,24 +62,54 @@ function usePdfExcerptCreation(props: { nodeId: string | null; rotation: number 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<PdfVisualExcerptRequest | null>(null);
   const [pending, setPending] = useState<PdfVisualExcerptRequest | null>(null);
-  const createRequest = useCallback(async (request: PdfVisualExcerptRequest) => {
-    if (!props.nodeId || creatingRef.current) return;
-    const page = pagesRef.current.get(request.page);
-    if (!page) { setError(request); return; }
-    creatingRef.current = true; setCreating(true); setError(null); setPending(request);
-    try {
-      const sourceRect = unrotatePdfNormalizedRect(request.rect, props.rotation);
-      const bytes = await renderPdfVisualExcerpt(page, sourceRect);
-      const attachmentId = await hashBytes(bytes);
-      const locator = { page: request.page, x: sourceRect.x, y: sourceRect.y, rects: [sourceRect] };
-      const created = await createExcerpt?.(props.nodeId, request.page, locator, attachmentId, encodeBytes(bytes));
-      if (!created) throw new Error('The image excerpt could not be saved.');
-      setPending(null);
-    } catch {
-      setError(request);
-    } finally { creatingRef.current = false; setCreating(false); }
-  }, [createExcerpt, pagesRef, props.nodeId, props.rotation]);
-  const reset = useCallback(() => { setError(null); setPending(null); }, []);
+  const createRequest = useCallback(
+    async (request: PdfVisualExcerptRequest) => {
+      if (!props.nodeId || creatingRef.current) return false;
+      const page = pagesRef.current.get(request.page);
+      if (!page) {
+        setError(request);
+        return false;
+      }
+      creatingRef.current = true;
+      setCreating(true);
+      setError(null);
+      setPending(request);
+      try {
+        const sourceRect = unrotatePdfNormalizedRect(request.rect, props.rotation);
+        const bytes = await renderPdfVisualExcerpt(page, sourceRect);
+        const attachmentId = await hashBytes(bytes);
+        const locator = {
+          page: request.page,
+          x: sourceRect.x,
+          y: sourceRect.y,
+          rects: [sourceRect]
+        };
+        const imageContent = `![Image excerpt](asset://${attachmentId}.png)`;
+        const content = request.note
+          ? formatHighlightCardContent({
+              note: request.note,
+              notePrefix: getHighlightAnnotationPrefix(),
+              text: imageContent
+            })
+          : undefined;
+        const created = await createExcerpt?.(props.nodeId, request.page, locator, attachmentId, encodeBytes(bytes), content);
+        if (!created) throw new Error('The image excerpt could not be saved.');
+        setPending(null);
+        return true;
+      } catch {
+        setError(request);
+        return false;
+      } finally {
+        creatingRef.current = false;
+        setCreating(false);
+      }
+    },
+    [createExcerpt, pagesRef, props.nodeId, props.rotation]
+  );
+  const reset = useCallback(() => {
+    setError(null);
+    setPending(null);
+  }, []);
   return { createRequest, creating, error, pending, reset };
 }
 
@@ -91,7 +135,10 @@ function useSelectedPdfOutline(deleteAnnotations: (nodeIds: string[]) => void, c
     if (!selected) return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!['Backspace', 'Delete'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.repeat) return;
-      event.preventDefault(); event.stopImmediatePropagation(); deleteAnnotations([selected.nodeId]); setSelected(null);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      deleteAnnotations([selected.nodeId]);
+      setSelected(null);
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
@@ -99,40 +146,47 @@ function useSelectedPdfOutline(deleteAnnotations: (nodeIds: string[]) => void, c
   return { selected, setSelected };
 }
 
-export function PdfVisualExcerptRuntimeProvider(props: {
-  children: ReactNode;
-  currentPage: number;
-  locators: PdfHighlightLocator[];
-  nodeId: string | null;
-  rotation: number;
-  source: string;
-}) {
+export function PdfVisualExcerptRuntimeProvider(props: { children: ReactNode; currentPage: number; locators: PdfHighlightLocator[]; nodeId: string | null; rotation: number; source: string }) {
   const deleteAnnotations = useWorkspaceStore((state) => state.deleteEditorAnnotationNodes);
   const openNode = useWorkspaceStore((state) => state.openNode);
   const pagesRef = useRef(new Map<number, PDFPageProxy>());
   const creation = usePdfExcerptCreation(props, pagesRef);
   const selection = useSelectedPdfOutline(deleteAnnotations, props.currentPage);
   useEffect(() => {
-    creation.reset(); selection.setSelected(null); pagesRef.current.clear();
+    creation.reset();
+    selection.setSelected(null);
+    pagesRef.current.clear();
   }, [creation.reset, props.nodeId, props.source, selection.setSelected]);
 
-  const value = useMemo<PdfVisualExcerptRuntimeValue>(() => ({
-    clearOutlineSelection: () => selection.setSelected(null),
-    createDisplayedRect: (page, rect) => creation.createRequest({ page, rect }),
-    creating: creation.creating, error: creation.error,
-    deleteSelectedOutline: () => {
-      if (!selection.selected) return;
-      deleteAnnotations([selection.selected.nodeId]); selection.setSelected(null);
-    },
-    imageLocators: props.locators.filter((locator) => locator.kind === 'image-excerpt'),
-    openExcerpt: (nodeId) => { openNode(nodeId); },
-    pending: creation.pending,
-    registerPage: (pageNumber, page) => { pagesRef.current.set(pageNumber, page); },
-    retry: () => creation.error ? creation.createRequest(creation.error) : Promise.resolve(),
-    rotation: props.rotation,
-    selectedOutline: selection.selected,
-    selectOutline: selection.setSelected
-  }), [creation, deleteAnnotations, openNode, props.locators, props.rotation, selection]);
+  const value = useMemo<PdfVisualExcerptRuntimeValue>(
+    () => ({
+      clearOutlineSelection: () => selection.setSelected(null),
+      clearCreationError: creation.reset,
+      createAnnotatedDisplayedRect: (page, rect, note) => creation.createRequest({ note, page, rect }),
+      createDisplayedRect: (page, rect) => creation.createRequest({ page, rect }),
+      creating: creation.creating,
+      error: creation.error,
+      deleteSelectedOutline: () => {
+        if (!selection.selected) return;
+        deleteAnnotations([selection.selected.nodeId]);
+        selection.setSelected(null);
+      },
+      imageLocators: props.locators.filter((locator) => locator.kind === 'image-excerpt'),
+      openExcerpt: (nodeId) => {
+        openNode(nodeId);
+      },
+      pending: creation.pending,
+      registerPage: (pageNumber, page) => {
+        pagesRef.current.set(pageNumber, page);
+      },
+      retry: () => (creation.error ? creation.createRequest(creation.error) : Promise.resolve(false)),
+      rotation: props.rotation,
+      selectedOutline: selection.selected,
+      surfaceKey: `${props.nodeId ?? ''}:${props.source}:${props.currentPage}`,
+      selectOutline: selection.setSelected
+    }),
+    [creation, deleteAnnotations, openNode, props.locators, props.rotation, selection]
+  );
   return <PdfVisualExcerptRuntimeContext.Provider value={value}>{props.children}</PdfVisualExcerptRuntimeContext.Provider>;
 }
 

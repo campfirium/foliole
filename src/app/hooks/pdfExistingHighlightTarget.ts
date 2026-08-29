@@ -25,6 +25,16 @@ export function resolvePdfExistingHighlight(input: {
   target: HTMLElement;
   trashedNodeIds: string[];
 }) {
+  const node = resolvePdfExistingHighlightNode(input);
+  return node ? resolveExistingExcerptNode(node, { canAdjustRange: false }) : null;
+}
+
+export function resolvePdfExistingHighlightNode(input: {
+  activeNodeId: string;
+  nodesById: Record<string, Node>;
+  target: HTMLElement;
+  trashedNodeIds: string[];
+}) {
   const nodeId = input.target.dataset.pdfHighlightNodeId;
   const node = nodeId ? input.nodesById[nodeId] : null;
   const anchor = node?.anchorLink;
@@ -37,5 +47,5 @@ export function resolvePdfExistingHighlight(input: {
   ) {
     return null;
   }
-  return resolveExistingExcerptNode(node, { canAdjustRange: false });
+  return node;
 }
