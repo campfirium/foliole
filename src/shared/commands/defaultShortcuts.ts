@@ -1,4 +1,5 @@
 import { canUseBrowserReservedAppShortcuts } from '../platform/browserReservedShortcuts';
+import { usesMacShortcutProjection } from '../platform/runtimeOperatingSystem';
 
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
 import { MACOS_DEFAULT_APP_COMMAND_SHORTCUTS } from './macosDefaultShortcuts';
@@ -72,17 +73,6 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
 
 const SHORTCUT_SET_SLOTS = ['primary', 'secondary'] as const;
 
-function resolvePlatformText() {
-  if (typeof navigator === 'undefined') {
-    return '';
-  }
-  return `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-}
-
-function isMacPlatform(platform = resolvePlatformText()) {
-  return platform.toLowerCase().includes('mac');
-}
-
 interface PlatformDefaultCommandShortcutOptions {
   includeBrowserReservedShortcuts?: boolean;
   platform?: string;
@@ -118,7 +108,7 @@ export function getPlatformDefaultCommandShortcuts(
 ): DefaultCommandShortcuts {
   const options = resolveDefaultShortcutOptions(platformOrOptions);
   const resolved: DefaultCommandShortcuts = {};
-  const platformDefaults = isMacPlatform(options.platform)
+  const platformDefaults = usesMacShortcutProjection(options.platform)
     ? MACOS_DEFAULT_APP_COMMAND_SHORTCUTS
     : DEFAULT_APP_COMMAND_SHORTCUTS;
   for (const [commandId, shortcuts] of Object.entries(platformDefaults)) {

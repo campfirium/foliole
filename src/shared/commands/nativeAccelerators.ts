@@ -1,3 +1,5 @@
+import { usesMacShortcutProjection } from '../platform/runtimeOperatingSystem';
+
 import { getShortcutSetShortcuts } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
@@ -15,18 +17,6 @@ function isNativeMenuSafe(shortcut: CommandShortcut) {
   return hasModifier(shortcut) || isFunctionKey(shortcut);
 }
 
-function resolvePlatform() {
-  if (typeof navigator === 'undefined') {
-    return '';
-  }
-  return `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-}
-
-function isMacPlatform(platform = resolvePlatform()) {
-  const normalized = platform.toLowerCase();
-  return normalized.includes('mac') || normalized === 'darwin';
-}
-
 function getShortcutCandidates(shortcuts: CommandShortcutSet) {
   return getShortcutSetShortcuts(shortcuts);
 }
@@ -36,7 +26,7 @@ function selectPlatformShortcut(shortcuts: CommandShortcutSet, platform?: string
   if (!candidates.length) {
     return null;
   }
-  const preferMeta = isMacPlatform(platform);
+  const preferMeta = usesMacShortcutProjection(platform);
   return candidates.find((shortcut) => Boolean(shortcut.metaKey) === preferMeta) ?? candidates[0] ?? null;
 }
 

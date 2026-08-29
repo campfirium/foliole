@@ -1,3 +1,5 @@
+import { usesMacShortcutProjection } from '../platform/runtimeOperatingSystem';
+
 import { formatShortcutLabel, getShortcutSetShortcuts, parseShortcutLabel } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet, CommandShortcutSlot } from './types';
 
@@ -7,17 +9,6 @@ const MAC_KEY_SEPARATOR = ' ';
 export interface ShortcutDisplayEntry {
   label: string;
   slot: CommandShortcutSlot;
-}
-
-function resolvePlatformText() {
-  if (typeof navigator === 'undefined') {
-    return '';
-  }
-  return `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-}
-
-function isMacPlatform(platform = resolvePlatformText()) {
-  return platform.toLowerCase().includes('mac');
 }
 
 const MAC_KEY_SYMBOLS: Record<string, string> = {
@@ -42,7 +33,7 @@ function formatMacShortcutLabel(shortcut: CommandShortcut) {
 }
 
 function formatShortcutDisplayLabel(shortcut: CommandShortcut, platform?: string) {
-  return isMacPlatform(platform) ? formatMacShortcutLabel(shortcut) : formatShortcutLabel(shortcut);
+  return usesMacShortcutProjection(platform) ? formatMacShortcutLabel(shortcut) : formatShortcutLabel(shortcut);
 }
 
 export function formatSerializedShortcutDisplayLabel(label: string, platform?: string) {
@@ -64,7 +55,7 @@ export function formatShortcutSetSearchLabel(shortcuts: CommandShortcutSet | und
 }
 
 function shortcutMatchesPlatform(shortcut: CommandShortcut, platform?: string) {
-  const isMac = isMacPlatform(platform);
+  const isMac = usesMacShortcutProjection(platform);
   if (isMac) {
     return !shortcut.ctrlKey || Boolean(shortcut.metaKey);
   }
@@ -88,7 +79,7 @@ function isCtrlCmdPair(left: CommandShortcut, right: CommandShortcut) {
 }
 
 function shortcutForPlatform(left: CommandShortcut, right: CommandShortcut, platform?: string) {
-  const preferMeta = isMacPlatform(platform);
+  const preferMeta = usesMacShortcutProjection(platform);
   if (preferMeta) {
     return left.metaKey ? left : right;
   }
