@@ -13,5 +13,6 @@ export function getWorkspaceStructureHistory(): ReturnType<WorkspaceDebugApi['ge
 }
 
 export function getWorkspaceStructureState(): ReturnType<WorkspaceDebugApi['getWorkspaceStructureState']> {
-  return { nodeOrder: [...useWorkspaceStore.getState().nodeOrder] };
+  const state = useWorkspaceStore.getState();
+  return { browseRootNodeId: state.browseRootNodeId, nodeOrder: [...state.nodeOrder] };
 }

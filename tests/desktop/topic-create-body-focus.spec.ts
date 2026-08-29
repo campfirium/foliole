@@ -5,6 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const EXISTING_BODY = 'Existing topic body';
 const NEW_BODY = 'Plain new topic body';
+const FOLDER_ID = 'topic-create-folder';
 
 type WindowPage = DesktopSession['firstWindow'];
 
@@ -18,6 +19,18 @@ async function getNodeContent(page: WindowPage, nodeId: string) {
 
 async function getNodeTitle(page: WindowPage, nodeId: string) {
   return page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.title ?? null, nodeId);
+}
+
+async function getCreationState(page: WindowPage) {
+  return page.evaluate(() => {
+    const debug = window.__folioleWorkspaceDebug;
+    const nodeId = debug?.getActiveNodeId?.() ?? null;
+    return {
+      browseRootNodeId: debug?.getWorkspaceStructureState?.().browseRootNodeId ?? null,
+      node: nodeId ? debug?.getNode?.(nodeId) ?? null : null,
+      nodeId
+    };
+  });
 }
 
 async function expectCompleteRenameSelection(page: WindowPage) {
@@ -119,4 +132,55 @@ test('F2 rename selects the title and restores editor or tree focus by exit key'
   await desktopWindow.keyboard.press('Escape');
   await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via tree');
   await expect(treeItem).toBeFocused();
+});
+
+test('Create Topic keeps writable folders visible and explicitly settles Inbox fallback', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await desktopWindow.evaluate(async (folderId) => {
+    await window.__folioleWorkspaceDebug?.seedNodes?.([{
+      content: '',
+      id: folderId,
+      kind: 'folder',
+      parentNodeId: null,
+      reveal: null,
+      title: 'Topic Create Folder'
+    }], { persist: true });
+  }, FOLDER_ID);
+
+  await desktopWindow.getByRole('treeitem', { name: 'Topic Create Folder', exact: true }).click();
+  await expect.poll(() => getCreationState(desktopWindow)).toMatchObject({ browseRootNodeId: FOLDER_ID });
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+N' : 'Control+N');
+  await expect.poll(() => getCreationState(desktopWindow)).toMatchObject({
+    browseRootNodeId: FOLDER_ID,
+    node: { parentNodeId: FOLDER_ID }
+  });
+  const folderTopic = await getCreationState(desktopWindow);
+  const folderTreeItem = desktopWindow.locator(`[role="treeitem"][data-node-id="${folderTopic.nodeId}"]`);
+  await expect(folderTreeItem).toBeVisible();
+  await expect(folderTreeItem).toHaveAttribute('aria-selected', 'true');
+
+  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await expect.poll(() => getCreationState(desktopWindow)).toMatchObject({ browseRootNodeId: 'special-home' });
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+N' : 'Control+N');
+  await expect.poll(() => getCreationState(desktopWindow)).toMatchObject({
+    browseRootNodeId: 'special-inbox',
+    node: { parentNodeId: 'special-inbox' }
+  });
+  const inboxTopic = await getCreationState(desktopWindow);
+  const inboxTreeItem = desktopWindow.locator(`[role="treeitem"][data-node-id="${inboxTopic.nodeId}"]`);
+  await expect(inboxTreeItem).toBeVisible();
+  await expect(inboxTreeItem).toHaveAttribute('aria-selected', 'true');
+  await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toBeFocused();
+
+  await desktopWindow.keyboard.press('F2');
+  const renameInput = await expectCompleteRenameSelection(desktopWindow);
+  await renameInput.fill('Inbox fallback topic');
+  await desktopWindow.keyboard.press('Enter');
+  await expect.poll(() => getNodeTitle(desktopWindow, inboxTopic.nodeId!)).toBe('Inbox fallback topic');
+
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug?.isHydrated?.()));
+  await expect.poll(() => getCreationState(desktopWindow)).toMatchObject({ browseRootNodeId: 'special-inbox' });
 });

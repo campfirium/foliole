@@ -48,7 +48,7 @@ export interface WorkspaceDebugApi {
     redoStack: Array<{ id: string; type: string }>;
     undoStack: Array<{ id: string; type: string }>;
   };
-  getWorkspaceStructureState: () => { nodeOrder: string[] };
+  getWorkspaceStructureState: () => { browseRootNodeId: string; nodeOrder: string[] };
   importClipboardImageAttachment: (args: {
     bytesBase64: string;
     mimeType: string;

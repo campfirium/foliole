@@ -12,6 +12,7 @@ import type { useFormalImport } from './useFormalImport';
 export function buildControllerPaletteState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   demoOperationTranslate: Translate;
+  externalView: ReturnType<typeof useWorkspaceControllerState>['externalView'];
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
@@ -23,6 +24,7 @@ export function buildControllerPaletteState(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
+  virtualView: ReturnType<typeof useWorkspaceControllerState>['virtualView'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const runPaletteCommand = createPaletteCommandRunner(createPaletteRunnerArgs(args));

@@ -93,6 +93,7 @@ export function useControllerAuxiliaryState(args: {
   const paletteState = buildControllerPaletteState({
     appearance: args.appearance,
     demoOperationTranslate: t,
+    externalView: args.controller.externalView,
     formalImport: args.formalImport,
     isStudyMode: args.isStudyMode,
     layoutProps: args.layoutProps,
@@ -104,6 +105,7 @@ export function useControllerAuxiliaryState(args: {
     runtime: args.controller.runtime,
     study: args.controller.study,
     trash: args.controller.trash,
+    virtualView: args.controller.virtualView,
     ws: args.ws
   });
   const goToNodeState = buildControllerGoToNodeState({

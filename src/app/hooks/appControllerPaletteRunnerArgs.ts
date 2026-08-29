@@ -160,9 +160,10 @@ async function openLocalFile() {
   if (result.status === 'error') showAppRuntimeNotice(result.message);
 }
 
-export function createPaletteRunnerArgs(args: {
+type PaletteRunnerArgs = {
   appearance: ReturnType<typeof useAppearanceSettings>;
   demoOperationTranslate: Translate;
+  externalView: ReturnType<typeof useWorkspaceControllerState>['externalView'];
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
@@ -174,8 +175,11 @@ export function createPaletteRunnerArgs(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
+  virtualView: ReturnType<typeof useWorkspaceControllerState>['virtualView'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
+};
+
+export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
   return {
     clearSettingsRequest: () => clearSettingsRequest(args.runtime),
     closeTrashView: args.trash.closeTrashView,
