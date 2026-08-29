@@ -46,7 +46,8 @@ export async function importPdf(desktopApp: ElectronApplication, desktopWindow: 
     throw new Error(`PDF import failed: ${JSON.stringify(result)}`);
   }
   await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), result.node_id);
-  await desktopWindow.locator(`[role="treeitem"][data-node-id="${result.node_id}"]`).click();
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe(result.node_id);
   await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
   return result.node_id;
 }
