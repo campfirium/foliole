@@ -1,5 +1,5 @@
 import { App } from '@capacitor/app';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
@@ -11,11 +11,13 @@ import { postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
+  const readyPosted = useRef(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrap);
 
   useEffect(() => {
-    if (!workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
+    if (readyPosted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
       !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null) return;
+    readyPosted.current = true;
     postReady(workspaceSync);
   }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.syncGroupJoined,
     workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at, workspaceSync.status]);
