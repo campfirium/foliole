@@ -4,6 +4,7 @@ import {
   IOS_HOSTED_PROVIDER_DEVICE_ID,
   IOS_HOSTED_SYNC_GROUP_ID
 } from '../../lib/platform/iosHostedSyncGroupContract';
+import { resolveRemoteSyncGroupDevices } from '../../lib/platform/syncGroupContract';
 import {
   parseSyncProtocolTxt,
   syncProtocolVersionHintMatchesDescriptor
@@ -72,10 +73,13 @@ export async function ensureIosAcceptanceSyncGroup(databasePath: string | null) 
 }
 
 export async function loadIosAcceptanceSyncPeer() {
-  const discovered = await discoverIosHostedProvider();
+  const group = await loadCompanionSyncGroup();
+  const peers = group ? resolveRemoteSyncGroupDevices(group) : [];
+  if (peers.length !== 1) throw new Error(`ios_hosted_sync_group_peer_count_${peers.length}`);
+  const peer = peers[0]!;
   return {
-    sourceHostName: discovered.discovery.provider_device_name,
-    sourcePeerId: discovered.discovery.provider_device_id
+    sourceHostName: peer.device_name,
+    sourcePeerId: peer.device_identity_key
   };
 }
 

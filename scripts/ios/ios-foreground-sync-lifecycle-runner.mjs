@@ -192,9 +192,13 @@ async function waitForRequestPhase(options, phase, count) {
 }
 
 function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
-  return waitForIosBridgeResult({ accept, describe: (value) => `phase=${value?.phase ?? 'missing'}`,
+  return waitForIosBridgeResult({ accept: (value) => value?.status === 'failed' || accept(value),
+    describe: (value) => `phase=${value?.phase ?? 'missing'}`,
     initialObservation: `${label} result was not readable`, label,
-    resultPath, timeoutMs });
+    resultPath, timeoutMs }).then((value) => {
+    if (value?.status === 'failed') throw new Error(value.error || `${label} failed`);
+    return value;
+  });
 }
 
 function readObservations(options) {

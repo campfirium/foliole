@@ -1,13 +1,21 @@
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { loadIosAcceptanceContractCorpus } from '../../scripts/ios/ios-acceptance-contract-corpus.js';
 import { readHostedPack } from '../../scripts/ios/ios-hosted-sync-pack-evidence.js';
 import { createIosHostedSyncPackGenerator } from '../../scripts/ios/ios-hosted-sync-pack-generator.js';
 import { createHostedPackTaskSource } from '../../scripts/ios/ios-hosted-sync-pack-task-source.js';
+
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 let tempRoot = '';
 
@@ -55,8 +63,32 @@ it('builds identity-bound live packs through the production writer inside the at
     .toEqual([expect.objectContaining({ target_peer_id: 'accepted-device:wrong' })]);
   expect(readHostedPack(packs.cursorGap).manifest.tables)
     .toContainEqual({ name: 'sync_object_state', row_count: 1 });
+  await expect(applyGeneratedPack(packs.stateInitial, 'state-initial')).resolves.toMatchObject({
+    applied: true, toStateSeq: 1
+  });
+  await expect(applyGeneratedPack(packs.legal, 'legal')).resolves.toMatchObject({
+    applied: true, toStateSeq: 1
+  });
   await expect(generator.prepare('different-device')).rejects.toThrow('ios_hosted_second_accepted_identity');
 });
+
+async function applyGeneratedPack(packPath: string, name: string) {
+  const incomingPath = path.join(tempRoot, `${name}.db`);
+  await fs.writeFile(incomingPath, readHostedPack(packPath).database);
+  const target = new BetterSqlite3(path.join(tempRoot, `${name}-target.db`));
+  initializeDatabaseSchema(target);
+  const port = createBetterSqliteDbPort(target, { name: `ios-hosted-${name}-reader` });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    return await applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0, hostName: 'accepted-device', sourceHostName: 'Acceptance Provider',
+      sourcePeerId: 'provider-device'
+    });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+    target.close();
+  }
+}
 
 it('fails closed when the source would escape the attempt root', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-ios-hosted-writer-'));

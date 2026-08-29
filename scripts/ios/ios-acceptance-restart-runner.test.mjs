@@ -7,6 +7,8 @@ import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-accept
 describe('iOS acceptance restart runner', () => {
   it('waits longer for sync-pack runtime restart bridge results', () => {
     expect(restartBridgeResultTimeoutMs('sync-pack-runtime')).toBe(60_000);
+    expect(restartBridgeResultTimeoutMs('state-writeback-runtime')).toBe(60_000);
+    expect(restartBridgeResultTimeoutMs('content-resource-read')).toBe(60_000);
     expect(restartBridgeResultTimeoutMs('sync-group-signed-transport')).toBe(15_000);
   });
 

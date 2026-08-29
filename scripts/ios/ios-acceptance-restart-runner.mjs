@@ -9,9 +9,12 @@ import { runSyncPackRejections } from './ios-sync-pack-acceptance-runner.mjs';
 
 const DEFAULT_BRIDGE_RESULT_TIMEOUT_MS = 15_000;
 const SYNC_PACK_BRIDGE_RESULT_TIMEOUT_MS = 60_000;
+const LIVE_PACK_SCENARIOS = new Set([
+  'content-resource-read', 'state-writeback-runtime', 'sync-pack-runtime'
+]);
 
 export function restartBridgeResultTimeoutMs(scenario) {
-  return scenario === 'sync-pack-runtime' ? SYNC_PACK_BRIDGE_RESULT_TIMEOUT_MS : DEFAULT_BRIDGE_RESULT_TIMEOUT_MS;
+  return LIVE_PACK_SCENARIOS.has(scenario) ? SYNC_PACK_BRIDGE_RESULT_TIMEOUT_MS : DEFAULT_BRIDGE_RESULT_TIMEOUT_MS;
 }
 
 export async function runAcceptanceRestart(options) {

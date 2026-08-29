@@ -194,7 +194,9 @@ async function runInitialAcceptanceLaunch(options, scenario, udid, containerPath
       () => readBridgeFailure(bridgeResultPath),
       () => launchApp(options, udid), BOOTSTRAP_TIMEOUT_MS
     );
-    const firstBridge = verifyBridgeResult(await readBridgeResult(bridgeResultPath), scenario);
+    const firstBridge = verifyBridgeResult(await readBridgeResult(
+      bridgeResultPath, restartBridgeResultTimeoutMs(scenario)
+    ), scenario);
     return { databasePath, first, firstBridge };
   }
   launchApp(options, udid);
