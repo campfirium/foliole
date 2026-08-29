@@ -3,7 +3,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
+  advancePhase: vi.fn(),
   ensureGroup: vi.fn(),
+  loadPhase: vi.fn(),
   loadBootstrap: vi.fn(),
   postResult: vi.fn(),
   rerunRoundtrip: vi.fn(),
@@ -26,12 +28,17 @@ vi.mock('./iosNodeVersionRoundtripAcceptance', () => ({
   rerunIosNodeVersionRoundtripAcceptance: mocks.rerunRoundtrip,
   runIosNodeVersionRoundtripAcceptance: mocks.runRoundtrip
 }));
+vi.mock('./iosSyncPackAcceptancePhase', () => ({
+  advanceIosSyncPackAcceptancePhase: mocks.advancePhase,
+  IOS_SYNC_PACK_ACCEPTANCE_PHASES: ['apply', 'reapply', 'wrong-target', 'cursor-gap'],
+  loadIosSyncPackAcceptancePhase: mocks.loadPhase
+}));
 
 import { runIosSyncPackAcceptance } from './iosSyncPackAcceptance';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.clear();
+  mocks.loadPhase.mockResolvedValue('apply');
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
@@ -52,11 +59,14 @@ it('joins and applies the identity-bound legal pack on the first launch', async 
     sourcePeerId: 'desktop-1',
     url: 'http://127.0.0.1:43123/acceptance/sync-pack/legal'
   });
+  expect(mocks.advancePhase).toHaveBeenCalledWith('apply');
+  expect(mocks.advancePhase.mock.invocationCallOrder[0] ?? Infinity)
+    .toBeLessThan(mocks.postResult.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'applied', status: 'passed' }));
 });
 
 it('reapplies through the shared path while reusing the accepted Sync Group identity', async () => {
-  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'reapply');
+  mocks.loadPhase.mockResolvedValue('reapply');
 
   await runIosSyncPackAcceptance();
 
@@ -73,7 +83,7 @@ it.each([
   ['wrong-target', 'sync_pack_target_mismatch'],
   ['cursor-gap', 'sync_pack_cursor_not_contiguous']
 ])('accepts only the deterministic %s rejection', async (phase, error) => {
-  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', phase);
+  mocks.loadPhase.mockResolvedValue(phase);
   mocks.apply.mockRejectedValue(new Error(error));
 
   await runIosSyncPackAcceptance();
@@ -84,10 +94,11 @@ it.each([
 });
 
 it('fails when a rejection category does not match the active phase', async () => {
-  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'wrong-target');
+  mocks.loadPhase.mockResolvedValue('wrong-target');
   mocks.apply.mockRejectedValue(new Error('missing_sync_pack_entry'));
 
   await runIosSyncPackAcceptance();
 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'failed', status: 'failed' }));
+  expect(mocks.advancePhase).not.toHaveBeenCalled();
 });

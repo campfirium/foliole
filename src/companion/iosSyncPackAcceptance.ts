@@ -9,14 +9,13 @@ import {
   rerunIosNodeVersionRoundtripAcceptance,
   runIosNodeVersionRoundtripAcceptance
 } from './iosNodeVersionRoundtripAcceptance';
+import {
+  advanceIosSyncPackAcceptancePhase,
+  loadIosSyncPackAcceptancePhase,
+  type IosSyncPackAcceptancePhase
+} from './iosSyncPackAcceptancePhase';
 
-const PHASE_KEY = 'foliole-ios-sync-pack-acceptance-phase';
-const PHASES = [
-  'apply', 'reapply', 'wrong-target', 'cursor-gap'
-] as const;
-type AcceptancePhase = typeof PHASES[number];
-
-const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
+const REJECTION_ERRORS: Partial<Record<IosSyncPackAcceptancePhase, string>> = {
   'cursor-gap': 'sync_pack_cursor_not_contiguous',
   'wrong-target': 'sync_pack_target_mismatch'
 };
@@ -27,20 +26,10 @@ async function prepareSyncGroup(databasePath: string | null) {
   return joined;
 }
 
-function loadPhase(): AcceptancePhase {
-  const value = localStorage.getItem(PHASE_KEY);
-  return PHASES.includes(value as AcceptancePhase) ? value as AcceptancePhase : 'apply';
-}
-
-function advancePhase(phase: AcceptancePhase) {
-  const next = PHASES[PHASES.indexOf(phase) + 1];
-  if (next) localStorage.setItem(PHASE_KEY, next);
-}
-
 async function applyPack(
   endpoint: string,
   peer: { sourceHostName: string; sourcePeerId: string },
-  phase: AcceptancePhase
+  phase: IosSyncPackAcceptancePhase
 ) {
   const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
   const path = `/acceptance/sync-pack/${kind}`;
@@ -54,7 +43,7 @@ async function applyPack(
 async function runPhase(
   endpoint: string,
   peer: { sourceHostName: string; sourcePeerId: string },
-  phase: AcceptancePhase
+  phase: IosSyncPackAcceptancePhase
 ) {
   if (phase === 'apply') {
     const initial = await applyPack(endpoint, peer, phase);
@@ -83,9 +72,9 @@ export async function runIosSyncPackAcceptance() {
   try {
     const bootstrap = await loadCompanionBootstrapState();
     const joined = await prepareSyncGroup(bootstrap.database_path);
-    const phase = loadPhase();
+    const phase = await loadIosSyncPackAcceptancePhase();
     const result = await runPhase(joined.endpointUrl, joined.peer, phase);
-    advancePhase(phase);
+    await advanceIosSyncPackAcceptancePhase(phase);
     postResult({
       ...result,
       phase: REJECTION_ERRORS[phase] ? 'rejected' : phase === 'apply' ? 'applied' : 'reapplied',
