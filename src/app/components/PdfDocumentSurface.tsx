@@ -50,9 +50,18 @@ export function PdfDocumentSurface({
   sourceHint
 }: PdfDocumentSurfaceProps) {
   const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible, persistedPageCount);
-  const selectionState = usePdfSelectionContextMenu(onCreateHighlightFromSelection);
+  const selectionState = usePdfSelectionContextMenu({
+    nodeId,
+    onCreateHighlightFromSelection
+  });
   const searchState = usePdfSearchControls();
-  useRegisterPdfSurface(nodeId, pdfSystem.actions.requestAnchorJump, searchState.applyExternalSearch);
+  useRegisterPdfSurface(
+    nodeId,
+    pdfSystem.actions.requestAnchorJump,
+    searchState.applyExternalSearch,
+    selectionState.requestAnnotation,
+    isVisible
+  );
 
   const searchIndexingHint = searchState.searchQuery.trim() && (pdfIndexStatus === 'pending' || pdfIndexStatus === 'indexing')
     ? 'Indexing in progress'
@@ -99,6 +108,12 @@ function renderPdfSelectionMenu(selectionState: ReturnType<typeof usePdfSelectio
   return (
     <PdfSelectionContextMenu
       onCreateHighlight={selectionState.handleCreateHighlight}
+      onCreateCloze={selectionState.handleCreateCloze}
+      onCreateNote={selectionState.handleCreateNote}
+      noteDraft={selectionState.noteDraft}
+      noteOpen={selectionState.noteOpen}
+      setNoteDraft={selectionState.setNoteDraft}
+      setNoteOpen={selectionState.setNoteOpen}
       state={selectionState.selectionMenuState}
     />
   );

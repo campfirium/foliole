@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObj
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
 
+import { onPdfVisualSelectionKindChange, setPdfVisualSelectionKind } from './pdfSurfaceRegistration';
 import { rectFromPointerDrag, type PdfNormalizedRect } from './pdfVisualExcerptGeometry';
 import { findPdfExcerptNearEdge, resolvePdfVisualExcerptPointerAction } from './pdfVisualExcerptPointerRouting';
 import { resolveDisplayedExcerptRect, useOptionalPdfVisualExcerptRuntime, usePdfVisualExcerptRuntime } from './PdfVisualExcerptRuntime';
@@ -81,6 +82,15 @@ function listenForPagePointers(root: HTMLElement, handlers: {
   };
 }
 
+function createNearEdgeResolver(root: HTMLElement, locators: Array<{ nodeId: string; rect: PdfNormalizedRect }>) {
+  return (event: PointerEvent) => {
+    const bounds = root.getBoundingClientRect();
+    return findPdfExcerptNearEdge(pointRatio(event, root), locators, {
+      x: 6 / Math.max(1, bounds.width), y: 6 / Math.max(1, bounds.height)
+    });
+  };
+}
+
 function installPagePointerRouting(args: {
   dragRef: MutableRefObject<PageDrag | null>;
   locators: Array<{ nodeId: string; rect: PdfNormalizedRect }>;
@@ -88,15 +98,11 @@ function installPagePointerRouting(args: {
   root: HTMLElement;
   runtime: PagePointerRuntime;
   setPreview: Dispatch<SetStateAction<PdfNormalizedRect | null>>;
+  visualSelectionActive: boolean;
 }) {
-    const { dragRef, locators, pageNumber, root, runtime, setPreview } = args;
+    const { dragRef, locators, pageNumber, root, runtime, setPreview, visualSelectionActive } = args;
     root.classList.add('pdf-visual-excerpt-page');
-    const nearEdge = (event: PointerEvent) => {
-      const bounds = root.getBoundingClientRect();
-      return findPdfExcerptNearEdge(pointRatio(event, root), locators, {
-        x: 6 / Math.max(1, bounds.width), y: 6 / Math.max(1, bounds.height)
-      });
-    };
+    const nearEdge = createNearEdgeResolver(root, locators);
     const onPointerMove = (event: PointerEvent) => {
       const drag = dragRef.current;
       if (drag?.pointerId === event.pointerId) {
@@ -119,7 +125,7 @@ function installPagePointerRouting(args: {
         return;
       }
       runtime.clearOutlineSelection();
-      if (action === 'text') return;
+      if (action === 'text' && !visualSelectionActive) return;
       event.preventDefault(); event.stopPropagation();
       dragRef.current = { pointerId: event.pointerId, start: point };
       setPreview({ ...point, height: 0, width: 0 });
@@ -133,7 +139,10 @@ function installPagePointerRouting(args: {
       dragRef.current = null; setPreview(null);
       if (root.hasPointerCapture(event.pointerId)) root.releasePointerCapture(event.pointerId);
       const bounds = root.getBoundingClientRect();
-      if (create && next.width * bounds.width >= 8 && next.height * bounds.height >= 8) void runtime.createDisplayedRect(pageNumber, next);
+      if (create && next.width * bounds.width >= 8 && next.height * bounds.height >= 8) {
+        void runtime.createDisplayedRect(pageNumber, next);
+        setPdfVisualSelectionKind(null);
+      }
     };
     const onPointerUp = (event: PointerEvent) => finishDrag(event, true);
     const onPointerCancel = (event: PointerEvent) => finishDrag(event, false);
@@ -145,10 +154,20 @@ function usePagePointerRouting(pageNumber: number, locators: Array<{ nodeId: str
   const layerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<PageDrag | null>(null);
   const [preview, setPreview] = useState<PdfNormalizedRect | null>(null);
+  const [visualSelectionActive, setVisualSelectionActive] = useState(false);
+  useEffect(() => onPdfVisualSelectionKindChange((kind) => setVisualSelectionActive(Boolean(kind))), []);
+  useEffect(() => {
+    if (!visualSelectionActive) return undefined;
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPdfVisualSelectionKind(null);
+    };
+    window.addEventListener('keydown', cancel, true);
+    return () => window.removeEventListener('keydown', cancel, true);
+  }, [visualSelectionActive]);
   useEffect(() => {
     const root = layerRef.current?.parentElement;
-    return root ? installPagePointerRouting({ dragRef, locators, pageNumber, root, runtime, setPreview }) : undefined;
-  }, [locators, pageNumber, runtime]);
+    return root ? installPagePointerRouting({ dragRef, locators, pageNumber, root, runtime, setPreview, visualSelectionActive }) : undefined;
+  }, [locators, pageNumber, runtime, visualSelectionActive]);
   return { layerRef, preview };
 }
 

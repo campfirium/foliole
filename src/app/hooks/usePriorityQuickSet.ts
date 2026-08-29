@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatShortcutSetLabel, matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
-import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydownCapture } from '../../shared/platform/keyboard';
 
 const QUICK_SET_TIMEOUT_MS = 4000;
 
@@ -88,7 +88,7 @@ function usePriorityQuickSetListeners(args: {
 
   useEffect(
     () =>
-      onWindowKeydown((event) =>
+      onWindowKeydownCapture((event) =>
         handlePriorityQuickSetKeydown({
           activeNodeId: args.activeNodeId,
           armTimeout: args.armTimeout,
