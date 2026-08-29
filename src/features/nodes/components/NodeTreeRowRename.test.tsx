@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { commitActiveNodeRename } from './nodeRenameCommitCapability';
 import { NodeTreeRow } from './NodeTreeRow';
 import { requestNodeRename } from './NodeTreeRowRename';
 
@@ -82,6 +83,7 @@ it('cancels with Escape and restores the tree origin without submitting', async 
   fireEvent.change(input, { target: { value: 'Changed topic' } });
 
   fireEvent.keyDown(input, { key: 'Escape' });
+  await commitActiveNodeRename();
   fireEvent.blur(input);
 
   await waitFor(() => expect(row).toHaveFocus());

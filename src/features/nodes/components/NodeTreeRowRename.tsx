@@ -36,6 +36,7 @@ function resolveExitFocus(detail: NodeRenameRequestDetail, target: RenameExitTar
 }
 
 function createSubmitRename(args: {
+  cancellationRef: { current: boolean };
   draftTitle: string;
   focusSessionRef: { current: NodeRenameRequestDetail };
   label: string;
@@ -45,6 +46,7 @@ function createSubmitRename(args: {
   submissionRef: { current: Promise<boolean> | null };
 }) {
   return (target: RenameExitTarget) => {
+    if (args.cancellationRef.current) return Promise.resolve(true);
     if (args.submissionRef.current) return args.submissionRef.current;
     const submission = (async () => {
       const normalizedTitle = args.draftTitle.trim() || UNTITLED_NODE_TITLE;
@@ -76,6 +78,7 @@ export function useRenameState(
 ): RenameState {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(label);
+  const cancellationRef = useRef(false);
   const focusSessionRef = useRef<NodeRenameRequestDetail>({ nodeId });
   const submissionRef = useRef<Promise<boolean> | null>(null);
 
@@ -84,6 +87,7 @@ export function useRenameState(
       const detail = (event as CustomEvent<NodeRenameRequestDetail>).detail;
       if (detail?.nodeId === nodeId && onRename) {
         focusSessionRef.current = detail;
+        cancellationRef.current = false;
         submissionRef.current = null;
         setDraftTitle(label);
         setIsRenaming(true);
@@ -98,7 +102,7 @@ export function useRenameState(
   }, [label]);
 
   const submitRename = createSubmitRename({
-    draftTitle, focusSessionRef, label, nodeId, onRename, setIsRenaming, submissionRef
+    cancellationRef, draftTitle, focusSessionRef, label, nodeId, onRename, setIsRenaming, submissionRef
   });
 
   useEffect(() => {
@@ -112,11 +116,13 @@ export function useRenameState(
     isRenaming,
     beginRename: () => {
       focusSessionRef.current = { nodeId };
+      cancellationRef.current = false;
       submissionRef.current = null;
       setIsRenaming(Boolean(onRename));
     },
     cancelRename: () => {
       if (submissionRef.current) return;
+      cancellationRef.current = true;
       setDraftTitle(label);
       setIsRenaming(false);
       scheduleFocus(focusSessionRef.current.restoreOrigin);
