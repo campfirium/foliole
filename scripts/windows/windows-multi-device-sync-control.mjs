@@ -15,7 +15,8 @@ const ROUTE_PREPARE_FAILURE_FILES = [
 const ROUTE_INTERACTIVE_FAILURE_FILES = ['request.json', 'status.json', 'result.json'];
 
 function routeSshTimeout(action) {
-  if (action === 'desktop-dnssd-find-diagnostic') return 10 * 60_000;
+  if (['desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
+    'desktop-dnssd-find-diagnostic'].includes(action)) return 10 * 60_000;
   if (action === 'desktop-dnssd-route-prepare') return 45 * 60_000;
   if (['desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck'].includes(action)) {
     return 25 * 60_000;
@@ -49,7 +50,8 @@ async function copyRouteFailure({ action, buildScpSpec, env, executeScp, fsApi, 
       local: relative, remote: `${evidence.remoteRoot}/${relative}`
     })));
   }
-  if (['desktop-dnssd-find-diagnostic', 'desktop-dnssd-route-provider',
+  if (['desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
+    'desktop-dnssd-find-diagnostic', 'desktop-dnssd-route-provider',
     'desktop-dnssd-route-selfcheck'].includes(action)) {
     files.push(...ROUTE_INTERACTIVE_FAILURE_FILES.map((relative) => ({
       local: `interactive/${relative}`,
@@ -85,7 +87,8 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   } catch (error) {
     output = error.output || error.message;
     if (!streamed && output) stdout.write(output);
-    if (['desktop-dnssd-find-diagnostic', 'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
+    if (['desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
+      'desktop-dnssd-find-diagnostic', 'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
       'desktop-dnssd-route-selfcheck'].includes(action)) {
       const copied = await copyRouteFailure({ action, buildScpSpec, env, executeScp,
         fsApi, host, output, repoRoot });
@@ -96,6 +99,8 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   }
   if (!streamed) stdout.write(output);
   const receiptNames = {
+    'desktop-dnssd-advertise-acceptance': 'desktop-dnssd-advertise-acceptance-receipt.json',
+    'desktop-dnssd-find-acceptance': 'desktop-dnssd-find-acceptance-receipt.json',
     'desktop-dnssd-find-diagnostic': 'desktop-dnssd-find-diagnostic-receipt.json',
     'desktop-dnssd-route-prepare': 'desktop-dnssd-route-prepare-receipt.json',
     'desktop-dnssd-route-provider': 'desktop-dnssd-route-provider-receipt.json',
@@ -117,7 +122,7 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   const manifestPath = path.join(localRoot, `${action}-receipt.json`);
   await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/${receiptName}`,
     manifestPath, env), { env });
-  if (action === 'desktop-dnssd-find-diagnostic') {
+  if (['desktop-dnssd-find-acceptance', 'desktop-dnssd-find-diagnostic'].includes(action)) {
     await executeScp(buildScpSpec(host, `${evidence.remoteRoot}/sync-group-runtime.log`,
       path.join(localRoot, 'sync-group-runtime.log'), env), { env });
   }

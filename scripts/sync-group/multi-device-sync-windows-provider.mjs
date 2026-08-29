@@ -8,6 +8,20 @@ import {
 /* global process */
 
 const PROVIDER_ACTIONS = Object.freeze({
+  'desktop-dnssd-advertise-acceptance': {
+    controllerAction: 'windows-desktop-dnssd-advertise-acceptance',
+    label: 'desktop DNS-SD advertisement acceptance',
+    missingPrefix: 'windows_desktop_dnssd_advertise_acceptance',
+    progressFactPattern: 'desktop-dnssd-advertise-acceptance',
+    progressMilestone: 'provider-ready', timeoutMs: 10 * 60_000
+  },
+  'desktop-dnssd-find-acceptance': {
+    controllerAction: 'windows-desktop-dnssd-find-acceptance',
+    label: 'desktop DNS-SD Find acceptance',
+    missingPrefix: 'windows_desktop_dnssd_find_acceptance',
+    progressFactPattern: 'desktop-dnssd-find-acceptance',
+    progressMilestone: 'candidate-found', timeoutMs: 10 * 60_000
+  },
   'desktop-dnssd-find-diagnostic': {
     controllerAction: 'windows-desktop-dnssd-find-diagnostic',
     label: 'desktop DNS-SD Find diagnostic', missingPrefix: 'windows_desktop_dnssd_find',
@@ -123,7 +137,8 @@ export function startWindowsSyncGroupProvider({
       FOLIOLE_T152_EXPECTED_GROUP_ID: expectedGroupId,
       FOLIOLE_T152_EXPECTED_GROUP_TAG: expectedGroupTag } } : {}),
     onOutput: ({ stdout }) => {
-      if (action === 'two-device-sync-provider' && !groupIdentity) {
+      if (['desktop-dnssd-advertise-acceptance', 'two-device-sync-provider'].includes(action)
+          && !groupIdentity) {
         const match = /^\[windows-dev-action\] provider-ready group=([A-Za-z0-9-]{1,128}) tag=([0-9a-f]{32})$/mu
           .exec(stdout);
         groupIdentity = match ? { groupId: match[1], groupTag: match[2] } : null;
@@ -194,7 +209,7 @@ export function startWindowsSyncGroupProvider({
       `${spec.missingPrefix}_progress_missing`);
     })]);
   const waitForGroupIdentity = () => {
-    if (action !== 'two-device-sync-provider') {
+    if (!['desktop-dnssd-advertise-acceptance', 'two-device-sync-provider'].includes(action)) {
       throw controllerFailure('Windows provider group identity is unavailable for this action.',
         `${spec.missingPrefix}_group_identity_invalid`);
     }

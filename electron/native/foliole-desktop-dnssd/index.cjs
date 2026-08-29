@@ -136,3 +136,4 @@ exports.browse = (input, callback) => getDefaultCapability().browse(input, callb
 exports.register = (input, callback) => getDefaultCapability().register(input, callback);
 exports.resolve = (input, callback) => getDefaultCapability().resolve(input, callback);
 exports._createCapability = createCapability;
+exports._validateTxt = validateTxt;

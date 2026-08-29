@@ -12,6 +12,9 @@ import {
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 import { resolveFrozenRendererUrl } from './macos-pair-sync-desktop-session.mjs';
 import { loadDesktopRoutePeerIds } from '../desktop/desktop-dnssd-route-observation.mjs';
+import {
+  loadDesktopDnsSdIdentityPreflight, validateDesktopDnsSdIdentity
+} from '../desktop/desktop-dnssd-identity-preflight.mjs';
 import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
@@ -119,13 +122,15 @@ export async function openMacosSyncGroupDesktopSession({
       enable: () => ensureMacosDeviceSyncGroup(actions),
       leave: () => invoke(page, 'leave_sync_group'),
       load: actions.load,
+      loadDnsSdIdentityPreflight: (groupId) => loadDesktopDnsSdIdentityPreflight(app, groupId),
       loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
       loadSyncTriggerResult: () => loadSyncTriggerResult(app),
       processId: app.process().pid,
       invoke: (command, args) => invoke(page, command, args),
       waitForEvent: (eventName, options) => waitForDesktopProductEvent(page, eventName, options),
       waitForState: (options) => waitForDesktopProductState(page, options),
-      sanitize: sanitizeMacosSyncGroupOverview
+      sanitize: sanitizeMacosSyncGroupOverview,
+      validateDnsSdIdentity: (identityKey) => validateDesktopDnsSdIdentity(app, identityKey)
     };
   } catch (error) {
     await app?.close().catch(() => undefined);

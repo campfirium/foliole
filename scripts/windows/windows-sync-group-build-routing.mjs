@@ -1,4 +1,5 @@
 export const WINDOWS_SYNC_GROUP_ACTIONS = [
+  'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
   'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck',
@@ -17,6 +18,7 @@ export function preparesWindowsSyncGroupCandidate(action) {
 
 export function attachSyncGroupResult(summary, result) {
   for (const key of [
+    'desktopDnsSdAdvertiseAcceptance', 'desktopDnsSdFindAcceptance',
     'desktopDnsSdHostFacts',
     'desktopDnsSdFindDiagnostic',
     'desktopDnsSdRoutePrepare',
@@ -32,6 +34,8 @@ export function attachSyncGroupResult(summary, result) {
 
 export function printSyncGroupResult(stream, summary) {
   const values = [
+    ['desktopDnsSdAdvertiseAcceptance', 'desktop-dnssd-advertise-acceptance', 'manifestPath'],
+    ['desktopDnsSdFindAcceptance', 'desktop-dnssd-find-acceptance', 'manifestPath'],
     ['desktopDnsSdFindDiagnostic', 'desktop-dnssd-find-diagnostic', 'manifestPath'],
     ['desktopDnsSdRoutePrepare', 'desktop-dnssd-route-prepare', 'manifestPath'],
     ['desktopDnsSdRouteProvider', 'desktop-dnssd-route-provider', 'manifestPath'],

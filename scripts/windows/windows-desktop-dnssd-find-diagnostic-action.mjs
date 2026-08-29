@@ -8,9 +8,11 @@ import {
 } from './windows-sync-group-recovery-action.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 
-const ACTION = 'desktop-dnssd-find-diagnostic';
+const ACTIONS = new Set(['desktop-dnssd-find-acceptance', 'desktop-dnssd-find-diagnostic']);
 
 export async function runWindowsDesktopDnsSdFindDiagnostic(options) {
+  const action = options.action;
+  if (!ACTIONS.has(action)) throw new Error('Windows DNS-SD Find action is invalid.');
   if (!/^group-[0-9a-f-]{36}$/u.test(options.expectedGroupId ?? '')
       || !/^[0-9a-f]{32}$/u.test(options.expectedGroupTag ?? '')) {
     throw new Error('Windows DNS-SD diagnostic requires exact Mac group identity.');
@@ -36,16 +38,18 @@ export async function runWindowsDesktopDnsSdFindDiagnostic(options) {
       item.group_id === options.expectedGroupId && item.group_tag === options.expectedGroupTag);
     if (matches.length !== 1) throw new Error('Windows DNS-SD diagnostic candidate was not unique.');
     [candidate] = matches;
-    options.reportProgress({ factId: 'desktop-dnssd-find-diagnostic',
+    options.reportProgress({ factId: action,
       milestone: 'candidate-found' });
   } finally {
     await closeWindowsSyncGroupSession(session);
   }
-  const manifestPath = path.join(options.evidenceRoot, `${ACTION}-receipt.json`);
+  const manifestPath = path.join(options.evidenceRoot, `${action}-receipt.json`);
   fs.writeFileSync(manifestPath, `${JSON.stringify({
     buildIdentity: options.buildIdentity, completedAt: new Date().toISOString(),
     groupId: candidate.group_id, groupTag: candidate.group_tag,
     processId, requestSent: false, resultStatus: 'success', schemaVersion: 1
   }, null, 2)}\n`, 'utf8');
-  return { desktopDnsSdFindDiagnostic: { manifestPath }, output: '' };
+  const key = action === 'desktop-dnssd-find-acceptance'
+    ? 'desktopDnsSdFindAcceptance' : 'desktopDnsSdFindDiagnostic';
+  return { [key]: { manifestPath }, output: '' };
 }

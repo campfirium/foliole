@@ -49,7 +49,7 @@ describe('desktop DNS-SD capability', () => {
   });
 
   it('rejects malformed and unbounded input before reaching the host', () => {
-    const { _createCapability } = require(modulePath);
+    const { _createCapability, _validateTxt } = require(modulePath);
     const { backend } = fakeBackend();
     const capability = _createCapability(backend);
     const callback = vi.fn();
@@ -67,6 +67,8 @@ describe('desktop DNS-SD capability', () => {
     expect(() => capability.browse(
       { domain: 'example.', type: '_foliole-sync._tcp' }, callback))
       .toThrow('desktop_dnssd_service_contract_invalid');
+    expect(() => _validateTxt({ device_id: 'x'.repeat(246) }))
+      .toThrow('desktop_dnssd_txt_invalid');
     expect(backend.register).not.toHaveBeenCalled();
   });
 

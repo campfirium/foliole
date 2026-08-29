@@ -18,6 +18,7 @@ export function isTrustedNativeClientWrapper(processEntry, paths) {
 export function allowsSyncGroupNativeClient(action, residual, paths) {
   return ['multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
     'multi-device-sync-from-zero', 'multi-device-sync-participation',
+    'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
     'desktop-dnssd-find-diagnostic',
     'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
     'desktop-dnssd-route-selfcheck',

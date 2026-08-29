@@ -11,9 +11,13 @@ import {
 } from './windows-multi-device-sync-participation-action.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
-  if (options.action === 'desktop-dnssd-find-diagnostic') {
+  if (['desktop-dnssd-find-acceptance', 'desktop-dnssd-find-diagnostic'].includes(options.action)) {
     return (await import('./windows-desktop-dnssd-find-diagnostic-action.mjs'))
       .runWindowsDesktopDnsSdFindDiagnostic(options);
+  }
+  if (options.action === 'desktop-dnssd-advertise-acceptance') {
+    return (await import('./windows-desktop-dnssd-advertise-acceptance-action.mjs'))
+      .runWindowsDesktopDnsSdAdvertiseAcceptance(options);
   }
   if (options.action === 'desktop-dnssd-route-selfcheck') {
     return (await import('./windows-desktop-dnssd-route-selfcheck-action.mjs'))
