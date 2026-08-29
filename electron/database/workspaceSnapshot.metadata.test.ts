@@ -79,3 +79,31 @@ it('loads persisted Untitled sequence state from sqlite snapshot', () => {
 
   expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __root__: 7 });
 });
+
+it('loads source-scoped image excerpt sequence state without advancing it for manual titles', () => {
+  upsertNodeSnapshot({
+    nodeId: 'pdf-1', parentNodeId: null, kind: 'topic', title: 'Source PDF', isTitleManual: true,
+    content: '', reveal: null, anchorLink: null, position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z', updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'excerpt-3', parentNodeId: 'pdf-1', kind: 'topic', title: 'Excerpt 3', isTitleManual: false,
+    content: '![Image excerpt](asset://image.png)', reveal: null,
+    anchorLink: {
+      id: 'anchor-3', kind: 'image-excerpt',
+      locator: { height: 0.2, page: 2, width: 0.3, x: 0.1, y: 0.2 }
+    },
+    position: 1, createdAt: '2026-03-18T00:00:01.000Z', updatedAt: '2026-03-18T00:00:01.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'manual-excerpt', parentNodeId: 'pdf-1', kind: 'topic', title: 'Excerpt 99', isTitleManual: true,
+    content: '![Image excerpt](asset://manual.png)', reveal: null,
+    anchorLink: {
+      id: 'anchor-manual', kind: 'image-excerpt',
+      locator: { height: 0.2, page: 4, width: 0.3, x: 0.2, y: 0.3 }
+    },
+    position: 2, createdAt: '2026-03-18T00:00:02.000Z', updatedAt: '2026-03-18T00:00:02.000Z'
+  });
+
+  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ 'image-excerpt:pdf-1': 4 });
+});

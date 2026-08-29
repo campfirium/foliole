@@ -80,7 +80,7 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
 }) => {
   const parentNodeId = await importPdf(desktopApp, desktopWindow);
   await dragExcerptRegion(desktopWindow);
-  const excerptNode = desktopWindow.getByRole('treeitem', { name: /Image excerpt · Page 1/ });
+  const excerptNode = desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ });
   await expect(excerptNode).toBeVisible();
   const excerptNodeId = await excerptNode.getAttribute('data-node-id');
   if (!excerptNodeId) throw new Error('PDF image excerpt node has no id');
@@ -140,7 +140,7 @@ for (const scenario of [
     }
     await expect(desktopWindow.locator('.pdf-visual-excerpt-page').first()).toHaveCSS('cursor', 'crosshair');
     await dragExcerptRegion(desktopWindow);
-    await expect(desktopWindow.getByRole('treeitem', { name: /Image excerpt · Page 1/ })).toBeVisible();
+    await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ })).toBeVisible();
     await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
     await desktopWindow.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-image-excerpt-${scenario.name}-visible.png`) });
   });

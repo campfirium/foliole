@@ -5,6 +5,7 @@ interface WorkspaceMetaRow extends DatabaseRow {
 }
 
 const UNTITLED_TITLE_PATTERN = /^Untitled(?: (\d+))?$/;
+const EXCERPT_TITLE_PATTERN = /^Excerpt (\d+)$/;
 const UNTITLED_SEQUENCE_META_KEY = 'untitled_sequence_by_parent';
 const ROOT_PARENT_KEY = '__root__';
 
@@ -36,6 +37,21 @@ function toNextSequence(title: string) {
   return match[1] ? Number.parseInt(match[1], 10) + 1 : 1;
 }
 
+function resolveSequenceUpdate(input: {
+  isImageExcerpt: boolean;
+  isTitleManual: boolean;
+  parentNodeId: string | null;
+  title: string;
+}) {
+  if (input.isImageExcerpt) {
+    if (input.isTitleManual || !input.parentNodeId) return null;
+    const match = input.title.trim().match(EXCERPT_TITLE_PATTERN);
+    return match ? { key: `image-excerpt:${input.parentNodeId}`, next: Number.parseInt(match[1]!, 10) + 1 } : null;
+  }
+  const next = toNextSequence(input.title);
+  return next === null ? null : { key: toParentKey(input.parentNodeId), next };
+}
+
 export function loadUntitledSequenceByParent(driver: DatabaseDriver) {
   const row = driver.queryOne<WorkspaceMetaRow>(
     'SELECT value FROM workspace_meta WHERE key = ?',
@@ -46,17 +62,20 @@ export function loadUntitledSequenceByParent(driver: DatabaseDriver) {
 
 export function bumpUntitledSequenceByParent(
   driver: DatabaseDriver,
-  input: { parentNodeId: string | null; title: string; updatedAt: string }
-) {
-  const nextSequence = toNextSequence(input.title);
-  if (nextSequence === null) {
-    return;
+  input: {
+    isImageExcerpt: boolean;
+    isTitleManual: boolean;
+    parentNodeId: string | null;
+    title: string;
+    updatedAt: string;
   }
-  const parentKey = toParentKey(input.parentNodeId);
+) {
+  const update = resolveSequenceUpdate(input);
+  if (!update) return;
   const currentSequenceByParent = loadUntitledSequenceByParent(driver);
   const updatedSequenceByParent = {
     ...currentSequenceByParent,
-    [parentKey]: Math.max(currentSequenceByParent[parentKey] ?? 0, nextSequence)
+    [update.key]: Math.max(currentSequenceByParent[update.key] ?? 0, update.next)
   };
   driver.execute(
     `INSERT INTO workspace_meta (key, value, updated_at)
