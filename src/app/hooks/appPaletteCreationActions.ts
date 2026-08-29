@@ -8,9 +8,13 @@ export function createPaletteCreationActions(args: {
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const createDirectNode = (kind: 'folder' | 'topic' | 'item') => () => {
+  const createDirectNode = (kind: 'folder' | 'topic' | 'item') => async () => {
     args.trash.closeTrashView();
-    args.ws.createRootNode('', kind);
+    const nodeId = await args.ws.createRootNode('', kind);
+    if (kind === 'topic' && nodeId) {
+      args.layoutProps.document.editorAdapterRef.current?.focus();
+    }
+    return nodeId;
   };
   return {
     createFolder: createDirectNode('folder'),
