@@ -21,11 +21,12 @@ function hotkeyMatchesQuery(item: HotkeySettingItem, query: string) {
     .trim()
     .toLowerCase();
   if (!normalizedQuery) return true;
-  const haystack = [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
+  const normalizedHaystack = [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
     .join(' ')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ');
-  const queryTokens = normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean);
+    .toLowerCase();
+  const haystack = normalizedHaystack.replace(/[^\p{L}\p{N}]+/gu, ' ');
+  const queryTokens = normalizedQuery.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  if (!queryTokens.length) return normalizedHaystack.includes(normalizedQuery);
   return queryTokens.every((token) => haystack.includes(token));
 }
 
