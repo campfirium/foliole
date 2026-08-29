@@ -50,7 +50,7 @@ for (const scenario of [
       if (!bounds) throw new Error('PDF text has no bounds');
       await desktopWindow.mouse.move(bounds.x + 2, bounds.y + bounds.height / 2);
       await desktopWindow.mouse.down();
-      await desktopWindow.mouse.move(bounds.x + bounds.width - 2, bounds.y + bounds.height / 2);
+      await desktopWindow.mouse.move(bounds.x + bounds.width - 2, bounds.y + bounds.height / 2, { steps: 12 });
       await desktopWindow.mouse.up();
       await expect.poll(() => desktopWindow.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
     }
