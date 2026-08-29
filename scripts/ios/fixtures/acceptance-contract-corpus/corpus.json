@@ -1,16 +1,17 @@
 {
   "files": {
-    "content-resource-read/content-resource.syncpack": "acfb2cd937a7569819ca359e81eecf936e13eb03f5db8e5562d25674392d6f03",
-    "state-writeback-runtime/confirmation-0.syncpack": "a1395645e92422e3f8f6192f39d1c53a27bda286dfe2d2552e3fb46781ea0026",
-    "state-writeback-runtime/confirmation-1.syncpack": "ad57f990a6173246842de03573257033fa30f356920560c604aa6a5345346fad",
-    "sync-pack-runtime/corrupt-envelope.syncpack": "52a550d6f8ac81db272f1584425ac25c8a0a8ce99b766788db5ed2fa6d38a0a8",
-    "sync-pack-runtime/cursor-gap.syncpack": "d9fa617cb54479bca2765edd71ca8e2e32947164b25dc45bd1dfd05b150c63c1",
-    "sync-pack-runtime/illegal-dag.syncpack": "d7a30b15a6015537a0ae122cea1ef5f2a9024c741e2fa838eecdce776188b9fb",
-    "sync-pack-runtime/legacy-format.syncpack": "c0886c0441db1675d37f12027c5d69bc98d5cee57772ec178ca186691222539d",
-    "sync-pack-runtime/legal.syncpack": "92d0f08265e63ca9369707597787ddbc49bd6dfd508d7362cc6c41bb84013ca2",
-    "sync-pack-runtime/successor.syncpack": "bc6e1750056476492c8f456e9e76d59c869ca6992b7885ed4d710a529335d71c",
-    "sync-pack-runtime/wrong-target.syncpack": "85871c44de49b6617c29ee626046481efe01d993c8bde374c6bafbc6475a6f4a"
+    "content-resource-read/content-resource.syncpack": "2acaddd7ad0b42ecb302bd8c919f8211b866377ceed225ff772c4aadc41e89d7",
+    "state-writeback-runtime/confirmation-0.syncpack": "bbefa531a31c175e96f80a96d17bb9266b3d8869b8c208504a486e0410db7bc0",
+    "state-writeback-runtime/confirmation-1.syncpack": "bad6cd9a3b73c23c31dc3625875a340dec08995f97b427ae3c97f3a57768c970",
+    "sync-pack-runtime/corrupt-envelope.syncpack": "b7c01bc459effbbfec41dfd23edc48493f92d1b354eea6750cff6f3fbffb1bd8",
+    "sync-pack-runtime/cursor-gap.syncpack": "12168f82a18157b52e9d8e512013e5cc95bb58a303e3b7ed2cebcecbfc35ecb6",
+    "sync-pack-runtime/illegal-dag.syncpack": "2ac91b8245d72770d98174283b45d97d13a682952612f5e566fa8178cf208ccd",
+    "sync-pack-runtime/legacy-format.syncpack": "6d416153da20abf79077bb947061989af626f2e7070143ef69f7932e4c1bc04f",
+    "sync-pack-runtime/legal.syncpack": "a6d9d4c4c129ed55e31370ac8389112a3ac35d117f19836d8cf309cbf0a9ab76",
+    "sync-pack-runtime/successor.syncpack": "ac4ab5e485e011802138d869ba01e5b4e182ec46d62480db6dd9d68b7c313092",
+    "sync-pack-runtime/wrong-target.syncpack": "6d7168fd4ae05a46ecbac63144fcf9a24c7c201cc34dcf0485b0b3a2f47143b7"
   },
+  "payload_schema_version": 78,
   "peer_id": "ios-acceptance-contract-peer",
-  "version": 1
+  "version": 2
 }

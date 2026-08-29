@@ -18,6 +18,11 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
       blobDataTable: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blob_data'").get(),
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
+      groupDevices: db.prepare('SELECT * FROM sync_group_devices').all(),
+      groups: db.prepare('SELECT * FROM sync_groups').all(),
+      innerManifest: JSON.parse(String(db.prepare(
+        "SELECT value FROM pack_manifest WHERE key = 'manifest_json'"
+      ).pluck().get())),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodeVersionParents: db.prepare(
@@ -30,7 +35,9 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text, reveal, current_version_id FROM nodes').all(),
       reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
-      syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
+      syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all(),
+      tableNames: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .pluck().all()
     };
   } finally {
     db.close();

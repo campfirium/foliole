@@ -9,13 +9,15 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures',
 
 interface CorpusIdentity {
   files: Record<string, string>;
+  payload_schema_version: number;
   peer_id: string;
   version: number;
 }
 
 export function loadIosAcceptanceContractCorpus() {
   const identity = JSON.parse(readFileSync(path.join(ROOT, 'corpus.json'), 'utf8')) as CorpusIdentity;
-  if (identity.version !== 1 || identity.peer_id !== IOS_ACCEPTANCE_CONTRACT_PEER_ID) {
+  if (identity.version !== 2 || identity.payload_schema_version !== 78 ||
+      identity.peer_id !== IOS_ACCEPTANCE_CONTRACT_PEER_ID) {
     throw new Error('ios_acceptance_contract_corpus_identity_invalid');
   }
   for (const [relativePath, expectedHash] of Object.entries(identity.files)) {

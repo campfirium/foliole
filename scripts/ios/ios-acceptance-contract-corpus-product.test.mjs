@@ -14,6 +14,11 @@ import {
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 const PEER_ID = 'ios-acceptance-contract-peer';
+const TABLES = [
+  'content_blobs', 'external_documents', 'node_attachments', 'node_order',
+  'node_sync_version_parents', 'node_sync_versions', 'nodes', 'pack_manifest', 'review_log',
+  'sync_group_devices', 'sync_groups', 'sync_object_state', 'sync_objects'
+];
 
 function read(relativePath) {
   return readPackRowsFromZip(path.join(ROOT, relativePath), '.tmp/ios-contract-corpus-read');
@@ -30,6 +35,19 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   const wrongTarget = read('sync-pack-runtime/wrong-target.syncpack');
   const cursorGap = read('sync-pack-runtime/cursor-gap.syncpack');
   const illegalDag = read('sync-pack-runtime/illegal-dag.syncpack');
+  const legacyFormat = read('sync-pack-runtime/legacy-format.syncpack');
+
+  for (const pack of [
+    content, stateInitial, stateSteady, legal, successor, wrongTarget, cursorGap, illegalDag, legacyFormat
+  ]) {
+    expect(pack.manifest.schema_version).toBe(78);
+    expect(pack.manifest.tables.map(({ name }) => name).sort()).toEqual(TABLES.filter((name) =>
+      name !== 'pack_manifest'));
+    expect(pack.innerManifest.tables).toEqual(pack.manifest.tables);
+    expect(pack.tableNames).toEqual(TABLES);
+    expect(pack.groups).toEqual([]);
+    expect(pack.groupDevices).toEqual([]);
+  }
 
   expect(content.manifest).toMatchObject({
     from_peer_id: 'acceptance-desktop', to_peer_id: PEER_ID, to_state_seq: 10
@@ -81,6 +99,7 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   expect(JSON.parse(restoredVersion.snapshot_json)).not.toHaveProperty('body_blob_hash');
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
+  expect(legacyFormat.manifest.format_version).toBe(1);
   expect(illegalDag.manifest.to_state_seq).toBeGreaterThan(illegalDag.manifest.from_state_seq);
   expect(illegalDag.nodeVersionParents).toContainEqual(expect.objectContaining({
     parent_version_id: 'missing#ancestor'

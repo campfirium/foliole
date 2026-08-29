@@ -29,7 +29,9 @@ const SYNC_FORMAL_ROOTS = [
 describe('iOS formal acceptance contract corpus', () => {
   it('keeps every served byte version-controlled and hash-identified', () => {
     const identity = JSON.parse(fs.readFileSync(path.join(ROOT, 'corpus.json'), 'utf8'));
-    expect(identity).toMatchObject({ peer_id: 'ios-acceptance-contract-peer', version: 1 });
+    expect(identity).toMatchObject({
+      payload_schema_version: 78, peer_id: 'ios-acceptance-contract-peer', version: 2
+    });
     expect(Object.keys(identity.files).sort()).toEqual([
       'content-resource-read/content-resource.syncpack',
       'state-writeback-runtime/confirmation-0.syncpack',

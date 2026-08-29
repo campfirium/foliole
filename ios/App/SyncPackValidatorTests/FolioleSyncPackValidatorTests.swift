@@ -90,6 +90,19 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         }
     }
 
+    func testRejectsSchema77BeforeSQLiteWrite() throws {
+        var entries = try fixtureEntries()
+        var manifest = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: try XCTUnwrap(entries["manifest.json"])
+        ) as? [String: Any])
+        manifest["schema_version"] = 77
+        entries["manifest.json"] = try JSONSerialization.data(withJSONObject: manifest)
+        let archiveURL = try temporaryArchiveURL(entries: entries)
+        defer { try? FileManager.default.removeItem(at: archiveURL) }
+
+        try assertEnvelopeError(archiveURL, code: "unsupported_sync_pack_schema_version")
+    }
+
     private func assertEnvelopeError(_ archiveURL: URL, code: String) throws {
         let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
         XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
