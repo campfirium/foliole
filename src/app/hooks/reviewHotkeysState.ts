@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
+import { findSystemGlobalShortcutConflict } from '../../shared/commands/conflicts';
 import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import {
@@ -79,8 +80,20 @@ export function useCommandShortcutState(commandIds: readonly string[]) {
 
   const updateShortcut = useCallback((commandId: string, slot: 'primary' | 'secondary', nextLabel: string): HotkeyUpdateResult => {
     const normalized = nextLabel.trim();
-    if (normalized && !parseShortcutLabel(normalized)) {
+    const parsed = normalized ? parseShortcutLabel(normalized) : null;
+    if (normalized && !parsed) {
       return { status: 'invalid', message: 'Shortcut is invalid.' };
+    }
+    if (parsed && findSystemGlobalShortcutConflict({
+      candidate: parsed,
+      commandId,
+      shortcutMap,
+      systemGlobalCommandId: APP_COMMAND_IDS.globalCaptureToInbox
+    })) {
+      return {
+        status: 'blocked',
+        message: 'This shortcut conflicts with the global Capture shortcut. Choose another shortcut.'
+      };
     }
     setOverrides((current) => {
       const next = { ...current };
@@ -91,8 +104,8 @@ export function useCommandShortcutState(commandIds: readonly string[]) {
       setCommandShortcutOverrides(next);
       return next;
     });
-    return { status: 'applied', normalizedShortcutLabel: normalized ? buildShortcutOverrideLabel(parseShortcutLabel(normalized)!) : '' };
-  }, []);
+    return { status: 'applied', normalizedShortcutLabel: parsed ? buildShortcutOverrideLabel(parsed) : '' };
+  }, [shortcutMap]);
 
   const resetShortcut = useCallback((commandId: string) => {
     setOverrides((current) => {

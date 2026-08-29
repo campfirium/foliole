@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCommandShortcutConflictMap } from './conflicts';
+import { buildCommandShortcutConflictMap, findSystemGlobalShortcutConflict } from './conflicts';
 
 describe('command shortcut conflicts', () => {
   it('marks same-scope duplicate as error', () => {
@@ -73,11 +73,34 @@ it('keeps Alt-letter conflicts based on the declared shortcut', () => {
   expect(conflicts['editor.other']?.severity).toBe('error');
 });
 
-it('does not confuse macOS global capture with shifted annotation', () => {
-  const conflicts = buildCommandShortcutConflictMap([
-    { commandId: 'capture.globalToInbox', title: 'Capture to Inbox', scope: 'global', shortcut: { altKey: true, key: 'a' } },
-    { commandId: 'editor.addSelectionNote', title: 'Annotate Selection', scope: 'global', shortcut: { altKey: true, key: 'a', shiftKey: true } }
-  ]);
+it('blocks application shortcuts consumed by a system-global shortcut', () => {
+  const shortcutMap = {
+    'capture.globalToInbox': { primary: { altKey: true, key: 'a' } },
+    'editor.addSelectionNote': { primary: { key: 'a', metaKey: true, shiftKey: true } }
+  };
 
-  expect(conflicts).toEqual({});
+  expect(findSystemGlobalShortcutConflict({
+    candidate: { altKey: true, key: 'a', shiftKey: true },
+    commandId: 'editor.addSelectionNote',
+    shortcutMap,
+    systemGlobalCommandId: 'capture.globalToInbox'
+  })).toBe('capture.globalToInbox');
+  expect(findSystemGlobalShortcutConflict({
+    candidate: { key: 'a', metaKey: true, shiftKey: true },
+    commandId: 'editor.addSelectionNote',
+    shortcutMap,
+    systemGlobalCommandId: 'capture.globalToInbox'
+  })).toBeNull();
+});
+
+it('blocks a system-global shortcut that would consume an existing application shortcut', () => {
+  expect(findSystemGlobalShortcutConflict({
+    candidate: { altKey: true, key: 'a' },
+    commandId: 'capture.globalToInbox',
+    shortcutMap: {
+      'capture.globalToInbox': { primary: { altKey: true, key: 'a' } },
+      'editor.addSelectionNote': { primary: { altKey: true, key: 'a', shiftKey: true } }
+    },
+    systemGlobalCommandId: 'capture.globalToInbox'
+  })).toBe('editor.addSelectionNote');
 });

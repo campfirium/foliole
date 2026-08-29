@@ -72,8 +72,8 @@ it('shows the macOS annotation default in shortcut settings', () => {
   });
 
   expect(settings.hotkeyItems.find((item) => item.commandId === APP_COMMAND_IDS.addSelectionNote)).toMatchObject({
-    primaryShortcutLabel: 'Alt+Shift+A',
-    shortcutDisplayEntries: [{ label: '⌥ ⇧ A', slot: 'primary' }],
+    primaryShortcutLabel: 'Cmd+Shift+A',
+    shortcutDisplayEntries: [{ label: '⇧ ⌘ A', slot: 'primary' }],
     title: 'Annotate Selection'
   });
   vi.restoreAllMocks();

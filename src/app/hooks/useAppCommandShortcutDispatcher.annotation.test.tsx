@@ -23,13 +23,13 @@ function dispatchShortcut(init: KeyboardEventInit) {
   return event;
 }
 
-it('dispatches macOS annotation only from the shifted physical Option A chord', () => {
+it('dispatches macOS annotation only from Command Shift A', () => {
   const runCommand = vi.fn();
   render(<Harness platform="MacIntel" runCommand={runCommand} />);
 
-  expect(dispatchShortcut({ altKey: true, code: 'KeyA', key: 'Å' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ altKey: true, code: 'KeyA', key: 'Å', shiftKey: true }).defaultPrevented).toBe(false);
   expect(dispatchShortcut({ metaKey: true, code: 'KeyA', key: 'a' }).defaultPrevented).toBe(false);
-  expect(dispatchShortcut({ altKey: true, code: 'KeyA', key: 'Å', shiftKey: true }).defaultPrevented).toBe(true);
+  expect(dispatchShortcut({ metaKey: true, code: 'KeyA', key: 'A', shiftKey: true }).defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledOnce();
   expect(runCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.addSelectionNote);
 });

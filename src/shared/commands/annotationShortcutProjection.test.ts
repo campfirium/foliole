@@ -9,7 +9,7 @@ it('keeps annotation distinct from global capture and Select All on every deskto
   const windows = getPlatformDefaultCommandShortcuts('Win32');
   const linux = getPlatformDefaultCommandShortcuts('Linux x86_64');
 
-  expect(mac[APP_COMMAND_IDS.addSelectionNote]).toEqual({ primary: { key: 'a', altKey: true, shiftKey: true } });
+  expect(mac[APP_COMMAND_IDS.addSelectionNote]).toEqual({ primary: { key: 'a', metaKey: true, shiftKey: true } });
   expect(mac[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({ primary: { key: 'a', altKey: true } });
   expect(matchesShortcutSet(
     new KeyboardEvent('keydown', { code: 'KeyA', key: 'a', metaKey: true }),

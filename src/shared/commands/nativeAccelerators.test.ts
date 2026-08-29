@@ -31,7 +31,7 @@ describe('resolveNativeMenuAccelerator', () => {
     const windows = getPlatformDefaultCommandShortcuts('Win32')[APP_COMMAND_IDS.addSelectionNote];
     const linux = getPlatformDefaultCommandShortcuts('Linux x86_64')[APP_COMMAND_IDS.addSelectionNote];
 
-    expect(resolveNativeMenuAccelerator(mac, 'MacIntel')).toBe('Alt+Shift+A');
+    expect(resolveNativeMenuAccelerator(mac, 'MacIntel')).toBe('Command+Shift+A');
     expect(resolveNativeMenuAccelerator(windows, 'Win32')).toBe('Alt+A');
     expect(resolveNativeMenuAccelerator(linux, 'Linux x86_64')).toBe('Alt+A');
   });

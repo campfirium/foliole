@@ -141,7 +141,7 @@ describe('native annotation menu projection', () => {
   beforeEach(resetMenuMock);
 
   it.each([
-    ['darwin', 'Alt+Shift+A'],
+    ['darwin', 'Command+Shift+A'],
     ['win32', 'Alt+A'],
     ['linux', 'Alt+A']
   ] as const)('projects annotation onto the %s native Editor menu', (platform, accelerator) => {

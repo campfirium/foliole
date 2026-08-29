@@ -1,5 +1,5 @@
-import { formatShortcutLabel, getShortcutSignature } from './shortcuts';
-import type { CommandShortcut } from './types';
+import { formatShortcutLabel, getShortcutSetShortcuts, getShortcutSignature } from './shortcuts';
+import type { CommandShortcut, CommandShortcutSet } from './types';
 
 type ShortcutConflictSeverity = 'warning' | 'error';
 
@@ -14,6 +14,38 @@ export interface ShortcutConflictEntry {
 export interface CommandShortcutConflictState {
   severity?: ShortcutConflictSeverity;
   message?: string;
+}
+
+const MODIFIER_KEYS = ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const;
+
+function hasSameShortcutKey(first: CommandShortcut, second: CommandShortcut) {
+  return getShortcutSignature({ key: first.key }) === getShortcutSignature({ key: second.key });
+}
+
+function systemShortcutConsumesCandidate(systemShortcut: CommandShortcut, candidate: CommandShortcut) {
+  return hasSameShortcutKey(systemShortcut, candidate) && MODIFIER_KEYS.every(
+    (key) => !systemShortcut[key] || Boolean(candidate[key])
+  );
+}
+
+export function findSystemGlobalShortcutConflict(args: {
+  candidate: CommandShortcut;
+  commandId: string;
+  systemGlobalCommandId: string;
+  shortcutMap: Record<string, CommandShortcutSet | undefined>;
+}) {
+  if (args.commandId === args.systemGlobalCommandId) {
+    for (const [commandId, shortcutSet] of Object.entries(args.shortcutMap)) {
+      if (commandId === args.systemGlobalCommandId) continue;
+      if (getShortcutSetShortcuts(shortcutSet).some((shortcut) =>
+        systemShortcutConsumesCandidate(args.candidate, shortcut)
+      )) return commandId;
+    }
+    return null;
+  }
+  return getShortcutSetShortcuts(args.shortcutMap[args.systemGlobalCommandId]).some((shortcut) =>
+    systemShortcutConsumesCandidate(shortcut, args.candidate)
+  ) ? args.systemGlobalCommandId : null;
 }
 
 function resolveSeverity(entries: ShortcutConflictEntry[]): ShortcutConflictSeverity {
