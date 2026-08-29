@@ -49,7 +49,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(shell).toContain('workspaceSync.state.last_synced_at === null');
     expect(shell).toContain('postReady(workspaceSync)');
     expect(shell).not.toContain('workspaceSync.pullFromDesktop(');
-    expect(runner).toContain("waitForRequestPhase(options, 'endpoint-ready', 2)");
+    expect(runner).toContain("waitForRequestPhase(options, 'endpoint-ready', 1)");
     expect(shell).toContain("App.addListener('pause'");
     expect(shell).not.toContain('createForegroundSyncRunner');
     expect(shell).not.toContain('tryForegroundAutoSync');
@@ -110,11 +110,10 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     const phase_requests = Object.fromEntries([
       'endpoint-ready', 'resume-single-flight', 'failed-resume', 'recovered-resume', 'restart'
     ].map((phase) => [phase, 1]));
-    phase_requests['endpoint-ready'] = 2;
     const registration = hostedProviderRegistrationEvidence();
     const observations = { registration, foreground_sync_lifecycle: {
-      active_requests: 0, completed_requests: 5, failed_requests: 1, max_concurrency: 1,
-      phase_requests, request_count: 6, requests: []
+      active_requests: 0, completed_requests: 4, failed_requests: 1, max_concurrency: 1,
+      phase_requests, request_count: 5, requests: []
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
@@ -124,7 +123,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       ...observations.foreground_sync_lifecycle,
       failed_requests: 2,
       phase_requests: { ...phase_requests, 'failed-resume': 2 },
-      request_count: 7
+      request_count: 6
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
@@ -132,9 +131,9 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     })).toMatchObject({ background_retry_request_count: 1 });
     const restartDoubleActive = { registration, foreground_sync_lifecycle: {
       ...observations.foreground_sync_lifecycle,
-      completed_requests: 6,
+      completed_requests: 5,
       phase_requests: { ...phase_requests, restart: 2 },
-      request_count: 7
+      request_count: 6
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,

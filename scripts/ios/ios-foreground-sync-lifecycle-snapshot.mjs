@@ -19,14 +19,14 @@ export function verifyForegroundSyncLifecycleAcceptance(args) {
   const restartExtraCount = Math.max(0, (phases.restart ?? 0) - 1);
   const backgroundPassed = args.backgroundDeltas.length === 3 && args.backgroundDeltas[0] === 0 &&
     args.backgroundDeltas[1] === 0 && (backgroundRetryCount === 0 || backgroundRetryCount === 1);
-  const countsPassed = phases['endpoint-ready'] === 2 && phases['resume-single-flight'] === 1 &&
+  const countsPassed = phases['endpoint-ready'] === 1 && phases['resume-single-flight'] === 1 &&
     phases['failed-resume'] === 1 + backgroundRetryCount && phases['recovered-resume'] === 1 &&
     (phases.restart === 1 || phases.restart === 2);
   const requestPassed = hostedProviderLifecyclePassed(args.observations) && countsPassed &&
     observations.max_concurrency === 1 &&
     observations.active_requests === 0 && observations.failed_requests === 1 + backgroundRetryCount &&
-    observations.completed_requests === 5 + restartExtraCount &&
-    observations.request_count === 6 + backgroundRetryCount + restartExtraCount;
+    observations.completed_requests === 4 + restartExtraCount &&
+    observations.request_count === 5 + backgroundRetryCount + restartExtraCount;
   const lifecyclePassed = backgroundPassed &&
     args.lifecycle.pause_count >= 2 && args.lifecycle.active_count >= 2 && args.lifecycle.resume_count >= 2;
   const snapshotsPassed = isForegroundSyncLifecycleSnapshotSettled(args.beforeRestart) &&

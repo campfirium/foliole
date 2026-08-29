@@ -68,7 +68,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
 
     launch(options, udid, true);
     await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
-    await waitForRequestPhase(options, 'endpoint-ready', 2);
+    await waitForRequestPhase(options, 'endpoint-ready', 1);
 
     const backgroundDeltas = [];
     let lifecycle = await enterBackground(options, udid, resultPath, backgroundDeltas);
