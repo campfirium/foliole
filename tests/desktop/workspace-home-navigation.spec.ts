@@ -4,6 +4,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/workspace-home-navigation-hidden-native.png');
+const VIRTUAL_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/workspace-virtual-root-hidden-native.png');
 const NODE_LIST_PANEL_NAME = /^(Node list panel|主题列表面板)$/;
 
 test('workspace navigation keeps root folders under Home after renderer patch seeding', async ({
@@ -60,4 +61,14 @@ test('workspace navigation keeps root folders under Home after renderer patch se
     'special-inbox',
     'special-virtual-root'
   ]);
+
+  await folderPanel.getByRole('treeitem', { name: 'Virtual folders', exact: true }).click();
+  await expect(desktopWindow.getByRole('region', { name: 'Virtual search' })).toBeVisible();
+  expect(await desktopWindow.evaluate(() =>
+    window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBeNull();
+  await desktopWindow.screenshot({ path: VIRTUAL_SCREENSHOT_PATH });
+  await testInfo.attach('workspace-virtual-root-screenshot', {
+    body: await desktopWindow.screenshot(),
+    contentType: 'image/png'
+  });
 });

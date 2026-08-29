@@ -84,7 +84,7 @@ it('keeps the Virtual root document surface when the Virtual root is active', ()
     <WorkspaceDocumentSurface
       {...createProps({
         activeVirtualNodeId: VIRTUAL_ROOT_NODE_ID,
-        documentNodeId: VIRTUAL_ROOT_NODE_ID
+        documentNodeId: null
       })}
     />
   );
@@ -97,7 +97,7 @@ it('keeps a saved search document surface when that saved search is active', () 
     <WorkspaceDocumentSurface
       {...createProps({
         activeVirtualNodeId: 'virtual-a',
-        documentNodeId: 'virtual-a',
+        documentNodeId: null,
         nodeOrder: [INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'topic-a'],
         nodesById: {
           [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),

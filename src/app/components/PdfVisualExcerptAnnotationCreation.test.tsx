@@ -98,8 +98,9 @@ it('creates one annotated image excerpt only after the PDF region note is saved'
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   await waitFor(() => expect(createPdfImageExcerpt).toHaveBeenCalledWith(
-    'pdf-1', 1,
+    'pdf-1',
     expect.objectContaining({ page: 1, rects: [expect.objectContaining({ height: 0.4, width: 0.4, x: 0.1, y: 0.15 })] }),
+    null,
     '0'.repeat(64), 'AQID',
     `![Image excerpt](asset://${'0'.repeat(64)}.png)\n※ Diagram thought`
   ));
