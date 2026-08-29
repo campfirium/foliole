@@ -6,11 +6,15 @@ import {
 } from '../../../lib/core/nodes/virtualNodeFilter';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
+import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 import { writeVirtualFolderInfoToTopicYaml } from './writeVirtualFolderInfoToTopicYaml';
 
 vi.mock('../../store/workspaceNodePreparation', () => ({
   ensureWorkspaceNodeDocumentReady: vi.fn()
+}));
+vi.mock('../../store/workspaceStoreContentRuntimePersist', () => ({
+  drainPendingNodeContentRuntimePersist: vi.fn(async () => true)
 }));
 
 beforeEach(() => {
@@ -50,12 +54,13 @@ it('force-loads matching Topics and idempotently merges the virtual folder colle
     unchanged: 1,
     updated: 1
   });
-  expect(ensureWorkspaceNodeDocumentReady).toHaveBeenCalledWith('topic-a', { forceLoad: true });
-  expect(ensureWorkspaceNodeDocumentReady).toHaveBeenCalledWith('topic-b', { forceLoad: true });
+  expect(ensureWorkspaceNodeDocumentReady).toHaveBeenCalledWith('topic-a', { forceLoad: true, keepWarm: true });
+  expect(ensureWorkspaceNodeDocumentReady).toHaveBeenCalledWith('topic-b', { forceLoad: true, keepWarm: true });
   expect(useWorkspaceStore.getState().updateNodeContent).toHaveBeenCalledWith(
     'topic-a',
     expect.stringContaining('collections:\n  - "Flow"')
   );
+  expect(drainPendingNodeContentRuntimePersist).toHaveBeenCalledWith('topic-a');
 });
 
 it('writes manual virtual Folder membership to Topic YAML only when explicitly requested', async () => {
@@ -108,6 +113,20 @@ it('reports a failed force load without hiding successful items', async () => {
     failed: 1,
     unchanged: 1,
     updated: 0
+  });
+});
+
+it('reports a failed durable write instead of claiming an optimistic update', async () => {
+  vi.mocked(ensureWorkspaceNodeDocumentReady).mockImplementation(async (nodeId) => ({
+    content: `Body ${nodeId}`, hideTitleHeading: false,
+    imageRegions: null, kind: 'topic', nodeId, reveal: null, virtualFilter: null
+  }));
+  vi.mocked(drainPendingNodeContentRuntimePersist).mockImplementation(async (nodeId) => nodeId !== 'topic-a');
+
+  await expect(writeVirtualFolderInfoToTopicYaml('virtual-flow')).resolves.toEqual({
+    failed: 1,
+    unchanged: 0,
+    updated: 1
   });
 });
 

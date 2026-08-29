@@ -4,6 +4,7 @@ import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 export interface VirtualFolderYamlWriteResult {
   failed: number;
@@ -38,7 +39,7 @@ export async function writeVirtualFolderInfoToTopicYaml(nodeId: string): Promise
   const result = { failed: 0, unchanged: 0, updated: 0 };
   for (const topicId of topicIds) {
     try {
-      const document = await ensureWorkspaceNodeDocumentReady(topicId, { forceLoad: true });
+      const document = await ensureWorkspaceNodeDocumentReady(topicId, { forceLoad: true, keepWarm: true });
       if (!document) {
         result.failed += 1;
         continue;
@@ -49,7 +50,8 @@ export async function writeVirtualFolderInfoToTopicYaml(nodeId: string): Promise
         continue;
       }
       const saved = await useWorkspaceStore.getState().updateNodeContent(topicId, content);
-      result[saved ? 'updated' : 'failed'] += 1;
+      const persisted = saved && await drainPendingNodeContentRuntimePersist(topicId);
+      result[persisted ? 'updated' : 'failed'] += 1;
     } catch {
       result.failed += 1;
     }

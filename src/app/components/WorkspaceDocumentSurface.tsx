@@ -32,7 +32,7 @@ function resolveDocumentNodeId(props: WorkspaceDocumentSurfaceProps) {
     activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ||
     isVirtualNode(props.nodesById[activeVirtualNodeId])
   ) {
-    return activeVirtualNodeId;
+    return props.documentNodeId ?? activeVirtualNodeId;
   }
   if (
     activeVirtualNodeId !== VIRTUAL_SHELVED_NODE_ID &&

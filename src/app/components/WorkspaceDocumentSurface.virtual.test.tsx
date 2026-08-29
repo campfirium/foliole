@@ -119,3 +119,24 @@ it('keeps a saved search document surface when that saved search is active', () 
 
   expect(screen.getByText('document virtual-a')).toBeInTheDocument();
 });
+
+it('opens a Topic selected from a saved search result list', () => {
+  render(
+    <WorkspaceDocumentSurface
+      {...createProps({
+        activeVirtualNodeId: 'virtual-a',
+        documentNodeId: 'stale-topic',
+        nodesById: {
+          ...createProps().nodesById,
+          'virtual-a': createWorkspaceContentNode({
+            id: 'virtual-a', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID,
+            specialKind: 'virtual', title: 'Saved Search',
+            virtualFilter: { conditions: [], match: 'all', version: 1 }
+          })
+        }
+      })}
+    />
+  );
+
+  expect(screen.getByText('document stale-topic')).toBeInTheDocument();
+});
