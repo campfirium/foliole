@@ -66,8 +66,10 @@ async function dragExcerptRegion(desktopWindow: Page, area = { endX: 0.7, endY: 
   await desktopWindow.mouse.up();
 }
 
-async function selectExcerptOutline(desktopWindow: Page) {
-  const outline = desktopWindow.getByTestId('pdf-image-excerpt-outline').first();
+async function selectExcerptOutline(desktopWindow: Page, nodeId?: string) {
+  const outline = nodeId
+    ? desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${nodeId}"]`).first()
+    : desktopWindow.getByTestId('pdf-image-excerpt-outline').first();
   const bounds = await outline.boundingBox();
   if (!bounds) throw new Error('PDF image excerpt outline has no bounds');
   await desktopWindow.mouse.click(bounds.x + 1, bounds.y + bounds.height / 2);
@@ -94,7 +96,7 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
   await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
-  await selectExcerptOutline(desktopWindow);
+  await selectExcerptOutline(desktopWindow, excerptNodeId);
   await desktopWindow.getByRole('button', { name: /Open excerpt|进入摘录/ }).click();
   await expect.poll(() => desktopWindow.evaluate(() => {
     const debug = window.__folioleWorkspaceDebug;
@@ -115,13 +117,13 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   ), excerptNodeId)).toBe('image-excerpt');
   await desktopWindow.locator(`[role="treeitem"][data-node-id="${parentNodeId}"]`).click();
   await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
-  const restoredOutline = desktopWindow.getByTestId('pdf-image-excerpt-outline').first();
+  const restoredOutline = desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${excerptNodeId}"]`).first();
   await expect(restoredOutline).toBeVisible();
-  await selectExcerptOutline(desktopWindow);
+  await selectExcerptOutline(desktopWindow, excerptNodeId);
   await desktopWindow.getByRole('button', { name: /Delete excerpt|删除摘录/ }).click();
   await expect(restoredOutline).toHaveCount(0);
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
-  await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
+  await expect(restoredOutline).toBeVisible();
 });
 
 for (const scenario of [
