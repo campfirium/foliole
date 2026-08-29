@@ -78,7 +78,9 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   desktopApp,
   desktopWindow
 }) => {
-  const parentNodeId = await importPdf(desktopApp, desktopWindow);
+  const fixturePath = path.resolve('.tmp/artifacts/pdf-image-excerpt-sequential.pdf');
+  createVisualPdfFixture(fixturePath, null);
+  const parentNodeId = await importPdf(desktopApp, desktopWindow, fixturePath);
   await dragExcerptRegion(desktopWindow);
   const excerptNode = desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ });
   await expect(excerptNode).toBeVisible();
