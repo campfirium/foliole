@@ -93,6 +93,31 @@ it('opens PDF highlight actions without making the overlay the pointer target', 
   expect(deleteEditorAnnotationNodes).toHaveBeenCalledWith(['pdf-highlight']);
 });
 
+it('routes a PDF image excerpt outline through the unified existing-excerpt actions', () => {
+  const { text } = appendPdfTargets();
+  const updateNodeContent = vi.fn();
+  const baseNodes = buildHookArgs().nodesById as unknown as Record<string, Record<string, unknown>>;
+  const nodesById = {
+    ...baseNodes,
+    'pdf-highlight': {
+      ...baseNodes['pdf-highlight'],
+      anchorLink: { id: 'pdf-image-anchor', kind: 'image-excerpt', locator: { page: 1, x: 0.3, y: 0.4 } },
+      content: '![Excerpt](asset://crop.png)\n※ First thought'
+    }
+  } as never;
+  const { result } = renderHook(() => useEditorContextCommands(buildHookArgs({ nodesById, updateNodeContent })));
+
+  act(() => text.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: 80, clientY: 100 })));
+  expect(result.current.contextMenu).toMatchObject({
+    existingHighlight: { kind: 'image-excerpt', nodeId: 'pdf-highlight', note: 'First thought' },
+    mode: 'existing-highlight-toolbar'
+  });
+  act(() => result.current.handleCreateNote('Revised thought'));
+  expect(updateNodeContent).toHaveBeenCalledWith(
+    'pdf-highlight', '![Excerpt](asset://crop.png)\n※ Revised thought', { preserveTitle: true }
+  );
+});
+
 it('refuses ambiguous overlapping PDF highlights', () => {
   const { text } = appendPdfTargets(['pdf-highlight', 'other-highlight']);
   const nodesById = {

@@ -76,31 +76,13 @@ describe('PDF visual excerpt page interaction', () => {
     render(<InteractionHarness />);
     preparePageRoot();
 
-    dispatchPointer(screen.getByTestId('pdf-canvas'), 'pointerdown', { clientX: 20, clientY: 40, pointerId: 1 });
-    expect(await screen.findByTestId('pdf-image-excerpt-outline-toolbar')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'Backspace' });
-
-    expect(deleteAnnotations).toHaveBeenCalledWith(['excerpt-1']);
-  });
-
-  it('edits the selected PDF image excerpt annotation on the same topic', async () => {
-    const updateNodeContent = vi.fn(async () => true);
-    useWorkspaceStore.setState({ updateNodeContent });
-    render(<InteractionHarness />);
-    preparePageRoot();
-
     act(() => dispatchPointer(
       screen.getByTestId('pdf-canvas'), 'pointerdown', { clientX: 20, clientY: 40, pointerId: 1 }
     ));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Comment' }));
-    const input = screen.getByPlaceholderText('Add a comment...');
-    expect(input).toHaveValue('First thought');
-    fireEvent.change(input, { target: { value: 'Revised thought' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-outline')).toHaveClass('shadow-marker'));
+    fireEvent.keyDown(window, { key: 'Backspace' });
 
-    await waitFor(() => expect(updateNodeContent).toHaveBeenCalledWith(
-      'excerpt-1', '![Excerpt](asset://crop.png)\n※ Revised thought', { preserveTitle: true }
-    ));
+    expect(deleteAnnotations).toHaveBeenCalledWith(['excerpt-1']);
   });
 
   it('keeps text spans native and treats the auxiliary text-layer element as visual area', async () => {

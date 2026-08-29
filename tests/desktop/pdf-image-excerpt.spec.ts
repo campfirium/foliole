@@ -73,7 +73,9 @@ async function selectExcerptOutline(desktopWindow: Page, nodeId?: string) {
   const bounds = await outline.boundingBox();
   if (!bounds) throw new Error('PDF image excerpt outline has no bounds');
   await desktopWindow.mouse.click(bounds.x + 1, bounds.y + bounds.height / 2);
-  await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline-toolbar')).toBeVisible();
+  const toolbar = desktopWindow.locator('[data-annotation-toolbar="true"]');
+  await expect(toolbar).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: /^(Add Comment|添加批注)$/ })).toBeVisible();
 }
 
 test('PDF image excerpt @pdf creates a normal image and opens it from the source outline', async ({
@@ -95,9 +97,10 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toHaveCount(0);
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
   await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
-  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
   await selectExcerptOutline(desktopWindow, excerptNodeId);
-  await desktopWindow.getByRole('button', { name: /Open excerpt|进入摘录/ }).click();
+  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
+  await desktopWindow.locator('[data-annotation-toolbar="true"]')
+    .getByRole('button', { name: /^(Open|打开)$/ }).click();
   await expect.poll(() => desktopWindow.evaluate(() => {
     const debug = window.__folioleWorkspaceDebug;
     const activeNodeId = debug?.getActiveNodeId?.() ?? null;
@@ -120,7 +123,8 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   const restoredOutline = desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${excerptNodeId}"]`).first();
   await expect(restoredOutline).toBeVisible();
   await selectExcerptOutline(desktopWindow, excerptNodeId);
-  await desktopWindow.getByRole('button', { name: /Delete excerpt|删除摘录/ }).click();
+  await desktopWindow.locator('[data-annotation-toolbar="true"]')
+    .getByRole('button', { name: /^(Close highlight|关闭高亮)$/ }).click();
   await expect(restoredOutline).toHaveCount(0);
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
   await expect(restoredOutline).toBeVisible();
