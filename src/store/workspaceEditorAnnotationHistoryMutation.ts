@@ -95,6 +95,7 @@ function finishDelete(
     mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
     return {
       nodesById: mutation.patch.nodesById,
+      navigation: mutation.patch.navigation,
       reviewSession: mutation.patch.reviewSession,
       trashedNodeDeletedAtById: mutation.patch.trashedNodeDeletedAtById,
       trashedNodeIds: mutation.patch.trashedNodeIds,

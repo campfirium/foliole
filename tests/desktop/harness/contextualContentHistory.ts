@@ -131,6 +131,7 @@ export async function selectPdfHighlightText(page: Page) {
     textNode.parentElement?.dispatchEvent(new MouseEvent('mouseup', {
       bubbles: true, button: 0, clientX: rect.right, clientY: rect.bottom
     }));
+    surface?.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Shift' }));
     return true;
   }, PDF_HIGHLIGHT_TEXT);
   expect(selected).toBe(true);

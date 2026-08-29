@@ -6,6 +6,7 @@ import {
   type EditorOperationHistoryEntry
 } from '../features/editor/model/editorOperationHistory';
 
+import { pushNavigationHistory } from './workspaceNavigation';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { computeDeleteNodesMutation } from './workspaceTrashMutations';
@@ -14,6 +15,18 @@ type WorkspaceSet = (
   partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)
 ) => void;
 type AnnotationCreationSettlementOutcome = 'confirmed-nontop' | 'confirmed-top' | 'failed' | 'ignored';
+
+function registerCreatedNodeVisits(
+  state: WorkspaceState,
+  sourceNodeId: string,
+  createdNodeIds: string[]
+) {
+  if (state.activeNodeId !== sourceNodeId) return state.navigation;
+  return {
+    backStack: createdNodeIds.reduce(pushNavigationHistory, state.navigation.backStack),
+    forwardStack: []
+  };
+}
 
 export function isSameEditorAnnotationEntry(
   entry: EditorOperationHistoryEntry | null | undefined,
@@ -96,7 +109,10 @@ export function settleEditorAnnotationCreation(
     const confirmed = confirmPendingEditorAnnotationEntry(state, result.nodeId, result.annotationNodeIds);
     if (!confirmed) return state;
     outcome = confirmed.wasTop ? 'confirmed-top' : 'confirmed-nontop';
-    return { editorOperationHistory: confirmed.history };
+    return {
+      editorOperationHistory: confirmed.history,
+      navigation: registerCreatedNodeVisits(state, result.nodeId, result.annotationNodeIds)
+    };
   });
   return outcome as AnnotationCreationSettlementOutcome;
 }
