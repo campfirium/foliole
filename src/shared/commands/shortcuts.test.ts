@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 
-import { formatAriaKeyShortcuts, formatShortcutSetLabel } from './shortcuts';
+import { formatAriaKeyShortcuts, formatShortcutSetLabel, matchesShortcut } from './shortcuts';
+
+function keyEvent(init: KeyboardEventInit) {
+  return new KeyboardEvent('keydown', init);
+}
 
 it('formats visual shortcut labels separately from aria key shortcuts', () => {
   const shortcuts = {
@@ -21,4 +25,28 @@ it('formats non-letter keys for aria key shortcuts', () => {
 it('omits empty aria key shortcuts', () => {
   expect(formatAriaKeyShortcuts(undefined)).toBeUndefined();
   expect(formatAriaKeyShortcuts({})).toBeUndefined();
+});
+
+it.each([
+  ['Ω', 'KeyZ', { altKey: true, key: 'z' }],
+  ['≈', 'KeyX', { altKey: true, key: 'x' }],
+  ['Å', 'KeyA', { altKey: true, key: 'a', shiftKey: true }],
+  ['a', 'KeyA', { altKey: true, key: 'a' }]
+])('matches Alt-modified letter %s by physical code %s', (key, code, shortcut) => {
+  expect(matchesShortcut(keyEvent({ altKey: true, code, key, shiftKey: shortcut.shiftKey }), shortcut)).toBe(true);
+});
+
+it('does not fall back to the produced character for Alt-modified letters', () => {
+  const shortcut = { altKey: true, key: 'a' };
+
+  expect(matchesShortcut(keyEvent({ altKey: true, code: 'KeyQ', key: 'a' }), shortcut)).toBe(false);
+  expect(matchesShortcut(keyEvent({ altKey: true, key: 'a' }), shortcut)).toBe(false);
+});
+
+it('keeps event.key matching for non-Alt letters and Alt-modified symbols', () => {
+  expect(matchesShortcut(keyEvent({ code: 'KeyQ', key: 'a' }), { key: 'a' })).toBe(true);
+  expect(matchesShortcut(keyEvent({ altKey: true, code: 'BracketLeft', key: '[' }), {
+    altKey: true,
+    key: '['
+  })).toBe(true);
 });

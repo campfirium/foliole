@@ -62,3 +62,13 @@ describe('command shortcut conflicts', () => {
     expect(conflicts).toEqual({});
   });
 });
+
+it('keeps Alt-letter conflicts based on the declared shortcut', () => {
+  const conflicts = buildCommandShortcutConflictMap([
+    { commandId: 'editor.highlight', title: 'Highlight', scope: 'global', shortcut: { altKey: true, key: 'z' } },
+    { commandId: 'editor.other', title: 'Other', scope: 'global', shortcut: { altKey: true, key: 'Z' } }
+  ]);
+
+  expect(conflicts['editor.highlight']?.severity).toBe('error');
+  expect(conflicts['editor.other']?.severity).toBe('error');
+});

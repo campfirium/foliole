@@ -88,7 +88,7 @@ it('can dispatch newly routed create command shortcuts', () => {
     />
   );
 
-  const event = dispatchShortcut({ ctrlKey: true, altKey: true, key: 'f' });
+  const event = dispatchShortcut({ ctrlKey: true, altKey: true, code: 'KeyF', key: 'f' });
 
   expect(event.defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledWith('workspace.createFolder');
@@ -108,7 +108,7 @@ it('routes remapped app commands without retaining their former hardcoded keys',
 
   expect(dispatchShortcut({ ctrlKey: true, key: 'i', shiftKey: true }).defaultPrevented).toBe(false);
   expect(dispatchShortcut({ key: 'F2' }).defaultPrevented).toBe(false);
-  expect(dispatchShortcut({ altKey: true, key: 'i' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcut({ altKey: true, code: 'KeyI', key: 'i' }).defaultPrevented).toBe(true);
   expect(dispatchShortcut({ key: 'F4' }).defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.toggleDevTools);
   expect(runCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.renameNode);
@@ -130,7 +130,7 @@ it('dispatches import shortcuts before an editor target can stop bubbling', () =
   input.focus();
 
   expect(dispatchShortcutFrom(input, { ctrlKey: true, key: 'o' }).defaultPrevented).toBe(true);
-  expect(dispatchShortcutFrom(input, { ctrlKey: true, altKey: true, key: 'v' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, altKey: true, code: 'KeyV', key: 'v' }).defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenNthCalledWith(1, 'import.singleFileToInbox');
   expect(runCommand).toHaveBeenNthCalledWith(2, 'import.clipboard');
 });

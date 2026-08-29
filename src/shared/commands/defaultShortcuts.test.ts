@@ -5,7 +5,10 @@ import { APP_COMMAND_IDS } from './ids';
 import { matchesShortcutSet } from './shortcuts';
 
 function keyEvent(init: KeyboardEventInit) {
-  return new KeyboardEvent('keydown', init);
+  const code = init.code || (init.altKey && /^[a-z]$/i.test(init.key ?? '')
+    ? `Key${init.key?.toUpperCase()}`
+    : undefined);
+  return new KeyboardEvent('keydown', { ...init, code });
 }
 
 it('uses an explicit Apple-native default table on macOS', () => {

@@ -50,4 +50,22 @@ describe('resolveCommandShortcutDispatch', () => {
     expect(resolveCommandShortcutDispatch({ ...args, event: keyEvent({ ctrlKey: true, key: 'l', repeat: true }) })).toBeNull();
     expect(resolveCommandShortcutDispatch({ ...args, event: keyEvent({ ctrlKey: true, isComposing: true, key: 'l' }) })).toBeNull();
   });
+
+  it('dispatches an Alt letter from its physical code but still ignores composition', () => {
+    const args = {
+      items: [{ id: 'editor.createSelectionHighlight', enabled: true }],
+      shortcutMap: {
+        'editor.createSelectionHighlight': { primary: { altKey: true, key: 'z' } }
+      }
+    };
+
+    expect(resolveCommandShortcutDispatch({
+      ...args,
+      event: keyEvent({ altKey: true, code: 'KeyZ', key: 'Ω' })
+    })).toBe('editor.createSelectionHighlight');
+    expect(resolveCommandShortcutDispatch({
+      ...args,
+      event: keyEvent({ altKey: true, code: 'KeyZ', isComposing: true, key: 'Ω' })
+    })).toBeNull();
+  });
 });

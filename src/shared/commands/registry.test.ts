@@ -155,3 +155,22 @@ describe('command registry palette state', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 });
+
+it('matches an Alt-letter override by physical code', () => {
+  const execute = vi.fn();
+  const registry = createCommandRegistry([
+    {
+      id: 'workspace.openSettings',
+      title: 'Open Settings',
+      execute,
+      shortcuts: { primary: { altKey: true, key: 's' } }
+    }
+  ]);
+
+  expect(registry.runByShortcut(new KeyboardEvent('keydown', {
+    altKey: true,
+    code: 'KeyS',
+    key: 'ß'
+  }))).toBe(true);
+  expect(execute).toHaveBeenCalledTimes(1);
+});

@@ -56,8 +56,16 @@ function normalizeKeyForMatch(value: string) {
   return normalized;
 }
 
+function matchesShortcutKey(event: KeyboardEvent, shortcut: CommandShortcut) {
+  const shortcutKey = normalizeKeyForMatch(shortcut.key);
+  if (shortcut.altKey && /^[a-z]$/.test(shortcutKey)) {
+    return event.code === `Key${shortcutKey.toUpperCase()}`;
+  }
+  return normalizeKeyForMatch(event.key) === shortcutKey;
+}
+
 export function matchesShortcut(event: KeyboardEvent, shortcut: CommandShortcut) {
-  if (normalizeKeyForMatch(event.key) !== normalizeKeyForMatch(shortcut.key)) {
+  if (!matchesShortcutKey(event, shortcut)) {
     return false;
   }
   return (
