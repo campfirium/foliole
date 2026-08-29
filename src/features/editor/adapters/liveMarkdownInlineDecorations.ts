@@ -4,7 +4,7 @@ import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
-import { createMarkdownImageWidgetDom } from './liveMarkdownImages';
+import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 import { canReuseMarkdownImageWidgetDom, updateMarkdownImageWidgetDomRange } from './liveMarkdownImageWidgetDom';
 
 function parseWidgetRangeValue(value: string | undefined, fallback: number) {
@@ -86,6 +86,10 @@ class MarkdownImageWidget extends WidgetType {
     }
     updateMarkdownImageWidgetDomRange(dom, this.imageMatch);
     return true;
+  }
+
+  override destroy(dom: HTMLElement) {
+    disposeMarkdownImageWidgetDom(dom);
   }
 }
 

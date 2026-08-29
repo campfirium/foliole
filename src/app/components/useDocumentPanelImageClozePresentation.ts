@@ -12,25 +12,9 @@ import {
   registerImageClozeEditorPresentation,
   unregisterImageClozeEditorPresentation
 } from '../../features/image-cloze/model/imageClozePresentation';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
-
-function registerParentImageClozePresentation(promptNodeId: string, parentRegions: ReturnType<typeof listImageClozePresentationRegions>) {
-  if (parentRegions.length === 0) {
-    return undefined;
-  }
-  registerImageClozeEditorPresentation(promptNodeId, {
-    canCreate: true,
-    focusRegionId: null,
-    hiddenRegionIds: [],
-    outlinedRegionIds: parentRegions.map((region) => region.id),
-    regions: parentRegions
-  });
-  return () => {
-    unregisterImageClozeEditorPresentation(promptNodeId);
-  };
-}
 
 function registerFocusedImageClozePresentation(
   promptNodeId: string,
@@ -75,10 +59,40 @@ function resolveParentPresentationImageRegions(activeNode: Node) {
   return activeNode.imageRegions;
 }
 
+function listOccurrenceBoundImageExcerptRegions(args: {
+  activeNode: Node;
+  nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
+}) {
+  const trashed = new Set(args.trashedNodeIds);
+  return Object.values(args.nodesById).flatMap((node) => {
+    const locator = node.anchorLink?.locator;
+    if (
+      node.parentNodeId !== args.activeNode.id ||
+      trashed.has(node.id) ||
+      node.anchorLink?.kind !== 'image-excerpt' ||
+      !isTextAnchorLocator(locator) ||
+      args.activeNode.content.slice(locator.from, locator.to) !== locator.originalText
+    ) {
+      return [];
+    }
+    return (node.imageRegions ?? []).flatMap((group) => {
+      if (!locator.originalText.includes(`asset://${group.attachmentId}`)) return [];
+      return group.regions.map((region) => ({
+        ...region,
+        attachmentId: group.attachmentId,
+        imageRange: { from: locator.from, to: locator.to },
+        openNodeId: node.id
+      }));
+    });
+  });
+}
+
 export function useDocumentPanelImageClozePresentation(args: {
   activeNode: Node | undefined;
   editorNodeId: string | null;
   nodesById: Record<string, Node>;
+  onOpenNode: (nodeId: string) => void;
   trashedNodeIds: string[];
 }) {
   useLayoutEffect(() => {
@@ -92,19 +106,35 @@ export function useDocumentPanelImageClozePresentation(args: {
       }
       const promptNodeId = args.editorNodeId;
       const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
-      const parentRegions = listImageClozePresentationRegions(
-        mergeImageClozeRegionGroups(
-          resolveParentPresentationImageRegions(args.activeNode),
-          deriveImageClozeRegionsFromChildren({
-            nodeId: args.activeNode.id,
-            nodesById: args.nodesById,
-            trashedNodeIds: args.trashedNodeIds
-          })
-        )
-      );
+      const parentRegions = [
+        ...listImageClozePresentationRegions(
+          mergeImageClozeRegionGroups(
+            resolveParentPresentationImageRegions(args.activeNode),
+            deriveImageClozeRegionsFromChildren({
+              nodeId: args.activeNode.id,
+              nodesById: args.nodesById,
+              trashedNodeIds: args.trashedNodeIds
+            })
+          )
+        ),
+        ...listOccurrenceBoundImageExcerptRegions({
+          activeNode: args.activeNode,
+          nodesById: args.nodesById,
+          trashedNodeIds: args.trashedNodeIds
+        })
+      ];
 
       if (!isImageClozeNode(args.activeNode)) {
-        return registerParentImageClozePresentation(promptNodeId, parentRegions);
+        if (parentRegions.length === 0) return undefined;
+        registerImageClozeEditorPresentation(promptNodeId, {
+          canCreate: true,
+          focusRegionId: null,
+          hiddenRegionIds: [],
+          onOpenNode: args.onOpenNode,
+          outlinedRegionIds: parentRegions.map((region) => region.id),
+          regions: parentRegions
+        });
+        return () => unregisterImageClozeEditorPresentation(promptNodeId);
       }
 
       const locator = getImageClozeLocator(args.activeNode.anchorLink);
@@ -113,5 +143,5 @@ export function useDocumentPanelImageClozePresentation(args: {
       }
       return registerFocusedImageClozePresentation(promptNodeId, answerNodeId, args.activeNode, locator);
     });
-  }, [args.activeNode, args.editorNodeId, args.nodesById, args.trashedNodeIds]);
+  }, [args.activeNode, args.editorNodeId, args.nodesById, args.onOpenNode, args.trashedNodeIds]);
 }

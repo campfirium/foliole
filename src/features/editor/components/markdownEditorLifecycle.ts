@@ -32,11 +32,14 @@ function useEditorContentSync(
     const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
     const startedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
     const adapter = adapterRef.current;
-    const previousContent = diagnosticsEnabled ? adapter?.getContent() ?? '' : '';
+    const previousContent = adapter?.getContent() ?? '';
     if (nodeId) {
       markEditorContentSyncStarted(nodeId, `content:${value.length}`);
     }
     adapter?.setContent(value);
+    if (previousContent !== value) {
+      adapter?.refreshImageClozePresentation?.();
+    }
     if (nodeId) {
       markEditorContentSyncCompleted(nodeId, `content:${value.length}`);
     }

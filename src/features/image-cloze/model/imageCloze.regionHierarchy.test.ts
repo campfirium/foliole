@@ -84,3 +84,22 @@ it('keeps only direct child image cloze regions for the source node', () => {
     }
   ]);
 });
+
+it('leaves text-located image excerpts to occurrence-aware presentation', () => {
+  const imageExcerpt = {
+    ...sourceNode,
+    anchorLink: {
+      id: 'excerpt-1',
+      kind: 'image-excerpt' as const,
+      locator: { from: 0, originalText: sourceNode.content, to: sourceNode.content.length }
+    },
+    id: 'excerpt-1',
+    imageRegions: [{ attachmentId: 'hash-1', regions: [directRegion] }],
+    parentNodeId: 'node-1'
+  };
+
+  expect(deriveImageClozeRegionsFromChildren({
+    nodeId: 'node-1',
+    nodesById: { 'excerpt-1': imageExcerpt, 'node-1': sourceNode }
+  })).toEqual([]);
+});

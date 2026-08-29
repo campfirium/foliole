@@ -57,12 +57,12 @@ describe('MarkdownEditor formula cloze presentation refresh', () => {
     unregisterFormulaClozeEditorPresentation('node-1');
   });
 
-  it('refreshes after the presentation listener is installed for the current node', async () => {
+  it('refreshes for initial content and after the presentation listener is installed for the current node', async () => {
     renderEditor();
 
     await waitFor(() => {
       expect(mockSetNodeId).toHaveBeenCalledWith('node-1');
-      expect(mockRefreshImageClozePresentation).toHaveBeenCalledTimes(2);
+      expect(mockRefreshImageClozePresentation).toHaveBeenCalledTimes(3);
     });
   });
 

@@ -6,6 +6,7 @@ import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
 import { HighlightRangeHandles } from './HighlightRangeHandles';
+import { ImageExcerptAnnotationCreation } from './ImageExcerptAnnotationCreation';
 
 export interface DocumentPanelSectionOverlaysProps {
   currentSourceUpdateContent: string;
@@ -88,6 +89,11 @@ export function DocumentPanelSectionOverlays(args: DocumentPanelSectionOverlaysP
         editor={editorAdapter}
         highlight={adjustableHighlight}
         onCommit={props.onAdjustExistingHighlightRange}
+      />
+      <ImageExcerptAnnotationCreation
+        activeNodeId={props.activeNodeId}
+        editor={editorAdapter}
+        editorNodeId={props.editorNodeId}
       />
       <DocumentPanelContextMenu
         contextMenu={props.contextMenu}

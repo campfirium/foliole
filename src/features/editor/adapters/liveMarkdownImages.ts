@@ -1,4 +1,3 @@
-import { buildRemoteImageRenderUrl } from '../../../../lib/platform/remoteImageProtocolUrl';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
@@ -7,9 +6,9 @@ import { isNativeCompanionAttachmentResourceRuntime } from '../../../shared/plat
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
-import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import { selectImageClozeOccurrencePresentation } from './imageClozeOccurrencePresentation';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import {
@@ -23,7 +22,10 @@ import {
 } from './liveMarkdownImageWidgetDom';
 import { resolveLocalDocumentImageSource } from './liveMarkdownLocalDocumentImages';
 import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
+import { buildRemoteRenderSource } from './liveMarkdownRemoteRenderSource';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
+
+export { disposeMarkdownImageWidgetDom } from './liveMarkdownImageDisposal';
 
 function createImageSurface(
   imageMatch: MarkdownImageMatch,
@@ -32,16 +34,11 @@ function createImageSurface(
   imageOptions: { deferSource?: boolean; onError?: (() => void) | null; onLoad?: (() => void) | null; requestMeasure?: RequestEditorMeasure } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
-  const imagePresentation =
-    presentation && imageMatch.attachmentId && presentation.regions.some((region) => region.attachmentId === imageMatch.attachmentId)
-      ? {
-          ...presentation,
-          regions: presentation.regions.filter((region) => region.attachmentId === imageMatch.attachmentId)
-        }
-      : null;
+  const imagePresentation = selectImageClozeOccurrencePresentation(presentation, imageMatch);
   return createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
     display: imageMatch.display,
+    editorNodeId,
     from: imageMatch.from,
     presentation: imagePresentation,
     renderImage: () =>
@@ -110,16 +107,6 @@ function appendLoadingImageSurface(
   surface.style.position = 'absolute';
   surface.style.width = '1px';
   wrapper.append(surface);
-}
-
-function buildRemoteRenderSource(sourceUrl: string, editorNodeId: string | null, retryKey: string | null = null) {
-  const shouldPersist = shouldAutoLocalizeRemoteImages() && Boolean(editorNodeId);
-  return buildRemoteImageRenderUrl({
-    nodeId: editorNodeId,
-    persist: shouldPersist,
-    retryKey,
-    sourceUrl
-  });
 }
 
 function appendResolvedNativeAttachmentImage(

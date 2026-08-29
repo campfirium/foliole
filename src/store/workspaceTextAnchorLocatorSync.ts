@@ -85,11 +85,13 @@ function buildNextTextAnchorNode(args: {
     );
   });
   const imageRegionStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
-  const nextImageRegions = deriveMarkdownImageTextAnchorRegions({
-    anchorId: args.node.anchorLink.id,
-    content: args.nextContent,
-    locators: nextLocators
-  });
+  const nextImageRegions = args.node.anchorLink.kind === 'image-excerpt'
+    ? args.node.imageRegions ?? null
+    : deriveMarkdownImageTextAnchorRegions({
+        anchorId: args.node.anchorLink.id,
+        content: args.nextContent,
+        locators: nextLocators
+      });
   if (args.diagnostics) {
     args.diagnostics.imageRegionMs += readEditorInputDiagnosticTime() - imageRegionStartedAt;
     args.diagnostics.buildMs += readEditorInputDiagnosticTime() - buildStartedAt;
@@ -166,11 +168,11 @@ export function syncTextAnchorLocatorsForParentContent(args: {
   timestamp: string;
 }) {
   const diagnostics = createTextAnchorLocatorSyncDiagnosticStats();
-  const syncState = {
+  const syncState: TextAnchorLocatorSyncState = {
     nextNodesById: args.nodesById,
     originalNodesById: args.nodesById,
     updatedNodes: []
-  } satisfies TextAnchorLocatorSyncState;
+  };
   readTextAnchorLocatorSyncNodes({ diagnostics, nodesById: args.nodesById }).forEach((node) => {
     syncTextAnchorLocatorNode({
       diagnostics,

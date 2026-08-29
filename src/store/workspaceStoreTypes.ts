@@ -3,7 +3,7 @@ import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
-import type { Node, NodeAnchorLink, NodeImageRegionGroup, PdfAnchorLocator } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink, NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
@@ -92,7 +92,7 @@ export interface WorkspaceState {
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
   createVirtualNode: (options?: { mode?: 'manual' | 'saved-search'; parentNodeId?: string }) => Promise<string | null>;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string, anchorLink?: NodeAnchorLink, imageRegions?: NodeImageRegionGroup[] | null) => Promise<string | null>;
-  createPdfImageExcerpt?: (parentNodeId: string, page: number, locator: PdfAnchorLocator, attachmentId: string, bytesBase64: string, content?: string) => Promise<string | null>;
+  createPdfImageExcerpt?: (parentNodeId: string, locator: PdfAnchorLocator | TextAnchorLocator, imageRegions: NodeImageRegionGroup[] | null, attachmentId: string, bytesBase64: string, content?: string) => Promise<string | null>;
   createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string, anchorId?: string, anchorLink?: NodeAnchorLink) => Promise<string | null>;
   createImageClozeNodes: (parentNodeId: string, attachmentId: string, sourcePayload: ImageClozeSourcePayload, regions: ImageClozeDraftRegion[]) => Promise<string[]>;
   createFormulaClozeNode: (parentNodeId: string, payload: FormulaClozeCreatePayload, sourcePayload: FormulaClozeSourcePayload) => Promise<string | null>;

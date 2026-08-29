@@ -105,7 +105,9 @@ export async function savePdfImageExcerptNodeMutation(args: {
       attachmentId: args.attachmentId,
       bytesBase64: args.bytesBase64,
       nodeOrder: args.nodeOrder,
-      originalName: `pdf-image-excerpt-page-${(payload.anchorLink?.locator as { page?: number } | undefined)?.page ?? 1}.png`
+      originalName: typeof (payload.anchorLink?.locator as { page?: number } | undefined)?.page === 'number'
+        ? `pdf-image-excerpt-page-${(payload.anchorLink?.locator as { page: number }).page}.png`
+        : 'image-excerpt.png'
     });
     if (!isCreateNodeMutationPatchResult(result)) return null;
     resolvePendingNodeSync(payload.nodeId, payload.updatedAt);

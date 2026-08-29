@@ -5,6 +5,7 @@ import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePrevi
 
 import { attachImageClozeOverlayInteractions } from './imageClozeWidgetInteractions';
 import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
+import { attachImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
 
 function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
   return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
@@ -63,10 +64,46 @@ function resolveCurrentImageRange(wrapper: HTMLElement, fallback: { from: number
   };
 }
 
+function attachImageExcerptSelection(args: {
+  attachmentId: string | null;
+  draftRectElement: HTMLElement;
+  editorNodeId?: string | null;
+  from: number;
+  image: HTMLImageElement;
+  overlay: HTMLElement;
+  surface: HTMLElement;
+  to: number;
+}) {
+  if (!args.attachmentId || !args.editorNodeId) return;
+  attachImageExcerptRegionInteractions({
+    attachmentId: args.attachmentId,
+    draftRectElement: args.draftRectElement,
+    editorNodeId: args.editorNodeId,
+    from: args.from,
+    getImageRange: () => resolveCurrentImageRange(args.surface, { from: args.from, to: args.to }),
+    image: args.image,
+    overlay: args.overlay,
+    surface: args.surface,
+    to: args.to
+  });
+}
+
+function createImageRegionOverlay() {
+  const overlay = document.createElement('div');
+  overlay.className = 'cm-md-image-cloze-overlay';
+  overlay.hidden = true;
+  const draftRectElement = document.createElement('div');
+  draftRectElement.className = 'cm-md-image-cloze-draft';
+  draftRectElement.hidden = true;
+  overlay.append(draftRectElement);
+  return { draftRectElement, overlay };
+}
+
 export function createImageClozeImageSurface(args: {
   attachmentId: string | null;
   presentation?: ImageClozeEditorPresentation | null;
   display: 'block' | 'inline';
+  editorNodeId?: string | null;
   from: number;
   previewAlt: string;
   previewPresentation: ImageClozeEditorPresentation | null;
@@ -78,7 +115,8 @@ export function createImageClozeImageSurface(args: {
   wrapper.className =
     args.display === 'inline' ? 'cm-md-image-surface cm-md-image-surface-inline' : 'cm-md-image-surface cm-md-image-surface-block';
   wrapper.dataset.mdImageHighlighted = hasWholeImageHighlight(args.presentation, args.attachmentId) ? 'true' : 'false';
-  wrapper.append(args.renderImage());
+  const image = args.renderImage();
+  wrapper.append(image);
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);
   wrapper.append(regionLayer);
   if (args.display === 'block') {
@@ -89,15 +127,19 @@ export function createImageClozeImageSurface(args: {
     return wrapper;
   }
 
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-md-image-cloze-overlay';
-  overlay.hidden = true;
+  const { draftRectElement, overlay } = createImageRegionOverlay();
   wrapper.append(overlay);
 
-  const draftRectElement = document.createElement('div');
-  draftRectElement.className = 'cm-md-image-cloze-draft';
-  draftRectElement.hidden = true;
-  overlay.append(draftRectElement);
+  attachImageExcerptSelection({
+    attachmentId: args.attachmentId,
+    draftRectElement,
+    ...(args.editorNodeId !== undefined ? { editorNodeId: args.editorNodeId } : {}),
+    from: args.from,
+    image,
+    overlay,
+    surface: wrapper,
+    to: args.to
+  });
 
   if (args.presentation?.canCreate !== false) {
     wrapper.classList.add('cm-md-image-surface-clozeable');

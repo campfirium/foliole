@@ -92,7 +92,7 @@ function usePdfExcerptCreation(props: { nodeId: string | null; rotation: number 
               text: imageContent
             })
           : undefined;
-        const created = await createExcerpt?.(props.nodeId, request.page, locator, attachmentId, encodeBytes(bytes), content);
+        const created = await createExcerpt?.(props.nodeId, locator, null, attachmentId, encodeBytes(bytes), content);
         if (!created) throw new Error('The image excerpt could not be saved.');
         setPending(null);
         return true;

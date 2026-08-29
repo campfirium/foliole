@@ -99,6 +99,7 @@ function toImageRegions(anchorId: string, content: string, locators: TextAnchorL
 
 function remapRawAnchorLinkInContent(input: {
   content: string;
+  imageRegions: string | null;
   value: string;
 }): AnchorRepairResult | SyncNodeAnchorUnmappedReason | null {
   const parsed = parseStoredAnchorLink(input.value);
@@ -121,12 +122,22 @@ function remapRawAnchorLinkInContent(input: {
   if (repairedLocators.length !== locators.length) {
     return resolveRepairFailureReason(input.content, locators);
   }
-  const raw = JSON.parse(input.value) as { id: string; locator?: unknown };
+  const raw = JSON.parse(input.value) as { id: string; kind?: unknown; locator?: unknown };
   raw.locator = createLocatorValue(repairedLocators);
   return {
-    imageRegions: toImageRegions(raw.id, input.content, repairedLocators),
+    imageRegions: raw.kind === 'image-excerpt'
+      ? input.imageRegions
+      : toImageRegions(raw.id, input.content, repairedLocators),
     value: JSON.stringify(raw)
   };
+}
+
+function remapChildAnchorInContent(row: ChildAnchorRow, content: string) {
+  return remapRawAnchorLinkInContent({
+    content,
+    imageRegions: row.image_regions,
+    value: row.anchor_link ?? ''
+  });
 }
 
 export async function repairDirectChildAnchorsForAppliedParent(input: {
@@ -156,7 +167,7 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
       continue;
     }
     const anchorId = parseStoredAnchorLink(row.anchor_link)?.id ?? null;
-    const result = remapRawAnchorLinkInContent({ content: input.content, value: row.anchor_link });
+    const result = remapChildAnchorInContent(row, input.content);
     if (!result) {
       await writeAnchorStatus(input.port, row.id, 'resolved', input.sourceVersionId, input.updatedAt);
       continue;

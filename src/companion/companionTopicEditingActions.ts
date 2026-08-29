@@ -55,6 +55,7 @@ async function remapCompanionChildAnchorVersions(args: {
     }
     const remapped = remapStoredTextAnchorLink({
       anchorLink: child.anchorLink,
+      ...(child.imageRegions !== undefined ? { imageRegions: child.imageRegions } : {}),
       nextContent: args.nextContent,
       previousContent: args.previousContent
     });

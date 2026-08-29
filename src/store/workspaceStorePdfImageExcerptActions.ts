@@ -1,4 +1,4 @@
-import type { PdfAnchorLocator } from '../features/nodes/model/nodeTypes';
+import type { NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -7,7 +7,7 @@ import { applyCreatedNode, buildAnnotationCreatePatch } from './workspaceStoreCr
 type WorkspaceSet = (partial: Partial<WorkspaceState> | WorkspaceState | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 const EXCERPT_TITLE_PATTERN = /^Excerpt (\d+)$/;
 
-function createExcerptNode(args: { attachmentId: string; content?: string; locator: PdfAnchorLocator; nodeId: string; parentNodeId: string; timestamp: string; title: string }): WorkspaceState['nodesById'][string] {
+function createExcerptNode(args: { attachmentId: string; content?: string; imageRegions: NodeImageRegionGroup[] | null; locator: PdfAnchorLocator | TextAnchorLocator; nodeId: string; parentNodeId: string; timestamp: string; title: string }): WorkspaceState['nodesById'][string] {
   return {
     id: args.nodeId,
     parentNodeId: args.parentNodeId,
@@ -21,7 +21,7 @@ function createExcerptNode(args: { attachmentId: string; content?: string; locat
       kind: 'image-excerpt',
       locator: args.locator
     },
-    imageRegions: null,
+    imageRegions: args.imageRegions,
     hasReveal: false,
     reveal: null,
     review: null,
@@ -52,7 +52,7 @@ export function createPdfImageExcerptAction(
   syncCreation: (args: { activeNodeId: string; attachmentId: string; bytesBase64: string; node: WorkspaceState['nodesById'][string]; nodeOrder: string[]; position: number }) => Promise<WorkspaceNodeMutationPatchResult | null>,
   get?: () => WorkspaceState
 ): NonNullable<WorkspaceState['createPdfImageExcerpt']> {
-  return async (parentNodeId, page, locator, attachmentId, bytesBase64, content) => {
+  return async (parentNodeId, locator, imageRegions, attachmentId, bytesBase64, content) => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let node: WorkspaceState['nodesById'][string] | null = null;
@@ -63,6 +63,7 @@ export function createPdfImageExcerptAction(
       node = createExcerptNode({
         attachmentId,
         ...(content ? { content } : {}),
+        imageRegions,
         locator,
         nodeId,
         parentNodeId,

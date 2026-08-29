@@ -20,6 +20,9 @@ export function createMarkdownImageElement(args: {
   image.loading = 'lazy';
   image.referrerPolicy = 'no-referrer';
   image.decoding = 'async';
+  if (args.source.startsWith('foliole-asset://')) {
+    image.crossOrigin = 'anonymous';
+  }
   image.className =
     args.display === 'inline'
       ? 'cm-md-image-element cm-md-image-element-inline'

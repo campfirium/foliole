@@ -52,8 +52,9 @@ function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
   );
 }
 
-function remapRawAnchorLink(value: string, previousContent: string, nextContent: string): RawAnchorRemapResult {
+function remapRawAnchorLink(value: string, imageRegions: string | null, previousContent: string, nextContent: string): RawAnchorRemapResult {
   return remapRawStoredAnchorLink({
+    imageRegions,
     nextContent,
     previousContent,
     value
@@ -117,7 +118,7 @@ export function applyParentContentChange(input: {
     if (!row.anchor_link) {
       return;
     }
-    const remapped = remapRawAnchorLink(row.anchor_link, previousContent, input.nextContent);
+    const remapped = remapRawAnchorLink(row.anchor_link, row.image_regions, previousContent, input.nextContent);
     if (!('value' in remapped)) {
       skippedAnchors.push({ nodeId: row.id, reason: remapped.reason });
       return;

@@ -23,7 +23,7 @@ function confirmCreation(args: { activeNodeId: string; node: WorkspaceState['nod
         content: args.node.content,
         reveal: null,
         anchorLink: args.node.anchorLink ?? null,
-        imageRegions: null,
+        imageRegions: args.node.imageRegions ?? null,
         position: args.position,
         createdAt: args.node.createdAt,
         updatedAt: args.node.updatedAt,
@@ -50,13 +50,13 @@ it('uses the existing optimistic mutation settlement owner for image excerpts', 
   const createExcerpt = createPdfImageExcerptAction(harness.setState, syncCreation, harness.getState);
   const nodeId = await createExcerpt(
     'node-1',
-    2,
     {
       page: 2,
       x: 0.1,
       y: 0.2,
       rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.4 }]
     },
+    null,
     'a'.repeat(64),
     'png'
   );
@@ -80,7 +80,7 @@ it('persists an annotated crop as the content of the same image excerpt creation
   const attachmentId = 'a'.repeat(64);
   const content = `![Image excerpt](asset://${attachmentId}.png)\n※ Diagram thought`;
 
-  const nodeId = await createExcerpt('node-1', 2, locator, attachmentId, 'png', content);
+  const nodeId = await createExcerpt('node-1', locator, null, attachmentId, 'png', content);
 
   expect(syncCreation).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -89,6 +89,29 @@ it('persists an annotated crop as the content of the same image excerpt creation
     })
   );
   expect(harness.getState().nodesById[nodeId!]?.content).toBe(content);
+});
+
+it('creates an occurrence-bound image excerpt with its local region in the same optimistic node', async () => {
+  const fixture = createWorkspaceNodeActionsFixture();
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const syncCreation = vi.fn(async (args) => confirmCreation(args));
+  const createExcerpt = createPdfImageExcerptAction(harness.setState, syncCreation, harness.getState);
+  const originalText = '![Cover](asset://source-image.png)';
+  const locator = { from: 10, originalText, to: 10 + originalText.length };
+  const imageRegions = [{
+    attachmentId: 'source-image',
+    regions: [{ height: 0.2, id: 'region-1', width: 0.3, x: 0.1, y: 0.4 }]
+  }];
+
+  const nodeId = await createExcerpt('node-1', locator, imageRegions, 'b'.repeat(64), 'png');
+
+  expect(harness.getState().nodesById[nodeId!]).toMatchObject({
+    anchorLink: { kind: 'image-excerpt', locator },
+    imageRegions
+  });
+  expect(syncCreation).toHaveBeenCalledWith(expect.objectContaining({
+    node: expect.objectContaining({ imageRegions })
+  }));
 });
 
 it('numbers excerpts per source without reusing deleted numbers or overwriting manual titles', async () => {
@@ -100,9 +123,9 @@ it('numbers excerpts per source without reusing deleted numbers or overwriting m
   const createExcerpt = createPdfImageExcerptAction(harness.setState, async (args) => confirmCreation(args), harness.getState);
   const locator = { page: 1, x: 0.1, y: 0.2, rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.4 }] };
 
-  const first = (await createExcerpt('node-1', 1, locator, 'a'.repeat(64), 'png'))!;
-  const second = (await createExcerpt('node-1', 4, { ...locator, page: 4 }, 'b'.repeat(64), 'png'))!;
-  const otherSource = (await createExcerpt('node-2', 7, { ...locator, page: 7 }, 'c'.repeat(64), 'png'))!;
+  const first = (await createExcerpt('node-1', locator, null, 'a'.repeat(64), 'png'))!;
+  const second = (await createExcerpt('node-1', { ...locator, page: 4 }, null, 'b'.repeat(64), 'png'))!;
+  const otherSource = (await createExcerpt('node-2', { ...locator, page: 7 }, null, 'c'.repeat(64), 'png'))!;
   harness.setState({
     nodesById: {
       ...harness.getState().nodesById,
@@ -110,7 +133,7 @@ it('numbers excerpts per source without reusing deleted numbers or overwriting m
     },
     trashedNodeIds: [first]
   });
-  const third = (await createExcerpt('node-1', 1, locator, 'd'.repeat(64), 'png'))!;
+  const third = (await createExcerpt('node-1', locator, null, 'd'.repeat(64), 'png'))!;
 
   expect(harness.getState().nodesById[first]?.title).toBe('Excerpt 1');
   expect(harness.getState().nodesById[second]?.title).toBe('Diagram');
@@ -132,13 +155,13 @@ it('rolls back the optimistic excerpt through the existing settlement owner when
 
   const nodeId = await createExcerpt(
     'node-1',
-    1,
     {
       page: 1,
       x: 0,
       y: 0,
       rects: [{ x: 0, y: 0, width: 1, height: 1 }]
     },
+    null,
     'b'.repeat(64),
     'png'
   );

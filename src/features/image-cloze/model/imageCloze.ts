@@ -1,5 +1,6 @@
 import { collectMarkdownImageReferences } from '../../../../lib/core/import/markdownImageReferences';
 import {
+  isTextAnchorLocator,
   type ImageAnchorLocator,
   type Node,
   type NodeAnchorLink,
@@ -138,7 +139,10 @@ export function deriveImageClozeRegionsFromChildren(args: {
   const groupsByAttachmentId = new Map<string, NodeImageRegionGroup>();
   const trashedNodeIdSet = new Set(args.trashedNodeIds ?? []);
   const visibleNodes = Object.values(args.nodesById).filter((node) => !trashedNodeIdSet.has(node.id));
-  const childNodes = visibleNodes.filter((node) => node.parentNodeId === args.nodeId);
+  const childNodes = visibleNodes.filter((node) =>
+    node.parentNodeId === args.nodeId &&
+    !(node.anchorLink?.kind === 'image-excerpt' && isTextAnchorLocator(node.anchorLink.locator))
+  );
 
   for (const node of childNodes) {
     const directChildRegionsByAttachmentId = collectNodePresentedRegions(node);

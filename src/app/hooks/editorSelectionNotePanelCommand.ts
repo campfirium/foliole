@@ -1,6 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { requestImageExcerptRegionSelection } from '../../features/editor/model/imageExcerptRegionSelection';
 import { getSelectionCommandPayload } from '../contextCommands';
 
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
@@ -31,6 +32,7 @@ export function createOpenSelectionNotePanel(args: {
     }
     const payload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     if (!payload) {
+      requestImageExcerptRegionSelection(args.activeNodeId);
       return;
     }
     args.setContextMenu({

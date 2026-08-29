@@ -68,6 +68,7 @@ function useDocumentPanelClozePresentations(activeNode: Node | undefined, props:
     activeNode,
     editorNodeId: props.editorNodeId,
     nodesById: props.nodesById,
+    onOpenNode: props.onSelectNode,
     trashedNodeIds: props.trashedNodeIds
   });
   useDocumentPanelFormulaClozePresentation({

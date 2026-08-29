@@ -69,6 +69,7 @@ function toImageRegions(anchorId: unknown, content: string, locators: TextAnchor
 
 export function remapStoredTextAnchorLink(input: {
   anchorLink: StoredAnchorLink;
+  imageRegions?: StoredImageRegionGroup[] | null;
   nextContent: string;
   previousContent: string;
 }): StoredAnchorLinkRemapResult | null {
@@ -86,11 +87,14 @@ export function remapStoredTextAnchorLink(input: {
       ...input.anchorLink,
       locator: createLocatorValue(nextLocators)
     },
-    imageRegions: toImageRegions(input.anchorLink.id, input.nextContent, nextLocators)
+    imageRegions: input.anchorLink.kind === 'image-excerpt'
+      ? input.imageRegions ?? null
+      : toImageRegions(input.anchorLink.id, input.nextContent, nextLocators)
   };
 }
 
 export function remapRawStoredAnchorLink(input: {
+  imageRegions?: string | null;
   nextContent: string;
   previousContent: string;
   value: string;
@@ -99,7 +103,7 @@ export function remapRawStoredAnchorLink(input: {
   if (!parsed) {
     return { reason: 'invalid_anchor_link' };
   }
-  const raw = JSON.parse(input.value) as { id?: unknown; locator?: unknown };
+  const raw = JSON.parse(input.value) as { id?: unknown; kind?: unknown; locator?: unknown };
   if (!raw.locator) {
     return { reason: 'no_locator' };
   }
@@ -113,9 +117,15 @@ export function remapRawStoredAnchorLink(input: {
     previousContent: input.previousContent
   });
   raw.locator = createLocatorValue(nextLocators);
-  const imageRegions = toImageRegions(raw.id, input.nextContent, nextLocators);
+  const imageRegions = raw.kind === 'image-excerpt'
+    ? input.imageRegions ?? null
+    : toImageRegions(raw.id, input.nextContent, nextLocators);
   return {
-    imageRegions: imageRegions ? JSON.stringify(imageRegions) : null,
+    imageRegions: typeof imageRegions === 'string'
+      ? imageRegions
+      : imageRegions
+        ? JSON.stringify(imageRegions)
+        : null,
     value: JSON.stringify(raw)
   };
 }

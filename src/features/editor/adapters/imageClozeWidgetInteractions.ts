@@ -1,5 +1,6 @@
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
+import { prunePresentationRegion } from './imageClozePresentationMutation';
 import {
   appendImageClozeDraftButtons,
   createDeleteControl,
@@ -14,25 +15,7 @@ import {
   toRelativeImagePoint
 } from './imageClozeWidgetInteractionHelpers';
 import { syncSavedRegionLayerState } from './imageClozeWidgetOverlayHelpers';
-
-function prunePresentationRegion(
-  presentation: ImageClozeEditorPresentation | null | undefined,
-  regionId: string
-) {
-  if (!presentation) {
-    return;
-  }
-  presentation.regions = presentation.regions.filter((region) => region.id !== regionId);
-  presentation.hiddenRegionIds = presentation.hiddenRegionIds.filter((id) => id !== regionId);
-  presentation.outlinedRegionIds = presentation.outlinedRegionIds.filter((id) => id !== regionId);
-  if (presentation.focusRegionId === regionId) {
-    presentation.focusRegionId = null;
-  }
-}
-
-function isImageClozeControlTarget(target: EventTarget | null) {
-  return target instanceof Element && target.closest('.cm-md-image-cloze-actions, .cm-md-image-cloze-delete, .cm-md-image-preview-trigger') !== null;
-}
+import { isImageClozeControlTarget } from './imageClozeWidgetPointerTargets';
 
 function positionDeleteControl(deleteControl: ImageClozeDeleteControl, anchorPoint: { x: number; y: number } | null) {
   if (!anchorPoint) {
@@ -68,6 +51,12 @@ function createSelectionPointerHandlers(args: {
       args.overlay.hidden = false;
       const point = toRelativeImagePoint(args.overlay, event);
       const region = findImageRegionNearBorder(args.presentation, args.attachmentId, point);
+      if (region?.openNodeId) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        args.presentation?.onOpenNode?.(region.openNodeId);
+        return;
+      }
       args.setSelected(
         region?.id ?? null,
         point && region

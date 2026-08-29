@@ -141,3 +141,34 @@ it('expands remapped image locators to the full localized image markdown', () =>
   expect(nextContent.slice(childAnchor.locator.from, childAnchor.locator.to)).toBe(localImage);
   expect(child.image_regions).toContain('7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec');
 });
+
+it('keeps image excerpt regions byte-for-byte while relocating the image occurrence', () => {
+  const image = '![Cover](asset://hash-1.png)';
+  const imageRegions = JSON.stringify([{
+    attachmentId: 'hash-1',
+    regions: [{ height: 0.2, id: 'region-1', width: 0.3, x: 0.1, y: 0.4 }]
+  }]);
+  seedNode({ content: image, nodeId: 'node-parent', parentNodeId: null });
+  seedNode({
+    anchorLink: {
+      id: 'excerpt-1', kind: 'image-excerpt',
+      locator: { from: 0, originalText: image, to: image.length }
+    },
+    content: '![Image excerpt](asset://crop.png)',
+    nodeId: 'node-child',
+    parentNodeId: 'node-parent'
+  });
+  openDatabaseConnection().sqlite.prepare('UPDATE nodes SET image_regions = ? WHERE id = ?').run(imageRegions, 'node-child');
+
+  applyParentContentChange({
+    driver: openDatabaseConnection().driver,
+    nextContent: `Lead\n${image}`,
+    nodeId: 'node-parent',
+    previousContent: image,
+    updatedAt: '2026-05-13T00:00:01.000Z'
+  });
+
+  const child = readNode('node-child');
+  expect(JSON.parse(child.anchor_link ?? '{}').locator).toMatchObject({ from: 5, originalText: image });
+  expect(child.image_regions).toBe(imageRegions);
+});

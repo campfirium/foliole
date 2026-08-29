@@ -4,7 +4,12 @@ export interface ImageClozeEditorPresentation {
   canCreate: boolean;
   focusRegionId?: string | null;
   outlinedRegionIds: string[];
-  regions: Array<ImageClozeLocator & { id: string }>;
+  onOpenNode?: (nodeId: string) => void;
+  regions: Array<ImageClozeLocator & {
+    id: string;
+    imageRange?: { from: number; to: number };
+    openNodeId?: string;
+  }>;
   hiddenRegionIds: string[];
 }
 
