@@ -56,13 +56,13 @@ async function importPdf(desktopApp: ElectronApplication, desktopWindow: Page, f
   return result.node_id;
 }
 
-async function dragExcerptRegion(desktopWindow: Page) {
+async function dragExcerptRegion(desktopWindow: Page, area = { endX: 0.7, endY: 0.75, startX: 0.2, startY: 0.35 }) {
   const page = desktopWindow.locator('.pdf-visual-excerpt-page').first();
   const bounds = await page.boundingBox();
   if (!bounds) throw new Error('PDF page has no bounds');
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.35);
+  await desktopWindow.mouse.move(bounds.x + bounds.width * area.startX, bounds.y + bounds.height * area.startY);
   await desktopWindow.mouse.down();
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.75);
+  await desktopWindow.mouse.move(bounds.x + bounds.width * area.endX, bounds.y + bounds.height * area.endY);
   await desktopWindow.mouse.up();
 }
 
@@ -114,6 +114,12 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await expect(restoredOutline).toHaveCount(0);
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
   await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
+  await dragExcerptRegion(desktopWindow, { endX: 0.92, endY: 0.7, startX: 0.76, startY: 0.45 });
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toHaveCount(0);
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
 });
 
 for (const scenario of [
