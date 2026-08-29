@@ -1,9 +1,11 @@
-import { lazy, Suspense, type CSSProperties, useCallback, useState } from 'react';
-
-import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { lazy, Suspense, type CSSProperties, useCallback } from 'react';
 
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import {
+  CompanionPdfTextVersionToolbar,
+  useCompanionPdfReadingEntry
+} from './CompanionPdfReadingEntry';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
@@ -13,7 +15,6 @@ import type { EditorViewState } from '@/features/editor/components/markdownEdito
 import { definedProps } from '@/shared/lib/definedProps';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
-import { AppButton } from '@/shared/ui';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 const SimplePdfDocument = lazy(() =>
@@ -68,15 +69,15 @@ function toEditorViewState(article: ReadableArticle): EditorViewState | undefine
 function renderOriginalPdf(
   article: ReadableArticle,
   onMissingResource: (attachmentId: string) => Promise<void>,
-  onBackToText: () => void
+  onBackToText?: () => void
 ) {
   return (
     <Suspense fallback={null}>
       <SimplePdfDocument
         attachmentId={article.pdfAttachmentId ?? ''}
-        onBackToText={onBackToText}
         onMissingResource={onMissingResource}
         title={article.title}
+        {...definedProps({ onBackToText })}
       />
     </Suspense>
   );
@@ -105,20 +106,6 @@ function useReadableArticleEditorState(props: {
     })
   });
   return { canEdit, editorState };
-}
-
-function PdfTextVersionToolbar(props: {
-  onOpenPdf(): void;
-}) {
-  const t = useTranslation();
-  return (
-    <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
-      <span className="text-xs text-companion-text-secondary">{t('companion.reading.textVersion')}</span>
-      <AppButton onClick={props.onOpenPdf} variant="ghost">
-        {t('companion.reading.openPdf')}
-      </AppButton>
-    </div>
-  );
 }
 
 function ReadableArticleTextDocument(props: {
@@ -172,10 +159,10 @@ export function ReadableArticleDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
 }) {
-  const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
+  const pdfReading = useCompanionPdfReadingEntry(props.readableArticle);
   const { canEdit, editorState } = useReadableArticleEditorState({
-    isViewingPdfOriginal,
+    isViewingPdfOriginal: pdfReading.isViewingOriginal,
     readableArticle: props.readableArticle,
     ...definedProps({
       allowContentEditing: props.allowContentEditing,
@@ -189,8 +176,12 @@ export function ReadableArticleDocument(props: {
     if (result.status === 'cached') props.onAttachmentResourceSynced?.();
   }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
 
-  if (pdfAttachmentId && isViewingPdfOriginal) {
-    return renderOriginalPdf(props.readableArticle, syncMissingAttachmentResource, () => setIsViewingPdfOriginal(false));
+  if (pdfAttachmentId && pdfReading.isViewingOriginal) {
+    return renderOriginalPdf(
+      props.readableArticle,
+      syncMissingAttachmentResource,
+      pdfReading.hasReadableText ? pdfReading.onBackToText : undefined
+    );
   }
   if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
     return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} title={props.readableArticle.title} />;
@@ -198,7 +189,9 @@ export function ReadableArticleDocument(props: {
 
   return (
     <>
-      {pdfAttachmentId ? <PdfTextVersionToolbar onOpenPdf={() => setIsViewingPdfOriginal(true)} /> : null}
+      {pdfAttachmentId ? (
+        <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
+      ) : null}
       <ReadableArticleTextDocument
         canEdit={canEdit}
         editorState={editorState}
