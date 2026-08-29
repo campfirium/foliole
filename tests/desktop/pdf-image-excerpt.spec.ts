@@ -87,6 +87,12 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   const excerptNodeId = await excerptNode.getAttribute('data-node-id');
   if (!excerptNodeId) throw new Error('PDF image excerpt node has no id');
   await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
+  await dragExcerptRegion(desktopWindow, { endX: 0.92, endY: 0.7, startX: 0.76, startY: 0.45 });
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toHaveCount(0);
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
+  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
   await selectExcerptOutline(desktopWindow);
   await desktopWindow.getByRole('button', { name: /Open excerpt|进入摘录/ }).click();
@@ -116,12 +122,6 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await expect(restoredOutline).toHaveCount(0);
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
   await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
-  await dragExcerptRegion(desktopWindow, { endX: 0.92, endY: 0.7, startX: 0.76, startY: 0.45 });
-  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
-  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
-  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toHaveCount(0);
-  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
-  await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 2/ })).toBeVisible();
 });
 
 for (const scenario of [
