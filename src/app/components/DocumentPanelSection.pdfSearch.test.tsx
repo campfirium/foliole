@@ -6,6 +6,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
+import { DOCUMENT_TOPIC_SEARCH_OPEN_EVENT } from './documentTopicSearchEvents';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
@@ -100,6 +101,15 @@ function createPdfSourceDetails() {
 
 beforeEach(() => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+});
+
+it('focuses PDF search from the shared find-in-document command', async () => {
+  renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
+  const searchInput = await screen.findByRole('textbox', { name: 'PDF search' });
+
+  window.dispatchEvent(new Event(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT));
+
+  await waitFor(() => expect(searchInput).toHaveFocus());
 });
 
 it('supports in-view pdf search navigation and empty-state feedback', async () => {

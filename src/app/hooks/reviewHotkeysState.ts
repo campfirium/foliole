@@ -38,7 +38,7 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.deleteReviewSourceTopic
 ] as const;
 
-export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.findInTopic, APP_COMMAND_IDS.enterPriorityMode] as const;
+export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.enterPriorityMode] as const;
 
 export const APP_SHORTCUT_COMMAND_IDS = Object.values(APP_COMMAND_IDS);
 

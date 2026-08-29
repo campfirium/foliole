@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { useEffect, type ComponentProps, type RefObject } from 'react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -9,6 +9,7 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
+import { DOCUMENT_TOPIC_SEARCH_OPEN_EVENT } from './documentTopicSearchEvents';
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
 import { resolvePdfExternalHref } from './pdfExternalLinkTarget';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
@@ -19,6 +20,17 @@ import { usePdfSearchControls } from './pdfSurfaceSearchControls';
 import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 
 configurePdfWorker();
+
+function usePdfFindCommand(surfaceRef: RefObject<HTMLElement | null>, isVisible: boolean) {
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const focusSearch = () => surfaceRef.current
+      ?.querySelector<HTMLInputElement>('[data-pdf-search-input="true"]')
+      ?.focus();
+    window.addEventListener(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT, focusSearch);
+    return () => window.removeEventListener(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT, focusSearch);
+  }, [isVisible, surfaceRef]);
+}
 
 interface PdfDocumentSurfaceProps {
   highlightLocators: PdfHighlightLocator[];
@@ -55,6 +67,7 @@ export function PdfDocumentSurface({
     onCreateHighlightFromSelection
   });
   const searchState = usePdfSearchControls();
+  usePdfFindCommand(selectionState.surfaceRef, isVisible);
   useRegisterPdfSurface(
     nodeId,
     pdfSystem.actions.requestAnchorJump,

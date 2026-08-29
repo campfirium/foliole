@@ -34,7 +34,10 @@ it('uses an explicit Apple-native default table on macOS', () => {
     primary: { key: 'n', metaKey: true, shiftKey: true }
   });
   expect(macShortcuts[APP_COMMAND_IDS.renameNode]).toEqual({ primary: { key: 'F2' } });
-  expect(macShortcuts[APP_COMMAND_IDS.enterPriorityMode]).toBeUndefined();
+  expect(macShortcuts[APP_COMMAND_IDS.enterPriorityMode]).toEqual({ primary: { key: 'm', ctrlKey: true } });
+  expect(macShortcuts[APP_COMMAND_IDS.createSelectionHighlight]).toEqual({ primary: { key: 'z', altKey: true } });
+  expect(macShortcuts[APP_COMMAND_IDS.createSelectionCloze]).toEqual({ primary: { key: 'x', altKey: true } });
+  expect(macShortcuts[APP_COMMAND_IDS.addSelectionNote]).toBeUndefined();
   expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
 
