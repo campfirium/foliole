@@ -28,6 +28,7 @@ export function createSimulatorAcceptanceBuildArgs(options) {
     '-scheme', 'App', '-configuration', 'Debug',
     '-destination', `platform=iOS Simulator,id=${options.udid}`,
     '-derivedDataPath', options.derivedData,
+    '-packageCachePath', path.join(options.derivedData, 'PackageCache'),
     ...options.resourceArgs,
     `PRODUCT_BUNDLE_IDENTIFIER=${options.bundleId}`,
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE',

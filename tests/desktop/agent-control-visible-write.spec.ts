@@ -49,6 +49,7 @@ async function createTopicFromUi(desktopWindow: DesktopWindow, content: string) 
     globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0) ?? false)).toBe(true);
   await desktopWindow.locator('.prompt-editor-host .cm-content').click();
   await desktopWindow.keyboard.insertText(content);
+  await desktopWindow.evaluate(() => globalThis.window?.__folioleFlushPendingEditorDraftBeforeClose?.());
   await expect.poll(() => desktopWindow.evaluate((targetNodeId) =>
     globalThis.window?.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.content ?? null, nodeId)).toBe(content);
   return nodeId!;

@@ -45,6 +45,9 @@ describe('iOS bootstrap acceptance contract', () => {
 
     expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
+    expect(args).toContain(path.join(
+      process.cwd(), '.tmp/artifacts/ios-bridge-acceptance/DerivedData/PackageCache'
+    ));
     expect(args).toContain('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
   });
