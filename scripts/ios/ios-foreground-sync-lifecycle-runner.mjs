@@ -26,7 +26,8 @@ import {
 } from './ios-simulator-acceptance-runner.mjs';
 import {
   assertForegroundSyncLifecycleRequestPhase,
-  verifyForegroundSyncLifecycleAcceptance
+  verifyForegroundSyncLifecycleAcceptance,
+  waitForRecoveredResumeRequest
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
 import { waitForForegroundSyncLifecycleSnapshot } from './ios-foreground-sync-lifecycle-state.mjs';
 
@@ -87,7 +88,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     setPhase(options, 'recovered-resume', 'foreground');
     launch(options, udid, false);
     lifecycle = await waitForForeground(options, resultPath, lifecycle);
-    await waitForRequestPhase(options, 'recovered-resume', 1);
+    await waitForRecoveredResumeRequest({ read: () => readObservations(options) });
     const beforeRestart = await waitForForegroundSyncLifecycleSnapshot({
       databasePath, repoRoot: options.repoRoot
     });

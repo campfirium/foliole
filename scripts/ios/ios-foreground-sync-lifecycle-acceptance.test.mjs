@@ -16,7 +16,10 @@ import {
 } from './ios-dedicated-simulator.mjs';
 import {
   parseForegroundSyncLifecycleSnapshot,
-  verifyForegroundSyncLifecycleAcceptance
+  RECOVERED_RESUME_ADMISSION_TIMEOUT_MS,
+  RECOVERED_RESUME_SETTLEMENT_TIMEOUT_MS,
+  verifyForegroundSyncLifecycleAcceptance,
+  waitForRecoveredResumeRequest
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
 import { hostedProviderRegistrationEvidence } from './ios-hosted-provider-test-evidence.mjs';
 import {
@@ -35,6 +38,23 @@ const snapshotRows = JSON.stringify([
   { key: 'workspace_sync_events', value: finishedEvent },
   { key: 'sync_pack_cursor', value: '2' }
 ]);
+
+function recoveredObservation(status = null, overrides = {}) {
+  const request = status ? [{ finished_at: status === 'running' ? null : '2026-07-22T00:00:02.000Z',
+    phase: 'recovered-resume', started_at: '2026-07-22T00:00:01.000Z', status }] : [];
+  return { foreground_sync_lifecycle: { active_requests: status === 'running' ? 1 : 0,
+    max_concurrency: status ? 1 : 0, phase_requests: { 'recovered-resume': request.length },
+    requests: request, ...overrides } };
+}
+
+function stagedObservationWait(stages, timeouts = []) {
+  return async (options) => {
+    timeouts.push(options.timeoutMs);
+    const values = stages.shift();
+    for (const value of values) if (options.accept(value)) return value;
+    throw new Error(`Timed out waiting for ${options.label}: ${options.describe(values.at(-1))}`);
+  };
+}
 
 describe('iOS foreground sync lifecycle acceptance', () => {
   it('keeps the shell and lifecycle evidence behind the exclusive acceptance gate', () => {
@@ -102,6 +122,37 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       .resolves.toMatchObject({ status: 503 });
     expect(observations).toMatchObject({ active_requests: 0, failed_requests: 1, max_concurrency: 1,
       phase_requests: { 'failed-resume': 1 }, request_count: 1 });
+  });
+
+  it('gives a late admitted recovered request its own bounded settlement window', async () => {
+    const timeouts = [];
+    const waitForObservation = stagedObservationWait([
+      [recoveredObservation(), recoveredObservation('running')],
+      [recoveredObservation('running'), recoveredObservation('passed')]
+    ], timeouts);
+    await expect(waitForRecoveredResumeRequest({ read: () => null, waitForObservation })).resolves.toBeTruthy();
+    expect(timeouts).toEqual([RECOVERED_RESUME_ADMISSION_TIMEOUT_MS, RECOVERED_RESUME_SETTLEMENT_TIMEOUT_MS]);
+  });
+
+  it('fails when recovered request admission or settlement never reaches its bounded condition', async () => {
+    await expect(waitForRecoveredResumeRequest({ read: () => null,
+      waitForObservation: stagedObservationWait([[recoveredObservation()]]) }))
+      .rejects.toThrow('recovered-resume request admission');
+    await expect(waitForRecoveredResumeRequest({ read: () => null,
+      waitForObservation: stagedObservationWait([[recoveredObservation('running')], [recoveredObservation('running')]]) }))
+      .rejects.toThrow('recovered-resume request settlement');
+  });
+
+  it.each([
+    ['terminal failure', recoveredObservation('failed')],
+    ['an extra request', recoveredObservation('passed', { phase_requests: { 'recovered-resume': 2 },
+      requests: [...recoveredObservation('passed').foreground_sync_lifecycle.requests,
+        { finished_at: null, phase: 'recovered-resume', started_at: 'later', status: 'running' }] })],
+    ['concurrency above one', recoveredObservation('passed', { max_concurrency: 2 })]
+  ])('fails recovered settlement on %s', async (_label, terminal) => {
+    await expect(waitForRecoveredResumeRequest({ read: () => null,
+      waitForObservation: stagedObservationWait([[recoveredObservation('running')], [terminal]]) }))
+      .rejects.toThrow('did not settle as one passed request');
   });
 
   it('accepts suspended or opportunistic background retry with exact counts and stable restart state', () => {

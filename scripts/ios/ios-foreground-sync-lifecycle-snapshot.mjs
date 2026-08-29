@@ -1,3 +1,9 @@
+import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
+import { waitForAcceptanceObservation } from './ios-simulator-acceptance-runner.mjs';
+
+export const RECOVERED_RESUME_ADMISSION_TIMEOUT_MS = 60_000;
+export const RECOVERED_RESUME_SETTLEMENT_TIMEOUT_MS = 30_000;
+
 export function parseForegroundSyncLifecycleSnapshot(output) {
   const values = Object.fromEntries(JSON.parse(output || '[]').map(({ key, value }) => [key, value]));
   const events = parseJson(values.workspace_sync_events, []);
@@ -76,6 +82,48 @@ export function assertForegroundSyncLifecycleRequestPhase(observations, phase, c
   }
 }
 
+export async function waitForRecoveredResumeRequest({
+  read, waitForObservation = waitForAcceptanceObservation
+}) {
+  const admission = await waitForObservation({
+    accept: (value) => recoveredRequests(value).length >= 1 || lifecycle(value).max_concurrency > 1,
+    describe: describeRecoveredResume,
+    initialObservation: 'recovered-resume request was not admitted',
+    label: 'recovered-resume request admission', read,
+    timeoutMs: RECOVERED_RESUME_ADMISSION_TIMEOUT_MS
+  });
+  const admitted = recoveredRequests(admission);
+  if (admitted.length !== 1 || lifecycle(admission).max_concurrency !== 1) {
+    throw new Error('recovered-resume request admission was not single-flight.');
+  }
+  const startedAt = admitted[0].started_at;
+  const settled = await waitForObservation({
+    accept: (value) => {
+      const requests = recoveredRequests(value);
+      const request = requests.find((item) => item.started_at === startedAt);
+      return requests.length !== 1 || lifecycle(value).max_concurrency > 1 || request?.status !== 'running';
+    },
+    describe: describeRecoveredResume,
+    initialObservation: 'admitted recovered-resume request was still running',
+    label: 'recovered-resume request settlement', read,
+    timeoutMs: RECOVERED_RESUME_SETTLEMENT_TIMEOUT_MS
+  });
+  const requests = recoveredRequests(settled);
+  const request = requests.find((item) => item.started_at === startedAt);
+  if (requests.length !== 1 || lifecycle(settled).max_concurrency !== 1 ||
+      lifecycle(settled).active_requests !== 0 || request?.status !== 'passed' || !request.finished_at) {
+    throw new Error('recovered-resume request did not settle as one passed request.');
+  }
+  return settled;
+}
+
+function lifecycle(value) { return value.foreground_sync_lifecycle; }
+function recoveredRequests(value) { return lifecycle(value).requests.filter((item) => item.phase === 'recovered-resume'); }
+function describeRecoveredResume(value) {
+  const state = lifecycle(value);
+  return `requests=${recoveredRequests(value).length}, active=${state.active_requests}, max=${state.max_concurrency}`;
+}
+
 function integerOrNull(value) {
   if (value === undefined || value === null || value === '') return null;
   const number = Number(value);
@@ -89,4 +137,3 @@ function parseJson(value, fallback) {
 function stringOrNull(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
-import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
