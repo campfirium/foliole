@@ -6,7 +6,7 @@
   "feedback.name.label": "이름",
   "feedback.name.placeholder": "이름, 선택사항",
   "feedback.contact.label": "연락처",
-  "feedback.contact.placeholder": "이메일 또는 핸들, 선택사항",
+  "feedback.contact.placeholder": "답변이 필요하면 연락처를 남겨 주세요",
   "feedback.optional": "선택사항",
   "feedback.attachments.add": "이미지 추가 또는 붙여넣기",
   "feedback.attachments.title": "이미지",

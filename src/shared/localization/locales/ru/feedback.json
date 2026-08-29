@@ -6,7 +6,7 @@
   "feedback.name.label": "Имя",
   "feedback.name.placeholder": "Имя, необязательно",
   "feedback.contact.label": "Контакт",
-  "feedback.contact.placeholder": "Электронная почта или адрес, необязательно",
+  "feedback.contact.placeholder": "Оставьте контакт, если хотите получить ответ",
   "feedback.optional": "Необязательно",
   "feedback.attachments.add": "Добавьте или вставьте изображения",
   "feedback.attachments.title": "Изображения",

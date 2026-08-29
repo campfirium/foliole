@@ -94,14 +94,13 @@ function useFeedbackDialogController({
   const [contact, setContact] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [name, setName] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
   const appVersion = useAppVersion();
   const { isDemo } = useDemoRuntimeState();
   const turnstile = useTurnstileToken(turnstileSiteKey);
   const canSubmit = Boolean(endpoint && message.trim()) && state !== 'sending' && (!turnstileSiteKey || Boolean(turnstile.token));
   const submit = useFeedbackSubmitAction({
-    draft: { appVersion, attachments: attachmentState.attachments, contact, isDemo, message, name },
+    draft: { appVersion, attachments: attachmentState.attachments, contact, isDemo, message },
     endpoint,
     setError,
     setAttachmentWarning,
@@ -116,7 +115,6 @@ function useFeedbackDialogController({
     setContact('');
     setError('');
     setMessage('');
-    setName('');
     setState('idle');
   }, [attachmentState.clearAttachments, open]);
 
@@ -130,10 +128,8 @@ function useFeedbackDialogController({
       attachmentWarning,
       appVersion,
       message,
-      name,
       setContact,
       setMessage,
-      setName,
       state,
       submit,
       turnstileContainerRef: turnstile.containerRef,

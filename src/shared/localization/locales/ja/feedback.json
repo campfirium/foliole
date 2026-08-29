@@ -6,7 +6,7 @@
   "feedback.name.label": "名前",
   "feedback.name.placeholder": "名前、オプション",
   "feedback.contact.label": "お問い合わせ",
-  "feedback.contact.placeholder": "電子メールまたはハンドル、オプション",
+  "feedback.contact.placeholder": "返信が必要な場合は連絡先を入力",
   "feedback.optional": "オプション",
   "feedback.attachments.add": "画像を追加または貼り付けます",
   "feedback.attachments.title": "画像",

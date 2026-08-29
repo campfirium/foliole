@@ -29,7 +29,6 @@ export interface FeedbackDraft {
   contact: string;
   isDemo: boolean;
   message: string;
-  name: string;
 }
 
 export function FeedbackDialogContent(props: {
@@ -42,12 +41,10 @@ export function FeedbackDialogContent(props: {
   error: string;
   isTurnstileError: boolean;
   message: string;
-  name: string;
   onAppendFiles: (files: File[]) => Promise<void>;
   onClose: () => void;
   onContactChange: (value: string) => void;
   onMessageChange: (value: string) => void;
-  onNameChange: (value: string) => void;
   onPasteFiles: (files: File[]) => Promise<void>;
   onRemoveAttachment: (index: number) => void;
   onSubmit: () => Promise<void>;
@@ -75,7 +72,7 @@ export function FeedbackDialogContent(props: {
     >
       <div className="px-[var(--app-shellless-content-inline-padding)]">
         <FeedbackTextField message={props.message} onMessageChange={props.onMessageChange} />
-        <FeedbackContactFields contact={props.contact} name={props.name} onContactChange={props.onContactChange} onNameChange={props.onNameChange} />
+        <FeedbackContactFields contact={props.contact} onContactChange={props.onContactChange} />
         <FeedbackAttachmentPicker attachments={props.attachments} onAppendFiles={props.onAppendFiles} onRemoveAttachment={props.onRemoveAttachment} />
         {props.turnstileSiteKey ? <div ref={props.turnstileContainerRef} /> : null}
         <FeedbackStatus
@@ -101,7 +98,6 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
       language: navigator.language,
       platform: draft.isDemo ? 'demo' : resolveRuntimeUpdateTarget().platform
     },
-    name: draft.name,
     turnstileToken
   };
 }
@@ -117,10 +113,8 @@ export function buildFeedbackContentProps(args: {
   error: string;
   isTurnstileError: boolean;
   message: string;
-  name: string;
   setContact: (value: string) => void;
   setMessage: (value: string) => void;
-  setName: (value: string) => void;
   removeAttachment: (index: number) => void;
   state: SubmitState;
   submit: () => Promise<void>;
@@ -137,11 +131,9 @@ export function buildFeedbackContentProps(args: {
     error: args.error,
     isTurnstileError: args.isTurnstileError,
     message: args.message,
-    name: args.name,
     onAppendFiles: args.appendFiles,
     onContactChange: args.setContact,
     onMessageChange: args.setMessage,
-    onNameChange: args.setName,
     onPasteFiles: args.appendFiles,
     onRemoveAttachment: args.removeAttachment,
     onSubmit: args.submit,

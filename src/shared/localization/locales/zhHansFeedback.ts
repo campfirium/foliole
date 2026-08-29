@@ -8,7 +8,7 @@ export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'feedback.name.label': '称呼',
   'feedback.name.placeholder': '称呼，可不填',
   'feedback.contact.label': '联系方式',
-  'feedback.contact.placeholder': '联系方式，可不填',
+  'feedback.contact.placeholder': '如需回复，请留下联系方式',
   'feedback.optional': '可不填',
   'feedback.attachments.add': '添加或粘贴图片',
   'feedback.attachments.title': '图片',

@@ -6,7 +6,7 @@
   "feedback.name.label": "名稱",
   "feedback.name.placeholder": "名稱，可選",
   "feedback.contact.label": "聯絡方式",
-  "feedback.contact.placeholder": "電子郵件或句柄，可選",
+  "feedback.contact.placeholder": "如需回覆，請留下聯絡方式",
   "feedback.optional": "可選",
   "feedback.attachments.add": "新增或貼上圖像",
   "feedback.attachments.title": "圖片",

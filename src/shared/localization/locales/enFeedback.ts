@@ -6,7 +6,7 @@ export const EN_FEEDBACK_TRANSLATIONS = {
   'feedback.name.label': 'Name',
   'feedback.name.placeholder': 'Name, optional',
   'feedback.contact.label': 'Contact',
-  'feedback.contact.placeholder': 'Email or handle, optional',
+  'feedback.contact.placeholder': "Leave contact details if you'd like a reply",
   'feedback.optional': 'Optional',
   'feedback.attachments.add': 'Add or paste images',
   'feedback.attachments.title': 'Images',

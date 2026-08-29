@@ -6,7 +6,7 @@
   "feedback.name.label": "Nombre",
   "feedback.name.placeholder": "Nombre, opcional",
   "feedback.contact.label": "Contacto",
-  "feedback.contact.placeholder": "Correo electrónico o identificador, opcional",
+  "feedback.contact.placeholder": "Deja un contacto si quieres recibir una respuesta",
   "feedback.optional": "Opcional",
   "feedback.attachments.add": "Agregar o pegar imágenes",
   "feedback.attachments.title": "Imágenes",
