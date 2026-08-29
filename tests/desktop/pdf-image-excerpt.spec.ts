@@ -57,15 +57,21 @@ async function importPdf(desktopApp: ElectronApplication, desktopWindow: Page, f
 }
 
 async function dragExcerptRegion(desktopWindow: Page) {
-  await desktopWindow.getByRole('button', { name: /Image excerpt|图片摘录/ }).click();
-  const selectionLayer = desktopWindow.getByTestId('pdf-image-excerpt-selection-layer').first();
-  const bounds = await selectionLayer.boundingBox();
-  if (!bounds) throw new Error('PDF image excerpt selection layer has no bounds');
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.2);
+  const page = desktopWindow.locator('.pdf-visual-excerpt-page').first();
+  const bounds = await page.boundingBox();
+  if (!bounds) throw new Error('PDF page has no bounds');
+  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.35);
   await desktopWindow.mouse.down();
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.65);
+  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.75);
   await desktopWindow.mouse.up();
-  await desktopWindow.getByRole('button', { name: /Create image excerpt|创建图片摘录/ }).click();
+}
+
+async function selectExcerptOutline(desktopWindow: Page) {
+  const outline = desktopWindow.getByTestId('pdf-image-excerpt-outline').first();
+  const bounds = await outline.boundingBox();
+  if (!bounds) throw new Error('PDF image excerpt outline has no bounds');
+  await desktopWindow.mouse.click(bounds.x + 1, bounds.y + bounds.height / 2);
+  await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline-toolbar')).toBeVisible();
 }
 
 test('PDF image excerpt @pdf creates a normal image and opens it from the source outline', async ({
@@ -78,10 +84,10 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await expect(excerptNode).toBeVisible();
   const excerptNodeId = await excerptNode.getAttribute('data-node-id');
   if (!excerptNodeId) throw new Error('PDF image excerpt node has no id');
-  const outline = desktopWindow.getByRole('button', { name: /Image excerpt: Image excerpt · Page 1/ }).first();
-  await expect(outline).toBeVisible();
+  await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
-  await outline.click();
+  await selectExcerptOutline(desktopWindow);
+  await desktopWindow.getByRole('button', { name: /Open excerpt|进入摘录/ }).click();
   await expect.poll(() => desktopWindow.evaluate(() => {
     const debug = window.__folioleWorkspaceDebug;
     const activeNodeId = debug?.getActiveNodeId?.() ?? null;
@@ -103,24 +109,37 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
   const restoredOutline = desktopWindow.getByTestId('pdf-image-excerpt-outline').first();
   await expect(restoredOutline).toBeVisible();
-  await restoredOutline.getByRole('button').first().click();
-  await expect(desktopWindow.locator('img[src^="foliole-asset://attachment/"]').first()).toBeVisible();
+  await selectExcerptOutline(desktopWindow);
+  await desktopWindow.getByRole('button', { name: /Delete excerpt|删除摘录/ }).click();
+  await expect(restoredOutline).toHaveCount(0);
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
+  await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
 });
 
 for (const scenario of [
   { name: 'mixed', text: 'Mixed PDF text layer' },
   { name: 'scanned', text: null }
 ]) {
-  test(`PDF image excerpt @pdf creates a full-page excerpt from ${scenario.name} pages`, async ({
+  test(`PDF image excerpt @pdf routes text and visual drags on ${scenario.name} pages`, async ({
     desktopApp,
     desktopWindow
   }) => {
     const fixturePath = path.resolve(`.tmp/artifacts/pdf-image-excerpt-${scenario.name}.pdf`);
     createVisualPdfFixture(fixturePath, scenario.text);
     await importPdf(desktopApp, desktopWindow, fixturePath);
-    await desktopWindow.getByRole('button', { name: /Image excerpt|图片摘录/ }).click();
-    await desktopWindow.getByRole('button', { name: /Select full page|选择整页/ }).click();
-    await desktopWindow.getByRole('button', { name: /Create image excerpt|创建图片摘录/ }).click();
+    await expect(desktopWindow.getByRole('button', { name: /Select full page|选择整页/ })).toHaveCount(0);
+    const hint = desktopWindow.getByRole('img', { name: /Excerpt|摘录/ });
+    await expect(hint).toBeVisible();
+    await hint.hover();
+    await expect(desktopWindow.getByRole('tooltip')).toContainText(
+      scenario.text ? /Drag over text|在文字上拖动/ : /Drag elsewhere|页面其他位置拖动/
+    );
+    if (scenario.text) {
+      const text = desktopWindow.locator('.textLayer span:not(.endOfContent)').first();
+      await expect(text).toHaveCSS('cursor', 'text');
+    }
+    await expect(desktopWindow.locator('.pdf-visual-excerpt-page').first()).toHaveCSS('cursor', 'crosshair');
+    await dragExcerptRegion(desktopWindow);
     await expect(desktopWindow.getByRole('treeitem', { name: /Image excerpt · Page 1/ })).toBeVisible();
     await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
     await desktopWindow.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-image-excerpt-${scenario.name}-visible.png`) });
