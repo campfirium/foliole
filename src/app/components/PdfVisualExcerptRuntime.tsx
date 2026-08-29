@@ -81,7 +81,7 @@ function useSelectedPdfOutline(deleteAnnotations: (nodeIds: string[]) => void, c
     if (!selected) return undefined;
     const clearFromOutsidePointer = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Element && target.closest('[data-testid="pdf-image-excerpt-outline-toolbar"]')) return;
+      if (target instanceof Element && target.closest('[data-testid="pdf-image-excerpt-outline-toolbar"], [data-annotation-toolbar="true"]')) return;
       setSelected(null);
     };
     window.addEventListener('pointerdown', clearFromOutsidePointer, true);

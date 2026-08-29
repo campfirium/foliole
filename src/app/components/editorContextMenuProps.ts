@@ -2,6 +2,7 @@ import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 
 export interface EditorContextMenuProps {
+  existingNote?: string | null;
   kind: 'image' | 'selection';
   left: number;
   initialNoteOpen?: boolean;
@@ -17,7 +18,7 @@ export interface EditorContextMenuProps {
   onClose: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateNote: (note: string) => void;
+  onCreateNote: (note: string) => boolean | Promise<boolean> | void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
   onRepairTable?: () => void;

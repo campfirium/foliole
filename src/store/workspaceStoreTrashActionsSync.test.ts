@@ -137,6 +137,40 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
 
 });
 
+describe('createWorkspaceNodeActions annotated excerpt lifecycle sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('keeps an annotated image excerpt unchanged through delete and restore', async () => {
+    const fixture = createWorkspaceNodeActionsFixture();
+    const excerpt = {
+      ...fixture.nodesById['node-1']!,
+      anchorLink: { id: 'image-anchor', kind: 'image-excerpt' as const, locator: {
+        page: 1, rects: [{ height: 0.4, width: 0.3, x: 0.2, y: 0.1 }], x: 0.2, y: 0.1
+      } },
+      content: '![Excerpt](asset://crop.png)\n※ Stable thought',
+      id: 'image-excerpt',
+      imageRegions: [{ attachmentId: 'crop', regions: [{
+        height: 0.4, id: 'region-1', width: 0.3, x: 0.2, y: 0.1
+      }] }],
+      parentNodeId: 'node-1',
+      title: 'Stable title'
+    };
+    fixture.nodeOrder.push(excerpt.id);
+    fixture.nodesById[excerpt.id] = excerpt;
+    const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    await actions.deleteNode(excerpt.id);
+    vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: [excerpt.id], skippedConflicts: [] });
+    await actions.restoreNode(excerpt.id);
+
+    expect(harness.getState().nodesById[excerpt.id]).toEqual(excerpt);
+    expect(harness.getState().trashedNodeIds).not.toContain(excerpt.id);
+  });
+});
+
 describe('createWorkspaceNodeActions trash root normalization sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();

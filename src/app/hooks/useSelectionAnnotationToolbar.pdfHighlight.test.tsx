@@ -78,7 +78,9 @@ it('opens PDF highlight actions without making the overlay the pointer target', 
   });
 
   act(() => result.current.handleCreateNote('Revised thought'));
-  expect(updateNodeContent).toHaveBeenCalledWith('pdf-highlight', 'Selected PDF text\n※ Revised thought');
+  expect(updateNodeContent).toHaveBeenCalledWith(
+    'pdf-highlight', 'Selected PDF text\n※ Revised thought', { preserveTitle: true }
+  );
   act(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
   expect(result.current.contextMenu).toBeNull();
 

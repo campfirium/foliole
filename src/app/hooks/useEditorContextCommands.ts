@@ -63,7 +63,11 @@ export interface UseEditorContextCommandsParams {
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
   selectionToolbarEnabled?: boolean;
-  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+  updateNodeContent: (
+    nodeId: string,
+    content: string,
+    options?: { preserveTitle?: boolean; publishLocal?: boolean }
+  ) => Promise<boolean>;
 }
 
 function usePreservedSelectionPayload(args: {
@@ -160,7 +164,11 @@ function buildEditorCommandsResult(args: {
   setContextMenu: (value: EditorContextMenuState | null) => void;
   trashedNodeIds: string[];
   syncActiveNodeContentFromEditor: () => void;
-  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+  updateNodeContent: (
+    nodeId: string,
+    content: string,
+    options?: { preserveTitle?: boolean; publishLocal?: boolean }
+  ) => Promise<boolean>;
 }) {
   const imageHandlers = createImageCommandHandlers({
     closeContextMenu: args.closeContextMenu,

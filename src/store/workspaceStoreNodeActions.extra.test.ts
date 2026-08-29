@@ -91,6 +91,39 @@ function registerContentEditCoverage() {
     expect(syncNodeContentWithAnchorsToRuntime).not.toHaveBeenCalled();
     expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
   });
+
+}
+
+function registerExcerptAnnotationCoverage() {
+  it('preserves excerpt identity fields and title during an annotation-only content update', async () => {
+    const fixture = createWorkspaceNodeActionsFixture();
+    const node = fixture.nodesById['node-1']!;
+    fixture.nodesById['node-1'] = {
+      ...node,
+      anchorLink: { id: 'excerpt-anchor', kind: 'image-excerpt', locator: {
+        page: 2, rects: [{ height: 0.4, width: 0.3, x: 0.2, y: 0.1 }], x: 0.2, y: 0.1
+      } },
+      content: '![Excerpt](asset://crop.png)',
+      imageRegions: [{ attachmentId: 'crop', regions: [{
+        height: 0.4, id: 'region-1', width: 0.3, x: 0.2, y: 0.1
+      }] }],
+      title: 'Stable excerpt title'
+    };
+    const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    await actions.updateNodeContent(
+      'node-1', '![Excerpt](asset://crop.png)\n※ # Annotation heading',
+      { preserveTitle: true, publishLocal: false }
+    );
+
+    expect(harness.getState().nodesById['node-1']).toMatchObject({
+      anchorLink: fixture.nodesById['node-1']!.anchorLink,
+      content: '![Excerpt](asset://crop.png)\n※ # Annotation heading',
+      imageRegions: fixture.nodesById['node-1']!.imageRegions,
+      title: 'Stable excerpt title'
+    });
+  });
 }
 
 function registerDerivedTitleCoverage() {
@@ -117,6 +150,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
   });
 
   registerContentEditCoverage();
+  registerExcerptAnnotationCoverage();
   registerDerivedTitleCoverage();
 
   it('defers pending content runtime persistence while the editor keeps changing', async () => {

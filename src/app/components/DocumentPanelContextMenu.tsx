@@ -10,7 +10,7 @@ interface DocumentPanelContextMenuProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateNote: (note: string) => void;
+  onCreateNote: (note: string) => boolean | Promise<boolean> | void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
   onRepairTable: () => void;
@@ -48,6 +48,7 @@ export function DocumentPanelContextMenu({
       left={contextMenu.left}
       {...definedProps({
         mode: contextMenu.mode,
+        existingNote: contextMenu.existingHighlight?.note,
         initialNoteOpen: contextMenu.initialNoteOpen,
         notePanelLeft: contextMenu.notePanelLeft,
         notePanelTop: contextMenu.notePanelTop

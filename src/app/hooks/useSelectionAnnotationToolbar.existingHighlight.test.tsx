@@ -131,7 +131,9 @@ it('opens an existing highlight toolbar from a highlight click', () => {
   expect(highlightElement).toHaveClass('cm-md-highlight-active');
 
   act(() => result.current.handleCreateNote('Reader thought'));
-  expect(updateNodeContent).toHaveBeenCalledWith('highlight-1', 'Welcome\n※ Reader thought');
+  expect(updateNodeContent).toHaveBeenCalledWith(
+    'highlight-1', 'Welcome\n※ Reader thought', { preserveTitle: true }
+  );
 
   act(() => result.current.handleOpenExistingHighlight());
   expect(onSelectNode).toHaveBeenCalledWith('highlight-1');
@@ -146,6 +148,75 @@ it('opens an existing highlight toolbar from a highlight click', () => {
   });
   act(() => result.current.handleDeleteExistingHighlight());
   expect(deleteEditorAnnotationNodes).toHaveBeenCalledWith(['highlight-1']);
+});
+
+it('opens a whole-image excerpt annotation and updates only its annotation suffix', () => {
+  const imageRegion = document.createElement('div');
+  imageRegion.className = 'cm-md-image-cloze-region';
+  imageRegion.dataset.regionId = 'whole-image-region';
+  imageRegion.dataset.regionScope = 'full-image';
+  imageRegion.getBoundingClientRect = vi.fn(() => mockRect(40, 90, 100, 80));
+  appendEditorTarget(imageRegion);
+  const updateNodeContent = vi.fn(async () => true);
+  const nodesById = {
+    ...buildHookArgs().nodesById as object,
+    'whole-image': {
+      anchorLink: { id: 'whole-image-anchor', kind: 'highlight', locator: {
+        from: 0, originalText: '![Cover](asset://cover.png)', to: 27
+      } },
+      content: '![Cover](asset://cover.png)\n※ First thought',
+      id: 'whole-image',
+      imageRegions: [{ attachmentId: 'cover', regions: [{
+        height: 1, id: 'whole-image-region', width: 1, x: 0, y: 0
+      }] }],
+      parentNodeId: 'node-1', title: 'Cover excerpt'
+    }
+  } as never;
+  const { result } = renderHook(() => useEditorContextCommands(buildHookArgs({ nodesById, updateNodeContent })));
+
+  act(() => imageRegion.dispatchEvent(new MouseEvent('mouseup', {
+    bubbles: true, button: 0, clientX: 80, clientY: 120
+  })));
+  expect(result.current.contextMenu).toMatchObject({
+    existingHighlight: {
+      kind: 'highlight', nodeId: 'whole-image', note: 'First thought',
+      originalText: '![Cover](asset://cover.png)'
+    },
+    mode: 'existing-highlight-toolbar'
+  });
+
+  act(() => { void result.current.handleCreateNote('   '); });
+  expect(updateNodeContent).not.toHaveBeenCalled();
+  act(() => { void result.current.handleCreateNote('Revised thought'); });
+  expect(updateNodeContent).toHaveBeenCalledWith(
+    'whole-image', '![Cover](asset://cover.png)\n※ Revised thought', { preserveTitle: true }
+  );
+});
+
+it('treats an imported text excerpt as the same editable annotation target', () => {
+  const highlightElement = createHighlightElement();
+  const baseNodes = buildHookArgs().nodesById as unknown as Record<string, Record<string, unknown>>;
+  const nodesById = {
+    ...baseNodes,
+    'highlight-1': {
+      ...baseNodes['highlight-1'],
+      anchorLink: {
+        id: 'anchor-1', kind: 'highlight', locator: { from: 0, originalText: 'Welcome', to: 7 },
+        origin: 'imported'
+      },
+      content: 'Welcome\n※ Imported thought'
+    }
+  } as never;
+  const { result } = renderHook(() => useEditorContextCommands(buildHookArgs({ nodesById })));
+
+  act(() => highlightElement.dispatchEvent(new MouseEvent('mouseup', {
+    bubbles: true, button: 0, clientX: 80, clientY: 120
+  })));
+
+  expect(result.current.contextMenu).toMatchObject({
+    existingHighlight: { nodeId: 'highlight-1', note: 'Imported thought', originalText: 'Welcome' },
+    mode: 'existing-highlight-toolbar'
+  });
 });
 
 it('opens an existing highlight toolbar from the clicked highlight position before the cursor moves', () => {

@@ -87,7 +87,7 @@ function prepareNextContentNode(
   node: WorkspaceNode,
   content: string,
   timestamp: string,
-  args: { diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics }
+  args: { diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics; preserveTitle?: boolean }
 ) {
   const nextNodeStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const nextNode = {
@@ -95,7 +95,7 @@ function prepareNextContentNode(
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,
-    title: resolveSyncedArticleTitle(node, content),
+    title: args.preserveTitle ? node.title : resolveSyncedArticleTitle(node, content),
     updatedAt: timestamp
   };
   args.metrics.nextNodeMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - nextNodeStartedAt : 0;
@@ -139,6 +139,7 @@ function collectUpdateNodeContentLocalState(args: {
   diagnosticsEnabled: boolean;
   metrics: UpdateNodeContentMetrics;
   nodeId: string;
+  preserveTitle?: boolean;
   set: WorkspaceSet;
 }) {
   const localState = createUpdateNodeContentLocalState();
@@ -152,7 +153,7 @@ async function updateNodeContent(
   set: WorkspaceSet,
   nodeId: string,
   content: string,
-  options: { publishLocal?: boolean } = {}
+  options: { preserveTitle?: boolean; publishLocal?: boolean } = {}
 ) {
   const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
   const metrics = createUpdateNodeContentMetrics(diagnosticsEnabled);
@@ -163,6 +164,7 @@ async function updateNodeContent(
     diagnosticsEnabled,
     metrics,
     nodeId,
+    ...(options.preserveTitle === undefined ? {} : { preserveTitle: options.preserveTitle }),
     set
   });
   if (!localState.nextNodeForSync) {

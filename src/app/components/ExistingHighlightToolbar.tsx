@@ -1,5 +1,5 @@
 import { CornerDownRight, MessageSquare, MoreHorizontal, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '../../shared/lib/utils';
@@ -10,16 +10,21 @@ import { AnnotationNotePanel } from './AnnotationNotePanel';
 import { AnnotationToolbarButton } from './AnnotationToolbarButton';
 
 export function ExistingHighlightToolbar(props: {
+  existingNote?: string | null;
   left: number;
   onClose: () => void;
-  onCreateNote: (note: string) => void;
+  onCreateNote: (note: string) => boolean | Promise<boolean> | void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
   top: number;
 }) {
   const t = useTranslation();
-  const [noteDraft, setNoteDraft] = useState('');
+  const [noteDraft, setNoteDraft] = useState(props.existingNote ?? '');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  useEffect(() => {
+    setNoteDraft(props.existingNote ?? '');
+    setIsNoteOpen(false);
+  }, [props.existingNote]);
 
   if (typeof document === 'undefined') {
     return null;
@@ -54,8 +59,9 @@ export function ExistingHighlightToolbar(props: {
           onCancel={() => setIsNoteOpen(false)}
           onChange={setNoteDraft}
           onSave={() => {
-            props.onCreateNote(noteDraft);
-            props.onClose();
+            void Promise.resolve(props.onCreateNote(noteDraft)).then((saved) => {
+              if (saved !== false) props.onClose();
+            });
           }}
           top={props.top + 42}
         />

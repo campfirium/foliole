@@ -1,9 +1,13 @@
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, MessageSquare, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
+import { parseExcerptAnnotationContent, replaceExcerptAnnotation } from '../../../lib/core/annotations/textAnnotationContent';
+import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { AnnotationNotePanel } from './AnnotationNotePanel';
 import { onPdfVisualSelectionKindChange, setPdfVisualSelectionKind } from './pdfSurfaceRegistration';
 import { rectFromPointerDrag, type PdfNormalizedRect } from './pdfVisualExcerptGeometry';
 import { findPdfExcerptNearEdge, resolvePdfVisualExcerptPointerAction } from './pdfVisualExcerptPointerRouting';
@@ -32,16 +36,35 @@ function SelectedOutlineToolbar() {
   const runtime = usePdfVisualExcerptRuntime();
   const t = useTranslation();
   const selected = runtime.selectedOutline;
+  const node = useWorkspaceStore((state) => selected ? state.nodesById[selected.nodeId] : undefined);
+  const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
+  const parsed = node ? parseExcerptAnnotationContent({
+    content: node.content, notePrefix: getHighlightAnnotationPrefix()
+  }) : null;
+  const [notePanel, setNotePanel] = useState<{ draft: string; left: number; top: number } | null>(null);
+  useEffect(() => setNotePanel(null), [selected?.nodeId]);
   if (!selected) return null;
   return (
-    <div className={appFloatingSurfaceClassName('popover', 'pointer-events-auto absolute z-floating flex gap-1 p-1')}
-      data-testid="pdf-image-excerpt-outline-toolbar" role="toolbar"
-      style={{ left: `${selected.x * 100}%`, top: `${selected.y * 100}%`, transform: 'translate(-50%, 8px)' }}>
-      <AppIconButton className="size-8" icon={<ExternalLink aria-hidden size={15} />} label={t('desktop.pdf.imageExcerpt.open')}
-        onClick={() => runtime.openExcerpt(selected.nodeId)} />
-      <AppIconButton className="size-8" icon={<Trash2 aria-hidden size={15} />} label={t('desktop.pdf.imageExcerpt.delete')}
-        onClick={runtime.deleteSelectedOutline} />
-    </div>
+    <>
+      <div className={appFloatingSurfaceClassName('popover', 'pointer-events-auto absolute z-floating flex gap-1 p-1')}
+        data-testid="pdf-image-excerpt-outline-toolbar" role="toolbar"
+        style={{ left: `${selected.x * 100}%`, top: `${selected.y * 100}%`, transform: 'translate(-50%, 8px)' }}>
+        <AppIconButton className="size-8" icon={<MessageSquare aria-hidden size={15} />}
+          label={t('desktop.highlightToolbar.addComment')} onClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setNotePanel({ draft: parsed?.note ?? '', left: rect.left, top: rect.bottom + 8 });
+          }} />
+        <AppIconButton className="size-8" icon={<ExternalLink aria-hidden size={15} />} label={t('desktop.pdf.imageExcerpt.open')}
+          onClick={() => runtime.openExcerpt(selected.nodeId)} />
+        <AppIconButton className="size-8" icon={<Trash2 aria-hidden size={15} />} label={t('desktop.pdf.imageExcerpt.delete')}
+          onClick={runtime.deleteSelectedOutline} />
+      </div>
+      {notePanel && node ? <AnnotationNotePanel draft={notePanel.draft} left={notePanel.left}
+        onCancel={() => setNotePanel(null)} onChange={(draft) => setNotePanel({ ...notePanel, draft })}
+        onSave={() => { void updateNodeContent(node.id, replaceExcerptAnnotation({
+          content: node.content, note: notePanel.draft, notePrefix: getHighlightAnnotationPrefix()
+        }), { preserveTitle: true }).then((saved) => { if (saved) setNotePanel(null); }); }} top={notePanel.top} /> : null}
+    </>
   );
 }
 

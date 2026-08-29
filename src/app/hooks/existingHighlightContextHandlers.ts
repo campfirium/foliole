@@ -1,4 +1,4 @@
-import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
+import { replaceExcerptAnnotation } from '../../../lib/core/annotations/textAnnotationContent';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
@@ -13,28 +13,34 @@ interface ExistingHighlightHandlerArgs {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
-  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+  updateNodeContent: (
+    nodeId: string,
+    content: string,
+    options?: { preserveTitle?: boolean; publishLocal?: boolean }
+  ) => Promise<boolean>;
 }
 
 export function createExistingHighlightHandlers(args: ExistingHighlightHandlerArgs) {
   const existingHighlight = args.contextMenu?.kind === 'selection' ? args.contextMenu.existingHighlight : null;
   return {
     handleCreateNote(note: string) {
+      if (!note.trim()) {
+        return false;
+      }
       if (!existingHighlight) {
         args.selectionHandlers.handleCreateNote(note);
-        return;
+        return false;
       }
       const node = args.nodesById[existingHighlight.nodeId];
       if (!node) {
-        return;
+        return false;
       }
       args.flushPendingEditorDraft();
-      args.updateNodeContent(existingHighlight.nodeId, appendHighlightCardNote({
+      return args.updateNodeContent(existingHighlight.nodeId, replaceExcerptAnnotation({
         content: node.content,
         note,
-        notePrefix: getHighlightAnnotationPrefix(),
-        originalText: existingHighlight.originalText
-      }));
+        notePrefix: getHighlightAnnotationPrefix()
+      }), { preserveTitle: true });
     },
     handleDeleteExistingHighlight() {
       if (!existingHighlight) {

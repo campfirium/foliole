@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendHighlightCardNote, parseHighlightCardContent } from './textAnnotationContent.js';
+import {
+  appendHighlightCardNote,
+  parseExcerptAnnotationContent,
+  parseHighlightCardContent,
+  replaceExcerptAnnotation
+} from './textAnnotationContent.js';
 
 describe('text annotation content', () => {
   it('parses the original excerpt and replaces an existing note without nesting it', () => {
@@ -25,5 +30,27 @@ describe('text annotation content', () => {
       note: 'Detail',
       text: 'Excerpt'
     });
+  });
+
+  it.each([
+    ['text', 'Selected text'],
+    ['whole image', '![Cover](asset://cover.png)'],
+    ['cropped image', '![Excerpt](asset://crop.png)']
+  ])('replaces the %s annotation without changing the excerpt body', (_kind, body) => {
+    const first = replaceExcerptAnnotation({ content: body, note: 'First thought' });
+    const second = replaceExcerptAnnotation({ content: first, note: 'Revised thought' });
+
+    expect(parseExcerptAnnotationContent({ content: second })).toEqual({
+      body,
+      lineEnding: '\n',
+      note: 'Revised thought'
+    });
+  });
+
+  it('preserves original body bytes and treats a blank annotation as no write', () => {
+    const content = '  ![Cover](asset://cover.png)  \r\n';
+
+    expect(replaceExcerptAnnotation({ content, note: '  ' })).toBe(content);
+    expect(replaceExcerptAnnotation({ content, note: 'Detail' })).toBe(`${content}\r\n※ Detail`);
   });
 });

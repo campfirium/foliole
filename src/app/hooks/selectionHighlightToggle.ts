@@ -1,6 +1,6 @@
 import type { MutableRefObject } from 'react';
 
-import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
+import { replaceExcerptAnnotation } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -113,7 +113,11 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   trashedNodeIds: string[];
-  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+  updateNodeContent: (
+    nodeId: string,
+    content: string,
+    options?: { preserveTitle?: boolean; publishLocal?: boolean }
+  ) => Promise<boolean>;
 }) {
   return (payload: SelectionCommandPayload, note = '') => {
     const existingHighlightMatch = resolveExistingHighlightMatch(
@@ -131,12 +135,11 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
       return null;
     }
     args.flushPendingEditorDraft();
-    args.updateNodeContent(existingHighlightMatch.nodeId, appendHighlightCardNote({
+    args.updateNodeContent(existingHighlightMatch.nodeId, replaceExcerptAnnotation({
       content: node.content,
       note,
-      notePrefix: getHighlightAnnotationPrefix(),
-      originalText: existingHighlightMatch.originalText
-    }));
+      notePrefix: getHighlightAnnotationPrefix()
+    }), { preserveTitle: true });
     args.onSelectNode(existingHighlightMatch.nodeId);
     return existingHighlightMatch.nodeId;
   };

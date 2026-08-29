@@ -6,9 +6,17 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getSelectionCommandPayload } from '../contextCommands';
 
 import {
+  getWholeImageExcerptTarget,
+  resolveExistingExcerptNode
+} from './existingExcerptTarget';
+import {
+  openPdfExcerptToolbar,
+  openWholeImageExcerptToolbar,
+  resolveSelectionToolbarPosition
+} from './existingExcerptToolbarOpeners';
+import {
   findPdfHighlightTargetAtPoint,
-  getPdfHighlightTarget,
-  resolvePdfExistingHighlight
+  getPdfHighlightTarget
 } from './pdfExistingHighlightTarget';
 import {
   clearActiveHighlightElements,
@@ -20,27 +28,9 @@ import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
 const ACTIVE_HIGHLIGHT_CLASS = 'cm-md-highlight-active';
 const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
-const TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET = 22;
 
 function getHighlightElement(target: EventTarget | null) {
   return target instanceof Element ? target.closest(HIGHLIGHT_TARGET_SELECTOR) : null;
-}
-
-function resolveSelectionToolbarPosition(event: MouseEvent, targetElement?: Element | null) {
-  const highlightElement = targetElement ?? getHighlightElement(event.target);
-  const highlightRect = highlightElement?.getBoundingClientRect();
-  const selection = window.getSelection();
-  const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-  const rect = highlightRect ?? range?.getBoundingClientRect();
-  const anchor = { left: event.clientX, top: rect && rect.height > 0 ? rect.top : event.clientY };
-  const toolbarWidth = 150;
-  const notePanelWidth = 240;
-  return {
-    left: Math.max(8, Math.min(anchor.left - TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET, window.innerWidth - toolbarWidth - 8)),
-    notePanelLeft: Math.max(8, Math.min(anchor.left - notePanelWidth / 2, window.innerWidth - notePanelWidth - 8)),
-    notePanelTop: Math.max(8, (rect?.bottom ?? event.clientY) + 8),
-    top: Math.max(8, anchor.top - 46)
-  };
 }
 
 function isAnnotationToolbarTarget(target: EventTarget | null) {
@@ -96,41 +86,16 @@ function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, even
   if (!highlightMatch) {
     return false;
   }
-  const toolbarPosition = resolveSelectionToolbarPosition(event);
+  const node = args.nodesById[highlightMatch.nodeId];
+  if (!node) return false;
+  const toolbarPosition = resolveSelectionToolbarPosition(event, getHighlightElement(event.target));
   getHighlightElement(event.target)?.classList.add(ACTIVE_HIGHLIGHT_CLASS);
   args.setContextMenu({
     canRunCommands: true,
-    existingHighlight: highlightMatch,
-    kind: 'selection',
-    left: toolbarPosition.left,
-    mode: 'existing-highlight-toolbar',
-    notePanelLeft: toolbarPosition.notePanelLeft,
-    notePanelTop: toolbarPosition.notePanelTop,
-    payload: null,
-    top: toolbarPosition.top
-  });
-  return true;
-}
-
-function openPdfHighlightToolbar(
-  args: SelectionAnnotationToolbarArgs,
-  event: MouseEvent,
-  target: HTMLElement
-) {
-  const highlightMatch = resolvePdfExistingHighlight({
-    activeNodeId: args.activeNodeId ?? '',
-    nodesById: args.nodesById,
-    target,
-    trashedNodeIds: args.trashedNodeIds
-  });
-  if (!highlightMatch) {
-    return false;
-  }
-  const toolbarPosition = resolveSelectionToolbarPosition(event, target);
-  target.classList.add(ACTIVE_HIGHLIGHT_CLASS);
-  args.setContextMenu({
-    canRunCommands: true,
-    existingHighlight: highlightMatch,
+    existingHighlight: resolveExistingExcerptNode(node, {
+      canAdjustRange: Boolean(highlightMatch.canAdjustRange),
+      originalText: highlightMatch.originalText
+    }),
     kind: 'selection',
     left: toolbarPosition.left,
     mode: 'existing-highlight-toolbar',
@@ -161,13 +126,15 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       const pdfTarget = getPdfHighlightTarget(event.target) ??
         findPdfHighlightTargetAtPoint(event.clientX, event.clientY);
       if (pdfTarget) {
-        openPdfHighlightToolbar(args, event, pdfTarget);
+        openPdfExcerptToolbar(args, event, pdfTarget);
       }
       return;
     }
     if (isHighlightTarget(event.target) && openExistingHighlightToolbar(args, event)) {
       return;
     }
+    const wholeImageTarget = getWholeImageExcerptTarget(event.target);
+    if (wholeImageTarget && openWholeImageExcerptToolbar(args, event, wholeImageTarget)) return;
     const payload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     if (!payload) {
       openExistingHighlightToolbar(args, event);
@@ -201,7 +168,7 @@ function createPdfHighlightKeyDownHandler(args: SelectionAnnotationToolbarArgs) 
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2
     });
-    if (openPdfHighlightToolbar(args, mouseEvent, target)) {
+    if (openPdfExcerptToolbar(args, mouseEvent, target)) {
       event.preventDefault();
     }
   };

@@ -1,6 +1,6 @@
-import { parseHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
-import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+
+import { resolveExistingExcerptNode } from './existingExcerptTarget';
 
 export const PDF_HIGHLIGHT_TARGET_SELECTOR = '[data-pdf-highlight-node-id]';
 
@@ -32,19 +32,10 @@ export function resolvePdfExistingHighlight(input: {
     !node ||
     node.parentNodeId !== input.activeNodeId ||
     input.trashedNodeIds.includes(node.id) ||
-    anchor?.kind !== 'highlight' ||
+    (anchor?.kind !== 'highlight' && anchor?.kind !== 'image-excerpt') ||
     !isPdfAnchorLocator(anchor.locator)
   ) {
     return null;
   }
-  const parsed = parseHighlightCardContent({
-    content: node.content,
-    notePrefix: getHighlightAnnotationPrefix()
-  });
-  return {
-    canAdjustRange: false,
-    kind: 'highlight' as const,
-    nodeId: node.id,
-    originalText: parsed.text
-  };
+  return resolveExistingExcerptNode(node, { canAdjustRange: false });
 }

@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, it, expect, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
@@ -194,4 +194,35 @@ it('renders existing highlight actions without cloze', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Open' }));
   expect(onOpenExistingHighlight).toHaveBeenCalledTimes(1);
+});
+
+it('prefills an existing excerpt comment and keeps cancel, blank, and failed saves non-destructive', async () => {
+  const onClose = vi.fn();
+  const onCreateNote = vi.fn(async () => false);
+  renderWithLocalization(
+    <EditorContextMenu
+      existingNote="First thought"
+      kind="selection"
+      left={16}
+      mode="existing-highlight-toolbar"
+      top={24}
+      {...requiredActionProps({ onClose, onCreateNote })}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+  const input = screen.getByPlaceholderText('Add a comment...');
+  expect(input).toHaveValue('First thought');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(onCreateNote).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+  fireEvent.change(screen.getByPlaceholderText('Add a comment...'), { target: { value: '   ' } });
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  fireEvent.change(screen.getByPlaceholderText('Add a comment...'), { target: { value: 'Revised thought' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  await waitFor(() => expect(onCreateNote).toHaveBeenCalledWith('Revised thought'));
+  expect(screen.getByPlaceholderText('Add a comment...')).toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled();
 });

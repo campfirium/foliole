@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
@@ -34,7 +34,19 @@ beforeAll(async () => {
 
 beforeEach(() => {
   deleteAnnotations.mockReset();
-  useWorkspaceStore.setState({ deleteEditorAnnotationNodes: deleteAnnotations });
+  useWorkspaceStore.setState({
+    deleteEditorAnnotationNodes: deleteAnnotations,
+    nodesById: {
+      'excerpt-1': {
+        anchorLink: { id: 'anchor-1', kind: 'image-excerpt', locator: {
+          page: 1, rects: [{ height: 0.4, width: 0.4, x: 0.2, y: 0.2 }], x: 0.2, y: 0.2
+        } },
+        content: '![Excerpt](asset://crop.png)\n※ First thought',
+        createdAt: '', id: 'excerpt-1', kind: 'topic', parentNodeId: 'pdf-1',
+        reveal: null, review: null, title: 'Excerpt title', updatedAt: ''
+      }
+    }
+  });
 });
 
 function preparePageRoot() {
@@ -69,6 +81,26 @@ describe('PDF visual excerpt page interaction', () => {
     fireEvent.keyDown(window, { key: 'Backspace' });
 
     expect(deleteAnnotations).toHaveBeenCalledWith(['excerpt-1']);
+  });
+
+  it('edits the selected PDF image excerpt annotation on the same topic', async () => {
+    const updateNodeContent = vi.fn(async () => true);
+    useWorkspaceStore.setState({ updateNodeContent });
+    render(<InteractionHarness />);
+    preparePageRoot();
+
+    act(() => dispatchPointer(
+      screen.getByTestId('pdf-canvas'), 'pointerdown', { clientX: 20, clientY: 40, pointerId: 1 }
+    ));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Comment' }));
+    const input = screen.getByPlaceholderText('Add a comment...');
+    expect(input).toHaveValue('First thought');
+    fireEvent.change(input, { target: { value: 'Revised thought' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(updateNodeContent).toHaveBeenCalledWith(
+      'excerpt-1', '![Excerpt](asset://crop.png)\n※ Revised thought', { preserveTitle: true }
+    ));
   });
 
   it('keeps text spans native and treats the auxiliary text-layer element as visual area', async () => {
