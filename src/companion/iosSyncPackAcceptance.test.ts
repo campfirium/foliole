@@ -4,7 +4,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
   ensureGroup: vi.fn(),
-  leaveGroup: vi.fn(),
   loadBootstrap: vi.fn(),
   postResult: vi.fn(),
   rerunRoundtrip: vi.fn(),
@@ -15,9 +14,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
 vi.mock('../shared/platform/companion/network/signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
-vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
-  leaveCompanionSyncGroupDevice: mocks.leaveGroup
-}));
 vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
@@ -38,7 +34,6 @@ beforeEach(() => {
   localStorage.clear();
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
-  mocks.leaveGroup.mockResolvedValue(undefined);
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
     group: { group_id: 'group-1' }, joined: true,
     peer: { sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' } });
@@ -60,7 +55,7 @@ it('joins and applies the identity-bound legal pack on the first launch', async 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'applied', status: 'passed' }));
 });
 
-it('reapplies through the shared path after rebuilding the acceptance Sync Group', async () => {
+it('reapplies through the shared path while reusing the accepted Sync Group identity', async () => {
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'reapply');
 
   await runIosSyncPackAcceptance();

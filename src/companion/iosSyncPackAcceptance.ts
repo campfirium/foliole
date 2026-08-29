@@ -1,5 +1,4 @@
 import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
-import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
@@ -23,8 +22,6 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
 };
 
 async function prepareSyncGroup(databasePath: string | null) {
-  await leaveCompanionSyncGroupDevice();
-  await saveCompanionWorkspaceSyncEndpoint('');
   const joined = await ensureIosAcceptanceSyncGroup(databasePath);
   await saveCompanionWorkspaceSyncEndpoint(joined.endpointUrl);
   return joined;

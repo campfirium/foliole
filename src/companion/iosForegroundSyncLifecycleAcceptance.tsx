@@ -1,5 +1,5 @@
 import { App } from '@capacitor/app';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
@@ -11,27 +11,14 @@ import { postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
-  const manualSyncStarted = useRef(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrap);
 
   useEffect(() => {
-    if (manualSyncStarted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
+    if (!workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
       !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null) return;
-    manualSyncStarted.current = true;
-    const endpoint = workspaceSync.state.endpoint_url;
-    void workspaceSync.pullFromDesktop(endpoint).then(() => {
-      postReady(workspaceSync);
-    }).catch((error) => {
-      postResult({
-        error: error instanceof Error ? error.message : String(error),
-        phase: 'failed',
-        scenario: 'foreground-sync-lifecycle',
-        status: 'failed'
-      });
-    });
+    postReady(workspaceSync);
   }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.syncGroupJoined,
-    workspaceSync.pullFromDesktop, workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at,
-    workspaceSync.status]);
+    workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at, workspaceSync.status]);
 
   return null;
 }
