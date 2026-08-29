@@ -119,6 +119,7 @@ export function createNodeListRowKeydownHandler({
   rows
 }: NodeListKeyboardInput) {
   return (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.defaultPrevented) return;
     const index = rows.findIndex((row) => getKeyboardRowId(row) === nodeId);
     if (index < 0) return;
 
