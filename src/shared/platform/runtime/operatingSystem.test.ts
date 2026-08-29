@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { resolveRuntimeOperatingSystem, usesMacShortcutProjection } from './runtimeOperatingSystem';
+import { resolveRuntimeOperatingSystem, usesMacShortcutProjection } from './operatingSystem';
 
 it('detects the supported desktop operating systems from browser platform signals', () => {
   expect(resolveRuntimeOperatingSystem('macOS MacIntel')).toBe('macos');

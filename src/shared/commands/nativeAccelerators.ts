@@ -1,4 +1,4 @@
-import { usesMacShortcutProjection } from '../platform/runtimeOperatingSystem';
+import { usesMacShortcutProjection } from '../platform/runtime/operatingSystem';
 
 import { getShortcutSetShortcuts } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet } from './types';

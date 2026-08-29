@@ -1,22 +1,24 @@
 import { render } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
 
-function Harness({ runCommand }: { runCommand: (id: string) => void }) {
+const NAVIGATION_ITEMS = [
+  { enabled: true, id: APP_COMMAND_IDS.goBack, title: 'Go Back' },
+  { enabled: true, id: APP_COMMAND_IDS.goForward, title: 'Go Forward' },
+  { enabled: true, id: APP_COMMAND_IDS.goParent, title: 'Go Up' },
+  { enabled: true, id: APP_COMMAND_IDS.goToLastChild, title: 'Go Down' }
+];
+
+function Harness({ platform, runCommand }: { platform: string; runCommand: (id: string) => void }) {
   useAppCommandShortcutDispatcher({
     isCommandSurfaceOpen: false,
-    items: [
-      { enabled: true, id: APP_COMMAND_IDS.goBack, title: 'Go Back' },
-      { enabled: true, id: APP_COMMAND_IDS.goToLastChild, title: 'Go Down' }
-    ],
+    items: NAVIGATION_ITEMS,
     runCommand,
-    shortcutMap: {
-      [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', metaKey: true } },
-      [APP_COMMAND_IDS.goToLastChild]: { primary: { key: 'ArrowDown', metaKey: true } }
-    }
+    shortcutMap: getPlatformDefaultCommandShortcuts(platform)
   });
   return <input aria-label="Title" />;
 }
@@ -27,14 +29,38 @@ function dispatchFrom(input: HTMLInputElement, init: KeyboardEventInit) {
   return event;
 }
 
-it('dispatches application navigation before a focused title input handles arrow keys', () => {
+it.each([
+  {
+    events: [
+      { key: 'ArrowLeft', metaKey: true },
+      { key: 'ArrowRight', metaKey: true },
+      { key: 'ArrowUp', metaKey: true },
+      { key: 'ArrowDown', metaKey: true }
+    ],
+    platform: 'MacIntel'
+  },
+  {
+    events: [
+      { altKey: true, key: 'ArrowLeft' },
+      { altKey: true, key: 'ArrowRight' },
+      { ctrlKey: true, key: 'ArrowUp' },
+      { ctrlKey: true, key: 'ArrowDown' }
+    ],
+    platform: 'Win32'
+  }
+])('intercepts $platform browser defaults and dispatches each navigation command once', ({ events, platform }) => {
   const runCommand = vi.fn();
-  render(<Harness runCommand={runCommand} />);
+  render(<Harness platform={platform} runCommand={runCommand} />);
   const input = document.querySelector('input')!;
   input.focus();
 
-  expect(dispatchFrom(input, { key: 'ArrowLeft', metaKey: true }).defaultPrevented).toBe(true);
-  expect(dispatchFrom(input, { key: 'ArrowDown', metaKey: true }).defaultPrevented).toBe(true);
-  expect(runCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.goBack);
-  expect(runCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.goToLastChild);
+  for (const event of events) {
+    expect(dispatchFrom(input, event).defaultPrevented).toBe(true);
+  }
+  expect(runCommand.mock.calls).toEqual([
+    [APP_COMMAND_IDS.goBack],
+    [APP_COMMAND_IDS.goForward],
+    [APP_COMMAND_IDS.goParent],
+    [APP_COMMAND_IDS.goToLastChild]
+  ]);
 });

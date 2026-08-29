@@ -1,5 +1,5 @@
 import { canUseBrowserReservedAppShortcuts } from '../platform/browserReservedShortcuts';
-import { usesMacShortcutProjection } from '../platform/runtimeOperatingSystem';
+import { usesMacShortcutProjection } from '../platform/runtime/operatingSystem';
 
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
 import { MACOS_DEFAULT_APP_COMMAND_SHORTCUTS } from './macosDefaultShortcuts';
