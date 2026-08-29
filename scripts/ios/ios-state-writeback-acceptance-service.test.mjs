@@ -9,6 +9,7 @@ import {
   createIosStateWritebackAcceptanceService,
   createIosStateWritebackObservations
 } from './ios-state-writeback-acceptance-service.ts';
+import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
 
 let tempRoot = '';
 
@@ -22,7 +23,10 @@ it('routes push acknowledgements and immutable confirmation corpus mechanically'
   const service = await createIosStateWritebackAcceptanceService({
     observations,
     outputDirectory: tempRoot,
-    toPeerId: 'ios-device'
+    packPaths: {
+      initial: loadIosAcceptanceContractCorpus().stateInitialPack,
+      steady: loadIosAcceptanceContractCorpus().stateSteadyPack
+    }
   });
   try {
     const diagnostics = await service.route({

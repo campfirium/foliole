@@ -6,13 +6,10 @@ import path from 'node:path';
 import { app } from 'electron';
 
 import {
-  IOS_ACCEPTANCE_CONTRACT_PEER_ID,
-  loadIosAcceptanceContractCorpus
-} from './ios-acceptance-contract-corpus.ts';
-import {
   type IosContentResourceAcceptanceFixture,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
+import { createIosHostedLiveScenario } from './ios-hosted-live-scenario.ts';
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
 import {
   readProviderJson,
@@ -25,9 +22,7 @@ import {
   registerHostedProvider
 } from './ios-sync-group-provider-registration.ts';
 import { createIosSyncGroupScenarioService } from './ios-sync-group-scenario-service.ts';
-import {
-  type IosSyncPackAcceptanceRoutes
-} from './ios-sync-pack-acceptance-routes.ts';
+import type { IosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-routes.ts';
 
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
@@ -48,6 +43,12 @@ let scenarioService: Awaited<ReturnType<typeof createIosSyncGroupScenarioService
 let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
 let registration: ReturnType<typeof registerHostedProvider> | null = null;
 let stopping = false;
+const liveScenario = corpusScenario ? createIosHostedLiveScenario({
+  artifactRoot: artifactDir,
+  observations,
+  providerDeviceId: provider.discovery.provider_device_id,
+  scenario
+}) : null;
 
 function writeObservations() {
   writeFileSync(path.join(artifactDir, 'service-observations.json'), `${JSON.stringify(observations, null, 2)}\n`);
@@ -55,21 +56,6 @@ function writeObservations() {
 
 async function handleJoinRequest(request: IncomingMessage, response: ServerResponse) {
   const created = await provider.accept(await readProviderJson(request));
-  if (scenario === 'sync-pack-runtime') {
-    const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
-    syncPackService = await createIosSyncPackAcceptanceRoutes({
-      observations: observations.sync_pack
-    });
-  } else if (scenario === 'content-resource-read') {
-    contentResourceFixture = loadIosAcceptanceContractCorpus().contentResource;
-  } else if (scenario === 'state-writeback-runtime' || scenario === 'foreground-sync-lifecycle') {
-    scenarioService = await createIosSyncGroupScenarioService({
-      artifactDir,
-      observations,
-      scenario,
-      toPeerId: corpusScenario ? IOS_ACCEPTANCE_CONTRACT_PEER_ID : provider.discovery.provider_device_id
-    });
-  }
   writeObservations();
   sendProviderResponse(response, 202, created);
 }
@@ -98,57 +84,74 @@ async function routeSyncPackRequest(
 }
 
 async function handleSignedRequest(request: IncomingMessage, response: ServerResponse) {
-    if (request.url === '/acceptance/redirect-target') {
-      observations.redirect_target_hits += 1;
-      writeObservations();
-      sendProviderResponse(response, 200, { reached: true });
-      return;
-    }
-    const bodyText = request.method === 'POST' ? await readProviderText(request) : '';
-    if (!provider.authenticate(request, bodyText)) {
-      writeObservations();
-      sendProviderResponse(response, 401, { error: 'invalid_signature' });
-      return;
-    }
+  if (request.url === '/acceptance/redirect-target') {
+    observations.redirect_target_hits += 1;
     writeObservations();
-    if (scenarioService) {
-      const routed = await scenarioService.route({
-        bodyText,
-        method: request.method ?? 'GET',
-        url: request.url ?? '/'
-      });
-      if (routed) {
-        writeObservations();
-        response.writeHead(routed.status ?? 200, { 'Content-Type': routed.contentType });
-        response.end(routed.body);
-        return;
-      }
-    }
-    if (await routeSyncPackRequest(request, response, bodyText)) return;
-    if (contentResourceFixture) {
-      const routed = routeIosContentResourceRequest({
-        bodyText,
-        fixture: contentResourceFixture,
-        method: request.method ?? 'GET',
-        observations: observations.content_resource,
-        requestUrl: request.url ?? '/'
-      });
-      if (routed) {
-        writeObservations();
-        response.writeHead(routed.status, routed.headers);
-        response.end(routed.body);
-        return;
-      }
-    }
-    if (request.url === '/acceptance/redirect') {
-      sendProviderResponse(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
+    sendProviderResponse(response, 200, { reached: true });
+    return;
+  }
+  const bodyText = request.method === 'POST' ? await readProviderText(request) : '';
+  if (!provider.authenticate(request, bodyText)) {
+    writeObservations();
+    sendProviderResponse(response, 401, { error: 'invalid_signature' });
+    return;
+  }
+  await prepareLiveServices();
+  writeObservations();
+  if (await routeScenarioRequest(request, response, bodyText)) return;
+  if (await routeSyncPackRequest(request, response, bodyText)) return;
+  if (contentResourceFixture) {
+    const routed = routeIosContentResourceRequest({
+      bodyText,
+      fixture: contentResourceFixture,
+      method: request.method ?? 'GET',
+      observations: observations.content_resource,
+      requestUrl: request.url ?? '/'
+    });
+    if (routed) {
+      writeObservations();
+      response.writeHead(routed.status, routed.headers);
+      response.end(routed.body);
       return;
     }
-    if (request.url === '/acceptance/error') {
-      sendProviderResponse(response, 503, { error: 'acceptance_failure' });
-      return;
-    }
-    sendProviderResponse(response, 200, { ok: true });
+  }
+  if (request.url === '/acceptance/redirect') {
+    sendProviderResponse(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
+    return;
+  }
+  if (request.url === '/acceptance/error') {
+    sendProviderResponse(response, 503, { error: 'acceptance_failure' });
+    return;
+  }
+  sendProviderResponse(response, 200, { ok: true });
+}
+
+async function prepareLiveServices() {
+  if (!liveScenario) return;
+  const prepared = await liveScenario.prepare(
+    provider.acceptedDeviceId(), observations.acceptance_collected_count
+  );
+  contentResourceFixture = prepared.contentResourceFixture;
+  scenarioService = prepared.scenarioService;
+  syncPackService = prepared.syncPackService;
+}
+
+async function routeScenarioRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  bodyText: string
+) {
+  if (!scenarioService) return false;
+  const routed = await scenarioService.route({
+    bodyText,
+    method: request.method ?? 'GET',
+    url: request.url ?? '/'
+  });
+  if (!routed) return false;
+  writeObservations();
+  response.writeHead(routed.status ?? 200, { 'Content-Type': routed.contentType });
+  response.end(routed.body);
+  return true;
 }
 
 const server = createServer(async (request, response) => {

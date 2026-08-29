@@ -76,11 +76,8 @@ it('reapplies through the shared path after rebuilding the acceptance Sync Group
 });
 
 it.each([
-  ['corrupt-envelope', 'missing_sync_pack_entry'],
   ['wrong-target', 'sync_pack_target_mismatch'],
-  ['cursor-gap', 'sync_pack_cursor_not_contiguous'],
-  ['legacy-format', 'unsupported_sync_pack_format_version'],
-  ['illegal-dag', 'sync_pack_node_version_missing_parent']
+  ['cursor-gap', 'sync_pack_cursor_not_contiguous']
 ])('accepts only the deterministic %s rejection', async (phase, error) => {
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', phase);
   mocks.apply.mockRejectedValue(new Error(error));

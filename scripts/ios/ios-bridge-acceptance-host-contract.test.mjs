@@ -39,7 +39,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
     expect(syncPackScenario).toContain(
-      "'apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'"
+      "'apply', 'reapply', 'wrong-target', 'cursor-gap'"
     );
     expect(syncPackScenario).toContain('pathWithQuery: path');
     expect(contentResourceScenario).toContain('pullMissingContentBlobs(endpoint)');
@@ -127,7 +127,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(sources).toContain('/sync-group/join-acceptance');
   });
 
-  it('serves the fixed corpus without retired builders or desktop apply imports', () => {
+  it('keeps route services free of generator ownership and retired builders', () => {
     for (const retired of [
       'scripts/ios/generate-ios-acceptance-contract-corpus.ts',
       'scripts/ios/ios-content-resource-acceptance-fixture.ts',

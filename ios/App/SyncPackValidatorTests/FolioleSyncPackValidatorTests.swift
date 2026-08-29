@@ -103,6 +103,20 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         try assertEnvelopeError(archiveURL, code: "unsupported_sync_pack_schema_version")
     }
 
+    func testRejectsFixedCorruptEnvelopeOracle() throws {
+        try assertEnvelopeError(
+            fixedCorpusURL("corrupt-envelope"),
+            code: "missing_sync_pack_entry"
+        )
+    }
+
+    func testRejectsFixedLegacyFormatOracle() throws {
+        try assertEnvelopeError(
+            fixedCorpusURL("legacy-format"),
+            code: "unsupported_sync_pack_format_version"
+        )
+    }
+
     private func assertEnvelopeError(_ archiveURL: URL, code: String) throws {
         let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
         XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
@@ -152,6 +166,12 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
     private func temporaryDatabaseURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-ios-sync-pack-\(UUID().uuidString).db")
+    }
+
+    private func fixedCorpusURL(_ name: String) -> URL {
+        repositoryRoot()
+            .appendingPathComponent("scripts/ios/fixtures/acceptance-contract-corpus/sync-pack-runtime")
+            .appendingPathComponent("\(name).syncpack")
     }
 
     private func repositoryRoot() -> URL {

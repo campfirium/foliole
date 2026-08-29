@@ -81,9 +81,7 @@ export function verifySyncPackAcceptance(
     service.pushed_node_ids?.includes(service.capture_node_id);
   if (!firstPassed || !secondPassed || !snapshotPassed || !serviceObserved ||
       JSON.stringify(secondSnapshot) !== JSON.stringify(firstSnapshot) || !rejectionSnapshotsStable ||
-      JSON.stringify(rejectionKinds) !== JSON.stringify([
-        'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
-      ])) {
+      JSON.stringify(rejectionKinds) !== JSON.stringify(['wrong-target', 'cursor-gap'])) {
     throw new Error('iOS Sync Pack acceptance evidence is incomplete.');
   }
   return {
@@ -98,7 +96,7 @@ function gatesClosed(gates) {
 
 export async function runSyncPackRejections(options) {
   const evidence = [];
-  for (const rejection of ['corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag']) {
+  for (const rejection of ['wrong-target', 'cursor-gap']) {
     const before = options.readSnapshot();
     options.removeBridgeResult();
     const bridge = await options.launchAndReadBridge();

@@ -20,11 +20,8 @@ const RETIRED_BUILDERS = [
   'scripts/ios/ios-sync-pack-acceptance-mutations.ts',
   'scripts/ios/ios-sync-pack-contract-roundtrip-fixture.ts'
 ];
-const SYNC_FORMAL_ROOTS = [
-  'scripts/ios/ios-bootstrap-acceptance-attempt.mjs',
-  'scripts/ios/ios-foreground-sync-lifecycle-runner.mjs',
-  'scripts/ios/ios-sync-group-provider-fixture.ts'
-];
+const HOSTED_GENERATION_ROOT = 'scripts/ios/ios-hosted-sync-pack-generator.ts';
+const HOSTED_SOURCE_ROOT = 'scripts/ios/ios-hosted-sync-pack-task-source.ts';
 
 describe('iOS formal acceptance contract corpus', () => {
   it('keeps every served byte version-controlled and hash-identified', () => {
@@ -50,19 +47,31 @@ describe('iOS formal acceptance contract corpus', () => {
     }
   });
 
-  it('keeps formal sync scenarios outside retired database and desktop pack production', () => {
+  it('limits production writer and sqlite generation to the named hosted roots', () => {
     for (const retired of RETIRED_BUILDERS) expect(fs.existsSync(retired), retired).toBe(false);
-    const files = [...new Set(SYNC_FORMAL_ROOTS.flatMap(reachableImports))].sort();
-    const source = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    expect(files).not.toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
-    expect(source).not.toMatch(/better-sqlite3|syncPackBuilderFromDriver|companionLanSyncPushWithApply/);
-    expect(source).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
+    expect(fs.readFileSync(HOSTED_GENERATION_ROOT, 'utf8')).toContain('buildDesktopSyncPackFromDriver');
+    const source = fs.readFileSync(HOSTED_SOURCE_ROOT, 'utf8');
+    expect(source).toContain('createBetterSqlite3Driver');
+    expect(source).toContain('initializeDatabaseSchema');
+    const unauthorized = fs.readdirSync('scripts/ios')
+      .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
+      .map((name) => `scripts/ios/${name}`)
+      .filter((file) => ![HOSTED_GENERATION_ROOT, HOSTED_SOURCE_ROOT].includes(file))
+      .filter((file) => /better-sqlite3|syncPackBuilderFromDriver|initializeDatabaseSchema/u
+        .test(fs.readFileSync(file, 'utf8')));
+    expect(unauthorized).toEqual([]);
+    for (const root of ['electron/main.ts', 'src/companion/main.tsx']) {
+      const files = reachableImports(root);
+      expect(files.some((file) => file.includes('ios-hosted-sync-pack'))).toBe(false);
+      expect(files.some((file) => file.includes('ios-hosted-live-scenario'))).toBe(false);
+    }
   });
 
   it('serves a pathname-normalized legal pack with an explicit byte length', async () => {
     const response = captureResponse();
     const routes = await createIosSyncPackAcceptanceRoutes({
-      observations: createIosSyncPackAcceptanceObservations()
+      observations: createIosSyncPackAcceptanceObservations(),
+      packPaths: syncPackPaths()
     });
 
     await expect(routes.handle({
@@ -74,7 +83,7 @@ describe('iOS formal acceptance contract corpus', () => {
 
   it('retains raw pushed version payloads for action-local failure evidence', async () => {
     const observations = createIosSyncPackAcceptanceObservations();
-    const routes = await createIosSyncPackAcceptanceRoutes({ observations });
+    const routes = await createIosSyncPackAcceptanceRoutes({ observations, packPaths: syncPackPaths() });
     const payloadJson = JSON.stringify({ version_id: 'ios-evidence-version' });
     const bodyText = JSON.stringify({ items: [{
       clientOpId: 'node:ios-evidence-version',
@@ -104,6 +113,16 @@ function captureResponse() {
     headers: {},
     end(body) { this.body = body; },
     writeHead(_status, headers) { this.headers = headers; }
+  };
+}
+
+function syncPackPaths() {
+  const root = path.join(ROOT, 'sync-pack-runtime');
+  return {
+    cursorGap: path.join(root, 'cursor-gap.syncpack'),
+    legal: path.join(root, 'legal.syncpack'),
+    successor: path.join(root, 'successor.syncpack'),
+    wrongTarget: path.join(root, 'wrong-target.syncpack')
   };
 }
 

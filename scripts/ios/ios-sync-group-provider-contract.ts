@@ -31,6 +31,9 @@ export function createIosSyncGroupProviderContract(observations: Observations) {
   });
 
   return {
+    acceptedDeviceId() {
+      return acceptedDeviceId;
+    },
     async accept(input: unknown) {
       const serialized = JSON.stringify(input);
       observations.group_key_absent_before_accept =

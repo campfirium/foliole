@@ -13,15 +13,12 @@ import {
 
 const PHASE_KEY = 'foliole-ios-sync-pack-acceptance-phase';
 const PHASES = [
-  'apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
+  'apply', 'reapply', 'wrong-target', 'cursor-gap'
 ] as const;
 type AcceptancePhase = typeof PHASES[number];
 
 const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
-  'corrupt-envelope': 'missing_sync_pack_entry',
   'cursor-gap': 'sync_pack_cursor_not_contiguous',
-  'illegal-dag': 'sync_pack_node_version_missing_parent',
-  'legacy-format': 'unsupported_sync_pack_format_version',
   'wrong-target': 'sync_pack_target_mismatch'
 };
 

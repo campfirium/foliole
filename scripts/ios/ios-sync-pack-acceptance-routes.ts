@@ -1,24 +1,23 @@
 import { readFileSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
-import path from 'node:path';
 
-import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
 import { acceptIosAcceptancePush } from './ios-acceptance-mechanical-push.ts';
 import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
 
 export async function createIosSyncPackAcceptanceRoutes(args: {
   observations: ReturnType<typeof createIosSyncPackAcceptanceObservations>;
   outputDirectory?: string;
-  toPeerId?: string;
+  packPaths: {
+    cursorGap: string;
+    legal: string;
+    successor: string;
+    wrongTarget: string;
+  };
 }) {
-  const fixtureDirectory = loadIosAcceptanceContractCorpus().syncPackDirectory;
   const staticRoutes: Record<string, string> = {
-    '/acceptance/sync-pack/corrupt-envelope': path.join(fixtureDirectory, 'corrupt-envelope.syncpack'),
-    '/acceptance/sync-pack/cursor-gap': path.join(fixtureDirectory, 'cursor-gap.syncpack'),
-    '/acceptance/sync-pack/illegal-dag': path.join(fixtureDirectory, 'illegal-dag.syncpack'),
-    '/acceptance/sync-pack/legacy-format': path.join(fixtureDirectory, 'legacy-format.syncpack'),
-    '/acceptance/sync-pack/legal': path.join(fixtureDirectory, 'legal.syncpack'),
-    '/acceptance/sync-pack/wrong-target': path.join(fixtureDirectory, 'wrong-target.syncpack')
+    '/acceptance/sync-pack/cursor-gap': args.packPaths.cursorGap,
+    '/acceptance/sync-pack/legal': args.packPaths.legal,
+    '/acceptance/sync-pack/wrong-target': args.packPaths.wrongTarget
   };
   let successorReady = false;
   const route = async (request: { bodyText: string; method: string; url: string }) => {
@@ -38,7 +37,7 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
     if (request.method !== 'GET') return null;
     const pathname = new URL(request.url, 'http://acceptance').pathname;
     const filePath = pathname === '/acceptance/sync-pack/successor' && successorReady
-      ? path.join(fixtureDirectory, 'successor.syncpack')
+      ? args.packPaths.successor
       : staticRoutes[pathname];
     return filePath
       ? { body: readFileSync(filePath), contentType: 'application/vnd.foliole.sync-pack' }

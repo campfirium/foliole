@@ -23,9 +23,7 @@ it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', (
     roundtrip: { gates, push: { pushedObjectIds: ['node:capture', 'node:restore'] } }
   };
   const second = { phase: 'reapplied', roundtrip: { gates, push: { pushedObjectIds: [] } } };
-  const rejections = [
-    'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
-  ].map((rejection) => ({
+  const rejections = ['wrong-target', 'cursor-gap'].map((rejection) => ({
     after: snapshot, before: snapshot, bridge: { phase: 'rejected', rejection }
   }));
   const observations = { registration: hostedProviderRegistrationEvidence(), sync_pack: {

@@ -26,6 +26,7 @@ export function loadIosAcceptanceContractCorpus() {
   }
   return {
     contentResource: contentResourceFixture(path.join(ROOT, 'content-resource-read', 'content-resource.syncpack')),
+    contentResourceForPack: (packPath: string) => contentResourceFixture(packPath),
     contentResourcePack: path.join(ROOT, 'content-resource-read', 'content-resource.syncpack'),
     stateInitialPack: path.join(ROOT, 'state-writeback-runtime', 'confirmation-0.syncpack'),
     stateSteadyPack: path.join(ROOT, 'state-writeback-runtime', 'confirmation-1.syncpack'),

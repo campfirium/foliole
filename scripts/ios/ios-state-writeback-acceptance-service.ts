@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 
-import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
 import { acceptIosAcceptancePush } from './ios-acceptance-mechanical-push.ts';
 import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
 
@@ -9,9 +8,8 @@ export { createIosStateWritebackObservations };
 export async function createIosStateWritebackAcceptanceService(args: {
   observations: ReturnType<typeof createIosStateWritebackObservations>;
   outputDirectory: string;
-  toPeerId: string;
+  packPaths: { initial: string; steady: string };
 }) {
-  const corpus = loadIosAcceptanceContractCorpus();
   return {
     route: async (request: { bodyText: string; method: string; url: string }) => {
       if (request.method === 'GET' && request.url === '/companion/diagnostics/sync') {
@@ -37,7 +35,7 @@ export async function createIosStateWritebackAcceptanceService(args: {
       }
       if (request.method !== 'GET' || !request.url.startsWith('/companion/sync-pack?')) return null;
       const fromStateSeq = Number(new URL(request.url, 'http://acceptance').searchParams.get('after_state_seq') ?? 0);
-      const packPath = fromStateSeq === 0 ? corpus.stateInitialPack : corpus.stateSteadyPack;
+      const packPath = fromStateSeq === 0 ? args.packPaths.initial : args.packPaths.steady;
       args.observations.pack_requests += 1;
       return { body: readFileSync(packPath), contentType: 'application/vnd.foliole.sync-pack' };
     },

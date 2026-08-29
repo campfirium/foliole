@@ -7,13 +7,13 @@ export async function createIosSyncGroupScenarioService(args: {
     foreground_sync_lifecycle: Parameters<typeof createIosForegroundSyncLifecycleService>[0]['observations'];
     state_writeback: Parameters<typeof createIosStateWritebackAcceptanceService>[0]['observations'];
   };
+  packPaths: { initial: string; steady: string };
   scenario: string;
-  toPeerId: string;
 }) {
   const service = await createIosStateWritebackAcceptanceService({
     observations: args.observations.state_writeback,
     outputDirectory: args.artifactDir,
-    toPeerId: args.toPeerId
+    packPaths: args.packPaths
   });
   return {
     close: service.close,
