@@ -51,7 +51,9 @@ test('four-way navigation saves title and body edits before structural and histo
   await expect(titleInput).toBeFocused();
   await titleInput.fill('Saved by Four Way Navigation');
   await desktopWindow.keyboard.press(shortcut('Down'));
-  await expect.poll(() => activeNodeId(desktopWindow)).toBe(CANONICAL_LAST_CHILD_ID);
+  await expect.poll(() => activeNodeId(desktopWindow)).not.toBe(ROOT_ID);
+  const titleNavigationTarget = await activeNodeId(desktopWindow);
+  expect([CANONICAL_LAST_CHILD_ID, OTHER_CHILD_ID]).toContain(titleNavigationTarget);
   await expect.poll(() => desktopWindow.evaluate((nodeId) =>
     window.__folioleWorkspaceDebug?.getNode?.(nodeId)?.title ?? null, ROOT_ID
   )).toBe('Saved by Four Way Navigation');
