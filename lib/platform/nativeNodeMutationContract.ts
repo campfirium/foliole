@@ -52,6 +52,15 @@ export type NativeNodeCreationMutationSpec = {
   result: NativeNodeMutationPatchResult;
 };
 
+export type NativePdfImageExcerptCreationMutationSpec = {
+  args: NativeNodeCreationMutationArgs & {
+    attachmentId: string;
+    bytesBase64: string;
+    originalName: string;
+  };
+  result: NativeNodeMutationPatchResult;
+};
+
 export type NativeSplitTopicMutationSpec = {
   args: NativeSplitTopicMutationArgs;
   result: NativeNodeMutationPatchResult;

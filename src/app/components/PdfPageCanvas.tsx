@@ -5,6 +5,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 
 import { resolvePdfPageDimensions, type PdfPageDimensions } from './pdfPageDimensions';
 import { resolvePageText, type PdfPageTextEntry } from './pdfPageText';
+import { useOptionalPdfVisualExcerptRuntime } from './PdfVisualExcerptRuntime';
 
 export const PdfPageCanvas = memo(
   function PdfPageCanvas(props: {
@@ -20,11 +21,13 @@ export const PdfPageCanvas = memo(
     zoomMode: 'custom' | 'fit-width';
     zoom?: number;
   }) {
+    const visualExcerpt = useOptionalPdfVisualExcerptRuntime();
     return (
       <Page
         className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-page"
         {...definedProps({ inputRef: props.pageRef })}
         onLoadSuccess={(page: unknown) => {
+          visualExcerpt?.registerPage(props.pageNumber, page as Parameters<NonNullable<typeof visualExcerpt>['registerPage']>[1]);
           const dimensions = resolvePdfPageDimensions(page);
           if (dimensions) {
             props.onPageLoadSuccess(props.pageNumber, dimensions);

@@ -18,7 +18,7 @@ export interface NodeReviewPayload {
 
 export interface NodeAnchorLinkPayload {
   id: string;
-  kind: 'highlight' | 'cloze';
+  kind: 'highlight' | 'cloze' | 'image-excerpt';
   locator?: {
     attachmentId?: string;
     from?: number;

@@ -110,11 +110,11 @@ beforeEach(() => {
 });
 
 describe('createRevealAnchorInDocument text locator', () => {
-  it('routes pdf locators when the current editor is unavailable', () => {
+  it('routes text and image excerpt pdf locators when the current editor is unavailable', () => {
     const revealAnchorInDocument = createRevealAnchorInDocument(createRevealPdfArgs() as never);
 
     revealAnchorInDocument({ id: 'pdf-hl-2', kind: 'highlight', locator: { page: 7, x: 0.2, y: 0.2 } });
-    revealAnchorInDocument({ id: 'pdf-hl-3', kind: 'highlight', locator: { page: 7, x: 0.9, y: 0.8 } });
+    revealAnchorInDocument({ id: 'pdf-image-3', kind: 'image-excerpt', locator: { page: 7, x: 0.9, y: 0.8 } });
 
     expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(1, 'node-pdf-parent', { page: 7, x: 0.2, y: 0.2 });
     expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(2, 'node-pdf-parent', { page: 7, x: 0.9, y: 0.8 });

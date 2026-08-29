@@ -118,7 +118,7 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!activeNode) {
       return;
     }
-    if (!adapter && anchor.kind === 'highlight' && isPdfAnchorLocator(anchor.locator)) {
+    if (!adapter && (anchor.kind === 'highlight' || anchor.kind === 'image-excerpt') && isPdfAnchorLocator(anchor.locator)) {
       requestPdfAnchorJump(args.ws.activeNodeId, anchor.locator);
       return;
     }

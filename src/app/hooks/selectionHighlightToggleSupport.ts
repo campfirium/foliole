@@ -85,12 +85,13 @@ export function findTextAnchorAtPosition(
     ) {
       return [];
     }
+    const kind: LocatorHighlightMatch['kind'] = node.anchorLink.kind;
     const canAdjustRange = isTextAnchorLocator(node.anchorLink.locator);
     return getTextAnchorLocators(node.anchorLink.locator)
       .filter((locator) => locator.from <= position && position < locator.to)
       .map((locator) => ({
         ...(canAdjustRange ? { canAdjustRange } : {}),
-        kind: node.anchorLink?.kind ?? 'highlight',
+        kind,
         locator,
         nodeId: node.id,
         originalText: locator.originalText

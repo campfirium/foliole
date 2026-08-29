@@ -29,6 +29,7 @@ import {
 } from './workspaceStoreNodeSchedulerActions';
 import { createShelveNodeAction, createUnshelveNodeAction } from './workspaceStoreNodeShelveAction';
 import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
+import { createPdfImageExcerptAction } from './workspaceStorePdfImageExcerptActions';
 import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import {
@@ -46,6 +47,7 @@ type WorkspaceNodeActions = Pick<
   | 'createHighlightNodeFromSelection'
   | 'createImageClozeNodes'
   | 'createQANodeFromSelection'
+  | 'createPdfImageExcerpt'
   | 'createRootNode'
   | 'createVirtualNode'
   | 'deleteImageClozeRegion'
@@ -133,6 +135,11 @@ export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => Worksp
       get
     ),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers, get),
+    createPdfImageExcerpt: createPdfImageExcerptAction(
+      set,
+      (args) => getWorkspaceMutationRepository().syncPdfImageExcerptCreation(args),
+      get
+    ),
     createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession, get),
     createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession, get),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers, get),

@@ -13,10 +13,14 @@ vi.mock('./CompanionArticleDocument', () => ({
 }));
 
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
-  SimplePdfDocument: (props: { onBackToText?: () => void }) => (
+  SimplePdfDocument: (props: {
+    onBackToText?: () => void;
+    onMissingResource?: (attachmentId: string) => void;
+  }) => (
     <div>
       <div>PDF original viewer</div>
-      <button onClick={props.onBackToText}>Text</button>
+      {props.onBackToText ? <button onClick={props.onBackToText}>Text</button> : null}
+      <button onClick={() => props.onMissingResource?.('pdf-attachment-1')}>Load PDF attachment</button>
     </div>
   )
 }));
@@ -64,6 +68,18 @@ function createSecondPdfReadableSurface() {
       title: 'Second PDF text'
     },
     selectedBrowseNodeId: 'topic-2'
+  };
+}
+
+function createPdfSurface(content: string, bodyStatus: 'empty' | 'ready' = 'ready') {
+  const surface = createPdfReadableSurface();
+  return {
+    ...surface,
+    readableArticle: {
+      ...surface.readableArticle,
+      bodyStatus,
+      content
+    }
   };
 }
 
@@ -171,8 +187,43 @@ async function testInlineAttachmentSyncUsesLatestTopic() {
   await waitFor(() => expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('topic-2'));
 }
 
+function testPdfPlaceholderUsesOriginalSurface() {
+  renderSurface(createPdfSurface('# Scanned PDF\n\nLinked PDF source ready for the reader surface.'));
+
+  expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
+  expect(screen.queryByText('Text version')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument();
+}
+
+function testPdfWithoutBodyUsesOriginalSurface() {
+  renderSurface(createPdfSurface('', 'empty'));
+
+  expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
+  expect(screen.queryByText('This topic has no body yet.')).not.toBeInTheDocument();
+}
+
+async function testOriginalPdfAttachmentSync() {
+  const pullFromDesktop = vi.fn(async () => undefined);
+  renderSurface(createPdfSurface(''), createWorkspaceSync({
+    pullFromDesktop,
+    state: { endpoint_url: 'http://10.0.2.2:38641', remembered_targets: [] }
+  }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load PDF attachment' }));
+
+  await waitFor(() => expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('topic-1'));
+  expect(attachmentSyncMock.syncCompanionAttachmentResourceFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641',
+    'pdf-attachment-1'
+  );
+  await waitFor(() => expect(pullFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641'));
+}
+
 describe('CompanionShellContent PDF articles', () => {
   it('keeps extracted PDF text as the primary mobile reading surface', testPrimaryPdfReadingSurface);
+  it('opens the original PDF when the synced body is only a PDF placeholder', testPdfPlaceholderUsesOriginalSurface);
+  it('opens the original PDF when no text body exists', testPdfWithoutBodyUsesOriginalSurface);
   it('syncs a missing inline attachment from the current topic surface', testInlineAttachmentSync);
   it('syncs a missing inline attachment against the latest topic after switching', testInlineAttachmentSyncUsesLatestTopic);
+  it('syncs the original PDF attachment on demand', testOriginalPdfAttachmentSync);
 });

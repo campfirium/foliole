@@ -25,6 +25,12 @@ it('treats reading nodes as reading items', () => {
   expect(getReviewItemKind(createNode())).toBe('reading');
 });
 
+it('keeps image excerpts out of review until an explicit cloze is created', () => {
+  expect(getReviewItemKind(createNode({
+    anchorLink: { id: 'image-1', kind: 'image-excerpt' }
+  }))).toBe('none');
+});
+
 it('keeps topic nodes in the reading lane even when reveal exists', () => {
   expect(getReviewItemKind(createNode({ kind: 'topic', reveal: 'answer' }))).toBe('reading');
 });

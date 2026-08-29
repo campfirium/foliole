@@ -10,6 +10,7 @@ import { PdfPageCropFrame } from './PdfPageCropFrame';
 import { resolveRenderedPageDimensions, type PdfPageDimensions } from './pdfPageDimensions';
 import { renderPdfHighlightMarkers, renderSearchHighlightsOnPage, renderSelectionOverlay, type PdfPageOverlayLocator } from './PdfPageOverlays';
 import type { PdfPageTextEntry } from './pdfPageText';
+import { PdfVisualExcerptPageLayer } from './PdfVisualExcerptPageLayer';
 
 interface RenderPdfPageArgs {
   fitWidthTargetWidth: number | null;
@@ -176,6 +177,7 @@ function renderPdfPageContent(props: PdfPageContentProps) {
       {renderPdfHighlightMarkers(props.pageHighlights, props.markerSize)}
       {renderSearchHighlightsOnPage(props.pageNumber, props.pageSearchHighlights, props.markerSize)}
       {renderSelectionOverlay(props.pdfSelectionLocator, props.markerSize)}
+      <PdfVisualExcerptPageLayer pageNumber={props.pageNumber} />
     </div>
   );
 }

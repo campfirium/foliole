@@ -34,6 +34,7 @@ export {
 } from './workspaceRuntimeNodeRepository';
 export {
   saveCreatedWorkspaceNodeMutationSnapshot,
+  savePdfImageExcerptNodeMutation,
   saveSplitTopicWorkspaceMutation,
   saveWorkspaceNodeContentMutationWithAnchors
 } from './workspaceRuntimeNodeMutationsNow';

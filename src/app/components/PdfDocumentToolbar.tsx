@@ -2,6 +2,7 @@ import { appFloatingToolbarClassName } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfPageControls, PdfSearchControls, PdfZoomControls } from './PdfDocumentToolbarControls';
+import { PdfVisualExcerptToolbarControls } from './PdfVisualExcerptToolbarControls';
 
 interface PdfDocumentToolbarProps {
   displayPage: number;
@@ -30,7 +31,7 @@ interface PdfDocumentToolbarProps {
 }
 
 function resolveToolbarShellClassName() {
-  return 'sticky top-0 z-surface-overlay h-0 w-full px-4 pt-3 pointer-events-none';
+  return 'sticky top-0 z-floating h-0 w-full px-4 pt-3 pointer-events-none';
 }
 
 function resolveToolbarPanelClassName(isVisible: boolean) {
@@ -75,6 +76,8 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
           onPreviousPage={props.onPreviousPage}
           onToolbarInteraction={props.onToolbarInteraction}
         />
+        <ToolbarDivider />
+        <PdfVisualExcerptToolbarControls onToolbarInteraction={props.onToolbarInteraction} />
         <ToolbarDivider />
         <PdfSearchControls
           onClearSearch={props.onClearSearch}

@@ -6,6 +6,7 @@ export interface PdfHighlightLocator {
   id: string;
   label: string;
   nodeId: string;
+  kind: 'highlight' | 'image-excerpt';
   page: number;
   x: number | null;
   y: number | null;
@@ -60,7 +61,7 @@ export function collectPdfHighlightLocators(
     }
     const node = nodesById[nodeId];
     const anchor = node?.anchorLink;
-    if (!node || anchor?.kind !== 'highlight' || !anchor.id || !isPdfAnchorLocator(anchor.locator)) {
+    if (!node || (anchor?.kind !== 'highlight' && anchor?.kind !== 'image-excerpt') || !anchor.id || !isPdfAnchorLocator(anchor.locator)) {
       continue;
     }
     if (seenLocatorIds.has(anchor.id)) {
@@ -71,6 +72,7 @@ export function collectPdfHighlightLocators(
       id: anchor.id,
       label: node.title,
       nodeId: node.id,
+      kind: anchor.kind,
       page: anchor.locator.page,
       rects: Array.isArray(anchor.locator.rects)
         ? anchor.locator.rects.filter(

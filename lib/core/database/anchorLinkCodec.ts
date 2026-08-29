@@ -2,7 +2,7 @@ import { parseFormulaLocator, type FormulaStoredAnchorLocator } from './anchorLi
 
 export interface StoredAnchorLink {
   id: string;
-  kind: 'highlight' | 'cloze';
+  kind: 'highlight' | 'cloze' | 'image-excerpt';
   locator?: {
     attachmentId?: string;
     from?: number;
@@ -192,7 +192,7 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     if (typeof parsed.id !== 'string') {
       return null;
     }
-    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') {
+    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze' && parsed.kind !== 'image-excerpt') {
       return null;
     }
     const base: StoredAnchorLink = { id: parsed.id, kind: parsed.kind };

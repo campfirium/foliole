@@ -9,7 +9,8 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceNode = Node;
 
 function getAnnotationKind(node: WorkspaceNode): EditorAnnotationOperationSnapshot['kind'] {
-  return node.anchorLink?.kind === 'cloze' ? 'cloze' : 'highlight';
+  if (node.anchorLink?.kind === 'cloze') return 'cloze';
+  return node.anchorLink?.kind === 'image-excerpt' ? 'image-excerpt' : 'highlight';
 }
 
 export function createEditorAnnotationSnapshot(

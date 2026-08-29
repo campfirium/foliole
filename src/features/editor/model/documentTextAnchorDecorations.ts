@@ -2,7 +2,7 @@ import { type EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
 interface TextAnchorDecorationNode {
   anchorLink?: {
-    kind: 'highlight' | 'cloze';
+    kind: 'highlight' | 'cloze' | 'image-excerpt';
     locator?: unknown;
   } | null;
   id: string;
@@ -75,8 +75,10 @@ function resolveNodeTextAnchorDecorations(
   parentContent: string
 ): EditorTextAnchorDecoration[] {
   const anchorLink = node.anchorLink;
+  if (anchorLink?.kind === 'image-excerpt') return [];
+  const kind = anchorLink?.kind;
   const locators = getTextAnchorLocators(anchorLink?.locator);
-  if (!anchorLink || locators.length === 0) {
+  if (!anchorLink || !kind || locators.length === 0) {
     return [];
   }
   return locators
@@ -84,7 +86,7 @@ function resolveNodeTextAnchorDecorations(
     .filter((selection): selection is { from: number; to: number } => Boolean(selection && selection.from < selection.to))
     .map((selection) => ({
       from: selection.from,
-      kind: anchorLink.kind,
+      kind,
       nodeId: node.id,
       to: selection.to
     }));

@@ -5,6 +5,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
+import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 
 type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
@@ -61,7 +62,7 @@ export function PdfDocumentSurfaceCache(props: {
   activeSourceHint: string | null;
   editorNodeId: string | null;
   editorNodeViewState: NodeViewState | undefined;
-  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  highlightLocators: PdfHighlightLocator[];
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onActiveCacheVisibilityChange: (visible: boolean) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;

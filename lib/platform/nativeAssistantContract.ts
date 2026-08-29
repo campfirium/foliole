@@ -98,7 +98,7 @@ export interface NativeAssistantSendMessageArgs {
 }
 
 export interface NativeAssistantWorkspaceChildSummary {
-  anchorKind?: 'cloze' | 'highlight';
+  anchorKind?: 'cloze' | 'highlight' | 'image-excerpt';
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   hasContent: boolean;
   isActive?: boolean;
@@ -132,7 +132,7 @@ export interface NativeAssistantWorkspaceSelectionContext {
 
 export interface NativeAssistantWorkspaceAnchorContext {
   id: string;
-  kind: 'cloze' | 'highlight';
+  kind: 'cloze' | 'highlight' | 'image-excerpt';
   page?: number;
   parentNodeId?: string;
   parentTitle?: string;

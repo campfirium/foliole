@@ -85,6 +85,41 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
   }
 }
 
+export async function savePdfImageExcerptNodeMutation(args: {
+  activeNodeId: string;
+  attachmentId: string;
+  bytesBase64: string;
+  node: WorkspaceRuntimeNode;
+  nodeOrder: string[];
+  position: number;
+}): Promise<WorkspaceNodeMutationPatchResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  const payload = createWorkspaceRuntimeNodeSnapshot(args.node, args.position);
+  const pendingOrderAck = capturePendingNodeOrderAck();
+  stagePendingNodeSync(payload, { optimistic: true });
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.createPdfImageExcerpt, {
+      ...payload,
+      activeNodeId: args.activeNodeId,
+      attachmentId: args.attachmentId,
+      bytesBase64: args.bytesBase64,
+      nodeOrder: args.nodeOrder,
+      originalName: `pdf-image-excerpt-page-${(payload.anchorLink?.locator as { page?: number } | undefined)?.page ?? 1}.png`
+    });
+    if (!isCreateNodeMutationPatchResult(result)) return null;
+    resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
+    resolveCapturedPendingNodeOrder(pendingOrderAck);
+    return result;
+  } catch (error) {
+    logRuntimeError('runtime sync failed', {
+      area: 'native', action: 'create_pdf_image_excerpt', command: NATIVE_COMMANDS.createPdfImageExcerpt,
+      fallback: 'none', error
+    });
+    return null;
+  }
+}
+
 export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
   affectedAnchorNodes: WorkspaceRuntimeNode[];
   diagnostics?: RuntimeNodeContentMutationDiagnostics;
