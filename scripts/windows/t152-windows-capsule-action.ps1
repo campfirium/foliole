@@ -80,8 +80,9 @@ try {
   Invoke-Checked "extract" "C:\Windows\System32\tar.exe" @("-xf", $archive, "-C", $sourceRoot)
   if ((Get-FileHash -LiteralPath (Join-Path $sourceRoot "package-lock.json") -Algorithm SHA256).Hash.ToLowerInvariant() -ne
       $manifest.lockfileSha256) { throw "lockfile digest mismatch" }
-  $files = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | ForEach-Object {
-    $_.FullName.Substring($sourceRoot.Length + 1).Replace("\", "/") } | Sort-Object)
+  [string[]]$files = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | ForEach-Object {
+    $_.FullName.Substring($sourceRoot.Length + 1).Replace("\", "/") })
+  [Array]::Sort($files, [StringComparer]::Ordinal)
   $list = [string]::Join("`n", $files) + "`n"
   $listPath = Join-Path $evidenceRoot "archive-files.txt"
   [IO.File]::WriteAllText($listPath, $list, [Text.UTF8Encoding]::new($false))

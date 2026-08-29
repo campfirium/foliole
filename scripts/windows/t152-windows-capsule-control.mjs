@@ -111,10 +111,19 @@ export async function runT152WindowsCapsule({ action, attemptId = randomUUID(),
     await upload(host, capsule.archivePath, `t152-product-${attemptId}.tar`, env);
     await upload(host, capsule.manifestPath, `t152-manifest-${attemptId}.json`, env);
   }
-  const output = await run('ssh', ['-T', ...sshBase(env), host, ...remoteCommand(action, attemptId)], { env });
+  let output = '';
+  let remoteError = null;
+  try {
+    output = await run('ssh', ['-T', ...sshBase(env), host,
+      ...remoteCommand(action, attemptId)], { env });
+  } catch (error) {
+    remoteError = error;
+    output = error.output || error.message;
+  }
   fs.writeFileSync(path.join(capsule.root, `${action}.log`), output);
   const receiptPath = path.join(capsule.root, `${action}-receipt.json`);
   const receipt = await downloadReceipt(host, output, receiptPath, env);
+  if (remoteError) throw Object.assign(remoteError, { receipt, receiptPath });
   if (receipt.action !== action || receipt.attemptId !== attemptId
       || receipt.resultStatus !== 'success') throw new Error('Windows capsule receipt is not successful');
   return { attemptId, capsule, output, receipt, receiptPath };
