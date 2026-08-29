@@ -130,11 +130,11 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       }
       return;
     }
+    const wholeImageTarget = getWholeImageExcerptTarget(event.target);
+    if (wholeImageTarget && openWholeImageExcerptToolbar(args, event, wholeImageTarget)) return;
     if (isHighlightTarget(event.target) && openExistingHighlightToolbar(args, event)) {
       return;
     }
-    const wholeImageTarget = getWholeImageExcerptTarget(event.target);
-    if (wholeImageTarget && openWholeImageExcerptToolbar(args, event, wholeImageTarget)) return;
     const payload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     if (!payload) {
       openExistingHighlightToolbar(args, event);

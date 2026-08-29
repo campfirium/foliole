@@ -152,7 +152,7 @@ it('opens an existing highlight toolbar from a highlight click', () => {
 
 it('opens a whole-image excerpt annotation and updates only its annotation suffix', () => {
   const imageRegion = document.createElement('div');
-  imageRegion.className = 'cm-md-image-cloze-region';
+  imageRegion.className = 'cm-md-highlight cm-md-image-cloze-region';
   imageRegion.dataset.regionId = 'whole-image-region';
   imageRegion.dataset.regionScope = 'full-image';
   imageRegion.getBoundingClientRect = vi.fn(() => mockRect(40, 90, 100, 80));
