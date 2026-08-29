@@ -19,6 +19,7 @@ describe('iOS bridge acceptance host contract', () => {
     const databaseUpgradeScenario = fs.readFileSync('src/companion/iosDatabaseUpgradeAcceptance.ts', 'utf8');
     const deviceIdentityScenario = fs.readFileSync('src/companion/iosDeviceIdentityAcceptance.ts', 'utf8');
     const syncPackScenario = fs.readFileSync('src/companion/iosSyncPackAcceptance.ts', 'utf8');
+    const syncPackPhase = fs.readFileSync('src/companion/iosSyncPackAcceptancePhase.ts', 'utf8');
     const syncTriggerScenario = fs.readFileSync('src/companion/iosSyncTriggerAcceptance.ts', 'utf8');
     const stateWritebackScenario = fs.readFileSync('src/companion/iosStateWritebackAcceptance.ts', 'utf8');
     expect(entry).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1'");
@@ -38,9 +39,11 @@ describe('iOS bridge acceptance host contract', () => {
     expect(acceptanceSyncGroup).not.toContain('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
-    expect(syncPackScenario).toContain(
+    expect(syncPackPhase).toContain(
       "'apply', 'reapply', 'wrong-target', 'cursor-gap'"
     );
+    expect(syncPackPhase).toContain('INSERT INTO companion_meta');
+    expect(syncPackScenario).not.toContain('localStorage');
     expect(syncPackScenario).toContain('pathWithQuery: path');
     expect(contentResourceScenario).toContain('pullMissingContentBlobs(endpoint)');
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT === '1'");
