@@ -9,7 +9,7 @@ import {
 } from '../../lib/platform/iosSyncPackAcceptanceContract';
 
 const mocks = vi.hoisted(() => ({
-  apply: vi.fn(), capture: vi.fn(), loadPeer: vi.fn(), loadWorkspace: vi.fn(),
+  apply: vi.fn(), capture: vi.fn(), loadWorkspace: vi.fn(),
   push: vi.fn(), restore: vi.fn(), sign: vi.fn()
 }));
 
@@ -22,7 +22,6 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
 }));
 vi.mock('./companionCaptureTextActions', () => ({ persistCompanionCapturedText: mocks.capture }));
 vi.mock('./companionTrashActions', () => ({ restoreCompanionTrashNode: mocks.restore }));
-vi.mock('./iosAcceptanceSyncGroup', () => ({ loadIosAcceptanceSyncPeer: mocks.loadPeer }));
 
 import { runIosNodeVersionRoundtripAcceptance } from './iosNodeVersionRoundtripAcceptance';
 
@@ -32,10 +31,11 @@ it('mutates the workspace snapshot produced by the applied contract pack', async
   mocks.capture.mockResolvedValue({ nodeId: 'capture-1', snapshot });
   mocks.restore.mockResolvedValue({ nodeId: 'ios-acceptance-restore', snapshot });
   mocks.push.mockResolvedValue({ pushConflictCount: 0, pushError: null, pushRejectedCount: 0 });
-  mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'acceptance-desktop' });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
 
-  await runIosNodeVersionRoundtripAcceptance('http://desktop.local');
+  await runIosNodeVersionRoundtripAcceptance('http://desktop.local', {
+    sourceHostName: 'Acceptance Desktop', sourcePeerId: 'acceptance-desktop'
+  });
 
   expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
     deviceId: IOS_SYNC_PACK_MUTATION_AUTHOR,

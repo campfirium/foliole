@@ -4,7 +4,7 @@ import { loadCompanionBootstrapState } from '../shared/platform/companionBootstr
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
+import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
 import {
   rerunIosNodeVersionRoundtripAcceptance,
@@ -27,7 +27,7 @@ async function prepareSyncGroup(databasePath: string | null) {
   await saveCompanionWorkspaceSyncEndpoint('');
   const joined = await ensureIosAcceptanceSyncGroup(databasePath);
   await saveCompanionWorkspaceSyncEndpoint(joined.endpointUrl);
-  return joined.endpointUrl;
+  return joined;
 }
 
 function loadPhase(): AcceptancePhase {
@@ -40,10 +40,13 @@ function advancePhase(phase: AcceptancePhase) {
   if (next) localStorage.setItem(PHASE_KEY, next);
 }
 
-async function applyPack(endpoint: string, phase: AcceptancePhase) {
+async function applyPack(
+  endpoint: string,
+  peer: { sourceHostName: string; sourcePeerId: string },
+  phase: AcceptancePhase
+) {
   const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
   const path = `/acceptance/sync-pack/${kind}`;
-  const peer = await loadIosAcceptanceSyncPeer();
   return await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: path }),
     ...peer,
@@ -51,22 +54,26 @@ async function applyPack(endpoint: string, phase: AcceptancePhase) {
   });
 }
 
-async function runPhase(endpoint: string, phase: AcceptancePhase) {
+async function runPhase(
+  endpoint: string,
+  peer: { sourceHostName: string; sourcePeerId: string },
+  phase: AcceptancePhase
+) {
   if (phase === 'apply') {
-    const initial = await applyPack(endpoint, phase);
+    const initial = await applyPack(endpoint, peer, phase);
     return {
       apply: initial,
       error: null,
-      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint)
+      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint, peer)
     };
   }
   if (phase === 'reapply') {
-    return { apply: null, error: null, roundtrip: await rerunIosNodeVersionRoundtripAcceptance(endpoint) };
+    return { apply: null, error: null, roundtrip: await rerunIosNodeVersionRoundtripAcceptance(endpoint, peer) };
   }
   const expectedError = REJECTION_ERRORS[phase];
   if (!expectedError) throw new Error(`Unexpected iOS Sync Pack phase: ${phase}`);
   try {
-    await applyPack(endpoint, phase);
+    await applyPack(endpoint, peer, phase);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes(expectedError)) return { apply: null, error: message };
@@ -78,9 +85,9 @@ async function runPhase(endpoint: string, phase: AcceptancePhase) {
 export async function runIosSyncPackAcceptance() {
   try {
     const bootstrap = await loadCompanionBootstrapState();
-    const endpoint = await prepareSyncGroup(bootstrap.database_path);
+    const joined = await prepareSyncGroup(bootstrap.database_path);
     const phase = loadPhase();
-    const result = await runPhase(endpoint, phase);
+    const result = await runPhase(joined.endpointUrl, joined.peer, phase);
     advancePhase(phase);
     postResult({
       ...result,

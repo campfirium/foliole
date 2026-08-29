@@ -9,8 +9,9 @@ import {
   serializeSyncProtocolTxt
 } from '../../lib/platform/syncProtocolContract';
 
-const runtime = vi.hoisted(() => ({ discover: vi.fn(), group: vi.fn(), key: vi.fn(), load: vi.fn() }));
+const runtime = vi.hoisted(() => ({ deriveTag: vi.fn(), discover: vi.fn(), group: vi.fn(), key: vi.fn(), load: vi.fn() }));
 
+vi.mock('../../lib/core/sync/workgroupAead', () => ({ deriveWorkgroupTag: runtime.deriveTag }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: { loadDiscoveryCandidates: runtime.discover }
 }));
@@ -24,8 +25,7 @@ vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
 
 import {
   discoverIosHostedProvider,
-  ensureIosAcceptanceSyncGroup,
-  loadIosAcceptanceSyncPeer
+  ensureIosAcceptanceSyncGroup
 } from './iosAcceptanceSyncGroup';
 
 const endpointUrl = 'http://hosted-provider.local:43123';
@@ -56,6 +56,7 @@ beforeEach(() => {
   runtime.load.mockResolvedValue([{ discovery, endpointUrl }]);
   runtime.group.mockResolvedValue(null);
   runtime.key.mockResolvedValue(null);
+  runtime.deriveTag.mockResolvedValue(groupTag);
 });
 
 it('accepts exactly one Network.framework candidate whose TXT and HTTP identity match', async () => {
@@ -94,25 +95,16 @@ it('rejects multiple exact hosted providers', async () => {
 it('rejects a restored group whose persisted key does not derive the advertised tag', async () => {
   runtime.group.mockResolvedValue({ group_id: IOS_HOSTED_SYNC_GROUP_ID });
   runtime.key.mockResolvedValue('YQ');
+  runtime.deriveTag.mockResolvedValue('b'.repeat(32));
   await expect(ensureIosAcceptanceSyncGroup('/acceptance.db'))
     .rejects.toThrow('sync_group_identity_mismatch');
 });
 
-it('loads the sync source from the single persisted remote Device without browsing again', async () => {
-  runtime.group.mockResolvedValue({
-    devices: [
-      { device_identity_key: 'accepted-device', device_name: 'iPhone', state: 'active' },
-      { device_identity_key: IOS_HOSTED_PROVIDER_DEVICE_ID, device_name: 'Acceptance Provider', state: 'active' }
-    ],
-    local_device_identity_key: 'accepted-device'
+it('returns the sync source from the exact discovered provider identity', async () => {
+  runtime.group.mockResolvedValue({ group_id: IOS_HOSTED_SYNC_GROUP_ID });
+  runtime.key.mockResolvedValue('acceptance-workgroup-key');
+  await expect(ensureIosAcceptanceSyncGroup('/acceptance.db')).resolves.toMatchObject({
+    peer: { sourceHostName: 'Acceptance Provider', sourcePeerId: IOS_HOSTED_PROVIDER_DEVICE_ID }
   });
-  await expect(loadIosAcceptanceSyncPeer()).resolves.toEqual({
-    sourceHostName: 'Acceptance Provider', sourcePeerId: IOS_HOSTED_PROVIDER_DEVICE_ID
-  });
-  expect(runtime.discover).not.toHaveBeenCalled();
-});
-
-it('fails closed unless exactly one persisted remote Device owns the sync source', async () => {
-  runtime.group.mockResolvedValue({ devices: [], local_device_identity_key: 'accepted-device' });
-  await expect(loadIosAcceptanceSyncPeer()).rejects.toThrow('ios_hosted_sync_group_peer_count_0');
+  expect(runtime.discover).toHaveBeenCalledOnce();
 });

@@ -13,12 +13,11 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
 import { restoreCompanionTrashNode } from './companionTrashActions';
-import { loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
-
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
 const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';
+type SyncPeer = { sourceHostName: string; sourcePeerId: string };
 
-export async function runIosNodeVersionRoundtripAcceptance(endpoint: string) {
+export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, peer: SyncPeer) {
   const initialSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   if (!initialSnapshot) throw new Error('ios_node_version_roundtrip_snapshot_missing');
   const capture = await persistCompanionCapturedText({
@@ -40,7 +39,7 @@ export async function runIosNodeVersionRoundtripAcceptance(endpoint: string) {
   if (push.pushError || push.pushConflictCount !== 0 || push.pushRejectedCount !== 0) {
     throw new Error(`ios_node_version_roundtrip_push_failed:${push.pushError ?? 'rejected'}`);
   }
-  const successor = await applySuccessor(endpoint);
+  const successor = await applySuccessor(endpoint, peer);
   return {
     capture_node_id: capture.nodeId,
     gates: readMutationGates(),
@@ -50,16 +49,15 @@ export async function runIosNodeVersionRoundtripAcceptance(endpoint: string) {
   };
 }
 
-export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string) {
+export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string, peer: SyncPeer) {
   return {
     gates: readMutationGates(),
     push: await pushLocalDirtyObjects(endpoint),
-    successor: await applySuccessor(endpoint)
+    successor: await applySuccessor(endpoint, peer)
   };
 }
 
-async function applySuccessor(endpoint: string) {
-  const peer = await loadIosAcceptanceSyncPeer();
+async function applySuccessor(endpoint: string, peer: SyncPeer) {
   return applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
     ...peer,

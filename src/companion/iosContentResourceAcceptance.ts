@@ -11,7 +11,7 @@ import { loadCompanionPdfPageText } from '../shared/platform/companionSyncObject
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { ensureIosAcceptanceSyncGroup, loadIosAcceptanceSyncPeer } from './iosAcceptanceSyncGroup';
+import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
@@ -29,8 +29,7 @@ const TOKENS = {
   topic: 'topic-amber-token'
 } as const;
 
-async function applyStructure(endpoint: string) {
-  const peer = await loadIosAcceptanceSyncPeer();
+async function applyStructure(endpoint: string, peer: { sourceHostName: string; sourcePeerId: string }) {
   await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: PACK_PATH }),
     ...peer,
@@ -77,11 +76,12 @@ export async function runIosContentResourceAcceptance() {
   try {
     const bootstrap = await loadCompanionBootstrapState();
     const group = await loadCompanionSyncGroup();
-    const endpoint = (await ensureIosAcceptanceSyncGroup(bootstrap.database_path)).endpointUrl;
+    const joined = await ensureIosAcceptanceSyncGroup(bootstrap.database_path);
+    const endpoint = joined.endpointUrl;
     let resourceSync = null;
     if (!group) {
       await saveCompanionWorkspaceSyncEndpoint(endpoint);
-      await applyStructure(endpoint);
+      await applyStructure(endpoint, joined.peer);
       resourceSync = {
         content: await pullMissingContentBlobs(endpoint),
         attachments: await pullMissingAttachmentResources(endpoint)

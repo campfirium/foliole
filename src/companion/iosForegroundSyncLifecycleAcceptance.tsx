@@ -11,18 +11,14 @@ import { postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
-  const initialSyncStarted = useRef(false);
+  const manualSyncStarted = useRef(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrap);
 
   useEffect(() => {
-    if (initialSyncStarted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
-      !workspaceSync.syncGroupJoined) return;
-    initialSyncStarted.current = true;
+    if (manualSyncStarted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
+      !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null) return;
+    manualSyncStarted.current = true;
     const endpoint = workspaceSync.state.endpoint_url;
-    if (workspaceSync.state.last_synced_at !== null) {
-      postReady(workspaceSync);
-      return;
-    }
     void workspaceSync.pullFromDesktop(endpoint).then(() => {
       postReady(workspaceSync);
     }).catch((error) => {

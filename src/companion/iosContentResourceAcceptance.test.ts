@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(), ensureGroup: vi.fn(), loadBootstrap: vi.fn(), loadExternal: vi.fn(), loadGroup: vi.fn(),
-  loadPdf: vi.fn(), loadPeer: vi.fn(), loadWorkspace: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
+  loadPdf: vi.fn(), loadWorkspace: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
   pullContent: vi.fn(), resolveArticle: vi.fn(), resolveResource: vi.fn(),
   saveEndpoint: vi.fn(), search: vi.fn(), sign: vi.fn()
 }));
@@ -25,7 +25,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
 vi.mock('../shared/platform/companionReadableArticle', () => ({ resolveReadableCompanionArticleByNodeId: mocks.resolveArticle }));
 vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({
-  ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
+  ensureIosAcceptanceSyncGroup: mocks.ensureGroup
 }));
 
 import { runIosContentResourceAcceptance } from './iosContentResourceAcceptance';
@@ -35,8 +35,8 @@ beforeEach(() => {
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.loadGroup.mockResolvedValue(null);
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
-    group: { group_id: 'group-1' }, joined: true });
-  mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
+    group: { group_id: 'group-1' }, joined: true,
+    peer: { sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' } });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });
   mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['ios-acceptance-valid-attachment'] });

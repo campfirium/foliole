@@ -4,7 +4,6 @@ import {
   IOS_HOSTED_PROVIDER_DEVICE_ID,
   IOS_HOSTED_SYNC_GROUP_ID
 } from '../../lib/platform/iosHostedSyncGroupContract';
-import { resolveRemoteSyncGroupDevices } from '../../lib/platform/syncGroupContract';
 import {
   parseSyncProtocolTxt,
   syncProtocolVersionHintMatchesDescriptor
@@ -53,7 +52,11 @@ export async function joinIosAcceptanceSyncGroup(databasePath: string) {
   if (group.group_id !== discovered.discovery.group_id || groupTag !== discovered.discovery.group_tag) {
     throw new Error('sync_group_discovery_identity_mismatch');
   }
-  return { endpointUrl: discovered.endpointUrl, group: { ...group, group_tag: groupTag } };
+  return {
+    endpointUrl: discovered.endpointUrl,
+    group: { ...group, group_tag: groupTag },
+    peer: syncPeerFromDiscovery(discovered.discovery)
+  };
 }
 
 export async function ensureIosAcceptanceSyncGroup(databasePath: string | null) {
@@ -65,21 +68,28 @@ export async function ensureIosAcceptanceSyncGroup(databasePath: string | null) 
     if (existing.group_id !== discovered.discovery.group_id || groupTag !== discovered.discovery.group_tag) {
       throw new Error('sync_group_identity_mismatch');
     }
-    return { endpointUrl: discovered.endpointUrl, group: { ...existing, group_tag: groupTag }, joined: false };
+    return {
+      endpointUrl: discovered.endpointUrl,
+      group: { ...existing, group_tag: groupTag },
+      joined: false,
+      peer: syncPeerFromDiscovery(discovered.discovery)
+    };
   }
   if (!databasePath) throw new Error('iOS acceptance database is unavailable.');
   const joined = await joinIosAcceptanceSyncGroup(databasePath);
   return { ...joined, joined: true };
 }
 
-export async function loadIosAcceptanceSyncPeer() {
-  const group = await loadCompanionSyncGroup();
-  const peers = group ? resolveRemoteSyncGroupDevices(group) : [];
-  if (peers.length !== 1) throw new Error(`ios_hosted_sync_group_peer_count_${peers.length}`);
-  const peer = peers[0]!;
+function syncPeerFromDiscovery(discovery: {
+  provider_device_id: string;
+  provider_device_name: string;
+}) {
+  const sourcePeerId = discovery.provider_device_id.trim();
+  const sourceHostName = discovery.provider_device_name.trim();
+  if (!sourcePeerId || !sourceHostName) throw new Error('ios_hosted_sync_group_peer_invalid');
   return {
-    sourceHostName: peer.device_name,
-    sourcePeerId: peer.device_identity_key
+    sourceHostName,
+    sourcePeerId
   };
 }
 

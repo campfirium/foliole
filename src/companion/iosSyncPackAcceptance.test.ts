@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   ensureGroup: vi.fn(),
   leaveGroup: vi.fn(),
   loadBootstrap: vi.fn(),
-  loadPeer: vi.fn(),
   postResult: vi.fn(),
   rerunRoundtrip: vi.fn(),
   runRoundtrip: vi.fn(),
@@ -25,7 +24,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
 }));
 vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({
-  ensureIosAcceptanceSyncGroup: mocks.ensureGroup, loadIosAcceptanceSyncPeer: mocks.loadPeer
+  ensureIosAcceptanceSyncGroup: mocks.ensureGroup
 }));
 vi.mock('./iosNodeVersionRoundtripAcceptance', () => ({
   rerunIosNodeVersionRoundtripAcceptance: mocks.rerunRoundtrip,
@@ -41,8 +40,8 @@ beforeEach(() => {
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.leaveGroup.mockResolvedValue(undefined);
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
-    group: { group_id: 'group-1' }, joined: true });
-  mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' });
+    group: { group_id: 'group-1' }, joined: true,
+    peer: { sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' } });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
   mocks.rerunRoundtrip.mockResolvedValue({ push: { pushedObjectIds: [] } });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
