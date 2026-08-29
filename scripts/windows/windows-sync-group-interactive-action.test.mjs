@@ -124,6 +124,24 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   }, 'desktop-dnssd-route-provider')).toEqual({
     factId: 'desktop-dnssd-route', milestone: 'route-ready'
   });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'desktop-dnssd-find-diagnostic', milestone: 'candidate-found'
+  }, 'desktop-dnssd-find-diagnostic')).toEqual({
+    factId: 'desktop-dnssd-find-diagnostic', milestone: 'candidate-found'
+  });
+});
+
+it('requires an exact group identity for the bounded Find diagnostic', () => {
+  const { evidenceRoot, paths } = fixture();
+  const request = { action: 'desktop-dnssd-find-diagnostic', evidenceRoot,
+    expectedGroupId: 'group-12345678-1234-4234-8234-123456789abc',
+    expectedGroupTag: 'a'.repeat(32), nonce: '12345678-1234-1234-1234-123456789abc',
+    schemaVersion: 1 };
+  expect(validateSyncGroupInteractiveRequest(request, paths.repoRoot))
+    .toMatchObject({ expectedGroupTag: 'a'.repeat(32) });
+  expect(() => validateSyncGroupInteractiveRequest({
+    ...request, expectedGroupTag: undefined
+  }, paths.repoRoot)).toThrow('invalid');
 });
 
 it('accepts only the registered route selfcheck modes', () => {

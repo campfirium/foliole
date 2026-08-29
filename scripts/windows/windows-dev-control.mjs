@@ -45,6 +45,7 @@ export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
   'frozen-revision-preflight',
   'desktop-dnssd-host-facts',
+  'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck',
   'sync-group-join-prepare',

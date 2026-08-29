@@ -1,4 +1,5 @@
 export const WINDOWS_SYNC_GROUP_ACTIONS = [
+  'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
@@ -17,6 +18,7 @@ export function preparesWindowsSyncGroupCandidate(action) {
 export function attachSyncGroupResult(summary, result) {
   for (const key of [
     'desktopDnsSdHostFacts',
+    'desktopDnsSdFindDiagnostic',
     'desktopDnsSdRoutePrepare',
     'desktopDnsSdRouteProvider',
     'desktopDnsSdRouteControllerSelfcheck',
@@ -30,6 +32,7 @@ export function attachSyncGroupResult(summary, result) {
 
 export function printSyncGroupResult(stream, summary) {
   const values = [
+    ['desktopDnsSdFindDiagnostic', 'desktop-dnssd-find-diagnostic', 'manifestPath'],
     ['desktopDnsSdRoutePrepare', 'desktop-dnssd-route-prepare', 'manifestPath'],
     ['desktopDnsSdRouteProvider', 'desktop-dnssd-route-provider', 'manifestPath'],
     ['desktopDnsSdRouteControllerSelfcheck', 'desktop-dnssd-route-selfcheck', 'manifestPath'],

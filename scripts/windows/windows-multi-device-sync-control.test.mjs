@@ -178,3 +178,26 @@ it('copies fixed runtime preparation diagnostics and applies the independent tim
     `${remoteRoot}/desktop-dnssd-route-prepare.log`
   ]);
 });
+
+it('bounds Find diagnostics and preserves product plus interactive evidence', async () => {
+  const executeScp = vi.fn(async () => 'copied');
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-10';
+  const output = `[windows-dev-action] status: FAILED exit=125 evidence=${remoteRoot}/summary.json\n`;
+  const remoteError = Object.assign(new Error('find failed'), { output });
+  const executeSsh = vi.fn(async () => { throw remoteError; });
+  await expect(runWindowsMultiDeviceSyncControl({ action: 'desktop-dnssd-find-diagnostic',
+    buildPushSpec: () => ({ args: ['push'], env: {} }),
+    buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
+    env: {}, executeGit: vi.fn(async () => ''), executeScp, executeSsh,
+    fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo',
+    stdout: { write: vi.fn() }
+  })).rejects.toBe(remoteError);
+  expect(executeSsh.mock.calls[0][1].timeout).toBe(10 * 60_000);
+  expect(executeScp.mock.calls.map(([args]) => args[0])).toEqual([
+    `${remoteRoot}/summary.json`,
+    `${remoteRoot}/sync-group-runtime.log`,
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/request.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/status.json',
+    'D:/C/foliole/.tmp/windows-sync-group-interactive/result.json'
+  ]);
+});

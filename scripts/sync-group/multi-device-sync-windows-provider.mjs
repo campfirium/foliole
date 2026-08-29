@@ -8,6 +8,12 @@ import {
 /* global process */
 
 const PROVIDER_ACTIONS = Object.freeze({
+  'desktop-dnssd-find-diagnostic': {
+    controllerAction: 'windows-desktop-dnssd-find-diagnostic',
+    label: 'desktop DNS-SD Find diagnostic', missingPrefix: 'windows_desktop_dnssd_find',
+    progressFactPattern: 'desktop-dnssd-find-diagnostic',
+    progressMilestone: 'candidate-found', timeoutMs: 10 * 60_000
+  },
   'desktop-dnssd-route-provider': {
     controllerAction: 'windows-desktop-dnssd-route', label: 'desktop DNS-SD route',
     missingPrefix: 'windows_desktop_dnssd_route',

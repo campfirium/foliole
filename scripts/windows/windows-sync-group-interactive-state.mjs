@@ -6,6 +6,7 @@ import {
 import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-contract.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
+  'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-provider', 'desktop-dnssd-route-selfcheck',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-from-zero', 'multi-device-sync-participation',
@@ -37,7 +38,8 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
       || !selfcheckAllowed) {
     throw new Error('invalid Sync Group interactive request');
   }
-  const expectedAllowed = request.action === 'single-principal-sync-group'
+  const expectedAllowed = ['desktop-dnssd-find-diagnostic', 'single-principal-sync-group']
+    .includes(request.action)
     ? /^group-[0-9a-f-]{36}$/u.test(request.expectedGroupId ?? '')
       && /^[0-9a-f]{32}$/u.test(request.expectedGroupTag ?? '')
     : request.expectedGroupId === undefined && request.expectedGroupTag === undefined;
@@ -46,6 +48,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'desktop-dnssd-find-diagnostic'
+      && progress?.milestone === 'candidate-found'
+      && progress.factId === 'desktop-dnssd-find-diagnostic') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'desktop-dnssd-route-provider'
       && ((progress?.milestone === 'fixture-ready'
           && /^[0-9a-f]{64}$/u.test(progress.factId || ''))

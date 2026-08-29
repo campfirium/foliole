@@ -14,5 +14,6 @@ it('allows one exact trusted runtime to remain untouched during frozen preflight
   expect(allowsSyncGroupNativeClient('frozen-revision-preflight', [runtime], paths)).toBe(true);
   expect(allowsSyncGroupNativeClient('desktop-dnssd-route-prepare', [runtime], paths)).toBe(true);
   expect(allowsSyncGroupNativeClient('desktop-dnssd-route-provider', [runtime], paths)).toBe(true);
+  expect(allowsSyncGroupNativeClient('desktop-dnssd-find-diagnostic', [runtime], paths)).toBe(true);
   expect(allowsSyncGroupNativeClient('frozen-revision-preflight', [], paths)).toBe(false);
 });
