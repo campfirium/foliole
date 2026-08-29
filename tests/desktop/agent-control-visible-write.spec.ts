@@ -35,14 +35,20 @@ async function readDescriptor(filePath: string) {
 }
 
 async function createTopicFromUi(desktopWindow: DesktopWindow, content: string) {
-  await desktopWindow.waitForFunction(() => Boolean(globalThis.window?.__folioleWorkspaceDebug));
-  const previousNodeId = await desktopWindow.evaluate(() =>
-    globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  await desktopWindow.waitForFunction(() =>
+    Boolean(globalThis.window?.__folioleWorkspaceDebug?.isHydrated?.()));
+  const previousNodeIds = await desktopWindow.evaluate(() =>
+    globalThis.window?.__folioleWorkspaceDebug?.listNodes?.().map((node) => node.id) ?? []);
   await desktopWindow.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();
-  await expect.poll(() => desktopWindow.evaluate((previous) => {
-    const nodeId = globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null;
-    return nodeId && nodeId !== previous ? nodeId : null;
-  }, previousNodeId)).not.toBeNull();
+  await expect.poll(() => desktopWindow.evaluate((existingNodeIds) => {
+    const workspace = globalThis.window?.__folioleWorkspaceDebug;
+    const nodeId = workspace?.getActiveNodeId?.() ?? null;
+    return {
+      editorContent: globalThis.window?.__folioleDebug?.getEditorContent?.('prompt-editor') ?? null,
+      isNewNode: Boolean(nodeId && !existingNodeIds.includes(nodeId)),
+      nodeContent: nodeId ? workspace?.getNode?.(nodeId)?.content ?? null : null
+    };
+  }, previousNodeIds)).toEqual({ editorContent: '', isNewNode: true, nodeContent: '' });
   const nodeId = await desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
   expect(nodeId).toBeTruthy();
   await expect.poll(() => desktopWindow.evaluate(() =>
