@@ -90,7 +90,8 @@ export async function runWindowsDevBuild({
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
     const residualBefore = await snapshotProcesses(execute, paths);
-    if (residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
+    if (action !== 'desktop-dnssd-host-facts'
+        && residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
     const signing = action === 'frozen-revision-preflight'

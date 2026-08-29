@@ -86,6 +86,12 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
 
 function consumeBrowseEvent(state: SessionState, event: DesktopDnsSdEvent) {
   if (state.stopped) return;
+  logDesktopDnsSdDiagnostic('browse_native_event', {
+    eventKind: event.kind,
+    ...(event.kind === 'error' ? { code: event.code }
+      : desktopDnsSdServiceFacts(event.service)),
+    sessionId: state.sessionId
+  });
   if (event.kind === 'error') return failSession(state, event);
   if (event.kind === 'registered') return;
   logDesktopDnsSdDiagnostic('browse_service', {

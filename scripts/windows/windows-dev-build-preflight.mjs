@@ -22,7 +22,7 @@ export function windowsDevRequiredTools(action, paths) {
   const gitRequired = action === 'frozen-revision-preflight'
     || WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(action);
   const tarRequired = action === 'frozen-revision-preflight';
-  const adbRequired = !['build', 'device-profile', 'frozen-revision-preflight',
+  const adbRequired = !['build', 'desktop-dnssd-host-facts', 'device-profile', 'frozen-revision-preflight',
     'sync-group-join-prepare'].includes(action) && !isWindowsSyncGroupAction(action);
   return [paths.systemNode, ...(npmRequired ? [paths.systemNpmCli] : []),
     ...(gitRequired ? [paths.gitPath] : []),

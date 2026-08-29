@@ -34,6 +34,8 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'desktop-dnssd-route-selfcheck' });
   expect(parseWindowsDevControlArgs(['desktop-dnssd-route-prepare'], {}))
     .toMatchObject({ action: 'desktop-dnssd-route-prepare' });
+  expect(parseWindowsDevControlArgs(['desktop-dnssd-host-facts'], {}))
+    .toMatchObject({ action: 'desktop-dnssd-host-facts' });
   expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
     .toThrow('only accepts a registered fixed action');
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-candidate'], {}))

@@ -7,8 +7,11 @@ import { controlWindowsNativeClient } from './windows-sync-group-recovery-action
 import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
 } from './windows-sync-group-native-lifecycle.mjs';
+import { runWindowsDesktopDnsSdHostFacts } from
+  './windows-desktop-dnssd-host-facts-action.mjs';
 
 export const WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS = new Set([
+  'desktop-dnssd-host-facts',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck'
 ]);
@@ -24,10 +27,18 @@ export async function runWindowsDesktopDnsSdRouteControl(options, {
   control = controlWindowsNativeClient,
   prepare = prepareWindowsDesktopDnsSdFixedRuntime,
   restore = restoreWindowsNativeClient,
+  runHostFacts = runWindowsDesktopDnsSdHostFacts,
   runSelfcheck = runWindowsDesktopDnsSdRouteSelfcheck,
   suspend = suspendWindowsNativeClient
 } = {}) {
   if (!WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(options.action)) return null;
+  if (options.action === 'desktop-dnssd-host-facts') {
+    const result = await runHostFacts(
+      options.action, options.execute, options.paths, options.evidenceRoot
+    );
+    return { desktopDnsSdHostFacts: result.evidence,
+      manifestPath: result.manifestPath, output: result.output };
+  }
   const suspended = await suspend({ control, execute: options.execute, paths: options.paths });
   let result;
   let primaryError;

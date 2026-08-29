@@ -91,6 +91,10 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
         runtime_instance_id: runtimeId, ...serializeSyncProtocolTxt() }
     }, (event) => {
       if (lifecycle !== lifecycleRevision) return;
+      logDesktopDnsSdDiagnostic('register_native_event', {
+        eventKind: event.kind, lifecycle, name,
+        ...(event.kind === 'error' ? { code: event.code } : {})
+      });
       if (event.kind === 'error') {
         logDesktopDnsSdDiagnostic('register_error', {
           code: event.code, lifecycle, message: event.message, name

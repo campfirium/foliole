@@ -28,6 +28,9 @@ import {
 import {
   copyWindowsFrozenPreflightEvidence
 } from './windows-frozen-revision-preflight-control.mjs';
+import {
+  copyWindowsDesktopDnsSdHostFacts
+} from './windows-desktop-dnssd-host-facts-control.mjs';
 
 export {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
@@ -41,6 +44,7 @@ export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
   'frozen-revision-preflight',
+  'desktop-dnssd-host-facts',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck',
   'sync-group-join-prepare',
@@ -190,6 +194,11 @@ export async function runWindowsDevControl({
       windowsDevScpSpec(host, remote, local, env), { env }
     ) });
   if (deviceProfile) Object.assign(result, deviceProfile);
+  const hostFacts = await copyWindowsDesktopDnsSdHostFacts({ action, fsApi, remoteError,
+    remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
+      windowsDevScpSpec(host, remote, local, env), { env }
+    ) });
+  if (hostFacts) Object.assign(result, hostFacts);
   const joinPrepare = await copyWindowsSyncGroupJoinPrepareEvidence({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
       windowsDevScpSpec(host, remote, local, env), { env }

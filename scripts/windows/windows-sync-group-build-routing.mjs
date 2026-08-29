@@ -16,6 +16,7 @@ export function preparesWindowsSyncGroupCandidate(action) {
 
 export function attachSyncGroupResult(summary, result) {
   for (const key of [
+    'desktopDnsSdHostFacts',
     'desktopDnsSdRoutePrepare',
     'desktopDnsSdRouteProvider',
     'desktopDnsSdRouteControllerSelfcheck',

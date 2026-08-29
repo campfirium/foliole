@@ -6,9 +6,28 @@ import { runWindowsDesktopDnsSdRouteControl } from
   './windows-desktop-dnssd-route-control.mjs';
 
 function options(action) {
-  return { action, deviceAction: vi.fn(async () => ({ output: 'route' })),
+  return { action, deviceAction: vi.fn(async () => ({ output: 'route' })), evidenceRoot: 'evidence',
     execute: vi.fn(), paths: {}, snapshotRuntime: vi.fn(async () => []) };
 }
+
+it('collects host facts without suspending or starting the product runtime', async () => {
+  const route = options('desktop-dnssd-host-facts');
+  const runHostFacts = vi.fn(async () => ({
+    evidence: { schemaVersion: 1 }, manifestPath: 'host-facts.json', output: ''
+  }));
+  const suspend = vi.fn();
+  await expect(runWindowsDesktopDnsSdRouteControl(route, {
+    runHostFacts, suspend
+  })).resolves.toEqual({
+    desktopDnsSdHostFacts: { schemaVersion: 1 },
+    manifestPath: 'host-facts.json', output: ''
+  });
+  expect(runHostFacts).toHaveBeenCalledWith(
+    'desktop-dnssd-host-facts', route.execute, route.paths, route.evidenceRoot
+  );
+  expect(suspend).not.toHaveBeenCalled();
+  expect(route.deviceAction).not.toHaveBeenCalled();
+});
 
 it('stops the fixed client, prepares once, and restores its prior state', async () => {
   const route = options('desktop-dnssd-route-prepare');
