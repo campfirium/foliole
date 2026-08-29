@@ -1,19 +1,38 @@
-import { Image } from 'lucide-react';
+import { SquareDashedMousePointer } from 'lucide-react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
+import { AppIconButton, AppTooltip, AppTooltipContent, AppTooltipContentLayout, AppTooltipTrigger } from '../../shared/ui';
+
+import { resolvePdfVisualExcerptModifier } from './pdfVisualExcerptInteractionMode';
+import { usePdfVisualExcerptRuntime } from './PdfVisualExcerptRuntime';
 
 export function PdfVisualExcerptToolbarControls(props: { onToolbarInteraction: () => void }) {
   const t = useTranslation();
+  const runtime = usePdfVisualExcerptRuntime();
+  const quick = runtime.interactionMode === 'quick';
+  const title = t(quick ? 'desktop.pdf.imageExcerpt.quick.title' : 'desktop.pdf.imageExcerpt.ordinary.title');
+  const description = quick
+    ? t('desktop.pdf.imageExcerpt.quick.hint')
+    : t('desktop.pdf.imageExcerpt.ordinary.hint', { modifier: resolvePdfVisualExcerptModifier() });
   return (
     <AppTooltip>
       <AppTooltipTrigger asChild>
-        <span aria-label={t('desktop.pdf.imageExcerpt.mode')} className="flex size-8 items-center justify-center text-foreground/65"
-          onFocus={props.onToolbarInteraction} onMouseEnter={props.onToolbarInteraction} role="img" tabIndex={0}>
-          <Image aria-hidden="true" size={15} strokeWidth={2.1} />
-        </span>
+        <AppIconButton
+          aria-pressed={quick}
+          className="size-8 aria-pressed:bg-[var(--app-control-bg-active-color)] aria-pressed:text-foreground"
+          icon={<SquareDashedMousePointer aria-hidden="true" size={15} strokeWidth={2.1} />}
+          label={t('desktop.pdf.imageExcerpt.mode')}
+          onClick={() => {
+            props.onToolbarInteraction();
+            runtime.toggleInteractionMode();
+          }}
+          onFocus={props.onToolbarInteraction}
+          onMouseEnter={props.onToolbarInteraction}
+        />
       </AppTooltipTrigger>
-      <AppTooltipContent>{t('desktop.pdf.imageExcerpt.hint')}</AppTooltipContent>
+      <AppTooltipContent>
+        <AppTooltipContentLayout description={description} title={title} />
+      </AppTooltipContent>
     </AppTooltip>
   );
 }

@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { rotatePdfNormalizedRect, unrotatePdfNormalizedRect, type PdfNormalizedRect } from './pdfVisualExcerptGeometry';
+import type { PdfVisualExcerptInteractionMode } from './pdfVisualExcerptInteractionMode';
 import { renderPdfVisualExcerpt } from './pdfVisualExcerptRenderer';
 
 interface PdfVisualExcerptRequest {
@@ -25,6 +26,7 @@ interface PdfVisualExcerptRuntimeValue {
   creating: boolean;
   error: PdfVisualExcerptRequest | null;
   imageLocators: PdfHighlightLocator[];
+  interactionMode: PdfVisualExcerptInteractionMode;
   pending: PdfVisualExcerptRequest | null;
   rotation: number;
   selectedOutline: PdfVisualExcerptSelection | null;
@@ -38,6 +40,7 @@ interface PdfVisualExcerptRuntimeValue {
   registerPage: (pageNumber: number, page: PDFPageProxy) => void;
   retry: () => Promise<boolean>;
   selectOutline: (selection: PdfVisualExcerptSelection) => void;
+  toggleInteractionMode: () => void;
 }
 
 const PdfVisualExcerptRuntimeContext = createContext<PdfVisualExcerptRuntimeValue | null>(null);
@@ -150,11 +153,13 @@ export function PdfVisualExcerptRuntimeProvider(props: { children: ReactNode; cu
   const deleteAnnotations = useWorkspaceStore((state) => state.deleteEditorAnnotationNodes);
   const openNode = useWorkspaceStore((state) => state.openNode);
   const pagesRef = useRef(new Map<number, PDFPageProxy>());
+  const [interactionMode, setInteractionMode] = useState<PdfVisualExcerptInteractionMode>('ordinary');
   const creation = usePdfExcerptCreation(props, pagesRef);
   const selection = useSelectedPdfOutline(deleteAnnotations, props.currentPage);
   useEffect(() => {
     creation.reset();
     selection.setSelected(null);
+    setInteractionMode('ordinary');
     pagesRef.current.clear();
   }, [creation.reset, props.nodeId, props.source, selection.setSelected]);
 
@@ -172,6 +177,7 @@ export function PdfVisualExcerptRuntimeProvider(props: { children: ReactNode; cu
         selection.setSelected(null);
       },
       imageLocators: props.locators.filter((locator) => locator.kind === 'image-excerpt'),
+      interactionMode,
       openExcerpt: (nodeId) => {
         openNode(nodeId);
       },
@@ -183,9 +189,10 @@ export function PdfVisualExcerptRuntimeProvider(props: { children: ReactNode; cu
       rotation: props.rotation,
       selectedOutline: selection.selected,
       surfaceKey: `${props.nodeId ?? ''}:${props.source}:${props.currentPage}`,
-      selectOutline: selection.setSelected
+      selectOutline: selection.setSelected,
+      toggleInteractionMode: () => setInteractionMode((mode) => (mode === 'ordinary' ? 'quick' : 'ordinary'))
     }),
-    [creation, deleteAnnotations, openNode, props.locators, props.rotation, selection]
+    [creation, deleteAnnotations, interactionMode, openNode, props.locators, props.rotation, selection]
   );
   return <PdfVisualExcerptRuntimeContext.Provider value={value}>{props.children}</PdfVisualExcerptRuntimeContext.Provider>;
 }

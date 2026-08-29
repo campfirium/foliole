@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type
 
 import { onPdfVisualSelectionKindChange, setPdfVisualSelectionKind, type PdfVisualSelectionKind } from './pdfSurfaceRegistration';
 import { rectFromPointerDrag, type PdfNormalizedRect } from './pdfVisualExcerptGeometry';
+import { canStartPdfVisualExcerpt, isPdfVisualExcerptModifierPressed, type PdfVisualExcerptInteractionMode } from './pdfVisualExcerptInteractionMode';
 import { findPdfExcerptNearEdge, resolvePdfVisualExcerptPointerAction } from './pdfVisualExcerptPointerRouting';
 import { usePdfVisualExcerptRuntime } from './PdfVisualExcerptRuntime';
 
@@ -28,11 +29,56 @@ function listenForPagePointers(root: HTMLElement, handlers: {
   root.addEventListener('pointerup', handlers.up, true);
   root.addEventListener('pointercancel', handlers.cancel, true);
   return () => {
-    root.classList.remove('pdf-visual-excerpt-page', 'pdf-visual-excerpt-near-edge');
+    root.classList.remove('pdf-visual-excerpt-page', 'pdf-visual-excerpt-enabled', 'pdf-visual-excerpt-near-edge');
     root.removeEventListener('pointerdown', handlers.down, true);
     root.removeEventListener('pointermove', handlers.move, true);
     root.removeEventListener('pointerup', handlers.up, true);
     root.removeEventListener('pointercancel', handlers.cancel, true);
+  };
+}
+
+function installModifierCursorRouting(
+  root: HTMLElement,
+  mode: PdfVisualExcerptInteractionMode,
+  explicitSelection: boolean
+) {
+  let modifierPressed = false;
+  let pointerInside = false;
+  const sync = () => root.classList.toggle('pdf-visual-excerpt-enabled', canStartPdfVisualExcerpt({
+    explicitSelection, mode, modifierPressed
+  }));
+  const onPointerEnter = (event: PointerEvent) => {
+    pointerInside = true;
+    modifierPressed = isPdfVisualExcerptModifierPressed(event);
+    sync();
+  };
+  const onPointerLeave = () => {
+    pointerInside = false;
+    modifierPressed = false;
+    sync();
+  };
+  const onModifier = (event: KeyboardEvent) => {
+    if (event.key !== 'Alt') return;
+    modifierPressed = event.type === 'keydown' && pointerInside;
+    if (pointerInside) event.preventDefault();
+    sync();
+  };
+  const clear = () => {
+    modifierPressed = false;
+    sync();
+  };
+  root.addEventListener('pointerenter', onPointerEnter);
+  root.addEventListener('pointerleave', onPointerLeave);
+  window.addEventListener('keydown', onModifier, true);
+  window.addEventListener('keyup', onModifier, true);
+  window.addEventListener('blur', clear);
+  sync();
+  return () => {
+    root.removeEventListener('pointerenter', onPointerEnter);
+    root.removeEventListener('pointerleave', onPointerLeave);
+    window.removeEventListener('keydown', onModifier, true);
+    window.removeEventListener('keyup', onModifier, true);
+    window.removeEventListener('blur', clear);
   };
 }
 
@@ -76,6 +122,7 @@ function finishPageDrag(args: {
 function installPagePointerRouting(args: {
   dragRef: MutableRefObject<PageDrag | null>;
   locators: Array<{ nodeId: string; rect: PdfNormalizedRect }>;
+  mode: PdfVisualExcerptInteractionMode;
   pageNumber: number;
   root: HTMLElement;
   runtime: PagePointerRuntime;
@@ -83,8 +130,9 @@ function installPagePointerRouting(args: {
   setPreview: Dispatch<SetStateAction<PdfNormalizedRect | null>>;
   visualSelectionKind: PdfVisualSelectionKind | null;
 }) {
-  const { dragRef, locators, pageNumber, root, runtime, setPendingNote, setPreview, visualSelectionKind } = args;
+  const { dragRef, locators, mode, pageNumber, root, runtime, setPendingNote, setPreview, visualSelectionKind } = args;
   root.classList.add('pdf-visual-excerpt-page');
+  const removeModifierCursorRouting = installModifierCursorRouting(root, mode, Boolean(visualSelectionKind));
   const nearEdge = createNearEdgeResolver(root, locators);
   const onPointerMove = (event: PointerEvent) => {
     const drag = dragRef.current;
@@ -107,7 +155,12 @@ function installPagePointerRouting(args: {
       return;
     }
     runtime.clearOutlineSelection();
-    if (action === 'text' && !visualSelectionKind) return;
+    const eligible = canStartPdfVisualExcerpt({
+      explicitSelection: Boolean(visualSelectionKind),
+      mode,
+      modifierPressed: isPdfVisualExcerptModifierPressed(event)
+    });
+    if (!eligible) return;
     event.preventDefault();
     event.stopPropagation();
     dragRef.current = { pointerId: event.pointerId, start: point };
@@ -117,10 +170,14 @@ function installPagePointerRouting(args: {
   const finishDrag = (event: PointerEvent, create: boolean) => finishPageDrag({
     create, dragRef, event, pageNumber, root, runtime, setPendingNote, setPreview, visualSelectionKind
   });
-  return listenForPagePointers(root, {
+  const removePagePointerRouting = listenForPagePointers(root, {
     cancel: (event) => finishDrag(event, false), down: onPointerDown, move: onPointerMove,
     up: (event) => finishDrag(event, true)
   });
+  return () => {
+    removeModifierCursorRouting();
+    removePagePointerRouting();
+  };
 }
 
 export function usePdfVisualExcerptPagePointerRouting(pageNumber: number, locators: Array<{ nodeId: string; rect: PdfNormalizedRect }>) {
@@ -142,8 +199,8 @@ export function usePdfVisualExcerptPagePointerRouting(pageNumber: number, locato
   useEffect(() => {
     const root = layerRef.current?.parentElement;
     return root ? installPagePointerRouting({
-      dragRef, locators, pageNumber, root, runtime, setPendingNote, setPreview, visualSelectionKind
+      dragRef, locators, mode: runtime.interactionMode, pageNumber, root, runtime, setPendingNote, setPreview, visualSelectionKind
     }) : undefined;
-  }, [locators, pageNumber, runtime, visualSelectionKind]);
+  }, [locators, pageNumber, runtime, runtime.interactionMode, visualSelectionKind]);
   return { layerRef, pendingNote, preview, setPendingNote };
 }

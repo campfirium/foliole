@@ -1251,11 +1251,16 @@ b {
 }
 
 .pdf-visual-excerpt-page {
-  cursor: crosshair;
+  cursor: default;
 }
 
 .pdf-visual-excerpt-page .textLayer span:not(.endOfContent) {
   cursor: text;
+}
+
+.pdf-visual-excerpt-page.pdf-visual-excerpt-enabled,
+.pdf-visual-excerpt-page.pdf-visual-excerpt-enabled .textLayer span:not(.endOfContent) {
+  cursor: crosshair;
 }
 
 .pdf-visual-excerpt-page :is(a, button, input, select, textarea, [role='button'], [role='menu'], [role='toolbar']) {

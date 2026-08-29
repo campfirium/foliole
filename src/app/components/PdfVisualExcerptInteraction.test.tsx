@@ -32,6 +32,7 @@ function InteractionHarness() {
         rotation={0}
         source="fixture.pdf"
       >
+        <PdfVisualExcerptToolbarControls onToolbarInteraction={vi.fn()} />
         <div data-testid="page-root">
           <canvas data-testid="pdf-canvas" />
           <div className="textLayer">
@@ -97,9 +98,10 @@ function preparePageRoot() {
   return root;
 }
 
-function dispatchPointer(target: Element, type: 'pointerdown' | 'pointerup', values: { clientX: number; clientY: number; pointerId: number }) {
+function dispatchPointer(target: Element, type: 'pointerdown' | 'pointerenter' | 'pointerup', values: { altKey?: boolean; clientX: number; clientY: number; pointerId: number }) {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperties(event, {
+    altKey: { value: values.altKey ?? false },
     button: { value: 0 },
     clientX: { value: values.clientX },
     clientY: { value: values.clientY },
@@ -107,6 +109,7 @@ function dispatchPointer(target: Element, type: 'pointerdown' | 'pointerup', val
     pointerId: { value: values.pointerId }
   });
   target.dispatchEvent(event);
+  return event;
 }
 
 it('selects a nearby outline and consumes Backspace through annotation history deletion', async () => {
@@ -121,20 +124,29 @@ it('selects a nearby outline and consumes Backspace through annotation history d
     })
   );
   await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-outline')).toHaveClass('shadow-marker'));
+  act(() => dispatchPointer(screen.getByTestId('pdf-canvas'), 'pointerdown', {
+    clientX: 90, clientY: 90, pointerId: 6
+  }));
+  await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-outline')).not.toHaveClass('shadow-marker'));
+  act(() => dispatchPointer(screen.getByTestId('pdf-canvas'), 'pointerdown', {
+    clientX: 20, clientY: 40, pointerId: 7
+  }));
+  await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-outline')).toHaveClass('shadow-marker'));
   fireEvent.keyDown(window, { key: 'Backspace' });
 
   expect(deleteAnnotations).toHaveBeenCalledWith(['excerpt-1']);
 });
 
-it('keeps text spans native and treats the auxiliary text-layer element as visual area', async () => {
+it('keeps ordinary text and visual drags native until Option is held at pointer-down', async () => {
   render(<InteractionHarness />);
   preparePageRoot();
 
-  dispatchPointer(screen.getByTestId('pdf-text'), 'pointerdown', {
+  const textDown = dispatchPointer(screen.getByTestId('pdf-text'), 'pointerdown', {
     clientX: 70,
     clientY: 10,
     pointerId: 2
   });
+  expect(textDown.defaultPrevented).toBe(false);
   dispatchPointer(screen.getByTestId('pdf-text'), 'pointerup', {
     clientX: 90,
     clientY: 30,
@@ -148,21 +160,60 @@ it('keeps text spans native and treats the auxiliary text-layer element as visua
     pointerId: 3
   });
   dispatchPointer(screen.getByTestId('pdf-end'), 'pointerup', {
+    altKey: true,
     clientX: 90,
     clientY: 30,
     pointerId: 3
   });
+  expect(screen.queryByTestId('pdf-image-excerpt-error')).not.toBeInTheDocument();
+
+  const optionDown = dispatchPointer(screen.getByTestId('pdf-text'), 'pointerdown', {
+    altKey: true,
+    clientX: 70,
+    clientY: 10,
+    pointerId: 4
+  });
+  dispatchPointer(screen.getByTestId('pdf-end'), 'pointerup', {
+    clientX: 90,
+    clientY: 30,
+    pointerId: 4
+  });
+  expect(optionDown.defaultPrevented).toBe(true);
   await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-error')).toBeInTheDocument());
   expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 });
 
-it('renders the toolbar excerpt affordance as a non-button status icon', () => {
+it('renders a real region excerpt toggle with stable accessible name', async () => {
   render(
     <LocalizationProvider initialLanguagePreference="en">
-      <PdfVisualExcerptToolbarControls onToolbarInteraction={vi.fn()} />
+      <PdfVisualExcerptRuntimeProvider currentPage={1} locators={[]} nodeId="pdf-1" rotation={0} source="fixture.pdf">
+        <PdfVisualExcerptToolbarControls onToolbarInteraction={vi.fn()} />
+      </PdfVisualExcerptRuntimeProvider>
     </LocalizationProvider>
   );
 
-  expect(screen.getByRole('img', { name: 'Excerpt' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /excerpt/i })).not.toBeInTheDocument();
+  const toggle = screen.getByRole('button', { name: 'Region excerpt' });
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+});
+
+it('locks quick eligibility at pointer-down across text and visual layers', async () => {
+  render(<InteractionHarness />);
+  preparePageRoot();
+  const toggle = screen.getByRole('button', { name: 'Region excerpt' });
+  fireEvent.click(toggle);
+
+  const down = dispatchPointer(screen.getByTestId('pdf-text'), 'pointerdown', {
+    clientX: 70, clientY: 10, pointerId: 5
+  });
+  dispatchPointer(screen.getByTestId('pdf-end'), 'pointerup', {
+    altKey: true, clientX: 90, clientY: 30, pointerId: 5
+  });
+
+  expect(down.defaultPrevented).toBe(true);
+  await waitFor(() => expect(screen.getByTestId('pdf-image-excerpt-error')).toBeInTheDocument());
+  expect(toggle).toHaveAttribute('aria-pressed', 'true');
 });

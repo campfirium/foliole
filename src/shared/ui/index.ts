@@ -11,6 +11,7 @@ export { AppPanel } from './Panel';
 export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';
 export { AppTooltip, AppTooltipContent, AppTooltipTrigger } from './Tooltip';
+export { AppTooltipContentLayout } from './TooltipContentLayout';
 export { TruncatedTextTooltip } from './TruncatedTextTooltip';
 
 // Feedback and status surfaces: empty, loading, error, badges, confirmation, and startup fallback.

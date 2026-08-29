@@ -1,61 +1,12 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
-import { deflateSync } from 'node:zlib';
 
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-
-const FIXTURE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/pdf-user-journey.pdf');
+import { createVisualPdfFixture, importPdf } from './pdf-image-excerpt-test-support';
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/pdf-image-excerpt-text-visible.png');
 const ANNOTATED_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/pdf-annotated-image-excerpt-visible.png');
-
-function pdfObject(number: number, body: Buffer | string) {
-  return Buffer.concat([Buffer.from(`${number} 0 obj\n`), Buffer.from(body), Buffer.from('\nendobj\n')]);
-}
-
-function createVisualPdfFixture(filePath: string, text: string | null) {
-  const pixels = deflateSync(Buffer.from([220, 60, 60, 60, 130, 220, 80, 180, 90, 230, 190, 70]));
-  const content = Buffer.from(`q\n160 0 0 160 20 20 cm\n/Im0 Do\nQ\n${text ? `BT /F1 14 Tf 24 175 Td (${text}) Tj ET\n` : ''}`);
-  const resources = text ? '/XObject << /Im0 4 0 R >> /Font << /F1 6 0 R >>' : '/XObject << /Im0 4 0 R >>';
-  const objects = [
-    pdfObject(1, '<< /Type /Catalog /Pages 2 0 R >>'),
-    pdfObject(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),
-    pdfObject(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << ${resources} >> /Contents 5 0 R >>`),
-    pdfObject(4, Buffer.concat([
-      Buffer.from(`<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${pixels.length} >>\nstream\n`),
-      pixels,
-      Buffer.from('\nendstream')
-    ])),
-    pdfObject(5, Buffer.concat([Buffer.from(`<< /Length ${content.length} >>\nstream\n`), content, Buffer.from('endstream')]))
-  ];
-  if (text) objects.push(pdfObject(6, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'));
-  const header = Buffer.from('%PDF-1.4\n');
-  const offsets: number[] = [];
-  let offset = header.length;
-  objects.forEach((object) => { offsets.push(offset); offset += object.length; });
-  const xref = Buffer.from(['xref', `0 ${objects.length + 1}`, '0000000000 65535 f ',
-    ...offsets.map((value) => `${String(value).padStart(10, '0')} 00000 n `), 'trailer',
-    `<< /Size ${objects.length + 1} /Root 1 0 R >>`, 'startxref', String(offset), '%%EOF', ''].join('\n'));
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, Buffer.concat([header, ...objects, xref]));
-}
-
-async function importPdf(desktopApp: ElectronApplication, desktopWindow: Page, fixturePath = FIXTURE_PATH) {
-  await desktopApp.evaluate(({ dialog }, fixturePath) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [fixturePath] });
-  }, fixturePath);
-  const result = await desktopWindow.evaluate(() => window.electronAPI?.invoke('run_text_file_import', {}));
-  if (!result || typeof result !== 'object' || typeof result.node_id !== 'string') {
-    throw new Error(`PDF import failed: ${JSON.stringify(result)}`);
-  }
-  await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), result.node_id);
-  await desktopWindow.locator(`[role="treeitem"][data-node-id="${result.node_id}"]`).click();
-  await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
-  return result.node_id;
-}
 
 async function dragExcerptRegion(desktopWindow: Page, area = { endX: 0.7, endY: 0.75, startX: 0.2, startY: 0.35 }) {
   const page = desktopWindow.locator('.pdf-visual-excerpt-page').first();
@@ -130,6 +81,7 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   const fixturePath = path.resolve('.tmp/artifacts/pdf-image-excerpt-sequential.pdf');
   createVisualPdfFixture(fixturePath, null);
   const parentNodeId = await importPdf(desktopApp, desktopWindow, fixturePath);
+  await desktopWindow.getByRole('button', { name: /Region excerpt|区域摘录/ }).click();
   await dragExcerptRegion(desktopWindow);
   const excerptNode = desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ });
   await expect(excerptNode).toBeVisible();
@@ -174,33 +126,3 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
   await expect(restoredOutline).toBeVisible();
 });
-
-for (const scenario of [
-  { name: 'mixed', text: 'Mixed PDF text layer' },
-  { name: 'scanned', text: null }
-]) {
-  test(`PDF image excerpt @pdf routes text and visual drags on ${scenario.name} pages`, async ({
-    desktopApp,
-    desktopWindow
-  }) => {
-    const fixturePath = path.resolve(`.tmp/artifacts/pdf-image-excerpt-${scenario.name}.pdf`);
-    createVisualPdfFixture(fixturePath, scenario.text);
-    await importPdf(desktopApp, desktopWindow, fixturePath);
-    await expect(desktopWindow.getByRole('button', { name: /Select full page|选择整页/ })).toHaveCount(0);
-    const hint = desktopWindow.getByRole('img', { name: /Excerpt|摘录/ });
-    await expect(hint).toBeVisible();
-    await hint.hover();
-    await expect(desktopWindow.getByRole('tooltip')).toContainText(
-      scenario.text ? /Drag over text|在文字上拖动/ : /Drag elsewhere|页面其他位置拖动/
-    );
-    if (scenario.text) {
-      const text = desktopWindow.locator('.textLayer span:not(.endOfContent)').first();
-      await expect(text).toHaveCSS('cursor', 'text');
-    }
-    await expect(desktopWindow.locator('.pdf-visual-excerpt-page').first()).toHaveCSS('cursor', 'crosshair');
-    await dragExcerptRegion(desktopWindow);
-    await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ })).toBeVisible();
-    await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();
-    await desktopWindow.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-image-excerpt-${scenario.name}-visible.png`) });
-  });
-}
