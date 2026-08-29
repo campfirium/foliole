@@ -18,6 +18,12 @@ it('shows the current platform modifier for Ctrl and Cmd equivalent shortcuts', 
   expect(formatShortcutSetDisplayLabel(shortcuts, 'MacIntel')).toBe('⌘ F');
 });
 
+it('keeps an intentional Control-only shortcut visible on macOS', () => {
+  const shortcuts = { primary: { ctrlKey: true, key: 'm' } };
+
+  expect(formatShortcutSetDisplayLabel(shortcuts, 'MacIntel')).toBe('⌃ M');
+});
+
 it('keeps real alternate shortcuts while folding platform equivalents', () => {
   const shortcuts = {
     primary: { ctrlKey: true, key: 'z', shiftKey: true },
@@ -28,7 +34,10 @@ it('keeps real alternate shortcuts while folding platform equivalents', () => {
     { label: 'Ctrl+Shift+Z', slot: 'primary' },
     { label: 'Ctrl+Y', slot: 'secondary' }
   ]);
-  expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([]);
+  expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([
+    { label: '⌃ ⇧ Z', slot: 'primary' },
+    { label: '⌃ Y', slot: 'secondary' }
+  ]);
 });
 
 it('hides non-current platform shortcuts even when their keys differ', () => {

@@ -84,7 +84,7 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
   useReviewTopicDelayPanelKeys(props);
   if (!props.isOpen) return null;
   return (
-    <div className="fixed inset-0 z-command-palette flex items-center justify-center px-4" role="presentation">
+    <div className="fixed inset-0 z-modal flex items-center justify-center px-4" role="presentation">
       <section
         aria-label={t('desktop.reviewDelay.dialog')}
         className={appFloatingSurfaceClassName('popover', 'grid w-full max-w-md gap-4 px-5 py-4 text-foreground/72')}

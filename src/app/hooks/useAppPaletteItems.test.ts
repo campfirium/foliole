@@ -18,7 +18,10 @@ function createPaletteArgs(activeNodeId: string | null) {
       overrides: {},
       resetAllShortcuts: () => undefined,
       resetShortcut: () => undefined,
-      shortcutMap: {},
+      shortcutMap: {
+        [APP_COMMAND_IDS.clipboardImport]: { primary: { altKey: true, ctrlKey: true, key: 'v' } },
+        [APP_COMMAND_IDS.importSingleFile]: { primary: { ctrlKey: true, key: 'o' } }
+      },
       updateShortcut: () => ({ status: 'applied' as const })
     },
     isCurrentReviewItemGradable: false,
@@ -37,7 +40,9 @@ function createPaletteArgs(activeNodeId: string | null) {
           ...initial.nodesById['node-1']!,
           id: 'node-1',
           kind: 'item' as const,
-          parentNodeId: 'source-topic'
+          parentNodeId: 'source-topic',
+          content: '',
+          bodyStatus: 'ready' as const
         }
       },
       trashedNodeIds: []
@@ -47,6 +52,27 @@ function createPaletteArgs(activeNodeId: string | null) {
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(LocalizationProvider, null, children);
+}
+
+function enabledState(activeNodeId: string | null, overrides: Record<string, unknown> = {}) {
+  const { result } = renderHook(() =>
+    useAppPaletteItems({
+      ...createPaletteArgs(activeNodeId),
+      ...overrides
+    } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
+  );
+  return Object.fromEntries(result.current.map((item) => [item.id, item.enabled]));
+}
+
+function enabledStateForNode(node: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+  const args = createPaletteArgs('node-1');
+  return enabledState('node-1', {
+    ...overrides,
+    ws: {
+      ...args.ws,
+      nodesById: { 'node-1': { ...args.ws.nodesById['node-1'], ...node } }
+    }
+  });
 }
 
 it('enables developer source reimport for the current non-folder topic surface', () => {
@@ -130,4 +156,87 @@ it('offers the custom copy manager as a localized settings command', () => {
     section: 'Settings',
     title: 'Open Custom Copy'
   });
+});
+
+it('keeps current-node commands disabled when a non-node surface owns the center panel', () => {
+  for (const overrides of [
+    { isExternalViewOpen: true },
+    { isFoliolePublishedContext: true },
+    { isViewingTrashNode: true }
+  ]) {
+    const state = enabledState(null, overrides);
+    expect(state[APP_COMMAND_IDS.renameNode]).toBe(false);
+    expect(state[APP_COMMAND_IDS.enterPriorityMode]).toBe(false);
+    expect(state[APP_COMMAND_IDS.findInTopic]).toBe(false);
+    expect(state[APP_COMMAND_IDS.addSelectionNote]).toBe(false);
+  }
+});
+
+it('targets the active derived or review-only item without enabling topic-only commands', () => {
+  const state = enabledState('node-1', { isReviewOnly: true });
+
+  expect(state[APP_COMMAND_IDS.renameNode]).toBe(true);
+  expect(state[APP_COMMAND_IDS.enterPriorityMode]).toBe(true);
+  expect(state[APP_COMMAND_IDS.addSelectionNote]).toBe(true);
+  expect(state[APP_COMMAND_IDS.findInTopic]).toBe(false);
+  expect(state[APP_COMMAND_IDS.mergeHighlightsIntoTopic]).toBe(false);
+});
+
+it('keeps the current-node command matrix distinct from topic-only editor commands', () => {
+  const topic = enabledStateForNode({ anchorLink: null, kind: 'topic' });
+  const derived = enabledStateForNode({
+    anchorLink: { id: 'anchor-1', kind: 'highlight', locator: { from: 0, originalText: 'x', to: 1 } },
+    kind: 'item'
+  });
+
+  for (const commandId of [
+    APP_COMMAND_IDS.renameNode,
+    APP_COMMAND_IDS.enterPriorityMode,
+    APP_COMMAND_IDS.exportCurrentArticle,
+    APP_COMMAND_IDS.createSelectionHighlight,
+    APP_COMMAND_IDS.createSelectionCloze,
+    APP_COMMAND_IDS.addSelectionNote,
+    APP_COMMAND_IDS.toggleImmersiveMode
+  ]) {
+    expect(topic[commandId], `topic ${commandId}`).toBe(true);
+    expect(derived[commandId], `derived ${commandId}`).toBe(true);
+  }
+
+  for (const commandId of [
+    APP_COMMAND_IDS.findInTopic,
+    APP_COMMAND_IDS.splitTopic,
+    APP_COMMAND_IDS.mergeHighlightsIntoTopic,
+    APP_COMMAND_IDS.publishToFoliole,
+    APP_COMMAND_IDS.publishToDiscourse,
+    APP_COMMAND_IDS.publishToWordPress
+  ]) {
+    expect(topic[commandId], `topic ${commandId}`).toBe(true);
+    expect(derived[commandId], `derived ${commandId}`).toBe(false);
+  }
+});
+
+it('removes every current-node target when a non-node surface owns the workspace', () => {
+  const commandIds = [
+    APP_COMMAND_IDS.renameNode,
+    APP_COMMAND_IDS.enterPriorityMode,
+    APP_COMMAND_IDS.exportCurrentArticle,
+    APP_COMMAND_IDS.findInTopic,
+    APP_COMMAND_IDS.splitTopic,
+    APP_COMMAND_IDS.mergeHighlightsIntoTopic,
+    APP_COMMAND_IDS.createSelectionHighlight,
+    APP_COMMAND_IDS.createSelectionCloze,
+    APP_COMMAND_IDS.addSelectionNote,
+    APP_COMMAND_IDS.toggleImmersiveMode
+  ];
+
+  for (const overrides of [
+    { isExternalViewOpen: true },
+    { isFoliolePublishedContext: true },
+    { isViewingTrashNode: true }
+  ]) {
+    const state = enabledState(null, overrides);
+    for (const commandId of commandIds) {
+      expect(state[commandId], `${JSON.stringify(overrides)} ${commandId}`).toBe(false);
+    }
+  }
 });

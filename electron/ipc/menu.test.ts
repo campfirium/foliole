@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
   Menu: menuMock
 }));
 
-import { installAppMenu, syncAppMenuState } from './menu.js';
+import { canDispatchNativeMenuAccelerator, installAppMenu, syncAppMenuState } from './menu.js';
 
 interface MockMenuItem {
   accelerator?: string | null;
@@ -100,6 +100,9 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'support.openIssues')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).toMatchObject({ enabled: false });
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
+    expect(canDispatchNativeMenuAccelerator('nodes.enterPriorityMode', 'Control+M')).toBe(true);
+    expect(canDispatchNativeMenuAccelerator('nodes.enterPriorityMode', 'Command+M')).toBe(false);
+    expect(canDispatchNativeMenuAccelerator('workspace.openGuidedSample', 'Control+M')).toBe(false);
   });
 
   it('uses the shared four-way navigation command names', () => {

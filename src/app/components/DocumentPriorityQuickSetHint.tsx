@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
@@ -49,8 +51,8 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
     return null;
   }
 
-  return (
-    <div className="pointer-events-none fixed inset-0 z-command-palette flex items-center justify-center px-4" role="presentation">
+  return createPortal(
+    <div className="pointer-events-none fixed inset-0 z-modal flex items-center justify-center px-4" role="presentation">
       <section
         aria-label={t('desktop.priorityQuickSet.dialog')}
         aria-live="polite"
@@ -76,6 +78,7 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
           <span>{t('desktop.priorityQuickSet.keyboardHint')}</span>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

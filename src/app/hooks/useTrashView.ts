@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 interface UseTrashViewParams {
+  clearActiveNode?: () => void;
   trashedNodeIds: string[];
 }
 
-export function useTrashView({ trashedNodeIds }: UseTrashViewParams) {
+export function useTrashView({ clearActiveNode, trashedNodeIds }: UseTrashViewParams) {
   const [isTrashViewOpen, setIsTrashViewOpen] = useState(false);
   const [selectedTrashNodeId, setSelectedTrashNodeId] = useState<string | null>(null);
 
@@ -21,6 +22,7 @@ export function useTrashView({ trashedNodeIds }: UseTrashViewParams) {
   }, [isTrashViewOpen, selectedTrashNodeId, trashedNodeIdSet]);
 
   const openTrashView = () => {
+    clearActiveNode?.();
     setIsTrashViewOpen(true);
   };
 

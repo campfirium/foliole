@@ -225,6 +225,11 @@ export function syncAppMenuState(
   setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet }, platform));
 }
 
+export function canDispatchNativeMenuAccelerator(commandId: string, accelerator: string) {
+  const item = menuItemsById.get(commandId);
+  return Boolean(item?.enabled && item.accelerator === accelerator);
+}
+
 export function bindMenuToWindow(window: ElectronBrowserWindow) {
   window.on('focus', () => {
     window.webContents.send(IPC_MENU_EVENT_CHANNEL, { commandId: '__menu_focus_sync__' });

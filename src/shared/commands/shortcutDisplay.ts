@@ -54,12 +54,18 @@ export function formatShortcutSetSearchLabel(shortcuts: CommandShortcutSet | und
     .join(' / ');
 }
 
-function shortcutMatchesPlatform(shortcut: CommandShortcut, platform?: string) {
+function shortcutMatchesPlatform(
+  shortcut: CommandShortcut,
+  platform: string | undefined,
+  availableShortcuts: CommandShortcut[]
+) {
   const isMac = usesMacShortcutProjection(platform);
   if (isMac) {
-    return !shortcut.ctrlKey || Boolean(shortcut.metaKey);
+    const hasMetaAlternative = availableShortcuts.some((candidate) => candidate.metaKey);
+    return !hasMetaAlternative || !shortcut.ctrlKey || Boolean(shortcut.metaKey);
   }
-  return !shortcut.metaKey;
+  const hasCtrlAlternative = availableShortcuts.some((candidate) => candidate.ctrlKey);
+  return !hasCtrlAlternative || !shortcut.metaKey;
 }
 
 function sameShortcutBase(left: CommandShortcut, right: CommandShortcut) {
@@ -111,7 +117,11 @@ export function formatShortcutSetDisplayEntries(
   }
 
   return entries
-    .filter((entry) => shortcutMatchesPlatform(entry.shortcut, platform))
+    .filter((entry) => shortcutMatchesPlatform(
+      entry.shortcut,
+      platform,
+      entries.map((candidate) => candidate.shortcut)
+    ))
     .filter((entry) => !hiddenSlots.has(entry.slot))
     .map((entry) => ({ label: formatShortcutDisplayLabel(entry.shortcut, platform), slot: entry.slot }));
 }

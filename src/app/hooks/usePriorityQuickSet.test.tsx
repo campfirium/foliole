@@ -1,9 +1,14 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
+import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platform/electronApi';
 import { onWindowEscape } from '../../shared/platform/keyboard';
 
 import { usePriorityQuickSet } from './usePriorityQuickSet';
+
+afterEach(() => {
+  delete window.electronAPI;
+});
 
 function Harness({
   activeNodeId = 'node-1',
@@ -57,6 +62,53 @@ it('enters quick-set mode when the editor has already handled Ctrl+M', () => {
   });
 
   expect(screen.getByText('active')).toBeInTheDocument();
+});
+
+it('enters quick-set mode when a focused surface exposes Ctrl+M as a control character', () => {
+  render(<Harness />);
+
+  fireEvent.keyDown(window, { code: 'KeyM', ctrlKey: true, key: 'Enter' });
+
+  expect(screen.getByText('active')).toBeInTheDocument();
+});
+
+it('enters quick-set mode from native Ctrl+M when PDF focus suppresses DOM keydown', () => {
+  let nativeHandler: ((payload: NativeKeyboardInputPayload) => void) | null = null;
+  window.electronAPI = {
+    onNativeKeyboardInput: (handler: (payload: NativeKeyboardInputPayload) => void) => {
+      nativeHandler = handler;
+      return () => undefined;
+    }
+  } as unknown as ElectronAPI;
+  render(<Harness />);
+
+  act(() => nativeHandler?.({
+    altKey: false,
+    code: 'KeyM',
+    controlKey: true,
+    key: 'Enter',
+    metaKey: false,
+    shiftKey: false,
+    type: 'keyDown'
+  }));
+
+  expect(screen.getByText('active')).toBeInTheDocument();
+});
+
+it('allows the command palette to invoke quick-set while its shortcut surface is blocked', () => {
+  const { rerender } = render(<Harness blocked />);
+
+  fireEvent.keyDown(window, { key: 'm', ctrlKey: true });
+  expect(screen.getByText('idle')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'enter' }));
+  expect(screen.getByText('active')).toBeInTheDocument();
+
+  rerender(<Harness />);
+  expect(screen.getByText('active')).toBeInTheDocument();
+
+  rerender(<Harness blocked />);
+  expect(screen.getByText('idle')).toBeInTheDocument();
 });
 
 it('cancels quick-set mode with escape', () => {

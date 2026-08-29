@@ -61,6 +61,9 @@ function matchesShortcutKey(event: KeyboardEvent, shortcut: CommandShortcut) {
   if (shortcut.altKey && /^[a-z]$/.test(shortcutKey)) {
     return event.code === `Key${shortcutKey.toUpperCase()}`;
   }
+  if (shortcut.ctrlKey && event.code && /^[a-z]$/.test(shortcutKey)) {
+    return event.code === `Key${shortcutKey.toUpperCase()}`;
+  }
   return normalizeKeyForMatch(event.key) === shortcutKey;
 }
 

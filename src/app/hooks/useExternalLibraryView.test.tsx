@@ -211,6 +211,23 @@ it('keeps document panel navigation history when opening an external document fr
   });
 });
 
+it('clears the previous active node at every external-view entry point', async () => {
+  const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.loadExternalSearchFolders) return [createNativeFolder()];
+    if (command === NATIVE_COMMANDS.loadExternalSearchBrowseEntries) return [createNativeEntry()];
+    return null;
+  });
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+  const clearActiveNode = vi.fn();
+  const { result } = renderHook(() => useExternalLibraryView(clearActiveNode));
+  await waitFor(() => expect(result.current.folders).toHaveLength(1));
+
+  act(() => result.current.openExternalFolder('folder-ext'));
+  act(() => result.current.openExternalDocument({ absolutePath: '/library/two think/a.md', folderId: 'folder-ext' }));
+
+  expect(clearActiveNode).toHaveBeenCalledTimes(2);
+});
+
 it('steps back through external folder selections before returning to notes', async () => {
   const invoke = vi.fn(async (command: string) => {
     if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {

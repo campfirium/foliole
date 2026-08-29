@@ -22,14 +22,14 @@ import {
 import { useExternalLibraryViewHistory, type ExternalLibraryViewTarget } from './externalLibraryViewHistory';
 import { useExternalDocumentFileOpenEvents } from './useExternalDocumentFileOpenEvents';
 
-export function useExternalLibraryView() {
+export function useExternalLibraryView(onEnterExternalView: () => void = () => undefined) {
   const [isExternalViewOpen, setIsExternalViewOpen] = useState(false);
   const [selection, setSelection] = useState<ExternalLibrarySelection>({ kind: 'root' });
   const [entriesByFolderId, setEntriesByFolderId] = useExternalFolderEntries(selection);
   const [folders, setFolders] = useExternalFoldersState(setSelection, setEntriesByFolderId);
   usePreloadExternalFolderEntries(folders, entriesByFolderId, setEntriesByFolderId);
   const applyHistoryTarget = (target: ExternalLibraryViewTarget) =>
-    applyExternalHistoryTarget(target, setSelection, setIsExternalViewOpen);
+    applyExternalHistoryTarget(target, onEnterExternalView, setSelection, setIsExternalViewOpen);
   const history = useExternalLibraryViewHistory({ applyTarget: applyHistoryTarget, isExternalViewOpen, selection });
   useExternalDocumentFileOpenEvents({
     folders,
@@ -113,6 +113,7 @@ function createExternalLibraryActions(args: {
 
 function applyExternalHistoryTarget(
   target: ExternalLibraryViewTarget,
+  onEnterExternalView: () => void,
   setSelection: Dispatch<SetStateAction<ExternalLibrarySelection>>,
   setIsExternalViewOpen: (value: boolean) => void
 ) {
@@ -121,6 +122,7 @@ function applyExternalHistoryTarget(
     setIsExternalViewOpen(false);
     return;
   }
+  onEnterExternalView();
   setSelection(target.selection);
   setIsExternalViewOpen(true);
 }

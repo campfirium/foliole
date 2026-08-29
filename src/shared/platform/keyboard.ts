@@ -1,6 +1,7 @@
 import { getElectronAPI, type NativeKeyboardInputPayload } from './electronApi';
 
 export type KeydownUnlisten = () => void;
+export type NativeKeydownPayload = NativeKeyboardInputPayload;
 
 type KeydownHandler = (event: KeyboardEvent) => boolean | void;
 
@@ -177,6 +178,10 @@ export function onWindowKeydown(handler: (event: KeyboardEvent) => void): Keydow
 
 export function onWindowKeydownCapture(handler: (event: KeyboardEvent) => void): KeydownUnlisten {
   return registerWindowKeydown(keydownCaptureEntries, handler);
+}
+
+export function onNativeKeydown(handler: (payload: NativeKeydownPayload) => void): KeydownUnlisten {
+  return getElectronAPI()?.onNativeKeyboardInput?.(handler) ?? (() => undefined);
 }
 
 export function onWindowEscape(handler: (event: KeyboardEvent) => boolean | void): KeydownUnlisten {

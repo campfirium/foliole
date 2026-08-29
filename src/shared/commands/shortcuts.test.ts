@@ -44,6 +44,17 @@ it('does not fall back to the produced character for Alt-modified letters', () =
   expect(matchesShortcut(keyEvent({ altKey: true, key: 'a' }), shortcut)).toBe(false);
 });
 
+it('matches Ctrl-modified letters by physical code when macOS exposes a control character key', () => {
+  expect(matchesShortcut(keyEvent({ code: 'KeyM', ctrlKey: true, key: 'Enter' }), {
+    ctrlKey: true,
+    key: 'm'
+  })).toBe(true);
+  expect(matchesShortcut(keyEvent({ code: 'KeyN', ctrlKey: true, key: 'Enter' }), {
+    ctrlKey: true,
+    key: 'm'
+  })).toBe(false);
+});
+
 it('keeps event.key matching for non-Alt letters and Alt-modified symbols', () => {
   expect(matchesShortcut(keyEvent({ code: 'KeyQ', key: 'a' }), { key: 'a' })).toBe(true);
   expect(matchesShortcut(keyEvent({ altKey: true, code: 'BracketLeft', key: '[' }), {

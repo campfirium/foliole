@@ -3,7 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatShortcutSetLabel, matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
-import { onWindowEscape, onWindowKeydownCapture } from '../../shared/platform/keyboard';
+import {
+  type NativeKeydownPayload,
+  onNativeKeydown,
+  onWindowEscape,
+  onWindowKeydownCapture
+} from '../../shared/platform/keyboard';
 
 const QUICK_SET_TIMEOUT_MS = 4000;
 
@@ -103,6 +108,32 @@ function usePriorityQuickSetListeners(args: {
       ),
     [args]
   );
+
+  useEffect(() => onNativeKeydown((payload) => {
+    if (payload.type !== 'keyDown') return;
+    handlePriorityQuickSetKeydown({
+      activeNodeId: args.activeNodeId,
+      armTimeout: args.armTimeout,
+      cancel: args.cancel,
+      canEnter: args.canEnter,
+      enter: args.enter,
+      event: createNativeKeyboardEvent(payload),
+      isActive: args.isActive,
+      onPriorityChange: args.onPriorityChange,
+      ...definedProps({ shortcuts: args.shortcuts })
+    });
+  }), [args]);
+}
+
+function createNativeKeyboardEvent(payload: NativeKeydownPayload) {
+  return new KeyboardEvent('keydown', {
+    altKey: payload.altKey,
+    code: payload.code,
+    ctrlKey: payload.controlKey,
+    key: payload.key,
+    metaKey: payload.metaKey,
+    shiftKey: payload.shiftKey
+  });
 }
 
 export function usePriorityQuickSet({
@@ -113,6 +144,7 @@ export function usePriorityQuickSet({
 }: UsePriorityQuickSetArgs) {
   const [isActive, setIsActive] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+  const wasBlockedRef = useRef(blocked);
   const canEnter = Boolean(activeNodeId) && !blocked;
 
   const clearTimer = useCallback(() => {
@@ -136,17 +168,19 @@ export function usePriorityQuickSet({
   }, [clearTimer]);
 
   const enter = useCallback(() => {
-    if (!canEnter) {
+    if (!activeNodeId) {
       return false;
     }
     setIsActive(true);
     armTimeout();
     return true;
-  }, [armTimeout, canEnter]);
+  }, [activeNodeId, armTimeout]);
 
   useEffect(() => {
-    if (!canEnter && isActive) cancel();
-  }, [canEnter, cancel, isActive]);
+    const becameBlocked = blocked && !wasBlockedRef.current;
+    wasBlockedRef.current = blocked;
+    if ((!activeNodeId || becameBlocked) && isActive) cancel();
+  }, [activeNodeId, blocked, cancel, isActive]);
 
   useEffect(() => clearTimer, [clearTimer]);
 

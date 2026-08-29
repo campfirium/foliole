@@ -53,6 +53,37 @@ describe('bindHotkeyRecorderInput command shortcuts', () => {
     expect(window.webContents.send).not.toHaveBeenCalled();
   });
 
+  it('forwards physical Ctrl+M without consuming it so PDF focus has a renderer fallback', () => {
+    const window = createWindow();
+    bindHotkeyRecorderInput(window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0]);
+
+    const event = emitInput(window, { code: 'KeyM', control: true, key: 'Enter' });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(window.webContents.send).toHaveBeenCalledWith(
+      'foliole:native-keyboard-input',
+      expect.objectContaining({ code: 'KeyM', controlKey: true, key: 'Enter' })
+    );
+  });
+
+  it('dispatches Ctrl+M through the enabled native menu projection when PDF owns focus', () => {
+    const window = createWindow();
+    const canDispatchMenuAccelerator = vi.fn(() => true);
+    bindHotkeyRecorderInput(
+      window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0],
+      canDispatchMenuAccelerator
+    );
+
+    const event = emitInput(window, { code: 'KeyM', control: true, key: 'Enter' });
+
+    expect(canDispatchMenuAccelerator).toHaveBeenCalledWith('nodes.enterPriorityMode', 'Control+M');
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(window.webContents.send).toHaveBeenCalledWith(
+      'foliole:native-menu-command',
+      { commandId: 'nodes.enterPriorityMode' }
+    );
+  });
+
   it('leaves unrelated shortcuts on the normal page path', () => {
     const window = createWindow();
     bindHotkeyRecorderInput(window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0]);

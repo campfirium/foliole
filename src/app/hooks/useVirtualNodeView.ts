@@ -11,6 +11,7 @@ import {
 interface VirtualNodeViewArgs {
   browseRootNodeId: string;
   browseRootSpecialKind: Node['specialKind'] | undefined;
+  clearActiveNode: () => void;
   setBrowseRootNode: (nodeId: string) => void;
 }
 
@@ -27,13 +28,15 @@ export function useVirtualNodeView(args: VirtualNodeViewArgs) {
   const [isVirtualViewOpen, setIsVirtualViewOpen] = useState(rootIsVirtual);
 
   useEffect(() => {
+    if (rootIsVirtual) args.clearActiveNode();
     setIsVirtualViewOpen(rootIsVirtual);
-  }, [args.browseRootNodeId, rootIsVirtual]);
+  }, [args.browseRootNodeId, args.clearActiveNode, rootIsVirtual]);
 
   const openVirtualView = useCallback((nodeId: string = VIRTUAL_ROOT_NODE_ID) => {
+    args.clearActiveNode();
     args.setBrowseRootNode(nodeId);
     setIsVirtualViewOpen(true);
-  }, [args.setBrowseRootNode]);
+  }, [args.clearActiveNode, args.setBrowseRootNode]);
 
   const closeVirtualView = useCallback(() => setIsVirtualViewOpen(false), []);
   const restoreBrowseView = useCallback(() => setIsVirtualViewOpen(rootIsVirtual), [rootIsVirtual]);

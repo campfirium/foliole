@@ -25,7 +25,9 @@ function renderPanel(overrides: Partial<Parameters<typeof ReviewTopicDelayPanel>
 it('shows the compact centered postpone layout without trigger shortcut text', () => {
   renderPanel();
 
-  expect(screen.getByRole('dialog', { name: 'Postpone Topic' })).toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: 'Postpone Topic' });
+  expect(dialog).toBeInTheDocument();
+  expect(dialog.parentElement).toHaveClass('z-modal');
   expect(screen.getByText('Postpone')).toBeInTheDocument();
   expect(screen.queryByText('Ctrl J')).not.toBeInTheDocument();
   expect(screen.getByText('0-9')).toBeInTheDocument();

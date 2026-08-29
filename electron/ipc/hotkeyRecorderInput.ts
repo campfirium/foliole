@@ -2,9 +2,14 @@ import { ipcMain, type BrowserWindow as ElectronBrowserWindow, type Input } from
 
 import {
   IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL,
+  IPC_MENU_EVENT_CHANNEL,
   IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
   type NativeKeyboardInputEvent
 } from './contracts.js';
+import { canDispatchNativeMenuAccelerator } from './menu.js';
+
+const PRIORITY_COMMAND_ID = 'nodes.enterPriorityMode';
+const PRIORITY_MACOS_ACCELERATOR = 'Control+M';
 
 function toNativeKeyboardInputEvent(input: Input): NativeKeyboardInputEvent {
   return {
@@ -18,7 +23,20 @@ function toNativeKeyboardInputEvent(input: Input): NativeKeyboardInputEvent {
   };
 }
 
-export function bindHotkeyRecorderInput(window: ElectronBrowserWindow) {
+function isPriorityShortcutInput(input: Input) {
+  return (
+    input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    (input.code === 'KeyM' || input.key.toLowerCase() === 'm')
+  );
+}
+
+export function bindHotkeyRecorderInput(
+  window: ElectronBrowserWindow,
+  canDispatchMenuAccelerator = canDispatchNativeMenuAccelerator
+) {
   let isRecorderActive = false;
   ipcMain.on(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, (event, payload: unknown) => {
     if (event.sender !== window.webContents) {
@@ -33,7 +51,16 @@ export function bindHotkeyRecorderInput(window: ElectronBrowserWindow) {
     if (input.type !== 'keyDown') {
       return;
     }
-    if (!isRecorderActive && input.key !== 'Escape') {
+    if (!isRecorderActive && input.key !== 'Escape' && !isPriorityShortcutInput(input)) {
+      return;
+    }
+    if (
+      !isRecorderActive &&
+      isPriorityShortcutInput(input) &&
+      canDispatchMenuAccelerator(PRIORITY_COMMAND_ID, PRIORITY_MACOS_ACCELERATOR)
+    ) {
+      event.preventDefault();
+      window.webContents.send(IPC_MENU_EVENT_CHANNEL, { commandId: PRIORITY_COMMAND_ID });
       return;
     }
     if (isRecorderActive) {
