@@ -21,6 +21,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncMoveNodesToRuntime: vi.fn(async () => undefined),
+  syncPdfImageExcerptNodeMutationToRuntime: vi.fn(async () => null),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -93,6 +94,55 @@ describe('workspace editor text history', () => {
     const { harness, historyActions } = createHarness();
     pushTextEdit(historyActions);
     harness.setState({ activeNodeId: 'node-b' });
+
+    expect(historyActions.undoEditorOperation()).toBe(false);
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toHaveLength(1);
+  });
+});
+
+describe('workspace image excerpt annotation history routing', () => {
+  it('replays parent PDF annotation history while its image excerpt child has focus', async () => {
+    const { harness, historyActions } = createHarness();
+    const createdId = (await harness.getState().createHighlightNodeFromSelection(
+      'node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')
+    ))!;
+    const createdNode = harness.getState().nodesById[createdId]!;
+    harness.setState({
+      activeNodeId: createdId,
+      nodesById: {
+        ...harness.getState().nodesById,
+        [createdId]: { ...createdNode, anchorLink: { ...createdNode.anchorLink!, kind: 'image-excerpt' } }
+      }
+    });
+
+    expect(historyActions.undoEditorOperation({
+      applyText: () => false, currentContent: createdNode.content, nodeId: createdId
+    })).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(createdId));
+    expect(historyActions.redoEditorOperation({
+      applyText: () => false, currentContent: createdNode.content, nodeId: createdId
+    })).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
+  });
+
+  it('does not replay parent text history while an image excerpt child has focus', () => {
+    const { harness, historyActions } = createHarness();
+    pushTextEdit(historyActions);
+    const sourceNode = harness.getState().nodesById['node-1']!;
+    harness.setState({
+      activeNodeId: 'excerpt-1',
+      nodeOrder: [...harness.getState().nodeOrder, 'excerpt-1'],
+      nodesById: {
+        ...harness.getState().nodesById,
+        'excerpt-1': {
+          ...sourceNode,
+          anchorLink: { id: 'excerpt-anchor', kind: 'image-excerpt' },
+          id: 'excerpt-1',
+          parentNodeId: 'node-1',
+          title: 'Excerpt'
+        }
+      }
+    });
 
     expect(historyActions.undoEditorOperation()).toBe(false);
     expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toHaveLength(1);

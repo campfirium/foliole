@@ -162,6 +162,8 @@ export function upsertNodeSnapshot(
     });
     writeNodeReviewSnapshotWithSync(driver, input, statements.upsertNodeReview.run);
     bumpUntitledSequenceByParent(driver, {
+      isImageExcerpt: input.anchorLink?.kind === 'image-excerpt',
+      isTitleManual: input.isTitleManual,
       parentNodeId: input.parentNodeId,
       title: input.title,
       updatedAt: input.updatedAt

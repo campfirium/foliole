@@ -1250,6 +1250,23 @@ b {
   -webkit-text-fill-color: transparent;
 }
 
+.pdf-visual-excerpt-page {
+  cursor: crosshair;
+}
+
+.pdf-visual-excerpt-page .textLayer span:not(.endOfContent) {
+  cursor: text;
+}
+
+.pdf-visual-excerpt-page :is(a, button, input, select, textarea, [role='button'], [role='menu'], [role='toolbar']) {
+  cursor: default;
+}
+
+.pdf-visual-excerpt-page.pdf-visual-excerpt-near-edge,
+.pdf-visual-excerpt-page.pdf-visual-excerpt-near-edge * {
+  cursor: grab !important;
+}
+
 :root[data-pdf-reading-mode='original'] .pdf-document-surface,
 :root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack),
 :root[data-resolved-base-color='light'] .pdf-document-surface,

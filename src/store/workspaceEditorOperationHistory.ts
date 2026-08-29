@@ -78,6 +78,20 @@ function hasBlockingAnnotation(get: WorkspaceGet, nodeId: string) {
   ));
 }
 
+function resolveOperationTarget(
+  state: WorkspaceState,
+  requestedNodeId: string,
+  mode: EditorOperationMode
+) {
+  if (getEditorOperationTopEntry(state.editorOperationHistory, requestedNodeId, mode)) {
+    return requestedNodeId;
+  }
+  const node = state.nodesById[requestedNodeId];
+  const parentNodeId = node?.anchorLink?.kind === 'image-excerpt' ? node.parentNodeId : null;
+  const parentEntry = getEditorOperationTopEntry(state.editorOperationHistory, parentNodeId, mode);
+  return parentEntry && parentEntry.type !== 'text.edit' && parentNodeId ? parentNodeId : requestedNodeId;
+}
+
 function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   const queuedByNodeId = new Map<string, QueuedEditorOperation[]>();
   const clearQueued = (nodeId: string) => queuedByNodeId.delete(nodeId);
@@ -204,8 +218,10 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry)
     })),
     redoEditorOperation: (context?: EditorOperationApplyContext) => {
-      const nodeId = context?.nodeId ?? get().activeNodeId;
-      return nodeId ? runner.apply(nodeId, 'redo', context) : false;
+      const requestedNodeId = context?.nodeId ?? get().activeNodeId;
+      if (!requestedNodeId) return false;
+      const nodeId = resolveOperationTarget(get(), requestedNodeId, 'redo');
+      return runner.apply(nodeId, 'redo', nodeId === requestedNodeId ? context : undefined);
     },
     settleEditorAnnotationCreation: (result: { annotationNodeIds: string[]; nodeId: string; succeeded: boolean }) => {
       const outcome = settleEditorAnnotationCreation(set, result);
@@ -214,8 +230,10 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       }
     },
     undoEditorOperation: (context?: EditorOperationApplyContext) => {
-      const nodeId = context?.nodeId ?? get().activeNodeId;
-      return nodeId ? runner.apply(nodeId, 'undo', context) : false;
+      const requestedNodeId = context?.nodeId ?? get().activeNodeId;
+      if (!requestedNodeId) return false;
+      const nodeId = resolveOperationTarget(get(), requestedNodeId, 'undo');
+      return runner.apply(nodeId, 'undo', nodeId === requestedNodeId ? context : undefined);
     }
   };
 }
