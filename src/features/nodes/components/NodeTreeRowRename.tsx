@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { onWindowPriorityEscape } from '../../../shared/platform/keyboard';
 import { UNTITLED_NODE_TITLE } from '../model/deriveNodeTitle';
 
 import { registerActiveNodeRenameCommit } from './nodeRenameCommitCapability';
@@ -155,6 +156,18 @@ interface NodeRenameInputProps {
   onSubmit: (target: RenameExitTarget) => Promise<boolean>;
 }
 
+function useRenameEscape(args: {
+  inputRef: { current: HTMLInputElement | null };
+  onCancel: () => void;
+  skipNextBlurSubmitRef: { current: boolean };
+}) {
+  useEffect(() => onWindowPriorityEscape(() => {
+    if (document.activeElement !== args.inputRef.current) return false;
+    args.skipNextBlurSubmitRef.current = true;
+    args.onCancel();
+  }), [args]);
+}
+
 export function NodeRenameInput({
   draftTitle,
   focusBodyOnTab,
@@ -170,6 +183,7 @@ export function NodeRenameInput({
     inputRef.current?.focus();
     inputRef.current?.select();
   }, []);
+  useRenameEscape({ inputRef, onCancel, skipNextBlurSubmitRef });
 
   const submit = (target: RenameExitTarget) => {
     void onSubmit(target).then((succeeded) => {
