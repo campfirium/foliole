@@ -28,6 +28,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   exitStudyMode: () => void;
   goBack: () => void;
   goForward: () => void;
+  goToLastChild: () => void;
   goToNode: () => void;
   moveToNode: () => void;
   renameNode: () => void;
@@ -130,6 +131,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createVirtualFolder: args.createVirtualFolder,
     goBack: args.goBack,
     goForward: args.goForward,
+    goToLastChild: args.goToLastChild,
     goToNode: () => args.setGoToNodePaletteOpen(true),
     moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
     renameNode: args.renameNode,

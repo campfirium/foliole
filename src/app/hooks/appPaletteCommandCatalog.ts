@@ -35,6 +35,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canToggleDevReviewStatusBarPersistence: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  canGoToLastChild: boolean;
   canGoToNode: boolean;
   canMoveToNode: boolean;
   canGoParent: boolean;
@@ -164,6 +165,9 @@ function isNavigationCommandEnabled(id: string, options: BuildAppPaletteItemsOpt
   }
   if (id === APP_COMMAND_IDS.goForward) {
     return options.canGoForward;
+  }
+  if (id === APP_COMMAND_IDS.goToLastChild) {
+    return options.canGoToLastChild;
   }
   if (id === APP_COMMAND_IDS.goToNode) {
     return options.canGoToNode;

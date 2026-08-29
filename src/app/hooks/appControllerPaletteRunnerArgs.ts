@@ -113,6 +113,7 @@ function createPaletteNavigationActions(args: {
   return {
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
+    goToLastChild: args.nav.handleGoToLastChild,
     goParent: args.nav.handleGoParent,
     goToNode: () => undefined,
     moveToNode: () => undefined,

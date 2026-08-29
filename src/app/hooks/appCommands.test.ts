@@ -26,6 +26,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canToggleDevTools: true,
     canToggleDevReviewStatusBarPersistence: true,
     canGoBack: true,
+    canGoToLastChild: true,
     canGoForward: true,
     canGoToNode: true,
     canMoveToNode: true,
@@ -51,6 +52,20 @@ function createPaletteOptions(isReviewMode: boolean) {
   };
 }
 
+function expectFourWayNavigationTitles(items: ReturnType<typeof buildAppPaletteItems>) {
+  expect([
+    APP_COMMAND_IDS.goBack,
+    APP_COMMAND_IDS.goForward,
+    APP_COMMAND_IDS.goParent,
+    APP_COMMAND_IDS.goToLastChild
+  ].map((commandId) => items.find((item) => item.id === commandId)?.title)).toEqual([
+    'Go Back',
+    'Go Forward',
+    'Go Up',
+    'Go Down'
+  ]);
+}
+
 function expectCorePaletteEntries() {
   const items = buildAppPaletteItems(createPaletteOptions(false));
 
@@ -67,6 +82,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
+  expectFourWayNavigationTitles(items);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
   expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to...');
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);

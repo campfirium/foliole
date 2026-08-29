@@ -92,6 +92,7 @@ export function createWorkspaceState() {
     exitReviewSession: vi.fn(),
     goBack: vi.fn(),
     goForward: vi.fn(),
+    goToLastChild: vi.fn(),
     goToParent: vi.fn(),
     gradeReviewCard: vi.fn(),
     isHydrated: true,

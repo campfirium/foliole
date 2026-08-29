@@ -31,6 +31,7 @@ interface RunAppCommandActions {
   repairTable: () => boolean | void;
   goBack: () => void;
   goForward: () => void;
+  goToLastChild: () => void;
   goToNode: () => void;
   moveToNode: () => void;
   renameNode: () => void;
@@ -168,6 +169,7 @@ function createNavigationCommandHandlers(actions: RunAppCommandActions): Record<
   return {
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,
+    [APP_COMMAND_IDS.goToLastChild]: actions.goToLastChild,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
     [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
     [APP_COMMAND_IDS.renameNode]: actions.renameNode,

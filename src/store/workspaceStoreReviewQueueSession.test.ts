@@ -20,13 +20,18 @@ function createHistoryActionStubs() {
   };
 }
 
+const NAVIGATION_ACTION_STUBS = {
+  goBack: () => null,
+  goForward: () => null,
+  goToLastChild: () => null,
+  goToParent: () => null,
+  jumpToAncestorNode: () => null,
+  openNode: () => null
+};
+
 function createWorkspaceActionStubs() {
   return {
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
+    ...NAVIGATION_ACTION_STUBS,
     resetLayout: () => undefined,
     setNodeViewState: () => undefined,
     setDocumentMaxWidth: () => undefined,

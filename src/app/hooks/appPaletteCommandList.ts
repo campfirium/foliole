@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { FOUR_WAY_NAVIGATION_COMMANDS } from '../../../lib/core/nodes/fourWayNavigationCommands';
 import { VIRTUAL_FOLDER_COMMAND } from '../../../lib/core/nodes/virtualFolderCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
@@ -60,11 +61,14 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   ...SETTINGS_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openHelpSearch, title: 'DEV Open Help Search', section: 'Workspace', keywords: ['help', 'search', 'guide'] },
   ...HELP_PALETTE_COMMANDS,
-  { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
-  { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
+  ...FOUR_WAY_NAVIGATION_COMMANDS.map((command) => ({
+    id: command.appCommandId,
+    keywords: command.keywords,
+    section: 'Navigation',
+    title: command.title
+  })),
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to...', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to...', section: 'Navigation', keywords: ['move', 'reparent'] },
-  { id: APP_COMMAND_IDS.goParent, title: 'Go to Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
   { id: APP_COMMAND_IDS.toggleComparisonView, title: 'Compare with Draft', section: 'Editor', keywords: ['compare', 'diff', 'paste', 'draft'] },
   { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },

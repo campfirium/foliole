@@ -16,6 +16,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canExportCurrentArticle: true,
   canFindInCurrentTopic: true,
   canGoBack: true,
+  canGoToLastChild: true,
   canGoForward: true,
   canGoParent: true,
   canGoToNode: true,

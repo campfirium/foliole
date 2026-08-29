@@ -44,6 +44,9 @@ function formatAcceleratorKey(key: string) {
   if (key === ' ') {
     return 'Space';
   }
+  if (key.startsWith('Arrow')) {
+    return key.slice('Arrow'.length);
+  }
   return key.length === 1 ? key.toUpperCase() : key;
 }
 

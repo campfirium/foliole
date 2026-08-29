@@ -24,6 +24,8 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   },
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
+  [APP_COMMAND_IDS.goParent]: { primary: { key: 'ArrowUp', ctrlKey: true } },
+  [APP_COMMAND_IDS.goToLastChild]: { primary: { key: 'ArrowDown', ctrlKey: true } },
   [APP_COMMAND_IDS.renameNode]: { primary: { key: 'F2' } },
   [APP_COMMAND_IDS.createFolder]: { primary: { key: 'f', ctrlKey: true, altKey: true }, secondary: { key: 'f', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.createTopic]: { primary: { key: 'n', ctrlKey: true } },

@@ -102,6 +102,15 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'workspace.toggleDevTools')).not.toHaveProperty('accelerator');
   });
 
+  it('uses the shared four-way navigation command names', () => {
+    installAppMenu();
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'navigation.goBack')?.label).toBe('Go Back');
+    expect(findMenuItem(items, 'navigation.goForward')?.label).toBe('Go Forward');
+    expect(findMenuItem(items, 'navigation.goParent')?.label).toBe('Go Up');
+    expect(findMenuItem(items, 'navigation.goToLastChild')?.label).toBe('Go Down');
+  });
+
   it('omits the DevTools menu entry from packaged app menus', () => {
     appMock.isPackaged = true;
 

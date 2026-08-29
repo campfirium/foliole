@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { UNTITLED_NODE_TITLE } from '../model/deriveNodeTitle';
 
+import { registerActiveNodeRenameCommit } from './nodeRenameCommitCapability';
+
 const NODE_RENAME_REQUEST_EVENT = 'foliole:node-rename-request';
 
 interface NodeRenameRequestDetail {
@@ -98,6 +100,11 @@ export function useRenameState(
   const submitRename = createSubmitRename({
     draftTitle, focusSessionRef, label, nodeId, onRename, setIsRenaming, submissionRef
   });
+
+  useEffect(() => {
+    if (!isRenaming) return undefined;
+    return registerActiveNodeRenameCommit(() => submitRename('none'));
+  }, [isRenaming, submitRename]);
 
   return {
     draftTitle,

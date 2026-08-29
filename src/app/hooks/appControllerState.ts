@@ -134,6 +134,7 @@ function useWorkspaceEditorController(
     forwardStackSize: ws.navigation.forwardStack.length,
     goBack: ws.goBack,
     goForward: ws.goForward,
+    goToLastChild: ws.goToLastChild,
     goToParent: ws.goToParent,
     jumpToAncestorNode: ws.jumpToAncestorNode,
     nodesById: ws.nodesById,

@@ -39,6 +39,7 @@ export interface WorkspaceState {
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
+  goToLastChild: () => NodeNavigationResult | null;
   jumpToAncestorNode: (ancestorNodeId: string) => NodeNavigationResult | null;
   openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null;
   resetLayout: () => void;

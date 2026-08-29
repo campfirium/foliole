@@ -148,11 +148,11 @@ function expectPreparedNavigationEffects(args: {
   invoke: ReturnType<typeof createPrefetchInvokeMock>;
 }) {
   expect(args.callOrder).toEqual([
-    'selection-requested',
     'fresh-transaction',
+    'flush-draft-immediately',
+    'selection-requested',
     'save-view',
     args.actionName,
-    'flush-draft-immediately',
     'load-started',
     'load-resolved',
     'load-merged'

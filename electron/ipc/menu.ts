@@ -7,6 +7,7 @@ import {
 } from 'electron';
 
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../lib/core/nodes/folderTopicItemCommands.js';
+import { FOUR_WAY_NAVIGATION_COMMANDS } from '../../lib/core/nodes/fourWayNavigationCommands.js';
 
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
 import { resolveMenuCommandWindow } from './menuCommandWindow.js';
@@ -178,10 +179,10 @@ function buildAppMenuTemplate(
     {
       label: 'Navigate',
       submenu: [
-        commandItem('Go Back', 'navigation.goBack', state),
-        commandItem('Go Forward', 'navigation.goForward', state),
+        ...FOUR_WAY_NAVIGATION_COMMANDS.map((command) =>
+          commandItem(command.title, command.appCommandId, state)
+        ),
         commandItem('Go to…', 'navigation.goToNode', state),
-        commandItem('Go to Parent', 'navigation.goParent', state)
       ]
     },
     {

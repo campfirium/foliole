@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { commitActiveNodeRename } from '../../features/nodes/components/nodeRenameCommitCapability';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
@@ -20,20 +21,29 @@ export function useNavigationAction(
 ) {
   return useCallback(async () => {
     const sourceNodeId = useWorkspaceStore.getState().activeNodeId;
-    const targetNodeId = resolveTargetNodeId();
-    if (targetNodeId) {
-      markRequested(targetNodeId);
+    if (!resolveTargetNodeId()) {
+      action();
+      return;
     }
     if (!flushActiveEditorTransaction(sourceNodeId)) {
       flushPendingEditorDraft();
     }
+    if (!await commitActiveNodeRename()) {
+      return;
+    }
+    if (!await flushPendingEditorDraftImmediately()) {
+      return;
+    }
+    const targetNodeId = resolveTargetNodeId();
+    if (!targetNodeId) {
+      action();
+      return;
+    }
+    markRequested(targetNodeId);
     prepareForNavigation(sourceNodeId);
     const result = action();
     finalize(result);
-    void flushPendingEditorDraftImmediately();
-    if (targetNodeId) {
-      void ensureNodeReady(targetNodeId);
-    }
+    void ensureNodeReady(targetNodeId);
   }, [
     action,
     ensureNodeReady,

@@ -57,6 +57,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     mergeHighlightsIntoTopic: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
+    goToLastChild: () => undefined,
     goToNode: () => undefined,
     moveToNode: () => undefined,
     renameNode: () => undefined,

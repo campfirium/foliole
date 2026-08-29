@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
+import { getPlatformDefaultCommandShortcuts } from './defaultShortcuts';
+import { APP_COMMAND_IDS } from './ids';
 import { getCommandShortcutOverrides, resolveCommandShortcutMap } from './keymap';
 
 function clearStorage() {
@@ -54,6 +56,23 @@ describe('command keymap overrides', () => {
     });
 
     expect(resolved['review.revealAnswer']?.primary).toMatchObject({ key: ' ', shiftKey: true });
+  });
+
+  it('preserves navigation customization and restores the platform default when reset', () => {
+    const defaults = getPlatformDefaultCommandShortcuts('MacIntel');
+    const customized = resolveCommandShortcutMap({
+      commandIds: [APP_COMMAND_IDS.goToLastChild],
+      defaults,
+      overrides: { [APP_COMMAND_IDS.goToLastChild]: { primary: 'Command+Shift+J' } }
+    });
+    const reset = resolveCommandShortcutMap({
+      commandIds: [APP_COMMAND_IDS.goToLastChild],
+      defaults,
+      overrides: {}
+    });
+
+    expect(customized[APP_COMMAND_IDS.goToLastChild]?.primary).toEqual({ key: 'j', metaKey: true, shiftKey: true });
+    expect(reset[APP_COMMAND_IDS.goToLastChild]?.primary).toEqual({ key: 'ArrowDown', metaKey: true });
   });
 
   it('returns empty map when storage payload is broken json', () => {

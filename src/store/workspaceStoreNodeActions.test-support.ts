@@ -83,6 +83,7 @@ function createWorkspaceActionStubs() {
   return {
     goBack: () => null,
     goForward: () => null,
+    goToLastChild: () => null,
     goToParent: () => null,
     jumpToAncestorNode: () => null,
     openNode: () => null,

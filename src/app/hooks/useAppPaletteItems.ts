@@ -120,6 +120,7 @@ function buildPaletteOptions(
     ...resolveDevPaletteOptions(),
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,
+    canGoToLastChild: args.nav.canGoToLastChild,
     canGoToNode: hasNavigableNodes,
     canMoveToNode,
     canGoParent: args.nav.canGoParent,

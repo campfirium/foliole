@@ -41,11 +41,8 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
   [APP_COMMAND_IDS.openCommandPalette]: 'desktop.command.openCommandPalette',
   [APP_COMMAND_IDS.customizeDocumentMenu]: 'desktop.command.customizeDocumentMenu',
-  [APP_COMMAND_IDS.goBack]: 'desktop.command.goBack',
-  [APP_COMMAND_IDS.goForward]: 'desktop.command.goForward',
   [APP_COMMAND_IDS.goToNode]: 'desktop.command.goToNode',
   [APP_COMMAND_IDS.moveToNode]: 'desktop.command.moveToNode',
-  [APP_COMMAND_IDS.goParent]: 'desktop.command.goParent',
   [APP_COMMAND_IDS.findInTopic]: 'desktop.command.findInTopic',
   [APP_COMMAND_IDS.toggleComparisonView]: 'desktop.command.compareWithDraft',
   [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]:

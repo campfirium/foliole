@@ -91,7 +91,7 @@ test('PDF image excerpt @pdf creates a normal image and opens it from the source
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
   const palette = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
   await expect(palette).toBeVisible();
-  await palette.locator('button[aria-label="Go to Parent"], button[aria-label="返回上级"]').click();
+  await palette.locator('button[aria-label="Go Up"], button[aria-label="返回上级"]').click();
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(parentNodeId);
   await expect(desktopWindow.getByTestId('pdf-image-excerpt-outline').first()).toBeVisible();

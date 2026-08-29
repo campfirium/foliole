@@ -1,34 +1,40 @@
 import { useCallback } from 'react';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted,
   markNodeDocumentMerged
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import {
+  resolveBackNavigationTarget,
+  resolveLastChildNavigationTarget,
+  resolveForwardNavigationTarget,
+  resolveParentNavigationTarget
+} from '../../store/workspaceNavigationTargets';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-export function useNavigationTargetResolvers(activeNodeId: string | null, nodesById: Record<string, Node>) {
+export function useNavigationTargetResolvers() {
   const resolveBackTargetNodeId = useCallback(() => {
-    const backStack = useWorkspaceStore.getState().navigation.backStack;
-    return backStack[backStack.length - 1] ?? null;
+    return resolveBackNavigationTarget(useWorkspaceStore.getState()).nodeId;
   }, []);
 
   const resolveForwardTargetNodeId = useCallback(() => {
-    return useWorkspaceStore.getState().navigation.forwardStack[0] ?? null;
+    return resolveForwardNavigationTarget(useWorkspaceStore.getState()).nodeId;
   }, []);
 
   const resolveParentTargetNodeId = useCallback(() => {
-    if (!activeNodeId) {
-      return null;
-    }
-    return nodesById[activeNodeId]?.parentNodeId ?? null;
-  }, [activeNodeId, nodesById]);
+    return resolveParentNavigationTarget(useWorkspaceStore.getState());
+  }, []);
+
+  const resolveLastChildTargetNodeId = useCallback(() => {
+    return resolveLastChildNavigationTarget(useWorkspaceStore.getState());
+  }, []);
 
   return {
     resolveBackTargetNodeId,
+    resolveLastChildTargetNodeId,
     resolveForwardTargetNodeId,
     resolveParentTargetNodeId
   };

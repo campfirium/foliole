@@ -16,6 +16,7 @@ import { useCommandShortcutState } from './reviewHotkeysState';
 import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
 import { useAppCommandSurfaceShortcuts } from './useAppCommandSurfaceShortcuts';
 import { useFormalImport } from './useFormalImport';
+import { useFourWayNavigationCommandGate } from './useFourWayNavigationCommandGate';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 
 function useAppCommandShortcuts(args: {
@@ -23,26 +24,32 @@ function useAppCommandShortcuts(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   paletteState: ReturnType<typeof buildControllerPaletteState>;
 }) {
-  useNativeCommandMenu(args.paletteState.items, args.paletteState.onRunCommand);
+  const isCommandSurfaceOpen =
+    args.controller.runtime.isCommandPaletteOpen ||
+    args.controller.runtime.isGoToNodePaletteOpen ||
+    args.controller.runtime.isImportManagementOpen ||
+    args.controller.runtime.isMoveToNodePaletteOpen ||
+    args.controller.runtime.isSearchPaletteOpen ||
+    args.controller.runtime.isSettingsOpen;
+  const runGuardedCommand = useFourWayNavigationCommandGate({
+    isCommandSurfaceOpen,
+    runCommand: args.paletteState.onRunCommand
+  });
+  useNativeCommandMenu(args.paletteState.items, runGuardedCommand);
   useAppCommandSurfaceShortcuts({
     isCommandPaletteOpen: args.controller.runtime.isCommandPaletteOpen,
     isSearchPaletteOpen: args.controller.runtime.isSearchPaletteOpen,
     isSettingsOpen: args.controller.runtime.isSettingsOpen,
     items: args.paletteState.items,
-    runCommand: args.paletteState.onRunCommand,
+    runCommand: runGuardedCommand,
     setIsCommandPaletteOpen: args.controller.runtime.setIsCommandPaletteOpen,
     setIsSearchPaletteOpen: args.controller.runtime.setIsSearchPaletteOpen,
     shortcutMap: args.hotkeys.shortcutMap
   });
   useAppCommandShortcutDispatcher({
-    isCommandSurfaceOpen:
-      args.controller.runtime.isCommandPaletteOpen ||
-      args.controller.runtime.isGoToNodePaletteOpen ||
-      args.controller.runtime.isMoveToNodePaletteOpen ||
-      args.controller.runtime.isSearchPaletteOpen ||
-      args.controller.runtime.isSettingsOpen,
+    isCommandSurfaceOpen,
     items: args.paletteState.items,
-    runCommand: args.paletteState.onRunCommand,
+    runCommand: runGuardedCommand,
     shortcutMap: args.hotkeys.shortcutMap
   });
 }

@@ -5,7 +5,13 @@ import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLi
 import { definedProps } from '../../shared/lib/definedProps';
 import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
-import type { NodeViewState } from '../../store/workspaceStore';
+import {
+  resolveBackNavigationTarget,
+  resolveLastChildNavigationTarget,
+  resolveForwardNavigationTarget,
+  resolveParentNavigationTarget
+} from '../../store/workspaceNavigationTargets';
+import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 
 import { usePreparedNavigationHandlers } from './useWorkspaceNavigationPrefetch';
 import { usePendingAnchorNavigation } from './useWorkspacePendingAnchorNavigation';
@@ -26,6 +32,7 @@ interface WorkspaceNavigationDependencies {
   forwardStackSize: number;
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
+  goToLastChild?: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
@@ -38,9 +45,11 @@ interface WorkspaceNavigationHandlers {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  canGoToLastChild: boolean;
   handleGoBack: () => void;
   handleGoForward: () => void;
   handleGoParent: () => void;
+  handleGoToLastChild: () => void;
   handleSelectBreadcrumbNode: (nodeId: string) => void;
   handleSelectNode: (
     nodeId: string,
@@ -75,62 +84,45 @@ function createNavigationReadingPositionCompat(args: {
   };
 }
 
-export function useWorkspaceNavigation({
-  activeNodeContent,
-  activeNodeId,
-  activeNodeParentId,
-  applyNavigationReadingPosition,
-  backStackSize,
-  beginAnchorNavigationRestore,
-  closeContextMenu,
-  completeAnchorNavigationRestore,
-  editorRef,
-  flushPendingEditorDraft,
-  flushActiveEditorTransaction = () => false,
-  flushPendingEditorDraftImmediately,
-  forwardStackSize,
-  goBack,
-  goForward,
-  goToParent,
-  jumpToAncestorNode,
-  nodesById,
-  nodeViewById,
-  openNode,
-  saveActiveNodeView
-}: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
+export function useWorkspaceNavigation(args: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
   const applyNavigationReadingPositionCompat = createNavigationReadingPositionCompat({
     ...definedProps({
-      applyNavigationReadingPosition,
-      beginAnchorNavigationRestore,
-      completeAnchorNavigationRestore
+      applyNavigationReadingPosition: args.applyNavigationReadingPosition,
+      beginAnchorNavigationRestore: args.beginAnchorNavigationRestore,
+      completeAnchorNavigationRestore: args.completeAnchorNavigationRestore
     })
   });
   const pendingAnchorNavigation = usePendingAnchorNavigation({
-    activeNodeContent,
-    activeNodeId,
+    activeNodeContent: args.activeNodeContent,
+    activeNodeId: args.activeNodeId,
     applyNavigationReadingPosition: applyNavigationReadingPositionCompat,
-    nodeViewById: nodeViewById ?? {}
+    nodeViewById: args.nodeViewById ?? {}
   });
   const preparedHandlers = usePreparedNavigationHandlers({
-    activeNodeContent,
-    activeNodeId,
+    activeNodeContent: args.activeNodeContent,
+    activeNodeId: args.activeNodeId,
     applyNavigationResult: pendingAnchorNavigation.applyNavigationResult,
-    closeContextMenu,
-    editorRef,
-    flushActiveEditorTransaction,
-    flushPendingEditorDraft,
-    flushPendingEditorDraftImmediately,
-    goBack,
-    goForward,
-    goToParent,
-    jumpToAncestorNode,
-    nodesById,
-    openNode,
-    saveActiveNodeView
+    closeContextMenu: args.closeContextMenu,
+    editorRef: args.editorRef,
+    flushActiveEditorTransaction: args.flushActiveEditorTransaction ?? (() => false),
+    flushPendingEditorDraft: args.flushPendingEditorDraft,
+    flushPendingEditorDraftImmediately: args.flushPendingEditorDraftImmediately,
+    goBack: args.goBack,
+    goForward: args.goForward,
+    goToLastChild: args.goToLastChild ?? (() => null),
+    goToParent: args.goToParent,
+    jumpToAncestorNode: args.jumpToAncestorNode,
+    nodesById: args.nodesById,
+    openNode: args.openNode,
+    saveActiveNodeView: args.saveActiveNodeView
   });
 
+  const targetSource = useWorkspaceStore.getState();
   return {
-    canGoBack: backStackSize > 0, canGoForward: forwardStackSize > 0, canGoParent: Boolean(activeNodeParentId),
+    canGoBack: args.backStackSize > 0 && Boolean(resolveBackNavigationTarget(targetSource).nodeId),
+    canGoForward: args.forwardStackSize > 0 && Boolean(resolveForwardNavigationTarget(targetSource).nodeId),
+    canGoParent: Boolean(args.activeNodeParentId) && Boolean(resolveParentNavigationTarget(targetSource)),
+    canGoToLastChild: Boolean(resolveLastChildNavigationTarget(targetSource)),
     shouldSuppressSelectionRestore: pendingAnchorNavigation.shouldSuppressSelectionRestore,
     ...preparedHandlers
   };

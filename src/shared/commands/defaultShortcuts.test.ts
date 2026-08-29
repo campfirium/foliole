@@ -38,6 +38,19 @@ it('uses an explicit Apple-native default table on macOS', () => {
   expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
 
+it('maps all four application navigation commands to platform defaults', () => {
+  const mac = getPlatformDefaultCommandShortcuts('MacIntel');
+  const windows = getPlatformDefaultCommandShortcuts('Win32');
+  expect(mac[APP_COMMAND_IDS.goBack]).toEqual({ primary: { key: 'ArrowLeft', metaKey: true } });
+  expect(mac[APP_COMMAND_IDS.goForward]).toEqual({ primary: { key: 'ArrowRight', metaKey: true } });
+  expect(mac[APP_COMMAND_IDS.goParent]).toEqual({ primary: { key: 'ArrowUp', metaKey: true } });
+  expect(mac[APP_COMMAND_IDS.goToLastChild]).toEqual({ primary: { key: 'ArrowDown', metaKey: true } });
+  expect(windows[APP_COMMAND_IDS.goBack]).toEqual({ primary: { altKey: true, key: 'ArrowLeft' } });
+  expect(windows[APP_COMMAND_IDS.goForward]).toEqual({ primary: { altKey: true, key: 'ArrowRight' } });
+  expect(windows[APP_COMMAND_IDS.goParent]).toEqual({ primary: { ctrlKey: true, key: 'ArrowUp' } });
+  expect(windows[APP_COMMAND_IDS.goToLastChild]).toEqual({ primary: { ctrlKey: true, key: 'ArrowDown' } });
+});
+
 it('uses the host-specific global capture default in the unified shortcut map', () => {
   expect(getPlatformDefaultCommandShortcuts('MacIntel')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
     primary: { key: 'a', altKey: true }

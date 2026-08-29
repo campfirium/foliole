@@ -39,6 +39,7 @@ function selectWorkspaceNavigationActions(state: WorkspaceState) {
     goBack: state.goBack,
     goForward: state.goForward,
     goToParent: state.goToParent,
+    goToLastChild: state.goToLastChild,
     jumpToAncestorNode: state.jumpToAncestorNode,
     openNode: state.openNode,
     setActiveNode: state.setActiveNode,

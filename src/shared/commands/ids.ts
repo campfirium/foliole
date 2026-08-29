@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { FOUR_WAY_NAVIGATION_COMMAND_IDS } from '../../../lib/core/nodes/fourWayNavigationCommands';
 import { VIRTUAL_FOLDER_APP_COMMAND_ID } from '../../../lib/core/nodes/virtualFolderCommands';
 import { GLOBAL_CAPTURE_COMMAND_ID } from '../../../lib/platform/globalCaptureShortcut';
 
@@ -10,8 +11,8 @@ export const APP_COMMAND_IDS = {
   closeContextMenu: 'ui.closeContextMenu',
   undo: 'app.undo',
   redo: 'app.redo',
-  goBack: 'navigation.goBack',
-  goForward: 'navigation.goForward',
+  goBack: FOUR_WAY_NAVIGATION_COMMAND_IDS.goBack,
+  goForward: FOUR_WAY_NAVIGATION_COMMAND_IDS.goForward,
   goToNode: 'navigation.goToNode',
   moveToNode: 'navigation.moveToNode',
   renameNode: 'workspace.renameNode',
@@ -25,7 +26,8 @@ export const APP_COMMAND_IDS = {
   createSelectionCloze: 'editor.createSelectionCloze',
   addSelectionNote: 'editor.addSelectionNote',
   repairTable: 'editor.repairTable',
-  goParent: 'navigation.goParent',
+  goParent: FOUR_WAY_NAVIGATION_COMMAND_IDS.goParent,
+  goToLastChild: FOUR_WAY_NAVIGATION_COMMAND_IDS.goToLastChild,
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
   toggleImmersiveMode: 'editor.toggleImmersiveMode',
   toggleDismissedTopicsVisibility: 'view.toggleDismissedTopicsVisibility',

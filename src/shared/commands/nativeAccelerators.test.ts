@@ -18,4 +18,9 @@ describe('resolveNativeMenuAccelerator', () => {
     expect(resolveNativeMenuAccelerator({ primary: { key: '1' } }, 'Win32')).toBe('');
     expect(resolveNativeMenuAccelerator({ primary: { key: ' ' } }, 'Win32')).toBe('');
   });
+
+  it('projects DOM arrow keys to Electron accelerator key names', () => {
+    expect(resolveNativeMenuAccelerator({ primary: { key: 'ArrowLeft', metaKey: true } }, 'MacIntel')).toBe('Command+Left');
+    expect(resolveNativeMenuAccelerator({ primary: { key: 'ArrowDown', ctrlKey: true } }, 'Win32')).toBe('Control+Down');
+  });
 });
