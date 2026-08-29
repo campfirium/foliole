@@ -22,6 +22,7 @@ import {
 
 vi.mock('./workspaceRuntimeSync', () => ({
   hasWorkspaceNodeMutationRuntime: vi.fn(() => true),
+  syncPdfImageExcerptNodeMutationToRuntime: vi.fn(),
   syncNodeContentWithAnchorsMutationToRuntime: vi.fn(async () => ({ nodes: [] }))
 }));
 

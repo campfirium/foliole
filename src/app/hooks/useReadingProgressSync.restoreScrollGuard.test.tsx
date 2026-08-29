@@ -14,6 +14,7 @@ vi.mock('../../shared/platform/runtimeInvoke', () => ({
 }));
 
 vi.mock('../../store/workspaceRuntimeSync', () => ({
+  syncPdfImageExcerptNodeMutationToRuntime: vi.fn(),
   syncReadingProgressToRuntime: vi.fn()
 }));
 
