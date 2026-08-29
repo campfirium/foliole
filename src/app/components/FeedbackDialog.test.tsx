@@ -85,7 +85,7 @@ describe('FeedbackDialog surface layout', () => {
   it('keeps the lower metadata above the single action divider', () => {
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
-    const metadataGrid = screen.getByLabelText('Contact').closest('label')?.parentElement;
+    const metadataGrid = screen.getByLabelText('Email').closest('label')?.parentElement;
     expect(metadataGrid?.className).not.toContain('border-shellless-divider');
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' }).closest('div')?.className).toContain('border-shellless-divider');
@@ -183,7 +183,7 @@ describe('FeedbackDialog action styling', () => {
   });
 
   it('uses the lighter Chinese feedback field copy', () => {
-    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.contact.placeholder']).toBe('如需回复，请留下联系方式');
+    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.contact.placeholder']).toBe('如需回复，请留下邮箱');
     expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.attachments.add']).toBe('添加或粘贴图片');
   });
 });
