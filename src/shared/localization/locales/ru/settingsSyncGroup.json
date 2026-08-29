@@ -30,5 +30,14 @@
   "settings.companionSync.group.remove.confirm.title": "Удалить устройство?",
   "settings.companionSync.group.remove.confirm.description": "Устройство {name} будет удалено из этой группы синхронизации. Для синхронизации ему потребуется присоединиться снова.",
   "settings.companionSync.group.member.active": "Присоединено",
-  "settings.companionSync.group.member.provisioning": "Настройка"
+  "settings.companionSync.group.member.provisioning": "Настройка",
+  "settings.companionSync.group.discovery.searching": "Поиск групп синхронизации…",
+  "settings.companionSync.group.discovery.permission_required": "Разрешите доступ к локальной сети, чтобы найти группы синхронизации.",
+  "settings.companionSync.group.discovery.unavailable": "Поиск групп синхронизации недоступен.",
+  "settings.companionSync.group.discovery.incompatible": "Для ближайших групп синхронизации требуется более новая версия Foliole.",
+  "settings.companionSync.group.discovery.connection_failed": "Группа синхронизации найдена, но Foliole не удалось к ней подключиться.",
+  "settings.companionSync.group.discovery.results": "Группы синхронизации найдены.",
+  "settings.companionSync.group.discovery.retry": "Повторить",
+  "settings.companionSync.group.syncNow.title": "Синхронизировать сейчас",
+  "settings.companionSync.group.syncNow.description": "Проверить сейчас все доступные устройства в этой группе синхронизации, даже если автоматическая синхронизация отключена."
 }

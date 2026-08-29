@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "Обновите Foliole на обоих устройствах, затем снова выполните сопряжение.",
   "companion.sync.discovery.desktopFallback": "Рабочий стол",
   "companion.sync.discovery.error.discoveryFailed": "Обнаружение рабочего стола не удалось.",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "Срок действия запроса на присоединение истёк. Отправьте новый запрос.",
+  "companion.sync.discovery.error.joinRejected": "Запрос на присоединение отклонён.",
   "companion.sync.discovery.error.requestFailed": "Не удалось запросить сопряжение с рабочим столом.",
   "companion.sync.discovery.unknownHost": "Неизвестный хост",
   "companion.sync.inline.attention": "Синхронизация требует внимания",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "На этом устройстве нет отзывов",
   "companion.onlyReview.noScheduledDescription": "Только обзор показывает элементы, подлежащие проверке, а не темы чтения.",
   "companion.onlyReview.noDueTitle": "На данный момент нет элементов для проверки",
-  "companion.onlyReview.noDueDescription": "Следующий элемент обзора: {date}"
+  "companion.onlyReview.noDueDescription": "Следующий элемент обзора: {date}",
+  "companion.sync.discovery.permissionRequired": "Разрешите доступ к локальной сети, чтобы найти группы синхронизации поблизости.",
+  "companion.sync.discovery.unavailable": "Поиск групп синхронизации недоступен на этом устройстве или в этой сети.",
+  "companion.sync.discovery.connectionFailed": "Группа синхронизации найдена, но Foliole не удалось к ней подключиться."
 }

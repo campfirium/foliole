@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "Zaktualizuj Foliole na obu urządzeniach, a następnie sparuj ponownie.",
   "companion.sync.discovery.desktopFallback": "Pulpit",
   "companion.sync.discovery.error.discoveryFailed": "Wykrywanie pulpitu nie powiodło się.",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "Prośba o dołączenie wygasła. Wyślij ją ponownie.",
+  "companion.sync.discovery.error.joinRejected": "Prośba o dołączenie została odrzucona.",
   "companion.sync.discovery.error.requestFailed": "Nie udało się zażądać parowania komputera stacjonarnego.",
   "companion.sync.discovery.unknownHost": "Nieznany gospodarz",
   "companion.sync.inline.attention": "Synchronizacja wymaga uwagi",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "Brak elementów recenzji na tym urządzeniu",
   "companion.onlyReview.noScheduledDescription": "Tylko Recenzja pokazuje elementy, które należy sprawdzić, a nie tematy do przeczytania.",
   "companion.onlyReview.noDueTitle": "W tej chwili nie ma żadnych elementów do recenzji",
-  "companion.onlyReview.noDueDescription": "Następny element recenzji: {date}"
+  "companion.onlyReview.noDueDescription": "Następny element recenzji: {date}",
+  "companion.sync.discovery.permissionRequired": "Zezwól na dostęp do sieci lokalnej, aby znaleźć pobliskie grupy synchronizacji.",
+  "companion.sync.discovery.unavailable": "Wyszukiwanie grup synchronizacji jest niedostępne na tym urządzeniu lub w tej sieci.",
+  "companion.sync.discovery.connectionFailed": "Znaleziono grupę synchronizacji, ale Foliole nie mogło się z nią połączyć."
 }

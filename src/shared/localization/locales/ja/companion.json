@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "両方のデバイスで Foliole を更新し、再度ペアリングします。",
   "companion.sync.discovery.desktopFallback": "デスクトップ",
   "companion.sync.discovery.error.discoveryFailed": "デスクトップの検出に失敗しました。",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "参加リクエストの有効期限が切れました。もう一度参加をリクエストしてください。",
+  "companion.sync.discovery.error.joinRejected": "参加リクエストが拒否されました。",
   "companion.sync.discovery.error.requestFailed": "デスクトップのペアリングの要求に失敗しました。",
   "companion.sync.discovery.unknownHost": "不明なホスト",
   "companion.sync.inline.attention": "同期には注意が必要です",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "このデバイスにはレビュー項目がありません",
   "companion.onlyReview.noScheduledDescription": "レビューのみに、期限が切れたレビュー項目が表示され、トピックは表示されません。",
   "companion.onlyReview.noDueTitle": "現在期限が迫っているレビュー項目はありません",
-  "companion.onlyReview.noDueDescription": "次のレビュー項目: {date}"
+  "companion.onlyReview.noDueDescription": "次のレビュー項目: {date}",
+  "companion.sync.discovery.permissionRequired": "近くの同期グループを検出するには、ローカルネットワークへのアクセスを許可してください。",
+  "companion.sync.discovery.unavailable": "このデバイスまたはネットワークでは、同期グループを検出できません。",
+  "companion.sync.discovery.connectionFailed": "同期グループは見つかりましたが、Foliole は接続できませんでした。"
 }

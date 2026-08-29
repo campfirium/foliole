@@ -193,6 +193,6 @@
   "desktop.rightPanel.outline.navigation": "Dokumentgliederung",
   "desktop.rightPanel.highlights.unavailableDescription": "Das ausgewählte Thema ist nicht mehr verfügbar.",
   "desktop.rightPanel.highlights.unavailableTitle": "Thema nicht verfügbar",
-  "desktop.rightPanel.highlights.count": "HIGHLIGHTS({count})",
+  "desktop.rightPanel.highlights.count": "HERVORHEBUNGEN({count})",
   "desktop.rightPanel.highlights.list": "Dokumenthervorhebungen"
 }

@@ -44,7 +44,7 @@ export function resetReviewHotkeysRuntimeInvokeMock() {
 }
 
 export function installNativeKeyboardBridge() {
-  let handler: ((payload: NativeKeyboardInputPayload) => void) | null = null;
+  const handlers = new Set<(payload: NativeKeyboardInputPayload) => void>();
   const baseInvoke = createSmokeRuntimeInvoke();
   const invoke = vi.fn(async (command: string, payload?: SchedulerRequestPayload) => {
     if (command === 'review_grade') return createSchedulerGradeResult(payload?.request);
@@ -56,15 +56,17 @@ export function installNativeKeyboardBridge() {
     invoke,
     onManagedInboxUpdated: () => () => undefined,
     onNativeKeyboardInput: (nextHandler: (payload: NativeKeyboardInputPayload) => void) => {
-      handler = nextHandler;
+      handlers.add(nextHandler);
       return () => {
-        handler = null;
+        handlers.delete(nextHandler);
       };
     },
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   } as unknown as ElectronAPI;
-  return (payload: NativeKeyboardInputPayload) => handler?.(payload);
+  return (payload: NativeKeyboardInputPayload) => {
+    for (const handler of handlers) handler(payload);
+  };
 }
 
 export function dispatchNativeEscape(dispatchNativeKeyboard: (payload: NativeKeyboardInputPayload) => void) {

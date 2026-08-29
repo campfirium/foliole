@@ -39,7 +39,7 @@
   "settings.category.companionSync.description": "Join devices to a Sync Group and manage local sync.",
   "settings.companionSync.sectionAria": "Seção de sincronização",
   "settings.companionSync.title": "Sincronizar",
-  "settings.companionSync.description": "Turn on desktop sync so nearby Foliole devices can request to join this Sync Group.",
+  "settings.companionSync.description": "Mantenha os dispositivos do seu grupo de sincronização atualizados na rede local.",
   "settings.companionSync.status.inDevelopment": "Em desenvolvimento",
   "settings.companionSync.enableDesktop.title": "Ativar nesta área de trabalho",
   "settings.companionSync.enableDesktop.aria": "Ativar sincronização de desktop",

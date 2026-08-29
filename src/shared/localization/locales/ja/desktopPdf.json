@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "この PDF 添付ファイルをデスクトップから再度同期します。",
   "desktop.pdf.simple.noFile.title": "PDF ファイルが選択されていません",
   "desktop.pdf.simple.noFile.description": "同期された PDF ファイルは空です。",
-  "desktop.pdf.simple.readerLabel": "{title} PDF リーダー"
+  "desktop.pdf.simple.readerLabel": "{title} PDF リーダー",
+  "desktop.pdf.imageExcerpt.mode": "抜粋",
+  "desktop.pdf.imageExcerpt.hint": "テキスト上をドラッグして選択します。ページ上のそれ以外の場所をドラッグすると、抜粋を作成できます。",
+  "desktop.pdf.imageExcerpt.open": "抜粋を開く",
+  "desktop.pdf.imageExcerpt.delete": "抜粋を削除",
+  "desktop.pdf.imageExcerpt.failed": "抜粋を作成できませんでした。",
+  "desktop.pdf.imageExcerpt.retry": "再試行"
 }

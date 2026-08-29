@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "再次從桌面同步此 PDF 附件。",
   "desktop.pdf.simple.noFile.title": "未選擇 PDF 文件",
   "desktop.pdf.simple.noFile.description": "同步的 PDF 檔案為空。",
-  "desktop.pdf.simple.readerLabel": "{title} PDF 讀卡機"
+  "desktop.pdf.simple.readerLabel": "{title} PDF 讀卡機",
+  "desktop.pdf.imageExcerpt.mode": "摘錄",
+  "desktop.pdf.imageExcerpt.hint": "在文字上拖曳以選取文字。在頁面其他位置拖曳以建立摘錄。",
+  "desktop.pdf.imageExcerpt.open": "開啟摘錄",
+  "desktop.pdf.imageExcerpt.delete": "刪除摘錄",
+  "desktop.pdf.imageExcerpt.failed": "無法建立摘錄。",
+  "desktop.pdf.imageExcerpt.retry": "重試"
 }

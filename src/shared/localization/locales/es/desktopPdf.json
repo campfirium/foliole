@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Sincronice este archivo adjunto PDF nuevamente desde el escritorio.",
   "desktop.pdf.simple.noFile.title": "No hay ningún archivo PDF seleccionado",
   "desktop.pdf.simple.noFile.description": "El archivo PDF sincronizado está vacío.",
-  "desktop.pdf.simple.readerLabel": "{title} PDF lector"
+  "desktop.pdf.simple.readerLabel": "{title} PDF lector",
+  "desktop.pdf.imageExcerpt.mode": "Extracto",
+  "desktop.pdf.imageExcerpt.hint": "Arrastre sobre el texto para seleccionarlo. Arrastre en otra parte de la página para crear un extracto.",
+  "desktop.pdf.imageExcerpt.open": "Abrir extracto",
+  "desktop.pdf.imageExcerpt.delete": "Eliminar extracto",
+  "desktop.pdf.imageExcerpt.failed": "No se pudo crear el extracto.",
+  "desktop.pdf.imageExcerpt.retry": "Reintentar"
 }

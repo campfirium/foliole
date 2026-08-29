@@ -43,6 +43,9 @@ it('uses an explicit Apple-native default table on macOS', () => {
   expect(macShortcuts[APP_COMMAND_IDS.addSelectionNote]).toEqual({
     primary: { key: 'a', metaKey: true, shiftKey: true }
   });
+  expect(macShortcuts[APP_COMMAND_IDS.deleteReviewSourceTopic]).toEqual({
+    primary: { key: 't', altKey: true }
+  });
   expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
 

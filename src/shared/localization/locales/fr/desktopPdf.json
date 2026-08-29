@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Synchronisez à nouveau cette pièce jointe PDF depuis le bureau.",
   "desktop.pdf.simple.noFile.title": "Aucun fichier PDF sélectionné",
   "desktop.pdf.simple.noFile.description": "Le fichier PDF synchronisé est vide.",
-  "desktop.pdf.simple.readerLabel": "{title} PDF lecteur"
+  "desktop.pdf.simple.readerLabel": "{title} PDF lecteur",
+  "desktop.pdf.imageExcerpt.mode": "Extrait",
+  "desktop.pdf.imageExcerpt.hint": "Faites glisser sur du texte pour le sélectionner. Faites glisser ailleurs sur la page pour créer un extrait.",
+  "desktop.pdf.imageExcerpt.open": "Ouvrir l’extrait",
+  "desktop.pdf.imageExcerpt.delete": "Supprimer l’extrait",
+  "desktop.pdf.imageExcerpt.failed": "Impossible de créer l’extrait.",
+  "desktop.pdf.imageExcerpt.retry": "Réessayer"
 }

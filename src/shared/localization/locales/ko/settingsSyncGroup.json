@@ -30,5 +30,14 @@
   "settings.companionSync.group.remove.confirm.title": "기기를 제거할까요?",
   "settings.companionSync.group.remove.confirm.description": "{name} 기기가 이 동기화 그룹에서 제거되며 다시 동기화하려면 그룹에 다시 참여해야 합니다.",
   "settings.companionSync.group.member.active": "참여함",
-  "settings.companionSync.group.member.provisioning": "설정 중"
+  "settings.companionSync.group.member.provisioning": "설정 중",
+  "settings.companionSync.group.discovery.searching": "동기화 그룹 검색 중…",
+  "settings.companionSync.group.discovery.permission_required": "동기화 그룹을 찾으려면 로컬 네트워크 접근을 허용하세요.",
+  "settings.companionSync.group.discovery.unavailable": "동기화 그룹을 찾을 수 없습니다.",
+  "settings.companionSync.group.discovery.incompatible": "근처의 동기화 그룹에 연결하려면 더 최신 버전의 Foliole가 필요합니다.",
+  "settings.companionSync.group.discovery.connection_failed": "동기화 그룹을 찾았지만 Foliole에서 연결하지 못했습니다.",
+  "settings.companionSync.group.discovery.results": "동기화 그룹을 찾았습니다.",
+  "settings.companionSync.group.discovery.retry": "다시 시도",
+  "settings.companionSync.group.syncNow.title": "지금 동기화",
+  "settings.companionSync.group.syncNow.description": "자동 동기화가 꺼져 있어도 이 동기화 그룹에서 사용 가능한 모든 기기를 지금 확인합니다."
 }

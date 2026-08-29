@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "更新兩台裝置上的 Foliole，然後重新申請加入。",
   "companion.sync.discovery.desktopFallback": "桌面",
   "companion.sync.discovery.error.discoveryFailed": "桌面發現失敗。",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "加入請求已過期。請重新申請加入。",
+  "companion.sync.discovery.error.joinRejected": "加入請求已被拒絕。",
   "companion.sync.discovery.error.requestFailed": "無法申請加入此同步群組。",
   "companion.sync.discovery.unknownHost": "未知主機",
   "companion.sync.inline.attention": "同步需要注意",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "此設備上沒有評論項目",
   "companion.onlyReview.noScheduledDescription": "僅評論顯示應有的評論項目，而不是閱讀主題。",
   "companion.onlyReview.noDueTitle": "目前沒有到期的審核項目",
-  "companion.onlyReview.noDueDescription": "下一個評論項目：{date}"
+  "companion.onlyReview.noDueDescription": "下一個評論項目：{date}",
+  "companion.sync.discovery.permissionRequired": "請允許存取本地網路，以尋找附近的同步組。",
+  "companion.sync.discovery.unavailable": "目前無法在此裝置或網路上尋找同步組。",
+  "companion.sync.discovery.connectionFailed": "已找到同步組，但 Foliole 無法連線。"
 }

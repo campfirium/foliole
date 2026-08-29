@@ -30,5 +30,14 @@
   "settings.companionSync.group.remove.confirm.title": "Usunąć urządzenie?",
   "settings.companionSync.group.remove.confirm.description": "{name} zostanie usunięte z tej grupy synchronizacji i musi dołączyć ponownie, aby się synchronizować.",
   "settings.companionSync.group.member.active": "Dołączono",
-  "settings.companionSync.group.member.provisioning": "Konfigurowanie"
+  "settings.companionSync.group.member.provisioning": "Konfigurowanie",
+  "settings.companionSync.group.discovery.searching": "Wyszukiwanie grup synchronizacji…",
+  "settings.companionSync.group.discovery.permission_required": "Zezwól na dostęp do sieci lokalnej, aby znaleźć grupy synchronizacji.",
+  "settings.companionSync.group.discovery.unavailable": "Wyszukiwanie grup synchronizacji jest niedostępne.",
+  "settings.companionSync.group.discovery.incompatible": "Pobliskie grupy synchronizacji wymagają nowszej wersji Foliole.",
+  "settings.companionSync.group.discovery.connection_failed": "Znaleziono grupę synchronizacji, ale Foliole nie mogło się z nią połączyć.",
+  "settings.companionSync.group.discovery.results": "Znaleziono grupy synchronizacji.",
+  "settings.companionSync.group.discovery.retry": "Spróbuj ponownie",
+  "settings.companionSync.group.syncNow.title": "Synchronizuj teraz",
+  "settings.companionSync.group.syncNow.description": "Sprawdź teraz każde dostępne urządzenie w tej grupie synchronizacji, nawet gdy synchronizacja automatyczna jest wyłączona."
 }

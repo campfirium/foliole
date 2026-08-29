@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Sincronizza nuovamente questo allegato PDF dal desktop.",
   "desktop.pdf.simple.noFile.title": "Nessun file PDF selezionato",
   "desktop.pdf.simple.noFile.description": "Il file PDF sincronizzato è vuoto.",
-  "desktop.pdf.simple.readerLabel": "Lettore {title} PDF"
+  "desktop.pdf.simple.readerLabel": "Lettore {title} PDF",
+  "desktop.pdf.imageExcerpt.mode": "Estratto",
+  "desktop.pdf.imageExcerpt.hint": "Trascina sul testo per selezionarlo. Trascina altrove nella pagina per creare un estratto.",
+  "desktop.pdf.imageExcerpt.open": "Apri estratto",
+  "desktop.pdf.imageExcerpt.delete": "Elimina estratto",
+  "desktop.pdf.imageExcerpt.failed": "Impossibile creare l’estratto.",
+  "desktop.pdf.imageExcerpt.retry": "Riprova"
 }

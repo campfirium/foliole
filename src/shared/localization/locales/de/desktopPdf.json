@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Synchronisieren Sie diesen PDF-Anhang erneut vom Desktop aus.",
   "desktop.pdf.simple.noFile.title": "Keine PDF-Datei ausgewählt",
   "desktop.pdf.simple.noFile.description": "Die synchronisierte Datei PDF ist leer.",
-  "desktop.pdf.simple.readerLabel": "{title} PDF Leser"
+  "desktop.pdf.simple.readerLabel": "{title} PDF Leser",
+  "desktop.pdf.imageExcerpt.mode": "Ausschnitt",
+  "desktop.pdf.imageExcerpt.hint": "Ziehen Sie über Text, um ihn auszuwählen. Ziehen Sie an einer anderen Stelle auf der Seite, um einen Ausschnitt zu erstellen.",
+  "desktop.pdf.imageExcerpt.open": "Ausschnitt öffnen",
+  "desktop.pdf.imageExcerpt.delete": "Ausschnitt löschen",
+  "desktop.pdf.imageExcerpt.failed": "Der Ausschnitt konnte nicht erstellt werden.",
+  "desktop.pdf.imageExcerpt.retry": "Erneut versuchen"
 }

@@ -39,7 +39,7 @@
   "settings.category.companionSync.description": "Join devices to a Sync Group and manage local sync.",
   "settings.companionSync.sectionAria": "同步部分",
   "settings.companionSync.title": "同步",
-  "settings.companionSync.description": "Turn on desktop sync so nearby Foliole devices can request to join this Sync Group.",
+  "settings.companionSync.description": "讓同步組內的裝置透過本地網路保持最新狀態。",
   "settings.companionSync.status.inDevelopment": "開發中",
   "settings.companionSync.enableDesktop.title": "在此桌面上啟用",
   "settings.companionSync.enableDesktop.aria": "啟用桌面同步",

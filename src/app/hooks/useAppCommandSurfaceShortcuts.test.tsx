@@ -78,8 +78,8 @@ it('matches both editable slots without adding platform-specific keys', () => {
   render(<Harness onRunCommand={onRunCommand} shortcutMap={shortcutMap} />);
 
   for (const shortcut of [
-    { ctrlKey: true, key: 'p' },
-    { altKey: true, key: 'p' }
+    { code: 'KeyP', ctrlKey: true, key: 'p' },
+    { altKey: true, code: 'KeyP', key: 'p' }
   ]) {
     dispatchShortcut(shortcut);
     expectSurface('command');

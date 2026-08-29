@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Снова синхронизируйте это вложение PDF с рабочего стола.",
   "desktop.pdf.simple.noFile.title": "Файл PDF не выбран.",
   "desktop.pdf.simple.noFile.description": "Синхронизированный файл PDF пуст.",
-  "desktop.pdf.simple.readerLabel": "{title} PDF считыватель"
+  "desktop.pdf.simple.readerLabel": "{title} PDF считыватель",
+  "desktop.pdf.imageExcerpt.mode": "Фрагмент",
+  "desktop.pdf.imageExcerpt.hint": "Проведите по тексту, чтобы выделить его. Проведите в другом месте страницы, чтобы создать фрагмент.",
+  "desktop.pdf.imageExcerpt.open": "Открыть фрагмент",
+  "desktop.pdf.imageExcerpt.delete": "Удалить фрагмент",
+  "desktop.pdf.imageExcerpt.failed": "Не удалось создать фрагмент.",
+  "desktop.pdf.imageExcerpt.retry": "Повторить"
 }

@@ -30,5 +30,14 @@
   "settings.companionSync.group.remove.confirm.title": "デバイスを削除しますか？",
   "settings.companionSync.group.remove.confirm.description": "{name} はこの同期グループから削除され、再び同期するには参加し直す必要があります。",
   "settings.companionSync.group.member.active": "参加済み",
-  "settings.companionSync.group.member.provisioning": "設定中"
+  "settings.companionSync.group.member.provisioning": "設定中",
+  "settings.companionSync.group.discovery.searching": "同期グループを検索中…",
+  "settings.companionSync.group.discovery.permission_required": "同期グループを検出するには、ローカルネットワークへのアクセスを許可してください。",
+  "settings.companionSync.group.discovery.unavailable": "同期グループを検出できません。",
+  "settings.companionSync.group.discovery.incompatible": "近くの同期グループに接続するには、より新しいバージョンの Foliole が必要です。",
+  "settings.companionSync.group.discovery.connection_failed": "同期グループは見つかりましたが、Foliole は接続できませんでした。",
+  "settings.companionSync.group.discovery.results": "同期グループが見つかりました。",
+  "settings.companionSync.group.discovery.retry": "再試行",
+  "settings.companionSync.group.syncNow.title": "今すぐ同期",
+  "settings.companionSync.group.syncNow.description": "自動同期がオフの場合でも、この同期グループ内で利用できるすべてのデバイスを今すぐ確認します。"
 }

@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "Aktualisieren Sie Foliole auf beiden Geräten und koppeln Sie es dann erneut.",
   "companion.sync.discovery.desktopFallback": "Desktop",
   "companion.sync.discovery.error.discoveryFailed": "Desktop-Erkennung fehlgeschlagen.",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "Die Beitrittsanfrage ist abgelaufen. Stellen Sie erneut eine Beitrittsanfrage.",
+  "companion.sync.discovery.error.joinRejected": "Die Beitrittsanfrage wurde abgelehnt.",
   "companion.sync.discovery.error.requestFailed": "Desktop-Kopplung konnte nicht angefordert werden.",
   "companion.sync.discovery.unknownHost": "Unbekannter Host",
   "companion.sync.inline.attention": "Die Synchronisierung erfordert Aufmerksamkeit",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "Keine Bewertungsartikel für dieses Gerät",
   "companion.onlyReview.noScheduledDescription": "Nur „Rezension“ zeigt fällige Rezensionselemente an, keine Lesethemen.",
   "companion.onlyReview.noDueTitle": "Derzeit sind keine Bewertungsartikel fällig",
-  "companion.onlyReview.noDueDescription": "Nächster Bewertungsartikel: {date}"
+  "companion.onlyReview.noDueDescription": "Nächster Bewertungsartikel: {date}",
+  "companion.sync.discovery.permissionRequired": "Erlauben Sie den Zugriff auf das lokale Netzwerk, um Sync-Gruppen in der Nähe zu finden.",
+  "companion.sync.discovery.unavailable": "Die Suche nach Sync-Gruppen ist auf diesem Gerät oder in diesem Netzwerk nicht verfügbar.",
+  "companion.sync.discovery.connectionFailed": "Eine Sync-Gruppe wurde gefunden, aber Foliole konnte keine Verbindung herstellen."
 }

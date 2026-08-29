@@ -46,7 +46,7 @@
   "desktop.command.increasePanelContentSize": "패널 콘텐츠 크기 늘리기",
   "desktop.command.decreasePanelContentSize": "패널 콘텐츠 크기 줄이기",
   "desktop.command.resetPanelContentSize": "패널 콘텐츠 크기 재설정",
-  "desktop.command.toggleDevTools": "Toggle DevTools",
+  "desktop.command.toggleDevTools": "개발자 도구 전환",
   "desktop.command.openHelpSearch": "DEV 도움말 검색 열기",
   "desktop.command.openWorkspaceSearch": "검색",
   "desktop.command.openCommandPalette": "명령 팔레트",

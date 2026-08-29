@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "Mettez à jour Foliole sur les deux appareils, puis associez-les à nouveau.",
   "companion.sync.discovery.desktopFallback": "Bureau",
   "companion.sync.discovery.error.discoveryFailed": "La découverte du bureau a échoué.",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "La demande d’adhésion a expiré. Envoyez une nouvelle demande.",
+  "companion.sync.discovery.error.joinRejected": "La demande d’adhésion a été refusée.",
   "companion.sync.discovery.error.requestFailed": "Échec de la demande de couplage du bureau.",
   "companion.sync.discovery.unknownHost": "Hôte inconnu",
   "companion.sync.inline.attention": "La synchronisation nécessite votre attention",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "Aucun élément d'évaluation sur cet appareil",
   "companion.onlyReview.noScheduledDescription": "Seule la révision affiche les éléments à réviser, pas les sujets de lecture.",
   "companion.onlyReview.noDueTitle": "Aucun élément de révision n'est attendu pour le moment",
-  "companion.onlyReview.noDueDescription": "Élément de révision suivant : {date}"
+  "companion.onlyReview.noDueDescription": "Élément de révision suivant : {date}",
+  "companion.sync.discovery.permissionRequired": "Autorisez l’accès au réseau local pour trouver les groupes de synchronisation à proximité.",
+  "companion.sync.discovery.unavailable": "La recherche de groupes de synchronisation n’est pas disponible sur cet appareil ou ce réseau.",
+  "companion.sync.discovery.connectionFailed": "Un groupe de synchronisation a été trouvé, mais Foliole n’a pas pu s’y connecter."
 }

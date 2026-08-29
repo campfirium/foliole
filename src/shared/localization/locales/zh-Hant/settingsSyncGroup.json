@@ -30,5 +30,14 @@
   "settings.companionSync.group.remove.confirm.title": "移除裝置？",
   "settings.companionSync.group.remove.confirm.description": "「{name}」將從目前的同步群組移除；如需再次同步，必須重新加入。",
   "settings.companionSync.group.member.active": "已加入",
-  "settings.companionSync.group.member.provisioning": "正在設定"
+  "settings.companionSync.group.member.provisioning": "正在設定",
+  "settings.companionSync.group.discovery.searching": "正在尋找同步組…",
+  "settings.companionSync.group.discovery.permission_required": "請允許存取本地網路，以尋找同步組。",
+  "settings.companionSync.group.discovery.unavailable": "目前無法尋找同步組。",
+  "settings.companionSync.group.discovery.incompatible": "附近的同步組需要更新版本的 Foliole。",
+  "settings.companionSync.group.discovery.connection_failed": "已找到同步組，但 Foliole 無法連線。",
+  "settings.companionSync.group.discovery.results": "已找到同步組。",
+  "settings.companionSync.group.discovery.retry": "重試",
+  "settings.companionSync.group.syncNow.title": "立即同步",
+  "settings.companionSync.group.syncNow.description": "立即檢查此同步組中每台可用的裝置，即使已關閉自動同步也會執行。"
 }

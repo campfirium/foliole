@@ -10,6 +10,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
       host.textContent = options.initialContent;
     }
     destroy() {}
+    getContent() { return ''; }
     refreshImageClozePresentation() {}
     onContentChange() { return () => undefined; }
     onScroll() { return () => undefined; }

@@ -34,5 +34,11 @@
   "desktop.pdf.simple.unavailable.description": "Sincronize este anexo PDF novamente no desktop.",
   "desktop.pdf.simple.noFile.title": "Nenhum arquivo PDF selecionado",
   "desktop.pdf.simple.noFile.description": "O arquivo PDF sincronizado está vazio.",
-  "desktop.pdf.simple.readerLabel": "Leitor {title} PDF"
+  "desktop.pdf.simple.readerLabel": "Leitor {title} PDF",
+  "desktop.pdf.imageExcerpt.mode": "Trecho",
+  "desktop.pdf.imageExcerpt.hint": "Arraste sobre o texto para selecioná-lo. Arraste em outro lugar da página para criar um trecho.",
+  "desktop.pdf.imageExcerpt.open": "Abrir trecho",
+  "desktop.pdf.imageExcerpt.delete": "Excluir trecho",
+  "desktop.pdf.imageExcerpt.failed": "Não foi possível criar o trecho.",
+  "desktop.pdf.imageExcerpt.retry": "Tentar novamente"
 }

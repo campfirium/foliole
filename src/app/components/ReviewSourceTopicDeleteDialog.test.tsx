@@ -49,7 +49,7 @@ it('does not retain plain T when the configured command uses Alt+T', () => {
 it('confirms with the resolved delete source topic shortcut', () => {
   const { dialog, onConfirm } = renderDialog();
 
-  fireEvent.keyDown(dialog, { altKey: true, key: 't' });
+  fireEvent.keyDown(dialog, { altKey: true, code: 'KeyT', key: 't' });
 
   expect(onConfirm).toHaveBeenCalledTimes(1);
 });
@@ -59,7 +59,7 @@ it('honors customized delete source topic shortcuts', () => {
     deleteSourceTopicShortcuts: { primary: { key: 'k', altKey: true } }
   });
 
-  fireEvent.keyDown(dialog, { altKey: true, key: 'k' });
+  fireEvent.keyDown(dialog, { altKey: true, code: 'KeyK', key: 'k' });
 
   expect(onConfirm).toHaveBeenCalledTimes(1);
 });

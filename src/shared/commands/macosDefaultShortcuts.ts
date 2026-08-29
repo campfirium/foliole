@@ -51,6 +51,7 @@ export const MACOS_DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.readingReviewDismiss]: { primary: { key: '4' }, secondary: { key: 'r' } },
   [APP_COMMAND_IDS.reviewScrollReadingDown]: { primary: { key: ' ' } },
   [APP_COMMAND_IDS.reviewScrollReadingUp]: { primary: { key: ' ', shiftKey: true } },
+  [APP_COMMAND_IDS.deleteReviewSourceTopic]: { primary: { key: 't', altKey: true } },
   [APP_COMMAND_IDS.deleteCurrentReviewItem]: { primary: { key: 't' }, secondary: { key: 'Delete' } },
   [APP_COMMAND_IDS.reviewNavigateParent]: { primary: { key: 'w' } },
   [APP_COMMAND_IDS.reviewNavigateBack]: { primary: { key: 'a' } },

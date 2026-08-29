@@ -39,7 +39,7 @@
   "settings.category.companionSync.description": "Join devices to a Sync Group and manage local sync.",
   "settings.companionSync.sectionAria": "동기화 섹션",
   "settings.companionSync.title": "동기화",
-  "settings.companionSync.description": "Turn on desktop sync so nearby Foliole devices can request to join this Sync Group.",
+  "settings.companionSync.description": "로컬 네트워크에서 동기화 그룹의 기기를 최신 상태로 유지합니다.",
   "settings.companionSync.status.inDevelopment": "개발 중",
   "settings.companionSync.enableDesktop.title": "이 데스크탑에서 활성화",
   "settings.companionSync.enableDesktop.aria": "데스크톱 동기화 활성화",

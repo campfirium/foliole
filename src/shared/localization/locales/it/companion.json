@@ -153,8 +153,8 @@
   "companion.sync.discovery.error.incompatible": "Aggiorna Foliole su entrambi i dispositivi, quindi accoppia nuovamente.",
   "companion.sync.discovery.desktopFallback": "Scrivania",
   "companion.sync.discovery.error.discoveryFailed": "Individuazione del desktop non riuscita.",
-  "companion.sync.discovery.error.joinExpired": "Join request expired. Request to join again.",
-  "companion.sync.discovery.error.joinRejected": "Join request was rejected.",
+  "companion.sync.discovery.error.joinExpired": "La richiesta di accesso è scaduta. Richiedi di nuovo l’accesso.",
+  "companion.sync.discovery.error.joinRejected": "La richiesta di accesso è stata rifiutata.",
   "companion.sync.discovery.error.requestFailed": "Impossibile richiedere l'accoppiamento desktop.",
   "companion.sync.discovery.unknownHost": "Host sconosciuto",
   "companion.sync.inline.attention": "La sincronizzazione richiede attenzione",
@@ -173,5 +173,8 @@
   "companion.onlyReview.noScheduledTitle": "Nessun elemento di recensione su questo dispositivo",
   "companion.onlyReview.noScheduledDescription": "Solo Revisione mostra gli elementi di revisione dovuti, non gli argomenti di lettura.",
   "companion.onlyReview.noDueTitle": "Nessun elemento di revisione in scadenza al momento",
-  "companion.onlyReview.noDueDescription": "Elemento di revisione successivo: {date}"
+  "companion.onlyReview.noDueDescription": "Elemento di revisione successivo: {date}",
+  "companion.sync.discovery.permissionRequired": "Consenti l’accesso alla rete locale per trovare i gruppi di sincronizzazione nelle vicinanze.",
+  "companion.sync.discovery.unavailable": "La ricerca dei gruppi di sincronizzazione non è disponibile su questo dispositivo o su questa rete.",
+  "companion.sync.discovery.connectionFailed": "È stato trovato un gruppo di sincronizzazione, ma Foliole non è riuscito a connettersi."
 }
