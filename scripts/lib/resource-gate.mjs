@@ -1,6 +1,6 @@
 /* global process */
 
-import { mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -107,6 +107,17 @@ function isLockStale(lock, staleMs) {
 
 async function removeStaleLock(filePath, staleMs) {
   const lock = await readLock(filePath);
+  if (!lock) {
+    try {
+      const fileAgeMs = Date.now() - (await stat(filePath)).mtimeMs;
+      if (fileAgeMs <= staleMs) return false;
+      await rm(filePath, { force: true });
+      return true;
+    } catch (error) {
+      if (error?.code === 'ENOENT') return true;
+      throw error;
+    }
+  }
   if (isLockStale(lock, staleMs)) {
     await rm(filePath, { force: true });
     return true;

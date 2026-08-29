@@ -75,8 +75,8 @@ describe('system entry display names', () => {
 
   it('matches every approved fixed navigation label in every formal locale', async () => {
     const mismatches: string[] = [];
+    await Promise.all(APP_LOCALES.map((locale) => preloadTranslationCatalog(locale)));
     for (const locale of APP_LOCALES) {
-      await preloadTranslationCatalog(locale);
       for (const [surface, keys] of Object.entries(FIXED_NAVIGATION_KEYS)) {
         const expected =
           SYSTEM_ENTRY_LOCALIZATION_CONTRACT[locale][surface as keyof typeof FIXED_NAVIGATION_KEYS];

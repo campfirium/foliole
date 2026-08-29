@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -79,6 +80,24 @@ describe('resource gate', () => {
 
       expect(results.map((result) => result.code)).toEqual([0, 0]);
       expect(log.indexOf('first:end') < log.indexOf('second:start') || log.indexOf('second:end') < log.indexOf('first:start')).toBe(true);
+    });
+  }, 10000);
+
+  it('keeps a fresh initializing lock until its owner releases it', async () => {
+    await withFixture(async ({ logFile, runtimeDir, stub }) => {
+      await mkdir(runtimeDir, { recursive: true });
+      const lockFile = path.join(runtimeDir, 'resource-gate.node-heavy.lock');
+      await writeFile(lockFile, '', 'utf8');
+      const queued = runGate({
+        className: 'node-heavy', command: [process.execPath, stub, 'queued', '1'],
+        env: { RESOURCE_GATE_LOG: logFile }, runtimeDir
+      });
+
+      await delay(100);
+      expect(await readFile(lockFile, 'utf8')).toBe('');
+      await rm(lockFile);
+      expect(await queued).toMatchObject({ code: 0 });
+      expect(await readFile(logFile, 'utf8')).toContain('queued:end');
     });
   }, 10000);
 
