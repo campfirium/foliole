@@ -14,6 +14,7 @@ export function renderNodeLabel(
     return (
       <NodeRenameInput
         draftTitle={rename.draftTitle}
+        focusBodyOnTab={rename.focusBodyOnTab}
         label={label}
         onCancel={rename.cancelRename}
         onChange={rename.setDraftTitle}

@@ -107,6 +107,7 @@ function createRestartAppCommand(args: {
 
 function createPaletteNavigationActions(args: {
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return {
@@ -115,7 +116,7 @@ function createPaletteNavigationActions(args: {
     goParent: args.nav.handleGoParent,
     goToNode: () => undefined,
     moveToNode: () => undefined,
-    renameNode: () => requestNodeRename(args.ws.activeNodeId)
+    renameNode: () => requestNodeRename(args.ws.activeNodeId, () => args.runtime.editorRef.current?.focus())
   };
 }
 

@@ -16,6 +16,20 @@ async function getNodeContent(page: WindowPage, nodeId: string) {
   return page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content ?? null, nodeId);
 }
 
+async function getNodeTitle(page: WindowPage, nodeId: string) {
+  return page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.title ?? null, nodeId);
+}
+
+async function expectCompleteRenameSelection(page: WindowPage) {
+  const input = page.locator('input[aria-label^="Rename "]');
+  await expect(input).toBeFocused();
+  await expect.poll(() => input.evaluate((element) => {
+    const target = element as HTMLInputElement;
+    return target.selectionStart === 0 && target.selectionEnd === target.value.length;
+  })).toBe(true);
+  return input;
+}
+
 test('Create Topic focuses the new topic body for immediate typing', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
@@ -49,4 +63,60 @@ test('Create Topic focuses the new topic body for immediate typing', async ({ de
     body: JSON.stringify({ existingNodeId, newNodeId, newBody: NEW_BODY }, null, 2),
     contentType: 'application/json'
   });
+});
+
+test('F2 rename selects the title and restores editor or tree focus by exit key', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await desktopWindow.waitForTimeout(6000);
+
+  const createTopicButton = desktopWindow.getByRole('button', { name: /^(Create topic|创建主题)$/ });
+  const beforeNodeId = await getActiveNodeId(desktopWindow);
+  await createTopicButton.focus();
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+N' : 'Control+N');
+  await expect.poll(() => getActiveNodeId(desktopWindow)).not.toBe(beforeNodeId);
+  const nodeId = await getActiveNodeId(desktopWindow);
+  expect(nodeId).toBeTruthy();
+
+  const editor = desktopWindow.locator('.prompt-editor-host .cm-content');
+  await expect(editor).toBeFocused();
+  await desktopWindow.keyboard.insertText('Body before title rename');
+  await expect.poll(() => getNodeContent(desktopWindow, nodeId!)).toBe('Body before title rename');
+
+  await desktopWindow.keyboard.press('F2');
+  await expectCompleteRenameSelection(desktopWindow);
+  await desktopWindow.keyboard.insertText('Title via Tab');
+  await desktopWindow.keyboard.press('Tab');
+  await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via Tab');
+  await expect(editor).toBeFocused();
+
+  await desktopWindow.keyboard.press('F2');
+  await expectCompleteRenameSelection(desktopWindow);
+  await desktopWindow.keyboard.insertText('Title via Enter');
+  await desktopWindow.keyboard.press('Enter');
+  await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via Enter');
+  await expect(editor).toBeFocused();
+
+  await desktopWindow.keyboard.press('F2');
+  await expectCompleteRenameSelection(desktopWindow);
+  await desktopWindow.keyboard.insertText('Cancelled editor title');
+  await desktopWindow.keyboard.press('Escape');
+  await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via Enter');
+  await expect(editor).toBeFocused();
+
+  const treeItem = desktopWindow.locator(`[role="treeitem"][data-node-id="${nodeId}"]`);
+  await treeItem.focus();
+  await desktopWindow.keyboard.press('F2');
+  await expectCompleteRenameSelection(desktopWindow);
+  await desktopWindow.keyboard.insertText('Title via tree');
+  await desktopWindow.keyboard.press('Enter');
+  await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via tree');
+  await expect(treeItem).toBeFocused();
+
+  await desktopWindow.keyboard.press('F2');
+  await expectCompleteRenameSelection(desktopWindow);
+  await desktopWindow.keyboard.insertText('Cancelled tree title');
+  await desktopWindow.keyboard.press('Escape');
+  await expect.poll(() => getNodeTitle(desktopWindow, nodeId!)).toBe('Title via tree');
+  await expect(treeItem).toBeFocused();
 });
