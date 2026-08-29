@@ -20,6 +20,7 @@ describe('T152 Windows immutable capsule controller', () => {
     expect(action.indexOf('lockfile digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
     expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
     expect(action).toContain('[StringComparer]::Ordinal');
+    expect(action).toContain('if ($exitCode -ne 0)');
     expect(action).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
   });
 

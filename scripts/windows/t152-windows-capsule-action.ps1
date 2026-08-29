@@ -52,8 +52,17 @@ function Get-HostFacts {
 }
 
 function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
-  & $File @Arguments 2>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "$Stage.log")
-  if ($LASTEXITCODE -ne 0) { throw "$Stage failed with exit $LASTEXITCODE" }
+  $previousPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    $output = @(& $File @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  @($output | ForEach-Object { [string]$_ }) |
+    Set-Content -LiteralPath (Join-Path $evidenceRoot "$Stage.log") -Encoding utf8
+  if ($exitCode -ne 0) { throw "$Stage failed with exit $exitCode" }
 }
 
 try {
