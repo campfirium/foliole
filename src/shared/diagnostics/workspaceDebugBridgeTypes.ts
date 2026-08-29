@@ -28,7 +28,7 @@ export interface WorkspaceDebugApi {
   getActiveNodeId: () => string | null;
   getEditorOperationHistory: () => WorkspaceDebugOperationHistory;
   getNode: (nodeId: string) => {
-    anchorKind: 'highlight' | 'cloze' | null;
+    anchorKind: 'highlight' | 'cloze' | 'image-excerpt' | null;
     anchorLink: NodeAnchorLink | null;
     content: string;
     id: string;

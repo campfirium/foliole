@@ -3,7 +3,7 @@ import { hasNodeReveal } from '../../nodes/model/nodeTypes';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
 export type ReviewItemNodeLike = Pick<Node, 'kind' | 'review' | 'reveal' | 'hasReveal'> & {
-  anchorLink?: { kind: 'highlight' | 'cloze' } | null;
+  anchorLink?: { kind: 'highlight' | 'cloze' | 'image-excerpt' } | null;
 };
 
 function resolveFormalReviewItemKind(kind: Node['kind'] | null | undefined): ReviewItemKind | null {
@@ -21,6 +21,9 @@ function resolveFormalReviewItemKind(kind: Node['kind'] | null | undefined): Rev
 
 export function getReviewItemKind(node: ReviewItemNodeLike | null | undefined): ReviewItemKind {
   if (!node) {
+    return 'none';
+  }
+  if (node.anchorLink?.kind === 'image-excerpt') {
     return 'none';
   }
   const formalReviewItemKind = resolveFormalReviewItemKind(node.kind);

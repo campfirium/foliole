@@ -50,6 +50,17 @@ function registerPdfLocatorTest() {
       }
     });
   });
+
+  it('losslessly preserves the explicit image excerpt kind', () => {
+    const value = JSON.stringify({
+      id: 'image-1', kind: 'image-excerpt',
+      locator: { page: 3, x: 0.1, y: 0.2, rects: [{ x: 0.1, y: 0.2, width: 0.4, height: 0.5 }] }
+    });
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'image-1', kind: 'image-excerpt',
+      locator: { page: 3, x: 0.1, y: 0.2, rects: [{ x: 0.1, y: 0.2, width: 0.4, height: 0.5 }] }
+    });
+  });
 }
 
 function registerMalformedLocatorTest() {

@@ -196,6 +196,7 @@ export const NATIVE_COMMANDS = {
   saveSplitTopicPreferences: 'save_split_topic_preferences',
   createFolder: 'create_folder',
   createTopic: 'create_topic',
+  createPdfImageExcerpt: 'create_pdf_image_excerpt',
   splitTopic: 'split_topic',
   createItem: 'create_item',
   updateNodeContent: 'update_node_content',

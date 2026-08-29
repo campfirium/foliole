@@ -1,6 +1,6 @@
 export interface NativeWorkspaceAnchorLink {
   id: string;
-  kind: 'highlight' | 'cloze';
+  kind: 'highlight' | 'cloze' | 'image-excerpt';
   locator?: {
     attachmentId?: string;
     from?: number;

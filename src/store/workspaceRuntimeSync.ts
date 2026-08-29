@@ -4,6 +4,7 @@ import {
   moveWorkspaceNodes,
   restoreWorkspaceNodes,
   saveCreatedWorkspaceNodeMutationSnapshot,
+  savePdfImageExcerptNodeMutation,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
   saveWorkspaceNodeContentSnapshotNow,
@@ -107,6 +108,8 @@ export async function syncCreateNodeMutationToRuntime(
     nodeOrder
   });
 }
+
+export { savePdfImageExcerptNodeMutation as syncPdfImageExcerptNodeMutationToRuntime };
 
 export function syncNodeRevealToRuntime(node: Node, position?: number) {
   saveWorkspaceNodeRevealSnapshot(createNodeSnapshotArgs(node, position));

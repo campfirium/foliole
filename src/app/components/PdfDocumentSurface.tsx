@@ -11,15 +11,17 @@ import type { NodeViewState } from '../../store/workspaceStore';
 
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
 import { resolvePdfExternalHref } from './pdfExternalLinkTarget';
+import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import { PdfSelectionContextMenu, usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
 import { usePdfSearchControls } from './pdfSurfaceSearchControls';
+import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 
 configurePdfWorker();
 
 interface PdfDocumentSurfaceProps {
-  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  highlightLocators: PdfHighlightLocator[];
   isVisible?: boolean;
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean;
@@ -56,14 +58,23 @@ export function PdfDocumentSurface({
     ? 'Indexing in progress'
     : null;
 
+  const textHighlightLocators = highlightLocators.filter((locator) => locator.kind === 'highlight');
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
+    ...buildPdfSurfaceLayoutProps(nodeId, textHighlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
     persistedPageCount,
     persistedPageDimensions
   };
 
   return (
-    <PdfDocumentSurfaceLayout {...layoutProps} />
+    <PdfVisualExcerptRuntimeProvider
+      currentPage={pdfSystem.state.page}
+      locators={highlightLocators}
+      nodeId={nodeId}
+      rotation={pdfSystem.state.rotation}
+      source={pdfSystem.state.pdfSource}
+    >
+      <PdfDocumentSurfaceLayout {...layoutProps} />
+    </PdfVisualExcerptRuntimeProvider>
   );
 }
 

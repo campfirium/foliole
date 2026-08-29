@@ -59,6 +59,25 @@ it('sanitizes extended workspace context fields', () => {
   expect(context).not.toHaveProperty('unknown');
 });
 
+it('losslessly preserves image excerpt identity without inventing source text', () => {
+  const context = readOptionalWorkspaceContext({
+    anchor: { id: 'image-1', kind: 'image-excerpt', page: 3, parentNodeId: 'pdf-1' },
+    folder: {
+      childCount: 1,
+      children: [{ anchorKind: 'image-excerpt', hasContent: true, kind: 'topic', nodeId: 'image-1', title: 'Image excerpt' }],
+      truncated: false
+    },
+    schemaVersion: 1,
+    scope: 'node'
+  });
+
+  expect(context?.anchor).toEqual({
+    id: 'image-1', kind: 'image-excerpt', page: 3, parentNodeId: 'pdf-1'
+  });
+  expect(context?.folder?.children[0]?.anchorKind).toBe('image-excerpt');
+  expect(context?.anchor).not.toHaveProperty('text');
+});
+
 function createExtendedWorkspaceContext() {
   return {
     activeKind: 'topic',

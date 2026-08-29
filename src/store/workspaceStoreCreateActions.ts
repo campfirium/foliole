@@ -46,7 +46,7 @@ interface RuntimeSyncHandlers {
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
-function buildAnnotationCreatePatch(args: {
+export function buildAnnotationCreatePatch(args: {
   createdNode: WorkspaceNode;
   parentNodeId: string;
   state: WorkspaceState;
@@ -85,7 +85,7 @@ function keepCreatedNodeDocumentInRendererBoundary(state: WorkspaceState, nodeId
   ].slice(0, RECENT_RENDERER_BOUNDARY_NODE_LIMIT);
 }
 
-async function applyCreatedNode(args: {
+export async function applyCreatedNode(args: {
   activeNodeId: string;
   handlers: RuntimeSyncHandlers;
   node: WorkspaceNode | null;
@@ -93,6 +93,7 @@ async function applyCreatedNode(args: {
   nodeOrder: string[] | null;
   get?: () => WorkspaceState;
   set: WorkspaceSet;
+  requireRuntimeConfirmation?: boolean;
 }) {
   const { activeNodeId, get, handlers, node, nodeId, nodeOrder, set } = args;
   if (!node || !nodeOrder) {
@@ -105,7 +106,7 @@ async function applyCreatedNode(args: {
   if (runtimeConfirmed && result) {
     set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));
   }
-  const succeeded = runtimeConfirmed || !hasWorkspaceNodeMutationRuntime();
+  const succeeded = runtimeConfirmed || (!args.requireRuntimeConfirmation && !hasWorkspaceNodeMutationRuntime());
   get?.().settleEditorAnnotationCreation({ annotationNodeIds: [nodeId], nodeId: activeNodeId, succeeded });
   if (succeeded) await completeNodeCreateRuntimePersist(nodeId);
   else {

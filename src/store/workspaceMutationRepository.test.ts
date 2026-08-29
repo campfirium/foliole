@@ -20,6 +20,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncMoveNodesToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
+  syncPdfImageExcerptNodeMutationToRuntime: vi.fn(async () => null),
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));

@@ -9,6 +9,7 @@ import {
   syncNodeContentMutationToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
+  syncPdfImageExcerptNodeMutationToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -24,6 +25,7 @@ export interface WorkspaceMutationRepository extends TrashRuntimeHandlers {
     activeNodeId?: string | null,
     position?: number
   ) => ReturnType<typeof syncCreateNodeMutationToRuntime>;
+  syncPdfImageExcerptCreation: typeof syncPdfImageExcerptNodeMutationToRuntime;
   syncNodeOrder: (nodeOrder: string[]) => void;
   syncMoveNodes: (payload: WorkspaceMoveNodesPayload) => Promise<WorkspaceMoveNodesResult | undefined>;
   syncNodeMutation: typeof syncNodeContentMutationToRuntime;
@@ -42,6 +44,7 @@ function createRuntimeWorkspaceMutationRepository(): WorkspaceMutationRepository
       }
       return syncCreateNodeMutationToRuntime(node, nodeOrder, activeNodeId, position);
     },
+    syncPdfImageExcerptCreation: syncPdfImageExcerptNodeMutationToRuntime,
     syncNodeOrder: syncNodeOrderToRuntime,
     syncRestoreNodes: syncRestoreNodesToRuntime,
     syncSoftDeleteNodes: syncSoftDeleteNodesToRuntime
@@ -63,6 +66,7 @@ export function createBrowserLocalWorkspaceMutationRepository(): WorkspaceMutati
     },
     syncNodeContent: () => undefined,
     syncNodeCreation: async () => null,
+    syncPdfImageExcerptCreation: async () => null,
     syncNodeOrder: () => undefined,
     syncRestoreNodes: ({ nodeIds }) => ({ restoredNodeIds: nodeIds, skippedConflicts: [] }),
     syncSoftDeleteNodes: ({ nodeIds }) => ({ deletedNodeIds: nodeIds })

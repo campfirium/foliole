@@ -27,6 +27,7 @@ import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import { handleSqliteMaintenanceCommand } from './storageCommandSupport.js';
 import { handleLocalFileStorageCommand } from './storageLocalFileCommands.js';
 import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
+import { handleStoragePdfImageExcerptCommand } from './storagePdfImageExcerptCommand.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
@@ -40,6 +41,9 @@ export async function handleStorageCommand(
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
     return syncMutationResult;
+  }
+  if (command === NATIVE_COMMANDS.createPdfImageExcerpt) {
+    return handleStoragePdfImageExcerptCommand(command, args, window);
   }
   const nodeMutationResult = await handleNodeMutationCommand(command, args, window);
   if (nodeMutationResult !== undefined) {

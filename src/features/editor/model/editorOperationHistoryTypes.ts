@@ -7,7 +7,7 @@ export interface EditorOperationSelectionSnapshot {
 
 export interface EditorAnnotationOperationSnapshot {
   anchorId?: string;
-  kind: 'cloze' | 'highlight' | 'note';
+  kind: 'cloze' | 'highlight' | 'image-excerpt' | 'note';
   nodeId: string;
   orderIndex?: number;
   parentNodeId: string;

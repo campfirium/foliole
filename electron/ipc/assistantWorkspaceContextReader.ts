@@ -34,7 +34,7 @@ export function readOptionalWorkspaceContext(value: unknown): NativeAssistantWor
 function readWorkspaceAnchorContext(value: object): AssistantAnchorContext {
   const anchor = value as Record<string, unknown>;
   if (typeof anchor.id !== 'string') throw new Error('invalid_workspace_anchor');
-  const kind = anchor.kind === 'cloze' || anchor.kind === 'highlight' ? anchor.kind : null;
+  const kind = readWorkspaceChildAnchorKind(anchor.kind);
   if (!kind) throw new Error('invalid_workspace_anchor');
   return {
     id: anchor.id.slice(0, 200),
@@ -87,8 +87,8 @@ function readWorkspaceChildSummary(value: unknown) {
   };
 }
 
-function readWorkspaceChildAnchorKind(value: unknown): 'cloze' | 'highlight' | null {
-  return value === 'cloze' || value === 'highlight' ? value : null;
+function readWorkspaceChildAnchorKind(value: unknown): 'cloze' | 'highlight' | 'image-excerpt' | null {
+  return value === 'cloze' || value === 'highlight' || value === 'image-excerpt' ? value : null;
 }
 
 function readWorkspaceSelectionContext(value: object) {

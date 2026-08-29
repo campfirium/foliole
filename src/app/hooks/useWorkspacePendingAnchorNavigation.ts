@@ -16,7 +16,7 @@ function revealPendingAnchor(args: {
   pendingAnchor: PendingAnchor;
   scheduleRestoreSuppressionRelease: (nodeId: string) => void;
 }) {
-  if (args.pendingAnchor.kind === 'highlight' && isPdfAnchorLocator(args.pendingAnchor.locator)) {
+  if ((args.pendingAnchor.kind === 'highlight' || args.pendingAnchor.kind === 'image-excerpt') && isPdfAnchorLocator(args.pendingAnchor.locator)) {
     requestPdfAnchorJump(args.activeNodeId, args.pendingAnchor.locator);
     args.scheduleRestoreSuppressionRelease(args.activeNodeId);
     args.clearPendingAnchor();

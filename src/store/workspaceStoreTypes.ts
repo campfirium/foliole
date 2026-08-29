@@ -7,7 +7,7 @@ import type {
 } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
-import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink, NodeImageRegionGroup, PdfAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
@@ -107,6 +107,13 @@ export interface WorkspaceState {
     anchorId?: string,
     anchorLink?: NodeAnchorLink,
     imageRegions?: NodeImageRegionGroup[] | null
+  ) => Promise<string | null>;
+  createPdfImageExcerpt?: (
+    parentNodeId: string,
+    page: number,
+    locator: PdfAnchorLocator,
+    attachmentId: string,
+    bytesBase64: string
   ) => Promise<string | null>;
   createQANodeFromSelection: (
     parentNodeId: string,

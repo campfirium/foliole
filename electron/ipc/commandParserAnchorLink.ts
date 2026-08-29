@@ -4,7 +4,7 @@ import { parseAnchorLinkLocatorRects } from './anchorLinkLocatorRects.js';
 
 interface AnchorLinkPayload {
   id: string;
-  kind: 'highlight' | 'cloze';
+  kind: 'highlight' | 'cloze' | 'image-excerpt';
   locator?: {
     attachmentId?: string;
     from?: number;
@@ -123,7 +123,9 @@ export function asAnchorLink(value: unknown, field: string): AnchorLinkPayload |
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`invalid argument: ${field}`);
   const payload = value as { id?: unknown; kind?: unknown; locator?: RawAnchorLocator };
   if (typeof payload.id !== 'string') throw new Error(`invalid argument: ${field}.id`);
-  if (payload.kind !== 'highlight' && payload.kind !== 'cloze') throw new Error(`invalid argument: ${field}.kind`);
+  if (payload.kind !== 'highlight' && payload.kind !== 'cloze' && payload.kind !== 'image-excerpt') {
+    throw new Error(`invalid argument: ${field}.kind`);
+  }
   const anchorLink: AnchorLinkPayload = { id: payload.id, kind: payload.kind };
   if (payload.locator === undefined) return anchorLink;
   const locator = payload.locator;
