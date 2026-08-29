@@ -632,7 +632,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -655,7 +655,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
