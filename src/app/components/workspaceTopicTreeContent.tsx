@@ -18,6 +18,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   drag: WorkspaceTopicTreeDragController;
   emptyState?: { description: string; title: string };
   nodesById: WorkspaceListNodesById;
+  onFocusEditor?: (nodeId: string, origin: HTMLButtonElement) => boolean;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
@@ -25,6 +26,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   scrollTargetNodeId?: string | null;
   selectedNodeIds: string[];
+  tabStopNodeId?: string;
   visibleRows: ReturnType<typeof buildVisibleNodeTreeRows>;
 }) {
   return (
@@ -49,6 +51,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           collapsedNodeIds={args.collapsedNodeIds}
           drag={args.drag}
           nodesById={args.nodesById}
+          {...definedProps({ onFocusEditor: args.onFocusEditor })}
           onContextMenu={args.contextMenu.openContextMenu}
           onRenameNode={args.onRenameNode}
           onSelectNode={args.onSelectNode}
@@ -56,6 +59,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           rows={args.visibleRows}
           scrollContainerRef={args.scrollContainerRef}
           selectedNodeIds={args.selectedNodeIds}
+          {...definedProps({ tabStopNodeId: args.tabStopNodeId })}
           {...definedProps({ scrollPlacement: args.scrollPlacement, scrollTargetNodeId: args.scrollTargetNodeId })}
         />
       </NodeListStateSurface>

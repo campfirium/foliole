@@ -13,6 +13,15 @@ function isMarkdownEditorActive(activeElement: Element) {
   return Boolean(activeElement.closest('.markdown-editor-host,.cm-editor,.cm-content'));
 }
 
+function isOrdinaryPromptEditorActive(activeElement: Element) {
+  const host = activeElement.closest<HTMLElement>('.markdown-editor-host.prompt-editor-host');
+  return Boolean(
+    host &&
+    host.dataset.readOnly === 'false' &&
+    host.dataset.reviewEscapeBlur === 'false'
+  );
+}
+
 function isDialogOpen() {
   return Boolean(document.querySelector('[role="dialog"]'));
 }
@@ -37,12 +46,20 @@ function blurActiveMarkdownEditorAfterEvent() {
   }, 0);
 }
 
-function blurActiveMarkdownEditorIfEscape(event: KeyboardEvent | ReactKeyboardEvent<HTMLDivElement>) {
+function blurActiveMarkdownEditorIfEscape(
+  event: KeyboardEvent | ReactKeyboardEvent<HTMLDivElement>,
+  onExitEditing?: () => boolean
+) {
   if (event.key !== 'Escape' || event.defaultPrevented) {
     return false;
   }
+  const activeElement = document.activeElement;
+  const shouldReturn = Boolean(
+    onExitEditing && activeElement instanceof Element && isOrdinaryPromptEditorActive(activeElement)
+  );
   const didBlur = blurActiveMarkdownEditor();
   if (didBlur) {
+    if (shouldReturn) onExitEditing?.();
     blurActiveMarkdownEditorAfterEvent();
   }
   return didBlur;
@@ -60,19 +77,24 @@ function blurReviewEditorIfEscape(event: KeyboardEvent | ReactKeyboardEvent<HTML
   return true;
 }
 
-function blurActiveEditorForNativeEscape(enabled: boolean) {
+function blurActiveEditorForNativeEscape(enabled: boolean, onExitEditing?: () => boolean) {
   const activeElement = document.activeElement;
   const isReviewActive = activeElement instanceof Element && isReviewEditorActive(activeElement);
+  const shouldReturn = Boolean(
+    !enabled && onExitEditing && activeElement instanceof Element && isOrdinaryPromptEditorActive(activeElement)
+  );
   if (!blurActiveMarkdownEditor()) {
     return;
   }
   if (enabled && isReviewActive) {
     dispatchReviewEditorEscapeBlur();
   }
+  if (shouldReturn) onExitEditing?.();
 }
 
 export function useReviewEditorEscapeBlur(args: {
   enabled: boolean;
+  onExitEditing?: () => boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   useEffect(() => {
@@ -84,7 +106,7 @@ export function useReviewEditorEscapeBlur(args: {
       if (args.enabled) {
         blurReviewEditorIfEscape(event);
       } else {
-        blurActiveMarkdownEditorIfEscape(event);
+        blurActiveMarkdownEditorIfEscape(event, args.onExitEditing);
       }
     };
     const handlePriorityEscape = (event: KeyboardEvent) => {
@@ -94,12 +116,12 @@ export function useReviewEditorEscapeBlur(args: {
       if (args.enabled) {
         return blurReviewEditorIfEscape(event);
       }
-      return blurActiveMarkdownEditorIfEscape(event);
+      return blurActiveMarkdownEditorIfEscape(event, args.onExitEditing);
     };
     root.addEventListener('keydown', handleKeyDown, true);
     const unlistenPriorityEscape = onWindowPriorityEscape(handlePriorityEscape);
     const unlistenNativeEscape = onNativeEditingEscape({
-      exitEditing: () => blurActiveEditorForNativeEscape(args.enabled),
+      exitEditing: () => blurActiveEditorForNativeEscape(args.enabled, args.onExitEditing),
       isDialogOpen,
       isEditing: () => {
         const activeElement = document.activeElement;
@@ -111,7 +133,7 @@ export function useReviewEditorEscapeBlur(args: {
       unlistenPriorityEscape();
       unlistenNativeEscape();
     };
-  }, [args.enabled, args.rootRef]);
+  }, [args.enabled, args.onExitEditing, args.rootRef]);
 }
 
 export function handleMarkdownEditorKeyDownCapture(
@@ -121,5 +143,5 @@ export function handleMarkdownEditorKeyDownCapture(
   if (props.reviewEscapeBlurEnabled === true && blurReviewEditorIfEscape(event)) {
     return;
   }
-  blurActiveMarkdownEditorIfEscape(event);
+  blurActiveMarkdownEditorIfEscape(event, props.onExitEditing);
 }

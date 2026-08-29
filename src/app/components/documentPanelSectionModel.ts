@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { translate, type TranslationKey } from '../../shared/localization/translations';
@@ -191,6 +192,7 @@ function getDocumentPanelBodyProps(
     onEditorRedo: props.onEditorRedo,
     onEditorDoubleClick: props.isImmersiveMode && !props.isImmersiveEditing ? props.onEnterImmersiveEdit : undefined,
     onEditorUndo: props.onEditorUndo,
+    ...definedProps({ onExitEditorFocus: props.onExitEditorFocus }),
     onPastedTextAnchors: props.onPastedTextAnchors,
     onEditorReady: props.onEditorReady,
     onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,

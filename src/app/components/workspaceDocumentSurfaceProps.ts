@@ -48,6 +48,7 @@ export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource &
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onExternalPreviewEditorReady?: (adapter: EditorAdapter | null) => void;
+  onExitEditorFocus?: () => boolean;
   onShouldSuppressSelectionRestore: () => boolean;
   reviewCaretLineHighlight: boolean;
   reviewEscapeBlurEnabled: boolean;

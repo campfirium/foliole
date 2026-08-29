@@ -24,6 +24,7 @@ export function selectWorkspaceGridColumnProps({
   listNodesById,
   outlineActivePosition,
   onSelectNode,
+  onFocusTopicEditor,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
@@ -33,6 +34,7 @@ export function selectWorkspaceGridColumnProps({
   listNodesById: WorkspaceListNodesById;
   outlineActivePosition: number;
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
+  onFocusTopicEditor: (nodeId: string, origin: HTMLButtonElement) => boolean;
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceGridColumnProps {
   return {
@@ -40,7 +42,7 @@ export function selectWorkspaceGridColumnProps({
     isImmersiveMode: props.layoutChrome.isImmersiveMode,
     isListCollapsed: props.layoutChrome.isListCollapsed,
     isRightSidebarCollapsed: props.layoutChrome.isRightSidebarCollapsed,
-    listAreaProps: selectWorkspaceListAreaProps({ listNodesById, onSelectNode, props }),
+    listAreaProps: selectWorkspaceListAreaProps({ listNodesById, onFocusTopicEditor, onSelectNode, props }),
     listSplitterProps: selectWorkspaceListSplitterProps(props),
     rightSidebarProps: selectWorkspaceRightSidebarProps({
       activeRightPanelId,
@@ -80,10 +82,12 @@ export function selectStudySessionCompleteSummaryProps(
 function selectWorkspaceListAreaProps({
   listNodesById,
   onSelectNode,
+  onFocusTopicEditor,
   props
 }: {
   listNodesById: WorkspaceListNodesById;
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
+  onFocusTopicEditor: (nodeId: string, origin: HTMLButtonElement) => boolean;
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceListAreaProps {
   return {
@@ -101,6 +105,7 @@ function selectWorkspaceListAreaProps({
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
     onCreateChildNode: props.nodeList.onCreateChildNode,
+    onFocusTopicEditor,
     onOpenMoveToNode: props.nodeList.onOpenMoveToNode,
     onOpenPostponeTopicPanel: props.review.onOpenPostponeTopicPanel,
     onOpenNotesView: props.nodeList.onOpenNotesView,

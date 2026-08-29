@@ -8,8 +8,10 @@ import {
 
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 import {
-  selectWorkspaceDocumentSurfaceProps
-} from './workspaceDocumentSurfaceProps';
+  selectWorkspaceTopicEditorFocusRoundTripInput,
+  useWorkspaceTopicEditorFocusRoundTrip
+} from './useWorkspaceTopicEditorFocusRoundTrip';
+import { selectWorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import { useWorkspaceGridContentDiagnostic } from './workspaceGridContentDiagnostic';
 import { resolveOutlineActivePosition, resolveShowDocumentOutline } from './workspaceGridContentModel';
@@ -21,6 +23,16 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceGridContentSource = WorkspaceLayoutProps;
 
+interface WorkspaceGridContentProps {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  isImmersiveEditing: boolean;
+  onEnterImmersiveEdit: () => void;
+  onShouldSuppressSelectionRestore: () => boolean;
+  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
+  props: WorkspaceGridContentSource;
+}
+
 export function WorkspaceGridContent({
   activeRightPanelId,
   documentNodeId,
@@ -29,24 +41,18 @@ export function WorkspaceGridContent({
   onShouldSuppressSelectionRestore,
   onSelectNode,
   props
-}: {
-  activeRightPanelId: WorkspaceRightPanelId;
-  documentNodeId: string | null;
-  isImmersiveEditing: boolean;
-  onEnterImmersiveEdit: () => void;
-  onShouldSuppressSelectionRestore: () => boolean;
-  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
-  props: WorkspaceGridContentSource;
-}) {
+}: WorkspaceGridContentProps) {
   const finishDiagnostic = useWorkspaceGridContentDiagnostic({ documentNodeId, props });
   const listNodesById = useProjectedListNodesById(props.nodeList.nodesById);
   const externalPreviewController = useExternalPreviewController(props);
+  const focusRoundTrip = useWorkspaceTopicEditorFocusRoundTrip(selectWorkspaceTopicEditorFocusRoundTripInput(props, listNodesById));
   const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
     activeRightPanelId,
     documentNodeId,
     externalPreviewController,
     isImmersiveEditing,
     onEnterImmersiveEdit,
+    onExitEditorFocus: focusRoundTrip.returnToTopic,
     onShouldSuppressSelectionRestore,
     props
   });
@@ -54,7 +60,6 @@ export function WorkspaceGridContent({
     editorSelection: props.document.editorNodeViewState?.selection ?? null,
     readingSelection: props.readingPosition.getReadingPositionSelection()
   });
-
   finishDiagnostic({
     hasExternalOutline: Boolean(externalPreviewController.outlineDocument),
     listNodeCount: Object.keys(listNodesById).length
@@ -74,6 +79,7 @@ export function WorkspaceGridContent({
           externalOutlineDocument: externalPreviewController.outlineDocument,
           outlineActivePosition,
           onSelectNode,
+          onFocusTopicEditor: focusRoundTrip.focusEditor,
           props
         })
       )}
@@ -87,6 +93,7 @@ function useWorkspaceGridDocumentSurfaceProps({
   externalPreviewController,
   isImmersiveEditing,
   onEnterImmersiveEdit,
+  onExitEditorFocus,
   onShouldSuppressSelectionRestore,
   props
 }: {
@@ -95,6 +102,7 @@ function useWorkspaceGridDocumentSurfaceProps({
   externalPreviewController: ReturnType<typeof useExternalPreviewController>;
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
+  onExitEditorFocus: () => boolean;
   onShouldSuppressSelectionRestore: () => boolean;
   props: WorkspaceGridContentSource;
 }) {
@@ -114,6 +122,7 @@ function useWorkspaceGridDocumentSurfaceProps({
       }),
       externalPreviewState: externalPreviewController.previewState,
       onExternalPreviewEditorReady: externalPreviewController.onEditorReady,
+      onExitEditorFocus,
       showDocumentOutline
     }),
     [
@@ -121,6 +130,7 @@ function useWorkspaceGridDocumentSurfaceProps({
       externalPreviewController,
       isImmersiveEditing,
       onEnterImmersiveEdit,
+      onExitEditorFocus,
       onShouldSuppressSelectionRestore,
       props,
       showDocumentOutline

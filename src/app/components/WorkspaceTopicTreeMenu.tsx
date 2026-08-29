@@ -10,8 +10,8 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
 import { requestClipboardImport } from './importActivityRequests';
+import type { useWorkspaceTopicTreeInteraction } from './useWorkspaceTopicTreeInteraction';
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
-import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 import { listAvailableManualVirtualFolders } from './workspaceVirtualFolderMembership';
 

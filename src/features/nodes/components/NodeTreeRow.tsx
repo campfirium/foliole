@@ -40,6 +40,7 @@ interface NodeTreeRowProps {
   labelTooltipText?: string;
   nodeId: string;
   rowSpacing: number;
+  tabIndex?: number;
   rowAction?: ReactNode;
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
@@ -87,6 +88,7 @@ function renderNodeTreeRowButton(props: {
   ariaPosInSet?: number;
   ariaSetSize?: number;
   rowSpacing: number;
+  tabIndex?: number;
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -139,6 +141,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         ...(props.ariaPosInSet !== undefined ? { ariaPosInSet: props.ariaPosInSet } : {}),
         ...(props.ariaSetSize !== undefined ? { ariaSetSize: props.ariaSetSize } : {}),
         rowSpacing: props.rowSpacing,
+        ...(props.tabIndex !== undefined ? { tabIndex: props.tabIndex } : {}),
         ...(props.secondaryLabel !== undefined ? { secondaryLabel: props.secondaryLabel } : {}),
         ...(props.trailingLabelContent !== undefined ? { trailingLabelContent: props.trailingLabelContent } : {}),
         ...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {}),
@@ -178,6 +181,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.showIcon === next.showIcon &&
     previous.showLeafChevronPlaceholder === next.showLeafChevronPlaceholder &&
     previous.rowSpacing === next.rowSpacing &&
+    previous.tabIndex === next.tabIndex &&
     previous.rowAction === next.rowAction &&
     previous.secondaryLabel === next.secondaryLabel &&
     previous.trailingLabelContent === next.trailingLabelContent &&

@@ -29,6 +29,7 @@ function resolveNodeTreeRowDataAttributes(props: {
   isMuted: boolean;
   nodeId: string;
   rowSpacing: number;
+  tabIndex?: number;
   treeItemState: { 'aria-selected': boolean };
 }) {
   return {
@@ -88,6 +89,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   showIcon: boolean;
   showLeafChevronPlaceholder: boolean;
   style: CSSProperties;
+  tabIndex?: number;
   treeItemState: { 'aria-selected': boolean };
   mutedOpacity: number;
   onToggleCollapse: (nodeId: string) => void;
@@ -113,6 +115,7 @@ export function renderNodeTreeRowButtonSurface(props: {
         ...props.style,
         ...(props.isMuted ? { '--node-muted-opacity': props.mutedOpacity } : {})
       } as CSSProperties}
+      tabIndex={props.tabIndex}
       variant="list"
     >
       {renderNodeTreeRowButtonBody(props)}

@@ -39,6 +39,7 @@ function findParentRowNodeId(rows: readonly KeyboardRow[], index: number): strin
 
 interface NodeListKeyboardInput {
   collapsedNodeIds: ReadonlySet<string>;
+  onTab?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => boolean;
   onSelect: (nodeId: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: readonly KeyboardRow[];
@@ -114,6 +115,7 @@ function handleHierarchyNavigationKey(
 
 export function createNodeListRowKeydownHandler({
   collapsedNodeIds,
+  onTab,
   onSelect,
   onToggleCollapse,
   rows
@@ -125,6 +127,10 @@ export function createNodeListRowKeydownHandler({
 
     const row = rows[index];
     if (!row) return;
+    if (event.key === 'Tab' && !event.shiftKey && onTab?.(nodeId, event)) {
+      event.preventDefault();
+      return;
+    }
     const isCollapsed = collapsedNodeIds.has(nodeId);
     const linearHandled = handleLinearNavigationKey(event.key, index, rows, onSelect);
     const hierarchyHandled = handleHierarchyNavigationKey(

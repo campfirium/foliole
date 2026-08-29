@@ -24,6 +24,7 @@ interface WorkspaceTopicTreeRowsProps {
   drag: WorkspaceTopicTreeDragController;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
+  onFocusEditor?: (nodeId: string, origin: HTMLButtonElement) => boolean;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
@@ -32,6 +33,7 @@ interface WorkspaceTopicTreeRowsProps {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   scrollTargetNodeId?: string | null;
   selectedNodeIds: string[];
+  tabStopNodeId?: string;
 }
 
 function resolveActiveRowIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
@@ -89,6 +91,7 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
           row={row}
           rowSpacing={args.rowSpacing}
           selectedNodeIds={args.selectedNodeIds}
+          {...definedProps({ tabIndex: args.tabStopNodeId === undefined ? undefined : row.node.id === args.tabStopNodeId ? 0 : -1 })}
         />}
       scrollAnchorIndex={resolveScrollAnchorIndex(args.rows, args.scrollTargetNodeId ?? args.activeNodeId, args.scrollPlacement)}
       scrollElementRef={args.scrollContainerRef}
@@ -101,6 +104,7 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
 function renderWorkspaceTopicTreeRowsSection(args: {
   ariaLabel: string;
   children: ReactNode;
+  focusRoundTripEnabled: boolean;
   rowGap: number;
   rowSpacing: number;
   scrollPaddingBottom: number;
@@ -112,6 +116,7 @@ function renderWorkspaceTopicTreeRowsSection(args: {
       className="flex flex-1 flex-col"
       data-node-list-row-gap={String(args.rowGap)}
       data-node-list-row-spacing={String(args.rowSpacing)}
+      data-topic-editor-focus-tree={args.focusRoundTripEnabled ? 'true' : undefined}
       role="tree"
       style={{ gap: `${args.rowGap}px`, paddingBottom: args.scrollPaddingBottom, paddingTop: args.scrollPaddingTop }}
     >
@@ -124,11 +129,14 @@ function useWorkspaceTopicTreeKeydown(props: WorkspaceTopicTreeRowsProps) {
   return useMemo(
     () => createNodeListRowKeydownHandler({
       collapsedNodeIds: props.collapsedNodeIds,
+      ...(props.onFocusEditor ? {
+        onTab: (nodeId, event) => props.onFocusEditor?.(nodeId, event.currentTarget) ?? false
+      } : {}),
       onSelect: props.onSelectNode,
       onToggleCollapse: props.onToggleCollapse,
       rows: props.rows
     }),
-    [props.collapsedNodeIds, props.onSelectNode, props.onToggleCollapse, props.rows]
+    [props.collapsedNodeIds, props.onFocusEditor, props.onSelectNode, props.onToggleCollapse, props.rows]
   );
 }
 
@@ -138,6 +146,7 @@ export function WorkspaceTopicTreeRows({
   drag,
   nodesById,
   onContextMenu,
+  onFocusEditor,
   onRenameNode,
   onSelectNode,
   onToggleCollapse,
@@ -145,7 +154,8 @@ export function WorkspaceTopicTreeRows({
   scrollPlacement,
   scrollContainerRef,
   scrollTargetNodeId,
-  selectedNodeIds
+  selectedNodeIds,
+  tabStopNodeId
 }: WorkspaceTopicTreeRowsProps) {
   const t = useTranslation();
   const { navigationTitleFontSize, rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop } = useWorkspaceTopicTreeRowScrollLayout({
@@ -155,10 +165,11 @@ export function WorkspaceTopicTreeRows({
     scrollPlacement,
     scrollTargetNodeId
   });
-  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ scrollPlacement, scrollTargetNodeId }) });
+  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ onFocusEditor, scrollPlacement, scrollTargetNodeId, tabStopNodeId }) });
 
   return renderWorkspaceTopicTreeRowsSection({
     ariaLabel: t('desktop.workspace.topicList'),
+    focusRoundTripEnabled: Boolean(onFocusEditor),
     rowGap,
     rowSpacing,
     scrollPaddingBottom,
@@ -169,6 +180,7 @@ export function WorkspaceTopicTreeRows({
         drag,
         nodesById,
         onContextMenu,
+        ...definedProps({ onFocusEditor }),
         onRenameNode,
         onRowKeyDown,
         onSelectNode,
@@ -179,7 +191,7 @@ export function WorkspaceTopicTreeRows({
         titleFontSize: navigationTitleFontSize,
         scrollContainerRef,
         selectedNodeIds,
-        ...definedProps({ scrollPlacement, scrollTargetNodeId })
+        ...definedProps({ scrollPlacement, scrollTargetNodeId, tabStopNodeId })
       })
   });
 }

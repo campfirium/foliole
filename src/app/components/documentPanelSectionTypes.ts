@@ -60,6 +60,7 @@ export interface DocumentPanelSectionProps {
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
   onNodeShortTermChange?: (nodeId: string, enableShortTerm: boolean | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onExitEditorFocus?: () => boolean;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;

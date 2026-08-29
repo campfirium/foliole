@@ -69,3 +69,14 @@ export function useWorkspaceTopicTreeAutoScroll(args: {
     ...definedProps({ placement: args.placement })
   });
 }
+
+export function resolveWorkspaceTopicTreeTabStopNodeId(
+  enabled: boolean,
+  focusedNodeId: string | null,
+  rows: readonly NodeTreeRow[]
+) {
+  if (!enabled) return undefined;
+  return focusedNodeId && rows.some((row) => row.node.id === focusedNodeId)
+    ? focusedNodeId
+    : rows[0]?.node.id;
+}

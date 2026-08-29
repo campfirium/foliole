@@ -6,7 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
-import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
+import type { useWorkspaceTopicTreeInteraction } from './useWorkspaceTopicTreeInteraction';
 import {
   renderWorkspaceTopicTreeBody,
   toggleCollapsedNode
@@ -14,7 +14,7 @@ import {
 import { WorkspaceTopicTreeHeaderBridge } from './WorkspaceTopicTreeHeaderBridge';
 import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
-export function renderWorkspaceTopicTreeShell(args: {
+interface WorkspaceTopicTreeShellArgs {
   activeFolderId: string;
   collapsibleNodeIds: string[];
   collapsedNodeIds: ReadonlySet<string>;
@@ -25,6 +25,7 @@ export function renderWorkspaceTopicTreeShell(args: {
   headerDescription?: string;
   interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
   nodesById: WorkspaceListNodesById;
+  onFocusEditor?: (nodeId: string, origin: HTMLButtonElement) => boolean;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   scrollPlacement?: WorkspaceTopicTreeScrollPlacement;
   searchQuery: string;
@@ -36,7 +37,10 @@ export function renderWorkspaceTopicTreeShell(args: {
   showCreateTopic?: boolean;
   viewHideDismissedTopics: boolean;
   visibleRows: NodeTreeRow[];
-}) {
+  tabStopNodeId?: string;
+}
+
+export function renderWorkspaceTopicTreeShell(args: WorkspaceTopicTreeShellArgs) {
   return (
     <aside aria-label={args.t('desktop.workspace.currentFolderContents')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <WorkspaceTopicTreeHeaderBridge
@@ -60,11 +64,13 @@ export function renderWorkspaceTopicTreeShell(args: {
         drag: args.interaction.drag,
         ...definedProps({ emptyState: args.emptyState }),
         nodesById: args.nodesById,
+        ...definedProps({ onFocusEditor: args.onFocusEditor }),
         onRenameNode: args.interaction.updateNodeTitle,
         onSelectNode: args.interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, args.setCollapsedNodeIds),
         scrollContainerRef: args.scrollContainerRef,
         selectedNodeIds: args.interaction.topicTreeState.selectedNodeIds,
+        ...definedProps({ tabStopNodeId: args.tabStopNodeId }),
         visibleRows: args.visibleRows,
         ...definedProps({ scrollPlacement: args.scrollPlacement, scrollTargetNodeId: args.scrollTargetNodeId })
       })}

@@ -27,6 +27,7 @@ export function WorkspaceTopicTreeRowItem(props: {
   row: NodeTreeRow;
   rowSpacing: number;
   selectedNodeIds: string[];
+  tabIndex?: number;
 }) {
   const rowModel = resolveWorkspaceTopicTreeRowModel(props.row, props);
 
@@ -51,6 +52,7 @@ export function WorkspaceTopicTreeRowItem(props: {
       showIcon
       showLeafChevronPlaceholder={false}
       rowSpacing={props.rowSpacing}
+      {...definedProps({ tabIndex: props.tabIndex })}
       {...definedProps({ onContextMenu: props.onContextMenu })}
       {...resolveWorkspaceTopicTreeRowDragProps(
         props.row.node.id,

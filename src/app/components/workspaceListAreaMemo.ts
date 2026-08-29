@@ -22,6 +22,7 @@ export function areWorkspaceListAreaPropsEqual(
     isWorkspaceHydrated: previous.isWorkspaceHydrated !== next.isWorkspaceHydrated,
     listNodesById: previous.listNodesById !== next.listNodesById,
     nodeOrder: previous.nodeOrder !== next.nodeOrder,
+    onFocusTopicEditor: previous.onFocusTopicEditor !== next.onFocusTopicEditor,
     reviewCurrentNodeId: previous.reviewCurrentNodeId !== next.reviewCurrentNodeId,
     selectedTrashNodeId: previous.selectedTrashNodeId !== next.selectedTrashNodeId,
     trashedNodeIds: previous.trashedNodeIds !== next.trashedNodeIds,

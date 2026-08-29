@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 
+import { definedProps } from '../../../shared/lib/definedProps';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
@@ -31,6 +32,7 @@ export function useMarkdownEditorModelEffects(args: {
   );
   useReviewEditorEscapeBlur({
     enabled: props.reviewEscapeBlurEnabled === true,
-    rootRef
+    rootRef,
+    ...definedProps({ onExitEditing: props.onExitEditing })
   });
 }

@@ -57,6 +57,7 @@ interface DocumentPanelBodyProps {
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onExitEditorFocus?: () => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;

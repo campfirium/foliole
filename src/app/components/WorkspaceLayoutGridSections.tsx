@@ -33,6 +33,7 @@ export interface WorkspaceListAreaProps {
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onCreateChildNode?: WorkspaceDualListContentProps['onCreateChildNode'] | undefined;
+  onFocusTopicEditor?: WorkspaceDualListContentProps['onFocusTopicEditor'];
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId?: string | null) => boolean;
   onOpenNotesView: () => void;
@@ -118,6 +119,7 @@ function renderWorkspaceListBody(
     | 'nodesById'
     | 'nodeOrder'
     | 'onCreateChildNode'
+    | 'onFocusTopicEditor'
     | 'onOpenMoveToNode'
     | 'onOpenPostponeTopicPanel'
     | 'onOpenNotesView'
@@ -142,14 +144,13 @@ function renderWorkspaceListBody(
   if (props.shouldShowEmptyState) {
     return <WorkspaceListEmptyState />;
   }
-  return renderWorkspaceDualListBody(props);
-}
-
-function renderWorkspaceDualListBody(
-  props: WorkspaceDualListContentProps & { isWorkspaceHydrated?: boolean; shouldShowEmptyState: boolean }
-) {
-  const dualListProps: WorkspaceDualListContentProps = props;
-  return <WorkspaceDualListContent {...dualListProps} />;
+  const { onFocusTopicEditor, ...dualListProps } = props;
+  return (
+    <WorkspaceDualListContent
+      {...dualListProps}
+      {...definedProps({ onFocusTopicEditor })}
+    />
+  );
 }
 
 export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({

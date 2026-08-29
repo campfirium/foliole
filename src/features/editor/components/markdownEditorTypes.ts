@@ -57,6 +57,7 @@ export interface MarkdownEditorProps {
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onExitEditing?: () => boolean;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onDocumentInput?: (meta: EditorContentChangeMeta) => void;

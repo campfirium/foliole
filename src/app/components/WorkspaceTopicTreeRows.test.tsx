@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -214,4 +214,34 @@ it('keeps virtual row sizing aligned with folder tree row spacing', () => {
 
   expect(screen.getByRole('tree', { name: 'Topic list' })).toHaveAttribute('data-node-list-row-gap', '4');
   expect(document.querySelector('[data-virtual-list="true"]')).toHaveStyle({ height: `${20 * (20 + 6 * 2) + 19 * 4}px` });
+});
+
+it('keeps one topic-tree Tab stop and sends forward Tab to the editor owner', () => {
+  const first = createTopicNode(1);
+  const second = createTopicNode(2);
+  const onFocusEditor = vi.fn(() => true);
+  renderWithLocalization(
+    <WorkspaceTopicTreeRows
+      activeNodeId={second.id}
+      collapsedNodeIds={new Set()}
+      drag={createDragMock()}
+      nodesById={{ [first.id]: first, [second.id]: second }}
+      onContextMenu={vi.fn()}
+      onFocusEditor={onFocusEditor}
+      onRenameNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rows={[createRow(first), createRow(second)]}
+      scrollContainerRef={createRef<HTMLDivElement>()}
+      selectedNodeIds={[second.id]}
+      tabStopNodeId={second.id}
+    />
+  );
+
+  const firstRow = screen.getByRole('treeitem', { name: 'Topic 1' });
+  const secondRow = screen.getByRole('treeitem', { name: 'Topic 2' });
+  expect(firstRow).toHaveAttribute('tabindex', '-1');
+  expect(secondRow).toHaveAttribute('tabindex', '0');
+  fireEvent.keyDown(secondRow, { key: 'Tab' });
+  expect(onFocusEditor).toHaveBeenCalledWith(second.id, secondRow);
 });

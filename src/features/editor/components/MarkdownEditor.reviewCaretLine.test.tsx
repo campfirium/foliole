@@ -24,13 +24,19 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
 
 import { MarkdownEditor } from './MarkdownEditor';
 
-function renderEditor(reviewCaretLineHighlight: boolean, reviewEscapeBlurEnabled = reviewCaretLineHighlight) {
+function renderEditor(
+  reviewCaretLineHighlight: boolean,
+  reviewEscapeBlurEnabled = reviewCaretLineHighlight,
+  options: { onExitEditing?: () => boolean; readOnly?: boolean } = {}
+) {
   return render(
     <LocalizationProvider>
       <MouseGestureSettingsProvider>
         <MarkdownEditor
           nodeId="node-1"
           onChange={vi.fn()}
+          className="prompt-editor-host"
+          {...options}
           reviewCaretLineHighlight={reviewCaretLineHighlight}
           reviewEscapeBlurEnabled={reviewEscapeBlurEnabled}
           value="Alpha"
@@ -142,6 +148,62 @@ describe('MarkdownEditor Escape blur', () => {
 
     expect(document.activeElement).not.toBe(editable);
     expect(host).toHaveAttribute('data-review-escape-blur', 'false');
+  });
+});
+
+describe('MarkdownEditor topic focus return', () => {
+  it('returns ordinary prompt editor focus once for DOM and native Escape', () => {
+    const onDomExit = vi.fn(() => true);
+    const domView = renderEditor(false, false, { onExitEditing: onDomExit });
+    const domHost = domView.container.querySelector('.markdown-editor-host') as HTMLElement;
+    const domEditable = document.createElement('div');
+    domEditable.contentEditable = 'true';
+    domEditable.tabIndex = 0;
+    domHost.append(domEditable);
+    domEditable.focus();
+
+    fireEvent.keyDown(domEditable, { key: 'Escape', cancelable: true });
+
+    expect(onDomExit).toHaveBeenCalledOnce();
+    domView.unmount();
+
+    const dispatchNativeEscape = installNativeKeyboardBridge();
+    const onNativeExit = vi.fn(() => true);
+    const nativeView = renderEditor(false, false, { onExitEditing: onNativeExit });
+    const nativeHost = nativeView.container.querySelector('.markdown-editor-host') as HTMLElement;
+    const nativeEditable = document.createElement('div');
+    nativeEditable.contentEditable = 'true';
+    nativeEditable.tabIndex = 0;
+    nativeHost.append(nativeEditable);
+    nativeEditable.focus();
+
+    dispatchNativeEscape();
+
+    expect(onNativeExit).toHaveBeenCalledOnce();
+  });
+
+  it('does not return focus from review or read-only prompt editors', () => {
+    const onExitEditing = vi.fn(() => true);
+    const reviewView = renderEditor(false, true, { onExitEditing });
+    const reviewHost = reviewView.container.querySelector('.markdown-editor-host') as HTMLElement;
+    const reviewEditable = document.createElement('div');
+    reviewEditable.contentEditable = 'true';
+    reviewEditable.tabIndex = 0;
+    reviewHost.append(reviewEditable);
+    reviewEditable.focus();
+    fireEvent.keyDown(reviewEditable, { key: 'Escape', cancelable: true });
+    reviewView.unmount();
+
+    const readOnlyView = renderEditor(false, false, { onExitEditing, readOnly: true });
+    const readOnlyHost = readOnlyView.container.querySelector('.markdown-editor-host') as HTMLElement;
+    const readOnlyEditable = document.createElement('div');
+    readOnlyEditable.contentEditable = 'true';
+    readOnlyEditable.tabIndex = 0;
+    readOnlyHost.append(readOnlyEditable);
+    readOnlyEditable.focus();
+    fireEvent.keyDown(readOnlyEditable, { key: 'Escape', cancelable: true });
+
+    expect(onExitEditing).not.toHaveBeenCalled();
   });
 });
 

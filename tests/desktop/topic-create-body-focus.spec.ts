@@ -1,5 +1,7 @@
 import process from 'node:process';
 
+import type { ElectronApplication } from '@playwright/test';
+
 import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -43,6 +45,17 @@ async function expectCompleteRenameSelection(page: WindowPage) {
   return input;
 }
 
+async function sendNativeEscape(desktopApp: ElectronApplication) {
+  await desktopApp.evaluate(async ({ BrowserWindow }) => {
+    const target = BrowserWindow.getAllWindows()[0];
+    if (!target) throw new Error('missing browser window');
+    target.focus();
+    target.webContents.focus();
+    target.webContents.sendInputEvent({ keyCode: 'Escape', type: 'keyDown' });
+    target.webContents.sendInputEvent({ keyCode: 'Escape', type: 'keyUp' });
+  });
+}
+
 test('Create Topic focuses the new topic body for immediate typing', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
@@ -74,6 +87,40 @@ test('Create Topic focuses the new topic body for immediate typing', async ({ de
 
   await testInfo.attach('topic-create-body-focus', {
     body: JSON.stringify({ existingNodeId, newNodeId, newBody: NEW_BODY }, null, 2),
+    contentType: 'application/json'
+  });
+});
+
+test('topic tree Tab enters the editor and Escape returns to the topic', async ({ desktopApp, desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  const beforeNodeId = await getActiveNodeId(desktopWindow);
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+N' : 'Control+N');
+  await expect.poll(() => getActiveNodeId(desktopWindow)).not.toBe(beforeNodeId);
+  const nodeId = await getActiveNodeId(desktopWindow);
+  expect(nodeId).toBeTruthy();
+
+  const topicTree = desktopWindow.locator('[data-topic-editor-focus-tree="true"]');
+  const treeItem = topicTree.locator(`[role="treeitem"][data-node-id="${nodeId}"]`);
+  const editor = desktopWindow.locator('.prompt-editor-host .cm-content');
+  await expect(editor).toBeFocused();
+  await expect(topicTree.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(1);
+
+  await treeItem.focus();
+  await desktopWindow.keyboard.press('Tab');
+  await expect(editor).toBeFocused();
+  await desktopWindow.keyboard.insertText('Keyboard round trip body');
+  await expect.poll(() => getNodeContent(desktopWindow, nodeId!)).toBe('Keyboard round trip body');
+  await desktopWindow.keyboard.press('Escape');
+  await expect(treeItem).toBeFocused();
+
+  await desktopWindow.keyboard.press('Tab');
+  await expect(editor).toBeFocused();
+  await sendNativeEscape(desktopApp);
+  await expect(treeItem).toBeFocused();
+  await desktopWindow.screenshot({ path: '.tmp/artifacts/t157-topic-editor-focus-round-trip.png' });
+  await testInfo.attach('topic-editor-focus-round-trip', {
+    body: JSON.stringify({ body: await getNodeContent(desktopWindow, nodeId!), nodeId }, null, 2),
     contentType: 'application/json'
   });
 });

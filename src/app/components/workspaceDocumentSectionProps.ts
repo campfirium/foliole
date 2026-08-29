@@ -138,6 +138,7 @@ export function buildDocumentSectionProps(
       onCreateHighlightFromPayload: props.onCreateHighlightFromPayload,
       onPastedTextAnchors: props.onPastedTextAnchors,
       onRunDocumentCommand: props.onRunDocumentCommand,
+      onExitEditorFocus: props.onExitEditorFocus,
       onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
       onSelectTrashNode: props.onSelectTrashNode,
       showDocumentOutline: props.showDocumentOutline

@@ -39,6 +39,7 @@ export interface NodeTreeRowButtonProps {
   ariaPosInSet?: number;
   ariaSetSize?: number;
   rowSpacing: number;
+  tabIndex?: number;
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -95,6 +96,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     onToggleCollapse: props.onToggleCollapse,
     rename,
     rowSpacing: props.rowSpacing,
+    ...definedProps({ tabIndex: props.tabIndex }),
     style: props.style,
     treeItemState: { 'aria-selected': props.isSelected }
   });
