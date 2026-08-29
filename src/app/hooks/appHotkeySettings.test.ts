@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { buildHotkeySettings } from './appHotkeySettings';
@@ -31,6 +32,7 @@ it('adds global capture as a standard editable hotkey item', () => {
 
 it('exposes both Windows redo entries as editable shortcut slots', () => {
   vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Win32');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Windows');
   const redoShortcuts = {
     primary: { ctrlKey: true, key: 'z', shiftKey: true },
     secondary: { ctrlKey: true, key: 'y' }
@@ -52,6 +54,27 @@ it('exposes both Windows redo entries as editable shortcut slots', () => {
       { label: 'Ctrl+Shift+Z', slot: 'primary' },
       { label: 'Ctrl+Y', slot: 'secondary' }
     ]
+  });
+  vi.restoreAllMocks();
+});
+
+it('shows the macOS annotation default in shortcut settings', () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+  const annotationShortcuts = getPlatformDefaultCommandShortcuts('MacIntel')[APP_COMMAND_IDS.addSelectionNote]!;
+  const settings = buildHotkeySettings([
+    { enabled: true, id: APP_COMMAND_IDS.addSelectionNote, shortcuts: annotationShortcuts, title: 'Annotate Selection' }
+  ], {
+    overrides: {},
+    resetAllShortcuts: vi.fn(),
+    resetShortcut: vi.fn(),
+    shortcutMap: { [APP_COMMAND_IDS.addSelectionNote]: annotationShortcuts },
+    updateShortcut: vi.fn()
+  });
+
+  expect(settings.hotkeyItems.find((item) => item.commandId === APP_COMMAND_IDS.addSelectionNote)).toMatchObject({
+    primaryShortcutLabel: 'Alt+Shift+A',
+    shortcutDisplayEntries: [{ label: '⌥ ⇧ A', slot: 'primary' }],
+    title: 'Annotate Selection'
   });
   vi.restoreAllMocks();
 });

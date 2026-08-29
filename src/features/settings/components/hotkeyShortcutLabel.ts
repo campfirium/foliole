@@ -75,7 +75,10 @@ export function nativeInputToShortcutLabel(input: RuntimeKeyboardInputPayload, a
   if (input.controlKey) parts.push('Ctrl');
   if (input.altKey) parts.push('Alt');
   if (input.shiftKey) parts.push('Shift');
-  const key = acceleratorCompatible ? acceleratorKeyFromCode(input.code) ?? input.key : input.key;
+  const usePhysicalAltLetter = input.altKey && /^Key[A-Z]$/.test(input.code);
+  const key = acceleratorCompatible || usePhysicalAltLetter
+    ? acceleratorKeyFromCode(input.code) ?? input.key
+    : input.key;
   parts.push(formatShortcutKey(key));
   return parts.join('+');
 }

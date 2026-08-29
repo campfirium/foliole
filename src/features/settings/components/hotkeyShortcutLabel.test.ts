@@ -30,6 +30,11 @@ it.each([
   expect(nativeInputToShortcutLabel(optionInput(code, key, shiftKey), true)).toBe(expected);
 });
 
-it('keeps generated characters for non-global command shortcuts', () => {
-  expect(nativeInputToShortcutLabel(optionInput('KeyC', 'ç'))).toBe('Alt+Ç');
+it('records application Option-letter shortcuts by physical letter', () => {
+  expect(nativeInputToShortcutLabel(optionInput('KeyC', 'ç'))).toBe('Alt+C');
+  expect(nativeInputToShortcutLabel(optionInput('KeyA', 'Å', true))).toBe('Alt+Shift+A');
+});
+
+it('keeps generated characters for non-letter application shortcuts', () => {
+  expect(nativeInputToShortcutLabel(optionInput('Slash', '¿', true))).toBe('Alt+Shift+¿');
 });

@@ -8,7 +8,7 @@ function keyEvent(init: KeyboardEventInit) {
   const code = init.code || (init.altKey && /^[a-z]$/i.test(init.key ?? '')
     ? `Key${init.key?.toUpperCase()}`
     : undefined);
-  return new KeyboardEvent('keydown', { ...init, code });
+  return new KeyboardEvent('keydown', { ...init, ...(code ? { code } : {}) });
 }
 
 it('uses an explicit Apple-native default table on macOS', () => {
@@ -40,7 +40,9 @@ it('uses an explicit Apple-native default table on macOS', () => {
   expect(macShortcuts[APP_COMMAND_IDS.enterPriorityMode]).toEqual({ primary: { key: 'm', ctrlKey: true } });
   expect(macShortcuts[APP_COMMAND_IDS.createSelectionHighlight]).toEqual({ primary: { key: 'z', altKey: true } });
   expect(macShortcuts[APP_COMMAND_IDS.createSelectionCloze]).toEqual({ primary: { key: 'x', altKey: true } });
-  expect(macShortcuts[APP_COMMAND_IDS.addSelectionNote]).toBeUndefined();
+  expect(macShortcuts[APP_COMMAND_IDS.addSelectionNote]).toEqual({
+    primary: { key: 'a', altKey: true, shiftKey: true }
+  });
   expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
 

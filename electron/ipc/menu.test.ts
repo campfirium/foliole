@@ -137,6 +137,28 @@ describe('native app menu command state', () => {
   });
 });
 
+describe('native annotation menu projection', () => {
+  beforeEach(resetMenuMock);
+
+  it.each([
+    ['darwin', 'Alt+Shift+A'],
+    ['win32', 'Alt+A'],
+    ['linux', 'Alt+A']
+  ] as const)('projects annotation onto the %s native Editor menu', (platform, accelerator) => {
+    syncAppMenuState(
+      ['editor.addSelectionNote'], [{ accelerator, commandId: 'editor.addSelectionNote' }], platform
+    );
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'editor.addSelectionNote')).toMatchObject({
+      accelerator, enabled: true, label: 'Annotate Selection'
+    });
+    if (platform === 'darwin') {
+      expect(collectMenuItems(items).some((item) => item.role === 'selectAll')).toBe(true);
+    }
+  });
+});
+
 describe('native app menu platform roles', () => {
   beforeEach(resetMenuMock);
 

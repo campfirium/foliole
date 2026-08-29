@@ -82,6 +82,18 @@ describe('command keymap overrides', () => {
   });
 });
 
+it('keeps an annotation override ahead of the platform default without rewriting it', () => {
+  const defaults = getPlatformDefaultCommandShortcuts('MacIntel');
+  const overrides = { [APP_COMMAND_IDS.addSelectionNote]: { primary: 'Command+Shift+N' } };
+  const resolved = resolveCommandShortcutMap({
+    commandIds: [APP_COMMAND_IDS.addSelectionNote], defaults, overrides
+  });
+
+  expect(resolved[APP_COMMAND_IDS.addSelectionNote]?.primary).toEqual({ key: 'n', metaKey: true, shiftKey: true });
+  expect(overrides).toEqual({ [APP_COMMAND_IDS.addSelectionNote]: { primary: 'Command+Shift+N' } });
+  expect(defaults[APP_COMMAND_IDS.addSelectionNote]?.primary).toEqual({ key: 'a', altKey: true, shiftKey: true });
+});
+
 describe('command keymap cleared slots', () => {
   it('keeps explicit blank slots cleared until the command is reset', () => {
     const resolved = resolveCommandShortcutMap({

@@ -72,3 +72,12 @@ it('keeps Alt-letter conflicts based on the declared shortcut', () => {
   expect(conflicts['editor.highlight']?.severity).toBe('error');
   expect(conflicts['editor.other']?.severity).toBe('error');
 });
+
+it('does not confuse macOS global capture with shifted annotation', () => {
+  const conflicts = buildCommandShortcutConflictMap([
+    { commandId: 'capture.globalToInbox', title: 'Capture to Inbox', scope: 'global', shortcut: { altKey: true, key: 'a' } },
+    { commandId: 'editor.addSelectionNote', title: 'Annotate Selection', scope: 'global', shortcut: { altKey: true, key: 'a', shiftKey: true } }
+  ]);
+
+  expect(conflicts).toEqual({});
+});

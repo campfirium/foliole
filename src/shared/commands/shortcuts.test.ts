@@ -33,7 +33,8 @@ it.each([
   ['Å', 'KeyA', { altKey: true, key: 'a', shiftKey: true }],
   ['a', 'KeyA', { altKey: true, key: 'a' }]
 ])('matches Alt-modified letter %s by physical code %s', (key, code, shortcut) => {
-  expect(matchesShortcut(keyEvent({ altKey: true, code, key, shiftKey: shortcut.shiftKey }), shortcut)).toBe(true);
+  const shiftKey = 'shiftKey' in shortcut && shortcut.shiftKey;
+  expect(matchesShortcut(keyEvent({ altKey: true, code, key, shiftKey }), shortcut)).toBe(true);
 });
 
 it('does not fall back to the produced character for Alt-modified letters', () => {

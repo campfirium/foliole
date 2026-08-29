@@ -153,6 +153,7 @@ function buildEditorMenu(state: MenuState, platform: NodeJS.Platform): MenuItemC
       ...historyItems,
       commandItem('Find in Topic', 'document.findInTopic', state),
       commandItem('Set Priority…', 'nodes.enterPriorityMode', state),
+      commandItem('Annotate Selection', 'editor.addSelectionNote', state),
       { type: 'separator' },
       commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode', state),
       commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode', state)
