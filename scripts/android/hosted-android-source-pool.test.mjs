@@ -9,9 +9,9 @@ const workflow = parse(fs.readFileSync('.github/workflows/hosted-quality-portabl
 const job = workflow.jobs['portable-domain-tests'];
 
 describe('hosted Android source pool contract', () => {
-  it('uses process isolation for the Windows native test bucket only', () => {
+  it('uses process isolation for Windows portable domains that load native SQLite', () => {
     expect(job.env.VITEST_POOL)
-      .toBe("${{ inputs.domain == 'android-source' && matrix.host == 'Windows' && 'forks' || 'threads' }}");
+      .toBe("${{ (inputs.domain == 'android-source' || inputs.domain == 'shared') && matrix.host == 'Windows' && 'forks' || 'threads' }}");
     expect(job.strategy.matrix.include).toEqual([
       { host: 'Ubuntu', runner: 'ubuntu-latest' },
       { host: 'Windows', runner: 'windows-latest' }

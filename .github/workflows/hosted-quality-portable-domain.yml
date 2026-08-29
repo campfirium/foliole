@@ -44,7 +44,7 @@ jobs:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
       TARGET_SHA: ${{ inputs.target_sha }}
-      VITEST_POOL: ${{ inputs.domain == 'android-source' && matrix.host == 'Windows' && 'forks' || 'threads' }}
+      VITEST_POOL: ${{ (inputs.domain == 'android-source' || inputs.domain == 'shared') && matrix.host == 'Windows' && 'forks' || 'threads' }}
     steps:
       - name: Validate target SHA input
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
