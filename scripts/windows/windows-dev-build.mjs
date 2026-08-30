@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
@@ -16,7 +16,7 @@ import {
 import { runWindowsDevDesktopAction } from './windows-dev-desktop-action-routing.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
 import {
-  requiresWindowsDevDesktopBuild, windowsDevRequiredTools
+  requiresWindowsDevDesktopBuild, verifyWindowsOrdinaryJourneyCheckout, windowsDevRequiredTools
 } from './windows-dev-build-preflight.mjs';
 import { WINDOWS_DEV_BUILD_ACTIONS } from './windows-dev-build-actions.mjs';
 import { runWindowsDevGradleBuild } from './windows-dev-gradle-build.mjs';
@@ -88,6 +88,7 @@ export async function runWindowsDevBuild({
     for (const filePath of windowsDevRequiredTools(action, paths)) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
+    await verifyWindowsOrdinaryJourneyCheckout({ action, checked, execute, paths });
     const residualBefore = await snapshotProcesses(execute, paths);
     if (action !== 'desktop-dnssd-host-facts'
         && residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
@@ -205,7 +206,9 @@ export async function runWindowsDevBuild({
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   const action = args.length === 0 ? 'build' : args.length === 1 ? args[0] : 'invalid';
-  const result = await runWindowsDevBuild({ action });
+  const cliRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const result = await runWindowsDevBuild({ action, ...(action === 'default-sync-journey'
+    ? { paths: windowsDevPaths({ repoRoot: cliRepoRoot }) } : {}) });
   const label = result.exitCode === 0 ? 'OK' : 'FAILED';
   const stream = result.exitCode === 0 ? console.log : console.error;
   if (result.exitCode !== 0) stream(formatWindowsDevFailure(result.summary));

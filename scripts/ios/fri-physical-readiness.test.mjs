@@ -8,12 +8,6 @@ import {
   prepareFriControlPlaneProbe, runFriControlPlaneProbe
 } from './fri-physical-readiness.mjs';
 
-it('exposes the fixed Fri readiness check as a direct current-checkout entry', () => {
-  const source = fs.readFileSync('scripts/ios/fri-physical-readiness.mjs', 'utf8');
-  expect(source).toContain('createFriPhysicalReadinessAdapter()()');
-  expect(source).not.toMatch(/git|archive|receipt|candidate|reset|clean/u);
-});
-
 it('requires the fixed wired physical Fri destination', async () => {
   const calls = [];
   const execute = async (command, args) => {

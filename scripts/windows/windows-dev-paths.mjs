@@ -4,6 +4,7 @@ import path from 'node:path';
 
 export const WINDOWS_DEV_REPO_ROOT = 'D:\\C\\foliole';
 export const WINDOWS_DEV_REPO_ROOT_POSIX = 'D:/C/foliole';
+export const WINDOWS_SYNC_REPO_ROOT = 'D:\\C\\foliole-sync';
 export const WINDOWS_DEV_EVIDENCE_PREFIX =
   `${WINDOWS_DEV_REPO_ROOT_POSIX}/.tmp/artifacts/windows-dev-action/`;
 export const WINDOWS_DEV_SYSTEM_NODE = 'C:\\Program Files\\nodejs\\node.exe';
@@ -36,6 +37,7 @@ export function windowsDevPaths({
     oldBareRepository: path.win32.join(oldLabRoot, 'repository.git'),
     oldConfig: path.win32.join(oldLabRoot, 'config.json'),
     oldLabRoot,
+    ordinaryJourneyRepoRoot: WINDOWS_SYNC_REPO_ROOT,
     protectionBackups: path.win32.join(oldLabRoot, 'protection', 'backups'),
     receiver: path.win32.join(gitRoot, 'receive.mjs'),
     repoRoot,

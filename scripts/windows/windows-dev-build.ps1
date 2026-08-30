@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 if ($args.Count -gt 1 -or ($args.Count -eq 1 -and $args[0] -ne "default-sync-journey")) {
-  [Console]::Error.WriteLine("Windows DEV build only accepts default-sync-journey.")
+  [Console]::Error.WriteLine("Windows DEV build accepts no arguments or default-sync-journey.")
   exit 64
 }
 

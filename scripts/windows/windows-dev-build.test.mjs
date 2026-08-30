@@ -21,7 +21,8 @@ function fixture() {
   const paths = {
     adbPath: path.join(root, 'adb.exe'), androidSdk: path.join(root, 'sdk'), gitPath: path.join(root, 'git.exe'),
     javaHome: path.join(root, 'jbr'), repoRoot, signingHome, signingKeystore,
-    signingManifest, systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js')
+    signingManifest, ordinaryJourneyRepoRoot: repoRoot,
+    systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js')
   };
   for (const directory of [repoRoot, signingHome, paths.androidSdk, paths.javaHome]) {
     fs.mkdirSync(directory, { recursive: true });

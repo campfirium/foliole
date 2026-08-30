@@ -11,7 +11,7 @@
 ## Repository And Work Unit
 
 - 当前仓库是 `Electron + React + TypeScript + Vite + Capacitor` 多平台单仓；`electron/`、`android/`、`ios/` 只承载薄宿主，`src/app/` 与 `src/companion/` 承载 renderer shell，跨宿主业务、状态与稳定调用面归 `src/features/`、`src/store/`、`src/shared/`。
-- 默认直接在 `dev` 连续小步推进，不创建 feature branch / worktree，除非用户明确要求。Windows 与 LAN Git 只消费 Mac `dev` 的精确镜像，不向 Mac 提供、合并或决定源码候选。
+- 默认直接在 `dev` 连续小步推进，不创建 feature branch / worktree，除非用户明确要求。Windows 与 LAN Git 只消费 Mac 拥有的明确 branch，不向 Mac 提供、合并或决定源码候选；日常 checkout 默认只消费 `dev`，用户明确建立的长期专项 branch 必须使用独立 checkout，不得占用日常现场。
 - 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
 - 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；标题取自 owning plan，完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。

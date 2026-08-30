@@ -40,14 +40,14 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell。Mac 控制的 Windows DEV 动作只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作；这些动作保留既有 `dev` source owner，并在固定 checkout 不满足其 branch preflight 时明确拒绝。四宿主普通 `default-sync-journey` 不属于该 registry，必须在固定的专用 branch checkout 内直接运行 `powershell.exe -File scripts/windows/windows-dev-build.ps1 default-sync-journey`，由既有 foreground lock 保护且不得由 Mac 推送、拉取、重置、清理或核对源码。Windows 不向 Mac 回传或合并源码。
-- Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell。Mac 控制的 Windows DEV 动作只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作；这些动作保留 `D:\C\foliole` 的既有 `dev` source owner。Windows 普通 `default-sync-journey` 不属于该 registry，必须在 `D:\C\foliole-sync` 的 `sync` branch 内直接运行 `powershell.exe -File scripts/windows/windows-dev-build.ps1 default-sync-journey`，由既有 foreground lock 保护且不得在普通运行时推送、拉取、重置、清理或核对 revision。Windows 不向 Mac 回传或合并源码。
+- Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node 或其他 source/build 控制面。`D:\C\foliole-sync` 是用户明确批准的唯一专项 checkout，不得用它替代或污染 `D:\C\foliole` 日常 checkout。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
 - Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免旧 PowerShell client wrapper 和 inline command 转义。
 - Windows 原生 Codex 会话直接站在 Windows checkout 内诊断时，使用 `npm run windows:preview:native`；该入口复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
-- Mac 控制的既有 Windows DEV 动作继续要求 `D:\C\foliole` 位于 `dev` 后才由既有 owner 执行 fetch/reset/clean；T161 不为它们切 branch 或提供 fallback。四宿主普通 `default-sync-journey` 只消费该 checkout 的专用 branch 当前内容，不执行这些源码步骤。fetch 失败时不得先覆盖本地内容。
+- Mac 控制的既有 Windows DEV 动作继续只在 `D:\C\foliole` 的 `dev` branch 执行 fetch/reset/clean；T161 不为它们切 branch或提供 fallback。Windows 普通 `default-sync-journey` 只消费 `D:\C\foliole-sync` 的 `sync` 当前内容，不执行这些源码步骤。fetch 失败时不得先覆盖本地内容。
 - Windows 固定仓库不得 commit / push 回 `dev` 或任何源码上游；本地源码改动不保留、不 stash、不合并、不回传，也不交给用户处理。`git clean` 不使用 `-x`，不得清理 ignored runtime、library、证据或工具缓存。
 - Windows 原生 Codex 需要快速确认本机环境与脚本入口时，优先使用 `npm run windows:native:check`；该入口覆盖 native preflight 与核心路径测试，不替代本轮能力闭环所需的最小相关验证。
 - `electron-dev-native.mjs` 只负责设置 Windows 原生试点的独立 userData / session，然后复用已验证的 `scripts/electron-dev.mjs`；不得为原生试点另写一套 Electron/Vite 启动协议，除非先证明旧 dev runner 在 Windows 原生下不可用。
