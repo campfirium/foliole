@@ -48,6 +48,6 @@ export async function importPdf(desktopApp: ElectronApplication, desktopWindow: 
   await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), result.node_id);
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(result.node_id);
-  await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first()).toBeVisible();
+  await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]:visible').first()).toBeVisible();
   return result.node_id;
 }
