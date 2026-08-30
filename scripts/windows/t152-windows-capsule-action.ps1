@@ -14,9 +14,39 @@ $ErrorActionPreference = "Stop"
 $productCommit = "86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a"
 $productTree = "ec8af4a625d98fb35e86134d8770c50a5e669ccb"
 $t7Run = "33270551363"
+$pathPredicateSchema = 't152-local-filesystem-path-v1:drive-rooted,get-full-path,owner-exact'
 
-function Assert-Absolute([string]$Value, [string]$Label) {
-  if (!$Value -or ![IO.Path]::IsPathFullyQualified($Value)) { throw "$Label must be explicit" }
+function Resolve-OwnerFilesystemPath([string]$Value, [string]$Label) {
+  if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch '^[A-Za-z]:\\') {
+    throw "$Label must be a drive-rooted local filesystem path"
+  }
+  try { $normalized = [IO.Path]::GetFullPath($Value) }
+  catch { throw "$Label normalization failed" }
+  if (![string]::Equals($normalized, $Value, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "$Label differs from its owner-normalized path"
+  }
+  $localRoot = [IO.Path]::GetPathRoot($normalized)
+  if (!(Test-Path -LiteralPath $localRoot -PathType Container)) {
+    throw "$Label local filesystem root is unavailable"
+  }
+  return [ordered]@{ localRoot = $localRoot; normalized = $normalized; value = $Value }
+}
+
+function Confirm-PathPredicateSelfcheck([string]$Positive) {
+  $root = [IO.Path]::GetPathRoot($Positive)
+  $drive = $root.Substring(0, 2)
+  $leaf = "t152-negative-$([Guid]::NewGuid().ToString('N'))"
+  $cases = [ordered]@{ relative = "relative\$leaf"; driveRelative = "$drive$leaf"
+    rootRelative = "\$leaf"; uri = "file:///$($Positive.Replace('\', '/'))"
+    normalizationMismatch = (Join-Path $Positive "..\$leaf") }
+  $rejected = [ordered]@{}
+  foreach ($case in $cases.GetEnumerator()) {
+    try { Resolve-OwnerFilesystemPath ([string]$case.Value) "selfcheck.$($case.Key)" | Out-Null
+      $rejected[$case.Key] = $false }
+    catch { $rejected[$case.Key] = $true }
+  }
+  if ($rejected.Values -contains $false) { throw 'path predicate negative selfcheck failed' }
+  return [ordered]@{ rejected = $rejected; samples = $cases }
 }
 
 function Get-Sha256([byte[]]$Bytes) {
@@ -43,7 +73,10 @@ function Read-PrepareRequest([string]$Token) {
   foreach ($name in @('capsuleId', 'hostFactsSha256', 'identity', 'rootId') + $paths) {
     if ($null -eq $request.PSObject.Properties[$name]) { throw "prepare field missing: $name" }
   }
-  foreach ($name in $paths) { Assert-Absolute ([string]$request.$name) $name }
+  $normalizedPaths = [ordered]@{}
+  foreach ($name in $paths) {
+    $normalizedPaths[$name] = Resolve-OwnerFilesystemPath ([string]$request.$name) $name
+  }
   if ($request.schemaVersion -ne 1 -or $request.capsuleId -notmatch '^[0-9a-f-]{36}$' -or
       $request.rootId -notmatch '^[0-9a-f-]{36}$' -or
       $request.hostFactsSha256 -notmatch '^[0-9a-f]{64}$' -or
@@ -58,6 +91,11 @@ function Read-PrepareRequest([string]$Token) {
     $runtime.tar -eq $request.tarPath
   if (!$runtimeExact) { throw "prepare runtime differs from host facts" }
   return [ordered]@{ fieldCount = $request.PSObject.Properties.Count; request = $request
+    pathPredicate = [ordered]@{ clrVersion = [Environment]::Version.ToString()
+      normalizedPaths = $normalizedPaths; powershellVersion = $PSVersionTable.PSVersion.ToString()
+      schema = $pathPredicateSchema
+      schemaSha256 = (Get-Sha256 ([Text.Encoding]::UTF8.GetBytes($pathPredicateSchema)))
+      selfcheck = (Confirm-PathPredicateSelfcheck $normalizedPaths.capsuleRoot.normalized) }
     requestSha256 = [string]$envelope.requestSha256; runtime = $runtime
     runtimeExact = $runtimeExact
     tokenSha256 = (Get-Sha256 ([Text.Encoding]::UTF8.GetBytes($Token))) }
@@ -108,11 +146,12 @@ try {
     $binding = Read-PrepareRequest $RequestBase64
     if ($Action -eq "binding-preflight") {
       $receipt = [ordered]@{ fieldCount = $binding.fieldCount
+        pathPredicate = $binding.pathPredicate
         requestSha256 = $binding.requestSha256; runtimeExact = $binding.runtimeExact
         runtimeExists = [ordered]@{ node = (Test-Path -LiteralPath $binding.runtime.node -PathType Leaf)
           npm = (Test-Path -LiteralPath $binding.runtime.npm -PathType Leaf)
           tar = (Test-Path -LiteralPath $binding.runtime.tar -PathType Leaf) } }
-      Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 4)"
+      Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 8)"
       exit 0
     }
     if (!(Test-Path -LiteralPath $binding.request.prepareHelperPath -PathType Leaf)) {
@@ -124,8 +163,10 @@ try {
   }
   foreach ($item in @(@($CapsuleRoot, "capsule root"), @($ControllerRoot, "controller root"),
       @($EvidenceRoot, "evidence root"), @($NodePath, "node path"),
-      @($SourceRoot, "source root"))) { Assert-Absolute $item[0] $item[1] }
-  Assert-Absolute $ConfigPath "interactive config"
+      @($SourceRoot, "source root"))) {
+    Resolve-OwnerFilesystemPath $item[0] $item[1] | Out-Null
+  }
+  Resolve-OwnerFilesystemPath $ConfigPath "interactive config" | Out-Null
   $runner = Join-Path $ControllerRoot "scripts\windows\t152-windows-capsule-formal-runner.mjs"
   & $NodePath $runner $ConfigPath
   if ($LASTEXITCODE -ne 0) { throw "interactive runner failed with exit $LASTEXITCODE" }

@@ -40,6 +40,22 @@ it('has no fixed task parent, environment fallback, or second T152 path owner', 
     'createT152DesktopDnsSdLibrary');
 });
 
+it('uses one runtime-compatible path predicate with normalization and dynamic negatives', () => {
+  const action = sources['t152-windows-capsule-action.ps1'];
+  const unavailableApi = ['IsPath', 'FullyQualified'].join('');
+  expect(action).not.toContain(unavailableApi);
+  expect(action.match(/function Resolve-OwnerFilesystemPath/g)).toHaveLength(1);
+  expect(action).not.toMatch(/Get-Member|PSObject\.Methods|method.*fallback/iu);
+  expect(action).toContain('[IO.Path]::GetFullPath($Value)');
+  expect(action).toContain('Test-Path -LiteralPath $localRoot -PathType Container');
+  expect(action).toContain('[StringComparison]::OrdinalIgnoreCase');
+  for (const negative of ['relative', 'driveRelative', 'rootRelative', 'uri',
+    'normalizationMismatch']) expect(action).toContain(negative);
+  expect(action).toContain('powershellVersion');
+  expect(action).toContain('clrVersion');
+  expect(action).toContain('schemaSha256');
+});
+
 it('keeps source-free host facts read-only and verifies both archives before builds', () => {
   const action = sources['t152-windows-capsule-action.ps1'];
   const stage = sources['t152-windows-prepare-stage.ps1'];

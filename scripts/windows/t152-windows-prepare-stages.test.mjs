@@ -2,7 +2,8 @@
 
 import { expect, it } from 'vitest';
 
-import { PREPARE_DEADLINE_MS, PREPARE_STAGES, validatePrepareStageReceipt } from
+import { PREPARE_DEADLINE_MS, PREPARE_STAGES, validateBindingPreflight,
+  validatePrepareStageReceipt } from
   './t152-windows-prepare-stages.mjs';
 
 const IDENTITY = { controllerCommit: 'a'.repeat(40), controllerTree: 'b'.repeat(40),
@@ -42,4 +43,29 @@ it('rejects failed, signalled, duplicate-stage, and identity-tampered receipts',
     expected('build'))).toThrow();
   expect(() => validatePrepareStageReceipt({ ...receipt(), identity: {
     ...IDENTITY, controllerCommit: '0'.repeat(40) } }, expected())).toThrow();
+});
+
+function bindingFixture() {
+  const fields = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
+    'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
+    'sourceRoot', 'tarPath'];
+  const request = Object.fromEntries(fields.map((field) => [field, `X:\\Owner Space\\资料\\${field}`]));
+  const normalizedPaths = Object.fromEntries(fields.map((field) => [field,
+    { localRoot: 'X:\\', normalized: request[field], value: request[field] }]));
+  const parsed = { pathPredicate: { clrVersion: '4.0.30319.42000', normalizedPaths,
+    powershellVersion: '5.1.26100.7705', schemaSha256: 'a'.repeat(64), selfcheck: { rejected: {
+      driveRelative: true, normalizationMismatch: true, relative: true, rootRelative: true,
+      uri: true } } }, requestSha256: 'b'.repeat(64), runtimeExact: true,
+  runtimeExists: { node: true, npm: true, tar: true } };
+  return { parsed, request };
+}
+
+it('requires every normalized owner path and every dynamic negative rejection', () => {
+  const { parsed, request } = bindingFixture();
+  expect(validateBindingPreflight(parsed, request, 'b'.repeat(64))).toBe(parsed);
+  parsed.pathPredicate.normalizedPaths.sourceRoot.normalized += '-changed';
+  expect(() => validateBindingPreflight(parsed, request, 'b'.repeat(64))).toThrow();
+  parsed.pathPredicate.normalizedPaths.sourceRoot.normalized = request.sourceRoot;
+  parsed.pathPredicate.selfcheck.rejected.driveRelative = false;
+  expect(() => validateBindingPreflight(parsed, request, 'b'.repeat(64))).toThrow();
 });

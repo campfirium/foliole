@@ -74,6 +74,25 @@ export function validatePrepareStageReceipt(receipt, expected) {
   return receipt;
 }
 
+export function validateBindingPreflight(parsed, request, requestSha256) {
+  const paths = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
+    'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
+    'sourceRoot', 'tarPath'];
+  const normalized = parsed?.pathPredicate?.normalizedPaths;
+  const rejected = parsed?.pathPredicate?.selfcheck?.rejected;
+  const pathExact = paths.every((field) => normalized?.[field]?.value === request[field]
+    && normalized[field].normalized === request[field]
+    && normalized[field].localRoot === path.win32.parse(request[field]).root);
+  const negativeExact = ['relative', 'driveRelative', 'rootRelative', 'uri',
+    'normalizationMismatch'].every((field) => rejected?.[field] === true);
+  if (parsed?.requestSha256 !== requestSha256 || parsed?.runtimeExact !== true
+      || !Object.values(parsed?.runtimeExists ?? {}).every((value) => value === true)
+      || !parsed?.pathPredicate?.powershellVersion || !parsed?.pathPredicate?.clrVersion
+      || !/^[0-9a-f]{64}$/u.test(parsed?.pathPredicate?.schemaSha256 ?? '')
+      || !pathExact || !negativeExact) throw new Error('prepare binding preflight failed');
+  return parsed;
+}
+
 function localTerminalReceipt(capsule, name, value) {
   const file = path.join(capsule.root, name);
   const reread = atomicJson(file, value);
@@ -102,10 +121,11 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
     identity: preparedRequest.request.identity, parsed,
     requestSha256: preparedRequest.requestSha256, rootId: preparedRequest.request.rootId,
     schemaVersion: 1, terminal: preflightTerminal, tokenSha256: digest(preparedRequest.token) });
-  if (preflightTerminal.exitCode !== 0 || preflightTerminal.signal !== null
-      || preflightTerminal.timedOut || parsed?.requestSha256 !== preparedRequest.requestSha256
-      || parsed?.runtimeExact !== true
-      || !Object.values(parsed?.runtimeExists ?? {}).every((value) => value === true)) {
+  try {
+    if (preflightTerminal.exitCode !== 0 || preflightTerminal.signal !== null
+        || preflightTerminal.timedOut) throw new Error('prepare binding terminal failed');
+    validateBindingPreflight(parsed, preparedRequest.request, preparedRequest.requestSha256);
+  } catch {
     throw Object.assign(new Error('prepare binding preflight failed'), { preflight });
   }
   deadlineAt = Date.now() + PREPARE_DEADLINE_MS;
