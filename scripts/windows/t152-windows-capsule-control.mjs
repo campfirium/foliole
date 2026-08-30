@@ -8,7 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { formalLaunchEnvHash } from './t152-windows-formal-interactive-contract.mjs';
+import { createInteractiveConfig, createInteractiveEnvelope, interactiveRemoteCommand } from
+  './t152-windows-interactive-envelope.mjs';
 import { canonicalPrepareJson, remoteT152CapsulePaths } from
   './t152-windows-prepare-request.mjs';
 import { runT152WindowsPrepareStages } from './t152-windows-prepare-stages.mjs';
@@ -78,12 +79,6 @@ export function createT152Capsule(repoRoot, controllerCommit, capsuleId, product
   return { controllerArchive, manifest, manifestPath, productArchive, root };
 }
 
-async function upload(transport, localPath, remotePath, env) {
-  await run('scp', ['-q', ...transport.options, localPath,
-    `${transport.host}:${remotePath.replaceAll('\\', '/')}`],
-    { env });
-}
-
 export async function readT152WindowsHostFacts({ controllerRoot, env = process.env,
   host, receiptRoot, transport = windowsDevTransportIdentity({ env, host }) }) {
   return captureSourceFreeHostFacts({ actionLocal: path.join(controllerRoot, ACTION_PATH),
@@ -129,6 +124,8 @@ export async function prepareT152WindowsCapsule({ capsuleId = randomUUID(), cont
     collectionsLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-control-bundle-collections.ps1'),
     parser: path.win32.join(controlRoot, 't152-windows-script-parser.ps1'),
     parserLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-script-parser.ps1'),
+    interactiveLocal: path.join(controllerRoot,
+      'scripts/windows/t152-windows-interactive-envelope.ps1'),
     verifierLocal: path.join(controllerRoot,
       'scripts/windows/t152-windows-control-bundle-verification.ps1') };
   const prepareRequestInput = { capsuleId,
@@ -149,83 +146,45 @@ export async function prepareT152WindowsCapsule({ capsuleId = randomUUID(), cont
     receipt: final.receipt, receiptPath: final.localReceipt, staging, stages, transport };
 }
 
-function interactiveConfig(prepared, phase, rootId, formal = {}) {
-  const { capsule, facts, paths } = prepared;
-  const evidenceRoot = path.win32.join(paths.capsuleRoot, 'evidence', 'admission', rootId);
-  const stateRoot = path.win32.join(paths.capsuleRoot, 'state', rootId);
-  const ownerReceiptPath = path.win32.join(evidenceRoot, `t152-task-root-${rootId}.json`);
-  const launchEnv = { sourceRoot: paths.sourceRoot, stateRoot, taskRoot: path.win32.join(
-    paths.taskBaseRoot, rootId) };
-  return { action: formal.action ?? 't152-prejourney-admission', baseRoot: paths.taskBaseRoot,
-    ...(formal.attemptId ? { attemptId: formal.attemptId } : {}),
-    capsuleId: path.win32.basename(paths.capsuleRoot), capsuleRoot: paths.capsuleRoot,
-    controllerCommit: capsule.manifest.identity.controllerCommit,
-    controllerRoot: paths.controllerRoot, controllerTree: capsule.manifest.identity.controllerTree,
-    createdAt: new Date().toISOString(), evidenceRoot,
-    ...(formal.expectedGroupId ? { expectedGroupId: formal.expectedGroupId,
-      expectedGroupTag: formal.expectedGroupTag,
-      ...(formal.expectedProviderDeviceId
-        ? { expectedProviderDeviceId: formal.expectedProviderDeviceId } : {}) } : {}),
-    formalAttempt: formal.attemptId ? { allocated: true, started: true }
-      : { allocated: false, started: false }, launchEnvHash: formalLaunchEnvHash(launchEnv),
-    nodePath: facts.runtime.nodePath, nonce: randomUUID(), ownerReceiptPath, phase,
-    protectedRoots: [paths.sourceRoot, paths.controllerRoot, paths.capsuleRoot, evidenceRoot,
-      facts.roots.programFiles, facts.roots.systemRoot], rootId, sourceRoot: paths.sourceRoot,
-    stateRoot };
+async function runInteractiveEntry({ env, formal = {}, onOutput, phase, prepared, rootId }) {
+  const config = createInteractiveConfig(prepared, phase, rootId, formal);
+  const envelope = createInteractiveEnvelope(config);
+  const localConfig = path.join(prepared.capsule.root, `${phase}-${rootId}.json`);
+  fs.writeFileSync(localConfig, `${envelope.configJson}\n`);
+  const command = interactiveRemoteCommand(prepared.staging.action, phase, envelope.token);
+  const output = await run('ssh', ['-T', ...prepared.transport.options,
+    prepared.transport.host, ...command], { env, onOutput });
+  return { config, envelope, output };
 }
 
 export async function runT152WindowsAdmission({ env = process.env,
   phase, prepared, rootId }) {
   if (!['g2-path', 'g3-anchor'].includes(phase)) throw new Error('admission phase is invalid');
-  const config = interactiveConfig(prepared, phase, rootId);
-  const localConfig = path.join(prepared.capsule.root, `${phase}-${rootId}.json`);
-  fs.writeFileSync(localConfig, `${JSON.stringify(config, null, 2)}\n`);
-  const remoteConfig = path.win32.join(prepared.facts.roots.userProfile,
-    `t152-${phase}-${rootId}.json`);
-  await upload(prepared.transport, localConfig, remoteConfig, env);
-  const remoteAction = prepared.staging.action;
-  const command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', remoteAction, '-Action', phase, '-CapsuleRoot', prepared.paths.capsuleRoot,
-    '-ConfigPath', remoteConfig, '-ControllerRoot', prepared.paths.controllerRoot,
-    '-EvidenceRoot', config.evidenceRoot, '-NodePath', prepared.facts.runtime.nodePath,
-    '-SourceRoot', prepared.paths.sourceRoot];
-  const output = await run('ssh', ['-T', ...prepared.transport.options,
-    prepared.transport.host, ...command], { env });
+  const entry = await runInteractiveEntry({ env, phase, prepared, rootId });
   const localReceipt = path.join(prepared.capsule.root, `${phase}-receipt.json`);
-  const receipt = await downloadReceipt(prepared.transport, path.win32.join(config.evidenceRoot,
+  const receipt = await downloadReceipt(prepared.transport, path.win32.join(entry.config.evidenceRoot,
     `${phase}-receipt.json`), localReceipt, env);
   if (receipt.resultStatus !== 'success' || receipt.formalAttempt.allocated !== false
       || receipt.formalAttempt.started !== false || receipt.rootId !== rootId) {
     throw new Error(`${phase} receipt is invalid`);
   }
-  return { config, localReceipt, output, receipt };
+  return { ...entry, localReceipt, receipt };
 }
 
 export async function runT152WindowsFormal({ action, env = process.env,
   expectedGroupId, expectedGroupTag, expectedProviderDeviceId,
   onOutput, prepared, rootId }) {
-  const config = interactiveConfig(prepared, 'formal', rootId, { action,
-    attemptId: rootId, expectedGroupId, expectedGroupTag, expectedProviderDeviceId });
-  const localConfig = path.join(prepared.capsule.root, `formal-${rootId}.json`);
-  fs.writeFileSync(localConfig, `${JSON.stringify(config, null, 2)}\n`);
-  const remoteConfig = path.win32.join(prepared.facts.roots.userProfile,
-    `t152-formal-${rootId}.json`);
-  await upload(prepared.transport, localConfig, remoteConfig, env);
-  const command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', prepared.staging.action, '-Action', 'formal',
-    '-CapsuleRoot', prepared.paths.capsuleRoot, '-ConfigPath', remoteConfig,
-    '-ControllerRoot', prepared.paths.controllerRoot, '-EvidenceRoot', config.evidenceRoot,
-    '-NodePath', prepared.facts.runtime.nodePath, '-SourceRoot', prepared.paths.sourceRoot];
-  const output = await run('ssh', ['-T', ...prepared.transport.options,
-    prepared.transport.host, ...command], { env, onOutput });
+  const entry = await runInteractiveEntry({ env, formal: { action, attemptId: rootId,
+    expectedGroupId, expectedGroupTag, expectedProviderDeviceId }, onOutput, phase: 'formal',
+  prepared, rootId });
   const localReceipt = path.join(prepared.capsule.root, `formal-${rootId}-receipt.json`);
-  const receipt = await downloadReceipt(prepared.transport, path.win32.join(config.evidenceRoot,
+  const receipt = await downloadReceipt(prepared.transport, path.win32.join(entry.config.evidenceRoot,
     'formal-receipt.json'), localReceipt, env);
   if (receipt.resultStatus !== 'success' || receipt.formalAttempt.allocated !== true
       || receipt.formalAttempt.started !== true || receipt.rootId !== rootId) {
     throw new Error('formal receipt is invalid');
   }
-  return { config, localReceipt, output, receipt };
+  return { ...entry, localReceipt, receipt };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) {

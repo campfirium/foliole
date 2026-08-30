@@ -42,7 +42,7 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
     `${host}:${target.replaceAll('\\', '/')}`], { deadlineAt, env });
   const bundle = createControlBundle({ bundleId: prepareRequestInput.capsuleId,
     capsuleRoot: capsule.root, files: [staging.actionLocal, staging.collectionsLocal,
-      staging.contractLocal,
+      staging.contractLocal, staging.interactiveLocal,
       staging.npmOwnerLocal, staging.parserLocal, staging.requestLocal, staging.runnerLocal,
       staging.transferLocal,
       staging.verifierLocal],

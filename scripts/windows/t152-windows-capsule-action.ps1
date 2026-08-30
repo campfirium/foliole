@@ -4,9 +4,8 @@ param(
     "launcher-preflight", "stage-plan-preflight",
     "g2-path", "g3-anchor", "formal") -or $_ -match '^prepare-[a-z-]+$' })]
   [string]$Action,
-  [string]$CapsuleRoot = "", [string]$ConfigPath = "", [string]$ControllerRoot = "",
-  [string]$EvidenceRoot = "", [string]$NodePath = "", [string]$RequestBase64 = "",
-  [string]$SourceRoot = "", [string]$VerificationBase64 = ""
+  [string]$InteractiveBase64 = "", [string]$RequestBase64 = "",
+  [string]$VerificationBase64 = ""
 )
 
 Set-StrictMode -Version Latest
@@ -205,13 +204,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "prepare stage runner failed with exit $LASTEXITCODE" }
     exit 0
   }
-  foreach ($item in @(@($CapsuleRoot, "capsule root"), @($ControllerRoot, "controller root"),
-      @($EvidenceRoot, "evidence root"), @($NodePath, "node path"),
-      @($SourceRoot, "source root"))) {
-    Resolve-OwnerFilesystemPath $item[0] $item[1] | Out-Null
+  . (Join-Path $PSScriptRoot 't152-windows-interactive-envelope.ps1')
+  $interactive = Read-T152InteractiveEnvelope $InteractiveBase64 $Action
+  if ($interactive.config.entryMode -eq 'projection') {
+    Write-T152InteractiveProjectionReceipt $interactive | Out-Null
+    Write-Output 'T152_INTERACTIVE_BINDING_WRITTEN=1'
+    exit 0
   }
-  Resolve-OwnerFilesystemPath $ConfigPath "interactive config" | Out-Null
-  $runner = Join-Path $ControllerRoot "scripts\windows\t152-windows-capsule-formal-runner.mjs"
-  & $NodePath $runner $ConfigPath
+  $runner = Join-Path $interactive.config.controllerRoot `
+    'scripts\windows\t152-windows-capsule-formal-runner.mjs'
+  & ([string]$interactive.config.nodePath) $runner $interactive.configPath
   if ($LASTEXITCODE -ne 0) { throw "interactive runner failed with exit $LASTEXITCODE" }
 } catch { Write-Error $_; exit 74 }

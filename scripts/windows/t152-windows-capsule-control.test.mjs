@@ -9,6 +9,7 @@ const names = [
   't152-windows-admission-run.mjs',
   't152-windows-capsule-control.mjs', 't152-windows-capsule-action.ps1',
   't152-windows-capsule-formal-runner.mjs', 't152-windows-formal-interactive-contract.mjs',
+  't152-windows-interactive-envelope.mjs', 't152-windows-interactive-envelope.ps1',
   't152-windows-formal-interactive-install.ps1',
   't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
   't152-windows-prepare-request.mjs', 't152-windows-prepare-request.test.mjs',
@@ -131,7 +132,7 @@ it('orders host facts before one control stream and serial payload terminals', (
   const control = sources['t152-windows-capsule-control.mjs'];
   const stages = sources['t152-windows-prepare-stages.mjs'];
   const transfer = sources['t152-windows-transfer-journal.mjs'];
-  expect(control.indexOf('const hostFacts = facts ?? await readT152WindowsHostFacts'))
+  expect(control.indexOf('const hostFactsResult = facts ?'))
     .toBeLessThan(control.indexOf('const stages = await runT152WindowsPrepareStages'));
   expect(stages).toContain('createControlBundle');
   expect(stages).toContain("'g1a-control-bundle-terminal.json'");
@@ -141,6 +142,29 @@ it('orders host facts before one control stream and serial payload terminals', (
   expect(transfer).toContain("return 'not_started'");
   expect(control).toContain("'g1-host-facts-terminal.json'");
   expect(transfer).toContain('captureSourceFreeHostFacts');
+});
+
+it('uses one interactive config envelope and one scalar token for every remote phase', () => {
+  const control = sources['t152-windows-capsule-control.mjs'];
+  const action = sources['t152-windows-capsule-action.ps1'];
+  const envelope = sources['t152-windows-interactive-envelope.mjs'];
+  const powershell = sources['t152-windows-interactive-envelope.ps1'];
+  expect(control).toContain('createInteractiveConfig(prepared, phase, rootId, formal)');
+  expect(control).toContain('interactiveRemoteCommand(prepared.staging.action, phase, envelope.token)');
+  expect(control).not.toMatch(/'-CapsuleRoot'|'-ConfigPath'|'-ControllerRoot'|'-EvidenceRoot'|'-NodePath'|'-SourceRoot'/u);
+  expect(action).toContain('[string]$InteractiveBase64');
+  expect(action).not.toMatch(/\[string\]\$(CapsuleRoot|ConfigPath|ControllerRoot|EvidenceRoot|NodePath|SourceRoot)/u);
+  expect(envelope).toContain('finalizeReceiptPath');
+  expect(envelope).toContain('requestSha256');
+  expect(envelope).toContain('tokenSha256');
+  expect(envelope).toContain('planSha256');
+  expect(powershell).toContain('G1 binding diverged from its terminal receipt');
+  expect(powershell).toContain('interactive config path escaped its capsule owner');
+  expect(powershell).toContain('[IO.File]::Move($temporary, $ConfigPath)');
+  expect(powershell).toContain('Write-T152InteractiveProjectionReceipt');
+  expect(action).toContain("'T152_INTERACTIVE_BINDING_WRITTEN=1'");
+  expect(action).not.toContain('T152_INTERACTIVE_BINDING=');
+  expect(powershell).not.toMatch(/Invoke-Expression|\beval\b/iu);
 });
 
 it('gates the exact archive before any control transfer and disables AppleDouble metadata', () => {
