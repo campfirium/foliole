@@ -34,8 +34,9 @@ it('binds the hidden native journey and fixed evidence to the checkout revision'
 
   expect(execute.mock.calls[0][1]).toEqual(['-C', repoRoot, 'rev-parse', 'HEAD']);
   expect(execute.mock.calls[1][1]).toContain(
-    path.join('tests', 'desktop', 't160-windows-default-sync-journey.spec.ts')
+    'tests/desktop/t160-windows-default-sync-journey.spec.ts'
   );
+  expect(execute.mock.calls[1][1].at(-1)).not.toContain('\\');
   expect(execute.mock.calls[1][2]).toMatchObject({
     cwd: repoRoot,
     env: { FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: '1', FOLIOLE_T160_EVIDENCE_ROOT: evidenceRoot },

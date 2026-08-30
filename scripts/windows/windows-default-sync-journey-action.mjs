@@ -37,7 +37,7 @@ export async function runWindowsDefaultSyncJourney({ checked, evidenceRoot, exec
   const revision = sourceRevision(revisionResult);
   const runner = path.join(paths.repoRoot, 'scripts', 'desktop',
     'playwright-desktop-native-hidden.mjs');
-  const spec = path.join('tests', 'desktop', 't160-windows-default-sync-journey.spec.ts');
+  const spec = 'tests/desktop/t160-windows-default-sync-journey.spec.ts';
   const result = await checked(execute, paths.systemNode, [runner, spec], {
     cwd: paths.repoRoot,
     env: {
