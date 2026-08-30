@@ -47,7 +47,16 @@ export function createFormalInteractiveRequest(input) {
 }
 
 function samePath(left, right, pathApi) {
-  return pathApi.normalize(left).toLowerCase() === pathApi.normalize(right).toLowerCase();
+  const canonical = (value) => {
+    if (!pathApi.isAbsolute(value ?? '')) return null;
+    const normalized = pathApi.normalize(value);
+    const root = pathApi.parse(normalized).root;
+    let end = normalized.length;
+    while (end > root.length && normalized[end - 1] === pathApi.sep) end -= 1;
+    return normalized.slice(0, end).toLowerCase();
+  };
+  const canonicalLeft = canonical(left);
+  return canonicalLeft !== null && canonicalLeft === canonical(right);
 }
 
 function validFormalIdentity(request) {

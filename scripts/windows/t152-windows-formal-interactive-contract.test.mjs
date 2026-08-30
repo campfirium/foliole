@@ -35,6 +35,28 @@ it('accepts dynamic admission roots and projects only the owner task root', () =
     controlRepoRoot: value.sourceRoot, repoRoot: value.sourceRoot });
 });
 
+it('accepts only an optional trailing separator on the same canonical root', () => {
+  const value = request();
+  value.baseRoot = `${value.baseRoot}\\`;
+  const signed = createFormalInteractiveRequest(value);
+  expect(validateFormalInteractiveRequest(signed).baseRoot).toBe('X:\\owned\\');
+});
+
+it.each([
+  ['different drive', 'Q:\\owned'],
+  ['UNC instead of drive', '\\\\server\\share\\owned'],
+  ['adjacent prefix', 'X:\\owned-copy'],
+  ['parent', 'X:\\'],
+  ['child', 'X:\\owned\\child'],
+  ['relative', 'owned'],
+  ['escaped', 'X:\\owned\\..\\escape']
+])('rejects %s as a different owner root', (_label, baseRoot) => {
+  const value = request();
+  value.baseRoot = baseRoot;
+  expect(() => validateFormalInteractiveRequest(createFormalInteractiveRequest(value)))
+    .toThrow('request is invalid');
+});
+
 it.each([
   ['missing root', (value) => { delete value.baseRoot; }],
   ['changed UUID', (value) => { value.rootId = NONCE; }],

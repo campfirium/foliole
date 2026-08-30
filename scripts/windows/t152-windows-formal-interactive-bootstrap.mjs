@@ -81,10 +81,10 @@ export function createBootstrapConfig({ bootstrapPath, identity, mode = 'worker'
     timeoutMs, workerPath, workingDirectory };
 }
 
-export function validateBootstrapConfig(config, request) {
+export function validateBootstrapConfig(config, request, { pathApi = path.win32 } = {}) {
   const paths = ['bootstrapPath', 'nodePath', 'stateRoot', 'workerPath', 'workingDirectory'];
   if (config?.schemaVersion !== 1 || !['worker', 'selfcheck'].includes(config.mode)
-      || !paths.every((key) => path.win32.isAbsolute(config[key] ?? ''))
+      || !paths.every((key) => pathApi.isAbsolute(config[key] ?? ''))
       || !UUID.test(config.nonce ?? '') || config.nonce !== request?.nonce
       || !SHA.test(config.requestHash ?? '') || config.requestHash !== request?.requestHash
       || !Number.isInteger(config.timeoutMs) || config.timeoutMs < 1

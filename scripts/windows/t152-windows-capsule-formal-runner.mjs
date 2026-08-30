@@ -10,6 +10,8 @@ import { createT152DesktopDnsSdLibrary, verifyT152DesktopDnsSdLibrary } from
 import { createFormalInteractiveRequest } from './t152-windows-formal-interactive-contract.mjs';
 import { createBootstrapConfig, waitForScheduledWorker } from
   './t152-windows-formal-interactive-bootstrap.mjs';
+import { transitionCompletedSelfcheck, writeAndPreflightFormalGeneration } from
+  './t152-windows-formal-interactive-generation.mjs';
 
 function requiredConfig(config) {
   const paths = ['baseRoot', 'capsuleRoot', 'controllerRoot', 'evidenceRoot', 'nodePath',
@@ -46,10 +48,6 @@ function bootstrapIdentity(config) {
 
 async function dispatch(config, request) {
   const [stateModule, processOwner] = await productModules(config.sourceRoot);
-  const state = stateModule.interactiveStatePaths(config.stateRoot);
-  stateModule.writeJsonAtomic(state.request, request);
-  stateModule.writeJsonAtomic(state.status, { nonce: request.nonce, schemaVersion: 2,
-    state: 'pending' });
   const install = path.win32.join(config.controllerRoot, 'scripts', 'windows',
     't152-windows-formal-interactive-install.ps1');
   const worker = path.win32.join(config.controllerRoot, 'scripts', 'windows',
@@ -60,10 +58,15 @@ async function dispatch(config, request) {
     principal: { logonType: 'Interactive', runLevel: 'Limited' }, settings: {
       executionTimeLimit: 'PT3M', multipleInstances: 'IgnoreNew' }, stateRoot: config.stateRoot,
     taskName: stateModule.WINDOWS_NATIVE_CLIENT_TASK, workingDirectory: config.sourceRoot };
-  stateModule.writeJsonAtomic(path.win32.join(config.stateRoot, 'bootstrap-config.json'),
-    createBootstrapConfig({ bootstrapPath: bootstrap, identity: bootstrapIdentity(config),
-      nodePath: config.nodePath, request, stateRoot: config.stateRoot, taskDefinition, workerPath: worker,
-      workingDirectory: config.sourceRoot }));
+  const bootstrapConfig = createBootstrapConfig({ bootstrapPath: bootstrap,
+    identity: bootstrapIdentity(config), nodePath: config.nodePath, request,
+    stateRoot: config.stateRoot, taskDefinition, workerPath: worker,
+    workingDirectory: config.sourceRoot });
+  if (config.phase === 'g2-path') transitionCompletedSelfcheck(config.stateRoot);
+  writeAndPreflightFormalGeneration({ config: bootstrapConfig,
+    ownerInput: { baseRoot: config.baseRoot, evidenceRoot: config.evidenceRoot,
+      rootId: config.rootId, sourceRoot: config.sourceRoot }, request,
+    stateRoot: config.stateRoot, writeJsonAtomic: stateModule.writeJsonAtomic });
   const installed = await processOwner.runCapture('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', install,
     '-NodePath', config.nodePath, '-WorkDir', config.sourceRoot,
