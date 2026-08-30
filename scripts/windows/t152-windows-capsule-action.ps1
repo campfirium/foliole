@@ -1,8 +1,11 @@
 param(
-  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare")][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare", "find-acceptance")][string]$Action,
   [Parameter(Mandatory = $true)][ValidatePattern("^[0-9a-f-]{36}$")][string]$AttemptId,
+  [ValidatePattern("^[0-9a-f-]{36}$")][string]$CapsuleAttemptId = "",
   [ValidatePattern("^t152-product-[0-9a-f-]{36}\.tar$")][string]$ArchiveName = "",
-  [ValidatePattern("^t152-manifest-[0-9a-f-]{36}\.json$")][string]$ManifestName = ""
+  [ValidatePattern("^t152-manifest-[0-9a-f-]{36}\.json$")][string]$ManifestName = "",
+  [ValidatePattern("^group-[0-9a-f-]{36}$")][string]$ExpectedGroupId = "",
+  [ValidatePattern("^[0-9a-f]{32}$")][string]$ExpectedGroupTag = ""
 )
 
 Set-StrictMode -Version Latest
@@ -66,6 +69,24 @@ function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
 }
 
 try {
+  if ($Action -eq "find-acceptance") {
+    if (!$CapsuleAttemptId -or !$ExpectedGroupId -or !$ExpectedGroupTag) {
+      throw "formal Find requires capsule and group identity"
+    }
+    $preparedRoot = Join-Path $capsules $CapsuleAttemptId
+    $preparedReceipt = Join-Path $preparedRoot "evidence\prepare-receipt.json"
+    $prepared = Get-Content -LiteralPath $preparedReceipt -Raw | ConvertFrom-Json
+    if ($prepared.resultStatus -ne "success" -or $prepared.identity.productCommit -ne $productCommit -or
+        $prepared.identity.productTree -ne $productTree -or $prepared.identity.t7Run -ne $t7Run) {
+      throw "formal Find capsule identity mismatch"
+    }
+    $runner = Join-Path ([Environment]::GetFolderPath("UserProfile")) "t152-windows-capsule-formal-runner.mjs"
+    $acceptanceRoot = "C:\T152\$AttemptId"
+    & "C:\Program Files\nodejs\node.exe" $runner "desktop-dnssd-find-acceptance" `
+      (Join-Path $preparedRoot "source") $AttemptId $acceptanceRoot $ExpectedGroupId $ExpectedGroupTag
+    if ($LASTEXITCODE -ne 0) { throw "formal Find runner failed with exit $LASTEXITCODE" }
+    exit 0
+  }
   if (Test-Path -LiteralPath $taskRoot) { throw "attempt capsule already exists" }
   New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
   if ($Action -eq "host-facts") {
