@@ -40,7 +40,7 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell。Mac 控制的 Windows DEV 动作只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作；这些动作保留既有 `dev` source owner，并在固定 checkout 不满足其 branch preflight 时明确拒绝。四宿主普通 `default-sync-journey` 不属于该 registry，必须在固定的专用 branch checkout 内直接运行 `node scripts/windows/windows-dev-build.mjs default-sync-journey`，不得由 Mac 推送、拉取、重置、清理或核对源码。Windows 不向 Mac 回传或合并源码。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell。Mac 控制的 Windows DEV 动作只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作；这些动作保留既有 `dev` source owner，并在固定 checkout 不满足其 branch preflight 时明确拒绝。四宿主普通 `default-sync-journey` 不属于该 registry，必须在固定的专用 branch checkout 内直接运行 `powershell.exe -File scripts/windows/windows-dev-build.ps1 default-sync-journey`，由既有 foreground lock 保护且不得由 Mac 推送、拉取、重置、清理或核对源码。Windows 不向 Mac 回传或合并源码。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。

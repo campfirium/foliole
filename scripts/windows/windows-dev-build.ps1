@@ -1,9 +1,11 @@
 $ErrorActionPreference = "Stop"
 
-if ($args.Count -ne 0) {
-  [Console]::Error.WriteLine("Windows DEV build accepts no arguments.")
+if ($args.Count -gt 1 -or ($args.Count -eq 1 -and $args[0] -ne "default-sync-journey")) {
+  [Console]::Error.WriteLine("Windows DEV build only accepts default-sync-journey.")
   exit 64
 }
+
+$action = if ($args.Count -eq 1) { $args[0] } else { "build" }
 
 $systemNode = "C:\Program Files\nodejs\node.exe"
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
@@ -30,7 +32,7 @@ try {
 }
 
 try {
-  & $systemNode $runner
+  & $systemNode $runner $action
   $runnerExit = $LASTEXITCODE
 } finally {
   $lock.Dispose()
