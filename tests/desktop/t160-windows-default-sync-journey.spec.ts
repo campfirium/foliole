@@ -88,6 +88,17 @@ async function captureCheckpoint(page: Page, phase: 'before' | 'after') {
   await page.keyboard.press('Escape');
 }
 
+async function captureRelaunchCheckpoint(page: Page) {
+  await mkdir(EVIDENCE_ROOT, { recursive: true });
+  await page.screenshot({ fullPage: true,
+    path: path.join(EVIDENCE_ROOT, 't160-after-sync.png') });
+  await page.keyboard.press('Escape');
+  const workspacePath = path.join(EVIDENCE_ROOT, 't160-after-workspace.png');
+  await page.screenshot({ fullPage: true, path: workspacePath });
+  await observeNamedTopic(page);
+  await page.screenshot({ fullPage: true, path: workspacePath });
+}
+
 test('keeps a Windows Sync Group and named content across a full isolated relaunch', async ({
   desktopSession
 }) => {
@@ -106,6 +117,8 @@ test('keeps a Windows Sync Group and named content across a full isolated relaun
     await desktopSession.firstWindow.keyboard.press('Escape');
     await createNamedTopic(desktopSession.firstWindow);
     await captureCheckpoint(desktopSession.firstWindow, 'before');
+    await desktopSession.firstWindow
+      .getByRole('treeitem', { name: /^(Welcome to Foliole|欢迎使用 Foliole)$/ }).click();
 
     await closeDesktopApplication(desktopSession.electronApp);
     secondSession = await launchDesktopSession({
@@ -113,12 +126,9 @@ test('keeps a Windows Sync Group and named content across a full isolated relaun
     }) as DesktopSession;
     expect(secondSession.target.runtimeStateRoot).toBe(stateRoot);
     await expectWorkspaceShell(secondSession.firstWindow);
-    await observeNamedTopic(secondSession.firstWindow);
     const secondGroup = await observeSyncGroup(secondSession.firstWindow, false);
     expect(secondGroup).toEqual(firstGroup);
-    await secondSession.firstWindow.keyboard.press('Escape');
-    await observeNamedTopic(secondSession.firstWindow);
-    await captureCheckpoint(secondSession.firstWindow, 'after');
+    await captureRelaunchCheckpoint(secondSession.firstWindow);
   } finally {
     await secondSession?.close();
   }
