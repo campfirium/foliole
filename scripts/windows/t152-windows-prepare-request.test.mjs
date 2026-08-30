@@ -17,7 +17,8 @@ function request() {
     identity: { controllerCommit: 'b'.repeat(40), controllerTree: 'c'.repeat(40),
       productCommit: 'd'.repeat(40), productTree: 'e'.repeat(40), t7Run: '1' },
     manifestPath: 'C:\\Stage\\manifest.json', nodePath: 'C:\\Program Files\\nodejs\\node.exe',
-    npmPath: 'C:\\Program Files\\nodejs\\npm.cmd', productArchivePath: 'C:\\Stage\\产品.tar',
+    npmPath: 'C:\\Program Files\\nodejs\\npm.cmd',
+    prepareHelperPath: 'C:\\Stage\\prepare-stage.ps1', productArchivePath: 'C:\\Stage\\产品.tar',
     rootId: ROOT, sourceRoot: 'C:\\Owned Space\\source', tarPath: 'C:\\Windows\\tar.exe' };
 }
 
@@ -48,8 +49,9 @@ it('rejects missing fields, tampering, and hash mismatch', () => {
 
 it('uses only a committed file action and one request token remotely', () => {
   const token = createT152WindowsPrepareRequest(request()).token;
-  const command = t152PrepareRemoteCommand('C:\\Stage\\action.ps1', 'prepare', token);
+  const command = t152PrepareRemoteCommand('C:\\Stage\\action.ps1', 'prepare-materialize', token);
   expect(command).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy',
-    'Bypass', '-File', 'C:\\Stage\\action.ps1', '-Action', 'prepare', '-RequestBase64', token]);
+    'Bypass', '-File', 'C:\\Stage\\action.ps1', '-Action', 'prepare-materialize',
+    '-RequestBase64', token]);
   expect(command).not.toContain('-Command');
 });

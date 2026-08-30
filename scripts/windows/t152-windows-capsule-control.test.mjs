@@ -12,6 +12,7 @@ const names = [
   't152-windows-formal-interactive-install.ps1',
   't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
   't152-windows-prepare-request.mjs', 't152-windows-prepare-request.test.mjs',
+  't152-windows-prepare-stage.ps1', 't152-windows-prepare-stages.mjs',
   't152-macos-to-windows-find.mjs', 't152-windows-to-macos-find.mjs'
 ];
 const sources = Object.fromEntries(names.map((name) => [name,
@@ -41,11 +42,12 @@ it('has no fixed task parent, environment fallback, or second T152 path owner', 
 
 it('keeps source-free host facts read-only and verifies both archives before builds', () => {
   const action = sources['t152-windows-capsule-action.ps1'];
-  expect(action.indexOf('archive digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
-  expect(action.indexOf('controller archive digest mismatch'))
-    .toBeLessThan(action.indexOf('"dependencies"'));
-  expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
-  expect(action).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
+  const stage = sources['t152-windows-prepare-stage.ps1'];
+  expect(stage.indexOf('prepare archive digest mismatch')).toBeLessThan(
+    stage.indexOf("'dependencies'"));
+  expect(stage.indexOf('prepare archive content mismatch')).toBeLessThan(
+    stage.indexOf("'dependencies'"));
+  expect(`${action}\n${stage}`).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
   expect(action).toContain('T152_HOST_FACTS=');
 });
 
@@ -53,11 +55,24 @@ it('uses one prepare request owner and one token for preflight and prepare', () 
   const control = sources['t152-windows-capsule-control.mjs'];
   const request = sources['t152-windows-prepare-request.mjs'];
   expect(control.match(/createT152WindowsPrepareRequest/g)).toHaveLength(2);
-  expect(control).toContain("t152PrepareRemoteCommand(staging.action, 'binding-preflight'");
-  expect(control).toContain("t152PrepareRemoteCommand(staging.action, 'prepare'");
+  expect(sources['t152-windows-prepare-stages.mjs']).toContain(
+    "t152PrepareRemoteCommand(staging.action, 'binding-preflight'");
+  expect(sources['t152-windows-prepare-stages.mjs']).toContain('`prepare-${stage}`');
   expect(request).toContain("'-RequestBase64', token");
   expect(request).not.toContain("'-Command'");
   expect(request).not.toMatch(/'-ArchivePath'|'-NpmPath'|'-TarPath'/u);
+});
+
+it('persists and rereads G1a before staging, then recovers every ordered terminal receipt', () => {
+  const stages = sources['t152-windows-prepare-stages.mjs'];
+  expect(stages.indexOf("'g1a-binding-terminal.json'")).toBeLessThan(
+    stages.indexOf('staging.helperLocal'));
+  expect(stages).toContain('fs.renameSync(temporary, file)');
+  expect(stages).toContain('JSON.parse(fs.readFileSync(file');
+  expect(stages).toContain('predecessorReceiptSha256');
+  expect(stages).toContain('process.kill(-child.pid');
+  expect(stages).toContain('notStarted');
+  expect(stages.match(/deadlineAt = Date\.now\(\) \+ PREPARE_DEADLINE_MS/g)).toHaveLength(2);
 });
 
 it('uses one scheduled worker for G2, G3, and formal execution', () => {

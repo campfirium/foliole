@@ -10,7 +10,8 @@ import { pathToFileURL } from 'node:url';
 
 import { formalLaunchEnvHash } from './t152-windows-formal-interactive-contract.mjs';
 import { canonicalPrepareJson, createT152WindowsPrepareRequest,
-  remoteT152CapsulePaths, t152PrepareRemoteCommand } from './t152-windows-prepare-request.mjs';
+  remoteT152CapsulePaths } from './t152-windows-prepare-request.mjs';
+import { runT152WindowsPrepareStages } from './t152-windows-prepare-stages.mjs';
 
 const PRODUCT_COMMIT = '86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a';
 const PRODUCT_TREE = 'ec8af4a625d98fb35e86134d8770c50a5e669ccb';
@@ -113,40 +114,29 @@ export async function prepareT152WindowsCapsule({ capsuleId = randomUUID(), cont
   const hostFacts = facts ?? await readT152WindowsHostFacts({ controllerRoot, env, host });
   const paths = remoteT152CapsulePaths(hostFacts, capsuleId);
   const staging = { action: path.win32.join(hostFacts.roots.userProfile,
-    `t152-capsule-action-${capsuleId}.ps1`), controller: path.win32.join(
+    `t152-capsule-action-${capsuleId}.ps1`), actionLocal: path.join(controllerRoot, ACTION_PATH),
+    controller: path.win32.join(
     hostFacts.roots.userProfile, `t152-controller-${capsuleId}.tar`), manifest: path.win32.join(
-    hostFacts.roots.userProfile, `t152-manifest-${capsuleId}.json`), product: path.win32.join(
+    hostFacts.roots.userProfile, `t152-manifest-${capsuleId}.json`), helper: path.win32.join(
+    hostFacts.roots.userProfile, `t152-prepare-stage-${capsuleId}.ps1`),
+    helperLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-prepare-stage.ps1'),
+    product: path.win32.join(
     hostFacts.roots.userProfile, `t152-product-${capsuleId}.tar`) };
   const preparedRequest = createT152WindowsPrepareRequest({ capsuleId,
     capsuleRoot: paths.capsuleRoot, controllerArchivePath: staging.controller,
     controllerRoot: paths.controllerRoot, evidenceRoot: paths.evidenceRoot,
     hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), identity: capsule.manifest.identity,
     manifestPath: staging.manifest, nodePath: hostFacts.runtime.node,
-    npmPath: hostFacts.runtime.npm, productArchivePath: staging.product, rootId,
+    npmPath: hostFacts.runtime.npm, prepareHelperPath: staging.helper,
+    productArchivePath: staging.product, rootId,
     sourceRoot: paths.sourceRoot, tarPath: hostFacts.runtime.tar });
-  await upload(host, path.join(controllerRoot, ACTION_PATH), staging.action, env);
-  const preflightOutput = await run('ssh', ['-T', ...sshBase(env), host,
-    ...t152PrepareRemoteCommand(staging.action, 'binding-preflight', preparedRequest.token)],
-  { env });
-  const preflight = JSON.parse(/^T152_BINDING_PREFLIGHT=(.+)$/mu.exec(preflightOutput)?.[1] ?? 'null');
-  if (preflight?.requestSha256 !== preparedRequest.requestSha256
-      || preflight?.runtimeExact !== true
-      || !Object.values(preflight?.runtimeExists ?? {}).every((value) => value === true)) {
-    throw new Error('prepare binding preflight failed');
-  }
-  await Promise.all([
-    upload(host, capsule.productArchive, staging.product, env),
-    upload(host, capsule.controllerArchive, staging.controller, env),
-    upload(host, capsule.manifestPath, staging.manifest, env)
-  ]);
-  const output = await run('ssh', ['-T', ...sshBase(env), host,
-    ...t152PrepareRemoteCommand(staging.action, 'prepare', preparedRequest.token)], { env });
-  const receiptPath = path.join(capsule.root, 'prepare-receipt.json');
-  const receipt = await downloadReceipt(host,
-    path.win32.join(paths.evidenceRoot, 'prepare-receipt.json'), receiptPath, env);
-  if (receipt.resultStatus !== 'success') throw new Error('Windows capsule prepare failed');
-  return { capsule, facts: hostFacts, output, paths, preflight, preparedRequest,
-    receipt, receiptPath, staging };
+  const stages = await runT152WindowsPrepareStages({ capsule, env, host,
+    hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), paths, preparedRequest,
+    sshBase: sshBase(env), staging });
+  const final = stages.receipts.at(-1);
+  return { capsule, facts: hostFacts, output: final.terminalRecord.receipt.terminal.stdout,
+    paths, preflight: stages.preflight.receipt.parsed, preparedRequest,
+    receipt: final.receipt, receiptPath: final.localReceipt, staging, stages };
 }
 
 function interactiveConfig(prepared, phase, rootId, formal = {}) {
