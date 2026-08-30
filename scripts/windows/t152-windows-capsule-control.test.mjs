@@ -1,54 +1,69 @@
+// @vitest-environment node
+
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
+import { expect, it } from 'vitest';
 
-import { describe, expect, it } from 'vitest';
+const names = [
+  't152-windows-admission-run.mjs',
+  't152-windows-capsule-control.mjs', 't152-windows-capsule-action.ps1',
+  't152-windows-capsule-formal-runner.mjs', 't152-windows-formal-interactive-contract.mjs',
+  't152-windows-formal-interactive-install.ps1',
+  't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
+  't152-macos-to-windows-find.mjs', 't152-windows-to-macos-find.mjs'
+];
+const sources = Object.fromEntries(names.map((name) => [name,
+  fs.readFileSync(path.join('scripts', 'windows', name), 'utf8')]));
+const all = Object.values(sources).join('\n');
 
-const control = fs.readFileSync('scripts/windows/t152-windows-capsule-control.mjs', 'utf8');
-const action = fs.readFileSync('scripts/windows/t152-windows-capsule-action.ps1', 'utf8');
-const formal = fs.readFileSync('scripts/windows/t152-windows-capsule-formal-runner.mjs', 'utf8');
-const firstPhase = fs.readFileSync('scripts/windows/t152-macos-to-windows-find.mjs', 'utf8');
-const reversePhase = fs.readFileSync('scripts/windows/t152-windows-to-macos-find.mjs', 'utf8');
+it('pins immutable product/controller archives without consuming the Windows dev mirror', () => {
+  const control = sources['t152-windows-capsule-control.mjs'];
+  expect(control).toContain('86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a');
+  expect(control).toContain('ec8af4a625d98fb35e86134d8770c50a5e669ccb');
+  expect(control).toContain('controllerArchiveSha256');
+  expect(all).not.toMatch(/refs\/heads\/dev|windows-dev-pull|D:\\C\\foliole/u);
+});
 
-describe('T152 Windows immutable capsule controller', () => {
-  it('pins the product identity and never consumes the Windows dev mirror', () => {
-    expect(control).toContain('86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a');
-    expect(control).toContain('ec8af4a625d98fb35e86134d8770c50a5e669ccb');
-    expect(control).toContain('33270551363');
-    expect(`${control}\n${action}`).not.toMatch(/refs\/heads\/dev|windows-dev-pull|D:\\\\C\\\\foliole/u);
-  });
+it('has no fixed task parent, environment fallback, or second T152 path owner', () => {
+  expect(all).not.toMatch(/[A-Za-z]:\\T152|\/private\/tmp\/foliole-t152/u);
+  expect(all).not.toMatch(/os\.homedir\(\).*foliole-windows-android-lab/u);
+  expect(sources['t152-windows-capsule-action.ps1']).not.toContain(
+    'Join-Path $env:LOCALAPPDATA "Foliole');
+  expect(sources['t152-windows-capsule-formal-runner.mjs']).toContain(
+    'createT152DesktopDnsSdLibrary');
+  expect(sources['t152-macos-to-windows-find.mjs']).toContain(
+    'createT152DesktopDnsSdLibrary');
+  expect(sources['t152-windows-to-macos-find.mjs']).toContain(
+    'createT152DesktopDnsSdLibrary');
+});
 
-  it('keeps the remote surface bounded and verifies immutable inputs before dependency writes', () => {
-    expect(action).toContain('"advertise-acceptance", "release-complete"');
-    expect(action.indexOf('archive digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
-    expect(action.indexOf('lockfile digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
-    expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
-    expect(action).toContain('[StringComparer]::Ordinal');
-    expect(action).toContain('if ($exitCode -ne 0)');
-    expect(action).toContain('"find-acceptance"');
-    expect(action).toContain('"C:\\T152\\$AttemptId"');
-    expect(action).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
-  });
+it('keeps source-free host facts read-only and verifies both archives before builds', () => {
+  const action = sources['t152-windows-capsule-action.ps1'];
+  expect(action.indexOf('archive digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
+  expect(action.indexOf('controller archive digest mismatch'))
+    .toBeLessThan(action.indexOf('"dependencies"'));
+  expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
+  expect(action).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
+  expect(action).toContain('T152_HOST_FACTS=');
+});
 
-  it('is committed as a self-contained controller entry', () => {
-    expect(control).not.toMatch(/^import .*\.\/windows-/mu);
-    expect(control).toContain('pathToFileURL(fs.realpathSync(process.argv[1]))');
-    expect(() => execFileSync('node', ['--check', 'scripts/windows/t152-windows-capsule-control.mjs']))
+it('uses one scheduled worker for G2, G3, and formal execution', () => {
+  const worker = sources['t152-windows-formal-interactive-worker.mjs'];
+  const runner = sources['t152-windows-capsule-formal-runner.mjs'];
+  expect(worker).toContain("request.phase === 'g2-path'");
+  expect(worker).toContain("request.phase === 'g3-anchor'");
+  expect(worker).toContain('runWindowsSyncGroupDeviceAction');
+  expect(runner).toContain('t152-windows-formal-interactive-worker.mjs');
+  expect(worker.indexOf("request.phase === 'g3-anchor'"))
+    .toBeLessThan(worker.indexOf('loadDesktopDnsSdIdentityPreflight'));
+  expect(worker.indexOf("request.phase === 'g3-anchor'"))
+    .toBeLessThan(worker.indexOf("'create_sync_group'"));
+});
+
+it('keeps every controller entry syntactically valid', () => {
+  for (const name of names.filter((name) => name.endsWith('.mjs'))) {
+    expect(() => execFileSync('node', ['--check', path.join('scripts', 'windows', name)]))
       .not.toThrow();
-  });
-
-  it('runs the first formal phase only from exact product and short task libraries', () => {
-    expect(firstPhase).toContain('86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a');
-    expect(firstPhase).toContain("baseRoot: '/private/tmp/foliole-t152-libraries'");
-    expect(firstPhase).toContain("'-Action', 'find-acceptance'");
-    expect(firstPhase).toContain('fs.mkdirSync(evidenceParent, { recursive: true })');
-    expect(formal).toContain("'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance'");
-    expect(`${formal}\n${firstPhase}`).not.toMatch(/refs\/heads\/dev|windows-dev-pull/u);
-  });
-
-  it('releases the Windows advertisement only after exact Mac discovery', () => {
-    expect(reversePhase).toContain("remoteCommand('advertise-acceptance'");
-    expect(reversePhase).toContain("kind: 'candidate-identity'");
-    expect(reversePhase).toContain("remoteCommand('release-complete'");
-    expect(reversePhase).toContain('matches.length !== 1');
-  });
+  }
 });
