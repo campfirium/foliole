@@ -6,6 +6,7 @@ const ACTION_OVERRIDES = Object.freeze({
     requiresHiddenDesktopRuntime: true },
   status: { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
+  'capture-annotation': { requiresDataProtection: false },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
@@ -49,12 +50,14 @@ export function assertRegisteredMacosA5Action(action) {
   if (!MACOS_A5_ACTIONS.has(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
-  return Object.freeze({ action, deviceLeaseMode: 'mutation', formalSourceClass: 'frozen-build',
+  const contract = { action, deviceLeaseMode: 'mutation', formalSourceClass: 'frozen-build',
     formalEvidence: FORMAL_EVIDENCE[action] ?? Object.freeze({ kind: 'receipt' }),
     formalTarget: 'fixed-a5',
     formalTargetIdentity: '87a33a4b',
     mutatesFixedA5: true, requiresHiddenDesktopRuntime: false,
-    ...ACTION_OVERRIDES[action] });
+    ...ACTION_OVERRIDES[action] };
+  return Object.freeze({ ...contract,
+    requiresDataProtection: contract.requiresDataProtection ?? contract.mutatesFixedA5 });
 }
 
 export function assertFormalMacosA5Action(actionContract) {

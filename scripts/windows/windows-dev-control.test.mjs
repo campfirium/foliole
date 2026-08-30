@@ -157,8 +157,8 @@ it('copies the complete fixed capture annotation evidence set after remote clean
     manifestPath: expect.stringContaining('capture-annotation-manifest.json')
   });
   expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1))).sort()).toEqual([
-    'capture-annotation-db-summary.json', 'capture-annotation-manifest.json',
-    'capture-annotation-receipt.json', 'capture-annotation-semantic-snapshot.json', 'summary.json'
+    'capture-annotation-manifest.json', 'capture-annotation-receipt.json',
+    'capture-annotation-semantic-snapshot.json', 'summary.json'
   ]);
   expect(executeScp.mock.calls.map(([args]) => args.at(-2))).toContain(
     `${WINDOWS_DEV_DEFAULT_SSH}:${remoteRoot}/summary.json`

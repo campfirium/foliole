@@ -20,8 +20,10 @@ final class FolioleCompanionCaptureNavigation {
         WebView webView,
         long timeoutMs
     ) throws Exception {
-        if (!hasTestId(instrumentation, webView, BROWSE_READY)) {
-            String entry = waitForBrowseEntry(instrumentation, webView, timeoutMs);
+        long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
+        while (!hasTestId(instrumentation, webView, BROWSE_READY)) {
+            long remainingMs = Math.max(1L, (deadline - System.nanoTime()) / 1_000_000L);
+            String entry = waitForBrowseEntry(instrumentation, webView, remainingMs);
             JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
                 instrumentation, webView, entry, "click", ""
             );
@@ -29,9 +31,6 @@ final class FolioleCompanionCaptureNavigation {
                 throw new IllegalStateException("Browse navigation failed: " + receipt);
             }
         }
-        FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-            instrumentation, webView, BROWSE_READY, timeoutMs
-        );
     }
 
     private static String waitForBrowseEntry(

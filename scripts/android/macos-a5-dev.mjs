@@ -135,7 +135,6 @@ async function captureAnnotation(
     adbPort: '5037', buildIdentity: runId, env, evidenceRoot, execute, paths: {
       adbPath: paths.adb, buildRoot: paths.buildRoot
     },
-    protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
     serial: A5_SERIAL
   });
   process.stdout.write(result.output);
@@ -179,7 +178,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       if (receipt && mode === 'backup') recordFormalA5DataProtection(receipt, manifest);
       return result;
     };
-    if (receipt && actionContract.mutatesFixedA5) {
+    if (receipt && actionContract.requiresDataProtection) {
       markFormalA5Stage(receipt, 'data-protection');
       assertFixedA5(paths);
       await runProtection('backup', path.join(path.dirname(receipt.path), 'device-baseline.json'),
