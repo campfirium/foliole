@@ -123,6 +123,39 @@ public class FolioleCompanionWebViewAutomationTest {
         }
     }
 
+    @Test
+    public void persistsOrdinaryCaptureAfterRelaunch() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Bundle arguments = InstrumentationRegistry.getArguments();
+        long timeoutMs = boundedTimeout(arguments.getString("timeoutMs", "30000"));
+        String token = arguments.getString("expectedValue", "");
+        String expectedSyncedText = arguments.getString("expectedSyncedText", "");
+        Activity activity = FolioleCompanionActivityLauncher.start(instrumentation, timeoutMs);
+        try {
+            waitForWindowFocus(activity, timeoutMs);
+            WebView webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            JSONObject receipt = FolioleCompanionOrdinaryJourneyScenario.create(
+                instrumentation, webView, token, expectedSyncedText, timeoutMs
+            );
+            instrumentation.runOnMainSync(activity::finish);
+            activity = FolioleCompanionActivityLauncher.start(instrumentation, timeoutMs);
+            waitForWindowFocus(activity, timeoutMs);
+            webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            FolioleCompanionOrdinaryJourneyScenario.verifyAfterRelaunch(
+                instrumentation, webView, token, expectedSyncedText, timeoutMs
+            );
+            receipt.put("visibleAfterRelaunch", true);
+            sendEvidence(instrumentation, before,
+                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
+        } finally {
+            Activity finalActivity = activity;
+            instrumentation.runOnMainSync(finalActivity::finish);
+        }
+    }
+
     private static Activity startMainActivity(Instrumentation instrumentation) {
         Context context = instrumentation.getTargetContext();
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());

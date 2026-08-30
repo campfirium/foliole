@@ -17,6 +17,18 @@ public class FolioleCompanionSyncGroupJoinTest {
         JSONObject receipt = FolioleCompanionSyncGroupJoinScenario.run(
             InstrumentationRegistry.getInstrumentation()
         );
+        sendReceipt(receipt);
+    }
+
+    @Test
+    public void joinsOrdinaryGroupAndPersistsAfterRestart() throws Exception {
+        JSONObject receipt = FolioleCompanionSyncGroupJoinScenario.run(
+            InstrumentationRegistry.getInstrumentation(), false
+        );
+        sendReceipt(receipt);
+    }
+
+    private static void sendReceipt(JSONObject receipt) {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Bundle evidence = new Bundle();
         evidence.putString("folioleSyncGroupJoinReceipt", receipt.toString());

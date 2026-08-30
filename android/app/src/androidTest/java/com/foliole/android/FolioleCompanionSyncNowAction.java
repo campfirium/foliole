@@ -54,9 +54,13 @@ final class FolioleCompanionSyncNowAction {
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        long enabledSince = 0;
         while (System.nanoTime() < deadline) {
             JSONObject state = readState(instrumentation, webView);
-            if (state.optBoolean("found") && !state.optBoolean("disabled")) return;
+            if (state.optBoolean("found") && !state.optBoolean("disabled")) {
+                if (enabledSince == 0) enabledSince = System.nanoTime();
+                if (System.nanoTime() - enabledSince >= TimeUnit.SECONDS.toNanos(1)) return;
+            } else enabledSince = 0;
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for public Sync Now.");

@@ -47,6 +47,16 @@ it('keeps two-device acceptance isolated from the installed product application'
   expect(action.mutatesFixedA5).toBe(false);
 });
 
+it('keeps the ordinary journey isolated from installed product data', () => {
+  const action = assertRegisteredMacosA5Action('ordinary-journey');
+  expect(action).toMatchObject({
+    deviceLeaseMode: 'mutation', formalEvidence: {
+      kind: 'run-directory', root: 'a5-ordinary-journey'
+    }, formalSourceClass: 'frozen-build', mutatesFixedA5: false,
+    requiresHiddenDesktopRuntime: true
+  });
+});
+
 it.each([
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials',

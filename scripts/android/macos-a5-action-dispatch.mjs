@@ -48,6 +48,10 @@ export async function dispatchMacosA5Action({
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
     checked, env, execute, markMutationBoundary, paths, protectData, serial
   };
+  if (action === 'ordinary-journey') {
+    await (await import('./android-a5-ordinary-journey-action.mjs'))
+      .runMacosA5OrdinaryJourneyEntry(productArgs);
+  }
   if (action === 'pair-credentials') {
     await (await import('./macos-a5-pair-credentials-action.mjs'))
       .runMacosA5PairCredentialsEntry(productArgs);
