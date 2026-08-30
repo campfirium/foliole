@@ -71,53 +71,56 @@ vi.mock('./pdfSearchTextSegments', () => ({
 }));
 
 import { PdfDocumentViewport } from './PdfDocumentViewport';
+import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 
 function PdfDocumentViewportSearchActivationHarness() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
 
   return (
-    <PdfDocumentViewport
-      clearPageJumpRequest={() => undefined}
-      highlightLocators={[]}
-      loadError={null}
-      maxPage={1}
-      onClearSearch={() => undefined}
-      onContextMenu={() => undefined}
-      onLoadError={() => undefined}
-      onLoadSuccess={() => undefined}
-      onRetryLoad={() => undefined}
-      onNextPage={() => undefined}
-      onPageChange={() => undefined}
-      onPreviousPage={() => undefined}
-      onRotateClockwise={() => undefined}
-      onSearchQueryChange={setSearchQuery}
-      onSearchRequest={() => undefined}
-      onSearchRequestHandled={() => undefined}
-      onSearchStatusChange={setSearchStatus}
-      onSearchTargetHandled={() => undefined}
-      onSetFitWidth={() => undefined}
-      onSetZoom={() => undefined}
-      onZoomIn={() => undefined}
-      onZoomOut={() => undefined}
-      visiblePage={1}
-      page={1}
-      pageJumpRequest={null}
-      persistedPageCount={1}
-      persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
-      pdfSelectionLocator={undefined}
-      pdfSource="/tmp/sample.pdf"
-      rotation={0}
-      searchIndexingHint={null}
-      searchQuery={searchQuery}
-      searchRequest={null}
-      searchTarget={null}
-      searchStatus={searchStatus}
-      setVisibleLocation={() => undefined}
-      totalPages={1}
-      zoomMode="fit-width"
-      zoom={100}
-    />
+    <PdfVisualExcerptRuntimeProvider currentPage={1} locators={[]} nodeId="pdf-1" rotation={0} source="/tmp/sample.pdf">
+      <PdfDocumentViewport
+        clearPageJumpRequest={() => undefined}
+        highlightLocators={[]}
+        loadError={null}
+        maxPage={1}
+        onClearSearch={() => undefined}
+        onContextMenu={() => undefined}
+        onLoadError={() => undefined}
+        onLoadSuccess={() => undefined}
+        onRetryLoad={() => undefined}
+        onNextPage={() => undefined}
+        onPageChange={() => undefined}
+        onPreviousPage={() => undefined}
+        onRotateClockwise={() => undefined}
+        onSearchQueryChange={setSearchQuery}
+        onSearchRequest={() => undefined}
+        onSearchRequestHandled={() => undefined}
+        onSearchStatusChange={setSearchStatus}
+        onSearchTargetHandled={() => undefined}
+        onSetFitWidth={() => undefined}
+        onSetZoom={() => undefined}
+        onZoomIn={() => undefined}
+        onZoomOut={() => undefined}
+        visiblePage={1}
+        page={1}
+        pageJumpRequest={null}
+        persistedPageCount={1}
+        persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
+        pdfSelectionLocator={undefined}
+        pdfSource="/tmp/sample.pdf"
+        rotation={0}
+        searchIndexingHint={null}
+        searchQuery={searchQuery}
+        searchRequest={null}
+        searchTarget={null}
+        searchStatus={searchStatus}
+        setVisibleLocation={() => undefined}
+        totalPages={1}
+        zoomMode="fit-width"
+        zoom={100}
+      />
+    </PdfVisualExcerptRuntimeProvider>
   );
 }
 

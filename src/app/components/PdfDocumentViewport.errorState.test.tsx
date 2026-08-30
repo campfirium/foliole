@@ -36,6 +36,7 @@ vi.mock('./pdfSearchTextSegments', () => ({
 
 import { PdfDocumentErrorState } from './PdfDocumentErrorState';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
+import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 
 function buildViewportProps(loadError: string | null, onRetryLoad: () => void) {
   return {
@@ -84,7 +85,11 @@ function buildViewportProps(loadError: string | null, onRetryLoad: () => void) {
 function RetryableErrorViewport() {
   const [loadError, setLoadError] = useState<string | null>('Failed to fetch PDF.');
 
-  return <PdfDocumentViewport {...buildViewportProps(loadError, () => setLoadError(null))} />;
+  return (
+    <PdfVisualExcerptRuntimeProvider currentPage={1} locators={[]} nodeId="pdf-1" rotation={0} source="/tmp/sample.pdf">
+      <PdfDocumentViewport {...buildViewportProps(loadError, () => setLoadError(null))} />
+    </PdfVisualExcerptRuntimeProvider>
+  );
 }
 
 describe('PdfDocumentViewport error state', () => {

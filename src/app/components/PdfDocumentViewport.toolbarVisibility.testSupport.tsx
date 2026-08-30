@@ -55,6 +55,7 @@ vi.mock('./pdfSearchTextSegments', () => ({
 }));
 
 import { PdfDocumentViewport } from './PdfDocumentViewport';
+import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 
 export { collectTextSegmentsSpy };
 
@@ -123,26 +124,28 @@ function ToolbarVisibilityHarness() {
   useToolbarReplayScroll(page, zoom, shouldReplayToolbarScrollRef);
 
   return (
-    <PdfDocumentViewport
-      {...buildBaseToolbarHarnessProps()}
-      onNextPage={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setPage((current) => current + 1))}
-      onPageChange={setPage}
-      onPreviousPage={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setPage((current) => Math.max(1, current - 1)))}
-      onSearchQueryChange={setSearchQuery}
-      onSearchStatusChange={setSearchStatus}
-      onSetFitWidth={createToolbarReplayAction(shouldReplayToolbarScrollRef)}
-      onSetZoom={(value) => {
-        shouldReplayToolbarScrollRef.current = true;
-        setZoom(value);
-      }}
-      onZoomIn={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current + 10))}
-      onZoomOut={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current - 10))}
-      page={page}
-      searchQuery={searchQuery}
-      searchStatus={searchStatus}
-      visiblePage={page}
-      zoom={zoom}
-    />
+    <PdfVisualExcerptRuntimeProvider currentPage={page} locators={[]} nodeId="pdf-1" rotation={0} source="/tmp/sample.pdf">
+      <PdfDocumentViewport
+        {...buildBaseToolbarHarnessProps()}
+        onNextPage={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setPage((current) => current + 1))}
+        onPageChange={setPage}
+        onPreviousPage={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setPage((current) => Math.max(1, current - 1)))}
+        onSearchQueryChange={setSearchQuery}
+        onSearchStatusChange={setSearchStatus}
+        onSetFitWidth={createToolbarReplayAction(shouldReplayToolbarScrollRef)}
+        onSetZoom={(value) => {
+          shouldReplayToolbarScrollRef.current = true;
+          setZoom(value);
+        }}
+        onZoomIn={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current + 10))}
+        onZoomOut={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current - 10))}
+        page={page}
+        searchQuery={searchQuery}
+        searchStatus={searchStatus}
+        visiblePage={page}
+        zoom={zoom}
+      />
+    </PdfVisualExcerptRuntimeProvider>
   );
 }
 
