@@ -125,6 +125,7 @@ test('keeps a Windows Sync Group and named content across a full isolated relaun
       env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot }
     }) as DesktopSession;
     expect(secondSession.target.runtimeStateRoot).toBe(stateRoot);
+    await secondSession.firstWindow.setViewportSize({ height: 1000, width: 1600 });
     await expectWorkspaceShell(secondSession.firstWindow);
     const secondGroup = await observeSyncGroup(secondSession.firstWindow, false);
     expect(secondGroup).toEqual(firstGroup);
