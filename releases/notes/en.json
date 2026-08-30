@@ -1,4 +1,21 @@
 {
+  "0.7.10": {
+    "notes": [
+      "New",
+      "Region excerpts and annotations are now available while reading PDFs.",
+      "Improved",
+      "Tab moves focus from the Topic list to the editor, and Escape moves it back to the original Topic.",
+      "F2 starts editing the Topic title and selects the existing title.",
+      "⌘← (Alt+←) and ⌘→ (Alt+→) move backward and forward through visit history.",
+      "⌘↑ (Ctrl+↑) opens the containing Topic, while ⌘↓ (Ctrl+↓) opens the last Topic nested within the current one.",
+      "New Derived Topics and Items are automatically added to visit history and can be revisited with the back and forward shortcuts.",
+      "A Topic created in the current Folder now opens directly in the editor, ready for typing.",
+      "Fixed",
+      "Hotkey search now recognizes localized command names.",
+      "Priority can now be set while reading PDFs.",
+      "Remote image localization now works when fake IP addresses are used."
+    ]
+  },
   "0.7.9": {
     "notes": [
       "Foliole now includes Custom Copy for personalizing interface text or submitting localization corrections.",
