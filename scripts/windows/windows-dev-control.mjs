@@ -43,6 +43,7 @@ export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
+  'default-sync-journey',
   'frozen-revision-preflight',
   'desktop-dnssd-host-facts',
   'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
@@ -139,7 +140,7 @@ export async function runWindowsDevControl({
   const syncGroup = runWindowsSyncGroupControl(action, {
     buildPushSpec: windowsDevPushSpec, buildScpSpec: windowsDevScpSpec,
     buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, fsApi,
-    host, repoRoot, stdout
+    host, repoRoot, sourceRef, stdout
   });
   if (syncGroup) return syncGroup;
   const localCandidate = ['frozen-revision-preflight', 'multi-device-sync-candidate'].includes(action)

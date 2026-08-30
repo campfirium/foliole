@@ -5,7 +5,7 @@ import {
 } from './windows-sync-group-build-routing.mjs';
 
 const DESKTOP_SYNC_GROUP_BUILD_ACTIONS = new Set([
-  'single-principal-sync-group', 'two-device-sync-provider'
+  'default-sync-journey', 'single-principal-sync-group', 'two-device-sync-provider'
 ]);
 
 export function requiresWindowsDevDesktopBuild(action) {
@@ -19,11 +19,12 @@ export function windowsDevRequiredTools(action, paths) {
     || requiresWindowsDevDesktopBuild(action)
     || action === 'desktop-dnssd-route-prepare'
     || action === 'frozen-revision-preflight';
-  const gitRequired = action === 'frozen-revision-preflight'
+  const gitRequired = ['default-sync-journey', 'frozen-revision-preflight'].includes(action)
     || WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(action);
   const tarRequired = action === 'frozen-revision-preflight';
-  const adbRequired = !['build', 'desktop-dnssd-host-facts', 'device-profile', 'frozen-revision-preflight',
-    'sync-group-join-prepare'].includes(action) && !isWindowsSyncGroupAction(action);
+  const adbRequired = !['build', 'default-sync-journey', 'desktop-dnssd-host-facts',
+    'device-profile', 'frozen-revision-preflight', 'sync-group-join-prepare'].includes(action)
+    && !isWindowsSyncGroupAction(action);
   return [paths.systemNode, ...(npmRequired ? [paths.systemNpmCli] : []),
     ...(gitRequired ? [paths.gitPath] : []),
     ...(tarRequired ? [paths.tarPath] : []),

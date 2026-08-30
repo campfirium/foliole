@@ -13,9 +13,8 @@ import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import {
   formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
 } from './windows-dev-build-support.mjs';
+import { runWindowsDevDesktopAction } from './windows-dev-desktop-action-routing.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
-import { runWindowsDesktopDnsSdRouteControl } from
-  './windows-desktop-dnssd-route-control.mjs';
 import {
   requiresWindowsDevDesktopBuild, windowsDevRequiredTools
 } from './windows-dev-build-preflight.mjs';
@@ -76,7 +75,7 @@ export async function runWindowsDevBuild({
   fsApi = fs, id = randomUUID, inspectCandidate = currentAcceptanceCandidate,
   now = () => new Date(), paths = windowsDevPaths(),
   platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost,
-  runRouteControl = runWindowsDesktopDnsSdRouteControl
+  runRouteControl = runWindowsDevDesktopAction
 } = {}) {
   const action = normalizeWindowsDevAction(requestedAction);
   const startedAt = now().toISOString();
@@ -94,7 +93,7 @@ export async function runWindowsDevBuild({
         && residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
-    const signing = action === 'frozen-revision-preflight'
+    const signing = ['default-sync-journey', 'frozen-revision-preflight'].includes(action)
       ? { sha256: null } : verifyWindowsDevSigningIdentity(paths, fsApi);
     const candidate = preparesWindowsSyncGroupCandidate(action)
       ? inspectCandidate(paths.repoRoot, 'diagnostic') : null;
@@ -122,7 +121,7 @@ export async function runWindowsDevBuild({
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = await runRouteControl({
-      action, buildIdentity: context.runId, deviceAction, evidenceRoot: context.root,
+      action, buildIdentity: context.runId, checked, deviceAction, evidenceRoot: context.root,
       execute, fsApi, paths, snapshotRuntime: () => snapshotProcesses(execute, paths)
     });
     if (action === 'frozen-revision-preflight') {
