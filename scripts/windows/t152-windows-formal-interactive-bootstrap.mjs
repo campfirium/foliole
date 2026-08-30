@@ -41,6 +41,30 @@ function fileFact(file) {
     throw error; }
 }
 
+const defaultStateOwner = {
+  exists: (file) => fs.existsSync(file),
+  read: (file) => fs.readFileSync(file),
+  write: (file, value) => atomicJson(file, value)
+};
+
+function sameValue(left, right) { return canonicalJson(left) === canonicalJson(right); }
+
+function writeBoundReceipt(file, value, stateOwner) {
+  stateOwner.write(file, value);
+  const raw = stateOwner.read(file);
+  const parsed = JSON.parse(raw.toString('utf8'));
+  if (!sameValue(parsed, value) || parsed.nonce !== value.nonce) {
+    throw new Error('T152 bootstrap receipt verification failed.');
+  }
+  return { exists: true, sha256: digest(raw), size: raw.length };
+}
+
+function assertFreshSelfcheck(state, stateOwner) {
+  for (const file of [state.launch, state.result, state.status, state.terminal]) {
+    if (stateOwner.exists(file)) throw new Error('T152 bootstrap selfcheck state is not fresh.');
+  }
+}
+
 export function bootstrapStatePaths(stateRoot) {
   return { config: path.join(stateRoot, 'bootstrap-config.json'),
     launch: path.join(stateRoot, 'bootstrap-launch.json'), request: path.join(stateRoot, 'request.json'),
@@ -85,26 +109,33 @@ function terminalOutput(chunks) {
 }
 
 export async function runScheduledWorkerBootstrap(config, request, {
-  now = () => Date.now(), spawnChild = spawn, timer = setTimeout, cancelTimer = clearTimeout
+  now = () => Date.now(), spawnChild = spawn, stateOwner = defaultStateOwner,
+  timer = setTimeout, cancelTimer = clearTimeout
 } = {}) {
   validateBootstrapConfig(config, request);
   const state = bootstrapStatePaths(config.stateRoot);
+  if (config.mode === 'selfcheck') assertFreshSelfcheck(state, stateOwner);
   const started = now();
   const launch = { identity: config.identity, mode: config.mode, nonce: config.nonce,
     formalAttempt: request.formalAttempt ?? null, phase: request.phase ?? null,
     productStarted: false, requestHash: config.requestHash, schemaVersion: 1,
     startedAt: new Date(started).toISOString(), taskDefinitionHash: config.taskDefinitionHash };
-  atomicJson(state.launch, launch);
-  const launchSha256 = digest(fs.readFileSync(state.launch));
+  const launchFact = writeBoundReceipt(state.launch, launch, stateOwner);
+  const launchSha256 = launchFact.sha256;
   if (config.mode === 'selfcheck') {
+    const completedAt = new Date(now()).toISOString();
+    const completed = { completedAt, exitCode: 0, formalAttempt: null,
+      groupAllocated: false, mode: 'selfcheck', nonce: config.nonce, productStarted: false,
+      schemaVersion: 2, state: 'completed' };
+    const result = writeBoundReceipt(state.result, completed, stateOwner);
+    const status = writeBoundReceipt(state.status, completed, stateOwner);
     const terminal = { durationMs: now() - started, endedAt: new Date(now()).toISOString(),
-      exitCode: 0, formalAttempt: request.formalAttempt ?? null, groupAllocated: false,
-      identity: config.identity,
+      exitCode: 0, formalAttempt: null, groupAllocated: false, identity: config.identity,
       launchSha256, mode: config.mode, nonce: config.nonce, productStarted: false,
-      requestHash: config.requestHash, result: fileFact(state.result), schemaVersion: 1,
-      signal: null, spawnError: null, startedAt: launch.startedAt, status: fileFact(state.status),
+      requestHash: config.requestHash, result, schemaVersion: 1,
+      signal: null, spawnError: null, startedAt: launch.startedAt, status,
       stderr: terminalOutput([]), stdout: terminalOutput([]), timedOut: false };
-    atomicJson(state.terminal, terminal); return terminal;
+    writeBoundReceipt(state.terminal, terminal, stateOwner); return terminal;
   }
   const stdout = []; const stderr = []; const stdoutState = { bytes: 0 };
   const stderrState = { bytes: 0 }; let child; let timedOut = false;

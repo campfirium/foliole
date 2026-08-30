@@ -84,11 +84,98 @@ it('kills once and records a bounded timeout terminal', async () => {
   expect(terminal.signal).toBe('SIGTERM');
 });
 
-it('selfcheck writes launch then terminal without spawning a worker', async () => {
+it('selfcheck writes one bound four-receipt chain without spawning a worker', async () => {
   const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
   let spawned = false;
   const terminal = await runScheduledWorkerBootstrap(config, value.request,
     { spawnChild: () => { spawned = true; return child({ code: 0 }); } });
   expect(spawned).toBe(false); expect(terminal.exitCode).toBe(0);
   expect(terminal.productStarted).toBe(false); expect(terminal.groupAllocated).toBe(false);
+  const result = JSON.parse(fs.readFileSync(value.paths.result, 'utf8'));
+  const status = JSON.parse(fs.readFileSync(value.paths.status, 'utf8'));
+  expect(result).toEqual(status);
+  expect(result).toMatchObject({ exitCode: 0, formalAttempt: null, groupAllocated: false,
+    mode: 'selfcheck', nonce: NONCE, productStarted: false, state: 'completed' });
+  expect(terminal.result.sha256).toBe(createHash('sha256')
+    .update(fs.readFileSync(value.paths.result)).digest('hex'));
+  expect(terminal.status.sha256).toBe(createHash('sha256')
+    .update(fs.readFileSync(value.paths.status)).digest('hex'));
+  expect(terminal.launchSha256).toBe(createHash('sha256')
+    .update(fs.readFileSync(value.paths.launch)).digest('hex'));
 });
+
+it('writes selfcheck receipts only in launch-result-status-terminal order', async () => {
+  const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+  const writes = [];
+  const stateOwner = { exists: fs.existsSync, read: fs.readFileSync,
+    write: (file, receipt) => { writes.push(path.basename(file));
+      fs.writeFileSync(file, `${JSON.stringify(receipt, null, 2)}\n`); } };
+  await runScheduledWorkerBootstrap(config, value.request, { stateOwner });
+  expect(writes).toEqual(['bootstrap-launch.json', 'result.json', 'status.json',
+    'bootstrap-terminal.json']);
+});
+
+it.each([
+  ['launch write', 'bootstrap-launch.json', []],
+  ['result write', 'result.json', ['bootstrap-launch.json']],
+  ['status write', 'status.json', ['bootstrap-launch.json', 'result.json']],
+  ['terminal write', 'bootstrap-terminal.json',
+    ['bootstrap-launch.json', 'result.json', 'status.json']]
+])('fails closed after a partial %s', async (_label, failedName, expected) => {
+  const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+  const writes = [];
+  const stateOwner = { exists: fs.existsSync, read: fs.readFileSync,
+    write: (file, receipt) => { if (path.basename(file) === failedName) throw new Error('write failed');
+      writes.push(path.basename(file)); fs.writeFileSync(file, `${JSON.stringify(receipt)}\n`); } };
+  await expect(runScheduledWorkerBootstrap(config, value.request, { stateOwner }))
+    .rejects.toThrow('write failed');
+  expect(writes).toEqual(expected);
+});
+
+it('fails closed when a written receipt cannot be reread', async () => {
+  const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+  let reads = 0;
+  const stateOwner = { exists: fs.existsSync,
+    read: (file) => { reads += 1; if (reads === 2) throw new Error('reread failed');
+      return fs.readFileSync(file); },
+    write: (file, receipt) => fs.writeFileSync(file, `${JSON.stringify(receipt)}\n`) };
+  await expect(runScheduledWorkerBootstrap(config, value.request, { stateOwner }))
+    .rejects.toThrow('reread failed');
+  expect(fs.existsSync(value.paths.launch)).toBe(true);
+  expect(fs.existsSync(value.paths.result)).toBe(true);
+  expect(fs.existsSync(value.paths.status)).toBe(false);
+  expect(fs.existsSync(value.paths.terminal)).toBe(false);
+});
+
+it('rejects a request nonce mismatch before writing any selfcheck receipt', async () => {
+  const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+  const changed = { ...value.request, nonce: '22222222-2222-4222-8222-222222222222' };
+  await expect(runScheduledWorkerBootstrap(config, changed)).rejects.toThrow('config is invalid');
+  expect(['launch', 'result', 'status', 'terminal']
+    .every((name) => !fs.existsSync(value.paths[name]))).toBe(true);
+});
+
+it('rejects a wrong nonce on reread without writing later receipts', async () => {
+  const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+  const writes = [];
+  const stateOwner = { exists: fs.existsSync, read: fs.readFileSync,
+    write: (file, receipt) => { writes.push(path.basename(file));
+      const valueToWrite = path.basename(file) === 'result.json'
+        ? { ...receipt, nonce: '22222222-2222-4222-8222-222222222222' } : receipt;
+      fs.writeFileSync(file, `${JSON.stringify(valueToWrite)}\n`); } };
+  await expect(runScheduledWorkerBootstrap(config, value.request, { stateOwner }))
+    .rejects.toThrow('receipt verification failed');
+  expect(writes).toEqual(['bootstrap-launch.json', 'result.json']);
+  expect(fs.existsSync(value.paths.status)).toBe(false);
+  expect(fs.existsSync(value.paths.terminal)).toBe(false);
+});
+
+it.each(['launch', 'result', 'status', 'terminal'])('rejects stale %s state before launch',
+  async (name) => {
+    const value = fixture(); const config = sign({ ...value.config, mode: 'selfcheck' });
+    fs.writeFileSync(value.paths[name], '{}\n');
+    await expect(runScheduledWorkerBootstrap(config, value.request))
+      .rejects.toThrow('state is not fresh');
+    expect(fs.readFileSync(value.paths[name], 'utf8')).toBe('{}\n');
+    expect(fs.existsSync(value.paths.launch)).toBe(name === 'launch');
+  });
