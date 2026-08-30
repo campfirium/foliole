@@ -1,18 +1,14 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("host-facts", "prepare", "g2-path", "g3-anchor", "formal")]
+  [ValidateSet("host-facts", "binding-preflight", "prepare", "g2-path", "g3-anchor", "formal")]
   [string]$Action,
-  [string]$ArchivePath = "",
   [string]$CapsuleRoot = "",
   [string]$ConfigPath = "",
-  [string]$ControllerArchivePath = "",
   [string]$ControllerRoot = "",
   [string]$EvidenceRoot = "",
-  [string]$ManifestPath = "",
   [string]$NodePath = "",
-  [string]$NpmPath = "",
-  [string]$SourceRoot = "",
-  [string]$TarPath = ""
+  [string]$RequestBase64 = "",
+  [string]$SourceRoot = ""
 )
 
 Set-StrictMode -Version Latest
@@ -23,6 +19,52 @@ $t7Run = "33270551363"
 
 function Assert-Absolute([string]$Value, [string]$Label) {
   if (!$Value -or ![IO.Path]::IsPathFullyQualified($Value)) { throw "$Label must be explicit" }
+}
+
+function Read-PrepareRequest([string]$Token) {
+  if (!$Token -or $Token -notmatch '^[A-Za-z0-9_-]+$') { throw "prepare token is invalid" }
+  $base64 = $Token.Replace('-', '+').Replace('_', '/')
+  while (($base64.Length % 4) -ne 0) { $base64 += '=' }
+  $envelope = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64)) |
+    ConvertFrom-Json
+  if (!$envelope.requestJson -or $envelope.requestSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw "prepare envelope is invalid"
+  }
+  $bytes = [Text.Encoding]::UTF8.GetBytes([string]$envelope.requestJson)
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try { $hashBytes = $sha.ComputeHash($bytes) } finally { $sha.Dispose() }
+  $hash = ([BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+  if ($hash -ne $envelope.requestSha256) { throw "prepare request hash mismatch" }
+  $request = $envelope.requestJson | ConvertFrom-Json
+  $required = @('capsuleId', 'capsuleRoot', 'controllerArchivePath', 'controllerRoot',
+    'evidenceRoot', 'hostFactsSha256', 'identity', 'manifestPath', 'nodePath', 'npmPath',
+    'productArchivePath', 'rootId', 'sourceRoot', 'tarPath')
+  foreach ($name in $required) {
+    if ($null -eq $request.PSObject.Properties[$name]) { throw "prepare field missing: $name" }
+  }
+  foreach ($name in @('capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
+      'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'sourceRoot', 'tarPath')) {
+    Assert-Absolute ([string]$request.$name) $name
+  }
+  if ($request.schemaVersion -ne 1 -or $request.capsuleId -notmatch '^[0-9a-f-]{36}$' -or
+      $request.rootId -notmatch '^[0-9a-f-]{36}$' -or
+      $request.hostFactsSha256 -notmatch '^[0-9a-f]{64}$' -or
+      $request.identity.productCommit -ne $productCommit -or
+      $request.identity.productTree -ne $productTree -or $request.identity.t7Run -ne $t7Run -or
+      $request.identity.controllerCommit -notmatch '^[0-9a-f]{40}$' -or
+      $request.identity.controllerTree -notmatch '^[0-9a-f]{40}$') {
+    throw "prepare identity is invalid"
+  }
+  $runtime = [ordered]@{
+    node = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+    npm = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+    tar = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source
+  }
+  $runtimeExact = $runtime.node -eq $request.nodePath -and $runtime.npm -eq $request.npmPath -and
+    $runtime.tar -eq $request.tarPath
+  if (!$runtimeExact) { throw "prepare runtime differs from host facts" }
+  return [ordered]@{ fieldCount = $request.PSObject.Properties.Count; request = $request
+    requestSha256 = [string]$envelope.requestSha256; runtime = $runtime; runtimeExact = $runtimeExact }
 }
 
 function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
@@ -98,6 +140,28 @@ try {
     $json = Get-HostFacts | ConvertTo-Json -Compress -Depth 10
     Write-Output "T152_HOST_FACTS=$json"
     exit 0
+  }
+  if ($Action -eq "binding-preflight" -or $Action -eq "prepare") {
+    $binding = Read-PrepareRequest $RequestBase64
+    if ($Action -eq "binding-preflight") {
+      $receipt = [ordered]@{ fieldCount = $binding.fieldCount
+        requestSha256 = $binding.requestSha256; runtimeExact = $binding.runtimeExact
+        runtimeExists = [ordered]@{ node = (Test-Path -LiteralPath $binding.runtime.node -PathType Leaf)
+          npm = (Test-Path -LiteralPath $binding.runtime.npm -PathType Leaf)
+          tar = (Test-Path -LiteralPath $binding.runtime.tar -PathType Leaf) } }
+      Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 4)"
+      exit 0
+    }
+    $ArchivePath = [string]$binding.request.productArchivePath
+    $CapsuleRoot = [string]$binding.request.capsuleRoot
+    $ControllerArchivePath = [string]$binding.request.controllerArchivePath
+    $ControllerRoot = [string]$binding.request.controllerRoot
+    $EvidenceRoot = [string]$binding.request.evidenceRoot
+    $ManifestPath = [string]$binding.request.manifestPath
+    $NodePath = [string]$binding.request.nodePath
+    $NpmPath = [string]$binding.request.npmPath
+    $SourceRoot = [string]$binding.request.sourceRoot
+    $TarPath = [string]$binding.request.tarPath
   }
   foreach ($item in @(@($CapsuleRoot, "capsule root"), @($ControllerRoot, "controller root"),
       @($EvidenceRoot, "evidence root"), @($NodePath, "node path"),

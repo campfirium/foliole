@@ -11,6 +11,7 @@ const names = [
   't152-windows-capsule-formal-runner.mjs', 't152-windows-formal-interactive-contract.mjs',
   't152-windows-formal-interactive-install.ps1',
   't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
+  't152-windows-prepare-request.mjs', 't152-windows-prepare-request.test.mjs',
   't152-macos-to-windows-find.mjs', 't152-windows-to-macos-find.mjs'
 ];
 const sources = Object.fromEntries(names.map((name) => [name,
@@ -46,6 +47,17 @@ it('keeps source-free host facts read-only and verifies both archives before bui
   expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
   expect(action).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
   expect(action).toContain('T152_HOST_FACTS=');
+});
+
+it('uses one prepare request owner and one token for preflight and prepare', () => {
+  const control = sources['t152-windows-capsule-control.mjs'];
+  const request = sources['t152-windows-prepare-request.mjs'];
+  expect(control.match(/createT152WindowsPrepareRequest/g)).toHaveLength(2);
+  expect(control).toContain("t152PrepareRemoteCommand(staging.action, 'binding-preflight'");
+  expect(control).toContain("t152PrepareRemoteCommand(staging.action, 'prepare'");
+  expect(request).toContain("'-RequestBase64', token");
+  expect(request).not.toContain("'-Command'");
+  expect(request).not.toMatch(/'-ArchivePath'|'-NpmPath'|'-TarPath'/u);
 });
 
 it('uses one scheduled worker for G2, G3, and formal execution', () => {

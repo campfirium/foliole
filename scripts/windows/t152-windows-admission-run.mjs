@@ -17,7 +17,7 @@ function requiredAbsolute(value, label) {
 export async function runT152WindowsAdmissionSequence({ capsuleId = randomUUID(),
   controllerCommit, controllerRoot, productObjectRepo, rootId = randomUUID() }) {
   const prepared = await prepareT152WindowsCapsule({ capsuleId, controllerCommit,
-    controllerRoot, productObjectRepo, repoRoot: controllerRoot });
+    controllerRoot, productObjectRepo, repoRoot: controllerRoot, rootId });
   const locatorPath = path.join(prepared.capsule.root, 'admission-locator.json');
   try {
     const g2 = await runT152WindowsAdmission({ phase: 'g2-path', prepared, rootId });
