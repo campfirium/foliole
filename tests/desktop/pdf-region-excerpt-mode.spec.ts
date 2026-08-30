@@ -48,11 +48,25 @@ for (const scenario of [
       await expect(text).toHaveCSS('cursor', 'text');
       const bounds = await text.boundingBox();
       if (!bounds) throw new Error('PDF text has no bounds');
+      await desktopWindow.evaluate(() => {
+        window.addEventListener('pointerdown', (event) => { document.documentElement.dataset.t158PointerDefault = String(event.defaultPrevented); }, { once: true });
+        window.addEventListener('mousedown', (event) => { document.documentElement.dataset.t158MouseDefault = String(event.defaultPrevented); }, { once: true });
+      });
       await desktopWindow.mouse.move(bounds.x + 2, bounds.y + bounds.height / 2);
       await desktopWindow.mouse.down();
       await desktopWindow.mouse.move(bounds.x + bounds.width - 2, bounds.y + bounds.height / 2, { steps: 12 });
       await desktopWindow.mouse.up();
-      await expect.poll(() => desktopWindow.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
+      await expect.poll(() => desktopWindow.evaluate(() => document.documentElement.dataset.t158PointerDefault)).toBe('false');
+      await expect.poll(() => desktopWindow.evaluate(() => document.documentElement.dataset.t158MouseDefault)).toBe('false');
+      const selectedText = await text.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        return selection?.toString();
+      });
+      expect(selectedText).toContain(scenario.text);
     }
     const page = desktopWindow.locator('.pdf-visual-excerpt-page').first();
     await expect(page).toHaveCSS('cursor', 'default');
