@@ -3,7 +3,8 @@ import path from 'node:path';
 export const CAPTURE_ANNOTATION_EVIDENCE_FILES = [
   'capture-annotation-manifest.json',
   'capture-annotation-receipt.json',
-  'capture-annotation-semantic-snapshot.json'
+  'capture-annotation-semantic-snapshot.json',
+  'capture-annotation-db-summary.json'
 ];
 
 export const CAPTURE_ANNOTATION_APP_ID = 'com.foliole.android';

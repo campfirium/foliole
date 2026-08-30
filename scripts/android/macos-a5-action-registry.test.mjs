@@ -29,13 +29,6 @@ it('keeps action evidence layout out of the generic formal receipt', () => {
   expect(assertRegisteredMacosA5Action('build').formalEvidence).toEqual({ kind: 'receipt' });
 });
 
-it('does not protect disposable A5 data before the local capture journey', () => {
-  expect(assertRegisteredMacosA5Action('capture-annotation')).toMatchObject({
-    deviceLeaseMode: 'mutation', mutatesFixedA5: true, requiresDataProtection: false
-  });
-  expect(assertRegisteredMacosA5Action('deploy').requiresDataProtection).toBe(true);
-});
-
 it('fails formal preflight for an action without a frozen or source-free contract', () => {
   expect(() => assertFormalMacosA5Action(
     assertRegisteredMacosA5Action('sync-group-stopped-status')

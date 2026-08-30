@@ -26,27 +26,29 @@ function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } 
   };
 }
 
-it('proves a canonical Inbox and local device identity without requiring synced content', () => {
+it('proves a populated canonical Inbox workspace without returning identity or endpoint values', () => {
   const inspection = inspectCaptureAnnotationWorkspace(databaseFixture({
-    counts: { content_blobs: 10, node_order: 0, nodes: 11 },
-    meta: { device_id: 'android-a5' }
+    counts: { content_blobs: 19, node_order: 12, nodes: 13 },
+    meta: { device_id: 'android-a5', workspace_sync_endpoint_url: 'http://windows:38641?secret=x' }
   }));
   const readiness = captureAnnotationReadiness({ database: { exists: true, inspection } });
   expect(readiness).toMatchObject({
     canonicalInbox: { active: true, kind: 'folder' },
-    counts: { content_blobs: 10, node_order: 0, nodes: 11 },
+    counts: { content_blobs: 19, node_order: 12, nodes: 13 },
     missingPrerequisites: [],
-    pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: false },
+    pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true },
     resultStatus: 'ready'
   });
-  expect(JSON.stringify(readiness)).not.toMatch(/android-a5/iu);
+  expect(JSON.stringify(readiness)).not.toMatch(/android-a5|windows:38641|secret/iu);
 });
 
-it('requires only the canonical Inbox and local device identity', () => {
+it('requires approval for an empty or unpaired workspace and exposes only bounded conclusions', () => {
   const inspection = inspectCaptureAnnotationWorkspace(databaseFixture({ inbox: null }));
   expect(captureAnnotationReadiness({ database: { exists: true, inspection } })).toMatchObject({
     counts: { content_blobs: 0, node_order: 0, nodes: 0 },
-    missingPrerequisites: ['canonical_inbox_missing', 'device_identity_missing'],
+    missingPrerequisites: [
+      'acceptance_workspace_empty', 'canonical_inbox_missing', 'pairing_workspace_unproven'
+    ],
     resultStatus: 'approval_required'
   });
 });

@@ -39,7 +39,7 @@ it('accepts only bounded readiness evidence without credential values', () => {
   const readiness = {
     canonicalInbox: { active: false, kind: null },
     counts: { content_blobs: 0, node_order: 0, nodes: 0 },
-    missingPrerequisites: ['canonical_inbox_missing', 'device_identity_missing'],
+    missingPrerequisites: ['acceptance_workspace_empty'],
     pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false },
     resultStatus: 'approval_required', schemaVersion: 1
   };

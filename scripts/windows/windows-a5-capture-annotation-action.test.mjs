@@ -66,12 +66,38 @@ function executor(token = 'capture-run-1') {
   return { calls, execute };
 }
 
-it('installs only same-run APKs, executes one fixed restart method, and cleans up', async () => {
+function auditSummary(token) {
+  return {
+    capture: { currentVersionId: 'v-capture', deviceId: 'a5', nodeId: 'capture', parentNodeId: 'special-inbox' },
+    cloze: { currentVersionId: 'v-cloze', deviceId: 'a5', nodeId: 'cloze', parentNodeId: 'capture' },
+    note: { currentVersionId: 'v-note', deviceId: 'a5', nodeId: 'note', parentNodeId: 'capture' },
+    resultStatus: 'success', review: { due: '2026-07-31T12:00:00.000Z', state: 0 },
+    schemaVersion: 1, token
+  };
+}
+
+function protection() {
+  return vi.fn(async (mode, manifest, backupRoot) => {
+    if (mode === 'backup') {
+      const targetRoot = backupRoot || path.join(path.dirname(manifest), 'protected');
+      fs.mkdirSync(targetRoot, { recursive: true });
+      const databasePath = path.join(targetRoot, 'snapshot.db');
+      fs.writeFileSync(databasePath, 'sqlite');
+      fs.writeFileSync(manifest, JSON.stringify({ backup: { created: true, databasePath } }));
+    }
+    return { output: `${mode}\n` };
+  });
+}
+
+it('installs only same-run APKs, executes one fixed restart method, audits, and cleans up', async () => {
   const { evidenceRoot, paths } = fixture();
   const { calls, execute } = executor();
+  const protectData = protection();
+  const database = { close: vi.fn() };
   const result = await runWindowsA5CaptureAnnotation({
-    adbPort: '5037', buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
-    paths, serial: '87a33a4b'
+    adbPort: '5037', auditDatabase: vi.fn(() => auditSummary('capture-run-1')),
+    buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
+    openDatabase: vi.fn(() => database), paths, protectData, serial: '87a33a4b'
   });
   const adbArgs = calls.map(({ args }) => args);
   expect(adbArgs[0]).toEqual([
@@ -84,20 +110,24 @@ it('installs only same-run APKs, executes one fixed restart method, and cleans u
   expect(adbArgs.find((args) => args.includes('instrument') && !args.includes('log'))).toContain(
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart'
   );
+  expect(protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup']);
   expect(adbArgs.at(-1)).toEqual(['-P', '5037', '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test']);
+  expect(database.close).toHaveBeenCalledOnce();
   const manifest = JSON.parse(fs.readFileSync(result.captureAnnotation.manifestPath, 'utf8'));
   expect(manifest).toMatchObject({
-    action: 'capture-annotation', cleanup: { appForceStopped: true, testPackageRemoved: true },
+    action: 'capture-annotation', cleanup: {
+      appForceStopped: true, auditSnapshotRemoved: true, testPackageRemoved: true
+    },
     installedPackages: {
       main: { versionCode: '1', versionName: '1.0' },
       test: { versionCode: '2', versionName: '1.0-test' }
     },
     lifecycle: { liveServer: 'not-started', reverse: 'not-created' },
-    result: { captureCreated: true, clozeCreated: true, hydratedAfterRestart: true,
-      noteCreated: true },
-    resultStatus: 'success', runId: 'capture-run-1', schemaVersion: 3, token: 'capture-run-1'
+    nodes: { capture: { parentNodeId: 'special-inbox' } }, resultStatus: 'success',
+    review: { state: 0 }, runId: 'capture-run-1', schemaVersion: 2, token: 'capture-run-1'
   });
   expect(manifest.builtApks.main.sha256).toMatch(/^[0-9a-f]{64}$/u);
+  expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-database'))).toBe(false);
 });
 
 it('rejects another run receipt, removes the installed test APK, and writes no success manifest', async () => {
@@ -107,11 +137,28 @@ it('rejects another run receipt, removes the installed test APK, and writes no s
   try {
     await runWindowsA5CaptureAnnotation({
       adbPort: '5037', buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
-      paths, serial: '87a33a4b'
+      paths, protectData: protection(), serial: '87a33a4b'
     });
   } catch (error) { failure = error; }
   expect(failure).toMatchObject({ stage: 'instrumentation-evidence' });
   expect(failure.result.output).toContain('folioleActionReceipt');
   expect(calls.some(({ args }) => args.includes('uninstall') && args.includes('com.foliole.android.test'))).toBe(true);
   expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-manifest.json'))).toBe(false);
+});
+
+it('retains fixed instrumentation output when the read-only audit fails', async () => {
+  const { evidenceRoot, paths } = fixture();
+  const { execute } = executor();
+  let failure;
+  try {
+    await runWindowsA5CaptureAnnotation({
+      adbPort: '5037', auditDatabase: vi.fn(() => { throw new Error('Cloze Item was not found'); }),
+      buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
+      openDatabase: vi.fn(() => ({ close: vi.fn() })), paths,
+      protectData: protection(), serial: '87a33a4b'
+    });
+  } catch (error) { failure = error; }
+  expect(failure).toMatchObject({ stage: 'capture-database-audit' });
+  expect(failure.result.output).toContain('folioleActionReceipt');
+  expect(failure.result.output).toContain('Success');
 });

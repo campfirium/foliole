@@ -44,11 +44,12 @@ function missingPrerequisites(snapshot) {
   const missing = [];
   if (!snapshot.database?.exists) missing.push('database_missing');
   else if (snapshot.database.unreadable || !inspection) missing.push('database_unreadable');
+  if (inspection && (inspection.counts.nodes <= 1 || inspection.counts.node_order <= 0
+      || inspection.counts.content_blobs <= 0)) missing.push('acceptance_workspace_empty');
   if (inspection && (!inspection.canonicalInbox.active
       || inspection.canonicalInbox.kind !== 'folder')) missing.push('canonical_inbox_missing');
-  if (inspection && !inspection.pairingWorkspace.localDeviceIdentityPresent) {
-    missing.push('device_identity_missing');
-  }
+  if (inspection && (!inspection.pairingWorkspace.localDeviceIdentityPresent
+      || !inspection.pairingWorkspace.syncEndpointPresent)) missing.push('pairing_workspace_unproven');
   return missing;
 }
 

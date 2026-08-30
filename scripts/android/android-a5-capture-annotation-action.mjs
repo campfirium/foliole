@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { auditCaptureAnnotationDatabase } from './android-capture-annotation-audit.mjs';
+import { openReadonlySqliteDatabaseSync } from './sqlite-readonly.mjs';
 import {
   CAPTURE_ANNOTATION_APP_ID, CAPTURE_ANNOTATION_EVIDENCE_FILES,
   CAPTURE_ANNOTATION_RUNNER_IDENTITY, CAPTURE_ANNOTATION_TEST_APP_ID,
@@ -88,6 +90,22 @@ async function requireInstalledScenario(options) {
   return { installedPackages: { main, test }, installedTestMethods: methods };
 }
 
+function auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token }) {
+  let snapshot;
+  try { snapshot = JSON.parse(fsApi.readFileSync(snapshotManifest, 'utf8')); }
+  catch { throw captureAnnotationFailure('Android database snapshot manifest is unreadable', 'capture-database-snapshot'); }
+  if (!snapshot.backup?.created || !snapshot.backup.databasePath) {
+    throw captureAnnotationFailure('Android database snapshot path is missing', 'capture-database-snapshot');
+  }
+  let database;
+  try {
+    database = openDatabase(snapshot.backup.databasePath);
+    return auditDatabase(database, token);
+  } catch (error) {
+    throw captureAnnotationFailure(error.message, 'capture-database-audit', error);
+  } finally { database?.close(); }
+}
+
 async function cleanupInstalledTest({ adbPort, env, execute, paths, serial }) {
   const forceStop = await checked(execute, paths.adbPath,
     ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
@@ -102,10 +120,14 @@ async function cleanupInstalledTest({ adbPort, env, execute, paths, serial }) {
 }
 
 export async function runA5CaptureAnnotation({
-  adbPort, buildIdentity, env, evidenceRoot, execute, fsApi = fs, paths, serial
+  adbPort, auditDatabase = auditCaptureAnnotationDatabase, buildIdentity, env,
+  evidenceRoot, execute, fsApi = fs, openDatabase = openReadonlySqliteDatabaseSync,
+  paths, protectData, serial
 }) {
   fsApi.mkdirSync(evidenceRoot, { recursive: true });
   const artifacts = captureAnnotationArtifactPaths(evidenceRoot);
+  const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
+  const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
   const builtApks = {
     main: builtApkIdentity(fsApi, paths.buildRoot, MAIN_APK),
     test: builtApkIdentity(fsApi, paths.buildRoot, TEST_APK)
@@ -133,11 +155,22 @@ export async function runA5CaptureAnnotation({
     const evidence = parseCaptureAnnotationInstrumentation(instrumentation.stdout, buildIdentity);
     writeJson(fsApi, artifacts['capture-annotation-receipt.json'], evidence.receipt);
     writeJson(fsApi, artifacts['capture-annotation-semantic-snapshot.json'], evidence.semanticSnapshot);
-    proof = { evidence, scenario };
+    await checked(execute, paths.adbPath,
+      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
+      commandOptions(env, 'capture_quiesce_timeout', 30_000), 'capture-quiesce');
+    output.push((await protectData('backup', snapshotManifest, snapshotRoot)).output);
+    const audit = auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token: buildIdentity });
+    writeJson(fsApi, artifacts['capture-annotation-db-summary.json'], audit);
+    fsApi.rmSync(snapshotRoot, { force: true, recursive: true });
+    fsApi.rmSync(snapshotManifest, { force: true });
+    proof = { audit, evidence, scenario };
   } catch (error) { primaryError = error; }
   let cleanup = { appForceStopped: false, testPackageRemoved: false };
   if (testInstalled) {
-    cleanup = await cleanupInstalledTest({ adbPort, env, execute, paths, serial });
+    cleanup = {
+      ...(await cleanupInstalledTest({ adbPort, env, execute, paths, serial })),
+      auditSnapshotRemoved: true
+    };
   }
   output.push(cleanup.output || '');
   if (primaryError) {
@@ -153,9 +186,8 @@ export async function runA5CaptureAnnotation({
     installedPackages: proof.scenario.installedPackages,
     installedTestMethods: proof.scenario.installedTestMethods,
     lifecycle: { adbServer: 'fixed-adapter-owned', liveServer: 'not-started', reverse: 'not-created' },
-    result: Object.fromEntries(['captureCreated', 'clozeCreated', 'noteCreated', 'hydratedAfterRestart']
-      .map((key) => [key, proof.evidence.receipt[key]])),
-    resultStatus: 'success', runId: buildIdentity, schemaVersion: 3, serial,
+    nodes: { capture: proof.audit.capture, cloze: proof.audit.cloze, note: proof.audit.note },
+    resultStatus: 'success', review: proof.audit.review, runId: buildIdentity, schemaVersion: 2, serial,
     testClass: CAPTURE_ANNOTATION_TEST_CLASS, token: buildIdentity
   };
   writeJson(fsApi, artifacts['capture-annotation-manifest.json'], manifest);
