@@ -1,11 +1,18 @@
 param(
-  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare", "find-acceptance", "advertise-acceptance", "release-complete", "release-cancel")][string]$Action,
-  [Parameter(Mandatory = $true)][ValidatePattern("^[0-9a-f-]{36}$")][string]$AttemptId,
-  [ValidatePattern("^[0-9a-f-]{36}$")][string]$CapsuleAttemptId = "",
-  [ValidatePattern("^t152-product-[0-9a-f-]{36}\.tar$")][string]$ArchiveName = "",
-  [ValidatePattern("^t152-manifest-[0-9a-f-]{36}\.json$")][string]$ManifestName = "",
-  [ValidatePattern("^group-[0-9a-f-]{36}$")][string]$ExpectedGroupId = "",
-  [ValidatePattern("^[0-9a-f]{32}$")][string]$ExpectedGroupTag = ""
+  [Parameter(Mandatory = $true)]
+  [ValidateSet("host-facts", "prepare", "g2-path", "g3-anchor", "formal")]
+  [string]$Action,
+  [string]$ArchivePath = "",
+  [string]$CapsuleRoot = "",
+  [string]$ConfigPath = "",
+  [string]$ControllerArchivePath = "",
+  [string]$ControllerRoot = "",
+  [string]$EvidenceRoot = "",
+  [string]$ManifestPath = "",
+  [string]$NodePath = "",
+  [string]$NpmPath = "",
+  [string]$SourceRoot = "",
+  [string]$TarPath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -13,21 +20,45 @@ $ErrorActionPreference = "Stop"
 $productCommit = "86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a"
 $productTree = "ec8af4a625d98fb35e86134d8770c50a5e669ccb"
 $t7Run = "33270551363"
-$capsules = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\capsules"
-$taskRoot = Join-Path $capsules $AttemptId
-$evidenceRoot = Join-Path $taskRoot "evidence"
-$sourceRoot = Join-Path $taskRoot "source"
-$receiptPath = Join-Path $evidenceRoot "$Action-receipt.json"
 
-function Write-Receipt([hashtable]$Receipt) {
-  New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
-  $Receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding utf8
-  Write-Output "[t152-windows-capsule] action=$Action attempt=$AttemptId receipt=$receiptPath"
+function Assert-Absolute([string]$Value, [string]$Label) {
+  if (!$Value -or ![IO.Path]::IsPathFullyQualified($Value)) { throw "$Label must be explicit" }
+}
+
+function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
+  $previousPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    $output = @(& $File @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+  } finally { $ErrorActionPreference = $previousPreference }
+  @($output | ForEach-Object { [string]$_ }) |
+    Set-Content -LiteralPath (Join-Path $EvidenceRoot "$Stage.log") -Encoding utf8
+  if ($exitCode -ne 0) { throw "$Stage failed with exit $exitCode" }
+}
+
+function Get-FileListFacts([string]$Root, [string]$Name) {
+  [string[]]$files = @(Get-ChildItem -LiteralPath $Root -File -Recurse | ForEach-Object {
+    $_.FullName.Substring($Root.Length + 1).Replace("\", "/") })
+  [Array]::Sort($files, [StringComparer]::Ordinal)
+  $listPath = Join-Path $EvidenceRoot "$Name-files.txt"
+  [IO.File]::WriteAllText($listPath, ([string]::Join("`n", $files) + "`n"),
+    [Text.UTF8Encoding]::new($false))
+  return [ordered]@{ count = $files.Count
+    sha256 = (Get-FileHash $listPath -Algorithm SHA256).Hash.ToLowerInvariant() }
 }
 
 function Get-HostFacts {
   $parts = @($env:SSH_CONNECTION -split '\s+' | Where-Object { $_ })
   if ($parts.Count -ne 4) { throw "SSH_CONNECTION is required" }
+  $node = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $npm = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+  $tar = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source
+  $roots = [ordered]@{ localAppData = [IO.Path]::GetFullPath($env:LOCALAPPDATA)
+    programFiles = [IO.Path]::GetFullPath($env:ProgramFiles)
+    systemRoot = [IO.Path]::GetFullPath($env:SystemRoot)
+    temp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    userProfile = [IO.Path]::GetFullPath($env:USERPROFILE) }
   $adapters = @(Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" } | ForEach-Object {
     $config = Get-NetIPConfiguration -InterfaceIndex $_.ifIndex
     [ordered]@{ interfaceAlias = [string]$_.Name; interfaceIndex = [int]$_.ifIndex
@@ -37,8 +68,7 @@ function Get-HostFacts {
   })
   $profiles = @(Get-NetConnectionProfile | ForEach-Object { [ordered]@{
     interfaceAlias = [string]$_.InterfaceAlias; interfaceIndex = [int]$_.InterfaceIndex
-    ipv4Connectivity = [string]$_.IPv4Connectivity; ipv6Connectivity = [string]$_.IPv6Connectivity
-    networkCategory = [string]$_.NetworkCategory } })
+    ipv4Connectivity = [string]$_.IPv4Connectivity; networkCategory = [string]$_.NetworkCategory } })
   $vpn = @(Get-VpnConnection -AllUserConnection:$false -ErrorAction SilentlyContinue |
     Where-Object { $_.ConnectionStatus -eq "Connected" } | ForEach-Object {
       [ordered]@{ name = [string]$_.Name; status = [string]$_.ConnectionStatus } })
@@ -47,105 +77,87 @@ function Get-HostFacts {
     defaultInboundAction = [string]$_.DefaultInboundAction
     defaultOutboundAction = [string]$_.DefaultOutboundAction; enabled = [bool]$_.Enabled
     name = [string]$_.Name } })
-  return [ordered]@{ activePhysicalAdapters = $adapters; capturedAt = [DateTime]::UtcNow.ToString("o")
-    connectedVpn = $vpn; dnsSdService = [ordered]@{ name = $service.Name; status = [string]$service.Status }
-    firewallProfiles = $firewall; networkProfiles = $profiles; schemaVersion = 1
-    sshSession = [ordered]@{ clientAddress = $parts[0]; serverAddress = $parts[2]
-      serverPort = [int]$parts[3]; sessionProcessId = $PID } }
+  return [ordered]@{ activePhysicalAdapters = $adapters
+    capturedAt = [DateTime]::UtcNow.ToString("o"); connectedVpn = $vpn
+    dnsSdService = [ordered]@{ name = $service.Name; status = [string]$service.Status }
+    firewallProfiles = $firewall; networkProfiles = $profiles
+    runtime = [ordered]@{ node = $node; npm = $npm; tar = $tar }; roots = $roots
+    schemaVersion = 2; sshSession = [ordered]@{ clientAddress = $parts[0]
+      serverAddress = $parts[2]; serverPort = [int]$parts[3]; sessionProcessId = $PID } }
 }
 
-function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
-  $previousPreference = $ErrorActionPreference
-  try {
-    $ErrorActionPreference = "Continue"
-    $output = @(& $File @Arguments 2>&1)
-    $exitCode = $LASTEXITCODE
-  } finally {
-    $ErrorActionPreference = $previousPreference
-  }
-  @($output | ForEach-Object { [string]$_ }) |
-    Set-Content -LiteralPath (Join-Path $evidenceRoot "$Stage.log") -Encoding utf8
-  if ($exitCode -ne 0) { throw "$Stage failed with exit $exitCode" }
+function Write-Receipt([hashtable]$Receipt, [string]$Name) {
+  New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
+  $receiptPath = Join-Path $EvidenceRoot $Name
+  $Receipt | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $receiptPath -Encoding utf8
+  Write-Output "[t152-windows-capsule] action=$Action receipt=$receiptPath"
 }
 
 try {
-  if (@("find-acceptance", "advertise-acceptance", "release-complete", "release-cancel") -contains $Action) {
-    if (!$CapsuleAttemptId -or ($Action -eq "find-acceptance" -and
-        (!$ExpectedGroupId -or !$ExpectedGroupTag))) {
-      throw "formal Find requires capsule and group identity"
-    }
-    $preparedRoot = Join-Path $capsules $CapsuleAttemptId
-    $preparedReceipt = Join-Path $preparedRoot "evidence\prepare-receipt.json"
-    $prepared = Get-Content -LiteralPath $preparedReceipt -Raw | ConvertFrom-Json
-    if ($prepared.resultStatus -ne "success" -or $prepared.identity.productCommit -ne $productCommit -or
-        $prepared.identity.productTree -ne $productTree -or $prepared.identity.t7Run -ne $t7Run) {
-      throw "formal Find capsule identity mismatch"
-    }
-    $runner = Join-Path ([Environment]::GetFolderPath("UserProfile")) "t152-windows-capsule-formal-runner.mjs"
-    $acceptanceRoot = "C:\T152\$AttemptId"
-    $formalAction = switch ($Action) {
-      "find-acceptance" { "desktop-dnssd-find-acceptance" }
-      "advertise-acceptance" { "desktop-dnssd-advertise-acceptance" }
-      "release-complete" { "release-complete" }
-      default { "release-cancel" }
-    }
-    & "C:\Program Files\nodejs\node.exe" $runner $formalAction `
-      (Join-Path $preparedRoot "source") $AttemptId $acceptanceRoot $ExpectedGroupId $ExpectedGroupTag
-    if ($LASTEXITCODE -ne 0) { throw "formal runner failed with exit $LASTEXITCODE" }
-    exit 0
-  }
-  if (Test-Path -LiteralPath $taskRoot) { throw "attempt capsule already exists" }
-  New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
   if ($Action -eq "host-facts") {
-    $facts = Get-HostFacts
-    Write-Receipt @{ action = $Action; attemptId = $AttemptId; facts = $facts
-      resultStatus = "success"; schemaVersion = 1 }
+    $json = Get-HostFacts | ConvertTo-Json -Compress -Depth 10
+    Write-Output "T152_HOST_FACTS=$json"
     exit 0
   }
-  if (!$ArchiveName -or !$ManifestName) { throw "prepare requires archive and manifest" }
-  $homeRoot = [Environment]::GetFolderPath("UserProfile")
-  $archive = Join-Path $homeRoot $ArchiveName
-  $manifestFile = Join-Path $homeRoot $ManifestName
-  $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
-  if ($manifest.identity.productCommit -ne $productCommit -or
-      $manifest.identity.productTree -ne $productTree -or $manifest.identity.t7Run -ne $t7Run) {
-    throw "product identity mismatch"
+  foreach ($item in @(@($CapsuleRoot, "capsule root"), @($ControllerRoot, "controller root"),
+      @($EvidenceRoot, "evidence root"), @($NodePath, "node path"),
+      @($SourceRoot, "source root"))) { Assert-Absolute $item[0] $item[1] }
+  if ($Action -eq "prepare") {
+    foreach ($item in @(@($ArchivePath, "product archive"),
+        @($ControllerArchivePath, "controller archive"), @($ManifestPath, "manifest"),
+        @($NpmPath, "npm path"), @($TarPath, "tar path"))) {
+      Assert-Absolute $item[0] $item[1]
+    }
+    if (Test-Path -LiteralPath $CapsuleRoot) { throw "capsule already exists" }
+    New-Item -ItemType Directory -Path $SourceRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $ControllerRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
+    $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+    if ($manifest.identity.productCommit -ne $productCommit -or
+        $manifest.identity.productTree -ne $productTree -or $manifest.identity.t7Run -ne $t7Run) {
+      throw "product identity mismatch"
+    }
+    if ((Get-FileHash $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+        $manifest.archiveSha256) { throw "archive digest mismatch" }
+    if ((Get-FileHash $ControllerArchivePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+        $manifest.controllerArchiveSha256) { throw "controller archive digest mismatch" }
+    Invoke-Checked "extract-product" $TarPath @("-xf", $ArchivePath, "-C", $SourceRoot)
+    Invoke-Checked "extract-controller" $TarPath @("-xf", $ControllerArchivePath, "-C", $ControllerRoot)
+    $productFiles = Get-FileListFacts $SourceRoot "product"
+    $controllerFiles = Get-FileListFacts $ControllerRoot "controller"
+    if ($productFiles.count -ne $manifest.productFiles.fileCount -or
+        $productFiles.sha256 -ne $manifest.productFiles.fileListSha256 -or
+        $controllerFiles.count -ne $manifest.controllerFiles.fileCount -or
+        $controllerFiles.sha256 -ne $manifest.controllerFiles.fileListSha256) {
+      throw "archive file list mismatch"
+    }
+    if ((Get-FileHash (Join-Path $SourceRoot "package-lock.json") -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+        $manifest.lockfileSha256) { throw "lockfile digest mismatch" }
+    Invoke-Checked "dependencies" $NpmPath @("ci", "--prefix", $SourceRoot)
+    Invoke-Checked "electron-runtime" $NodePath @((Join-Path $SourceRoot "node_modules\electron\install.js"))
+    Push-Location $SourceRoot
+    try {
+      Invoke-Checked "build" $NpmPath @("run", "build")
+      Invoke-Checked "electron-compile" $NpmPath @("run", "electron:compile")
+      Invoke-Checked "native-rebuild" $NpmPath @("run", "electron:rebuild:native")
+      Invoke-Checked "native-probe" (Join-Path $SourceRoot "node_modules\electron\dist\electron.exe") `
+        @((Join-Path $SourceRoot "scripts\desktop\desktop-dnssd-native-probe.cjs"))
+      Invoke-Checked "package-smoke" $NpmPath @("run", "windows:package")
+    } finally { Pop-Location }
+    Write-Receipt @{ action = $Action; completedAt = [DateTime]::UtcNow.ToString("o")
+      identity = $manifest.identity; resultStatus = "success"; schemaVersion = 2
+      sourceRoot = $SourceRoot; controllerRoot = $ControllerRoot } "prepare-receipt.json"
+    exit 0
   }
-  if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne
-      $manifest.archiveSha256) { throw "archive digest mismatch" }
-  New-Item -ItemType Directory -Path $sourceRoot | Out-Null
-  Invoke-Checked "extract" "C:\Windows\System32\tar.exe" @("-xf", $archive, "-C", $sourceRoot)
-  if ((Get-FileHash -LiteralPath (Join-Path $sourceRoot "package-lock.json") -Algorithm SHA256).Hash.ToLowerInvariant() -ne
-      $manifest.lockfileSha256) { throw "lockfile digest mismatch" }
-  [string[]]$files = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | ForEach-Object {
-    $_.FullName.Substring($sourceRoot.Length + 1).Replace("\", "/") })
-  [Array]::Sort($files, [StringComparer]::Ordinal)
-  $list = [string]::Join("`n", $files) + "`n"
-  $listPath = Join-Path $evidenceRoot "archive-files.txt"
-  [IO.File]::WriteAllText($listPath, $list, [Text.UTF8Encoding]::new($false))
-  $listHash = (Get-FileHash -LiteralPath $listPath -Algorithm SHA256).Hash.ToLowerInvariant()
-  if ($files.Count -ne $manifest.fileCount -or $listHash -ne $manifest.fileListSha256) {
-    throw "archive file list mismatch"
-  }
-  $node = "C:\Program Files\nodejs\node.exe"
-  $npm = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
-  Invoke-Checked "dependencies" $node @($npm, "ci", "--prefix", $sourceRoot)
-  Invoke-Checked "electron-runtime" $node @((Join-Path $sourceRoot "node_modules\electron\install.js"))
-  Push-Location $sourceRoot
-  try {
-    Invoke-Checked "build" $node @($npm, "run", "build")
-    Invoke-Checked "electron-compile" $node @($npm, "run", "electron:compile")
-    Invoke-Checked "native-rebuild" $node @($npm, "run", "electron:rebuild:native")
-    Invoke-Checked "native-probe" (Join-Path $sourceRoot "node_modules\electron\dist\electron.exe") @(
-      (Join-Path $sourceRoot "scripts\desktop\desktop-dnssd-native-probe.cjs"))
-    Invoke-Checked "package-smoke" $node @($npm, "run", "windows:package")
-  } finally { Pop-Location }
-  Write-Receipt @{ action = $Action; attemptId = $AttemptId; archiveSha256 = $manifest.archiveSha256
-    completedAt = [DateTime]::UtcNow.ToString("o"); fileCount = $files.Count
-    identity = $manifest.identity; lockfileSha256 = $manifest.lockfileSha256
-    resultStatus = "success"; schemaVersion = 1; sourceRoot = $sourceRoot }
+  Assert-Absolute $ConfigPath "interactive config"
+  $runner = Join-Path $ControllerRoot "scripts\windows\t152-windows-capsule-formal-runner.mjs"
+  & $NodePath $runner $ConfigPath
+  if ($LASTEXITCODE -ne 0) { throw "interactive runner failed with exit $LASTEXITCODE" }
 } catch {
-  Write-Receipt @{ action = $Action; attemptId = $AttemptId; failure = $_.Exception.Message
-    resultStatus = "failed"; schemaVersion = 1 }
+  if ($EvidenceRoot) {
+    Write-Receipt @{ action = $Action; failure = $_.Exception.Message
+      resultStatus = "failed"; schemaVersion = 2 } "$Action-failure.json"
+  }
+  Write-Error $_
   exit 74
 }
