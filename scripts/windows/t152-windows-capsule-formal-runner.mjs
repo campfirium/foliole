@@ -10,7 +10,7 @@ import { createT152DesktopDnsSdLibrary, verifyT152DesktopDnsSdLibrary } from
 import { createFormalInteractiveRequest } from './t152-windows-formal-interactive-contract.mjs';
 import { createBootstrapConfig, waitForScheduledWorker } from
   './t152-windows-formal-interactive-bootstrap.mjs';
-import { transitionCompletedSelfcheck, writeAndPreflightFormalGeneration } from
+import { transitionFormalInteractiveGeneration, writeAndPreflightFormalGeneration } from
   './t152-windows-formal-interactive-generation.mjs';
 
 function requiredConfig(config) {
@@ -62,7 +62,8 @@ async function dispatch(config, request) {
     identity: bootstrapIdentity(config), nodePath: config.nodePath, request,
     stateRoot: config.stateRoot, taskDefinition, workerPath: worker,
     workingDirectory: config.sourceRoot });
-  if (config.phase === 'g2-path') transitionCompletedSelfcheck(config.stateRoot);
+  transitionFormalInteractiveGeneration({ nextConfig: bootstrapConfig, nextRequest: request,
+    stateRoot: config.stateRoot, writeJsonAtomic: stateModule.writeJsonAtomic });
   writeAndPreflightFormalGeneration({ config: bootstrapConfig,
     ownerInput: { baseRoot: config.baseRoot, evidenceRoot: config.evidenceRoot,
       rootId: config.rootId, sourceRoot: config.sourceRoot }, request,
