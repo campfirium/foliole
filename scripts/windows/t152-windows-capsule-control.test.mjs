@@ -11,6 +11,7 @@ const names = [
   't152-windows-capsule-formal-runner.mjs', 't152-windows-formal-interactive-contract.mjs',
   't152-windows-interactive-envelope.mjs', 't152-windows-interactive-envelope.ps1',
   't152-windows-formal-interactive-install.ps1',
+  't152-windows-formal-interactive-bootstrap.mjs',
   't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
   't152-windows-prepare-request.mjs', 't152-windows-prepare-request.test.mjs',
   't152-windows-control-bundle-verification.ps1',
@@ -211,12 +212,18 @@ it('retires the PowerShell stage helper and keeps one Node plan and receipt owne
 });
 
 it('uses one scheduled worker for G2, G3, and formal execution', () => {
+  const bootstrap = sources['t152-windows-formal-interactive-bootstrap.mjs'];
   const worker = sources['t152-windows-formal-interactive-worker.mjs'];
   const runner = sources['t152-windows-capsule-formal-runner.mjs'];
   expect(worker).toContain("request.phase === 'g2-path'");
   expect(worker).toContain("request.phase === 'g3-anchor'");
   expect(worker).toContain('runWindowsSyncGroupDeviceAction');
   expect(runner).toContain('t152-windows-formal-interactive-worker.mjs');
+  expect(runner).toContain('t152-windows-formal-interactive-bootstrap.mjs');
+  expect(bootstrap).toContain('shell: false');
+  expect(bootstrap).toContain('bootstrap-launch.json');
+  expect(bootstrap).toContain('bootstrap-terminal.json');
+  expect(sources['t152-windows-formal-interactive-install.ps1']).not.toContain('WorkerScript');
   expect(worker.indexOf("request.phase === 'g3-anchor'"))
     .toBeLessThan(worker.indexOf('loadDesktopDnsSdIdentityPreflight'));
   expect(worker.indexOf("request.phase === 'g3-anchor'"))

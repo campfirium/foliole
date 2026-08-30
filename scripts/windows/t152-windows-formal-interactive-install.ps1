@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$NodePath,
   [Parameter(Mandatory = $true)][string]$WorkDir,
-  [Parameter(Mandatory = $true)][string]$WorkerScript,
+  [Parameter(Mandatory = $true)][string]$BootstrapScript,
   [Parameter(Mandatory = $true)][string]$StateRoot
 )
 
@@ -9,10 +9,10 @@ $ErrorActionPreference = "Stop"
 $taskName = "FolioleNativeClient"
 $resolvedNode = (Resolve-Path -LiteralPath $NodePath).Path
 $resolvedWorkDir = (Resolve-Path -LiteralPath $WorkDir).Path
-$resolvedWorker = (Resolve-Path -LiteralPath $WorkerScript).Path
+$resolvedBootstrap = (Resolve-Path -LiteralPath $BootstrapScript).Path
 $resolvedState = (Resolve-Path -LiteralPath $StateRoot).Path
 $userId = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$arguments = '"' + $resolvedWorker + '" "' + $resolvedState + '"'
+$arguments = '"' + $resolvedBootstrap + '" "' + $resolvedState + '"'
 $action = New-ScheduledTaskAction -Execute $resolvedNode -Argument $arguments `
   -WorkingDirectory $resolvedWorkDir
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
