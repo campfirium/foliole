@@ -40,6 +40,7 @@ for (const scenario of [
     await importPdf(desktopApp, desktopWindow, fixturePath);
     const toggle = desktopWindow.getByRole('button', { name: /Region excerpt|区域摘录/ });
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await desktopWindow.mouse.move(0, 0);
     await toggle.hover();
     await expect(desktopWindow.getByRole('tooltip')).toContainText(/Region excerpt \(Ordinary\)|区域摘录（常规）/);
     await expect(desktopWindow.getByRole('tooltip')).toContainText(/Hold ⌥|按住 ⌥/);
