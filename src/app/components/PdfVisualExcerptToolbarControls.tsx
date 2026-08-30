@@ -19,7 +19,7 @@ export function PdfVisualExcerptToolbarControls(props: { onToolbarInteraction: (
       <AppTooltipTrigger asChild>
         <AppIconButton
           aria-pressed={quick}
-          className="size-8 aria-pressed:bg-[var(--app-control-bg-active-color)] aria-pressed:text-foreground"
+          className="size-8 aria-pressed:bg-foreground/[0.035] aria-pressed:text-foreground/70"
           icon={<SquareDashedMousePointer aria-hidden="true" size={15} strokeWidth={2.1} />}
           label={t('desktop.pdf.imageExcerpt.mode')}
           onClick={() => {

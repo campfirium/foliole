@@ -21,6 +21,7 @@ it('shows platform and mode-specific tooltip content without changing the access
   );
   const toggle = screen.getByRole('button', { name: 'Region excerpt' });
 
+  expect(toggle.className).toContain('aria-pressed:bg-foreground/[0.035]');
   fireEvent.focus(toggle);
   expect(await screen.findAllByText('Region excerpt (Ordinary)')).not.toHaveLength(0);
   expect(screen.getAllByText('Hold ⌥ and drag to excerpt any region on the page.')).not.toHaveLength(0);
