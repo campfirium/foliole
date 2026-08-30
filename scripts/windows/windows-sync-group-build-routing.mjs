@@ -26,12 +26,9 @@ export function attachSyncGroupResult(summary, result) {
     'desktopDnsSdRouteControllerSelfcheck',
     'multiDeviceSyncALeave', 'multiDeviceSyncARejoin', 'multiDeviceSyncC', 'multiDeviceSyncCandidate',
     'multiDeviceSyncFromZero', 'multiDeviceSyncParticipation', 'singlePrincipalSyncGroup',
-    'twoDeviceSyncProvider', 'defaultSyncJourney'
+    'twoDeviceSyncProvider'
   ]) {
     if (result?.[key]) summary[key] = result[key];
-  }
-  if (result?.defaultSyncJourney) {
-    summary.sourceRevision = result.defaultSyncJourney.sourceRevision;
   }
 }
 
@@ -50,8 +47,7 @@ export function printSyncGroupResult(stream, summary) {
     ['multiDeviceSyncFromZero', 'multi-device-sync-from-zero', 'manifestPath'],
     ['multiDeviceSyncParticipation', 'multi-device-sync-participation', 'manifestPath'],
     ['singlePrincipalSyncGroup', 'single-principal-sync-group', 'manifestPath'],
-    ['twoDeviceSyncProvider', 'two-device-sync-provider', 'manifestPath'],
-    ['defaultSyncJourney', 'default-sync-journey', 'manifestPath']
+    ['twoDeviceSyncProvider', 'two-device-sync-provider', 'manifestPath']
   ];
   for (const [key, action, field] of values) {
     if (summary[key]) stream(`[windows-dev-action] ${action} identity=${summary.runId} manifest=${summary[key][field]}`);

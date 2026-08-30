@@ -1,6 +1,9 @@
+/* global console, process */
+
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
@@ -95,5 +98,15 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
       lastSuccessfulAction: 'fri_xcode_destination_ready',
       missingFact: locked ? 'fri_current_unlock_required' : 'fri_xcuitest_control_plane_failed',
       status: 'blocked' };
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  try {
+    const result = await createFriPhysicalReadinessAdapter()();
+    console.log(`[fri-physical-readiness] status=ready facts=${result.facts.join(',')}`);
+  } catch (error) {
+    console.error(`[fri-physical-readiness] status=blocked fact=${error.missingFact ?? 'unknown'}`);
+    process.exitCode = 1;
   }
 }

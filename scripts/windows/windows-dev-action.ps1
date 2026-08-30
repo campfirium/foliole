@@ -23,6 +23,13 @@ if (-not (Test-Path -LiteralPath $systemNode -PathType Leaf)) {
   exit 64
 }
 
+if ($Action -eq "default-sync-journey") {
+  [Console]::Error.WriteLine(
+    "Run default-sync-journey directly in the dedicated Windows checkout."
+  )
+  exit 64
+}
+
 $releaseStatus = switch ($Action) {
   "multi-device-sync-provider-complete" { "consumer_complete" }
   "multi-device-sync-provider-cancel" { "cancelled" }

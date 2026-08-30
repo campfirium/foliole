@@ -18,6 +18,7 @@
 
 ## Validation
 
+- 固定 Fri 的普通最小入口是从当前 Mac worktree 运行 `node scripts/ios/fri-physical-readiness.mjs`；它只核对既有配对、Developer Mode、wired transport、解锁与 Xcode destination，不准备或证明源码，也不替代产品 XCUITest 验收。
 - iOS 公开最小流程：`npm run android:web:build`、`npx cap sync ios`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`。
 - 不需要真实 iOS runtime 的改动先使用登记的显式文件检查；`quality:ios*` 与 `ios:sync:preflight` 均为 hosted-only。开发线程的中度 iOS 质检只在 `dev` 使用 `npm run quality:remote -- --scope ios`；自动化 Simulator 全检只进入 `--scope full` 或 T5 nightly full。内部 target commit 由 workflow 事件决定，人类不得输入 SHA。完整验收覆盖 runtime capability、bootstrap、配对 / Keychain、同步状态、sync-pack apply、永久游标、首次建库与进程重启持久化，每个场景使用独立证据目录，只关闭自己启动的设备，不接触正式模拟器应用或真机数据。交互式、视觉、难复现诊断、脚手架修改后的单场景复跑与真机验收仍留在本机；不得为质检隐式 commit / push。
 - 隔离 Simulator 验收必须保留 Xcode 的本地签名并在安装前验证签名；`CODE_SIGNING_ALLOWED=NO` 只用于不运行 App 的通用编译检查，不得复用其产物验收 Keychain 或可见运行态，否则会产生缺少 entitlement 的假红灯。

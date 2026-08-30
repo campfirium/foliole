@@ -14,10 +14,10 @@ it('builds desktop output before the journey without requiring Android signing m
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-default-sync-build-'));
   roots.push(repoRoot);
   const paths = {
-    gitPath: path.join(repoRoot, 'git.exe'), repoRoot,
+    repoRoot,
     systemNode: path.join(repoRoot, 'node.exe'), systemNpmCli: path.join(repoRoot, 'npm-cli.js')
   };
-  for (const name of [paths.gitPath, paths.systemNode, paths.systemNpmCli]) fs.writeFileSync(name, 'tool');
+  for (const name of [paths.systemNode, paths.systemNpmCli]) fs.writeFileSync(name, 'tool');
   const order = [];
   const calls = [];
   const execute = vi.fn(async (command, args) => {
@@ -26,26 +26,30 @@ it('builds desktop output before the journey without requiring Android signing m
     if (command === 'powershell.exe') return result('[]');
     return result('built');
   });
-  const revision = 'c'.repeat(40);
   const runRouteControl = vi.fn(async () => {
     order.push('journey');
-    return {
-      defaultSyncJourney: { manifestPath: path.join(repoRoot, 'receipt.json'), sourceRevision: revision },
-      output: 'journey passed\n'
-    };
+    return { output: 'journey passed\n' };
   });
   const run = await runWindowsDevBuild({ action: 'default-sync-journey', execute,
     paths, platform: 'win32', runRouteControl });
 
   expect(run).toMatchObject({ exitCode: 0, summary: {
-    action: 'default-sync-journey', resultStatus: 'success', signingSha256: null,
-    sourceRevision: revision
+    action: 'default-sync-journey', resultStatus: 'success', signingSha256: null
   } });
+  expect(run.summary).not.toHaveProperty('sourceRevision');
   expect(calls.filter(({ command }) => command === paths.systemNode)
     .map(({ args }) => args.slice(-2))).toEqual([
     ['run', 'build'], ['run', 'electron:compile']
   ]);
   expect(order.at(-1)).toBe('journey');
+});
+
+it('keeps the ordinary journey out of the source-pulling remote wrapper', () => {
+  const wrapper = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
+  const rejection = wrapper.indexOf('Run default-sync-journey directly');
+  const pull = wrapper.indexOf('& $systemNode $puller');
+  expect(rejection).toBeGreaterThan(-1);
+  expect(rejection).toBeLessThan(pull);
 });
 
 function result(stdout) {

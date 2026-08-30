@@ -1,10 +1,6 @@
 import { runWindowsMultiDeviceSyncControl } from './windows-multi-device-sync-control.mjs';
-import { runWindowsDefaultSyncJourneyControl } from './windows-default-sync-journey-control.mjs';
 
 export function runWindowsSyncGroupControl(action, options) {
-  if (action === 'default-sync-journey') {
-    return runWindowsDefaultSyncJourneyControl({ ...options, action });
-  }
   if (['desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
     'desktop-dnssd-find-diagnostic', 'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
     'desktop-dnssd-route-selfcheck',

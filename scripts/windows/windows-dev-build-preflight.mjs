@@ -19,7 +19,7 @@ export function windowsDevRequiredTools(action, paths) {
     || requiresWindowsDevDesktopBuild(action)
     || action === 'desktop-dnssd-route-prepare'
     || action === 'frozen-revision-preflight';
-  const gitRequired = ['default-sync-journey', 'frozen-revision-preflight'].includes(action)
+  const gitRequired = action === 'frozen-revision-preflight'
     || WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(action);
   const tarRequired = action === 'frozen-revision-preflight';
   const adbRequired = !['build', 'default-sync-journey', 'desktop-dnssd-host-facts',
