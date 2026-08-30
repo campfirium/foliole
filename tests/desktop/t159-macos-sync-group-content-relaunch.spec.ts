@@ -51,6 +51,7 @@ async function observeSyncGroup(page: Page, create: boolean): Promise<SyncGroupO
 async function createNamedTopic(page: Page) {
   const editor = page.locator('.prompt-editor-host .cm-content');
   await page.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();
+  await editor.click();
   await expect(editor).toBeFocused();
   await page.keyboard.press('F2');
   const rename = page.locator('input[aria-label^="Rename "]');
