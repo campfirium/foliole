@@ -46,7 +46,7 @@ async function copyFailure(options, output) {
   const localRoot = path.join(options.repoRoot, '.tmp', 'artifacts',
     't160-windows-default-sync-journey', evidence.buildIdentity);
   const copyFailures = [];
-  for (const name of ['summary.json', 'action.log']) {
+  for (const name of SUCCESS_FILES) {
     try {
       await copyFiles({ ...options, localRoot, names: [name], remoteRoot: evidence.remoteRoot });
     } catch (error) {

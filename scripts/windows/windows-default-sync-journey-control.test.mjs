@@ -84,7 +84,7 @@ it('does not enter Windows when Mac dev moves during the push', async () => {
   expect(runOptions.executeSsh).not.toHaveBeenCalled();
 });
 
-it('preserves bounded summary and log evidence from a remote journey failure', async () => {
+it('attempts the same bounded evidence set after a remote journey failure', async () => {
   const current = fixture();
   const runOptions = options(current);
   const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/20260830-failure';
@@ -95,7 +95,11 @@ it('preserves bounded summary and log evidence from a remote journey failure', a
 
   await expect(runWindowsDefaultSyncJourneyControl(runOptions))
     .rejects.toMatchObject({ evidenceRoot: expect.stringContaining('20260830-failure') });
-  expect(current.executeScp).toHaveBeenCalledTimes(2);
+  expect(current.executeScp).toHaveBeenCalledTimes(7);
   expect(current.executeScp.mock.calls.map(([args]) => path.basename(args.at(-1))).sort())
-    .toEqual(['action.log', 'summary.json']);
+    .toEqual([
+      'action.log', 'default-sync-journey-receipt.json', 'summary.json',
+      't160-after-sync.png', 't160-after-workspace.png',
+      't160-before-sync.png', 't160-before-workspace.png'
+    ]);
 });

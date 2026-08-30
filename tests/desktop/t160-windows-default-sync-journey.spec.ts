@@ -60,7 +60,12 @@ async function createNamedTopic(page: Page) {
   await page.keyboard.press('Enter');
   await expect(editor).toBeFocused();
   await page.keyboard.insertText(TOPIC_BODY);
-  await expect(page.getByRole('treeitem', { name: TOPIC_TITLE, exact: true })).toBeVisible();
+  const topic = page.getByRole('treeitem', { name: TOPIC_TITLE, exact: true });
+  await expect(topic).toBeVisible();
+  await expect(page.getByRole('main', { name: /^(Foliole workspace|Foliole 工作区)$/ }))
+    .toContainText(TOPIC_BODY);
+  await page.getByRole('treeitem', { name: /^(Welcome to Foliole|欢迎使用 Foliole)$/ }).click();
+  await topic.click();
   await expect(page.getByRole('main', { name: /^(Foliole workspace|Foliole 工作区)$/ }))
     .toContainText(TOPIC_BODY);
 }
