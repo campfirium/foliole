@@ -29,6 +29,7 @@ final class FoliolePhysicalOrdinaryJourneyUITests: XCTestCase {
     private func assertOrdinaryControls(in app: XCUIApplication) {
         XCTAssertTrue(app.buttons["Browse"].waitForExistence(timeout: 45),
                       "Browse did not become available after iPhone workspace loading.")
+        app.buttons["Browse"].tap()
         XCTAssertTrue(app.buttons["Capture"].waitForExistence(timeout: 15),
                       "Capture is unavailable on the ordinary iPhone surface.")
     }
@@ -45,6 +46,7 @@ final class FoliolePhysicalOrdinaryJourneyUITests: XCTestCase {
     }
 
     private func captureContent(in app: XCUIApplication) {
+        tapButton(named: "Browse", in: app)
         tapButton(named: "Capture", in: app)
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "Capture editor is unavailable.")
