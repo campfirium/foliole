@@ -60,6 +60,7 @@
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 		50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */; };
 		50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */; };
+		50F100211FED79650016851F /* FoliolePhysicalOrdinaryJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100221FED79650016851F /* FoliolePhysicalOrdinaryJourneyUITests.swift */; };
 		50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */; };
 		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
 /* End PBXBuildFile section */
@@ -135,6 +136,7 @@
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITests.swift; sourceTree = "<group>"; };
 		50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITestSupport.swift; sourceTree = "<group>"; };
+		50F100221FED79650016851F /* FoliolePhysicalOrdinaryJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalOrdinaryJourneyUITests.swift; sourceTree = "<group>"; };
 		50F100031FED79650016851F /* AppPhysicalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppPhysicalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceSyncEventProjectionTests.swift; sourceTree = "<group>"; };
 		50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceGroupDiscoveryTests.swift; sourceTree = "<group>"; };
@@ -250,6 +252,7 @@
 		50F100081FED79650016851F /* AppPhysicalUITests */ = {
 			isa = PBXGroup;
 			children = (
+				50F100221FED79650016851F /* FoliolePhysicalOrdinaryJourneyUITests.swift */,
 				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
 				50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */,
 			);
@@ -460,6 +463,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50F100211FED79650016851F /* FoliolePhysicalOrdinaryJourneyUITests.swift in Sources */,
 				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
 				50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */,
 			);
