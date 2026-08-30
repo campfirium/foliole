@@ -39,6 +39,7 @@ describe('T152 Windows immutable capsule controller', () => {
     expect(firstPhase).toContain('86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a');
     expect(firstPhase).toContain("baseRoot: '/private/tmp/foliole-t152-libraries'");
     expect(firstPhase).toContain("'-Action', 'find-acceptance'");
+    expect(firstPhase).toContain('fs.mkdirSync(evidenceParent, { recursive: true })');
     expect(formal).toContain("action !== 'desktop-dnssd-find-acceptance'");
     expect(`${formal}\n${firstPhase}`).not.toMatch(/refs\/heads\/dev|windows-dev-pull/u);
   });

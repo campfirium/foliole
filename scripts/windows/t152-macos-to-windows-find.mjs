@@ -86,7 +86,9 @@ async function remoteFind({ capsuleAttempt, controllerRoot, group, attemptId }) 
 export async function runMacosToWindowsFind({ attemptId, capsuleAttempt, controllerCommit,
   controllerRoot, productSource, repoRoot = process.cwd() }) {
   const { identity } = exactManifest(repoRoot, capsuleAttempt, controllerCommit);
-  const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 't152-15-formal-find', attemptId);
+  const evidenceParent = path.join(repoRoot, '.tmp', 'artifacts', 't152-15-formal-find');
+  const evidenceRoot = path.join(evidenceParent, attemptId);
+  fs.mkdirSync(evidenceParent, { recursive: true });
   fs.mkdirSync(evidenceRoot, { recursive: false });
   const [macos, libraryOwner, channel] = await productModules(productSource);
   const library = libraryOwner.createT152DesktopDnsSdLibrary({ attemptId,
