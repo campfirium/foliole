@@ -7,10 +7,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { t152PrepareRemoteCommand } from './t152-windows-prepare-request.mjs';
+import { PREPARE_DEADLINE_MS, PREPARE_STAGES } from
+  './t152-windows-prepare-stage-contract.mjs';
 
-export const PREPARE_STAGES = ['materialize', 'dependencies', 'electron-runtime', 'build',
-  'electron-compile', 'native', 'package', 'finalize'];
-export const PREPARE_DEADLINE_MS = 45 * 60 * 1000;
+export { PREPARE_DEADLINE_MS, PREPARE_STAGES };
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -67,6 +67,7 @@ export function validatePrepareStageReceipt(receipt, expected) {
       || receipt.capsuleId !== expected.capsuleId || receipt.capsuleRoot !== expected.capsuleRoot
       || receipt.hostFactsSha256 !== expected.hostFactsSha256
       || receipt.rootId !== expected.rootId
+      || receipt.planSha256 !== expected.planSha256
       || receipt.predecessorReceiptSha256 !== expected.predecessorReceiptSha256
       || !identityMatches || receipt.rawExit !== 0 || receipt.rawSignal !== null) {
     throw new Error(`prepare ${expected.stage} receipt is invalid`);
@@ -76,7 +77,7 @@ export function validatePrepareStageReceipt(receipt, expected) {
 
 export function validateBindingPreflight(parsed, request, requestSha256) {
   const paths = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
+    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath'];
   const normalized = parsed?.pathPredicate?.normalizedPaths;
   const rejected = parsed?.pathPredicate?.selfcheck?.rejected;
@@ -90,6 +91,27 @@ export function validateBindingPreflight(parsed, request, requestSha256) {
       || !parsed?.pathPredicate?.powershellVersion || !parsed?.pathPredicate?.clrVersion
       || !/^[0-9a-f]{64}$/u.test(parsed?.pathPredicate?.schemaSha256 ?? '')
       || !pathExact || !negativeExact) throw new Error('prepare binding preflight failed');
+  return parsed;
+}
+
+export function validateStagePlanProjection(parsed, request) {
+  const stages = parsed?.plan?.entries?.map((entry) => entry.stage);
+  const argvScalar = parsed?.plan?.entries?.every((entry) => entry.commands.every((command) =>
+    command.shell === false && typeof command.file === 'string'
+      && command.args.every((value) => typeof value === 'string')));
+  const matrices = PREPARE_STAGES.every((stage) => {
+    const matrix = parsed?.matrices?.[stage];
+    return matrix?.success?.resultStatus === 'success'
+      && matrix?.failure?.resultStatus === 'failed'
+      && matrix?.timeout?.resultStatus === 'timeout'
+      && [matrix.success, matrix.failure, matrix.timeout].every((receipt) =>
+        receipt.planSha256 === parsed.planSha256 && receipt.rootId === request.rootId);
+  });
+  if (JSON.stringify(stages) !== JSON.stringify(PREPARE_STAGES) || !argvScalar || !matrices
+      || !/^[0-9a-f]{64}$/u.test(parsed?.planSha256 ?? '')
+      || !/^[0-9a-f]{64}$/u.test(parsed?.projectionSha256 ?? '') || !parsed?.nodeVersion) {
+    throw new Error('prepare stage plan projection failed');
+  }
   return parsed;
 }
 
@@ -107,30 +129,40 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
   let deadlineAt = Date.now() + PREPARE_DEADLINE_MS;
   const remote = (local, target) => copy('scp', ['-q', ...sshBase, local,
     `${host}:${target.replaceAll('\\', '/')}`], { deadlineAt, env });
-  await remote(staging.actionLocal, staging.action);
+  await Promise.all([[staging.actionLocal, staging.action], [staging.contractLocal, staging.contract],
+    [staging.requestLocal, staging.request], [staging.runnerLocal, staging.runner]].map(
+    ([local, target]) => remote(local, target)));
   const preflightTerminal = await terminal('ssh', ['-T', ...sshBase, host,
     ...t152PrepareRemoteCommand(staging.action, 'binding-preflight', preparedRequest.token)],
   { deadlineAt, env });
   const parsed = JSON.parse(/^T152_BINDING_PREFLIGHT=(.+)$/mu.exec(
     preflightTerminal.stdout)?.[1] ?? 'null');
+  const planTerminal = await terminal('ssh', ['-T', ...sshBase, host,
+    ...t152PrepareRemoteCommand(staging.action, 'stage-plan-preflight', preparedRequest.token)],
+  { deadlineAt, env });
+  const stagePlan = JSON.parse(/^T152_STAGE_PLAN=(.+)$/mu.exec(planTerminal.stdout)?.[1] ?? 'null');
   const absence = { archivesUploaded: false, capsuleMaterialized: false,
-    longPrepareStarted: false, stagingUploaded: false };
+    dependenciesStarted: false, longPrepareStarted: false, productStarted: false };
   const preflight = localTerminalReceipt(capsule, 'g1a-binding-terminal.json', {
     absence, capsuleId: preparedRequest.request.capsuleId,
     capsuleRoot: preparedRequest.request.capsuleRoot, hostFactsSha256,
-    identity: preparedRequest.request.identity, parsed,
+    identity: preparedRequest.request.identity, parsed, planTerminal, stagePlan,
     requestSha256: preparedRequest.requestSha256, rootId: preparedRequest.request.rootId,
     schemaVersion: 1, terminal: preflightTerminal, tokenSha256: digest(preparedRequest.token) });
   try {
     if (preflightTerminal.exitCode !== 0 || preflightTerminal.signal !== null
         || preflightTerminal.timedOut) throw new Error('prepare binding terminal failed');
     validateBindingPreflight(parsed, preparedRequest.request, preparedRequest.requestSha256);
+    if (planTerminal.exitCode !== 0 || planTerminal.signal !== null || planTerminal.timedOut) {
+      throw new Error('prepare stage plan terminal failed');
+    }
+    validateStagePlanProjection(stagePlan, preparedRequest.request);
   } catch {
     throw Object.assign(new Error('prepare binding preflight failed'), { preflight });
   }
   deadlineAt = Date.now() + PREPARE_DEADLINE_MS;
-  await Promise.all([[staging.helperLocal, staging.helper],
-    [capsule.productArchive, staging.product], [capsule.controllerArchive, staging.controller],
+  await Promise.all([[capsule.productArchive, staging.product],
+    [capsule.controllerArchive, staging.controller],
     [capsule.manifestPath, staging.manifest]].map(([local, target]) => remote(local, target)));
 
   const receipts = []; let predecessorReceiptSha256 = null;
@@ -152,6 +184,7 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
         capsuleRoot: preparedRequest.request.capsuleRoot,
         hostFactsSha256,
         identity: preparedRequest.request.identity, predecessorReceiptSha256,
+        planSha256: stagePlan.planSha256,
         requestSha256: preparedRequest.requestSha256, rootId: preparedRequest.request.rootId,
         stage, tokenSha256: digest(preparedRequest.token) });
       predecessorReceiptSha256 = digest(fs.readFileSync(localReceipt));

@@ -115,21 +115,25 @@ export async function prepareT152WindowsCapsule({ capsuleId = randomUUID(), cont
   const paths = remoteT152CapsulePaths(hostFacts, capsuleId);
   const staging = { action: path.win32.join(hostFacts.roots.userProfile,
     `t152-capsule-action-${capsuleId}.ps1`), actionLocal: path.join(controllerRoot, ACTION_PATH),
+    contract: path.win32.join(hostFacts.roots.userProfile,
+      't152-windows-prepare-stage-contract.mjs'), contractLocal: path.join(controllerRoot,
+      'scripts/windows/t152-windows-prepare-stage-contract.mjs'),
     controller: path.win32.join(
     hostFacts.roots.userProfile, `t152-controller-${capsuleId}.tar`), manifest: path.win32.join(
-    hostFacts.roots.userProfile, `t152-manifest-${capsuleId}.json`), helper: path.win32.join(
-    hostFacts.roots.userProfile, `t152-prepare-stage-${capsuleId}.ps1`),
-    helperLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-prepare-stage.ps1'),
+    hostFacts.roots.userProfile, `t152-manifest-${capsuleId}.json`),
     product: path.win32.join(
-    hostFacts.roots.userProfile, `t152-product-${capsuleId}.tar`) };
+    hostFacts.roots.userProfile, `t152-product-${capsuleId}.tar`), request: path.win32.join(
+    hostFacts.roots.userProfile, 't152-windows-prepare-request.mjs'), requestLocal: path.join(
+    controllerRoot, 'scripts/windows/t152-windows-prepare-request.mjs'), runner: path.win32.join(
+    hostFacts.roots.userProfile, `t152-windows-prepare-stage-runner-${capsuleId}.mjs`),
+    runnerLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-prepare-stage-runner.mjs') };
   const preparedRequest = createT152WindowsPrepareRequest({ capsuleId,
     capsuleRoot: paths.capsuleRoot, controllerArchivePath: staging.controller,
     controllerRoot: paths.controllerRoot, evidenceRoot: paths.evidenceRoot,
     hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), identity: capsule.manifest.identity,
     manifestPath: staging.manifest, nodePath: hostFacts.runtime.node,
-    npmPath: hostFacts.runtime.npm, prepareHelperPath: staging.helper,
-    productArchivePath: staging.product, rootId,
-    sourceRoot: paths.sourceRoot, tarPath: hostFacts.runtime.tar });
+    npmPath: hostFacts.runtime.npm, productArchivePath: staging.product, rootId,
+    sourceRoot: paths.sourceRoot, stageRunnerPath: staging.runner, tarPath: hostFacts.runtime.tar });
   const stages = await runT152WindowsPrepareStages({ capsule, env, host,
     hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), paths, preparedRequest,
     sshBase: sshBase(env), staging });

@@ -27,7 +27,7 @@ function sha256(value) {
 
 function validateRequest(request) {
   const paths = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
+    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath'];
   if (request.schemaVersion !== 1 || !UUID.test(request.capsuleId ?? '')
       || !UUID.test(request.rootId ?? '') || !paths.every((key) => path.win32.isAbsolute(
@@ -65,10 +65,9 @@ export function decodeT152WindowsPrepareRequest(token) {
 }
 
 export function t152PrepareRemoteCommand(scriptPath, action, token) {
-  const actions = ['binding-preflight', 'prepare-materialize', 'prepare-dependencies',
-    'prepare-electron-runtime', 'prepare-build', 'prepare-electron-compile',
-    'prepare-native', 'prepare-package', 'prepare-finalize'];
-  if (!actions.includes(action)
+  const validAction = ['binding-preflight', 'stage-plan-preflight'].includes(action)
+    || /^prepare-[a-z-]+$/u.test(action);
+  if (!validAction
       || !path.win32.isAbsolute(scriptPath ?? '') || !/^[A-Za-z0-9_-]+$/u.test(token ?? '')) {
     throw new Error('T152 prepare remote command is invalid');
   }

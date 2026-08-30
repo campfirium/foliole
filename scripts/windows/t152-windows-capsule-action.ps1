@@ -1,8 +1,7 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("host-facts", "binding-preflight", "prepare-materialize", "prepare-dependencies",
-    "prepare-electron-runtime", "prepare-build", "prepare-electron-compile", "prepare-native",
-    "prepare-package", "prepare-finalize", "g2-path", "g3-anchor", "formal")]
+  [ValidateScript({ $_ -in @("host-facts", "binding-preflight", "stage-plan-preflight",
+    "g2-path", "g3-anchor", "formal") -or $_ -match '^prepare-[a-z-]+$' })]
   [string]$Action,
   [string]$CapsuleRoot = "", [string]$ConfigPath = "", [string]$ControllerRoot = "",
   [string]$EvidenceRoot = "", [string]$NodePath = "", [string]$RequestBase64 = "",
@@ -69,7 +68,7 @@ function Read-PrepareRequest([string]$Token) {
   $request = $envelope.requestJson | ConvertFrom-Json
   $requestProperties = @($request.PSObject.Properties)
   $paths = @('capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
+    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath')
   foreach ($name in @('capsuleId', 'hostFactsSha256', 'identity', 'rootId') + $paths) {
     if ($null -eq $request.PSObject.Properties[$name]) { throw "prepare field missing: $name" }
@@ -143,7 +142,8 @@ try {
     Write-Output "T152_HOST_FACTS=$(Get-HostFacts | ConvertTo-Json -Compress -Depth 10)"
     exit 0
   }
-  if ($Action -eq "binding-preflight" -or $Action.StartsWith("prepare-")) {
+  if ($Action -eq "binding-preflight" -or $Action -eq "stage-plan-preflight" -or
+      $Action.StartsWith("prepare-")) {
     $binding = Read-PrepareRequest $RequestBase64
     if ($Action -eq "binding-preflight") {
       $receipt = [ordered]@{ fieldCount = $binding.fieldCount
@@ -155,11 +155,12 @@ try {
       Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 8)"
       exit 0
     }
-    if (!(Test-Path -LiteralPath $binding.request.prepareHelperPath -PathType Leaf)) {
-      throw "prepare stage helper is missing"
+    if (!(Test-Path -LiteralPath $binding.request.stageRunnerPath -PathType Leaf)) {
+      throw "prepare stage runner is missing"
     }
-    . $binding.request.prepareHelperPath
-    Invoke-T152PrepareStage -Action $Action -Binding $binding
+    & $binding.request.nodePath $binding.request.stageRunnerPath --action $Action `
+      --request-base64 $RequestBase64
+    if ($LASTEXITCODE -ne 0) { throw "prepare stage runner failed with exit $LASTEXITCODE" }
     exit 0
   }
   foreach ($item in @(@($CapsuleRoot, "capsule root"), @($ControllerRoot, "controller root"),

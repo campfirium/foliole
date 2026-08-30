@@ -12,7 +12,8 @@ const names = [
   't152-windows-formal-interactive-install.ps1',
   't152-windows-formal-interactive-worker.mjs', 't152-windows-prejourney-anchor.mjs',
   't152-windows-prepare-request.mjs', 't152-windows-prepare-request.test.mjs',
-  't152-windows-prepare-stage.ps1', 't152-windows-prepare-stages.mjs',
+  't152-windows-prepare-stage-contract.mjs', 't152-windows-prepare-stage-runner.mjs',
+  't152-windows-prepare-stages.mjs',
   't152-macos-to-windows-find.mjs', 't152-windows-to-macos-find.mjs'
 ];
 const sources = Object.fromEntries(names.map((name) => [name,
@@ -66,11 +67,9 @@ it('projects request properties as an explicit collection under strict mode', ()
 
 it('keeps source-free host facts read-only and verifies both archives before builds', () => {
   const action = sources['t152-windows-capsule-action.ps1'];
-  const stage = sources['t152-windows-prepare-stage.ps1'];
-  expect(stage.indexOf('prepare archive digest mismatch')).toBeLessThan(
-    stage.indexOf("'dependencies'"));
-  expect(stage.indexOf('prepare archive content mismatch')).toBeLessThan(
-    stage.indexOf("'dependencies'"));
+  const stage = sources['t152-windows-prepare-stage-runner.mjs'];
+  expect(stage).toContain('prepare archive digest mismatch');
+  expect(stage).toContain('prepare archive content mismatch');
   expect(`${action}\n${stage}`).not.toMatch(/Set-Net|New-Net|Remove-Net|Restart-Service|Set-Service/u);
   expect(action).toContain('T152_HOST_FACTS=');
 });
@@ -90,13 +89,27 @@ it('uses one prepare request owner and one token for preflight and prepare', () 
 it('persists and rereads G1a before staging, then recovers every ordered terminal receipt', () => {
   const stages = sources['t152-windows-prepare-stages.mjs'];
   expect(stages.indexOf("'g1a-binding-terminal.json'")).toBeLessThan(
-    stages.indexOf('staging.helperLocal'));
+    stages.indexOf('capsule.productArchive'));
   expect(stages).toContain('fs.renameSync(temporary, file)');
   expect(stages).toContain('JSON.parse(fs.readFileSync(file');
   expect(stages).toContain('predecessorReceiptSha256');
   expect(stages).toContain('process.kill(-child.pid');
   expect(stages).toContain('notStarted');
   expect(stages.match(/deadlineAt = Date\.now\(\) \+ PREPARE_DEADLINE_MS/g)).toHaveLength(2);
+});
+
+it('retires the PowerShell stage helper and keeps one Node plan and receipt owner', () => {
+  const action = sources['t152-windows-capsule-action.ps1'];
+  const contract = sources['t152-windows-prepare-stage-contract.mjs'];
+  const runner = sources['t152-windows-prepare-stage-runner.mjs'];
+  expect(fs.existsSync('scripts/windows/t152-windows-prepare-stage.ps1')).toBe(false);
+  expect(all).not.toContain('prepareHelperPath');
+  expect(action).not.toContain('Invoke-T152PrepareStage');
+  expect(action).toContain('$binding.request.stageRunnerPath');
+  expect(contract.match(/PREPARE_STAGES =/gu)).toHaveLength(1);
+  expect(runner).toContain('createPrepareStageReceipt');
+  expect(runner).toContain("shell: false");
+  expect(runner).not.toMatch(/spawn\([^)]*shell:\s*true/gu);
 });
 
 it('uses one scheduled worker for G2, G3, and formal execution', () => {

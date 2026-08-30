@@ -18,8 +18,9 @@ function request() {
       productCommit: 'd'.repeat(40), productTree: 'e'.repeat(40), t7Run: '1' },
     manifestPath: 'C:\\Stage\\manifest.json', nodePath: 'C:\\Program Files\\nodejs\\node.exe',
     npmPath: 'C:\\Program Files\\nodejs\\npm.cmd',
-    prepareHelperPath: 'C:\\Stage\\prepare-stage.ps1', productArchivePath: 'C:\\Stage\\产品.tar',
-    rootId: ROOT, sourceRoot: 'C:\\Owned Space\\source', tarPath: 'C:\\Windows\\tar.exe' };
+    productArchivePath: 'C:\\Stage\\产品.tar', rootId: ROOT,
+    sourceRoot: 'C:\\Owned Space\\source', stageRunnerPath: 'C:\\Stage\\stage-runner.mjs',
+    tarPath: 'C:\\Windows\\tar.exe' };
 }
 
 it('round trips canonical UTF-8 JSON through one unpadded base64url token', () => {
