@@ -1,118 +1,29 @@
-/* global clearTimeout, process, setTimeout */
-
 import { createHash } from 'node:crypto';
-import { spawn } from 'node:child_process';
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { t152PrepareRemoteCommand } from './t152-windows-prepare-request.mjs';
+import { createT152WindowsPrepareRequest, t152PrepareRemoteCommand } from
+  './t152-windows-prepare-request.mjs';
 import { PREPARE_DEADLINE_MS, PREPARE_STAGES } from
   './t152-windows-prepare-stage-contract.mjs';
+import { atomicJson, createControlBundle, parseControlBundleScripts, serialTransfers, terminalState,
+  transferTerminal as terminal, verifyAndCollectControlBundle } from './t152-windows-transfer-journal.mjs';
+import { validateBindingPreflight, validateNpmRuntimeOwner, validatePrepareStageReceipt,
+  validateStagePlanProjection } from './t152-windows-prepare-validation.mjs';
 
 export { PREPARE_DEADLINE_MS, PREPARE_STAGES };
+export { validateBindingPreflight, validateNpmRuntimeOwner, validatePrepareStageReceipt,
+  validateStagePlanProjection } from './t152-windows-prepare-validation.mjs';
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function atomicJson(file, value) {
-  const temporary = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`);
-  fs.renameSync(temporary, file);
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
-
-function terminal(command, args, { deadlineAt, env }) {
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const child = spawn(command, args, { detached: true, env, shell: false,
-      stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = ''; let stderr = ''; let timedOut = false;
-    child.stdout.on('data', (chunk) => { stdout += chunk; process.stdout.write(chunk); });
-    child.stderr.on('data', (chunk) => { stderr += chunk; process.stderr.write(chunk); });
-    const remaining = Math.max(0, deadlineAt - Date.now());
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) {
-        if (error.code !== 'ESRCH') stderr += `\nprocess-group termination failed: ${error.message}`;
-      }
-    }, remaining);
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      resolve({ durationMs: Date.now() - started, endedAt: new Date().toISOString(),
-        error: error.message, exitCode: null, signal: null, startedAt: new Date(started).toISOString(),
-        stderr, stdout, timedOut });
-    });
-    child.on('close', (exitCode, signal) => {
-      clearTimeout(timer);
-      resolve({ durationMs: Date.now() - started, endedAt: new Date().toISOString(),
-        exitCode, signal, startedAt: new Date(started).toISOString(), stderr, stdout, timedOut });
-    });
-  });
 }
 
 async function copy(command, args, options) {
   const result = await terminal(command, args, options);
   if (result.exitCode !== 0) throw Object.assign(new Error(`${command} transfer failed`), result);
   return result;
-}
-
-export function validatePrepareStageReceipt(receipt, expected) {
-  const identityMatches = Object.entries(expected.identity).every(
-    ([key, value]) => receipt.identity?.[key] === value);
-  if (receipt.resultStatus !== 'success' || receipt.stage !== expected.stage
-      || receipt.requestSha256 !== expected.requestSha256
-      || receipt.tokenSha256 !== expected.tokenSha256
-      || receipt.capsuleId !== expected.capsuleId || receipt.capsuleRoot !== expected.capsuleRoot
-      || receipt.hostFactsSha256 !== expected.hostFactsSha256
-      || receipt.rootId !== expected.rootId
-      || receipt.planSha256 !== expected.planSha256
-      || receipt.predecessorReceiptSha256 !== expected.predecessorReceiptSha256
-      || !identityMatches || receipt.rawExit !== 0 || receipt.rawSignal !== null) {
-    throw new Error(`prepare ${expected.stage} receipt is invalid`);
-  }
-  return receipt;
-}
-
-export function validateBindingPreflight(parsed, request, requestSha256) {
-  const paths = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
-    'sourceRoot', 'tarPath'];
-  const normalized = parsed?.pathPredicate?.normalizedPaths;
-  const rejected = parsed?.pathPredicate?.selfcheck?.rejected;
-  const pathExact = paths.every((field) => normalized?.[field]?.value === request[field]
-    && normalized[field].normalized === request[field]
-    && normalized[field].localRoot === path.win32.parse(request[field]).root);
-  const negativeExact = ['relative', 'driveRelative', 'rootRelative', 'uri',
-    'normalizationMismatch'].every((field) => rejected?.[field] === true);
-  if (parsed?.requestSha256 !== requestSha256 || parsed?.runtimeExact !== true
-      || !Object.values(parsed?.runtimeExists ?? {}).every((value) => value === true)
-      || !parsed?.pathPredicate?.powershellVersion || !parsed?.pathPredicate?.clrVersion
-      || !/^[0-9a-f]{64}$/u.test(parsed?.pathPredicate?.schemaSha256 ?? '')
-      || !pathExact || !negativeExact) throw new Error('prepare binding preflight failed');
-  return parsed;
-}
-
-export function validateStagePlanProjection(parsed, request) {
-  const stages = parsed?.plan?.entries?.map((entry) => entry.stage);
-  const argvScalar = parsed?.plan?.entries?.every((entry) => entry.commands.every((command) =>
-    command.shell === false && typeof command.file === 'string'
-      && command.args.every((value) => typeof value === 'string')));
-  const matrices = PREPARE_STAGES.every((stage) => {
-    const matrix = parsed?.matrices?.[stage];
-    return matrix?.success?.resultStatus === 'success'
-      && matrix?.failure?.resultStatus === 'failed'
-      && matrix?.timeout?.resultStatus === 'timeout'
-      && [matrix.success, matrix.failure, matrix.timeout].every((receipt) =>
-        receipt.planSha256 === parsed.planSha256 && receipt.rootId === request.rootId);
-  });
-  if (JSON.stringify(stages) !== JSON.stringify(PREPARE_STAGES) || !argvScalar || !matrices
-      || !/^[0-9a-f]{64}$/u.test(parsed?.planSha256 ?? '')
-      || !/^[0-9a-f]{64}$/u.test(parsed?.projectionSha256 ?? '') || !parsed?.nodeVersion) {
-    throw new Error('prepare stage plan projection failed');
-  }
-  return parsed;
 }
 
 function localTerminalReceipt(capsule, name, value) {
@@ -125,18 +36,70 @@ function localTerminalReceipt(capsule, name, value) {
 }
 
 export async function runT152WindowsPrepareStages({ capsule, env, host, hostFactsSha256,
-  paths, preparedRequest, sshBase, staging }) {
+  paths, prepareRequestInput, sshBase, staging }) {
   let deadlineAt = Date.now() + PREPARE_DEADLINE_MS;
   const remote = (local, target) => copy('scp', ['-q', ...sshBase, local,
     `${host}:${target.replaceAll('\\', '/')}`], { deadlineAt, env });
-  await Promise.all([[staging.actionLocal, staging.action], [staging.contractLocal, staging.contract],
-    [staging.requestLocal, staging.request], [staging.runnerLocal, staging.runner]].map(
-    ([local, target]) => remote(local, target)));
+  const bundle = createControlBundle({ bundleId: prepareRequestInput.capsuleId,
+    capsuleRoot: capsule.root, files: [staging.actionLocal, staging.collectionsLocal,
+      staging.contractLocal,
+      staging.npmOwnerLocal, staging.parserLocal, staging.requestLocal, staging.runnerLocal,
+      staging.transferLocal,
+      staging.verifierLocal],
+    remoteBaseRoot: staging.remoteBaseRoot });
+  if (staging.action !== path.win32.join(bundle.remoteRoot, path.basename(staging.actionLocal))
+      || staging.runner !== path.win32.join(bundle.remoteRoot, path.basename(staging.runnerLocal))) {
+    throw new Error('prepare control bundle path mismatch');
+  }
+  const controlTransfer = await serialTransfers([{ local: bundle.archive,
+    remote: bundle.remoteArchive }], ({ local, remote: target }) => remote(local, target));
+  const extractTerminal = terminal('ssh', ['-T', ...sshBase, host,
+    prepareRequestInput.tarPath, '-xf', bundle.remoteArchive, '-C',
+    path.win32.dirname(bundle.remoteRoot)], { deadlineAt, env });
+  const extracted = await extractTerminal;
+  const parser = terminalState(extracted) === 'success'
+    ? await parseControlBundleScripts({ deadlineAt, env, host, parserPath: staging.parser,
+      sshBase, verificationToken: bundle.verificationToken })
+    : { parsed: null, state: 'not_started', terminal: null };
+  const verify = parser.state === 'success' ? await verifyAndCollectControlBundle({
+    actionPath: staging.action, bundle, deadlineAt, env, host,
+    localFile: path.join(capsule.root, 'g1a-control-bundle-verification.json'), sshBase })
+    : { receipt: { parsed: null, state: 'not_started', terminal: null },
+      state: 'not_started', terminal: null };
+  const controlBundle = localTerminalReceipt(capsule, 'g1a-control-bundle-terminal.json', {
+    bundle, extract: { state: terminalState(extracted), terminal: extracted },
+    parser, schemaVersion: 1, transfer: controlTransfer, verify });
+  if (controlTransfer[0]?.terminalState !== 'success' || terminalState(extracted) !== 'success'
+      || parser.state !== 'success' || !parser.parsed
+      || parser.parsed.scripts.some((script) => script.errors.length !== 0)
+      || verify.receipt.state !== 'success' || verify.state !== 'success'
+      || verify.receipt.parsed.failure !== null) {
+    throw Object.assign(new Error('prepare control bundle failed'), { controlBundle });
+  }
+  const runtimeOwnerTerminal = await terminal('ssh', ['-T', ...sshBase, host,
+    'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-File', staging.action, '-Action', 'runtime-owner'], { deadlineAt, env });
+  const runtimeOwner = JSON.parse(/^T152_RUNTIME_OWNER=(.+)$/mu.exec(
+    runtimeOwnerTerminal.stdout)?.[1] ?? 'null');
+  const runtimeOwnerReceipt = localTerminalReceipt(capsule, 'g1a-runtime-owner-terminal.json', {
+    parsed: runtimeOwner, schemaVersion: 1, terminal: runtimeOwnerTerminal });
+  if (terminalState(runtimeOwnerTerminal) !== 'success') {
+    throw Object.assign(new Error('prepare runtime owner terminal failed'), { runtimeOwnerReceipt });
+  }
+  validateNpmRuntimeOwner(runtimeOwner, prepareRequestInput);
+  const preparedRequest = createT152WindowsPrepareRequest({ ...prepareRequestInput,
+    nodePath: runtimeOwner.nodePath, npmCliPath: runtimeOwner.npmCliPath,
+    npmCommandPath: runtimeOwner.npmCommandPath, npmRuntimeOwner: runtimeOwner });
   const preflightTerminal = await terminal('ssh', ['-T', ...sshBase, host,
     ...t152PrepareRemoteCommand(staging.action, 'binding-preflight', preparedRequest.token)],
   { deadlineAt, env });
   const parsed = JSON.parse(/^T152_BINDING_PREFLIGHT=(.+)$/mu.exec(
     preflightTerminal.stdout)?.[1] ?? 'null');
+  const launcherTerminal = await terminal('ssh', ['-T', ...sshBase, host,
+    ...t152PrepareRemoteCommand(staging.action, 'launcher-preflight', preparedRequest.token)],
+  { deadlineAt, env });
+  const launcher = JSON.parse(/^T152_NPM_LAUNCHER=(.+)$/mu.exec(
+    launcherTerminal.stdout)?.[1] ?? 'null');
   const planTerminal = await terminal('ssh', ['-T', ...sshBase, host,
     ...t152PrepareRemoteCommand(staging.action, 'stage-plan-preflight', preparedRequest.token)],
   { deadlineAt, env });
@@ -146,13 +109,23 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
   const preflight = localTerminalReceipt(capsule, 'g1a-binding-terminal.json', {
     absence, capsuleId: preparedRequest.request.capsuleId,
     capsuleRoot: preparedRequest.request.capsuleRoot, hostFactsSha256,
-    identity: preparedRequest.request.identity, parsed, planTerminal, stagePlan,
+    identity: preparedRequest.request.identity, launcher, launcherTerminal, parsed,
+    planTerminal, stagePlan,
     requestSha256: preparedRequest.requestSha256, rootId: preparedRequest.request.rootId,
     schemaVersion: 1, terminal: preflightTerminal, tokenSha256: digest(preparedRequest.token) });
   try {
     if (preflightTerminal.exitCode !== 0 || preflightTerminal.signal !== null
         || preflightTerminal.timedOut) throw new Error('prepare binding terminal failed');
     validateBindingPreflight(parsed, preparedRequest.request, preparedRequest.requestSha256);
+    if (launcherTerminal.exitCode !== 0 || launcherTerminal.signal !== null
+        || launcherTerminal.timedOut || launcher?.descriptor?.file !== preparedRequest.request.nodePath
+        || launcher?.descriptor?.args?.[0] !== preparedRequest.request.npmCliPath
+        || launcher?.descriptor?.shell !== false || launcher?.rawExit !== 0
+        || launcher?.rawSignal !== null || launcher?.timedOut !== false || !launcher?.version
+        || !Object.values(launcher?.fileIdentities ?? {}).every((item) =>
+          /^[0-9a-f]{64}$/u.test(item?.sha256 ?? ''))) {
+      throw new Error('prepare npm launcher preflight failed');
+    }
     if (planTerminal.exitCode !== 0 || planTerminal.signal !== null || planTerminal.timedOut) {
       throw new Error('prepare stage plan terminal failed');
     }
@@ -161,9 +134,17 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
     throw Object.assign(new Error('prepare binding preflight failed'), { preflight });
   }
   deadlineAt = Date.now() + PREPARE_DEADLINE_MS;
-  await Promise.all([[capsule.productArchive, staging.product],
-    [capsule.controllerArchive, staging.controller],
-    [capsule.manifestPath, staging.manifest]].map(([local, target]) => remote(local, target)));
+  const payloadTransfers = await serialTransfers([
+    { local: capsule.productArchive, remote: staging.product },
+    { local: capsule.controllerArchive, remote: staging.controller },
+    { local: capsule.manifestPath, remote: staging.manifest }
+  ], ({ local, remote: target }) => remote(local, target));
+  const payload = localTerminalReceipt(capsule, 'g1b-payload-transfer-terminal.json', {
+    schemaVersion: 1, transfers: payloadTransfers });
+  if (payloadTransfers.length !== 3
+      || payloadTransfers.some((item) => item.terminalState !== 'success')) {
+    throw Object.assign(new Error('prepare payload transfer failed'), { payload });
+  }
 
   const receipts = []; let predecessorReceiptSha256 = null;
   for (const stage of PREPARE_STAGES) {
@@ -199,5 +180,5 @@ export async function runT152WindowsPrepareStages({ capsule, env, host, hostFact
       throw Object.assign(new Error(`${action} terminal failed`), { receipts });
     }
   }
-  return { preflight, receipts };
+  return { preflight, preparedRequest, receipts, runtimeOwnerReceipt };
 }

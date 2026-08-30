@@ -7,8 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { decodeT152WindowsPrepareRequest } from './t152-windows-prepare-request.mjs';
-import { createPrepareContractProjection, createPrepareStagePlan, createPrepareStageReceipt,
-  PREPARE_DEADLINE_MS, PREPARE_STAGES, prepareStagePlanSha256 } from
+import { createNpmLauncherDescriptor, createPrepareContractProjection, createPrepareStagePlan,
+  createPrepareStageReceipt, PREPARE_DEADLINE_MS, PREPARE_STAGES, prepareStagePlanSha256 } from
   './t152-windows-prepare-stage-contract.mjs';
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
@@ -56,6 +56,43 @@ function terminal(spec, deadlineAt, evidenceRoot) {
     child.on('error', (error) => finish(null, null, error.message));
     child.on('close', (exitCode, signal) => finish(exitCode, signal));
   });
+}
+
+function fileIdentity(file) {
+  return { path: fs.realpathSync(file), sha256: digest(fs.readFileSync(file)) };
+}
+
+function launcherTerminal(spec) {
+  return new Promise((resolve) => {
+    let stdout = ''; let stderr = ''; let settled = false; let timedOut = false;
+    const child = spawn(spec.file, spec.args, { shell: false, stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true });
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, 60_000);
+    const finish = (exitCode, signal, error = null) => {
+      if (settled) return; settled = true; clearTimeout(timer);
+      resolve({ error, exitCode, signal, stderr, stdout, timedOut });
+    };
+    child.on('error', (error) => finish(null, null, error.message));
+    child.on('close', (exitCode, signal) => finish(exitCode, signal));
+  });
+}
+
+async function runLauncherPreflight(request) {
+  const descriptor = createNpmLauncherDescriptor(request, 'npm-version', ['--version']);
+  const result = await launcherTerminal(descriptor);
+  const version = result.exitCode === 0 && result.signal === null && !result.timedOut
+    ? result.stdout.trim() : null;
+  const receipt = { descriptor, fileIdentities: {
+    nodePath: fileIdentity(request.nodePath), npmCliPath: fileIdentity(request.npmCliPath),
+    npmCommandPath: fileIdentity(request.npmCommandPath),
+    npmManifestPath: fileIdentity(request.npmRuntimeOwner.npmManifestPath) },
+  npmRuntimeOwnerSha256: request.npmRuntimeOwner.ownerSha256, rawExit: result.exitCode,
+  rawSignal: result.signal, stderr: result.stderr, stdout: result.stdout,
+  timedOut: result.timedOut, version };
+  process.stdout.write(`T152_NPM_LAUNCHER=${JSON.stringify(receipt)}\n`);
+  if (!version || result.error) throw new Error(result.error ?? 'npm launcher preflight failed');
 }
 
 function readManifest(request) {
@@ -151,14 +188,16 @@ async function runStage(action, decoded, token) {
 function parseArgs(argv) {
   const values = {};
   for (let index = 0; index < argv.length; index += 2) values[argv[index]] = argv[index + 1];
-  if (!values['--action'] || !values['--request-base64']) throw new Error('runner args missing');
+  if (!values['--action']) throw new Error('runner args missing');
   return values;
 }
 
 try {
   const args = parseArgs(process.argv.slice(2));
   const decoded = decodeT152WindowsPrepareRequest(args['--request-base64']);
-  if (args['--action'] === 'stage-plan-preflight') {
+  if (args['--action'] === 'launcher-preflight') {
+    await runLauncherPreflight(decoded.request);
+  } else if (args['--action'] === 'stage-plan-preflight') {
     const projection = createPrepareContractProjection(decoded.request, decoded.requestSha256,
       digest(args['--request-base64']));
     process.stdout.write(`T152_STAGE_PLAN=${JSON.stringify(projection)}\n`);

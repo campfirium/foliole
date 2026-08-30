@@ -9,14 +9,15 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { formalLaunchEnvHash } from './t152-windows-formal-interactive-contract.mjs';
-import { canonicalPrepareJson, createT152WindowsPrepareRequest,
-  remoteT152CapsulePaths } from './t152-windows-prepare-request.mjs';
+import { canonicalPrepareJson, remoteT152CapsulePaths } from
+  './t152-windows-prepare-request.mjs';
 import { runT152WindowsPrepareStages } from './t152-windows-prepare-stages.mjs';
+import { captureSourceFreeHostFacts } from './t152-windows-transfer-journal.mjs';
+import { windowsDevTransportIdentity } from './windows-dev-remote-spec.mjs';
 
 const PRODUCT_COMMIT = '86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a';
 const PRODUCT_TREE = 'ec8af4a625d98fb35e86134d8770c50a5e669ccb';
 const T7_RUN = '33270551363';
-const DEFAULT_HOST = 'zephu@192.168.0.11';
 const ACTION_PATH = 'scripts/windows/t152-windows-capsule-action.ps1';
 
 function digest(value) {
@@ -77,70 +78,75 @@ export function createT152Capsule(repoRoot, controllerCommit, capsuleId, product
   return { controllerArchive, manifest, manifestPath, productArchive, root };
 }
 
-function sshBase(env) {
-  const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY?.trim();
-  if (!path.isAbsolute(key ?? '')) throw new Error('Explicit Windows SSH identity is required');
-  return ['-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
-    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes'];
-}
-
-async function upload(host, localPath, remotePath, env) {
-  await run('scp', ['-q', ...sshBase(env), localPath, `${host}:${remotePath.replaceAll('\\', '/')}`],
+async function upload(transport, localPath, remotePath, env) {
+  await run('scp', ['-q', ...transport.options, localPath,
+    `${transport.host}:${remotePath.replaceAll('\\', '/')}`],
     { env });
 }
 
 export async function readT152WindowsHostFacts({ controllerRoot, env = process.env,
-  host = env.FOLIOLE_WINDOWS_DEV_SSH || DEFAULT_HOST }) {
-  const remoteName = `t152-host-facts-${randomUUID()}.ps1`;
-  await upload(host, path.join(controllerRoot, ACTION_PATH), remoteName, env);
-  const output = await run('ssh', ['-T', ...sshBase(env), host, 'powershell.exe', '-NoProfile',
-    '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', remoteName,
-    '-Action', 'host-facts'], { env });
-  const encoded = /^T152_HOST_FACTS=(.+)$/mu.exec(output)?.[1];
-  if (!encoded) throw new Error('source-free Windows host facts are missing');
-  return JSON.parse(encoded);
+  host, receiptRoot, transport = windowsDevTransportIdentity({ env, host }) }) {
+  return captureSourceFreeHostFacts({ actionLocal: path.join(controllerRoot, ACTION_PATH),
+    deadlineAt: Date.now() + 60_000, env, host: transport.host,
+    receiptFile: receiptRoot ? path.join(receiptRoot, 'g1-host-facts-terminal.json') : null,
+    sshBase: transport.options });
 }
 
-async function downloadReceipt(host, remotePath, localPath, env) {
-  await run('scp', ['-q', ...sshBase(env), `${host}:${remotePath.replaceAll('\\', '/')}`, localPath],
+async function downloadReceipt(transport, remotePath, localPath, env) {
+  await run('scp', ['-q', ...transport.options,
+    `${transport.host}:${remotePath.replaceAll('\\', '/')}`, localPath],
     { env });
   return JSON.parse(fs.readFileSync(localPath, 'utf8').replace(/^\uFEFF/u, ''));
 }
 
 export async function prepareT152WindowsCapsule({ capsuleId = randomUUID(), controllerCommit,
-  controllerRoot, env = process.env, facts, host = env.FOLIOLE_WINDOWS_DEV_SSH || DEFAULT_HOST,
+  controllerRoot, env = process.env, facts, host,
   productObjectRepo, repoRoot = process.cwd(), rootId }) {
+  const transport = windowsDevTransportIdentity({ env, host });
   const capsule = createT152Capsule(repoRoot, controllerCommit, capsuleId, productObjectRepo);
-  const hostFacts = facts ?? await readT152WindowsHostFacts({ controllerRoot, env, host });
+  const hostFactsResult = facts ? { facts, receipt: null }
+    : await readT152WindowsHostFacts({ controllerRoot, env, receiptRoot: capsule.root, transport });
+  const hostFacts = hostFactsResult.facts;
   const paths = remoteT152CapsulePaths(hostFacts, capsuleId);
-  const staging = { action: path.win32.join(hostFacts.roots.userProfile,
-    `t152-capsule-action-${capsuleId}.ps1`), actionLocal: path.join(controllerRoot, ACTION_PATH),
-    contract: path.win32.join(hostFacts.roots.userProfile,
+  const controlRoot = path.win32.join(hostFacts.roots.userProfile, `t152-control-${capsuleId}`);
+  const staging = { action: path.win32.join(controlRoot, 't152-windows-capsule-action.ps1'),
+    actionLocal: path.join(controllerRoot, ACTION_PATH), contract: path.win32.join(controlRoot,
       't152-windows-prepare-stage-contract.mjs'), contractLocal: path.join(controllerRoot,
       'scripts/windows/t152-windows-prepare-stage-contract.mjs'),
     controller: path.win32.join(
     hostFacts.roots.userProfile, `t152-controller-${capsuleId}.tar`), manifest: path.win32.join(
     hostFacts.roots.userProfile, `t152-manifest-${capsuleId}.json`),
     product: path.win32.join(
-    hostFacts.roots.userProfile, `t152-product-${capsuleId}.tar`), request: path.win32.join(
-    hostFacts.roots.userProfile, 't152-windows-prepare-request.mjs'), requestLocal: path.join(
-    controllerRoot, 'scripts/windows/t152-windows-prepare-request.mjs'), runner: path.win32.join(
-    hostFacts.roots.userProfile, `t152-windows-prepare-stage-runner-${capsuleId}.mjs`),
-    runnerLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-prepare-stage-runner.mjs') };
-  const preparedRequest = createT152WindowsPrepareRequest({ capsuleId,
+    hostFacts.roots.userProfile, `t152-product-${capsuleId}.tar`), remoteBaseRoot:
+    hostFacts.roots.userProfile, request: path.win32.join(controlRoot,
+      't152-windows-prepare-request.mjs'), requestLocal: path.join(controllerRoot,
+      'scripts/windows/t152-windows-prepare-request.mjs'), runner: path.win32.join(controlRoot,
+      't152-windows-prepare-stage-runner.mjs'),
+    runnerLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-prepare-stage-runner.mjs'),
+    npmOwnerLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-npm-runtime-owner.mjs'),
+    transfer: path.win32.join(controlRoot, 't152-windows-transfer-journal.mjs'),
+    transferLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-transfer-journal.mjs'),
+    collectionsLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-control-bundle-collections.ps1'),
+    parser: path.win32.join(controlRoot, 't152-windows-script-parser.ps1'),
+    parserLocal: path.join(controllerRoot, 'scripts/windows/t152-windows-script-parser.ps1'),
+    verifierLocal: path.join(controllerRoot,
+      'scripts/windows/t152-windows-control-bundle-verification.ps1') };
+  const prepareRequestInput = { capsuleId,
     capsuleRoot: paths.capsuleRoot, controllerArchivePath: staging.controller,
     controllerRoot: paths.controllerRoot, evidenceRoot: paths.evidenceRoot,
     hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), identity: capsule.manifest.identity,
-    manifestPath: staging.manifest, nodePath: hostFacts.runtime.node,
-    npmPath: hostFacts.runtime.npm, productArchivePath: staging.product, rootId,
-    sourceRoot: paths.sourceRoot, stageRunnerPath: staging.runner, tarPath: hostFacts.runtime.tar });
-  const stages = await runT152WindowsPrepareStages({ capsule, env, host,
-    hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), paths, preparedRequest,
-    sshBase: sshBase(env), staging });
+    manifestPath: staging.manifest, nodePath: hostFacts.runtime.nodePath,
+    npmCommandPath: hostFacts.runtime.npmCommandPath,
+    productArchivePath: staging.product, rootId, sourceRoot: paths.sourceRoot,
+    stageRunnerPath: staging.runner, tarPath: hostFacts.runtime.tarPath };
+  const stages = await runT152WindowsPrepareStages({ capsule, env, host: transport.host,
+    hostFactsSha256: digest(canonicalPrepareJson(hostFacts)), paths, prepareRequestInput,
+    sshBase: transport.options, staging });
+  const preparedRequest = stages.preparedRequest;
   const final = stages.receipts.at(-1);
   return { capsule, facts: hostFacts, output: final.terminalRecord.receipt.terminal.stdout,
     paths, preflight: stages.preflight.receipt.parsed, preparedRequest,
-    receipt: final.receipt, receiptPath: final.localReceipt, staging, stages };
+    receipt: final.receipt, receiptPath: final.localReceipt, staging, stages, transport };
 }
 
 function interactiveConfig(prepared, phase, rootId, formal = {}) {
@@ -162,30 +168,31 @@ function interactiveConfig(prepared, phase, rootId, formal = {}) {
         ? { expectedProviderDeviceId: formal.expectedProviderDeviceId } : {}) } : {}),
     formalAttempt: formal.attemptId ? { allocated: true, started: true }
       : { allocated: false, started: false }, launchEnvHash: formalLaunchEnvHash(launchEnv),
-    nodePath: facts.runtime.node, nonce: randomUUID(), ownerReceiptPath, phase,
+    nodePath: facts.runtime.nodePath, nonce: randomUUID(), ownerReceiptPath, phase,
     protectedRoots: [paths.sourceRoot, paths.controllerRoot, paths.capsuleRoot, evidenceRoot,
       facts.roots.programFiles, facts.roots.systemRoot], rootId, sourceRoot: paths.sourceRoot,
     stateRoot };
 }
 
 export async function runT152WindowsAdmission({ env = process.env,
-  host = env.FOLIOLE_WINDOWS_DEV_SSH || DEFAULT_HOST, phase, prepared, rootId }) {
+  phase, prepared, rootId }) {
   if (!['g2-path', 'g3-anchor'].includes(phase)) throw new Error('admission phase is invalid');
   const config = interactiveConfig(prepared, phase, rootId);
   const localConfig = path.join(prepared.capsule.root, `${phase}-${rootId}.json`);
   fs.writeFileSync(localConfig, `${JSON.stringify(config, null, 2)}\n`);
   const remoteConfig = path.win32.join(prepared.facts.roots.userProfile,
     `t152-${phase}-${rootId}.json`);
-  await upload(host, localConfig, remoteConfig, env);
+  await upload(prepared.transport, localConfig, remoteConfig, env);
   const remoteAction = prepared.staging.action;
   const command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', remoteAction, '-Action', phase, '-CapsuleRoot', prepared.paths.capsuleRoot,
     '-ConfigPath', remoteConfig, '-ControllerRoot', prepared.paths.controllerRoot,
-    '-EvidenceRoot', config.evidenceRoot, '-NodePath', prepared.facts.runtime.node,
+    '-EvidenceRoot', config.evidenceRoot, '-NodePath', prepared.facts.runtime.nodePath,
     '-SourceRoot', prepared.paths.sourceRoot];
-  const output = await run('ssh', ['-T', ...sshBase(env), host, ...command], { env });
+  const output = await run('ssh', ['-T', ...prepared.transport.options,
+    prepared.transport.host, ...command], { env });
   const localReceipt = path.join(prepared.capsule.root, `${phase}-receipt.json`);
-  const receipt = await downloadReceipt(host, path.win32.join(config.evidenceRoot,
+  const receipt = await downloadReceipt(prepared.transport, path.win32.join(config.evidenceRoot,
     `${phase}-receipt.json`), localReceipt, env);
   if (receipt.resultStatus !== 'success' || receipt.formalAttempt.allocated !== false
       || receipt.formalAttempt.started !== false || receipt.rootId !== rootId) {
@@ -196,7 +203,6 @@ export async function runT152WindowsAdmission({ env = process.env,
 
 export async function runT152WindowsFormal({ action, env = process.env,
   expectedGroupId, expectedGroupTag, expectedProviderDeviceId,
-  host = env.FOLIOLE_WINDOWS_DEV_SSH || DEFAULT_HOST,
   onOutput, prepared, rootId }) {
   const config = interactiveConfig(prepared, 'formal', rootId, { action,
     attemptId: rootId, expectedGroupId, expectedGroupTag, expectedProviderDeviceId });
@@ -204,15 +210,16 @@ export async function runT152WindowsFormal({ action, env = process.env,
   fs.writeFileSync(localConfig, `${JSON.stringify(config, null, 2)}\n`);
   const remoteConfig = path.win32.join(prepared.facts.roots.userProfile,
     `t152-formal-${rootId}.json`);
-  await upload(host, localConfig, remoteConfig, env);
+  await upload(prepared.transport, localConfig, remoteConfig, env);
   const command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', prepared.staging.action, '-Action', 'formal',
     '-CapsuleRoot', prepared.paths.capsuleRoot, '-ConfigPath', remoteConfig,
     '-ControllerRoot', prepared.paths.controllerRoot, '-EvidenceRoot', config.evidenceRoot,
-    '-NodePath', prepared.facts.runtime.node, '-SourceRoot', prepared.paths.sourceRoot];
-  const output = await run('ssh', ['-T', ...sshBase(env), host, ...command], { env, onOutput });
+    '-NodePath', prepared.facts.runtime.nodePath, '-SourceRoot', prepared.paths.sourceRoot];
+  const output = await run('ssh', ['-T', ...prepared.transport.options,
+    prepared.transport.host, ...command], { env, onOutput });
   const localReceipt = path.join(prepared.capsule.root, `formal-${rootId}-receipt.json`);
-  const receipt = await downloadReceipt(host, path.win32.join(config.evidenceRoot,
+  const receipt = await downloadReceipt(prepared.transport, path.win32.join(config.evidenceRoot,
     'formal-receipt.json'), localReceipt, env);
   if (receipt.resultStatus !== 'success' || receipt.formalAttempt.allocated !== true
       || receipt.formalAttempt.started !== true || receipt.rootId !== rootId) {

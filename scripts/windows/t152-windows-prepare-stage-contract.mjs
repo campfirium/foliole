@@ -24,9 +24,14 @@ function command(name, file, args) {
   return freeze({ args: [...args], file, name, shell: false });
 }
 
+export function createNpmLauncherDescriptor(request, name, args) {
+  return command(name, request.nodePath, [request.npmCliPath, ...args]);
+}
+
 export function createPrepareStagePlan(request) {
   const source = request.sourceRoot;
-  const npm = (name, args) => command(name, request.npmPath, ['--prefix', source, ...args]);
+  const npm = (name, args) => createNpmLauncherDescriptor(request, name,
+    ['--prefix', source, ...args]);
   const entries = [
     { stage: 'materialize', commands: [
       command('extract-product', request.tarPath,

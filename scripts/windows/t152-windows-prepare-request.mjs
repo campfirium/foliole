@@ -27,13 +27,17 @@ function sha256(value) {
 
 function validateRequest(request) {
   const paths = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
+    'manifestPath', 'nodePath', 'npmCliPath', 'npmCommandPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath'];
   if (request.schemaVersion !== 1 || !UUID.test(request.capsuleId ?? '')
       || !UUID.test(request.rootId ?? '') || !paths.every((key) => path.win32.isAbsolute(
         request[key] ?? '')) || !/^[0-9a-f]{64}$/u.test(request.hostFactsSha256 ?? '')
       || !/^[0-9a-f]{40}$/u.test(request.identity?.controllerCommit ?? '')
-      || !/^[0-9a-f]{40}$/u.test(request.identity?.controllerTree ?? '')) {
+      || !/^[0-9a-f]{40}$/u.test(request.identity?.controllerTree ?? '')
+      || !/^[0-9a-f]{64}$/u.test(request.npmRuntimeOwner?.ownerSha256 ?? '')
+      || request.npmRuntimeOwner?.nodePath !== request.nodePath
+      || request.npmRuntimeOwner?.npmCliPath !== request.npmCliPath
+      || request.npmRuntimeOwner?.npmCommandPath !== request.npmCommandPath) {
     throw new Error('T152 prepare request is invalid');
   }
   return request;
@@ -65,7 +69,8 @@ export function decodeT152WindowsPrepareRequest(token) {
 }
 
 export function t152PrepareRemoteCommand(scriptPath, action, token) {
-  const validAction = ['binding-preflight', 'stage-plan-preflight'].includes(action)
+  const validAction = ['binding-preflight', 'launcher-preflight', 'stage-plan-preflight']
+    .includes(action)
     || /^prepare-[a-z-]+$/u.test(action);
   if (!validAction
       || !path.win32.isAbsolute(scriptPath ?? '') || !/^[A-Za-z0-9_-]+$/u.test(token ?? '')) {

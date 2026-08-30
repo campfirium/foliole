@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { expect, it, vi } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 
 import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
@@ -12,10 +12,13 @@ import {
   WINDOWS_DEV_DEFAULT_SSH, windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
-const TEST_HOME = '/Users/dev';
+const TEST_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-transport-owner-'));
 const TEST_WINDOWS_DEV_SSH_KEY = path.join(
   TEST_HOME, '.ssh', 'agent', 'foliole-windows-android-lab'
 );
+fs.mkdirSync(path.dirname(TEST_WINDOWS_DEV_SSH_KEY), { recursive: true });
+fs.writeFileSync(TEST_WINDOWS_DEV_SSH_KEY, 'test identity', { mode: 0o600 });
+afterAll(() => fs.rmSync(TEST_HOME, { force: true, recursive: true }));
 
 it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
   expect(parseWindowsDevControlArgs(['build'], {}))
@@ -87,7 +90,7 @@ it('uses only the dedicated Git key and strict host checking', () => {
 
 it('uses only the ordinary SSH key and fixed remote action path', () => {
   const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'deploy', {}, TEST_HOME);
-  expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
+  expect(spec).toContain(fs.realpathSync(TEST_WINDOWS_DEV_SSH_KEY));
   expect(spec).toContain('D:/C/foliole/scripts/windows/windows-dev-action.ps1');
   expect(spec.at(-1)).toBe('deploy');
 });
@@ -102,7 +105,7 @@ it('uses an alphabetic wire action that an old wrapper can pull before normalizi
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
   const remotePath = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
   const spec = windowsDevScpSpec(WINDOWS_DEV_DEFAULT_SSH, remotePath, '/repo/a5.png', {}, TEST_HOME);
-  expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
+  expect(spec).toContain(fs.realpathSync(TEST_WINDOWS_DEV_SSH_KEY));
   expect(spec.at(-2)).toBe(`${WINDOWS_DEV_DEFAULT_SSH}:${remotePath}`);
   expect(spec.at(-1)).toBe('/repo/a5.png');
   expect(parseWindowsDevLiveEvidence(

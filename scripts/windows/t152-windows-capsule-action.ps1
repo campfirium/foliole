@@ -1,11 +1,12 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateScript({ $_ -in @("host-facts", "binding-preflight", "stage-plan-preflight",
+  [ValidateScript({ $_ -in @("host-facts", "runtime-owner", "verify-control-bundle", "binding-preflight",
+    "launcher-preflight", "stage-plan-preflight",
     "g2-path", "g3-anchor", "formal") -or $_ -match '^prepare-[a-z-]+$' })]
   [string]$Action,
   [string]$CapsuleRoot = "", [string]$ConfigPath = "", [string]$ControllerRoot = "",
   [string]$EvidenceRoot = "", [string]$NodePath = "", [string]$RequestBase64 = "",
-  [string]$SourceRoot = ""
+  [string]$SourceRoot = "", [string]$VerificationBase64 = ""
 )
 
 Set-StrictMode -Version Latest
@@ -54,6 +55,31 @@ function Get-Sha256([byte[]]$Bytes) {
   return ([BitConverter]::ToString($hash)).Replace('-', '').ToLowerInvariant()
 }
 
+function Get-FileIdentity([string]$Value, [string]$Label) {
+  $resolved = Resolve-OwnerFilesystemPath $Value $Label
+  if (!(Test-Path -LiteralPath $resolved.normalized -PathType Leaf)) {
+    throw "$Label must be an existing file"
+  }
+  return [ordered]@{ path = $resolved.normalized
+    sha256 = (Get-Sha256 ([IO.File]::ReadAllBytes($resolved.normalized))) }
+}
+
+function Get-NpmRuntimeOwner {
+  $nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $npmCommandPath = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+  if (![string]::Equals([IO.Path]::GetDirectoryName($nodePath),
+      [IO.Path]::GetDirectoryName($npmCommandPath), [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'node and npm command are not from the same installation distribution'
+  }
+  $resolverPath = Join-Path $PSScriptRoot 't152-windows-npm-runtime-owner.mjs'
+  $output = @(& $nodePath $resolverPath --node-path $nodePath --npm-command-path $npmCommandPath |
+    ForEach-Object { [string]$_ })
+  if ($LASTEXITCODE -ne 0) { throw 'npm runtime owner resolver failed' }
+  $line = @($output | Where-Object { $_.StartsWith('T152_NPM_RUNTIME_OWNER=') })
+  if ($line.Count -ne 1) { throw 'npm runtime owner receipt is missing' }
+  return $line[0].Substring('T152_NPM_RUNTIME_OWNER='.Length) | ConvertFrom-Json
+}
+
 function Read-PrepareRequest([string]$Token) {
   if (!$Token -or $Token -notmatch '^[A-Za-z0-9_-]+$') { throw "prepare token is invalid" }
   $base64 = $Token.Replace('-', '+').Replace('_', '/')
@@ -68,9 +94,9 @@ function Read-PrepareRequest([string]$Token) {
   $request = $envelope.requestJson | ConvertFrom-Json
   $requestProperties = @($request.PSObject.Properties)
   $paths = @('capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
+    'manifestPath', 'nodePath', 'npmCliPath', 'npmCommandPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath')
-  foreach ($name in @('capsuleId', 'hostFactsSha256', 'identity', 'rootId') + $paths) {
+  foreach ($name in @('capsuleId', 'hostFactsSha256', 'identity', 'npmRuntimeOwner', 'rootId') + $paths) {
     if ($null -eq $request.PSObject.Properties[$name]) { throw "prepare field missing: $name" }
   }
   $normalizedPaths = [ordered]@{}
@@ -84,11 +110,15 @@ function Read-PrepareRequest([string]$Token) {
       $request.identity.productTree -ne $productTree -or $request.identity.t7Run -ne $t7Run -or
       $request.identity.controllerCommit -notmatch '^[0-9a-f]{40}$' -or
       $request.identity.controllerTree -notmatch '^[0-9a-f]{40}$') { throw "prepare identity is invalid" }
-  $runtime = [ordered]@{ node = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
-    npm = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
-    tar = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }
-  $runtimeExact = $runtime.node -eq $request.nodePath -and $runtime.npm -eq $request.npmPath -and
-    $runtime.tar -eq $request.tarPath
+  $npmOwner = Get-NpmRuntimeOwner
+  $runtime = [ordered]@{ nodePath = $npmOwner.nodePath; npmCliPath = $npmOwner.npmCliPath
+    npmCommandPath = $npmOwner.npmCommandPath
+    tarPath = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }
+  $runtimeExact = $runtime.nodePath -eq $request.nodePath -and
+    $runtime.npmCliPath -eq $request.npmCliPath -and
+    $runtime.npmCommandPath -eq $request.npmCommandPath -and
+    $runtime.tarPath -eq $request.tarPath -and
+    $npmOwner.ownerSha256 -eq $request.npmRuntimeOwner.ownerSha256
   if (!$runtimeExact) { throw "prepare runtime differs from host facts" }
   return [ordered]@{ fieldCount = [int]$requestProperties.Length; request = $request
     pathPredicate = [ordered]@{ clrVersion = [Environment]::Version.ToString()
@@ -130,10 +160,10 @@ function Get-HostFacts {
     capturedAt = [DateTime]::UtcNow.ToString("o"); connectedVpn = $vpn
     dnsSdService = [ordered]@{ name = $service.Name; status = [string]$service.Status }
     firewallProfiles = $firewall; networkProfiles = $profiles
-    runtime = [ordered]@{ node = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
-      npm = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
-      tar = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }; roots = $roots
-    schemaVersion = 2; sshSession = [ordered]@{ clientAddress = $parts[0]
+    runtime = [ordered]@{ nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+      npmCommandPath = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+      tarPath = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }; roots = $roots
+    schemaVersion = 3; sshSession = [ordered]@{ clientAddress = $parts[0]
       serverAddress = $parts[2]; serverPort = [int]$parts[3]; sessionProcessId = $PID } }
 }
 
@@ -142,24 +172,36 @@ try {
     Write-Output "T152_HOST_FACTS=$(Get-HostFacts | ConvertTo-Json -Compress -Depth 10)"
     exit 0
   }
-  if ($Action -eq "binding-preflight" -or $Action -eq "stage-plan-preflight" -or
+  if ($Action -eq "runtime-owner") {
+    Write-Output "T152_RUNTIME_OWNER=$(Get-NpmRuntimeOwner | ConvertTo-Json -Compress -Depth 6)"
+    exit 0
+  }
+  if ($Action -eq "verify-control-bundle") {
+    . (Join-Path $PSScriptRoot 't152-windows-control-bundle-verification.ps1')
+    $receipt = Read-ControlBundleVerification $VerificationBase64
+    Write-Output "T152_CONTROL_BUNDLE=$($receipt | ConvertTo-Json -Compress -Depth 6)"
+    exit 0
+  }
+  if ($Action -eq "binding-preflight" -or $Action -eq "launcher-preflight" -or
+      $Action -eq "stage-plan-preflight" -or
       $Action.StartsWith("prepare-")) {
     $binding = Read-PrepareRequest $RequestBase64
     if ($Action -eq "binding-preflight") {
       $receipt = [ordered]@{ fieldCount = $binding.fieldCount
         pathPredicate = $binding.pathPredicate
         requestSha256 = $binding.requestSha256; runtimeExact = $binding.runtimeExact
-        runtimeExists = [ordered]@{ node = (Test-Path -LiteralPath $binding.runtime.node -PathType Leaf)
-          npm = (Test-Path -LiteralPath $binding.runtime.npm -PathType Leaf)
-          tar = (Test-Path -LiteralPath $binding.runtime.tar -PathType Leaf) } }
+        runtimeExists = [ordered]@{
+          nodePath = (Test-Path -LiteralPath $binding.runtime.nodePath -PathType Leaf)
+          npmCliPath = (Test-Path -LiteralPath $binding.runtime.npmCliPath -PathType Leaf)
+          npmCommandPath = (Test-Path -LiteralPath $binding.runtime.npmCommandPath -PathType Leaf)
+          tarPath = (Test-Path -LiteralPath $binding.runtime.tarPath -PathType Leaf) } }
       Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 8)"
       exit 0
     }
     if (!(Test-Path -LiteralPath $binding.request.stageRunnerPath -PathType Leaf)) {
       throw "prepare stage runner is missing"
     }
-    & $binding.request.nodePath $binding.request.stageRunnerPath --action $Action `
-      --request-base64 $RequestBase64
+    & $binding.request.nodePath $binding.request.stageRunnerPath --action $Action --request-base64 $RequestBase64
     if ($LASTEXITCODE -ne 0) { throw "prepare stage runner failed with exit $LASTEXITCODE" }
     exit 0
   }

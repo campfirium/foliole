@@ -11,13 +11,15 @@ const ROOT = '11111111-1111-4111-8111-111111111111';
 const CAPSULE = '22222222-2222-4222-8222-222222222222';
 
 function request() {
+  const runtime = { nodePath: 'C:\\Program Files\\nodejs\\node.exe',
+    npmCliPath: 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js',
+    npmCommandPath: 'C:\\Program Files\\nodejs\\npm.cmd', ownerSha256: 'f'.repeat(64) };
   return { capsuleId: CAPSULE, capsuleRoot: 'C:\\Owned Space\\胶囊',
     controllerArchivePath: 'C:\\Stage\\controller.tar', controllerRoot: 'C:\\Owned Space\\controller',
     evidenceRoot: 'C:\\Owned Space\\evidence', hostFactsSha256: 'a'.repeat(64),
     identity: { controllerCommit: 'b'.repeat(40), controllerTree: 'c'.repeat(40),
       productCommit: 'd'.repeat(40), productTree: 'e'.repeat(40), t7Run: '1' },
-    manifestPath: 'C:\\Stage\\manifest.json', nodePath: 'C:\\Program Files\\nodejs\\node.exe',
-    npmPath: 'C:\\Program Files\\nodejs\\npm.cmd',
+    manifestPath: 'C:\\Stage\\manifest.json', ...runtime, npmRuntimeOwner: runtime,
     productArchivePath: 'C:\\Stage\\产品.tar', rootId: ROOT,
     sourceRoot: 'C:\\Owned Space\\source', stageRunnerPath: 'C:\\Stage\\stage-runner.mjs',
     tarPath: 'C:\\Windows\\tar.exe' };
@@ -32,18 +34,19 @@ it('round trips canonical UTF-8 JSON through one unpadded base64url token', () =
 
 it('keeps paths with spaces and Unicode as single request fields', () => {
   const decoded = decodeT152WindowsPrepareRequest(createT152WindowsPrepareRequest(request()).token);
-  expect(decoded.request.npmPath).toBe('C:\\Program Files\\nodejs\\npm.cmd');
+  expect(decoded.request.npmCliPath)
+    .toBe('C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js');
   expect(decoded.request.productArchivePath).toBe('C:\\Stage\\产品.tar');
 });
 
 it('rejects missing fields, tampering, and hash mismatch', () => {
   const missing = request();
-  delete missing.npmPath;
+  delete missing.npmCliPath;
   expect(() => createT152WindowsPrepareRequest(missing)).toThrow();
   const token = createT152WindowsPrepareRequest(request()).token;
   expect(() => decodeT152WindowsPrepareRequest(`${token.slice(0, -1)}A`)).toThrow();
   const envelope = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
-  envelope.requestJson = envelope.requestJson.replace('npm.cmd', 'npx.cmd');
+  envelope.requestJson = envelope.requestJson.replace('npm-cli.js', 'npx-cli.js');
   const mismatched = Buffer.from(JSON.stringify(envelope), 'utf8').toString('base64url');
   expect(() => decodeT152WindowsPrepareRequest(mismatched)).toThrow('hash mismatch');
 });

@@ -1,10 +1,12 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 
 import { PREPARE_DEADLINE_MS, PREPARE_STAGES, validateBindingPreflight,
-  validatePrepareStageReceipt, validateStagePlanProjection } from
+  validateNpmRuntimeOwner, validatePrepareStageReceipt, validateStagePlanProjection } from
   './t152-windows-prepare-stages.mjs';
+import { canonicalPrepareJson } from './t152-windows-prepare-request.mjs';
 import { createPrepareContractProjection } from './t152-windows-prepare-stage-contract.mjs';
 import { createPrepareStagePlan, createPrepareStageReceipt, prepareStagePlanSha256 } from
   './t152-windows-prepare-stage-contract.mjs';
@@ -22,6 +24,26 @@ function expected(stage = 'materialize') {
 function receipt(stage = 'materialize') {
   return { ...expected(stage), rawExit: 0, rawSignal: null, resultStatus: 'success' };
 }
+
+function runtimeOwner() {
+  const paths = { nodePath: 'X:\\Node\\node.exe', npmCliPath: 'X:\\Node\\npm\\cli.js',
+    npmCommandPath: 'X:\\Node\\npm.cmd', npmManifestPath: 'X:\\Node\\npm\\package.json' };
+  const unsigned = { fileIdentities: Object.fromEntries(Object.entries(paths).map(([name, value]) =>
+    [name, { path: value, sha256: 'a'.repeat(64) }])), installationRoot: 'X:\\Node',
+  ...paths, packageName: 'npm', packageVersion: '1.2.3', schemaVersion: 1 };
+  return { ...unsigned, ownerSha256: createHash('sha256').update(
+    canonicalPrepareJson(unsigned)).digest('hex') };
+}
+
+it('accepts only the exact package-manifest runtime owner receipt', () => {
+  const owner = runtimeOwner();
+  expect(validateNpmRuntimeOwner(owner, owner)).toBe(owner);
+  expect(() => validateNpmRuntimeOwner({ ...owner, packageName: 'node' }, owner)).toThrow();
+  expect(() => validateNpmRuntimeOwner({ ...owner, npmCliPath: 'X:\\escape.js' }, owner)).toThrow();
+  expect(() => validateNpmRuntimeOwner({ ...owner,
+    fileIdentities: { ...owner.fileIdentities,
+      npmManifestPath: { ...owner.fileIdentities.npmManifestPath, sha256: '0' } } }, owner)).toThrow();
+});
 
 it('pins one ordered stage machine and one non-resetting 45-minute deadline', () => {
   expect(PREPARE_STAGES).toEqual(['materialize', 'dependencies', 'electron-runtime', 'build',
@@ -50,7 +72,7 @@ it('rejects failed, signalled, duplicate-stage, and identity-tampered receipts',
 
 function bindingFixture() {
   const fields = ['capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
-    'manifestPath', 'nodePath', 'npmPath', 'productArchivePath', 'stageRunnerPath',
+    'manifestPath', 'nodePath', 'npmCliPath', 'npmCommandPath', 'productArchivePath', 'stageRunnerPath',
     'sourceRoot', 'tarPath'];
   const request = Object.fromEntries(fields.map((field) => [field, `X:\\Owner Space\\资料\\${field}`]));
   const normalizedPaths = Object.fromEntries(fields.map((field) => [field,
@@ -59,7 +81,7 @@ function bindingFixture() {
     powershellVersion: '5.1.26100.7705', schemaSha256: 'a'.repeat(64), selfcheck: { rejected: {
       driveRelative: true, normalizationMismatch: true, relative: true, rootRelative: true,
       uri: true } } }, requestSha256: 'b'.repeat(64), runtimeExact: true,
-  runtimeExists: { node: true, npm: true, tar: true } };
+  runtimeExists: { nodePath: true, npmCliPath: true, npmCommandPath: true, tarPath: true } };
   return { parsed, request };
 }
 
@@ -95,7 +117,12 @@ it('keeps every real command argv scalar and finalize side-effect free', () => {
   expect(plan.entries.flatMap((entry) => entry.commands).every((command) =>
     command.shell === false && command.args.every((value) => typeof value === 'string'))).toBe(true);
   expect(plan.entries.find((entry) => entry.stage === 'dependencies').commands[0].args)
-    .toEqual(['--prefix', stageRequest().sourceRoot, 'ci']);
+    .toEqual([stageRequest().npmCliPath, '--prefix', stageRequest().sourceRoot, 'ci']);
+  expect(plan.entries.filter((entry) => ['dependencies', 'build', 'electron-compile', 'native',
+    'package'].includes(entry.stage)).flatMap((entry) => entry.commands)
+    .filter((command) => command.name !== 'native-probe').every((command) =>
+      command.file === stageRequest().nodePath && command.args[0] === stageRequest().npmCliPath))
+    .toBe(true);
 });
 
 it('uses one receipt constructor for success, failure, and timeout facts', () => {
