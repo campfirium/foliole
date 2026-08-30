@@ -3,6 +3,7 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import type { ElectronAPI, NativeKeyboardInputPayload } from '../../shared/platform/electronApi';
+import { onWindowPriorityEscape } from '../../shared/platform/keyboard';
 
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 
@@ -77,6 +78,7 @@ function HookHarness(props: {
       <div contentEditable role="textbox" suppressContentEditableWarning tabIndex={0}>
         Alpha
       </div>
+      <button type="button">Origin</button>
       {props.showDialog ? (
         <div role="dialog">
           <button type="button">Delay</button>
@@ -154,6 +156,37 @@ it('keeps current node editing context through a dialog and native Escape clears
   fireEvent.keyDown(window, { key: 'Delete' });
 
   expect(deleteNode).toHaveBeenCalledWith('node-1');
+});
+
+it('lets the priority editor owner return focus before native current-node fallback', async () => {
+  const dispatchNativeKeyboard = installNativeKeyboardBridge();
+  vi.useFakeTimers();
+  render(<HookHarness />);
+  const editor = screen.getByRole('textbox');
+  const origin = screen.getByRole('button', { name: 'Origin' });
+  const unlistenPriority = onWindowPriorityEscape(() => {
+    editor.blur();
+    origin.focus();
+    return true;
+  });
+  editor.focus();
+  fireEvent.focusIn(editor);
+
+  await act(async () => {
+    dispatchNativeKeyboard({
+      altKey: false,
+      code: 'Escape',
+      controlKey: false,
+      key: 'Escape',
+      metaKey: false,
+      shiftKey: false,
+      type: 'keyDown'
+    });
+    vi.runOnlyPendingTimers();
+  });
+
+  expect(origin).toHaveFocus();
+  unlistenPriority();
 });
 
 it('keeps current node editing context while a transient panel blocks shortcuts', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import { onNativeEditingEscape, onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -118,15 +118,7 @@ function useCurrentNodeEditingEscape(
       exitEditing();
     };
     const unlistenEscape = onWindowEscape(handleEscape);
-    const unlistenNativeFallback = onNativeEditingEscape({
-      exitEditing,
-      isDialogOpen: () => transientSurfaceOpen || Boolean(document.querySelector('[role="dialog"]')),
-      isEditing: () => editingContextRef.current || isEditableKeyboardTarget(document.activeElement)
-    });
-    return () => {
-      unlistenEscape();
-      unlistenNativeFallback();
-    };
+    return unlistenEscape;
   }, [blocked, editingContextRef, setIsEditing, transientSurfaceOpen]);
 }
 
