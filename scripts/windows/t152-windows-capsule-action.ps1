@@ -67,6 +67,7 @@ function Read-PrepareRequest([string]$Token) {
   if ((Get-Sha256 ([Text.Encoding]::UTF8.GetBytes([string]$envelope.requestJson))) -ne
       $envelope.requestSha256) { throw "prepare request hash mismatch" }
   $request = $envelope.requestJson | ConvertFrom-Json
+  $requestProperties = @($request.PSObject.Properties)
   $paths = @('capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
     'manifestPath', 'nodePath', 'npmPath', 'prepareHelperPath', 'productArchivePath',
     'sourceRoot', 'tarPath')
@@ -90,7 +91,7 @@ function Read-PrepareRequest([string]$Token) {
   $runtimeExact = $runtime.node -eq $request.nodePath -and $runtime.npm -eq $request.npmPath -and
     $runtime.tar -eq $request.tarPath
   if (!$runtimeExact) { throw "prepare runtime differs from host facts" }
-  return [ordered]@{ fieldCount = $request.PSObject.Properties.Count; request = $request
+  return [ordered]@{ fieldCount = [int]$requestProperties.Length; request = $request
     pathPredicate = [ordered]@{ clrVersion = [Environment]::Version.ToString()
       normalizedPaths = $normalizedPaths; powershellVersion = $PSVersionTable.PSVersion.ToString()
       schema = $pathPredicateSchema

@@ -56,6 +56,14 @@ it('uses one runtime-compatible path predicate with normalization and dynamic ne
   expect(action).toContain('schemaSha256');
 });
 
+it('projects request properties as an explicit collection under strict mode', () => {
+  const action = sources['t152-windows-capsule-action.ps1'];
+  expect(action).toContain('$requestProperties = @($request.PSObject.Properties)');
+  expect(action).toContain('fieldCount = [int]$requestProperties.Length');
+  expect(action).not.toContain('$request.PSObject.Properties.Count');
+  expect(action).not.toMatch(/fieldCount\s*=\s*\d+/u);
+});
+
 it('keeps source-free host facts read-only and verifies both archives before builds', () => {
   const action = sources['t152-windows-capsule-action.ps1'];
   const stage = sources['t152-windows-prepare-stage.ps1'];
