@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare", "find-acceptance")][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare", "find-acceptance", "advertise-acceptance", "release-complete", "release-cancel")][string]$Action,
   [Parameter(Mandatory = $true)][ValidatePattern("^[0-9a-f-]{36}$")][string]$AttemptId,
   [ValidatePattern("^[0-9a-f-]{36}$")][string]$CapsuleAttemptId = "",
   [ValidatePattern("^t152-product-[0-9a-f-]{36}\.tar$")][string]$ArchiveName = "",
@@ -69,8 +69,9 @@ function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
 }
 
 try {
-  if ($Action -eq "find-acceptance") {
-    if (!$CapsuleAttemptId -or !$ExpectedGroupId -or !$ExpectedGroupTag) {
+  if (@("find-acceptance", "advertise-acceptance", "release-complete", "release-cancel") -contains $Action) {
+    if (!$CapsuleAttemptId -or ($Action -eq "find-acceptance" -and
+        (!$ExpectedGroupId -or !$ExpectedGroupTag))) {
       throw "formal Find requires capsule and group identity"
     }
     $preparedRoot = Join-Path $capsules $CapsuleAttemptId
@@ -82,9 +83,15 @@ try {
     }
     $runner = Join-Path ([Environment]::GetFolderPath("UserProfile")) "t152-windows-capsule-formal-runner.mjs"
     $acceptanceRoot = "C:\T152\$AttemptId"
-    & "C:\Program Files\nodejs\node.exe" $runner "desktop-dnssd-find-acceptance" `
+    $formalAction = switch ($Action) {
+      "find-acceptance" { "desktop-dnssd-find-acceptance" }
+      "advertise-acceptance" { "desktop-dnssd-advertise-acceptance" }
+      "release-complete" { "release-complete" }
+      default { "release-cancel" }
+    }
+    & "C:\Program Files\nodejs\node.exe" $runner $formalAction `
       (Join-Path $preparedRoot "source") $AttemptId $acceptanceRoot $ExpectedGroupId $ExpectedGroupTag
-    if ($LASTEXITCODE -ne 0) { throw "formal Find runner failed with exit $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "formal runner failed with exit $LASTEXITCODE" }
     exit 0
   }
   if (Test-Path -LiteralPath $taskRoot) { throw "attempt capsule already exists" }

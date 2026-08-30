@@ -7,6 +7,7 @@ const control = fs.readFileSync('scripts/windows/t152-windows-capsule-control.mj
 const action = fs.readFileSync('scripts/windows/t152-windows-capsule-action.ps1', 'utf8');
 const formal = fs.readFileSync('scripts/windows/t152-windows-capsule-formal-runner.mjs', 'utf8');
 const firstPhase = fs.readFileSync('scripts/windows/t152-macos-to-windows-find.mjs', 'utf8');
+const reversePhase = fs.readFileSync('scripts/windows/t152-windows-to-macos-find.mjs', 'utf8');
 
 describe('T152 Windows immutable capsule controller', () => {
   it('pins the product identity and never consumes the Windows dev mirror', () => {
@@ -17,7 +18,7 @@ describe('T152 Windows immutable capsule controller', () => {
   });
 
   it('keeps the remote surface bounded and verifies immutable inputs before dependency writes', () => {
-    expect(action).toContain('[ValidateSet("host-facts", "prepare", "find-acceptance")]');
+    expect(action).toContain('"advertise-acceptance", "release-complete"');
     expect(action.indexOf('archive digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
     expect(action.indexOf('lockfile digest mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
     expect(action.indexOf('archive file list mismatch')).toBeLessThan(action.indexOf('"dependencies"'));
@@ -40,7 +41,14 @@ describe('T152 Windows immutable capsule controller', () => {
     expect(firstPhase).toContain("baseRoot: '/private/tmp/foliole-t152-libraries'");
     expect(firstPhase).toContain("'-Action', 'find-acceptance'");
     expect(firstPhase).toContain('fs.mkdirSync(evidenceParent, { recursive: true })');
-    expect(formal).toContain("action !== 'desktop-dnssd-find-acceptance'");
+    expect(formal).toContain("'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance'");
     expect(`${formal}\n${firstPhase}`).not.toMatch(/refs\/heads\/dev|windows-dev-pull/u);
+  });
+
+  it('releases the Windows advertisement only after exact Mac discovery', () => {
+    expect(reversePhase).toContain("remoteCommand('advertise-acceptance'");
+    expect(reversePhase).toContain("kind: 'candidate-identity'");
+    expect(reversePhase).toContain("remoteCommand('release-complete'");
+    expect(reversePhase).toContain('matches.length !== 1');
   });
 });

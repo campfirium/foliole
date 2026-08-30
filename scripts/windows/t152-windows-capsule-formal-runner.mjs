@@ -13,16 +13,31 @@ function required(value, pattern, label) {
 async function main() {
   const [action, sourceRoot, attemptId, acceptanceRoot, expectedGroupId, expectedGroupTag] =
     process.argv.slice(2);
-  if (action !== 'desktop-dnssd-find-acceptance') throw new Error('formal action is invalid');
+  const productActions = new Set([
+    'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance'
+  ]);
+  if (['release-cancel', 'release-complete'].includes(action)) {
+    const sourceUrl = pathToFileURL(path.win32.join(sourceRoot, 'scripts', 'windows'));
+    const { writeWindowsSyncGroupProviderRelease } = await import(
+      new URL('./windows-sync-group-provider-release-control.mjs', `${sourceUrl.href}/`)
+    );
+    const status = action === 'release-complete' ? 'consumer_complete' : 'cancelled';
+    writeWindowsSyncGroupProviderRelease({ repoRoot: sourceRoot, status });
+    console.log(`[t152-windows-formal] release=${status}`);
+    return;
+  }
+  if (!productActions.has(action)) throw new Error('formal action is invalid');
   required(attemptId, /^[0-9a-f-]{36}$/u, 'formal attempt');
-  required(expectedGroupId, /^group-[0-9a-f-]{36}$/u, 'expected group id');
-  required(expectedGroupTag, /^[0-9a-f]{32}$/u, 'expected group tag');
+  if (action === 'desktop-dnssd-find-acceptance') {
+    required(expectedGroupId, /^group-[0-9a-f-]{36}$/u, 'expected group id');
+    required(expectedGroupTag, /^[0-9a-f]{32}$/u, 'expected group tag');
+  }
   if (!path.win32.isAbsolute(sourceRoot) || !path.win32.isAbsolute(acceptanceRoot)
       || !fs.existsSync(path.win32.join(sourceRoot, 'package.json'))) {
     throw new Error('formal capsule paths are invalid');
   }
-  process.env.FOLIOLE_T152_EXPECTED_GROUP_ID = expectedGroupId;
-  process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG = expectedGroupTag;
+  if (expectedGroupId) process.env.FOLIOLE_T152_EXPECTED_GROUP_ID = expectedGroupId;
+  if (expectedGroupTag) process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG = expectedGroupTag;
   const sourceUrl = pathToFileURL(path.win32.join(sourceRoot, 'scripts', 'windows'));
   const [{ formatWindowsDevFailure, runWindowsDevBuild }, { windowsDevPaths }] = await Promise.all([
     import(new URL('./windows-dev-build.mjs', `${sourceUrl.href}/`)),
@@ -36,7 +51,9 @@ async function main() {
     process.exitCode = result.exitCode;
     return;
   }
-  const manifest = result.summary.desktopDnsSdFindAcceptance?.manifestPath;
+  const manifest = action === 'desktop-dnssd-find-acceptance'
+    ? result.summary.desktopDnsSdFindAcceptance?.manifestPath
+    : result.summary.desktopDnsSdAdvertiseAcceptance?.manifestPath;
   if (!manifest) throw new Error('formal Find receipt is missing');
   console.log(`[t152-windows-formal] action=${action} attempt=${attemptId} receipt=${manifest}`);
 }
