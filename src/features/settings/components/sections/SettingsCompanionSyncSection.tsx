@@ -7,24 +7,33 @@ import {
   SettingsErrorState,
   SettingsRow,
   SettingsSection,
-  requestAppConfirmation
+  requestAppConfirmation,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
 
 function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
   const t = useTranslation();
+  const title = t('settings.companionSync.group.sync.title');
   return (
     <SettingsRow
       description={t('settings.companionSync.group.sync.description')}
-      title={t('settings.companionSync.group.sync.title')}
+      title={title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <SettingsButton disabled={props.disabled} onClick={props.onToggle}>
-          {t(props.enabled
-            ? 'settings.companionSync.group.sync.turnOff'
-            : 'settings.companionSync.group.sync.turnOn')}
-        </SettingsButton>
+        <button
+          aria-checked={props.enabled}
+          aria-label={title}
+          className={settingsSwitchClassName(props.enabled)}
+          disabled={props.disabled}
+          onClick={props.onToggle}
+          role="switch"
+          type="button"
+        >
+          <span aria-hidden="true" className={settingsSwitchKnobClassName(props.enabled)} />
+        </button>
       </SettingsControlSlot>
     </SettingsRow>
   );

@@ -3,9 +3,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
-const SCREENSHOT_PATH = path.join(
-  process.cwd(), '.tmp/artifacts/desktop-acceptance/settings-sync-group.png'
-);
+const SCREENSHOT_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance');
 test('creates a persistent Sync Group from desktop settings', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const settings = await openSettingsCategory(desktopWindow, 'Sync');
@@ -22,12 +20,15 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
   await expect(devices.getByText(/^(macOS|Windows|Linux)$/)).toBeVisible();
   await expect(create).toHaveCount(0);
   const syncNow = section.getByRole('button', { name: /^(Sync Now|立即同步)$/ });
-  const turnOff = section.getByRole('button', { name: /^(Turn Off|关闭)$/ });
+  const syncSwitch = section.getByRole('switch', { name: /^(Sync|同步)$/ });
   await expect(syncNow).toBeEnabled();
-  await turnOff.click();
-  await expect(section.getByRole('button', { name: /^(Turn On|打开)$/ })).toBeVisible();
+  await expect(syncSwitch).toHaveAttribute('aria-checked', 'true');
+  const onScreenshot = await section.screenshot({ path: path.join(SCREENSHOT_DIR, 'settings-sync-group-on.png') });
+  await testInfo.attach('settings-sync-group-on', { body: onScreenshot, contentType: 'image/png' });
+  await syncSwitch.click();
+  await expect(syncSwitch).toHaveAttribute('aria-checked', 'false');
   await expect(syncNow).toBeEnabled();
 
-  const screenshot = await section.screenshot({ path: SCREENSHOT_PATH });
-  await testInfo.attach('settings-sync-group', { body: screenshot, contentType: 'image/png' });
+  const offScreenshot = await section.screenshot({ path: path.join(SCREENSHOT_DIR, 'settings-sync-group-off.png') });
+  await testInfo.attach('settings-sync-group-off', { body: offScreenshot, contentType: 'image/png' });
 });
