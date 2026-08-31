@@ -2,7 +2,7 @@ import { access, mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-import type { Page, TestInfo } from '@playwright/test';
+import type { ElectronApplication, Page, TestInfo } from '@playwright/test';
 
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
@@ -20,6 +20,17 @@ async function openByokSection(page: Page) {
   const section = settings.getByLabel(/^(Your model settings|你的模型设置)$/);
   await expect(section).toBeVisible();
   return section;
+}
+
+async function expectSecureStorageReady(electronApp: ElectronApplication) {
+  await expect.poll(() => electronApp.evaluate(({ safeStorage }) => {
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    const probe = 'foliole-t141-secure-storage-probe';
+    return safeStorage.decryptString(safeStorage.encryptString(probe)) === probe;
+  }), {
+    message: 'waiting for the hidden-native secure storage roundtrip',
+    timeout: 10_000
+  }).toBe(true);
 }
 
 async function saveConfiguration(page: Page) {
@@ -86,6 +97,7 @@ test('keeps a device-local encrypted Aide model configuration across relaunch an
 
   try {
     await expectWorkspaceShell(desktopSession.firstWindow);
+    await expectSecureStorageReady(desktopSession.electronApp);
     await saveConfiguration(desktopSession.firstWindow);
     await expectNoRendererSecret(desktopSession.firstWindow);
     await expect(access(secretPath)).resolves.toBeUndefined();
