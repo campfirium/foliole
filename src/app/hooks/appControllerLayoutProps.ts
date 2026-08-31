@@ -211,13 +211,17 @@ function createLayoutHandlerArgs(
   };
 }
 
-function createFlushBeforeCreateChildNode(args: BuildControllerLayoutPropsArgs) {
+export function createFlushBeforeCreateChildNode(args: BuildControllerLayoutPropsArgs) {
   return async (parentNodeId: string, content = '', kind: NodeKind = 'topic') => {
     if (!args.runtime.flushActiveEditorTransaction(args.ws.activeNodeId)) {
       args.runtime.flushPendingEditorDraft();
     }
     await args.runtime.flushPendingEditorDraftImmediately();
-    return args.ws.createChildNode(parentNodeId, content, kind);
+    const nodeId = await args.ws.createChildNode(parentNodeId, content, kind);
+    if (nodeId && kind === 'topic' && content.length === 0) {
+      args.runtime.editorRef.current?.focus();
+    }
+    return nodeId;
   };
 }
 
