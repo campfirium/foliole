@@ -1,4 +1,4 @@
-import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
@@ -22,7 +22,7 @@ function isPdfReadingMode(value: string): value is PdfReadingMode {
 
 export function getBaseColorMode(): BaseColorMode {
   const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.baseColor);
-  return raw && isBaseColorMode(raw) ? raw : 'light';
+  return raw && isBaseColorMode(raw) ? raw : DEFAULT_BASE_COLOR_MODE;
 }
 
 export function setBaseColorMode(value: BaseColorMode) {
