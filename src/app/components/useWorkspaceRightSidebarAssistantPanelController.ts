@@ -2,6 +2,7 @@ import { useMemo, useReducer, useRef, useState } from 'react';
 
 import type {
   NativeAssistantFailureCategory,
+  NativeAssistantProviderId,
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
@@ -25,17 +26,29 @@ import {
   PENDING_THREAD_KEY,
   resolveAssistantLocation
 } from './workspaceRightSidebarAssistantPanelModel';
+import {
+  createAssistantProviderControls,
+  findSelectedAssistantRecord,
+  getSelectedAssistantThreadNotice,
+  isAssistantProviderReady,
+  selectAssistantRecord
+} from './workspaceRightSidebarAssistantProvider';
 import { createAssistantSubmitHandler } from './workspaceRightSidebarAssistantSubmitHandler';
 
 type AssistantPanelControllerArgs = {
   activeNodeId: string | null;
   aideReady: boolean;
+  byokConfigured: boolean;
+  byokModel: string;
+  codexReady: boolean;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
   nodesById: Record<string, Node>;
-  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
+  onCapabilityFailure: (provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => void;
+  onSelectProvider: (provider: NativeAssistantProviderId) => Promise<void>;
   onSelectNode: (nodeId: string) => void;
   topicUnavailableText: string;
+  selectedProvider: NativeAssistantProviderId;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
 
@@ -50,11 +63,16 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
   const [followCurrentMaterial, setFollowCurrentMaterial] = useFolioleAideContextFollow();
-  const modelControls = useFolioleAideModelControls(args.aideReady);
+  const modelControls = useFolioleAideModelControls(args.aideReady && args.codexReady);
   const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
-  const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
-  const threadMessageStatus = useThreadMessageStatus(dispatchCache, messagesByThread, threads.selectedThreadId);
+  const selectedRecord = findSelectedAssistantRecord(threads.records, threads.selectedThreadId);
+  const threadMessageStatus = useWorkspaceRightSidebarAssistantThreadMessages({
+    dispatchCache,
+    messagesByThread,
+    ...(selectedRecord ? { provider: selectedRecord.provider } : {}),
+    selectedThreadId: threads.selectedThreadId
+  });
 
   useAssistantTurnEventSubscription({
     activeTurnRef,
@@ -129,7 +147,7 @@ type ControllerResultInput = {
   setFollowCurrentMaterial: (value: boolean) => void;
   setMessageText: (value: string) => void;
   setSending: (value: boolean) => void;
-  threadMessageStatus: ReturnType<typeof useThreadMessageStatus>;
+  threadMessageStatus: ReturnType<typeof useWorkspaceRightSidebarAssistantThreadMessages>;
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
 };
 
@@ -147,35 +165,25 @@ function createPanelControllerResult(input: ControllerResultInput) {
     handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
       removeRecord(record, threads.removeRecord, input.dispatchCache),
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
-      selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
-    handleSubmit: createAssistantSubmitHandler(args, {
-      activeTurnRef: input.activeTurnRef,
-      dispatchCache: input.dispatchCache,
-      followCurrentMaterial: input.followCurrentMaterial,
-      imageDrafts: imageState.imageDrafts,
-      location: input.location,
-      messageText: input.messageText,
-      ...(input.modelControls.selection ? { modelSelection: input.modelControls.selection } : {}),
-      refreshModelCatalog: input.modelControls.refresh,
-      selectedRecord: input.selectedRecord,
-      sending: input.sending,
-      setImageDrafts: imageState.setImageDrafts,
-      setMessageText: input.setMessageText,
-      setSending: input.setSending,
-      threads
-    }),
+      selectAssistantRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
+    handleSubmit: createControllerSubmitHandler(input),
     imageDrafts: imageState.imageDrafts,
     imageError: imageState.imageError,
     loading: threads.loading,
     messageText: input.messageText,
     modelControls: input.modelControls,
+    providerControls: createAssistantProviderControls(args, input.selectedRecord),
     records: threads.records,
     reloadThreads: threads.reload,
     removeImage: imageState.removeImage,
     removingThreadId: threads.removingThreadId,
     selectedRecord: input.selectedRecord,
     selectedThreadId: threads.selectedThreadId,
-    selectedThreadNotice: getSelectedThreadNotice(input.selectedRecord, args.nodesById, args.topicUnavailableText),
+    selectedThreadNotice: getSelectedAssistantThreadNotice(
+      input.selectedRecord,
+      args.nodesById,
+      args.topicUnavailableText
+    ),
     sending: input.sending,
     setFollowCurrentMaterial: input.setFollowCurrentMaterial,
     setMessageText: input.setMessageText,
@@ -184,51 +192,36 @@ function createPanelControllerResult(input: ControllerResultInput) {
   };
 }
 
+function createControllerSubmitHandler(input: ControllerResultInput) {
+  const { args, imageState } = input;
+  const provider = input.selectedRecord?.provider ?? args.selectedProvider;
+  return createAssistantSubmitHandler({
+    ...args,
+    aideReady: args.aideReady && isAssistantProviderReady(provider, args)
+  }, {
+    activeTurnRef: input.activeTurnRef,
+    dispatchCache: input.dispatchCache,
+    followCurrentMaterial: input.followCurrentMaterial,
+    imageDrafts: imageState.imageDrafts,
+    location: input.location,
+    messageText: input.messageText,
+    ...(input.modelControls.selection ? { modelSelection: input.modelControls.selection } : {}),
+    provider,
+    refreshModelCatalog: input.modelControls.refresh,
+    selectedRecord: input.selectedRecord,
+    sending: input.sending,
+    setImageDrafts: imageState.setImageDrafts,
+    setMessageText: input.setMessageText,
+    setSending: input.setSending,
+    threads: input.threads
+  });
+}
+
+
 async function removeRecord(
   record: NativeAssistantThreadIndexRecord,
   remove: (record: NativeAssistantThreadIndexRecord) => Promise<boolean>,
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void
 ) {
   if (await remove(record)) dispatchCache({ key: record.providerThreadId, type: 'delete' });
-}
-
-function useThreadMessageStatus(
-  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void,
-  messagesByThread: ReturnType<typeof messageCacheReducer>,
-  selectedThreadId: string | null
-) {
-  return useWorkspaceRightSidebarAssistantThreadMessages({
-    dispatchCache,
-    messagesByThread,
-    selectedThreadId
-  });
-}
-
-
-function selectRecord(
-  record: NativeAssistantThreadIndexRecord,
-  nodesById: Record<string, Node>,
-  onSelectNode: (nodeId: string) => void,
-  selectThreadId: (threadId: string | null) => void
-) {
-  selectThreadId(record.providerThreadId);
-  if (record.location.type === 'node' && nodesById[record.location.nodeId])
-    onSelectNode(record.location.nodeId);
-}
-
-function findSelectedRecord(
-  records: NativeAssistantThreadIndexRecord[],
-  selectedThreadId: string | null
-) {
-  return records.find((record) => record.providerThreadId === selectedThreadId) ?? null;
-}
-
-function getSelectedThreadNotice(
-  record: NativeAssistantThreadIndexRecord | null,
-  nodesById: Record<string, Node>,
-  unavailableText: string
-) {
-  return record?.location.type === 'node' && !nodesById[record.location.nodeId]
-    ? unavailableText
-    : null;
 }

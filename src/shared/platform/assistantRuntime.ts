@@ -16,11 +16,14 @@ import type {
   NativeAssistantThreadIndexRecord,
   NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantProviderId } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageContentResult } from '../../../lib/platform/nativeAssistantImageContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
+
+const ASSISTANT_BYOK_SETTINGS_EVENT = 'foliole-assistant-byok-settings-change';
 
 export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult | null> {
   const invoke = getRuntimeInvoke();
@@ -118,11 +121,34 @@ export async function saveAssistantByokSettings(
 ): Promise<NativeAssistantByokSettings | null> {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.assistantSaveByokSettings, input);
+  return publishByokSettings(await invoke(NATIVE_COMMANDS.assistantSaveByokSettings, input));
 }
 
 export async function disconnectAssistantByokSettings(): Promise<NativeAssistantByokSettings | null> {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.assistantDisconnectByokSettings);
+  return publishByokSettings(await invoke(NATIVE_COMMANDS.assistantDisconnectByokSettings));
+}
+
+export async function selectAssistantProvider(
+  provider: NativeAssistantProviderId
+): Promise<NativeAssistantByokSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return publishByokSettings(await invoke(NATIVE_COMMANDS.assistantSetProvider, { provider }));
+}
+
+export function subscribeAssistantByokSettings(
+  listener: (settings: NativeAssistantByokSettings) => void
+) {
+  const handler = (event: Event) => {
+    listener((event as CustomEvent<NativeAssistantByokSettings>).detail);
+  };
+  window.addEventListener(ASSISTANT_BYOK_SETTINGS_EVENT, handler);
+  return () => window.removeEventListener(ASSISTANT_BYOK_SETTINGS_EVENT, handler);
+}
+
+function publishByokSettings(settings: NativeAssistantByokSettings) {
+  window.dispatchEvent(new CustomEvent(ASSISTANT_BYOK_SETTINGS_EVENT, { detail: settings }));
+  return settings;
 }

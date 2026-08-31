@@ -1,45 +1,44 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
+import type { NativeAssistantByokSettings } from '../../../lib/platform/nativeAssistantByokContract';
 import type {
   NativeAssistantFailureCategory,
-  NativeAssistantStatusResult
+  NativeAssistantProviderId
 } from '../../../lib/platform/nativeAssistantContract';
-import {
-  loadAssistantStatus,
-  startAssistantChatGptLogin
-} from '../../shared/platform/assistantRuntime';
+import * as assistantRuntime from '../../shared/platform/assistantRuntime';
 import {
   getFolioleAideEnabled,
   setFolioleAideEnabled,
   subscribeFolioleAideEnabled
 } from '../../shared/platform/folioleAideSettings';
 
-export type FolioleAideCapabilityState = 'checking' | 'notEnabled' | 'ready' | 'unavailable' | 'needsCheck';
-export type FolioleAideCapabilityUnavailableReason =
-  | 'missingThreadIndex'
-  | 'missingSendMessage'
-  | 'statusFailed'
-  | NativeAssistantFailureCategory;
-export type FolioleAideDiagnosticState =
-  | 'authFailed'
-  | 'busy'
-  | 'launchFailed'
-  | 'notConfigured'
-  | 'ready'
-  | 'unavailable'
-  | 'unknown';
-export type FolioleAideToolsDiagnosticState = 'failed' | 'running' | 'stopped' | 'unknown';
+import {
+  createFailureDiagnostic,
+  isAssistantReady,
+  isCapabilityFailureCategory,
+  readDiagnostic,
+  readUnavailableReason,
+  type FolioleAideCapabilityDiagnostic,
+  type FolioleAideCapabilityState,
+  type FolioleAideCapabilityUnavailableReason
+} from './folioleAideCapabilityModel';
 
-export interface FolioleAideCapabilityDiagnostic {
-  codex: FolioleAideDiagnosticState;
-  tools: FolioleAideToolsDiagnosticState;
-}
+export type {
+  FolioleAideCapabilityDiagnostic,
+  FolioleAideCapabilityState,
+  FolioleAideCapabilityUnavailableReason,
+  FolioleAideDiagnosticState,
+  FolioleAideToolsDiagnosticState
+} from './folioleAideCapabilityModel';
 
 export function useFolioleAideCapability() {
   const [enabled, setEnabled] = useState(() => getFolioleAideEnabled());
   const [state, setState] = useState<FolioleAideCapabilityState>(() => readInitialState(enabled));
   const [unavailableReason, setUnavailableReason] = useState<FolioleAideCapabilityUnavailableReason | null>(null);
   const [diagnostic, setDiagnostic] = useState<FolioleAideCapabilityDiagnostic | null>(null);
+  const [byokSettings, setByokSettings] = useState<NativeAssistantByokSettings | null>(null);
+  const [codexReady, setCodexReady] = useState(false);
 
   useEffect(
     () =>
@@ -52,7 +51,15 @@ export function useFolioleAideCapability() {
     []
   );
 
-  const check = useAssistantStatusCheck(setDiagnostic, setState, setUnavailableReason);
+  const check = useAssistantStatusCheck({
+    setByokSettings,
+    setCodexReady,
+    setDiagnostic,
+    setState,
+    setUnavailableReason
+  });
+
+  useByokSettingsSubscription(check, setByokSettings);
 
   useAutoCheckEnabledAide(enabled, state, check);
 
@@ -64,53 +71,88 @@ export function useFolioleAideCapability() {
 
   const signIn = useAssistantSignIn(check, setDiagnostic, setState, setUnavailableReason);
 
-  const markUnavailableFromFailure = useCallback((category: NativeAssistantFailureCategory) => {
-    if (!isCapabilityFailureCategory(category)) return;
-    setUnavailableReason(category);
-    setDiagnostic((current) => createFailureDiagnostic(category, current));
-    setState('unavailable');
-  }, []);
+  const markUnavailableFromFailure = useCapabilityFailure({
+    byokConfigured: byokSettings?.state === 'configured',
+    check,
+    setCodexReady,
+    setDiagnostic,
+    setState,
+    setUnavailableReason
+  });
+  const selectProvider = useProviderSelection(setByokSettings);
 
   return useMemo(
     () => ({
       enabled,
       enable,
       diagnostic,
+      byokSettings,
+      codexReady,
       markUnavailableFromFailure,
       ready: state === 'ready',
       unavailableReason,
       retry: check,
+      selectProvider,
       signIn,
       state
     }),
-    [check, diagnostic, enable, enabled, markUnavailableFromFailure, signIn, state, unavailableReason]
+    [byokSettings, check, codexReady, diagnostic, enable, enabled, markUnavailableFromFailure, selectProvider, signIn, state, unavailableReason]
   );
 }
 
-function useAssistantStatusCheck(
-  setDiagnostic: (value: FolioleAideCapabilityDiagnostic | null) => void,
-  setState: (value: FolioleAideCapabilityState) => void,
-  setUnavailableReason: (value: FolioleAideCapabilityUnavailableReason | null) => void
+function useByokSettingsSubscription(
+  check: () => Promise<void>,
+  setByokSettings: (settings: NativeAssistantByokSettings | null) => void
 ) {
+  useEffect(() => {
+    if (!('subscribeAssistantByokSettings' in assistantRuntime)) return;
+    return assistantRuntime.subscribeAssistantByokSettings((settings) => {
+      setByokSettings(settings);
+      void check();
+    });
+  }, [check, setByokSettings]);
+}
+
+function useAssistantStatusCheck(setters: {
+  setByokSettings: (value: NativeAssistantByokSettings | null) => void;
+  setCodexReady: (value: boolean) => void;
+  setDiagnostic: (value: FolioleAideCapabilityDiagnostic | null) => void;
+  setState: (value: FolioleAideCapabilityState) => void;
+  setUnavailableReason: (value: FolioleAideCapabilityUnavailableReason | null) => void;
+}) {
   return useCallback(async () => {
-    setState('checking');
-    setUnavailableReason(null);
-    setDiagnostic(null);
+    setters.setState('checking');
+    setters.setUnavailableReason(null);
+    setters.setDiagnostic(null);
     try {
-      const status = await loadAssistantStatus();
-      setDiagnostic(readDiagnostic(status));
-      if (isAssistantReady(status)) {
-        setState('ready');
+      const byokRequest = 'loadAssistantByokSettings' in assistantRuntime
+        ? assistantRuntime.loadAssistantByokSettings()
+        : Promise.resolve(null);
+      const [status, byok] = await Promise.all([assistantRuntime.loadAssistantStatus(), byokRequest]);
+      const nextCodexReady = isAssistantReady(status);
+      const byokReady = byok?.state === 'configured';
+      setters.setByokSettings(byok);
+      setters.setCodexReady(nextCodexReady);
+      setters.setDiagnostic(readDiagnostic(status));
+      if (nextCodexReady || byokReady) {
+        setters.setState('ready');
         return;
       }
-      setUnavailableReason(readUnavailableReason(status));
-      setState('unavailable');
+      setters.setUnavailableReason(readUnavailableReason(status));
+      setters.setState('unavailable');
     } catch {
-      setDiagnostic({ codex: 'unknown', tools: 'unknown' });
-      setUnavailableReason('statusFailed');
-      setState('unavailable');
+      setters.setCodexReady(false);
+      setters.setDiagnostic({ codex: 'unknown', tools: 'unknown' });
+      setters.setUnavailableReason('statusFailed');
+      setters.setState('unavailable');
     }
-  }, [setDiagnostic, setState, setUnavailableReason]);
+  }, [
+    setters.setByokSettings,
+    setters.setCodexReady,
+    setters.setDiagnostic,
+    setters.setState,
+    setters.setUnavailableReason
+  ]);
 }
 
 function useAssistantSignIn(
@@ -122,13 +164,52 @@ function useAssistantSignIn(
   return useCallback(async () => {
     setState('checking');
     setUnavailableReason(null);
-    const result = await startAssistantChatGptLogin().catch(() => null);
+    const result = await assistantRuntime.startAssistantChatGptLogin().catch(() => null);
     if (result?.state === 'ready') return check();
     const category = result?.failure?.category ?? 'auth_failed';
     setDiagnostic(createFailureDiagnostic(category, null));
     setUnavailableReason(category);
     setState('unavailable');
   }, [check, setDiagnostic, setState, setUnavailableReason]);
+}
+
+function useProviderSelection(
+  setByokSettings: (settings: NativeAssistantByokSettings | null) => void
+) {
+  return useCallback(async (provider: NativeAssistantProviderId) => {
+    if (!('selectAssistantProvider' in assistantRuntime)) return;
+    const next = await assistantRuntime.selectAssistantProvider(provider);
+    if (next) setByokSettings(next);
+  }, [setByokSettings]);
+}
+
+function useCapabilityFailure(input: {
+  byokConfigured: boolean;
+  check: () => Promise<void>;
+  setCodexReady: (ready: boolean) => void;
+  setDiagnostic: Dispatch<SetStateAction<FolioleAideCapabilityDiagnostic | null>>;
+  setState: (state: FolioleAideCapabilityState) => void;
+  setUnavailableReason: (reason: FolioleAideCapabilityUnavailableReason | null) => void;
+}) {
+  const {
+    byokConfigured,
+    check,
+    setCodexReady,
+    setDiagnostic,
+    setState,
+    setUnavailableReason
+  } = input;
+  return useCallback((provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => {
+    if (provider === 'openai-compatible') {
+      if (category === 'not_configured') void check();
+      return;
+    }
+    setCodexReady(false);
+    if (byokConfigured || !isCapabilityFailureCategory(category)) return;
+    setUnavailableReason(category);
+    setDiagnostic((current) => createFailureDiagnostic(category, current));
+    setState('unavailable');
+  }, [byokConfigured, check, setCodexReady, setDiagnostic, setState, setUnavailableReason]);
 }
 
 function readInitialState(enabled: boolean): FolioleAideCapabilityState {
@@ -143,86 +224,4 @@ function useAutoCheckEnabledAide(
   useEffect(() => {
     if (enabled && state === 'needsCheck') void check();
   }, [check, enabled, state]);
-}
-
-function isAssistantReady(status: NativeAssistantStatusResult | null | undefined) {
-  return Boolean(
-    status?.state === 'ready' &&
-      status.capabilities.some((capability) => capability.name === 'sendMessage' && capability.enabled) &&
-      status.capabilities.some((capability) => capability.name === 'threadIndex' && capability.enabled) &&
-      status.capabilities.some((capability) => capability.name === 'agentControl' && capability.enabled) &&
-      status.agentControl?.state === 'running'
-  );
-}
-
-function readUnavailableReason(
-  status: NativeAssistantStatusResult | null | undefined
-): FolioleAideCapabilityUnavailableReason {
-  if (!status) return 'statusFailed';
-  if (status.failure?.category) return status.failure.category;
-  if (status.agentControl?.state !== 'running') return 'agent_control_unavailable';
-  if (!status.capabilities.some((capability) => capability.name === 'agentControl' && capability.enabled)) {
-    return 'agent_control_unavailable';
-  }
-  if (!status.capabilities.some((capability) => capability.name === 'sendMessage' && capability.enabled)) {
-    return 'missingSendMessage';
-  }
-  if (!status.capabilities.some((capability) => capability.name === 'threadIndex' && capability.enabled)) {
-    return 'missingThreadIndex';
-  }
-  return status.state === 'busy' ? 'busy' : 'statusFailed';
-}
-
-function readDiagnostic(
-  status: NativeAssistantStatusResult | null | undefined
-): FolioleAideCapabilityDiagnostic {
-  return {
-    codex: readCodexDiagnostic(status),
-    tools: readToolsDiagnostic(status)
-  };
-}
-
-function readCodexDiagnostic(
-  status: NativeAssistantStatusResult | null | undefined
-): FolioleAideDiagnosticState {
-  if (!status) return 'unknown';
-  if (isAssistantReady(status)) return 'ready';
-  if (status.failure?.category === 'auth_failed') return 'authFailed';
-  if (status.failure?.category === 'not_configured') return 'notConfigured';
-  if (status.failure?.category === 'launch_failed') return 'launchFailed';
-  if (status.failure?.category === 'busy' || status.state === 'busy') return 'busy';
-  return 'unavailable';
-}
-
-function readToolsDiagnostic(
-  status: NativeAssistantStatusResult | null | undefined
-): FolioleAideToolsDiagnosticState {
-  if (!status?.agentControl) return 'unknown';
-  if (status.agentControl.state === 'running') return 'running';
-  if (status.agentControl.state === 'failed') return 'failed';
-  return 'stopped';
-}
-
-function isCapabilityFailureCategory(category: NativeAssistantFailureCategory) {
-  return category === 'agent_control_unavailable' ||
-    category === 'auth_failed' ||
-    category === 'not_configured';
-}
-
-function createFailureDiagnostic(
-  category: NativeAssistantFailureCategory,
-  current: FolioleAideCapabilityDiagnostic | null
-): FolioleAideCapabilityDiagnostic {
-  return {
-    codex: readFailureCodexDiagnostic(category),
-    tools: category === 'agent_control_unavailable' ? 'stopped' : current?.tools ?? 'unknown'
-  };
-}
-
-function readFailureCodexDiagnostic(category: NativeAssistantFailureCategory): FolioleAideDiagnosticState {
-  if (category === 'auth_failed') return 'authFailed';
-  if (category === 'busy' || category === 'overloaded' || category === 'timeout') return 'busy';
-  if (category === 'launch_failed') return 'launchFailed';
-  if (category === 'not_configured') return 'notConfigured';
-  return 'unavailable';
 }

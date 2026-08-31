@@ -37,7 +37,8 @@ import {
   FOLIOLE_AIDE_BYOK_SETTINGS_KEY,
   loadFolioleAideByokSettings,
   normalizeEndpoint,
-  saveFolioleAideByokSettings
+  saveFolioleAideByokSettings,
+  setFolioleAideProvider
 } from './folioleAideByokSettings.js';
 
 beforeEach(() => {
@@ -68,6 +69,7 @@ it('stores only public settings and never returns the API key', () => {
     endpoint: 'https://models.example/v1/chat/completions',
     has_api_key: true,
     model: 'model-a',
+    selected_provider: 'codex-app-server',
     state: 'configured'
   });
   expect(JSON.stringify(state.setting)).not.toContain('secret-key');
@@ -88,6 +90,19 @@ it('requires a new key when the endpoint changes', () => {
   expect(loadFolioleAideByokSettings().endpoint)
     .toBe('https://one.example/v1/chat/completions');
   expect(state.secret).toBe('old-key');
+});
+
+it('persists only a configured new-conversation provider and resets it on disconnect', () => {
+  expect(() => setFolioleAideProvider('openai-compatible')).toThrow('byok_not_configured');
+  saveFolioleAideByokSettings({
+    api_key: 'secret-key',
+    endpoint: 'https://models.example/v1/chat/completions',
+    model: 'model-a'
+  });
+
+  expect(setFolioleAideProvider('openai-compatible').selected_provider).toBe('openai-compatible');
+  expect(JSON.stringify(state.setting)).not.toContain('secret-key');
+  expect(disconnectFolioleAideByokSettings().selected_provider).toBe('codex-app-server');
 });
 
 it('restores the previous secret when the public settings write fails', () => {
@@ -128,7 +143,7 @@ it('disconnects without leaving a public or secret configuration', () => {
   });
 
   expect(disconnectFolioleAideByokSettings()).toEqual({
-    endpoint: '', has_api_key: false, model: '', state: 'not_configured'
+    endpoint: '', has_api_key: false, model: '', selected_provider: 'codex-app-server', state: 'not_configured'
   });
   expect(state.secret).toBe('');
   expect(state.setting).toBeNull();

@@ -1,6 +1,7 @@
 import {
   CURRENT_ASSISTANT_AGENT_TOOL_VERSION,
-  type NativeAssistantAgentControlContext
+  type NativeAssistantAgentControlContext,
+  type NativeAssistantProviderId
 } from '../../lib/platform/nativeAssistantContract.js';
 import { readAssistantImageContent } from '../assistant/assistantImageStorage.js';
 import type { AssistantContinuationMessage } from '../assistant/codexAppServerThreadHistory.js';
@@ -12,29 +13,40 @@ export type PreparedAssistantThreadContinuation = {
   continuationMessages?: AssistantContinuationMessage[];
   continuedFromThreadId?: string;
   persistedContinuationMessages?: ReturnType<typeof listAssistantThreadMessages>;
+  provider: NativeAssistantProviderId;
   providerThreadId?: string;
 };
 
 export async function prepareAssistantThreadContinuation(
+  provider: NativeAssistantProviderId,
   providerThreadId: string | undefined,
   agentControl: NativeAssistantAgentControlContext
 ): Promise<PreparedAssistantThreadContinuation> {
   if (!providerThreadId) return {
-    agentToolVersion: resolveAttachedToolVersion(agentControl)
+    agentToolVersion: provider === 'codex-app-server' ? resolveAttachedToolVersion(agentControl) : 0,
+    provider
   };
-  const record = getAssistantThreadIndex(providerThreadId);
-  if (!requiresToolUpgrade(record.agentToolVersion, agentControl)) return {
-    agentToolVersion: record.agentToolVersion,
+  const record = getAssistantThreadIndex(provider, providerThreadId);
+  if (provider === 'openai-compatible') return {
+    agentToolVersion: 0,
+    persistedContinuationMessages: listAssistantThreadMessages(provider, providerThreadId),
+    provider,
     providerThreadId
   };
-  const persistedContinuationMessages = listAssistantThreadMessages(providerThreadId);
+  if (!requiresToolUpgrade(record.agentToolVersion, agentControl)) return {
+    agentToolVersion: record.agentToolVersion,
+    provider,
+    providerThreadId
+  };
+  const persistedContinuationMessages = listAssistantThreadMessages(provider, providerThreadId);
   if (!persistedContinuationMessages.length) throw new Error('assistant_thread_history_unavailable');
   const continuationMessages = await hydrateContinuationImages(persistedContinuationMessages);
   return {
     agentToolVersion: CURRENT_ASSISTANT_AGENT_TOOL_VERSION,
     continuationMessages,
     continuedFromThreadId: providerThreadId,
-    persistedContinuationMessages
+    persistedContinuationMessages,
+    provider
   };
 }
 

@@ -47,6 +47,10 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
               <span className={`${inspectorListBodyClassName} block truncate`}>
                 {getThreadLocationText(record, props.activeNodeId, props.nodesById, t)}
                 {' · '}
+                {record.provider === 'openai-compatible'
+                  ? t('desktop.rightPanel.assistant.provider.historyByok')
+                  : 'Codex'}
+                {' · '}
                 {record.preview || t('desktop.rightPanel.assistant.noPreview')}
               </span>
             </span>

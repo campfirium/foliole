@@ -13,11 +13,10 @@ import { listAssistantThreadMessages } from '../database/assistantThreadMessages
 
 import {
   readAssistantAttachmentId,
+  readAssistantProvider,
   readOpeningLocation,
   readProviderThreadId
 } from './assistantCommandInputs.js';
-
-const LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND = 'assistant_delete_thread_index';
 
 export function handleAssistantLocalHistoryCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
@@ -30,7 +29,10 @@ export function handleAssistantLocalHistoryCommand(command: string, args: Record
     }));
   }
   if (command === NATIVE_COMMANDS.assistantListThreadMessages) {
-    return runWithAssistantHistoryConnectionOwner(() => listAssistantThreadMessages(readProviderThreadId(args)));
+    return runWithAssistantHistoryConnectionOwner(() => listAssistantThreadMessages(
+      readAssistantProvider(args.provider),
+      readProviderThreadId(args)
+    ));
   }
   if (command === NATIVE_COMMANDS.assistantReadImageAttachment) {
     return runWithAssistantHistoryConnectionOwner(() =>
@@ -38,12 +40,17 @@ export function handleAssistantLocalHistoryCommand(command: string, args: Record
     );
   }
   if (command === NATIVE_COMMANDS.assistantArchiveThreadIndex) {
-    return runWithAssistantHistoryConnectionOwner(() => archiveAssistantThreadIndex(readProviderThreadId(args)));
+    return runWithAssistantHistoryConnectionOwner(() => archiveAssistantThreadIndex(
+      readAssistantProvider(args.provider),
+      readProviderThreadId(args)
+    ));
   }
-  if (command === NATIVE_COMMANDS.assistantRemoveThreadFromHistory ||
-      command === LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND) {
+  if (command === NATIVE_COMMANDS.assistantRemoveThreadFromHistory) {
     return runWithAssistantHistoryConnectionOwner(async () => {
-      const removed = deleteAssistantThreadIndexWithImages(readProviderThreadId(args));
+      const removed = deleteAssistantThreadIndexWithImages(
+        readAssistantProvider(args.provider),
+        readProviderThreadId(args)
+      );
       await deleteAssistantImageFiles(removed.unreferencedImages);
       return removed.record;
     });

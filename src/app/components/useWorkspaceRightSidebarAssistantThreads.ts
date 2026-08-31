@@ -83,7 +83,10 @@ async function removeAssistantThreadRecord(args: {
   args.setRemovingThreadId(args.record.providerThreadId);
   args.setError(null);
   try {
-    const removed = await removeAssistantThreadFromHistory({ providerThreadId: args.record.providerThreadId });
+    const removed = await removeAssistantThreadFromHistory({
+      provider: args.record.provider,
+      providerThreadId: args.record.providerThreadId
+    });
     if (!removed) throw new Error('assistant_thread_remove_unavailable');
     args.setRecords((current) => removeRecordFromList(current, args.record, args.selectThreadId));
     return true;

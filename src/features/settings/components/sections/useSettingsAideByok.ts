@@ -8,7 +8,7 @@ import {
 } from '../../../../shared/platform/assistantRuntime';
 
 const EMPTY_SETTINGS: NativeAssistantByokSettings = {
-  endpoint: '', has_api_key: false, model: '', state: 'not_configured'
+  endpoint: '', has_api_key: false, model: '', selected_provider: 'codex-app-server', state: 'not_configured'
 };
 
 type SettingsStatus = 'disconnecting' | 'idle' | 'loading' | 'saving';

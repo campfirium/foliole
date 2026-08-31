@@ -1,6 +1,10 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.rightPanel.assistant.provider.label': '新对话入口',
+  'desktop.rightPanel.assistant.provider.byok': '你的模型 · {model}',
+  'desktop.rightPanel.assistant.provider.historyByok': '你的模型',
+  'desktop.rightPanel.assistant.provider.unconfiguredModel': '未配置',
   'desktop.rightPanel.assistant.model.settings': '模型与性能设置',
   'desktop.rightPanel.assistant.model.loading': '正在载入可用模型与性能设置…',
   'desktop.rightPanel.assistant.model.unavailable': '模型与性能设置暂不可用。消息将使用 Codex 默认配置。',

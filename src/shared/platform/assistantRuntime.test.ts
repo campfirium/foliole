@@ -26,12 +26,12 @@ it('returns null when the runtime bridge is unavailable', async () => {
     bridge.getRuntimeInvoke.mockReturnValue(null);
 
     await expect(loadAssistantStatus()).resolves.toBeNull();
-    await expect(sendAssistantMessage({ message: 'Hi' })).resolves.toBeNull();
+    await expect(sendAssistantMessage({ message: 'Hi', provider: 'codex-app-server' })).resolves.toBeNull();
     await expect(listAssistantThreadIndex()).resolves.toBeNull();
-    await expect(listAssistantThreadMessages({ providerThreadId: 'thread-1' })).resolves.toBeNull();
-    await expect(archiveAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toBeNull();
+    await expect(listAssistantThreadMessages({ provider: 'codex-app-server', providerThreadId: 'thread-1' })).resolves.toBeNull();
+    await expect(archiveAssistantThreadIndex({ provider: 'codex-app-server', providerThreadId: 'thread-1' })).resolves.toBeNull();
     await expect(loadAssistantImageAttachment('a'.repeat(64))).resolves.toBeNull();
-    await expect(removeAssistantThreadFromHistory({ providerThreadId: 'thread-1' })).resolves.toBeNull();
+    await expect(removeAssistantThreadFromHistory({ provider: 'codex-app-server', providerThreadId: 'thread-1' })).resolves.toBeNull();
     await expect(loadAssistantStorageInfo()).resolves.toBeNull();
     await expect(openAssistantStorageLocation()).resolves.toBe(false);
 });
@@ -48,6 +48,7 @@ it('routes assistant calls through typed native commands', async () => {
       sendAssistantMessage({
         message: 'Hi',
         openingLocation: location,
+        provider: 'codex-app-server',
         providerThreadId: 'thread-1'
       })
     ).resolves.toEqual({
@@ -56,16 +57,16 @@ it('routes assistant calls through typed native commands', async () => {
     await expect(listAssistantThreadIndex({ location })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantListThreadIndex
     });
-    await expect(listAssistantThreadMessages({ providerThreadId: 'thread-1' })).resolves.toEqual({
+    await expect(listAssistantThreadMessages({ provider: 'codex-app-server', providerThreadId: 'thread-1' })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantListThreadMessages
     });
-    await expect(archiveAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toEqual({
+    await expect(archiveAssistantThreadIndex({ provider: 'codex-app-server', providerThreadId: 'thread-1' })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantArchiveThreadIndex
     });
     await expect(loadAssistantImageAttachment('a'.repeat(64))).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantReadImageAttachment
     });
-    await expect(removeAssistantThreadFromHistory({ providerThreadId: 'thread-2' })).resolves.toEqual({
+    await expect(removeAssistantThreadFromHistory({ provider: 'codex-app-server', providerThreadId: 'thread-2' })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantRemoveThreadFromHistory
     });
 
@@ -73,21 +74,25 @@ it('routes assistant calls through typed native commands', async () => {
     expect(invoke).toHaveBeenNthCalledWith(2, NATIVE_COMMANDS.assistantSendMessage, {
       message: 'Hi',
       openingLocation: location,
+      provider: 'codex-app-server',
       providerThreadId: 'thread-1'
     });
     expect(invoke).toHaveBeenNthCalledWith(3, NATIVE_COMMANDS.assistantListThreadIndex, {
       location
     });
     expect(invoke).toHaveBeenNthCalledWith(4, NATIVE_COMMANDS.assistantListThreadMessages, {
+      provider: 'codex-app-server',
       providerThreadId: 'thread-1'
     });
     expect(invoke).toHaveBeenNthCalledWith(5, NATIVE_COMMANDS.assistantArchiveThreadIndex, {
+      provider: 'codex-app-server',
       providerThreadId: 'thread-1'
     });
     expect(invoke).toHaveBeenNthCalledWith(6, NATIVE_COMMANDS.assistantReadImageAttachment, {
       attachmentId: 'a'.repeat(64)
     });
     expect(invoke).toHaveBeenNthCalledWith(7, NATIVE_COMMANDS.assistantRemoveThreadFromHistory, {
+      provider: 'codex-app-server',
       providerThreadId: 'thread-2'
     });
 });

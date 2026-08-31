@@ -16,5 +16,6 @@ export const NATIVE_ASSISTANT_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.assistantOpenStorageLocation, route: 'assistant', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.assistantLoadByokSettings, route: 'assistant', capability: 'read' },
   { command: NATIVE_COMMANDS.assistantSaveByokSettings, route: 'assistant', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.assistantSetProvider, route: 'assistant', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.assistantDisconnectByokSettings, route: 'assistant', capability: 'settingsMutation' }
 ] as const satisfies readonly NativeCommandRegistryEntry[];

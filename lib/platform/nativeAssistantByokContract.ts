@@ -1,3 +1,4 @@
+import type { NativeAssistantProviderId } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export type NativeAssistantByokConfigurationState =
@@ -9,6 +10,7 @@ export interface NativeAssistantByokSettings {
   endpoint: string;
   has_api_key: boolean;
   model: string;
+  selected_provider: NativeAssistantProviderId;
   state: NativeAssistantByokConfigurationState;
 }
 
@@ -29,6 +31,10 @@ export type NativeAssistantByokCommandMap = {
   };
   [NATIVE_COMMANDS.assistantDisconnectByokSettings]: {
     args: undefined;
+    result: NativeAssistantByokSettings;
+  };
+  [NATIVE_COMMANDS.assistantSetProvider]: {
+    args: { provider: NativeAssistantProviderId };
     result: NativeAssistantByokSettings;
   };
 };

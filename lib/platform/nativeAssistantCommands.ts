@@ -12,5 +12,6 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantOpenStorageLocation: 'assistant_open_storage_location',
   assistantLoadByokSettings: 'assistant_load_byok_settings',
   assistantSaveByokSettings: 'assistant_save_byok_settings',
+  assistantSetProvider: 'assistant_set_provider',
   assistantDisconnectByokSettings: 'assistant_disconnect_byok_settings'
 } as const;

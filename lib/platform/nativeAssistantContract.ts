@@ -8,7 +8,7 @@ export type { NativeAssistantCommandMap } from './nativeAssistantCommandContract
 export type * from './nativeAssistantByokContract.js';
 export type * from './nativeAssistantModelContract.js';
 
-export type NativeAssistantProviderId = 'codex-app-server';
+export type NativeAssistantProviderId = 'codex-app-server' | 'openai-compatible';
 
 export type NativeAssistantStatusState =
   'busy' | 'disconnected' | 'failed' | 'ready' | 'unavailable';
@@ -93,7 +93,7 @@ export interface NativeAssistantSendMessageArgs {
   message: string;
   modelSelection?: NativeAssistantModelSelection;
   openingLocation?: NativeAssistantThreadOpeningLocation;
-  provider?: NativeAssistantProviderId;
+  provider: NativeAssistantProviderId;
   providerThreadId?: string;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }
@@ -171,10 +171,12 @@ export interface NativeAssistantThreadIndexListArgs {
 }
 
 export interface NativeAssistantThreadIndexMutationArgs {
+  provider: NativeAssistantProviderId;
   providerThreadId: string;
 }
 
 export interface NativeAssistantThreadMessageListArgs {
+  provider: NativeAssistantProviderId;
   providerThreadId: string;
 }
 

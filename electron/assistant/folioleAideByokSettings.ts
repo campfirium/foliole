@@ -4,6 +4,7 @@ import type {
   NativeAssistantByokSettings,
   NativeAssistantByokSettingsInput
 } from '../../lib/platform/nativeAssistantByokContract.js';
+import type { NativeAssistantProviderId } from '../../lib/platform/nativeAssistantContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import {
   deletePublishDeviceSecret as deleteDeviceSecret,
@@ -19,7 +20,14 @@ const SECRET_LABEL = 'Foliole Aide model API key';
 interface StoredByokSettings {
   endpoint: string;
   model: string;
+  selected_provider: NativeAssistantProviderId;
   updated_at: string;
+}
+
+export interface FolioleAideByokRuntimeConfig {
+  apiKey: string;
+  endpoint: string;
+  model: string;
 }
 
 export function loadFolioleAideByokSettings(): NativeAssistantByokSettings {
@@ -70,11 +78,45 @@ export function disconnectFolioleAideByokSettings(): NativeAssistantByokSettings
   return emptySettings();
 }
 
+export function setFolioleAideProvider(provider: NativeAssistantProviderId) {
+  if (provider !== 'codex-app-server' && provider !== 'openai-compatible') {
+    throw new Error('invalid_assistant_provider');
+  }
+  const stored = loadStoredSettings();
+  if (provider === 'openai-compatible' && loadFolioleAideByokSettings().state !== 'configured') {
+    throw new Error('byok_not_configured');
+  }
+  if (!stored) return emptySettings();
+  saveJsonSetting(FOLIOLE_AIDE_BYOK_SETTINGS_KEY, {
+    ...stored,
+    selected_provider: provider,
+    updated_at: new Date().toISOString()
+  });
+  return loadFolioleAideByokSettings();
+}
+
+export function loadFolioleAideByokRuntimeConfig(): FolioleAideByokRuntimeConfig {
+  const stored = loadStoredSettings();
+  if (!stored || loadFolioleAideByokSettings().state !== 'configured') {
+    throw new Error('byok_not_configured');
+  }
+  return {
+    apiKey: readDeviceSecret(SECRET_FILE, SECRET_LABEL),
+    endpoint: stored.endpoint,
+    model: stored.model
+  };
+}
+
 function normalizeInput(input: NativeAssistantByokSettingsInput): StoredByokSettings {
   const endpoint = normalizeEndpoint(input.endpoint);
   const model = input.model.trim();
   if (!model || model.length > 200) throw new Error('invalid_byok_model');
-  return { endpoint, model, updated_at: new Date().toISOString() };
+  return {
+    endpoint,
+    model,
+    selected_provider: loadStoredSettings()?.selected_provider ?? 'codex-app-server',
+    updated_at: new Date().toISOString()
+  };
 }
 
 export function normalizeEndpoint(value: string) {
@@ -106,7 +148,14 @@ function loadStoredSettings(): StoredByokSettings | null {
   const stored = value as Partial<StoredByokSettings>;
   return typeof stored.endpoint === 'string' && typeof stored.model === 'string'
     && typeof stored.updated_at === 'string'
-    ? stored as StoredByokSettings
+    ? {
+        endpoint: stored.endpoint,
+        model: stored.model,
+        selected_provider: stored.selected_provider === 'openai-compatible'
+          ? 'openai-compatible'
+          : 'codex-app-server',
+        updated_at: stored.updated_at
+      }
     : null;
 }
 
@@ -125,9 +174,21 @@ function publicSettings(
   hasApiKey: boolean,
   state: NativeAssistantByokSettings['state']
 ): NativeAssistantByokSettings {
-  return { endpoint: stored.endpoint, has_api_key: hasApiKey, model: stored.model, state };
+  return {
+    endpoint: stored.endpoint,
+    has_api_key: hasApiKey,
+    model: stored.model,
+    selected_provider: stored.selected_provider,
+    state
+  };
 }
 
 function emptySettings(): NativeAssistantByokSettings {
-  return { endpoint: '', has_api_key: false, model: '', state: 'not_configured' };
+  return {
+    endpoint: '',
+    has_api_key: false,
+    model: '',
+    selected_provider: 'codex-app-server',
+    state: 'not_configured'
+  };
 }
