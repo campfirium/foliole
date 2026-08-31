@@ -12,6 +12,7 @@ import { expectWorkspaceShell } from './harness/settings';
 const QUESTION = 'Why does retrieval practice improve memory?';
 const ANSWER = 'It strengthens recall by requiring active retrieval.';
 const EVIDENCE_PATH = path.join(process.cwd(), '.tmp/artifacts/agent-control-item-create.json');
+const CREDENTIAL_ISOLATION_ARGS = process.platform === 'darwin' ? ['--use-mock-keychain'] : [];
 
 async function readDescriptorPath(session: DesktopSession) {
   const userDataPath = await session.electronApp.evaluate(({ app }) => app.getPath('userData'));
@@ -25,6 +26,12 @@ async function readDescriptorPath(session: DesktopSession) {
     }
   }).toBe(true);
   return descriptorPath;
+}
+
+async function expectCredentialIsolation(session: DesktopSession) {
+  if (process.platform !== 'darwin') return;
+  expect(await session.electronApp.evaluate(({ app }) =>
+    app.commandLine.hasSwitch('use-mock-keychain'))).toBe(true);
 }
 
 async function readRendererItem(page: Page, itemId: string) {
@@ -67,10 +74,12 @@ function expectQuestionAnswerItem(item: Record<string, unknown> | null) {
   });
 }
 
-test('creates and hydrates a real question-answer Item through the public CLI', async ({ desktopSession }, testInfo) => {
+test('creates and hydrates a real question-answer Item through the public CLI', async (_fixtures, testInfo) => {
+  const desktopSession = await launchDesktopSession({ extraArgs: CREDENTIAL_ISOLATION_ARGS }) as DesktopSession;
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   const stateRoot = desktopSession.target.runtimeStateRoot;
   try {
+    await expectCredentialIsolation(desktopSession);
     await expectWorkspaceShell(desktopSession.firstWindow);
     const descriptorPath = await readDescriptorPath(desktopSession);
     const created = await runAgentCli([
@@ -95,8 +104,10 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
 
     await desktopSession.electronApp.close();
     secondSession = await launchDesktopSession({
-      env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot }
+      env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot },
+      extraArgs: CREDENTIAL_ISOLATION_ARGS
     }) as DesktopSession;
+    await expectCredentialIsolation(secondSession);
     await expectWorkspaceShell(secondSession.firstWindow);
     await expect.poll(() => readRendererItem(secondSession!.firstWindow, itemId)).not.toBeNull();
     const hydrated = await openRendererItem(secondSession.firstWindow, itemId);
@@ -112,12 +123,14 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
       accepted_item_id: itemId,
       after_relaunch_api: relaunchedRead,
       after_relaunch_renderer: hydrated,
-      before_relaunch_api: material
+      before_relaunch_api: material,
+      credential_isolation: process.platform === 'darwin' ? 'mock-keychain' : 'platform-native'
     }, null, 2)}\n`);
     await testInfo.attach('agent-control-item-create', {
       contentType: 'application/json', path: EVIDENCE_PATH
     });
   } finally {
     await secondSession?.close();
+    await desktopSession.close();
   }
 });
