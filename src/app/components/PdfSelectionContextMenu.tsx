@@ -36,13 +36,13 @@ function usePdfSelectionMenuState() {
     setNoteOpen(false);
     setNoteDraft('');
   };
-  const openSelectionToolbar = (selection: PdfSelectionSnapshot, position: { left: number; top: number }, showOverlay = false) => {
+  const openSelectionToolbar = (selection: PdfSelectionSnapshot, position: { left: number; top: number }) => {
     setSelectionMenuState({
       ...position,
       locator: selection.locator,
       selectionText: selection.selectionText
     });
-    setSelectionOverlayLocator(showOverlay ? selection.locator : undefined);
+    setSelectionOverlayLocator(selection.locator);
   };
   useTrackPdfSelection(surfaceRef, preservedSelectionRef);
   usePdfSelectionToolbar({ onClose: closeSelectionMenu, onOpen: openSelectionToolbar, surfaceRef });
@@ -55,7 +55,7 @@ function usePdfSelectionMenuState() {
     }
     event.preventDefault();
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
-    openSelectionToolbar(fallbackSelection, position, true);
+    openSelectionToolbar(fallbackSelection, position);
   };
   return {
     closeSelectionMenu,

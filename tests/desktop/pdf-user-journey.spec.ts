@@ -218,9 +218,12 @@ test('PDF highlight journey @pdf opens shared actions and deletes a saved highli
 
   await selectPdfHighlightText(desktopWindow);
   const createHighlightButton = desktopWindow.getByRole('button', { name: /^(Highlight|高亮)$/ });
+  const pendingSelection = getPdfReaderRegion(desktopWindow).locator('[data-testid="pdf-selection-rect"], [data-testid="pdf-selection-marker"]').first();
   await expect(createHighlightButton).toBeVisible();
+  await expect(pendingSelection).toBeVisible();
   await desktopWindow.screenshot({ path: PDF_HIGHLIGHT_ACTIONS_SCREENSHOT });
   await createHighlightButton.click();
+  await expect(pendingSelection).toHaveCount(0);
 
   const highlightRect = getPdfReaderRegion(desktopWindow).getByTestId('pdf-highlight-rect').first();
   await expect(highlightRect).toBeVisible();
