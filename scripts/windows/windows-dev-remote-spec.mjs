@@ -43,8 +43,9 @@ export function windowsDevTransportIdentity({ env = process.env, fsApi = fs,
   return { host: resolvedHost, identityPath, options: ['-i', identityPath, ...SSH_OPTIONS], receipt };
 }
 
-export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir()) {
-  const transport = windowsDevTransportIdentity({ env, home, host });
+export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir(),
+  fsApi = fs) {
+  const transport = windowsDevTransportIdentity({ env, fsApi, home, host });
   const expectedGroupId = env.FOLIOLE_T152_EXPECTED_GROUP_ID?.trim();
   const expectedGroupTag = env.FOLIOLE_T152_EXPECTED_GROUP_TAG?.trim();
   if (expectedGroupId && !/^group-[0-9a-f-]{36}$/u.test(expectedGroupId)) {
@@ -61,7 +62,7 @@ export function windowsDevSshSpec(host, action, env = process.env, home = os.hom
 }
 
 export function windowsDevScpSpec(host, remotePath, localPath,
-  env = process.env, home = os.homedir()) {
-  const transport = windowsDevTransportIdentity({ env, home, host });
+  env = process.env, home = os.homedir(), fsApi = fs) {
+  const transport = windowsDevTransportIdentity({ env, fsApi, home, host });
   return ['-q', ...transport.options, `${transport.host}:${remotePath}`, localPath];
 }

@@ -9,7 +9,7 @@ import process from 'node:process';
 import { expect, it } from 'vitest';
 import { Buffer } from 'node:buffer';
 
-import { createControlBundle, createExactControlBundleArchive, serialTransfers, terminalState,
+import { createControlBundle, createExactControlBundleArchive, localTarArgs, serialTransfers, terminalState,
   validateControlBundleArchive, validateControlBundleReceipt, validateControlBundleTree } from
   './t152-windows-transfer-journal.mjs';
 
@@ -17,6 +17,13 @@ it('classifies unstarted, successful, and failed transport terminals exactly', (
   expect(terminalState(null)).toBe('not_started');
   expect(terminalState({ exitCode: 0, signal: null, timedOut: false })).toBe('success');
   expect(terminalState({ exitCode: 255, signal: null, timedOut: false })).toBe('failure');
+});
+
+it('forces Windows drive paths to remain local tar operands', () => {
+  expect(localTarArgs(['-tf', 'C:\\bundle.tar'], 'win32'))
+    .toEqual(['--force-local', '-tf', 'C:\\bundle.tar']);
+  expect(localTarArgs(['-tf', '/tmp/bundle.tar'], 'darwin'))
+    .toEqual(['-tf', '/tmp/bundle.tar']);
 });
 
 it('stops the single transfer stream at its first red terminal', async () => {
@@ -145,7 +152,7 @@ it('rejects top-level and payload AppleDouble archive members', () => {
   }
   fs.writeFileSync(path.join(root, '._bundle'), 'metadata');
   const archive = path.join(os.tmpdir(), `t152-invalid-${Date.now()}.tar`);
-  execFileSync('tar', ['-cf', archive, '-C', root, '._bundle', 'bundle'], {
+  execFileSync('tar', localTarArgs(['-cf', archive, '-C', root, '._bundle', 'bundle']), {
     env: { ...process.env, COPYFILE_DISABLE: '1' } });
   expect(() => validateControlBundleArchive({ archive, directoryName: 'bundle',
     fileFacts: [{ name: 'payload.mjs' }] })).toThrow();

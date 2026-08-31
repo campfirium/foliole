@@ -18,6 +18,10 @@ function exactNames(actual, expected, label) {
   }
 }
 
+export function localTarArgs(args, platform = process.platform) {
+  return platform === 'win32' ? ['--force-local', ...args] : args;
+}
+
 export function validateControlBundleTree({ fileFacts, localRoot }) {
   const expected = ['manifest.json', ...fileFacts.map((item) => item.name)];
   const actual = fs.readdirSync(localRoot);
@@ -32,7 +36,7 @@ export function validateControlBundleTree({ fileFacts, localRoot }) {
 }
 
 export function validateControlBundleArchive({ archive, directoryName, fileFacts }) {
-  const entries = execFileSync('tar', ['-tf', archive], { encoding: 'utf8',
+  const entries = execFileSync('tar', localTarArgs(['-tf', archive]), { encoding: 'utf8',
     env: { ...process.env, COPYFILE_DISABLE: '1' } }).split(/\r?\n/u).filter(Boolean);
   const expected = [`${directoryName}/`, 'manifest.json', ...fileFacts.map((item) => item.name)]
     .map((name, index) => index === 0 ? name : `${directoryName}/${name}`);
@@ -42,7 +46,7 @@ export function validateControlBundleArchive({ archive, directoryName, fileFacts
 
 export function createExactControlBundleArchive({ archive, directoryName, fileFacts,
   localParent }) {
-  execFileSync('tar', ['-cf', archive, '-C', localParent, directoryName], {
+  execFileSync('tar', localTarArgs(['-cf', archive, '-C', localParent, directoryName]), {
     env: { ...process.env, COPYFILE_DISABLE: '1' } });
   return validateControlBundleArchive({ archive, directoryName, fileFacts });
 }

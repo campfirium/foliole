@@ -1,11 +1,16 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
-import { expect, it, vi } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 
 import {
   parseWindowsDevControlArgs, runWindowsDevControl, WINDOWS_DEV_DEFAULT_SSH
 } from './windows-dev-control.mjs';
+import { createWindowsDevRemoteSpecTestFixture } from
+  './windows-dev-remote-spec-test-fixture.mjs';
+
+const transport = createWindowsDevRemoteSpecTestFixture();
+afterAll(() => transport.cleanup());
 
 it('accepts desktop preview as a fixed Windows DEV action', () => {
   expect(parseWindowsDevControlArgs([
@@ -28,7 +33,7 @@ it('accepts installed Internal launch as a fixed Windows DEV action', () => {
 it('pushes the Mac dev mirror before invoking desktop preview', async () => {
   const calls = [];
   await runWindowsDevControl({
-    argv: ['desktop-preview'], env: {},
+    argv: ['desktop-preview'], env: transport.env, fsApi: transport.fsApi,
     executeGit: vi.fn(async (args) => { calls.push(['git', ...args]); return ''; }),
     executeSsh: vi.fn(async (args) => {
       calls.push(['ssh', ...args]);
