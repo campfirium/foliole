@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
 import { usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
 import { onPdfVisualSelectionKindChange, setPdfVisualSelectionKind } from './pdfSurfaceRegistration';
@@ -61,6 +62,33 @@ function selectNoteRegion(start: [number, number], end: [number, number], pointe
   });
 }
 
+function createPdfTextSelection() {
+  const surface = document.createElement('div');
+  const page = document.createElement('div');
+  const text = document.createTextNode('Selected PDF text');
+  page.dataset.pdfPageNumber = '1';
+  page.appendChild(text);
+  surface.appendChild(page);
+  document.body.appendChild(surface);
+  vi.spyOn(page, 'getBoundingClientRect').mockReturnValue({
+    bottom: 200, height: 200, left: 0, right: 200, top: 0, width: 200, x: 0, y: 0, toJSON: () => ({})
+  });
+  const range = document.createRange();
+  range.selectNodeContents(text);
+  const rect = {
+    bottom: 60, height: 20, left: 20, right: 160, top: 40, width: 140, x: 20, y: 40, toJSON: () => ({})
+  } as DOMRect;
+  Object.defineProperty(range, 'getBoundingClientRect', { configurable: true, value: () => rect });
+  Object.defineProperty(range, 'getClientRects', {
+    configurable: true,
+    value: () => createTestDomRectList([rect])
+  });
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  return { selection, surface };
+}
+
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
 });
@@ -82,6 +110,46 @@ it('routes a note command without text selection into PDF visual selection', () 
   act(() => expect(result.current.requestAnnotation('note')).toBe(true));
 
   expect(received).toEqual(['note']);
+  unlisten();
+});
+
+it('applies a shortcut to the current PDF text selection before visual selection', () => {
+  const onCreateHighlight = vi.fn(() => true);
+  const received: Array<string | null> = [];
+  const unlisten = onPdfVisualSelectionKindChange((kind) => received.push(kind));
+  const { result } = renderHook(() => usePdfSelectionContextMenu({
+    nodeId: 'pdf-1', onCreateHighlightFromSelection: onCreateHighlight
+  }));
+  const fixture = createPdfTextSelection();
+  result.current.surfaceRef.current = fixture.surface;
+
+  act(() => expect(result.current.requestAnnotation('highlight')).toBe(true));
+
+  expect(onCreateHighlight).toHaveBeenCalledWith('Selected PDF text', expect.anything());
+  expect(received).toEqual([]);
+  fixture.selection?.removeAllRanges();
+  fixture.surface.remove();
+  unlisten();
+});
+
+it('starts visual selection when only an old preserved text selection remains', () => {
+  window.getSelection()?.removeAllRanges();
+  const onCreateHighlight = vi.fn(() => true);
+  const received: Array<string | null> = [];
+  const unlisten = onPdfVisualSelectionKindChange((kind) => received.push(kind));
+  const { result } = renderHook(() => usePdfSelectionContextMenu({
+    nodeId: 'pdf-1', onCreateHighlightFromSelection: onCreateHighlight
+  }));
+  result.current.preservedSelectionRef.current = {
+    capturedAt: Date.now(),
+    locator: { page: 1, x: 0.5, y: 0.5 },
+    selectionText: 'Old PDF text'
+  };
+
+  act(() => expect(result.current.requestAnnotation('highlight')).toBe(true));
+
+  expect(onCreateHighlight).not.toHaveBeenCalled();
+  expect(received).toEqual(['highlight']);
   unlisten();
 });
 

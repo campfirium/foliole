@@ -14,7 +14,12 @@ import { normalizeContextMenuPosition } from '../contextCommands';
 
 import { AnnotationNotePanel } from './AnnotationNotePanel';
 import { AnnotationToolbarButton } from './AnnotationToolbarButton';
-import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
+import {
+  resolveContextMenuSelection,
+  resolvePdfSelectionSnapshot,
+  useTrackPdfSelection,
+  type PdfSelectionSnapshot
+} from './pdfSelectionRuntime';
 import { setPdfVisualSelectionKind, type PdfSelectionAnnotationKind } from './pdfSurfaceRegistration';
 import { usePdfSelectionToolbar } from './usePdfSelectionToolbar';
 
@@ -109,7 +114,7 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
     return true;
   };
   const requestAnnotation = (kind: PdfSelectionAnnotationKind) => {
-    const selection = resolveContextMenuSelection(menu.surfaceRef.current, menu.preservedSelectionRef.current);
+    const selection = resolvePdfSelectionSnapshot(menu.surfaceRef.current) ?? menu.selectionMenuState;
     if (selection) {
       menu.openSelectionToolbar(selection, normalizeContextMenuPosition(window.innerWidth / 2, window.innerHeight / 3));
       if (kind === 'note') menu.setNoteOpen(true);
