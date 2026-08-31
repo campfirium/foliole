@@ -197,7 +197,9 @@ function createControllerSubmitHandler(input: ControllerResultInput) {
   const provider = input.selectedRecord?.provider ?? args.selectedProvider;
   return createAssistantSubmitHandler({
     ...args,
-    aideReady: args.aideReady && isAssistantProviderReady(provider, args)
+    aideReady: args.aideReady && (
+      input.selectedRecord !== null || isAssistantProviderReady(provider, args)
+    )
   }, {
     activeTurnRef: input.activeTurnRef,
     dispatchCache: input.dispatchCache,

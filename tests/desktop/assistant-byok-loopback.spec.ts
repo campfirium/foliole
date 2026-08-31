@@ -63,7 +63,7 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
   try {
     await prepareAide(session.page);
     await openAssistantPanel(session.page);
-    await expect(session.page.getByLabel('Assistant provider')).toHaveValue('openai-compatible');
+    await expect(providerSelector(session.page)).toHaveValue('openai-compatible');
     await expect(session.page.getByText(/Your model/).first()).toBeVisible();
     await session.page.getByRole('button', { name: /Loopback first/ }).click();
     await expect(session.page.getByText('Loopback reply 2')).toBeVisible();
@@ -117,20 +117,26 @@ async function closeSettings(page: Page) {
 }
 
 async function selectProvider(page: Page, provider: 'codex-app-server' | 'openai-compatible') {
-  await page.getByLabel('Assistant provider').selectOption(provider);
-  await expect(page.getByLabel('Assistant provider')).toHaveValue(provider);
+  const selector = providerSelector(page);
+  await selector.selectOption(provider);
+  await expect(selector).toHaveValue(provider);
+}
+
+function providerSelector(page: Page) {
+  return page.getByLabel(/^(New conversation provider|新对话入口)$/);
 }
 
 async function sendAndExpect(page: Page, prompt: string, answer: string) {
   await page.getByLabel('Foliole Aide message').fill(prompt);
-  await page.getByRole('button', { name: 'Send' }).click();
-  if (answer.startsWith('Loopback')) await expect(page.getByText('Loopback')).toBeVisible();
-  await expect(page.getByText(answer)).toBeVisible();
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  const response = page.locator('[data-message-role="assistant"]').last();
+  if (answer.startsWith('Loopback')) await expect(response).toContainText('Loopback');
+  await expect(response).toContainText(answer);
 }
 
 async function sendExpectingFailure(page: Page, prompt: string) {
   await page.getByLabel('Foliole Aide message').fill(prompt);
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByText(/could not reply/i)).toBeVisible();
   await expect(page.getByLabel('Foliole Aide message')).toHaveValue(prompt);
 }
@@ -166,7 +172,7 @@ function assertRestartHistoryRequest(request: LoopbackRequest | undefined) {
 async function verifyCodexRegression(page: Page, harness: Harness) {
   await page.getByRole('button', { name: /^(New|新建)$/ }).click();
   await selectProvider(page, 'codex-app-server');
-  await expect(page.getByLabel(/^(Assistant model|助手模型)$/)).toBeVisible();
+  await expect(page.getByLabel(/^(Model and performance settings|模型与性能设置)$/)).toBeVisible();
   await sendAndExpect(page, 'Codex regression', 'Codex regression reply');
   expect(await harness.codexTurnCount()).toBe(1);
 }

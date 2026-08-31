@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
@@ -15,6 +15,7 @@ const assistantRuntime = vi.hoisted(() => ({
   removeAssistantThreadFromHistory: vi.fn(),
   selectAssistantProvider: vi.fn(),
   sendAssistantMessage: vi.fn(),
+  subscribeAssistantByokSettings: vi.fn(),
   subscribeAssistantTurnEvents: vi.fn()
 }));
 
@@ -44,6 +45,38 @@ beforeEach(() => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
   assistantRuntime.listAssistantThreadMessages.mockResolvedValue([]);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
+  assistantRuntime.subscribeAssistantByokSettings.mockReturnValue(() => undefined);
+});
+
+it('keeps a newer configured result when the initial capability check finishes late', async () => {
+  let finishInitial: ((value: unknown) => void) | undefined;
+  assistantRuntime.loadAssistantByokSettings
+    .mockReturnValueOnce(new Promise((resolve) => { finishInitial = resolve; }))
+    .mockResolvedValue({
+      endpoint: 'http://127.0.0.1:43121/v1/chat/completions', has_api_key: true,
+      model: 'local-model', selected_provider: 'openai-compatible', state: 'configured'
+    });
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createAssistantPanelNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  await waitFor(() => expect(assistantRuntime.subscribeAssistantByokSettings).toHaveBeenCalled());
+  const listener = assistantRuntime.subscribeAssistantByokSettings.mock.calls[0]?.[0];
+  await act(async () => listener?.({
+    endpoint: 'http://127.0.0.1:43121/v1/chat/completions', has_api_key: true,
+    model: 'local-model', selected_provider: 'openai-compatible', state: 'configured'
+  }));
+  expect(await screen.findByRole('combobox', { name: 'New conversation provider' }))
+    .toHaveValue('openai-compatible');
+
+  await act(async () => finishInitial?.({
+    endpoint: '', has_api_key: false, model: '',
+    selected_provider: 'codex-app-server', state: 'not_configured'
+  }));
+  expect(screen.getByRole('option', { name: 'Your model · local-model' })).toBeEnabled();
 });
 
 it('uses configured BYOK without Codex login, tools, or model controls', async () => {
