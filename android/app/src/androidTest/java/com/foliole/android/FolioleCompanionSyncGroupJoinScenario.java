@@ -13,8 +13,8 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupJoinScenario {
@@ -24,19 +24,15 @@ final class FolioleCompanionSyncGroupJoinScenario {
     private FolioleCompanionSyncGroupJoinScenario() {}
 
     static JSONObject run(Instrumentation instrumentation) throws Exception {
-        return run(instrumentation, true);
-    }
-
-    static JSONObject run(Instrumentation instrumentation, boolean createPrejoinFact) throws Exception {
         Activity activity = start(instrumentation);
         try {
             waitForFocus(activity, 30_000);
             Log.i(LOG_TAG, "stage=focused");
             WebView webView = activity.findViewById(R.id.webview);
-            JSONObject prejoinFact = createPrejoinFact
-                ? FolioleCompanionSyncGroupMaintenanceScenario.createFact(instrumentation, webView)
-                : null;
-            if (prejoinFact != null) Log.i(LOG_TAG, "stage=prejoin-fact-created");
+            JSONObject prejoinFact = FolioleCompanionSyncGroupMaintenanceScenario.createFact(
+                instrumentation, webView
+            );
+            Log.i(LOG_TAG, "stage=prejoin-fact-created");
             FolioleCompanionSettingsNavigation.open(instrumentation, webView);
             Log.i(LOG_TAG, "stage=settings-open");
             FolioleCompanionSemanticActions.clickVisible(
@@ -70,14 +66,6 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=joined");
-            JSONObject initialSync = null;
-            if (!createPrejoinFact) {
-                initialSync = FolioleCompanionSyncNowAction.perform(instrumentation, webView);
-                if (!"completed".equals(initialSync.optString("terminalResult"))) {
-                    throw new IllegalStateException("Initial Sync Now failed: " + initialSync);
-                }
-                Log.i(LOG_TAG, "stage=initial-sync-completed");
-            }
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
             waitForFocus(activity, 30_000);
@@ -89,12 +77,9 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );
-            JSONObject receipt = new JSONObject()
-                .put("ok", true).put("targetTestId", "sync-group-device-join")
-                .put("joined", true).put("restarted", true);
-            if (prejoinFact != null) receipt.put("prejoinFactText", prejoinFact.getString("factText"));
-            if (initialSync != null) receipt.put("initialSyncCompleted", true);
-            return receipt;
+            return new JSONObject().put("ok", true).put("targetTestId", "sync-group-device-join")
+                .put("joined", true).put("restarted", true)
+                .put("prejoinFactText", prejoinFact.getString("factText"));
         } finally {
             Activity finalActivity = activity;
             instrumentation.runOnMainSync(finalActivity::finish);
@@ -112,35 +97,25 @@ final class FolioleCompanionSyncGroupJoinScenario {
             throw new IllegalStateException("acceptance_group_identity_missing");
         }
         Context context = instrumentation.getTargetContext();
-        Map<String, String> matches = new LinkedHashMap<>();
+        List<String> matches = new ArrayList<>();
         int mismatches = 0;
-        int reachable = 0;
         for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
             String endpointKey = FolioleCompanionHostBridgeContractDefinitions
                 .networkEndpointUrlCandidateKey(context);
             String endpoint = candidate.optString(endpointKey);
-            try {
-                JSObject response = FolioleCompanionDesktopHttpClient.request(context,
-                    endpoint + "/companion/discovery", "GET", new JSONObject(), null);
-                String bodyKey = FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context);
-                JSONObject discovery = new JSONObject(response.getString(bodyKey));
-                reachable += 1;
-                boolean idMatches = groupId.equals(discovery.optString("group_id"));
-                boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
-                if (idMatches && tagMatches) {
-                    matches.putIfAbsent(discovery.optString("provider_device_id"), endpoint);
-                }
-                else if (idMatches || tagMatches) mismatches += 1;
-            } catch (Exception unreachableCandidate) {
-                Log.i(LOG_TAG, "stage=discovery-candidate-unreachable endpoint=" + endpoint);
-            }
+            JSObject response = FolioleCompanionDesktopHttpClient.request(context,
+                endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+            String bodyKey = FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context);
+            JSONObject discovery = new JSONObject(response.getString(bodyKey));
+            boolean idMatches = groupId.equals(discovery.optString("group_id"));
+            boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
+            if (idMatches && tagMatches) matches.add(endpoint);
+            else if (idMatches || tagMatches) mismatches += 1;
         }
         if (mismatches > 0 || matches.size() != 1) {
-            throw new IllegalStateException("acceptance_group_identity_not_unique reachable="
-                + reachable + " matches=" + matches.size() + " mismatches=" + mismatches
-                + " providers=" + matches.keySet());
+            throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
-        return matches.values().iterator().next();
+        return matches.get(0);
     }
 
     private static Activity start(Instrumentation instrumentation) {

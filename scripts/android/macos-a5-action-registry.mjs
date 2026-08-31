@@ -6,7 +6,6 @@ const ACTION_OVERRIDES = Object.freeze({
     requiresHiddenDesktopRuntime: true },
   status: { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
-  'ordinary-journey': { requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
@@ -18,7 +17,6 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });
 const FORMAL_EVIDENCE = Object.freeze({
-  'ordinary-journey': { kind: 'run-directory', root: 'a5-ordinary-journey' },
   'capture-annotation': { kind: 'run-directory', root: 'a5-capture-annotation' },
   'clear-app-data': { kind: 'run-json', root: 'a5-clear-app-data' },
   'database-performance': { kind: 'run-directory', root: 'companion-database-performance' },
