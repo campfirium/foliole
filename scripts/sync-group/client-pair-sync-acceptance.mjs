@@ -12,7 +12,7 @@ import {
   waitForMacosDeviceRequest, openMacosSyncGroupDesktopSession
 } from '../android/macos-sync-group-desktop-session.mjs';
 import {
-  createClientPairTopic, updateClientPairTopic
+  createClientPairTopic, distinctClientPairDeviceIds, updateClientPairTopic
 } from '../desktop/client-pair-sync-content-action.mjs';
 import {
   signalWindowsClientPair, startWindowsClientPairParticipant
@@ -139,8 +139,7 @@ async function runScenario({ owner, revision, root, runId, skipBuild }) {
     const joined = await session.waitForState({ command: 'load_sync_group_overview',
       condition: { deviceCount: 2, groupId: identity.groupId, kind: 'group' },
       eventName: 'onSyncGroupDiscoveryChanged' });
-    const deviceIds = joined.sync_group.devices.map((device) => device.device_id);
-    if (new Set(deviceIds).size !== 2) throw new Error('Mac did not observe two device identities.');
+    const deviceIds = distinctClientPairDeviceIds(joined.sync_group.devices);
     const content = await contentRoundTrip(session, windows, name);
     await signalWindowsClientPair(windows.signalRoot, 'release');
     const complete = await windows.event('complete');

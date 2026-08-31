@@ -3,8 +3,17 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  createClientPairTopic, updateClientPairTopic
+  createClientPairTopic, distinctClientPairDeviceIds, updateClientPairTopic
 } from './client-pair-sync-content-action.mjs';
+
+it('reads the product device identity field for both participants', () => {
+  expect(distinctClientPairDeviceIds([
+    { device_identity_key: 'mac-device' }, { device_identity_key: 'windows-device' }
+  ])).toEqual(['mac-device', 'windows-device']);
+  expect(() => distinctClientPairDeviceIds([
+    { device_identity_key: 'same-device' }, { device_identity_key: 'same-device' }
+  ])).toThrow('two distinct device identities');
+});
 
 it('creates and updates the same exact client-pair entity', async () => {
   const nodesById = {};

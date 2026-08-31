@@ -8,7 +8,7 @@ import {
   waitForDesktopProductState
 } from '../../scripts/acceptance/desktop-product-event.mjs';
 import {
-  createClientPairTopic, updateClientPairTopic
+  createClientPairTopic, distinctClientPairDeviceIds, updateClientPairTopic
 } from '../../scripts/desktop/client-pair-sync-content-action.mjs';
 
 import { expect, test } from './harness/fixtures';
@@ -19,7 +19,7 @@ type GroupIdentity = { groupId: string; groupTag: string };
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 type Overview = { join_candidates: Array<{ endpoint_url: string; group_id: string; group_tag: string }>;
   join_requests: Array<{ request_id: string }>;
-  sync_group: { devices: Array<{ device_id: string }>; group_id: string; group_tag: string } };
+  sync_group: { devices: Array<{ device_identity_key: string }>; group_id: string; group_tag: string } };
 
 const role = required('FOLIOLE_PAIR_ROLE');
 const signalRoot = required('FOLIOLE_PAIR_SIGNAL_ROOT');
@@ -86,8 +86,7 @@ async function assertJoined(page: Page, identity: GroupIdentity) {
     command: 'load_sync_group_overview', condition: { deviceCount: 2,
       groupId: identity.groupId, kind: 'group' }, eventName: 'onSyncGroupDiscoveryChanged'
   }) as Overview;
-  const deviceIds = joined.sync_group.devices.map((device) => device.device_id);
-  expect(new Set(deviceIds).size).toBe(2);
+  const deviceIds = distinctClientPairDeviceIds(joined.sync_group.devices);
   emit('joined', { deviceIds, ...identity });
   return deviceIds;
 }

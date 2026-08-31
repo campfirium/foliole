@@ -1,6 +1,15 @@
 function timestampAfter(value, now = () => new Date()) {
   return new Date(Math.max(now().getTime(), Date.parse(value ?? '') + 1)).toISOString();
 }
+
+export function distinctClientPairDeviceIds(devices) {
+  const deviceIds = devices.map((device) => device.device_identity_key);
+  if (deviceIds.length !== 2 || deviceIds.some((value) => !value)
+      || new Set(deviceIds).size !== 2) {
+    throw new Error('Client pair did not expose two distinct device identities.');
+  }
+  return deviceIds;
+}
 export async function createClientPairTopic({ label, now = () => new Date(), session }) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', {
     includePdfOpenings: false
