@@ -31,6 +31,16 @@ async function readRendererItem(page: Page, itemId: string) {
   return page.evaluate((id) => globalThis.window?.__folioleWorkspaceDebug?.getNode?.(id) ?? null, itemId);
 }
 
+async function openRendererItem(page: Page, itemId: string) {
+  expect(await page.evaluate(async (id) =>
+    await globalThis.window?.__folioleWorkspaceDebug?.openNode?.(id) ?? false, itemId)).toBe(true);
+  await expect.poll(() => readRendererItem(page, itemId)).toMatchObject({
+    content: QUESTION,
+    reveal: ANSWER
+  });
+  return readRendererItem(page, itemId);
+}
+
 async function readCliItem(descriptorPath: string, itemId: string) {
   const result = await runAgentCli(['materials/read', '--descriptor', descriptorPath, '--id', itemId]);
   expect(result.status).toBe(0);
@@ -78,7 +88,10 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     expect(await readCliItem(descriptorPath, itemId)).toMatchObject(material);
 
     await expect.poll(() => readRendererItem(desktopSession.firstWindow, itemId)).not.toBeNull();
-    expectQuestionAnswerItem(await readRendererItem(desktopSession.firstWindow, itemId));
+    expect(await readRendererItem(desktopSession.firstWindow, itemId)).toMatchObject({
+      id: itemId, kind: 'item', parentNodeId: 'special-inbox', title: QUESTION
+    });
+    expectQuestionAnswerItem(await openRendererItem(desktopSession.firstWindow, itemId));
 
     await desktopSession.electronApp.close();
     secondSession = await launchDesktopSession({
@@ -86,7 +99,7 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     }) as DesktopSession;
     await expectWorkspaceShell(secondSession.firstWindow);
     await expect.poll(() => readRendererItem(secondSession!.firstWindow, itemId)).not.toBeNull();
-    const hydrated = await readRendererItem(secondSession.firstWindow, itemId);
+    const hydrated = await openRendererItem(secondSession.firstWindow, itemId);
     expectQuestionAnswerItem(hydrated);
     const relaunchedDescriptorPath = await readDescriptorPath(secondSession);
     const relaunchedRead = await readCliItem(relaunchedDescriptorPath, itemId);
