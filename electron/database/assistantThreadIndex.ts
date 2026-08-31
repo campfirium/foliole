@@ -14,8 +14,8 @@ import {
   listAssistantThreadAttachmentIds
 } from './assistantThreadImages.js';
 import { deleteAssistantThreadMessages } from './assistantThreadMessages.js';
+import { truncateAssistantThreadDisplayText } from './assistantThreadText.js';
 
-const DEFAULT_PROVIDER: NativeAssistantProviderId = 'codex-app-server';
 const TITLE_LIMIT = 80;
 const PREVIEW_LIMIT = 160;
 
@@ -43,7 +43,7 @@ export interface AssistantThreadIndexUpsertInput {
   continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
-  provider?: NativeAssistantProviderId;
+  provider: NativeAssistantProviderId;
   providerThreadId: string;
   now?: string;
 }
@@ -61,9 +61,9 @@ export function upsertAssistantThreadIndex(
   const location = normalizeOpeningLocation(input.location);
   const providerThreadId = normalizeRequiredString(input.providerThreadId, 'providerThreadId');
   const now = input.now ?? new Date().toISOString();
-  const title = truncateDisplayText(input.message, TITLE_LIMIT) || 'Untitled thread';
-  const preview = truncateDisplayText(input.message, PREVIEW_LIMIT);
-  const provider = input.provider ?? DEFAULT_PROVIDER;
+  const title = truncateAssistantThreadDisplayText(input.message, TITLE_LIMIT) || 'Untitled thread';
+  const preview = truncateAssistantThreadDisplayText(input.message, PREVIEW_LIMIT);
+  const provider = input.provider;
   const row = locationToColumns(location);
 
   openAssistantHistoryConnection().driver.execute(
@@ -119,46 +119,52 @@ export function listAssistantThreadIndex(
     .map(rowToRecord);
 }
 
-export function getAssistantThreadIndex(providerThreadId: string) {
+export function getAssistantThreadIndex(
+  provider: NativeAssistantProviderId,
+  providerThreadId: string
+) {
   return readAssistantThreadIndexRecord(
-    DEFAULT_PROVIDER,
+    provider,
     normalizeRequiredString(providerThreadId, 'providerThreadId')
   );
 }
 
 export function archiveAssistantThreadIndex(
+  provider: NativeAssistantProviderId,
   providerThreadId: string,
   now = new Date().toISOString()
 ) {
-  return updateAssistantThreadIndexStatus(providerThreadId, 'archived', now);
+  return updateAssistantThreadIndexStatus(provider, providerThreadId, 'archived', now);
 }
 
 export function deleteAssistantThreadIndex(
+  provider: NativeAssistantProviderId,
   providerThreadId: string,
   now = new Date().toISOString()
 ) {
-  return deleteAssistantThreadIndexWithImages(providerThreadId, now).record;
+  return deleteAssistantThreadIndexWithImages(provider, providerThreadId, now).record;
 }
 
 export function deleteAssistantThreadIndexWithImages(
+  provider: NativeAssistantProviderId,
   providerThreadId: string,
   now = new Date().toISOString()
 ) {
   return openAssistantHistoryConnection().driver.transaction(() => {
-    const attachmentIds = listAssistantThreadAttachmentIds(providerThreadId);
-    const record = updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
-    deleteAssistantThreadMessages(providerThreadId);
+    const attachmentIds = listAssistantThreadAttachmentIds(provider, providerThreadId);
+    const record = updateAssistantThreadIndexStatus(provider, providerThreadId, 'deleted', now);
+    deleteAssistantThreadMessages(provider, providerThreadId);
     const unreferencedImages = deleteUnreferencedAssistantImageAttachments(attachmentIds);
     return { record, unreferencedImages };
   });
 }
 
 function updateAssistantThreadIndexStatus(
+  provider: NativeAssistantProviderId,
   providerThreadId: string,
   status: NativeAssistantThreadIndexStatus,
   now: string
 ) {
-  const provider = DEFAULT_PROVIDER;
   openAssistantHistoryConnection().driver.execute(
     `UPDATE assistant_thread_index
      SET status = ?, updated_at = ?, archived_at = ?, deleted_at = ?
@@ -229,9 +235,4 @@ function normalizeRequiredString(value: string, field: string) {
   const normalized = value.trim();
   if (!normalized) throw new Error(`invalid_${field}`);
   return normalized;
-}
-
-function truncateDisplayText(value: string, limit: number) {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  return normalized.length <= limit ? normalized : normalized.slice(0, limit - 3).trimEnd() + '...';
 }

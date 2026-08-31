@@ -15,18 +15,21 @@ export function formatAgentControlContext(context: NativeAssistantWorkspaceConte
     ? '- Foliole tools can read and update the workspace for this turn; use them to complete requested changes.'
     : '- Read-only Foliole tools are available for this turn; use them when the included context is insufficient.'];
   if (actions.length > 0) lines.push(`- Available Foliole actions: ${actions.join('; ')}.`);
+  if (capabilities.has('materials.create')) {
+    lines.push('- Create an Item only when the user explicitly asks to create or save it; never save ordinary chat answers or create Items in batches automatically.');
+  }
   lines.push(...formatActiveContextGuidance(context, capabilities));
   return lines;
 }
 
 const ACTIONS = [
   { capabilities: ['materials.search'], description: 'search Topics and Folders' },
-  { capabilities: ['materials.read'], description: 'read a Topic or Folder' },
+  { capabilities: ['materials.read'], description: 'read a Topic, Folder, or Item' },
   { capabilities: ['materials.listChildren'], description: 'list Folder contents' },
   { capabilities: ['virtualFolders.list', 'virtualFolders.read'], description: 'list or read virtual Folders' },
-  { capabilities: ['materials.create'], description: 'create a Topic or Folder' },
-  { capabilities: ['materials.update'], description: 'update a Topic' },
-  { capabilities: ['materials.move', 'materials.reorder'], description: 'move or reorder Topics and Folders' },
+  { capabilities: ['materials.create'], description: 'create a Topic, Folder, or explicitly requested question-answer Item' },
+  { capabilities: ['materials.update'], description: 'update a Topic or Item' },
+  { capabilities: ['materials.move', 'materials.reorder'], description: 'move or reorder Topics, Folders, and Items' },
   { capabilities: ['materials.deleteSoft', 'materials.restore'], description: 'move materials to trash or restore them' },
   { capabilities: ['virtualFolders.create', 'virtualFolders.update'], description: 'create or rename virtual Folders' },
   { capabilities: ['virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder'], description: 'change virtual Folder contents' },

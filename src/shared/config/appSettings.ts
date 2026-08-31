@@ -1,6 +1,8 @@
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy.js';
 import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbox.js';
 
+export const DEFAULT_BASE_COLOR_MODE = 'system' as const;
+
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
   frontmatterDisplayMode: 'foliole-frontmatter-display-mode',

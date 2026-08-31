@@ -19,7 +19,7 @@ import {
   resolveAssistantThreadLoadStatusLabel,
   resolveAssistantThreadPreviewLabel
 } from './workspaceRightSidebarAssistantLabels';
-import { WorkspaceRightSidebarAssistantModelControl } from './WorkspaceRightSidebarAssistantModelControl';
+import { AssistantProviderAndModelControls } from './WorkspaceRightSidebarAssistantProviderControl';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
 
 export function FolioleAideReadyContent(props: {
@@ -86,7 +86,7 @@ function AssistantConversationView(props: {
         imageErrorText={resolveAssistantImageError(props.controller, t)}
         images={props.controller.imageDrafts}
         messageText={props.controller.messageText}
-        modelControl={<WorkspaceRightSidebarAssistantModelControl controls={props.controller.modelControls} />}
+        modelControl={<AssistantProviderAndModelControls controller={props.controller} />}
         onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
         onEditMessage={props.controller.editMessage}
         onMessageTextChange={props.controller.setMessageText}
@@ -128,7 +128,7 @@ function AssistantHomeView(props: {
           imageErrorText={resolveAssistantImageError(props.controller, t)}
           images={props.controller.imageDrafts}
           messageText={props.controller.messageText}
-          modelControl={<WorkspaceRightSidebarAssistantModelControl controls={props.controller.modelControls} />}
+          modelControl={<AssistantProviderAndModelControls controller={props.controller} />}
           onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
           onMessageTextChange={props.controller.setMessageText}
           onRemoveImage={props.controller.removeImage}
@@ -143,6 +143,7 @@ function AssistantHomeView(props: {
     </div>
   );
 }
+
 
 function AssistantHistoryList(props: {
   activeNodeId: string | null;

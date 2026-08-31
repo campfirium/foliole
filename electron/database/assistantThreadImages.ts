@@ -7,8 +7,6 @@ import type {
 
 import { openAssistantHistoryConnection } from './assistantHistoryConnection.js';
 
-const DEFAULT_PROVIDER: NativeAssistantProviderId = 'codex-app-server';
-
 interface AssistantImageRow extends DatabaseRow {
   attachment_id: string;
   created_at: string;
@@ -40,10 +38,10 @@ export function upsertAssistantImageAttachments(images: NativeAssistantImageAtta
 export function replaceAssistantMessageImages(input: {
   images: NativeAssistantImageAttachment[];
   messageId: string;
-  provider?: NativeAssistantProviderId;
+  provider: NativeAssistantProviderId;
   providerThreadId: string;
 }) {
-  const provider = input.provider ?? DEFAULT_PROVIDER;
+  const provider = input.provider;
   const driver = openAssistantHistoryConnection().driver;
   driver.execute(
     `DELETE FROM assistant_thread_message_images
@@ -60,8 +58,8 @@ export function replaceAssistantMessageImages(input: {
 }
 
 export function listAssistantThreadMessageImages(
-  providerThreadId: string,
-  provider: NativeAssistantProviderId = DEFAULT_PROVIDER
+  provider: NativeAssistantProviderId,
+  providerThreadId: string
 ) {
   const rows = openAssistantHistoryConnection().driver.queryAll<AssistantMessageImageRow>(
     `SELECT links.message_id, links.position, images.*
@@ -90,8 +88,8 @@ export function getAssistantImageAttachment(attachmentId: string) {
 }
 
 export function listAssistantThreadAttachmentIds(
-  providerThreadId: string,
-  provider: NativeAssistantProviderId = DEFAULT_PROVIDER
+  provider: NativeAssistantProviderId,
+  providerThreadId: string
 ) {
   return openAssistantHistoryConnection().driver.queryAll<{ attachment_id: string }>(
     `SELECT DISTINCT attachment_id FROM assistant_thread_message_images

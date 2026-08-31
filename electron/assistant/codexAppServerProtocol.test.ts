@@ -36,8 +36,9 @@ it('formats complete Foliole actions without exposing implementation details', (
 
   expect(input).toContain('Foliole tools can read and update the workspace for this turn');
   expect(input).toContain('Active Foliole parent material id: workspace-parent');
-  expect(input).toContain('create a Topic or Folder');
-  expect(input).toContain('update a Topic');
+  expect(input).toContain('create a Topic, Folder, or explicitly requested question-answer Item');
+  expect(input).toContain('update a Topic or Item');
+  expect(input).toContain('never save ordinary chat answers');
   for (const leak of ['Agent Control', 'MCP', 'FOLIOLE_AGENT_DESCRIPTOR', 'foliole-agent', '127.0.0.1']) {
     expect(input).not.toContain(leak);
   }

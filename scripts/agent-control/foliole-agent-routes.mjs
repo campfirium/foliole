@@ -13,12 +13,12 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   registryRoute('foundation', 'POST', 'auth/verify', 'foundation.auth.verify'),
   registryRoute('product', 'POST', 'materials/create', 'materials.create', {
     capabilityOrder: 3,
-    cli: cliRoute('materials/create', 'Create a Topic or Folder.', optionalAndRequired(['content', 'parent-id'], ['kind', 'title'])),
+    cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'parent-id', 'reveal', 'title'], ['kind'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/delete-soft', 'materials.deleteSoft', {
     capabilityOrder: 17,
-    cli: cliRoute('materials/delete-soft', 'Move a Topic or Folder to trash.', optionalAndRequired(['expected-updated-at'], ['id'])),
+    cli: cliRoute('materials/delete-soft', 'Move a Topic, Folder, or Item to trash.', optionalAndRequired(['expected-updated-at'], ['id'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/list-children', 'materials.listChildren', {
@@ -27,12 +27,12 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/move', 'materials.move', {
     capabilityOrder: 4,
-    cli: cliRoute('materials/move', 'Move a Topic or Folder.', required('id', 'parent-id', 'expected-updated-at')),
+    cli: cliRoute('materials/move', 'Move a Topic, Folder, or Item.', required('id', 'parent-id', 'expected-updated-at')),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/read', 'materials.read', {
     capabilityOrder: 0,
-    cli: cliRoute('materials/read', 'Read one Topic or Folder.', required('id'))
+    cli: cliRoute('materials/read', 'Read one Topic, Folder, or Item.', required('id'))
   }),
   registryRoute('product', 'POST', 'materials/search', 'materials.search', {
     capabilityOrder: 1,
@@ -45,12 +45,12 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/restore', 'materials.restore', {
     capabilityOrder: 6,
-    cli: cliRoute('materials/restore', 'Restore a Topic or Folder from trash.', required('id', 'expected-updated-at')),
+    cli: cliRoute('materials/restore', 'Restore a Topic, Folder, or Item from trash.', required('id', 'expected-updated-at')),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/update', 'materials.update', {
     capabilityOrder: 16,
-    cli: cliRoute('materials/update', 'Update a Topic.', optionalAndRequired(['content', 'title'], ['id', 'expected-updated-at'])),
+    cli: cliRoute('materials/update', 'Update a Topic or Item.', optionalAndRequired(['content', 'reveal', 'title'], ['id', 'expected-updated-at'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'virtual-folders/add-items', 'virtualFolders.addItems', {

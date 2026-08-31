@@ -7,16 +7,31 @@ import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
-import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 
 const DEFAULT_TABLES = [
   'nodes', 'node_order', 'content_blobs', 'attachments',
-  'sync_object_state', 'workspace_meta', 'companion_meta'
+  'sync_object_state', 'workspace_meta', 'companion_meta',
+  'sync_groups', 'sync_group_devices', 'sync_group_local_state'
 ];
-const IDENTITY_FIELDS = [
-  'activeSyncGroupMemberCount', 'localMemberAuthorizationFingerprint',
-  'syncGroupId', 'syncGroupTimelineId'
-];
+const IDENTITY_FIELDS = ['activeSyncGroupId', 'localDeviceIdentityKey'];
+
+function tableExists(database, table) {
+  return database.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
+  ).get(table) !== undefined;
+}
+
+export function inspectProtectionIdentity(database) {
+  if (!tableExists(database, 'sync_groups')
+      || !tableExists(database, 'sync_group_local_state')) {
+    return { activeSyncGroupId: null, localDeviceIdentityKey: null };
+  }
+  const row = database.prepare(`SELECT groups.group_id, local.local_device_identity_key
+    FROM sync_group_local_state local JOIN sync_groups groups ON groups.group_id = local.group_id
+    WHERE local.singleton_id = 1 AND local.state = 'active' LIMIT 1`).get();
+  return { activeSyncGroupId: row?.group_id ?? null,
+    localDeviceIdentityKey: row?.local_device_identity_key ?? null };
+}
 
 function protectionFacts(snapshot) {
   const inspection = snapshot.database?.inspection ?? {};
@@ -34,7 +49,7 @@ export function assertProtectionPreserved(before, after) {
   const beforeFacts = protectionFacts(before);
   const afterFacts = protectionFacts(after);
   if (JSON.stringify(beforeFacts) !== JSON.stringify(afterFacts)) {
-    throw new Error('Android data protection failure: database identity, group, timeline, or counts changed');
+    throw new Error('Android data protection failure: database identity, group, or counts changed');
   }
 }
 
@@ -83,7 +98,7 @@ function printSummary(label, snapshot) {
 
 async function runBackup(options) {
   const snapshot = await collectAndroidDeviceSnapshot({
-    ...options, databaseInspector: inspectPairSyncRecoveryWorkspace, keepPulledDatabase: true
+    ...options, databaseInspector: inspectProtectionIdentity, keepPulledDatabase: true
   });
   try {
     assertReadableDatabase(snapshot, 'before install');
@@ -107,7 +122,7 @@ async function runCheck(options) {
   const before = JSON.parse(await readFile(options.manifest, 'utf8'));
   assertReadableDatabase(before.snapshot, 'before install');
   const after = await collectAndroidDeviceSnapshot({
-    ...options, databaseInspector: inspectPairSyncRecoveryWorkspace
+    ...options, databaseInspector: inspectProtectionIdentity
   });
   assertReadableDatabase(after, 'after install');
   assertProtectionPreserved(before.snapshot, after);

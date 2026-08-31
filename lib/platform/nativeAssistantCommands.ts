@@ -1,0 +1,17 @@
+export const NATIVE_ASSISTANT_COMMANDS = {
+  assistantGetStatus: 'assistant_get_status',
+  assistantListModels: 'assistant_list_models',
+  assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
+  assistantSendMessage: 'assistant_send_message',
+  assistantListThreadIndex: 'assistant_list_thread_index',
+  assistantListThreadMessages: 'assistant_list_thread_messages',
+  assistantReadImageAttachment: 'assistant_read_image_attachment',
+  assistantArchiveThreadIndex: 'assistant_archive_thread_index',
+  assistantRemoveThreadFromHistory: 'assistant_remove_thread_from_history',
+  assistantGetStorageInfo: 'assistant_get_storage_info',
+  assistantOpenStorageLocation: 'assistant_open_storage_location',
+  assistantLoadByokSettings: 'assistant_load_byok_settings',
+  assistantSaveByokSettings: 'assistant_save_byok_settings',
+  assistantSetProvider: 'assistant_set_provider',
+  assistantDisconnectByokSettings: 'assistant_disconnect_byok_settings'
+} as const;

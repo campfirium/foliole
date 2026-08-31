@@ -11,6 +11,7 @@ const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
 const CONTRACT_FILES = [
   'nativeAideStorageContract.ts',
   'nativeAssistantContract.ts',
+  'nativeAssistantByokContract.ts',
   'nativeAssistantCommandContract.ts',
   'nativeContract.ts',
   'nativeDiscoursePublishContract.ts',
@@ -82,6 +83,7 @@ describe('native command contracts', () => {
   });
 
   it('keeps credentials and user-authored setting values out of command traces', () => {
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantSaveByokSettings)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWordPressPublishDraft)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.connectWordPressPublishSettings)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveSystemEntryDisplayNames)).toBe(false);

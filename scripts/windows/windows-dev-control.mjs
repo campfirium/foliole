@@ -17,7 +17,8 @@ import {
   collectWindowsCandidateControl, extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
 import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
-import { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
+import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from
+  './windows-dev-remote-spec.mjs';
 import {
   isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from './windows-sync-group-provider-release-control.mjs';
@@ -37,10 +38,9 @@ export {
   parseWindowsDevLiveEvidence,
   parseWindowsDevSuccessEvidence
 } from './windows-dev-control-evidence.mjs';
-export { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
+export { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec };
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
-export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
   'frozen-revision-preflight',
@@ -118,7 +118,8 @@ async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names,
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', path.basename(remoteRoot));
   fsApi.mkdirSync(localRoot, { recursive: true });
   for (const name of names) {
-    await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
+    await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name),
+      env, os.homedir(), fsApi), { env });
   }
   return localRoot;
 }
@@ -131,14 +132,18 @@ export async function runWindowsDevControl({
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
   const { action, host, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
+  const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
+    targetHost, remote, local, env, os.homedir(), fsApi);
+  const buildSshSpec = (targetHost, targetAction) => windowsDevSshSpec(
+    targetHost, targetAction, env, os.homedir(), fsApi);
   if (isWindowsSyncGroupProviderReleaseAction(action)) {
-    const output = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+    const output = await executeSsh(buildSshSpec(host, action), { env });
     if (output) stdout.write(output);
     return { action, operation: 'provider-release', ref: WINDOWS_DEV_SOURCE_REF };
   }
   const syncGroup = runWindowsSyncGroupControl(action, {
-    buildPushSpec: windowsDevPushSpec, buildScpSpec: windowsDevScpSpec,
-    buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, fsApi,
+    buildPushSpec: windowsDevPushSpec, buildScpSpec,
+    buildSshSpec, env, executeGit, executeScp, executeSsh, fsApi,
     host, repoRoot, sourceRef, stdout
   });
   if (syncGroup) return syncGroup;
@@ -152,7 +157,7 @@ export async function runWindowsDevControl({
   let remoteError = null;
   let remoteOutput = '';
   try {
-    remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+    remoteOutput = await executeSsh(buildSshSpec(host, action), { env });
   } catch (error) {
     remoteError = error;
     remoteOutput = error.output || error.message;
@@ -162,7 +167,7 @@ export async function runWindowsDevControl({
   if (action === 'multi-device-sync-candidate' && !remoteError) {
     Object.assign(result, await collectWindowsCandidateControl({ fsApi, localCandidate,
       output: remoteOutput, repoRoot, sourceRef, stdout, copyFile: (remote, local) => executeScp(
-        windowsDevScpSpec(host, remote, local, env), { env }) }));
+        buildScpSpec(host, remote, local), { env }) }));
   }
   if (action === 'frozen-revision-preflight') {
     const reported = remoteOutput.includes('[windows-dev-action] frozen-revision-preflight');
@@ -170,7 +175,7 @@ export async function runWindowsDevControl({
     Object.assign(result, await copyWindowsFrozenPreflightEvidence({
       fsApi, localCandidate, output: remoteOutput, remoteError, repoRoot,
       copyFile: (remote, local) => executeScp(
-        windowsDevScpSpec(host, remote, local, env), { env })
+        buildScpSpec(host, remote, local), { env })
     }));
   }
   if (action === 'capture-annotation') {
@@ -193,17 +198,17 @@ export async function runWindowsDevControl({
   }
   const deviceProfile = await copyWindowsDeviceProfileEvidence({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
-      windowsDevScpSpec(host, remote, local, env), { env }
+      buildScpSpec(host, remote, local), { env }
     ) });
   if (deviceProfile) Object.assign(result, deviceProfile);
   const hostFacts = await copyWindowsDesktopDnsSdHostFacts({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
-      windowsDevScpSpec(host, remote, local, env), { env }
+      buildScpSpec(host, remote, local), { env }
     ) });
   if (hostFacts) Object.assign(result, hostFacts);
   const joinPrepare = await copyWindowsSyncGroupJoinPrepareEvidence({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
-      windowsDevScpSpec(host, remote, local, env), { env }
+      buildScpSpec(host, remote, local), { env }
     ) });
   if (joinPrepare) Object.assign(result, joinPrepare);
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
@@ -216,7 +221,7 @@ export async function runWindowsDevControl({
     const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-live-reload');
     fsApi.mkdirSync(evidenceRoot, { recursive: true });
     const screenshotPath = path.join(evidenceRoot, `${evidence.buildIdentity}.png`);
-    await executeScp(windowsDevScpSpec(host, evidence.remotePath, screenshotPath, env), { env });
+    await executeScp(buildScpSpec(host, evidence.remotePath, screenshotPath), { env });
     result.screenshotPath = screenshotPath;
   }
   if (remoteError) throw remoteError;

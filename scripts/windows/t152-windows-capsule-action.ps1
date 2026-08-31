@@ -1,11 +1,11 @@
 param(
-  [Parameter(Mandatory = $true)][ValidateSet("host-facts", "prepare", "find-acceptance", "advertise-acceptance", "release-complete", "release-cancel")][string]$Action,
-  [Parameter(Mandatory = $true)][ValidatePattern("^[0-9a-f-]{36}$")][string]$AttemptId,
-  [ValidatePattern("^[0-9a-f-]{36}$")][string]$CapsuleAttemptId = "",
-  [ValidatePattern("^t152-product-[0-9a-f-]{36}\.tar$")][string]$ArchiveName = "",
-  [ValidatePattern("^t152-manifest-[0-9a-f-]{36}\.json$")][string]$ManifestName = "",
-  [ValidatePattern("^group-[0-9a-f-]{36}$")][string]$ExpectedGroupId = "",
-  [ValidatePattern("^[0-9a-f]{32}$")][string]$ExpectedGroupTag = ""
+  [Parameter(Mandatory = $true)]
+  [ValidateScript({ $_ -in @("host-facts", "runtime-owner", "verify-control-bundle", "binding-preflight",
+    "launcher-preflight", "stage-plan-preflight",
+    "g2-path", "g3-anchor", "formal") -or $_ -match '^prepare-[a-z-]+$' })]
+  [string]$Action,
+  [string]$InteractiveBase64 = "", [string]$RequestBase64 = "",
+  [string]$VerificationBase64 = ""
 )
 
 Set-StrictMode -Version Latest
@@ -13,32 +13,140 @@ $ErrorActionPreference = "Stop"
 $productCommit = "86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a"
 $productTree = "ec8af4a625d98fb35e86134d8770c50a5e669ccb"
 $t7Run = "33270551363"
-$capsules = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\capsules"
-$taskRoot = Join-Path $capsules $AttemptId
-$evidenceRoot = Join-Path $taskRoot "evidence"
-$sourceRoot = Join-Path $taskRoot "source"
-$receiptPath = Join-Path $evidenceRoot "$Action-receipt.json"
+$pathPredicateSchema = 't152-local-filesystem-path-v1:drive-rooted,get-full-path,owner-exact'
 
-function Write-Receipt([hashtable]$Receipt) {
-  New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
-  $Receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding utf8
-  Write-Output "[t152-windows-capsule] action=$Action attempt=$AttemptId receipt=$receiptPath"
+function Resolve-OwnerFilesystemPath([string]$Value, [string]$Label) {
+  if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch '^[A-Za-z]:\\') {
+    throw "$Label must be a drive-rooted local filesystem path"
+  }
+  try { $normalized = [IO.Path]::GetFullPath($Value) }
+  catch { throw "$Label normalization failed" }
+  if (![string]::Equals($normalized, $Value, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "$Label differs from its owner-normalized path"
+  }
+  $localRoot = [IO.Path]::GetPathRoot($normalized)
+  if (!(Test-Path -LiteralPath $localRoot -PathType Container)) {
+    throw "$Label local filesystem root is unavailable"
+  }
+  return [ordered]@{ localRoot = $localRoot; normalized = $normalized; value = $Value }
+}
+
+function Confirm-PathPredicateSelfcheck([string]$Positive) {
+  $root = [IO.Path]::GetPathRoot($Positive)
+  $drive = $root.Substring(0, 2)
+  $leaf = "t152-negative-$([Guid]::NewGuid().ToString('N'))"
+  $cases = [ordered]@{ relative = "relative\$leaf"; driveRelative = "$drive$leaf"
+    rootRelative = "\$leaf"; uri = "file:///$($Positive.Replace('\', '/'))"
+    normalizationMismatch = (Join-Path $Positive "..\$leaf") }
+  $rejected = [ordered]@{}
+  foreach ($case in $cases.GetEnumerator()) {
+    try { Resolve-OwnerFilesystemPath ([string]$case.Value) "selfcheck.$($case.Key)" | Out-Null
+      $rejected[$case.Key] = $false }
+    catch { $rejected[$case.Key] = $true }
+  }
+  if ($rejected.Values -contains $false) { throw 'path predicate negative selfcheck failed' }
+  return [ordered]@{ rejected = $rejected; samples = $cases }
+}
+
+function Get-Sha256([byte[]]$Bytes) {
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try { $hash = $sha.ComputeHash($Bytes) } finally { $sha.Dispose() }
+  return ([BitConverter]::ToString($hash)).Replace('-', '').ToLowerInvariant()
+}
+
+function Get-FileIdentity([string]$Value, [string]$Label) {
+  $resolved = Resolve-OwnerFilesystemPath $Value $Label
+  if (!(Test-Path -LiteralPath $resolved.normalized -PathType Leaf)) {
+    throw "$Label must be an existing file"
+  }
+  return [ordered]@{ path = $resolved.normalized
+    sha256 = (Get-Sha256 ([IO.File]::ReadAllBytes($resolved.normalized))) }
+}
+
+function Get-NpmRuntimeOwner {
+  $nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $npmCommandPath = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+  if (![string]::Equals([IO.Path]::GetDirectoryName($nodePath),
+      [IO.Path]::GetDirectoryName($npmCommandPath), [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'node and npm command are not from the same installation distribution'
+  }
+  $resolverPath = Join-Path $PSScriptRoot 't152-windows-npm-runtime-owner.mjs'
+  $output = @(& $nodePath $resolverPath --node-path $nodePath --npm-command-path $npmCommandPath |
+    ForEach-Object { [string]$_ })
+  if ($LASTEXITCODE -ne 0) { throw 'npm runtime owner resolver failed' }
+  $line = @($output | Where-Object { $_.StartsWith('T152_NPM_RUNTIME_OWNER=') })
+  if ($line.Count -ne 1) { throw 'npm runtime owner receipt is missing' }
+  return $line[0].Substring('T152_NPM_RUNTIME_OWNER='.Length) | ConvertFrom-Json
+}
+
+function Read-PrepareRequest([string]$Token) {
+  if (!$Token -or $Token -notmatch '^[A-Za-z0-9_-]+$') { throw "prepare token is invalid" }
+  $base64 = $Token.Replace('-', '+').Replace('_', '/')
+  while (($base64.Length % 4) -ne 0) { $base64 += '=' }
+  $envelope = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64)) |
+    ConvertFrom-Json
+  if (!$envelope.requestJson -or $envelope.requestSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw "prepare envelope is invalid"
+  }
+  if ((Get-Sha256 ([Text.Encoding]::UTF8.GetBytes([string]$envelope.requestJson))) -ne
+      $envelope.requestSha256) { throw "prepare request hash mismatch" }
+  $request = $envelope.requestJson | ConvertFrom-Json
+  $requestProperties = @($request.PSObject.Properties)
+  $paths = @('capsuleRoot', 'controllerArchivePath', 'controllerRoot', 'evidenceRoot',
+    'manifestPath', 'nodePath', 'npmCliPath', 'npmCommandPath', 'productArchivePath', 'stageRunnerPath',
+    'sourceRoot', 'tarPath')
+  foreach ($name in @('capsuleId', 'hostFactsSha256', 'identity', 'npmRuntimeOwner', 'rootId') + $paths) {
+    if ($null -eq $request.PSObject.Properties[$name]) { throw "prepare field missing: $name" }
+  }
+  $normalizedPaths = [ordered]@{}
+  foreach ($name in $paths) {
+    $normalizedPaths[$name] = Resolve-OwnerFilesystemPath ([string]$request.$name) $name
+  }
+  if ($request.schemaVersion -ne 1 -or $request.capsuleId -notmatch '^[0-9a-f-]{36}$' -or
+      $request.rootId -notmatch '^[0-9a-f-]{36}$' -or
+      $request.hostFactsSha256 -notmatch '^[0-9a-f]{64}$' -or
+      $request.identity.productCommit -ne $productCommit -or
+      $request.identity.productTree -ne $productTree -or $request.identity.t7Run -ne $t7Run -or
+      $request.identity.controllerCommit -notmatch '^[0-9a-f]{40}$' -or
+      $request.identity.controllerTree -notmatch '^[0-9a-f]{40}$') { throw "prepare identity is invalid" }
+  $npmOwner = Get-NpmRuntimeOwner
+  $runtime = [ordered]@{ nodePath = $npmOwner.nodePath; npmCliPath = $npmOwner.npmCliPath
+    npmCommandPath = $npmOwner.npmCommandPath
+    tarPath = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }
+  $runtimeExact = $runtime.nodePath -eq $request.nodePath -and
+    $runtime.npmCliPath -eq $request.npmCliPath -and
+    $runtime.npmCommandPath -eq $request.npmCommandPath -and
+    $runtime.tarPath -eq $request.tarPath -and
+    $npmOwner.ownerSha256 -eq $request.npmRuntimeOwner.ownerSha256
+  if (!$runtimeExact) { throw "prepare runtime differs from host facts" }
+  return [ordered]@{ fieldCount = [int]$requestProperties.Length; request = $request
+    pathPredicate = [ordered]@{ clrVersion = [Environment]::Version.ToString()
+      normalizedPaths = $normalizedPaths; powershellVersion = $PSVersionTable.PSVersion.ToString()
+      schema = $pathPredicateSchema
+      schemaSha256 = (Get-Sha256 ([Text.Encoding]::UTF8.GetBytes($pathPredicateSchema)))
+      selfcheck = (Confirm-PathPredicateSelfcheck $normalizedPaths.capsuleRoot.normalized) }
+    requestSha256 = [string]$envelope.requestSha256; runtime = $runtime
+    runtimeExact = $runtimeExact
+    tokenSha256 = (Get-Sha256 ([Text.Encoding]::UTF8.GetBytes($Token))) }
 }
 
 function Get-HostFacts {
   $parts = @($env:SSH_CONNECTION -split '\s+' | Where-Object { $_ })
   if ($parts.Count -ne 4) { throw "SSH_CONNECTION is required" }
+  $roots = [ordered]@{ localAppData = [IO.Path]::GetFullPath($env:LOCALAPPDATA)
+    programFiles = [IO.Path]::GetFullPath($env:ProgramFiles)
+    systemRoot = [IO.Path]::GetFullPath($env:SystemRoot)
+    temp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    userProfile = [IO.Path]::GetFullPath($env:USERPROFILE) }
   $adapters = @(Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" } | ForEach-Object {
     $config = Get-NetIPConfiguration -InterfaceIndex $_.ifIndex
     [ordered]@{ interfaceAlias = [string]$_.Name; interfaceIndex = [int]$_.ifIndex
       ipv4 = @($config.IPv4Address | ForEach-Object {
         [ordered]@{ address = [string]$_.IPAddress; prefixLength = [int]$_.PrefixLength } })
-      mediaType = [string]$_.MediaType }
-  })
+      mediaType = [string]$_.MediaType } })
   $profiles = @(Get-NetConnectionProfile | ForEach-Object { [ordered]@{
     interfaceAlias = [string]$_.InterfaceAlias; interfaceIndex = [int]$_.InterfaceIndex
-    ipv4Connectivity = [string]$_.IPv4Connectivity; ipv6Connectivity = [string]$_.IPv6Connectivity
-    networkCategory = [string]$_.NetworkCategory } })
+    ipv4Connectivity = [string]$_.IPv4Connectivity; networkCategory = [string]$_.NetworkCategory } })
   $vpn = @(Get-VpnConnection -AllUserConnection:$false -ErrorAction SilentlyContinue |
     Where-Object { $_.ConnectionStatus -eq "Connected" } | ForEach-Object {
       [ordered]@{ name = [string]$_.Name; status = [string]$_.ConnectionStatus } })
@@ -47,105 +155,64 @@ function Get-HostFacts {
     defaultInboundAction = [string]$_.DefaultInboundAction
     defaultOutboundAction = [string]$_.DefaultOutboundAction; enabled = [bool]$_.Enabled
     name = [string]$_.Name } })
-  return [ordered]@{ activePhysicalAdapters = $adapters; capturedAt = [DateTime]::UtcNow.ToString("o")
-    connectedVpn = $vpn; dnsSdService = [ordered]@{ name = $service.Name; status = [string]$service.Status }
-    firewallProfiles = $firewall; networkProfiles = $profiles; schemaVersion = 1
-    sshSession = [ordered]@{ clientAddress = $parts[0]; serverAddress = $parts[2]
-      serverPort = [int]$parts[3]; sessionProcessId = $PID } }
-}
-
-function Invoke-Checked([string]$Stage, [string]$File, [string[]]$Arguments) {
-  $previousPreference = $ErrorActionPreference
-  try {
-    $ErrorActionPreference = "Continue"
-    $output = @(& $File @Arguments 2>&1)
-    $exitCode = $LASTEXITCODE
-  } finally {
-    $ErrorActionPreference = $previousPreference
-  }
-  @($output | ForEach-Object { [string]$_ }) |
-    Set-Content -LiteralPath (Join-Path $evidenceRoot "$Stage.log") -Encoding utf8
-  if ($exitCode -ne 0) { throw "$Stage failed with exit $exitCode" }
+  return [ordered]@{ activePhysicalAdapters = $adapters
+    capturedAt = [DateTime]::UtcNow.ToString("o"); connectedVpn = $vpn
+    dnsSdService = [ordered]@{ name = $service.Name; status = [string]$service.Status }
+    firewallProfiles = $firewall; networkProfiles = $profiles
+    runtime = [ordered]@{ nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+      npmCommandPath = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
+      tarPath = (Get-Command tar.exe -CommandType Application -ErrorAction Stop).Source }; roots = $roots
+    schemaVersion = 3; sshSession = [ordered]@{ clientAddress = $parts[0]
+      serverAddress = $parts[2]; serverPort = [int]$parts[3]; sessionProcessId = $PID } }
 }
 
 try {
-  if (@("find-acceptance", "advertise-acceptance", "release-complete", "release-cancel") -contains $Action) {
-    if (!$CapsuleAttemptId -or ($Action -eq "find-acceptance" -and
-        (!$ExpectedGroupId -or !$ExpectedGroupTag))) {
-      throw "formal Find requires capsule and group identity"
-    }
-    $preparedRoot = Join-Path $capsules $CapsuleAttemptId
-    $preparedReceipt = Join-Path $preparedRoot "evidence\prepare-receipt.json"
-    $prepared = Get-Content -LiteralPath $preparedReceipt -Raw | ConvertFrom-Json
-    if ($prepared.resultStatus -ne "success" -or $prepared.identity.productCommit -ne $productCommit -or
-        $prepared.identity.productTree -ne $productTree -or $prepared.identity.t7Run -ne $t7Run) {
-      throw "formal Find capsule identity mismatch"
-    }
-    $runner = Join-Path ([Environment]::GetFolderPath("UserProfile")) "t152-windows-capsule-formal-runner.mjs"
-    $acceptanceRoot = "C:\T152\$AttemptId"
-    $formalAction = switch ($Action) {
-      "find-acceptance" { "desktop-dnssd-find-acceptance" }
-      "advertise-acceptance" { "desktop-dnssd-advertise-acceptance" }
-      "release-complete" { "release-complete" }
-      default { "release-cancel" }
-    }
-    & "C:\Program Files\nodejs\node.exe" $runner $formalAction `
-      (Join-Path $preparedRoot "source") $AttemptId $acceptanceRoot $ExpectedGroupId $ExpectedGroupTag
-    if ($LASTEXITCODE -ne 0) { throw "formal runner failed with exit $LASTEXITCODE" }
-    exit 0
-  }
-  if (Test-Path -LiteralPath $taskRoot) { throw "attempt capsule already exists" }
-  New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
   if ($Action -eq "host-facts") {
-    $facts = Get-HostFacts
-    Write-Receipt @{ action = $Action; attemptId = $AttemptId; facts = $facts
-      resultStatus = "success"; schemaVersion = 1 }
+    Write-Output "T152_HOST_FACTS=$(Get-HostFacts | ConvertTo-Json -Compress -Depth 10)"
     exit 0
   }
-  if (!$ArchiveName -or !$ManifestName) { throw "prepare requires archive and manifest" }
-  $homeRoot = [Environment]::GetFolderPath("UserProfile")
-  $archive = Join-Path $homeRoot $ArchiveName
-  $manifestFile = Join-Path $homeRoot $ManifestName
-  $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
-  if ($manifest.identity.productCommit -ne $productCommit -or
-      $manifest.identity.productTree -ne $productTree -or $manifest.identity.t7Run -ne $t7Run) {
-    throw "product identity mismatch"
+  if ($Action -eq "runtime-owner") {
+    Write-Output "T152_RUNTIME_OWNER=$(Get-NpmRuntimeOwner | ConvertTo-Json -Compress -Depth 6)"
+    exit 0
   }
-  if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne
-      $manifest.archiveSha256) { throw "archive digest mismatch" }
-  New-Item -ItemType Directory -Path $sourceRoot | Out-Null
-  Invoke-Checked "extract" "C:\Windows\System32\tar.exe" @("-xf", $archive, "-C", $sourceRoot)
-  if ((Get-FileHash -LiteralPath (Join-Path $sourceRoot "package-lock.json") -Algorithm SHA256).Hash.ToLowerInvariant() -ne
-      $manifest.lockfileSha256) { throw "lockfile digest mismatch" }
-  [string[]]$files = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | ForEach-Object {
-    $_.FullName.Substring($sourceRoot.Length + 1).Replace("\", "/") })
-  [Array]::Sort($files, [StringComparer]::Ordinal)
-  $list = [string]::Join("`n", $files) + "`n"
-  $listPath = Join-Path $evidenceRoot "archive-files.txt"
-  [IO.File]::WriteAllText($listPath, $list, [Text.UTF8Encoding]::new($false))
-  $listHash = (Get-FileHash -LiteralPath $listPath -Algorithm SHA256).Hash.ToLowerInvariant()
-  if ($files.Count -ne $manifest.fileCount -or $listHash -ne $manifest.fileListSha256) {
-    throw "archive file list mismatch"
+  if ($Action -eq "verify-control-bundle") {
+    . (Join-Path $PSScriptRoot 't152-windows-control-bundle-verification.ps1')
+    $receipt = Read-ControlBundleVerification $VerificationBase64
+    Write-Output "T152_CONTROL_BUNDLE=$($receipt | ConvertTo-Json -Compress -Depth 6)"
+    exit 0
   }
-  $node = "C:\Program Files\nodejs\node.exe"
-  $npm = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
-  Invoke-Checked "dependencies" $node @($npm, "ci", "--prefix", $sourceRoot)
-  Invoke-Checked "electron-runtime" $node @((Join-Path $sourceRoot "node_modules\electron\install.js"))
-  Push-Location $sourceRoot
-  try {
-    Invoke-Checked "build" $node @($npm, "run", "build")
-    Invoke-Checked "electron-compile" $node @($npm, "run", "electron:compile")
-    Invoke-Checked "native-rebuild" $node @($npm, "run", "electron:rebuild:native")
-    Invoke-Checked "native-probe" (Join-Path $sourceRoot "node_modules\electron\dist\electron.exe") @(
-      (Join-Path $sourceRoot "scripts\desktop\desktop-dnssd-native-probe.cjs"))
-    Invoke-Checked "package-smoke" $node @($npm, "run", "windows:package")
-  } finally { Pop-Location }
-  Write-Receipt @{ action = $Action; attemptId = $AttemptId; archiveSha256 = $manifest.archiveSha256
-    completedAt = [DateTime]::UtcNow.ToString("o"); fileCount = $files.Count
-    identity = $manifest.identity; lockfileSha256 = $manifest.lockfileSha256
-    resultStatus = "success"; schemaVersion = 1; sourceRoot = $sourceRoot }
-} catch {
-  Write-Receipt @{ action = $Action; attemptId = $AttemptId; failure = $_.Exception.Message
-    resultStatus = "failed"; schemaVersion = 1 }
-  exit 74
-}
+  if ($Action -eq "binding-preflight" -or $Action -eq "launcher-preflight" -or
+      $Action -eq "stage-plan-preflight" -or
+      $Action.StartsWith("prepare-")) {
+    $binding = Read-PrepareRequest $RequestBase64
+    if ($Action -eq "binding-preflight") {
+      $receipt = [ordered]@{ fieldCount = $binding.fieldCount
+        pathPredicate = $binding.pathPredicate
+        requestSha256 = $binding.requestSha256; runtimeExact = $binding.runtimeExact
+        runtimeExists = [ordered]@{
+          nodePath = (Test-Path -LiteralPath $binding.runtime.nodePath -PathType Leaf)
+          npmCliPath = (Test-Path -LiteralPath $binding.runtime.npmCliPath -PathType Leaf)
+          npmCommandPath = (Test-Path -LiteralPath $binding.runtime.npmCommandPath -PathType Leaf)
+          tarPath = (Test-Path -LiteralPath $binding.runtime.tarPath -PathType Leaf) } }
+      Write-Output "T152_BINDING_PREFLIGHT=$($receipt | ConvertTo-Json -Compress -Depth 8)"
+      exit 0
+    }
+    if (!(Test-Path -LiteralPath $binding.request.stageRunnerPath -PathType Leaf)) {
+      throw "prepare stage runner is missing"
+    }
+    & $binding.request.nodePath $binding.request.stageRunnerPath --action $Action --request-base64 $RequestBase64
+    if ($LASTEXITCODE -ne 0) { throw "prepare stage runner failed with exit $LASTEXITCODE" }
+    exit 0
+  }
+  . (Join-Path $PSScriptRoot 't152-windows-interactive-envelope.ps1')
+  $interactive = Read-T152InteractiveEnvelope $InteractiveBase64 $Action
+  if ($interactive.config.entryMode -eq 'projection') {
+    Write-T152InteractiveProjectionReceipt $interactive | Out-Null
+    Write-Output 'T152_INTERACTIVE_BINDING_WRITTEN=1'
+    exit 0
+  }
+  $runner = Join-Path $interactive.config.controllerRoot `
+    'scripts\windows\t152-windows-capsule-formal-runner.mjs'
+  & ([string]$interactive.config.nodePath) $runner $interactive.configPath
+  if ($LASTEXITCODE -ne 0) { throw "interactive runner failed with exit $LASTEXITCODE" }
+} catch { Write-Error $_; exit 74 }

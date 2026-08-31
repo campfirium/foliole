@@ -14,6 +14,7 @@ import {
 export function useWorkspaceRightSidebarAssistantThreadMessages(args: {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   messagesByThread: MessageCache;
+  provider?: import('../../../lib/platform/nativeAssistantContract').NativeAssistantProviderId;
   selectedThreadId: string | null;
 }) {
   const { dispatchCache, messagesByThread, selectedThreadId } = args;
@@ -30,7 +31,11 @@ export function useWorkspaceRightSidebarAssistantThreadMessages(args: {
     }
     let active = true;
     setStatus('loading');
-    void loadLocalThreadMessages(threadId).then((messages) => {
+    if (!args.provider) {
+      setStatus('failed');
+      return;
+    }
+    void loadLocalThreadMessages(args.provider, threadId).then((messages) => {
       if (!active) return;
       setStatus('ready');
       if (messages.length === 0) return;
@@ -41,12 +46,15 @@ export function useWorkspaceRightSidebarAssistantThreadMessages(args: {
     return () => {
       active = false;
     };
-  }, [dispatchCache, messagesByThread, selectedThreadId]);
+  }, [args.provider, dispatchCache, messagesByThread, selectedThreadId]);
   return status;
 }
 
-async function loadLocalThreadMessages(threadId: string) {
-  const records = await listAssistantThreadMessages({ providerThreadId: threadId });
+async function loadLocalThreadMessages(
+  provider: import('../../../lib/platform/nativeAssistantContract').NativeAssistantProviderId,
+  threadId: string
+) {
+  const records = await listAssistantThreadMessages({ provider, providerThreadId: threadId });
   if (!records) throw new Error('assistant_thread_messages_unavailable');
   const messages = threadMessagesToAssistantMessages(records);
   await Promise.all(records.map(async (record, index) => {

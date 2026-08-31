@@ -38,9 +38,19 @@ import { openAssistantHistoryConnection } from '../database/assistantHistoryConn
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
+import { handleAssistantCommand as handleAssistantCommandRaw, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 
 let tempRoot = '';
+const handleAssistantCommand: typeof handleAssistantCommandRaw = (command, args, sender) =>
+  handleAssistantCommandRaw(command, withCodexProvider(command, args), sender);
+
+function withCodexProvider(command: string, args: Record<string, unknown>) {
+  return command === NATIVE_COMMANDS.assistantSendMessage
+    || command === NATIVE_COMMANDS.assistantListThreadMessages
+    || command === NATIVE_COMMANDS.assistantRemoveThreadFromHistory
+    ? { ...args, provider: 'codex-app-server' }
+    : args;
+}
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-thread-history-'));
@@ -82,26 +92,11 @@ it('removes a thread from local Foliole Aide history without calling the provide
   expect(adapterSendMessage).not.toHaveBeenCalled();
 });
 
-it('keeps the legacy delete-thread command as a local history removal alias', async () => {
-  adapterSendMessage.mockResolvedValue({
-    message: { text: 'Answer', threadId: 'thread-legacy' },
+it('does not retain the retired delete-thread command alias', async () => {
+  await expect(handleAssistantCommandRaw('assistant_delete_thread_index', {
     provider: 'codex-app-server',
-    state: 'ready'
-  });
-  await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-    message: 'Prompt body',
-    openingLocation: { type: 'workspace' }
-  });
-  adapterSendMessage.mockClear();
-
-  await expect(
-    handleAssistantCommand('assistant_delete_thread_index', {
-      providerThreadId: 'thread-legacy'
-    })
-  ).resolves.toMatchObject({ status: 'deleted' });
-  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {}))
-    .resolves.toEqual([]);
-  expect(adapterSendMessage).not.toHaveBeenCalled();
+    providerThreadId: 'thread-legacy'
+  })).resolves.toBeUndefined();
 });
 
 it('queues local history reads behind an active asynchronous database transaction', async () => {

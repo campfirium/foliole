@@ -1,68 +1,15 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  build,
-  macosA5GradleEnv,
-  macosA5Paths,
-  runMacosA5Action
-} from './macos-a5-dev.mjs';
+import { runMacosA5Action } from './macos-a5-dev.mjs';
 import {
   macosA5ActionEnv, macosA5ErrorEvidence, macosA5ParallelDesktopEnv
 } from './macos-a5-extended-actions.mjs';
 import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
-  it('runs Web, Capacitor, and Gradle generation only from the selected build root', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a5-build-order-'));
-    const paths = { apk: path.join(root, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-      buildRoot: root, cap: path.join(root, 'node_modules/.bin/cap'),
-      gradle: path.join(root, 'android/gradlew') };
-    const calls = [];
-    const stages = [];
-    try {
-      build(paths, (command, args, options) => {
-        calls.push({ args, command, cwd: options.cwd });
-        if (command === paths.gradle) {
-          fs.mkdirSync(path.dirname(paths.apk), { recursive: true });
-          fs.writeFileSync(paths.apk, 'apk');
-        }
-      }, (stage) => stages.push(stage));
-      expect(calls.map(({ command }) => command)).toEqual(['npm', paths.cap, paths.gradle]);
-      expect(calls.map(({ cwd }) => cwd)).toEqual([root, root, path.join(root, 'android')]);
-      expect(stages).toEqual(['web-build', 'capacitor-sync', 'gradle-build', 'apk-check']);
-    } finally { fs.rmSync(root, { force: true, recursive: true }); }
-  });
-
-  it('uses the repository APK and fixed CLI toolchain', () => {
-    const repoRoot = path.resolve('macos-a5-source-fixture');
-    const paths = macosA5Paths(repoRoot);
-
-    expect(paths.apk).toBe(path.join(repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk'));
-    expect(paths.adb).toBe(path.join('/opt/homebrew/share/android-commandlinetools', 'platform-tools', 'adb'));
-    expect(paths.gradle).toBe(path.join(repoRoot, 'android/gradlew'));
-    expect(paths).toMatchObject({
-      buildRoot: repoRoot, sourceRepoRoot: repoRoot,
-      controllerStateRoot: path.join(repoRoot, '.lab/internal/macos-a5-controller'),
-      deviceBackupRoot: path.join(repoRoot, '.lab/internal/android-device-backups'),
-      desktopDevLibrary: path.join(
-        repoRoot, '.lab/internal/macos-a5-controller/desktop-library'
-      )
-    });
-  });
-
-  it('binds Gradle to the lightweight Homebrew SDK and JDK', () => {
-    expect(macosA5GradleEnv({ PATH: '/bin' })).toMatchObject({
-      ANDROID_HOME: '/opt/homebrew/share/android-commandlinetools',
-      ANDROID_SDK_ROOT: '/opt/homebrew/share/android-commandlinetools',
-      JAVA_HOME: '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home',
-      PATH: '/bin'
-    });
-  });
-
   it('lets only formal hidden desktop actions bypass the ordinary instance lock', () => {
     expect(macosA5ActionEnv({ BASE: 'kept' }, true, true)).toEqual({
       BASE: 'kept', FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1'

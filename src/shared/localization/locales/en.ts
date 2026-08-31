@@ -22,6 +22,7 @@ import { EN_DESKTOP_WORDPRESS_TRANSLATIONS } from './enDesktopWordPress';
 import { EN_FEEDBACK_TRANSLATIONS } from './enFeedback';
 import { EN_SETTINGS_TRANSLATIONS } from './enSettings';
 import { EN_SETTINGS_ABOUT_TRANSLATIONS } from './enSettingsAbout';
+import { EN_SETTINGS_AIDE_TRANSLATIONS } from './enSettingsAide';
 import { EN_SETTINGS_APPEARANCE_TRANSLATIONS } from './enSettingsAppearance';
 import { EN_SETTINGS_CAPTURE_TRANSLATIONS } from './enSettingsCapture';
 import { EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS } from './enSettingsDemoPreview';
@@ -35,6 +36,7 @@ import { EN_SHARED_UI_TRANSLATIONS } from './enSharedUi';
 export const EN_TRANSLATIONS = {
   ...EN_SETTINGS_TRANSLATIONS,
   ...EN_SETTINGS_ABOUT_TRANSLATIONS,
+  ...EN_SETTINGS_AIDE_TRANSLATIONS,
   ...EN_SETTINGS_APPEARANCE_TRANSLATIONS,
   ...EN_SETTINGS_CAPTURE_TRANSLATIONS,
   ...EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS,

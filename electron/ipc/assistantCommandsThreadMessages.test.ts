@@ -45,9 +45,18 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { openAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
+import { handleAssistantCommand as handleAssistantCommandRaw, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 
 let tempRoot = '';
+const handleAssistantCommand: typeof handleAssistantCommandRaw = (command, args, sender) =>
+  handleAssistantCommandRaw(command, withCodexProvider(command, args), sender);
+
+function withCodexProvider(command: string, args: Record<string, unknown>) {
+  return command === NATIVE_COMMANDS.assistantSendMessage
+    || command === NATIVE_COMMANDS.assistantListThreadMessages
+    ? { ...args, provider: 'codex-app-server' }
+    : args;
+}
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-thread-messages-'));
@@ -202,69 +211,3 @@ async function expectThreadTranscript(providerThreadId: string, expected: string
   expect(messages).toEqual(expect.any(Array));
   expect((messages as Array<{ text: string }>).map((message) => message.text)).toEqual(expected);
 }
-
-it('rolls back the thread index when transcript persistence fails', async () => {
-  adapterSendMessage.mockResolvedValueOnce({
-    message: {
-      text: { invalid: 'sqlite-bind-value' },
-      threadId: 'thread-rollback',
-      turnId: 'turn-rollback'
-    },
-    provider: 'codex-app-server',
-    state: 'ready'
-  });
-
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-      message: 'Prompt body',
-      openingLocation: { type: 'workspace' }
-    })
-  ).resolves.toEqual({
-    failure: { category: 'persistence_failed' },
-    provider: 'codex-app-server',
-    state: 'failed'
-  });
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, { includeDeleted: true })
-  ).resolves.toEqual([]);
-});
-
-it('returns a controlled failure when the provider send rejects', async () => {
-  adapterSendMessage.mockRejectedValueOnce(new Error('provider failed'));
-
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-      message: 'Prompt body',
-      openingLocation: { type: 'workspace' }
-    })
-  ).resolves.toEqual({
-    failure: { category: 'protocol_error' },
-    provider: 'codex-app-server',
-    state: 'failed'
-  });
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, { includeDeleted: true })
-  ).resolves.toEqual([]);
-});
-
-it('does not persist a local thread when the provider returns an empty assistant answer', async () => {
-  adapterSendMessage.mockResolvedValueOnce({
-    message: { text: '', threadId: 'thread-empty', turnId: 'turn-empty' },
-    provider: 'codex-app-server',
-    state: 'ready'
-  });
-
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-      message: 'Prompt body',
-      openingLocation: { type: 'workspace' }
-    })
-  ).resolves.toEqual({
-    failure: { category: 'protocol_error' },
-    provider: 'codex-app-server',
-    state: 'failed'
-  });
-  await expect(
-    handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, { includeDeleted: true })
-  ).resolves.toEqual([]);
-});

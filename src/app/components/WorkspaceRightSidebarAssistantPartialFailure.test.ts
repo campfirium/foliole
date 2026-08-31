@@ -9,6 +9,7 @@ it('keeps a partial reply and does not restore the sent prompt when the turn lat
     current: {
       clientTurnId: 'client-1',
       prompt: 'Continue our discussion',
+      provider: 'codex-app-server',
       responseText: '',
       threadKey: '__pending_assistant_thread__'
     }
