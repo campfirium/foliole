@@ -50,11 +50,16 @@ function writeJson(filePath, value) {
 async function connect(endpoint) {
   const browser = await chromium.connectOverCDP(endpoint, { timeout: 15_000 });
   const context = browser.contexts()[0];
-  const page = context.pages().find((candidate) => /^http:\/\/127\.0\.0\.1:\d+\//u.test(candidate.url()));
+  const page = context.pages().find((candidate) => isDesktopWorkspaceUrl(candidate.url()));
   if (!page) throw new Error(`Foliole workspace is unavailable at ${endpoint}`);
   page.setDefaultTimeout(90_000);
   await page.getByRole('main', { name: WORKSPACE }).waitFor({ state: 'visible' });
-  return { context, page };
+  return { browser, context, page };
+}
+
+export function isDesktopWorkspaceUrl(value) {
+  return /^file:\/\/\/.*\/dist\/desktop\/index\.html(?:[?#].*)?$/u.test(value)
+    || /^http:\/\/127\.0\.0\.1:\d+\/(?:[?#].*)?$/u.test(value);
 }
 
 function invoke(page, command, args) {
@@ -160,6 +165,8 @@ export async function runCrossClientJourney(argv = process.argv.slice(2)) {
     result.completedAt = new Date().toISOString();
     await mac?.context.tracing.stop({ path: path.join(root, 'mac-trace.zip') }).catch(() => undefined);
     await windows?.context.tracing.stop({ path: path.join(root, 'windows-trace.zip') }).catch(() => undefined);
+    await mac?.browser.close().catch(() => undefined);
+    await windows?.browser.close().catch(() => undefined);
     writeJson(path.join(root, 'result.json'), result);
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
