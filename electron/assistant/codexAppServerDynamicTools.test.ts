@@ -46,18 +46,6 @@ it('keeps one dynamic tool for every product capability', () => {
   expect(namespace?.tools).toHaveLength(AGENT_CONTROL_CAPABILITIES.length);
 });
 
-it('describes conditional question-answer Item creation without enabling automatic saves', () => {
-  const [namespace] = createFolioleDynamicTools(['materials.create']);
-  const createTool = namespace?.tools.find((tool) => tool.name === 'create_material');
-
-  expect(createTool).toMatchObject({
-    description: expect.stringContaining('only when the user explicitly asks'),
-    inputSchema: expect.objectContaining({ oneOf: expect.any(Array) })
-  });
-  expect(JSON.stringify(createTool?.inputSchema)).toContain('reveal');
-  expect(JSON.stringify(createTool?.inputSchema)).toContain('item');
-});
-
 it('calls the protected write route with optimistic concurrency fields', async () => {
   const fetcher = vi.fn(async () => new Response(JSON.stringify({ material: { id: 'topic-1' } }), {
     headers: { 'content-type': 'application/json' },

@@ -1,6 +1,5 @@
 import type {
   NativeAssistantMessageResult,
-  NativeAssistantProviderId,
   NativeAssistantThreadMessageRecord,
   NativeAssistantThreadOpeningLocation
 } from '../../lib/platform/nativeAssistantContract.js';
@@ -20,19 +19,26 @@ export function recordAssistantThreadSuccess(input: {
   continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
-  provider: NativeAssistantProviderId;
   images?: NativeAssistantImageAttachment[];
   result: NativeAssistantMessageResult;
 }) {
   return openAssistantHistoryConnection().driver.transaction(() => {
     const turnId = input.result.turnId ?? input.clientTurnId;
-    appendContinuationPrompt(input, turnId);
+    if (input.continuedFromThreadId) {
+      appendAssistantThreadMessages([{
+        createdAt: createContinuationPromptTime(input.continuationMessages),
+        id: `${turnId}:user`,
+        providerThreadId: input.continuedFromThreadId,
+        role: 'user',
+        text: input.message,
+        ...(input.images?.length ? { images: input.images } : {})
+      }]);
+    }
     const threadIndex = upsertAssistantThreadIndex({
       agentToolVersion: input.agentToolVersion,
       ...(input.continuedFromThreadId ? { continuedFromThreadId: input.continuedFromThreadId } : {}),
       location: input.location,
       message: input.message,
-      provider: input.provider,
       providerThreadId: input.result.threadId ?? ''
     });
     appendAssistantThreadMessages([
@@ -47,7 +53,6 @@ export function recordAssistantThreadSuccess(input: {
       })),
       {
         id: `${turnId}:user`,
-        provider: input.provider,
         providerThreadId: input.result.threadId ?? '',
         role: 'user',
         text: input.message,
@@ -55,7 +60,6 @@ export function recordAssistantThreadSuccess(input: {
       },
       {
         id: `${turnId}:assistant`,
-        provider: input.provider,
         providerThreadId: input.result.threadId ?? '',
         role: 'assistant',
         text: input.result.text ?? ''
@@ -63,22 +67,6 @@ export function recordAssistantThreadSuccess(input: {
     ]);
     return threadIndex;
   });
-}
-
-function appendContinuationPrompt(
-  input: Parameters<typeof recordAssistantThreadSuccess>[0],
-  turnId: string
-) {
-  if (!input.continuedFromThreadId) return;
-  appendAssistantThreadMessages([{
-    createdAt: createContinuationPromptTime(input.continuationMessages),
-    id: `${turnId}:user`,
-    provider: input.provider,
-    providerThreadId: input.continuedFromThreadId,
-    role: 'user',
-    text: input.message,
-    ...(input.images?.length ? { images: input.images } : {})
-  }]);
 }
 
 function createContinuationPromptTime(messages?: NativeAssistantThreadMessageRecord[]) {

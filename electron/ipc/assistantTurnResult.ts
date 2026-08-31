@@ -22,7 +22,7 @@ export async function finishAssistantTurn(input: {
   const { clientTurnId, continuation, images, message, openingLocation, result } = input;
   if (!result) {
     await discardUncommittedImages(images);
-    return protocolFailure(continuation.provider);
+    return protocolFailure();
   }
   const readyMessage = result.message;
   if (result.state !== 'ready' || !openingLocation || !readyMessage?.threadId) {
@@ -31,7 +31,7 @@ export async function finishAssistantTurn(input: {
   }
   if (typeof readyMessage.text === 'string' && !readyMessage.text.trim()) {
     await discardUncommittedImages(images);
-    return protocolFailure(continuation.provider);
+    return protocolFailure();
   }
   try {
     const threadIndex = await runWithAssistantHistoryConnectionOwner(() => recordAssistantThreadSuccess({
@@ -41,7 +41,6 @@ export async function finishAssistantTurn(input: {
       images,
       location: openingLocation,
       message,
-      provider: result.provider,
       result: readyMessage
     }));
     return { ...result, threadIndex };
@@ -66,7 +65,6 @@ async function discardUncommittedImages(images: StoredAssistantImage[]) {
 function continuationPersistenceInput(
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>
 ) {
-  if (!continuation.continuedFromThreadId) return {};
   return {
     ...(continuation.persistedContinuationMessages
       ? { continuationMessages: continuation.persistedContinuationMessages }
@@ -77,10 +75,10 @@ function continuationPersistenceInput(
   };
 }
 
-function protocolFailure(provider: import('../../lib/platform/nativeAssistantContract.js').NativeAssistantProviderId) {
+function protocolFailure() {
   return {
     failure: { category: 'protocol_error' as const },
-    provider,
+    provider: 'codex-app-server' as const,
     state: 'failed' as const
   };
 }

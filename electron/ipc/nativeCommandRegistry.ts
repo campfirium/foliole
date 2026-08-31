@@ -2,7 +2,6 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 
 import type { CommandRouteFamily } from './commandRoutes.js';
 import type { CommandSecurityCapability } from './commandSecurityCapabilities.js';
-import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
@@ -13,10 +12,20 @@ export interface NativeCommandRegistryEntry {
 
 export const NATIVE_COMMAND_REGISTRY = [
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
-  ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.appGetVersion, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },
+  { command: NATIVE_COMMANDS.assistantGetStatus, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantListModels, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantStartChatGptLogin, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantSendMessage, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantListThreadIndex, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantListThreadMessages, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantReadImageAttachment, route: 'assistant', capability: 'read' },
+  { command: NATIVE_COMMANDS.assistantArchiveThreadIndex, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantRemoveThreadFromHistory, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantGetStorageInfo, route: 'assistant', capability: 'read' },
+  { command: NATIVE_COMMANDS.assistantOpenStorageLocation, route: 'assistant', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.bootReport, route: 'review', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.desktopUpdateCheck, route: 'update', capability: 'appUpdate' },
   { command: NATIVE_COMMANDS.desktopUpdateDownload, route: 'update', capability: 'appUpdate' },

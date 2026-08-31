@@ -31,16 +31,6 @@ export interface AgentMaterialSearchResult {
   updated_at: string;
 }
 
-export function projectAgentMaterialReveal(reveal: string | null, limit: number) {
-  const value = reveal ?? '';
-  const truncated = value.length > limit;
-  return {
-    reveal: truncated ? value.slice(0, limit) : value,
-    reveal_char_count: value.length,
-    reveal_truncated: truncated
-  };
-}
-
 export function projectAgentMaterialSearchResults(
   results: WorkspaceSearchResult[],
   limit: number

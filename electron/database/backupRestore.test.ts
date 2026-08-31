@@ -166,7 +166,6 @@ it('leaves device-local assistant history unchanged when restoring the main data
   upsertAssistantThreadIndex({
     location: { nodeId: 'node-1', type: 'node' },
     message: 'Before backup',
-    provider: 'codex-app-server',
     now: '2026-03-14T10:00:00.000Z',
     providerThreadId: 'thread-1'
   });
@@ -174,7 +173,6 @@ it('leaves device-local assistant history unchanged when restoring the main data
     {
       createdAt: '2026-03-14T10:00:01.000Z',
       id: 'turn-1:user',
-      provider: 'codex-app-server',
       providerThreadId: 'thread-1',
       role: 'user',
       text: 'Before backup'
@@ -182,7 +180,6 @@ it('leaves device-local assistant history unchanged when restoring the main data
     {
       createdAt: '2026-03-14T10:00:02.000Z',
       id: 'turn-1:assistant',
-      provider: 'codex-app-server',
       providerThreadId: 'thread-1',
       role: 'assistant',
       text: 'Persisted answer'
@@ -194,7 +191,6 @@ it('leaves device-local assistant history unchanged when restoring the main data
     {
       createdAt: '2026-03-14T10:01:00.000Z',
       id: 'turn-2:user',
-      provider: 'codex-app-server',
       providerThreadId: 'thread-1',
       role: 'user',
       text: 'Later drift'
@@ -203,7 +199,7 @@ it('leaves device-local assistant history unchanged when restoring the main data
 
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
 
-  expect(listAssistantThreadMessages('codex-app-server', 'thread-1').map((message) => message.text)).toEqual([
+  expect(listAssistantThreadMessages('thread-1').map((message) => message.text)).toEqual([
     'Before backup',
     'Persisted answer',
     'Later drift'

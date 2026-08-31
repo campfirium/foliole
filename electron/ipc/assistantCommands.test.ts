@@ -37,17 +37,8 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { handleAssistantCommand as handleAssistantCommandRaw, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
+import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 let tempRoot = '';
-const handleAssistantCommand: typeof handleAssistantCommandRaw = (command, args, sender) =>
-  handleAssistantCommandRaw(command, withCodexProvider(command, args), sender);
-
-function withCodexProvider(command: string, args: Record<string, unknown>) {
-  return command.startsWith('assistant_') && command !== NATIVE_COMMANDS.assistantGetStatus
-    && command !== NATIVE_COMMANDS.assistantListThreadIndex
-    ? { ...args, provider: 'codex-app-server' }
-    : args;
-}
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-commands-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -222,4 +213,28 @@ afterEach(async () => {
       state: 'failed'
     });
     expect(adapterSendMessage).not.toHaveBeenCalled();
+  });
+
+  it('updates Foliole-only index status', async () => {
+    adapterSendMessage.mockResolvedValue({
+      message: { text: 'Answer', threadId: 'thread-1' },
+      provider: 'codex-app-server',
+      state: 'ready'
+    });
+    await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+      message: 'Prompt body',
+      openingLocation: { type: 'workspace' }
+    });
+
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantArchiveThreadIndex, {
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toMatchObject({ status: 'archived' });
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantRemoveThreadFromHistory, {
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toMatchObject({ status: 'deleted' });
+    expect(adapterSendMessage).toHaveBeenCalledTimes(1);
   });

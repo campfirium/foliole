@@ -30,11 +30,8 @@ export async function sendAssistantTurn(
     clientTurnId,
     ...(images.length ? { images } : {}),
     message,
-    ...(args.provider === 'codex-app-server' && args.modelSelection
-      ? { modelSelection: args.modelSelection }
-      : {}),
+    ...(args.modelSelection ? { modelSelection: args.modelSelection } : {}),
     openingLocation,
-    provider: args.provider,
     workspaceContext,
     ...(args.selectedThreadId ? { providerThreadId: args.selectedThreadId } : {})
   });
@@ -46,7 +43,6 @@ export type AssistantSendTurnArgs = {
   followCurrentMaterial: boolean;
   location: ReturnType<typeof resolveAssistantLocation>;
   modelSelection?: NativeAssistantModelSelection;
-  provider: import('../../../lib/platform/nativeAssistantContract').NativeAssistantProviderId;
   nodesById: Record<string, Node>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   selectedThreadId: string | null;

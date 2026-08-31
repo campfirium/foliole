@@ -120,23 +120,6 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   expect(learnedSourcesCount.count).toBe(0);
 });
 
-it('keeps Foliole Aide BYOK settings out of canonical sync projection', () => {
-  saveJsonSetting('foliole_aide_byok_settings', {
-    endpoint: 'https://models.example/v1/chat/completions',
-    model: 'model-a',
-    updated_at: '2026-08-31T00:00:00.000Z'
-  });
-
-  const sqlite = openDatabaseConnection().sqlite;
-  expect(loadJsonSetting('foliole_aide_byok_settings')).toMatchObject({ model: 'model-a' });
-  expect(sqlite.prepare('SELECT COUNT(*) FROM setting_records WHERE key = ?')
-    .pluck().get('foliole_aide_byok_settings')).toBe(0);
-  expect(sqlite.prepare(
-    `SELECT COUNT(*) FROM sync_object_state
-     WHERE object_type = 'setting' AND object_id LIKE ?`
-  ).pluck().get('%:foliole_aide_byok_settings')).toBe(0);
-});
-
 it('stores full-text search index strategy inside the user-space app settings record', () => {
   saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
   saveJsonSetting(

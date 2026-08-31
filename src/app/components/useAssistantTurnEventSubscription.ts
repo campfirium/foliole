@@ -15,7 +15,6 @@ import {
 export type AssistantActiveTurn = {
   clientTurnId: string;
   prompt: string;
-  provider: NativeAssistantTurnEvent['provider'];
   responseText: string;
   threadKey: string;
 };
@@ -24,10 +23,7 @@ export function useAssistantTurnEventSubscription(args: {
   activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
-  onCapabilityFailure: (
-    provider: NativeAssistantTurnEvent['provider'],
-    category: NativeAssistantFailureCategory
-  ) => void;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   onProviderThreadStarted: (providerThreadId: string) => void;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
@@ -63,17 +59,13 @@ export function applyAssistantTurnEvent(args: {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   event: NativeAssistantTurnEvent;
   failedText: string;
-  onCapabilityFailure: (
-    provider: NativeAssistantTurnEvent['provider'],
-    category: NativeAssistantFailureCategory
-  ) => void;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   onProviderThreadStarted: (providerThreadId: string) => void;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
 }) {
   const activeTurn = args.activeTurnRef.current;
-  if (!activeTurn || args.event.clientTurnId !== activeTurn.clientTurnId
-    || args.event.provider !== activeTurn.provider) return;
+  if (!activeTurn || args.event.clientTurnId !== activeTurn.clientTurnId) return;
   if (args.event.kind === 'started' && args.event.providerThreadId
     && activeTurn.threadKey !== args.event.providerThreadId) {
     args.dispatchCache({ fromKey: activeTurn.threadKey, toKey: args.event.providerThreadId, type: 'move' });
@@ -86,9 +78,7 @@ export function applyAssistantTurnEvent(args: {
   }
   if (args.event.kind === 'failed') {
     const partialText = args.event.text ?? activeTurn.responseText;
-    if (args.event.failure?.category) {
-      args.onCapabilityFailure(args.event.provider, args.event.failure.category);
-    }
+    if (args.event.failure?.category) args.onCapabilityFailure(args.event.failure.category);
     args.dispatchCache(createFailedMessageAction(
       activeTurn.threadKey,
       activeTurn.clientTurnId,

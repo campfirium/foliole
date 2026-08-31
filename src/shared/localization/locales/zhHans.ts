@@ -24,7 +24,6 @@ import { ZH_HANS_DESKTOP_WORDPRESS_TRANSLATIONS } from './zhHansDesktopWordPress
 import { ZH_HANS_FEEDBACK_TRANSLATIONS } from './zhHansFeedback';
 import { ZH_HANS_SETTINGS_TRANSLATIONS } from './zhHansSettings';
 import { ZH_HANS_SETTINGS_ABOUT_TRANSLATIONS } from './zhHansSettingsAbout';
-import { ZH_HANS_SETTINGS_AIDE_TRANSLATIONS } from './zhHansSettingsAide';
 import { ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS } from './zhHansSettingsAppearance';
 import { ZH_HANS_SETTINGS_CAPTURE_TRANSLATIONS } from './zhHansSettingsCapture';
 import { ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS } from './zhHansSettingsDemoPreview';
@@ -38,7 +37,6 @@ import { ZH_HANS_SHARED_UI_TRANSLATIONS } from './zhHansSharedUi';
 export const ZH_HANS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_SETTINGS_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_ABOUT_TRANSLATIONS,
-  ...ZH_HANS_SETTINGS_AIDE_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_CAPTURE_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS,

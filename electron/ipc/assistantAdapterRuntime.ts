@@ -9,13 +9,11 @@ import {
   readFolioleAideDeveloperInstructions,
   resolveFolioleAideRuntimePaths
 } from '../assistant/folioleAideRuntime.js';
-import { OpenAiCompatibleAdapter } from '../assistant/openAiCompatibleAdapter.js';
 
 import { resolveAssistantLauncherEnv } from './assistantLauncherEnvironment.js';
 import { resolveBootstrapLibraryPaths } from './libraryPathBootstrap.js';
 
 let adapter: CodexAppServerAdapter | null = null;
-let byokAdapter: OpenAiCompatibleAdapter | null = null;
 
 export function getAssistantAdapter() {
   const scriptRoot = resolveAssistantAgentControlScriptRoot();
@@ -36,16 +34,9 @@ export function getAssistantAdapter() {
   return adapter;
 }
 
-export function getAssistantByokAdapter() {
-  byokAdapter ??= new OpenAiCompatibleAdapter();
-  return byokAdapter;
-}
-
 export function disposeAssistantCommandAdapter() {
   adapter?.dispose();
   adapter = null;
-  byokAdapter?.dispose();
-  byokAdapter = null;
 }
 
 export function resetAssistantCommandAdapterForTests() {

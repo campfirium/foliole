@@ -7,9 +7,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 import { backupDatabase } from './android-data-backup-files.mjs';
-import {
-  assertProtectionPreserved, inspectProtectionIdentity
-} from './android-device-data-protection.mjs';
+import { assertProtectionPreserved } from './android-device-data-protection.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { pullAttachmentArchive, pullDatabaseFile } from './android-device-snapshot.mjs';
 
@@ -94,27 +92,14 @@ describe('Android device data protection', () => {
     expect(() => assertReadableDatabase({ database: { exists: true } }, 'after install')).not.toThrow();
   });
 
-  it('reads protection identity from the current single-principal schema', () => {
-    const database = {
-      prepare: (sql) => ({
-        get: () => sql.includes('sqlite_master') ? { exists: 1 } : {
-          group_id: 'group-1', local_device_identity_key: 'device-1'
-        }
-      })
-    };
-    expect(inspectProtectionIdentity(database)).toEqual({
-      activeSyncGroupId: 'group-1', localDeviceIdentityKey: 'device-1'
-    });
-  });
-
-  it('fails closed when install changes identity, group, integrity, or data counts', () => {
+  it('fails closed when install changes identity, group, timeline, integrity, or data counts', () => {
     const snapshot = { database: { counts: { nodes: 2 }, inspection: {
-      activeSyncGroupId: 'group-1', localDeviceIdentityKey: 'device-1'
+      activeSyncGroupMemberCount: 2, deviceIdentityFingerprint: 'identity',
+      syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1'
     }, integrity: 'ok' } };
     expect(() => assertProtectionPreserved(snapshot, JSON.parse(JSON.stringify(snapshot)))).not.toThrow();
     const changed = JSON.parse(JSON.stringify(snapshot));
-    changed.database.inspection.localDeviceIdentityKey = 'device-2';
-    expect(() => assertProtectionPreserved(snapshot, changed))
-      .toThrow('database identity, group, or counts changed');
+    changed.database.inspection.syncGroupTimelineId = 'timeline-2';
+    expect(() => assertProtectionPreserved(snapshot, changed)).toThrow('database identity, group, timeline, or counts changed');
   });
 });

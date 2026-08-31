@@ -22,7 +22,6 @@ describe('desktop setting policy', () => {
     ['foliole_publish_settings', 'host', true],
     ['readwise_import_settings', 'host', true],
     ['device_id', 'local_only', false],
-    ['foliole_aide_byok_settings', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {
     expect(resolveDesktopSettingPolicy(key)).toMatchObject({ canonical, declared: true, scope });
@@ -48,9 +47,5 @@ describe('desktop setting policy', () => {
     expect(canMaterializeDesktopSetting({ ...identity!, platform: 'android' }, 'desktop-device')).toBe(false);
     const session = resolveDesktopSettingIdentity('window_state', 'desktop-device');
     expect(canMaterializeDesktopSetting(session!, 'other-device')).toBe(false);
-  });
-
-  it('never creates a canonical identity for the local Aide BYOK configuration', () => {
-    expect(resolveDesktopSettingIdentity('foliole_aide_byok_settings', 'desktop-device')).toBeNull();
   });
 });

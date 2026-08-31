@@ -26,7 +26,6 @@ import { requestCustomCopyDialogOpen } from '../../model/customCopyDialogRequest
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
-import { SettingsAideByokSection } from './SettingsAideByokSection';
 import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
@@ -166,7 +165,6 @@ export function SettingsGeneralSection({
         <SearchEnhancementRow />
       </SettingsSection>
       <SettingsCaptureSection />
-      {!previewDesktopSettings ? <SettingsAideByokSection /> : null}
       <SettingsAideStorageSection preview={previewDesktopSettings} />
     </>
   );

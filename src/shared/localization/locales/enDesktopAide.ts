@@ -1,8 +1,4 @@
 export const EN_DESKTOP_AIDE_TRANSLATIONS = {
-  'desktop.rightPanel.assistant.provider.label': 'New conversation provider',
-  'desktop.rightPanel.assistant.provider.byok': 'Your model · {model}',
-  'desktop.rightPanel.assistant.provider.historyByok': 'Your model',
-  'desktop.rightPanel.assistant.provider.unconfiguredModel': 'Not configured',
   'desktop.rightPanel.assistant.model.settings': 'Model and performance settings',
   'desktop.rightPanel.assistant.model.loading': 'Loading available models and performance settings...',
   'desktop.rightPanel.assistant.model.unavailable':

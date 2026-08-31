@@ -1,12 +1,21 @@
-import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 
 export const NATIVE_COMMANDS = {
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
-  ...NATIVE_ASSISTANT_COMMANDS,
   appGetVersion: 'app_get_version',
   folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
+  assistantGetStatus: 'assistant_get_status',
+  assistantListModels: 'assistant_list_models',
+  assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
+  assistantSendMessage: 'assistant_send_message',
+  assistantListThreadIndex: 'assistant_list_thread_index',
+  assistantListThreadMessages: 'assistant_list_thread_messages',
+  assistantReadImageAttachment: 'assistant_read_image_attachment',
+  assistantArchiveThreadIndex: 'assistant_archive_thread_index',
+  assistantRemoveThreadFromHistory: 'assistant_remove_thread_from_history',
+  assistantGetStorageInfo: 'assistant_get_storage_info',
+  assistantOpenStorageLocation: 'assistant_open_storage_location',
   bootReport: 'boot_report',
   desktopUpdateCheck: 'desktop_update_check',
   desktopUpdateDownload: 'desktop_update_download',

@@ -114,7 +114,7 @@ async function runMaterialWriteCommand(command, body, descriptor, flags, options
   const read = await callApi(ROUTES['materials/read'], descriptor, { id: materialId }, options);
   if (read.status !== 0) return read;
   const material = read.output.material;
-  if (material?.content_truncated || material?.reveal_truncated) return failure('backup_source_truncated', 4);
+  if (material?.content_truncated) return failure('backup_source_truncated', 4);
   const mutationBody = buildMaterialMutationBody(command, body, material);
   if (!mutationBody.ok) return failure(mutationBody.error, 4);
   const backup = await writeBackup(command, 'material', materialId, material, mutationBody.body, flags, options);

@@ -1,13 +1,7 @@
 import type {
   NativeAssistantModelSelection,
-  NativeAssistantProviderId,
   NativeAssistantThreadOpeningLocation
 } from '../../lib/platform/nativeAssistantContract.js';
-
-export function readAssistantProvider(value: unknown): NativeAssistantProviderId {
-  if (value === 'codex-app-server' || value === 'openai-compatible') return value;
-  throw new Error('invalid_assistant_provider');
-}
 
 export function readOptionalClientTurnId(value: unknown) {
   if (value === undefined) return undefined;

@@ -5,100 +5,57 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { createT152DesktopDnsSdLibrary, verifyT152DesktopDnsSdLibrary } from
-  '../desktop/t152-desktop-dnssd-library.mjs';
-import { createFormalInteractiveRequest } from './t152-windows-formal-interactive-contract.mjs';
-import { createBootstrapConfig, waitForScheduledWorker } from
-  './t152-windows-formal-interactive-bootstrap.mjs';
-import { transitionFormalInteractiveGeneration, writeAndPreflightFormalGeneration } from
-  './t152-windows-formal-interactive-generation.mjs';
-
-function requiredConfig(config) {
-  const paths = ['baseRoot', 'capsuleRoot', 'controllerRoot', 'evidenceRoot', 'nodePath',
-    'sourceRoot', 'stateRoot'];
-  if (!paths.every((key) => path.win32.isAbsolute(config[key] ?? ''))
-      || !Array.isArray(config.protectedRoots)) throw new Error('T152 runner paths are invalid.');
-  return config;
-}
-
-function readOwner(config) {
-  const input = { baseRoot: config.baseRoot, evidenceRoot: config.evidenceRoot,
-    rootId: config.rootId, sourceRoot: config.sourceRoot };
-  if (config.phase === 'g2-path') {
-    return createT152DesktopDnsSdLibrary(input, { pathApi: path.win32 });
-  }
-  const receipt = JSON.parse(fs.readFileSync(config.ownerReceiptPath, 'utf8'));
-  return { ...verifyT152DesktopDnsSdLibrary(input, receipt, { pathApi: path.win32 }),
-    receiptPath: config.ownerReceiptPath };
-}
-
-async function productModules(sourceRoot) {
-  const rootUrl = pathToFileURL(path.win32.join(sourceRoot, 'scripts', 'windows'));
-  return Promise.all([
-    import(new URL('./windows-client-native-interactive-state.mjs', `${rootUrl.href}/`)),
-    import(new URL('./windows-client-native-process.mjs', `${rootUrl.href}/`))
-  ]);
-}
-
-function bootstrapIdentity(config) {
-  return { capsuleId: config.capsuleId, controllerCommit: config.controllerCommit,
-    controllerTree: config.controllerTree, productCommit: config.productCommit,
-    productTree: config.productTree, rootId: config.rootId, t7Run: config.t7Run };
-}
-
-async function dispatch(config, request) {
-  const [stateModule, processOwner] = await productModules(config.sourceRoot);
-  const install = path.win32.join(config.controllerRoot, 'scripts', 'windows',
-    't152-windows-formal-interactive-install.ps1');
-  const worker = path.win32.join(config.controllerRoot, 'scripts', 'windows',
-    't152-windows-formal-interactive-worker.mjs');
-  const bootstrap = path.win32.join(config.controllerRoot, 'scripts', 'windows',
-    't152-windows-formal-interactive-bootstrap.mjs');
-  const taskDefinition = { bootstrapPath: bootstrap, nodePath: config.nodePath,
-    principal: { logonType: 'Interactive', runLevel: 'Limited' }, settings: {
-      executionTimeLimit: 'PT3M', multipleInstances: 'IgnoreNew' }, stateRoot: config.stateRoot,
-    taskName: stateModule.WINDOWS_NATIVE_CLIENT_TASK, workingDirectory: config.sourceRoot };
-  const bootstrapConfig = createBootstrapConfig({ bootstrapPath: bootstrap,
-    identity: bootstrapIdentity(config), nodePath: config.nodePath, request,
-    stateRoot: config.stateRoot, taskDefinition, workerPath: worker,
-    workingDirectory: config.sourceRoot });
-  transitionFormalInteractiveGeneration({ nextConfig: bootstrapConfig, nextRequest: request,
-    stateRoot: config.stateRoot, writeJsonAtomic: stateModule.writeJsonAtomic });
-  writeAndPreflightFormalGeneration({ config: bootstrapConfig,
-    ownerInput: { baseRoot: config.baseRoot, evidenceRoot: config.evidenceRoot,
-      rootId: config.rootId, sourceRoot: config.sourceRoot }, request,
-    stateRoot: config.stateRoot, writeJsonAtomic: stateModule.writeJsonAtomic });
-  const installed = await processOwner.runCapture('powershell.exe', [
-    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', install,
-    '-NodePath', config.nodePath, '-WorkDir', config.sourceRoot,
-    '-BootstrapScript', bootstrap, '-StateRoot', config.stateRoot
-  ], { cwd: config.controllerRoot, timeoutMs: 30_000 });
-  if (installed.code !== 0) throw new Error('T152 interactive task installation failed.');
-  const launch = await processOwner.runCapture('schtasks.exe', ['/Run', '/TN',
-    stateModule.WINDOWS_NATIVE_CLIENT_TASK], { cwd: config.controllerRoot, timeoutMs: 30_000 });
-  if (launch.code !== 0) throw new Error('T152 interactive task launch failed.');
-  return waitForScheduledWorker(config.stateRoot, request.nonce,
-    { resultTimeoutMs: 20 * 60_000, startTimeoutMs: 5_000 });
+function required(value, pattern, label) {
+  if (!pattern.test(value ?? '')) throw new Error(`${label} is invalid`);
+  return value;
 }
 
 async function main() {
-  const configPath = process.argv[2];
-  if (!path.win32.isAbsolute(configPath ?? '')) throw new Error('T152 config path is required.');
-  const config = requiredConfig(JSON.parse(fs.readFileSync(configPath, 'utf8')));
-  if (config.phase === 'g2-path') {
-    fs.mkdirSync(config.evidenceRoot, { recursive: true });
-    fs.mkdirSync(config.stateRoot, { recursive: true });
-  } else if (!fs.existsSync(config.evidenceRoot) || !fs.existsSync(config.stateRoot)) {
-    throw new Error('T152 admission roots are missing.');
+  const [action, sourceRoot, attemptId, acceptanceRoot, expectedGroupId, expectedGroupTag] =
+    process.argv.slice(2);
+  const productActions = new Set([
+    'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance'
+  ]);
+  if (['release-cancel', 'release-complete'].includes(action)) {
+    const sourceUrl = pathToFileURL(path.win32.join(sourceRoot, 'scripts', 'windows'));
+    const { writeWindowsSyncGroupProviderRelease } = await import(
+      new URL('./windows-sync-group-provider-release-control.mjs', `${sourceUrl.href}/`)
+    );
+    const status = action === 'release-complete' ? 'consumer_complete' : 'cancelled';
+    writeWindowsSyncGroupProviderRelease({ repoRoot: sourceRoot, status });
+    console.log(`[t152-windows-formal] release=${status}`);
+    return;
   }
-  const owner = readOwner(config);
-  const request = createFormalInteractiveRequest({ ...config,
-    ownerHash: owner.ownerHash,
-    ownerReceipt: JSON.parse(fs.readFileSync(owner.receiptPath, 'utf8'))
-  });
-  const result = await dispatch(config, request);
-  if (result.exitCode !== 0) throw new Error(result.error || 'T152 interactive worker failed.');
-  console.log(`[t152-windows-formal] phase=${config.phase} receipt=${result.receiptPath}`);
+  if (!productActions.has(action)) throw new Error('formal action is invalid');
+  required(attemptId, /^[0-9a-f-]{36}$/u, 'formal attempt');
+  if (action === 'desktop-dnssd-find-acceptance') {
+    required(expectedGroupId, /^group-[0-9a-f-]{36}$/u, 'expected group id');
+    required(expectedGroupTag, /^[0-9a-f]{32}$/u, 'expected group tag');
+  }
+  if (!path.win32.isAbsolute(sourceRoot) || !path.win32.isAbsolute(acceptanceRoot)
+      || !fs.existsSync(path.win32.join(sourceRoot, 'package.json'))) {
+    throw new Error('formal capsule paths are invalid');
+  }
+  if (expectedGroupId) process.env.FOLIOLE_T152_EXPECTED_GROUP_ID = expectedGroupId;
+  if (expectedGroupTag) process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG = expectedGroupTag;
+  const sourceUrl = pathToFileURL(path.win32.join(sourceRoot, 'scripts', 'windows'));
+  const [{ formatWindowsDevFailure, runWindowsDevBuild }, { windowsDevPaths }] = await Promise.all([
+    import(new URL('./windows-dev-build.mjs', `${sourceUrl.href}/`)),
+    import(new URL('./windows-dev-paths.mjs', `${sourceUrl.href}/`))
+  ]);
+  const paths = { ...windowsDevPaths({ repoRoot: sourceRoot }), acceptanceRepoRoot: acceptanceRoot,
+    controlRepoRoot: sourceRoot };
+  const result = await runWindowsDevBuild({ action, id: () => attemptId, paths });
+  if (result.exitCode !== 0) {
+    console.error(formatWindowsDevFailure(result.summary));
+    process.exitCode = result.exitCode;
+    return;
+  }
+  const manifest = action === 'desktop-dnssd-find-acceptance'
+    ? result.summary.desktopDnsSdFindAcceptance?.manifestPath
+    : result.summary.desktopDnsSdAdvertiseAcceptance?.manifestPath;
+  if (!manifest) throw new Error('formal Find receipt is missing');
+  console.log(`[t152-windows-formal] action=${action} attempt=${attemptId} receipt=${manifest}`);
 }
 
 main().catch((error) => {

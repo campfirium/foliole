@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const APPEARANCE_ACTION = /^(Appearance mode|外观模式)$/;
+const APPEARANCE_ACTION = /^(Appearance mode: (Light|Dark|Follow system \(currently (Light|Dark)\))|外观模式：(浅色|深色|跟随系统（当前为(浅色|深色)）))$/;
 const APPEARANCE_MANAGER_LABEL = /^(Cycle Appearance Mode|循环切换外观模式)$/;
 const CUSTOMIZATION_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/workspace-appearance-customization.png');
 
@@ -36,7 +36,6 @@ test('keeps the three-state appearance action inside left toolbar customization'
   const initialResolvedMode = await readResolvedBaseColor(desktopWindow);
   const oppositeMode = initialResolvedMode === 'light' ? 'dark' : 'light';
 
-  expect(await readBaseColor(desktopWindow)).toBe('system');
   await action.click();
   await expect.poll(() => readBaseColor(desktopWindow)).toBe(oppositeMode);
   await action.click();

@@ -3,7 +3,6 @@ import type { FormEvent } from 'react';
 import type {
   NativeAssistantFailureCategory,
   NativeAssistantModelSelection,
-  NativeAssistantProviderId,
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
@@ -31,7 +30,7 @@ type AssistantSubmitPanelArgs = {
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
   nodesById: Record<string, Node>;
-  onCapabilityFailure: (provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => void;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
 
@@ -43,7 +42,6 @@ type AssistantSubmitState = {
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
   modelSelection?: NativeAssistantModelSelection;
-  provider: NativeAssistantProviderId;
   refreshModelCatalog: () => Promise<void>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
@@ -71,13 +69,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.setSending(true);
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
     const pendingId = `assistant-${Date.now()}`;
-    args.activeTurnRef.current = {
-      clientTurnId: pendingId,
-      prompt,
-      provider: args.provider,
-      responseText: '',
-      threadKey
-    };
+    args.activeTurnRef.current = { clientTurnId: pendingId, prompt, responseText: '', threadKey };
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt, args.imageDrafts));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId));
     try {
@@ -119,7 +111,7 @@ function applySendResult(result: SendResultArgs) {
   }
   const failureCategory = result.result?.failure?.category;
   if (failureCategory === 'protocol_error') void result.refreshModelCatalog();
-  if (failureCategory) result.onCapabilityFailure(result.result?.provider ?? result.provider, failureCategory);
+  if (failureCategory) result.onCapabilityFailure(failureCategory);
   result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
   result.setMessageText(result.prompt);
 }

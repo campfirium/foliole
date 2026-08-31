@@ -21,9 +21,7 @@ export function buildAgentCliBody(command, flags) {
 }
 
 function buildMaterialCreateBody(flags) {
-  const required = flags.kind === 'item' ? ['kind', 'content', 'reveal'] : ['kind', 'title'];
-  const optional = flags.kind === 'item' ? ['parent_id'] : ['content', 'parent_id'];
-  const result = requireFields(flags, required, optional);
+  const result = requireFields(flags, ['kind', 'title'], ['content', 'parent_id']);
   return result.ok ? { body: { parent_id: null, ...result.body }, ok: true } : result;
 }
 
@@ -58,8 +56,8 @@ function requireFields(flags, required, optional = []) {
 function buildUpdateBody(flags) {
   const base = requireFields(flags, ['id', 'expected_updated_at']);
   if (!base.ok) return base;
-  if (!flags.title && !flags.reveal && !Object.hasOwn(flags, 'content')) return { error: 'missing_patch', ok: false, statusCode: 2 };
-  return { body: { ...base.body, ...(flags.title ? { title: flags.title } : {}), ...(flags.reveal ? { reveal: flags.reveal } : {}), ...(Object.hasOwn(flags, 'content') ? { content: flags.content } : {}) }, ok: true };
+  if (!flags.title && !Object.hasOwn(flags, 'content')) return { error: 'missing_patch', ok: false, statusCode: 2 };
+  return { body: { ...base.body, ...(flags.title ? { title: flags.title } : {}), ...(Object.hasOwn(flags, 'content') ? { content: flags.content } : {}) }, ok: true };
 }
 
 function normalizeFieldValue(field, value) {

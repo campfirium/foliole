@@ -118,7 +118,7 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('compact')).toBeInTheDocument();
   expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();
   expect(screen.getByText('hidden')).toBeInTheDocument();
-  expect(screen.getByText('system')).toBeInTheDocument();
+  expect(screen.getByText('light')).toBeInTheDocument();
   expect(screen.getByText('dim-on')).toBeInTheDocument();
   expect(screen.getByText('warm')).toBeInTheDocument();
   expect(screen.getByText('1.75')).toBeInTheDocument();

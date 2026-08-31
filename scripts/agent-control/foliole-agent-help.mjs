@@ -5,22 +5,21 @@ import {
 } from './foliole-agent-routes.mjs';
 
 const GROUP_LABELS = {
-  materials: 'Topics, Folders, and Items',
+  materials: 'Topics and Folders',
   'virtual-folders': 'Virtual Folders'
 };
 
 const FLAG_DESCRIPTIONS = {
-  content: 'Topic content or Item question. Pass an empty value with --content= to clear Topic content.',
+  content: 'Topic content. Pass an empty value with --content= to clear it.',
   'expected-updated-at': 'The updated_at value returned by the latest read.',
   'folder-id': 'Virtual Folder ID.',
-  id: 'Topic, Folder, or Item ID.',
-  kind: 'Type to create: topic, folder, or item.',
+  id: 'Topic or Folder ID.',
+  kind: 'Type to create: topic or folder.',
   limit: 'Maximum number of results to return.',
   'material-ids': 'Comma-separated Topic or Folder IDs in the requested order.',
-  'parent-id': 'Parent ID, or root for the workspace root; root means Inbox for Items.',
+  'parent-id': 'Parent Folder ID, or root for the workspace root.',
   query: 'Search text.',
-  reveal: 'Item answer, limited to 4,000 characters.',
-  title: 'Topic or Folder title, or an explicit Item title update.'
+  title: 'Topic or Folder title.'
 };
 
 const COMMON_OPTIONS = [
@@ -39,14 +38,8 @@ const EXIT_CODES = [
 
 const COMMAND_DETAILS = {
   'materials/create': details(
-    [
-      'Creates a local backup record before writing.',
-      'Topic and Folder require --title. Item requires --content and --reveal and does not accept --title.'
-    ],
-    [
-      'foliole materials/create --kind topic --title "Reading topic" --content "Body" --parent-id root',
-      'foliole materials/create --kind item --content "Question" --reveal "Answer" --parent-id root'
-    ]
+    ['Creates a local backup record before writing.'],
+    ['foliole materials/create --kind topic --title "Reading note" --content "Body" --parent-id root']
   ),
   'materials/delete-soft': details([
     'Moves the Topic or Folder to trash; it does not permanently delete it.',
@@ -59,8 +52,8 @@ const COMMAND_DETAILS = {
   ]),
   'materials/restore': guardedWrite('Use the updated_at value returned for the trashed material.'),
   'materials/update': details([
-    'Updates only the supplied title, content, or Item answer; it does not change Folder membership or ordering.',
-    'Run materials/read first and pass the latest materials/read updated_at value. The CLI backs up the current Topic or Item before writing.'
+    'Updates only the supplied title or content; it does not change Folder membership or ordering.',
+    'Run materials/read first and pass the latest materials/read updated_at value. The CLI backs up the current Topic before writing.'
   ], [
     'foliole materials/update --id <id> --expected-updated-at <updated_at> --title "New title"'
   ]),

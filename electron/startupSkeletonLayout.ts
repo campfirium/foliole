@@ -1,4 +1,4 @@
-import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../src/shared/config/appSettings.js';
+import { APP_SETTINGS_STORAGE_KEYS } from '../src/shared/config/appSettings.js';
 
 const MAX_LIST_WIDTH = 900;
 const MAX_RIGHT_SIDEBAR_WIDTH = 640;
@@ -94,10 +94,7 @@ export function createStartupSkeletonLayoutFromSettings(
   settings: Record<string, unknown>,
   options: StartupSkeletonLayoutOptions = {}
 ): StartupSkeletonLayout {
-  const rawBaseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
-  const baseColor = rawBaseColor === 'dark' || rawBaseColor === 'light' || rawBaseColor === 'system'
-    ? rawBaseColor
-    : DEFAULT_BASE_COLOR_MODE;
+  const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
   const mode = baseColor === 'dark' || (baseColor === 'system' && options.systemColorMode === 'dark') ? 'dark' : 'light';
   return {
     dualListWidth: readNumberSetting(settings, APP_SETTINGS_STORAGE_KEYS.dualListWidth, MIN_DUAL_LIST_WIDTH, MAX_DUAL_LIST_WIDTH),

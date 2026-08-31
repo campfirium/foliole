@@ -28,13 +28,8 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
   const controller = useWorkspaceRightSidebarAssistantPanelController({
     ...props,
     aideReady: capability.ready,
-    byokConfigured: capability.byokSettings?.state === 'configured',
-    byokModel: capability.byokSettings?.model ?? '',
-    codexReady: capability.codexReady,
     failedText: t('desktop.rightPanel.assistant.failed'),
     onCapabilityFailure: capability.markUnavailableFromFailure,
-    onSelectProvider: capability.selectProvider,
-    selectedProvider: capability.byokSettings?.selected_provider ?? 'codex-app-server',
     topicUnavailableText: t('desktop.rightPanel.assistant.location.topicUnavailable')
   });
 

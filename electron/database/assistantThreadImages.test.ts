@@ -42,13 +42,12 @@ it('persists image metadata with a message and reads content by attachment id', 
   appendAssistantThreadMessages([{
     id: 'turn-1:user',
     images: stored ? [stored] : [],
-    provider: 'codex-app-server',
     providerThreadId: 'thread-1',
     role: 'user',
     text: 'Inspect this'
   }]);
 
-  expect(listAssistantThreadMessages('codex-app-server', 'thread-1')).toEqual([
+  expect(listAssistantThreadMessages('thread-1')).toEqual([
     expect.objectContaining({ images: [expect.objectContaining({ id: stored?.id })] })
   ]);
   await expect(readAssistantImageContent(stored?.id ?? '')).resolves.toEqual({
@@ -67,7 +66,6 @@ it('keeps shared metadata until the final message reference is removed', async (
     appendAssistantThreadMessages([{
       id: `${threadId}:user`,
       images: stored ? [stored] : [],
-      provider: 'codex-app-server',
       providerThreadId: threadId,
       role: 'user',
       text: 'Shared'
@@ -75,11 +73,11 @@ it('keeps shared metadata until the final message reference is removed', async (
   }
   const attachmentId = stored?.id ?? '';
 
-  deleteAssistantThreadMessages('codex-app-server', 'thread-1');
+  deleteAssistantThreadMessages('thread-1');
   expect(deleteUnreferencedAssistantImageAttachments([attachmentId])).toEqual([]);
-  expect(listAssistantThreadAttachmentIds('codex-app-server', 'thread-2')).toEqual([attachmentId]);
+  expect(listAssistantThreadAttachmentIds('thread-2')).toEqual([attachmentId]);
 
-  deleteAssistantThreadMessages('codex-app-server', 'thread-2');
+  deleteAssistantThreadMessages('thread-2');
   expect(deleteUnreferencedAssistantImageAttachments([attachmentId])).toEqual([
     expect.objectContaining({ id: attachmentId })
   ]);
@@ -89,7 +87,6 @@ function seedThread(providerThreadId = 'thread-1') {
   upsertAssistantThreadIndex({
     location: { type: 'workspace' },
     message: 'Prompt',
-    provider: 'codex-app-server',
     providerThreadId
   });
 }

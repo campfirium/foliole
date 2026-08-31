@@ -1,16 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import {
-  projectAgentMaterialReveal,
-  projectAgentMaterialSearchResults
-} from './agentControlMaterialsProjection.js';
-
-it('bounds historical Item answers with explicit truncation metadata', () => {
-  expect(projectAgentMaterialReveal('x'.repeat(4_001), 4_000)).toEqual({
-    reveal: 'x'.repeat(4_000), reveal_char_count: 4_001, reveal_truncated: true
-  });
-});
+import { projectAgentMaterialSearchResults } from './agentControlMaterialsProjection.js';
 
 it('projects external search results without private absolute paths', () => {
   const projected = projectAgentMaterialSearchResults([

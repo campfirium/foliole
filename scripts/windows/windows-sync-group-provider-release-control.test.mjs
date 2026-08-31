@@ -3,19 +3,15 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { runWindowsDevControl } from './windows-dev-control.mjs';
 import {
   writeWindowsSyncGroupProviderRelease
 } from './windows-sync-group-provider-release-control.mjs';
 import { syncGroupInteractivePaths } from './windows-sync-group-interactive-state.mjs';
-import { createWindowsDevRemoteSpecTestFixture } from
-  './windows-dev-remote-spec-test-fixture.mjs';
 
 const roots = [];
-const transport = createWindowsDevRemoteSpecTestFixture();
-afterAll(() => transport.cleanup());
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function fixture(state = 'running') {
@@ -54,8 +50,7 @@ it('routes a provider release directly to fixed SSH without pushing source', asy
   const executeGit = vi.fn();
   const executeSsh = vi.fn(async () => 'released\n');
   await expect(runWindowsDevControl({
-    argv: ['multi-device-sync-provider-cancel'], env: transport.env, executeGit, executeSsh,
-    fsApi: transport.fsApi,
+    argv: ['multi-device-sync-provider-cancel'], env: {}, executeGit, executeSsh,
     stdout: { write: vi.fn() }
   })).resolves.toMatchObject({ operation: 'provider-release' });
   expect(executeGit).not.toHaveBeenCalled();

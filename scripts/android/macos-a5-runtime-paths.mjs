@@ -16,9 +16,6 @@ export function macosA5Paths(contextOrRepoRoot) {
     adb: path.join(SDK_ROOT, 'platform-tools', 'adb'),
     ...context,
     apk: path.join(context.buildRoot, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-    androidTestApk: path.join(
-      context.buildRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'
-    ),
     cap: path.join(context.buildRoot, 'node_modules/.bin/cap'),
     electron: path.join(context.buildRoot,
       'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),

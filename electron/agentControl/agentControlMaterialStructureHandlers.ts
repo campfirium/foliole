@@ -1,10 +1,6 @@
 import type http from 'node:http';
 
-import {
-  AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT,
-  AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT,
-  AgentMaterialMutationError
-} from './agentControlMaterialMutations.js';
+import { AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT, AgentMaterialMutationError } from './agentControlMaterialMutations.js';
 import {
   createAgentControlMaterial,
   moveAgentControlMaterial,
@@ -28,41 +24,16 @@ export async function handleMaterialCreate(
   const body = await readAuthorizedAgentControlBody(request, response, options, capability);
   if (!body) return;
   const title = readString(body.title);
-  const kind = body.kind === 'folder' || body.kind === 'topic' || body.kind === 'item' ? body.kind : null;
+  const kind = body.kind === 'folder' || body.kind === 'topic' ? body.kind : null;
   const content = body.content === undefined ? undefined : readString(body.content, false);
-  const reveal = body.reveal === undefined ? undefined : readString(body.reveal, false);
   const parentId = readNullableId(body.parent_id);
-  if (!isValidCreateInput({ body, content, kind, parentId, reveal, title })) {
+  if (!title || !kind || content === null || parentId === undefined || (content?.length ?? 0) > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) {
     sendAgentControlInvalidRequest(request, response, options, capability);
     return;
   }
   sendMutation(request, response, options, capability, () => ({
-    material: kind === 'item'
-      ? createAgentControlMaterial({
-          content: content as string, kind, parentId: parentId as string | null, reveal: reveal as string
-        })
-      : createAgentControlMaterial({
-          ...(typeof content === 'string' ? { content } : {}),
-          kind: kind as 'folder' | 'topic', parentId: parentId as string | null, title: title as string
-        })
+    material: createAgentControlMaterial({ ...(content === undefined ? {} : { content }), kind, parentId, title })
   }));
-}
-
-function isValidCreateInput(args: {
-  body: Record<string, unknown>;
-  content: string | null | undefined;
-  kind: 'folder' | 'item' | 'topic' | null;
-  parentId: string | null | undefined;
-  reveal: string | null | undefined;
-  title: string | null;
-}) {
-  if (!args.kind || args.parentId === undefined || args.content === null || args.reveal === null) return false;
-  if ((args.content?.length ?? 0) > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) return false;
-  if ((args.reveal?.length ?? 0) > AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT) return false;
-  if (args.kind === 'item') {
-    return args.body.title === undefined && Boolean(args.content?.trim()) && Boolean(args.reveal?.trim());
-  }
-  return Boolean(args.title) && args.body.reveal === undefined;
 }
 
 export async function handleMaterialMove(

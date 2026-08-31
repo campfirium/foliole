@@ -13,6 +13,8 @@ import {
   replaceAssistantMessageImages
 } from './assistantThreadImages.js';
 
+const DEFAULT_PROVIDER: NativeAssistantProviderId = 'codex-app-server';
+
 interface AssistantThreadMessageRow extends DatabaseRow {
   created_at: string;
   message_id: string;
@@ -26,7 +28,7 @@ export interface AssistantThreadMessageInput {
   createdAt?: string;
   id: string;
   images?: NativeAssistantImageAttachment[];
-  provider: NativeAssistantProviderId;
+  provider?: NativeAssistantProviderId;
   providerThreadId: string;
   role: NativeAssistantThreadMessageRecord['role'];
   text: string;
@@ -36,15 +38,14 @@ export function appendAssistantThreadMessages(
   messages: AssistantThreadMessageInput[]
 ): NativeAssistantThreadMessageRecord[] {
   if (messages.length === 0) return [];
-  const provider = messages[0]?.provider;
-  if (!provider) throw new Error('invalid_assistant_provider');
+  const provider = messages[0]?.provider ?? DEFAULT_PROVIDER;
   const providerThreadId = normalizeRequiredString(messages[0]?.providerThreadId ?? '', 'providerThreadId');
   const now = Date.now();
   const normalized = messages.map((message, index) => ({
     createdAt: message.createdAt ?? new Date(now + index).toISOString(),
     id: normalizeRequiredString(message.id, 'messageId'),
     images: message.images ?? [],
-    provider: message.provider,
+    provider: message.provider ?? DEFAULT_PROVIDER,
     providerThreadId: normalizeRequiredString(message.providerThreadId, 'providerThreadId'),
     role: normalizeAssistantMessageRole(message.role),
     text: message.text
@@ -66,7 +67,7 @@ export function appendAssistantThreadMessages(
       });
     }
   });
-  return listAssistantThreadMessages(provider, providerThreadId);
+  return listAssistantThreadMessages(providerThreadId, provider);
 }
 
 function assertSameThreadBatch(
@@ -81,8 +82,8 @@ function assertSameThreadBatch(
 }
 
 export function listAssistantThreadMessages(
-  provider: NativeAssistantProviderId,
-  providerThreadId: string
+  providerThreadId: string,
+  provider: NativeAssistantProviderId = DEFAULT_PROVIDER
 ): NativeAssistantThreadMessageRecord[] {
   const normalizedThreadId = normalizeRequiredString(providerThreadId, 'providerThreadId');
   const messages = openAssistantHistoryConnection()
@@ -93,7 +94,7 @@ export function listAssistantThreadMessages(
       [provider, normalizedThreadId]
     )
     .map(messageRowToRecord);
-  const imagesByMessage = listAssistantThreadMessageImages(provider, normalizedThreadId);
+  const imagesByMessage = listAssistantThreadMessageImages(normalizedThreadId, provider);
   return messages.map((message) => {
     const images = imagesByMessage.get(message.id);
     return images?.length ? { ...message, images } : message;
@@ -101,8 +102,8 @@ export function listAssistantThreadMessages(
 }
 
 export function deleteAssistantThreadMessages(
-  provider: NativeAssistantProviderId,
-  providerThreadId: string
+  providerThreadId: string,
+  provider: NativeAssistantProviderId = DEFAULT_PROVIDER
 ) {
   return openAssistantHistoryConnection().driver.execute(
     `DELETE FROM assistant_thread_messages

@@ -20,41 +20,18 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import {
-  archiveAssistantThreadIndex as archiveAssistantThreadIndexRaw,
-  deleteAssistantThreadIndex as deleteAssistantThreadIndexRaw,
+  archiveAssistantThreadIndex,
+  deleteAssistantThreadIndex,
   listAssistantThreadIndex,
-  upsertAssistantThreadIndex as upsertAssistantThreadIndexRaw,
-  type AssistantThreadIndexUpsertInput
+  upsertAssistantThreadIndex
 } from './assistantThreadIndex.js';
 import {
-  appendAssistantThreadMessages as appendAssistantThreadMessagesRaw,
-  listAssistantThreadMessages as listAssistantThreadMessagesRaw,
-  type AssistantThreadMessageInput
+  appendAssistantThreadMessages,
+  listAssistantThreadMessages
 } from './assistantThreadMessages.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
 let tempRoot = '';
-const TEST_PROVIDER = 'codex-app-server' as const;
-
-function upsertAssistantThreadIndex(input: Omit<AssistantThreadIndexUpsertInput, 'provider'>) {
-  return upsertAssistantThreadIndexRaw({ ...input, provider: TEST_PROVIDER });
-}
-
-function appendAssistantThreadMessages(messages: Array<Omit<AssistantThreadMessageInput, 'provider'>>) {
-  return appendAssistantThreadMessagesRaw(messages.map((message) => ({ ...message, provider: TEST_PROVIDER })));
-}
-
-function listAssistantThreadMessages(providerThreadId: string) {
-  return listAssistantThreadMessagesRaw(TEST_PROVIDER, providerThreadId);
-}
-
-function archiveAssistantThreadIndex(providerThreadId: string, now: string) {
-  return archiveAssistantThreadIndexRaw(TEST_PROVIDER, providerThreadId, now);
-}
-
-function deleteAssistantThreadIndex(providerThreadId: string, now: string) {
-  return deleteAssistantThreadIndexRaw(TEST_PROVIDER, providerThreadId, now);
-}
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-thread-index-'));

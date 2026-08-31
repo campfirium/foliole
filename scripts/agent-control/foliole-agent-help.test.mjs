@@ -28,7 +28,7 @@ describe('foliole agent cli discovery', () => {
     }));
     expect(result.output.commands).toContainEqual(expect.objectContaining({
       access: 'write',
-      arguments: { optional: ['content', 'reveal', 'title'], required: ['id', 'expected-updated-at'] },
+      arguments: { optional: ['content', 'title'], required: ['id', 'expected-updated-at'] },
       name: 'materials/update'
     }));
     const names = result.output.commands.map((command) => command.name);
@@ -56,14 +56,10 @@ describe('foliole agent cli discovery', () => {
   it('documents command arguments and write safety in human and JSON forms', async () => {
     const human = await runAgentCli(['materials/update', '--help'], { env: {} });
     expect(human.status).toBe(0);
-    expect(human.output).toContain('Updates only the supplied title, content, or Item answer');
+    expect(human.output).toContain('Updates only the supplied title or content');
     expect(human.output).toContain('--expected-updated-at');
     expect(human.output).toContain('--backup-dir <path>');
     expect(human.output).toContain('latest materials/read');
-
-    const createItem = await runAgentCli(['materials/create', '--help'], { env: {} });
-    expect(createItem.output).toContain('Item requires --content and --reveal and does not accept --title');
-    expect(createItem.output).toContain('--kind item --content "Question" --reveal "Answer"');
 
     const json = await runAgentCli(['help', 'virtual-folders', 'reorder', '--json'], { env: {} });
     expect(json.status).toBe(0);
@@ -74,7 +70,7 @@ describe('foliole agent cli discovery', () => {
   it('lists command groups and accepts nested command aliases', async () => {
     const group = await runAgentCli(['materials', '--help'], { env: {} });
     expect(group.status).toBe(0);
-    expect(group.output).toContain('Foliole Topics, Folders, and Items');
+    expect(group.output).toContain('Foliole Topics and Folders');
     expect(group.output).not.toContain('virtual-folders/list');
 
     const descriptor = '/tmp/foliole-help-descriptor.json';

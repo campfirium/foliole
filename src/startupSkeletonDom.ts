@@ -1,4 +1,4 @@
-import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from './shared/config/appSettings';
+import { APP_SETTINGS_STORAGE_KEYS } from './shared/config/appSettings';
 import { applyMacOsFontSmoothingFromSettings } from './shared/platform/macOsFontSmoothing';
 
 const REGION_IDS = [
@@ -28,15 +28,8 @@ const DEFAULT_ASSIGNMENTS = {
   'main-sidebar': 4
 } as const;
 
-function readBaseColor(settings: Record<string, string>) {
-  const rawBaseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
-  return rawBaseColor === 'dark' || rawBaseColor === 'light' || rawBaseColor === 'system'
-    ? rawBaseColor
-    : DEFAULT_BASE_COLOR_MODE;
-}
-
 function resolveMode(settings: Record<string, string>) {
-  const baseColor = readBaseColor(settings);
+  const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
   if (baseColor === 'dark') return 'dark';
   if (baseColor === 'system' && typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
     return 'dark';
@@ -81,7 +74,8 @@ function deriveDividerMixTarget(color: string) {
 export function applyStartupSkeletonSettings(settings: Record<string, string>) {
   if (typeof document === 'undefined') return;
   applyMacOsFontSmoothingFromSettings(settings);
-  const baseColor = readBaseColor(settings);
+  const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
+  if (baseColor !== 'dark' && baseColor !== 'light' && baseColor !== 'system') return;
   const mode = resolveMode(settings);
   const paletteKey = mode === 'dark'
     ? APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark

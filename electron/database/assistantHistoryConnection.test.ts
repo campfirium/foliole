@@ -38,7 +38,6 @@ it('bootstraps a versioned device-local history database and reopens it', () => 
   upsertAssistantThreadIndex({
     location: { type: 'workspace' },
     message: 'Device-local prompt',
-    provider: 'codex-app-server',
     providerThreadId: 'thread-local'
   });
 
@@ -55,7 +54,6 @@ it('upgrades v1 text history without changing its messages', () => {
   upsertAssistantThreadIndex({
     location: { type: 'workspace' },
     message: 'Keep this text history',
-    provider: 'codex-app-server',
     providerThreadId: 'thread-v1'
   });
   connection.sqlite.exec('DROP TABLE assistant_thread_message_images');
