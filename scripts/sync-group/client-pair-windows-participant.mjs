@@ -41,6 +41,11 @@ function markerEvents(child) {
       pending.get(match[1])?.resolve(value);
     }
   });
+  child.on('close', (code) => {
+    for (const { reject } of pending.values()) {
+      reject(new Error(`Windows client-pair participant exited before its marker: ${code}`));
+    }
+  });
   return (name) => {
     if (seen.has(name)) return Promise.resolve(seen.get(name));
     if (!pending.has(name)) pending.set(name, deferred());
@@ -65,7 +70,7 @@ export function startWindowsClientPairParticipant({ groupIdentity, role, runId, 
     `$env:FOLIOLE_PAIR_GROUP_TAG='${groupIdentity?.groupTag ?? ''}'`,
     `$env:FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD='${skipBuild ? '1' : '0'}'`,
     `$env:FOLIOLE_ELECTRON_APP_ROOT='${REPO}'`, `$env:FOLIOLE_WINDOWS_WORKDIR='${REPO}'`,
-    "& 'C:\\Program Files\\nodejs\\node.exe' scripts\\desktop\\playwright-desktop-native-hidden.mjs tests\\desktop\\client-pair-sync-participant.spec.ts",
+    "& 'C:\\Program Files\\nodejs\\node.exe' scripts\\desktop\\playwright-desktop-native-hidden.mjs tests/desktop/client-pair-sync-participant.spec.ts",
     'exit $LASTEXITCODE'
   ].join('; ');
   const child = sshPowerShell(source);
