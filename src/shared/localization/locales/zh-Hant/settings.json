@@ -40,7 +40,7 @@
   "settings.companionSync.sectionAria": "同步部分",
   "settings.companionSync.title": "同步",
   "settings.companionSync.description": "讓同步組內的裝置透過本地網路保持最新狀態。",
-  "settings.companionSync.status.inDevelopment": "開發中",
+  "settings.companionSync.status.inDevelopment": "開發中 · 暫不可用",
   "settings.companionSync.enableDesktop.title": "在此桌面上啟用",
   "settings.companionSync.enableDesktop.aria": "啟用桌面同步",
   "settings.companionSync.error.open": "無法開啟同步。 {error}",

@@ -40,7 +40,7 @@
   "settings.companionSync.sectionAria": "동기화 섹션",
   "settings.companionSync.title": "동기화",
   "settings.companionSync.description": "로컬 네트워크에서 동기화 그룹의 기기를 최신 상태로 유지합니다.",
-  "settings.companionSync.status.inDevelopment": "개발 중",
+  "settings.companionSync.status.inDevelopment": "개발 중 · 아직 사용할 수 없음",
   "settings.companionSync.enableDesktop.title": "이 데스크탑에서 활성화",
   "settings.companionSync.enableDesktop.aria": "데스크톱 동기화 활성화",
   "settings.companionSync.error.open": "동기화를 열 수 없습니다. {error}",

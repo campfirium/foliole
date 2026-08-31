@@ -40,7 +40,7 @@
   "settings.companionSync.sectionAria": "同期セクション",
   "settings.companionSync.title": "同期",
   "settings.companionSync.description": "同期グループ内のデバイスをローカルネットワーク上で最新の状態に保ちます。",
-  "settings.companionSync.status.inDevelopment": "開発中",
+  "settings.companionSync.status.inDevelopment": "開発中 · まだ利用できません",
   "settings.companionSync.enableDesktop.title": "このデスクトップで有効にする",
   "settings.companionSync.enableDesktop.aria": "デスクトップ同期を有効にする",
   "settings.companionSync.error.open": "同期を開けませんでした。 {error}",

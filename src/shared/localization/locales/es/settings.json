@@ -40,7 +40,7 @@
   "settings.companionSync.sectionAria": "Sección de sincronización",
   "settings.companionSync.title": "Sincronización",
   "settings.companionSync.description": "Mantenga actualizados los dispositivos de su grupo de sincronización en la red local.",
-  "settings.companionSync.status.inDevelopment": "En desarrollo",
+  "settings.companionSync.status.inDevelopment": "En desarrollo · Aún no disponible",
   "settings.companionSync.enableDesktop.title": "Habilitar en este escritorio",
   "settings.companionSync.enableDesktop.aria": "Habilitar sincronización de escritorio",
   "settings.companionSync.error.open": "No se pudo abrir la sincronización. {error}",

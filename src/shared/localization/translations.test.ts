@@ -25,6 +25,21 @@ const FRONTMATTER_DESCRIPTIONS = {
   'zh-Hant': '自訂正文元資訊欄中直接顯示的欄位；其餘 YAML 元資訊可透過欄內的 meta 按鈕展開查看。'
 } satisfies Record<(typeof APP_LOCALES)[number], string>;
 
+const SYNC_UNAVAILABLE_STATUSES = {
+  de: 'In Entwicklung · Noch nicht verfügbar',
+  en: 'In development · Not yet available',
+  es: 'En desarrollo · Aún no disponible',
+  fr: 'En cours de développement · Pas encore disponible',
+  it: 'In fase di sviluppo · Non ancora disponibile',
+  ja: '開発中 · まだ利用できません',
+  ko: '개발 중 · 아직 사용할 수 없음',
+  pl: 'W fazie rozwoju · Jeszcze niedostępne',
+  'pt-BR': 'Em desenvolvimento · Ainda não disponível',
+  ru: 'В разработке · Пока недоступно',
+  'zh-Hans': '开发中 · 暂不可用',
+  'zh-Hant': '開發中 · 暫不可用'
+} satisfies Record<(typeof APP_LOCALES)[number], string>;
+
 describe('translation catalog loading', () => {
   it('falls back to English before a target catalog is available', () => {
     expect(translate('de', 'settings.title')).toBe('Settings');
@@ -51,5 +66,14 @@ describe('translation catalog loading', () => {
       expect(translate(locale, 'settings.editor.frontmatter.description')).toBe(FRONTMATTER_DESCRIPTIONS[locale]);
     }
     expect(translate('zh-Hans', 'settings.search.editorFrontmatter.title')).toBe('文档元信息');
+  });
+
+  it('marks Sync as not yet available in every locale', async () => {
+    for (const locale of APP_LOCALES) {
+      await preloadTranslationCatalog(locale);
+      expect(translate(locale, 'settings.companionSync.status.inDevelopment')).toBe(
+        SYNC_UNAVAILABLE_STATUSES[locale]
+      );
+    }
   });
 });

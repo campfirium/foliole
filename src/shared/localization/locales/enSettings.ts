@@ -44,7 +44,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.companionSync.sectionAria': 'Sync section',
   'settings.companionSync.title': 'Sync',
   'settings.companionSync.description': 'Keep the devices in your Sync Group up to date on the local network.',
-  'settings.companionSync.status.inDevelopment': 'In development',
+  'settings.companionSync.status.inDevelopment': 'In development · Not yet available',
   'settings.companionSync.enableDesktop.title': 'Enable on this desktop',
   'settings.companionSync.enableDesktop.aria': 'Enable desktop sync',
   'settings.companionSync.error.open': 'Could not open sync. {error}',

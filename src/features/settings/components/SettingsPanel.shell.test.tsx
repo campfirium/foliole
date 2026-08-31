@@ -60,12 +60,12 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');
 });
 
-it('marks Sync as in development only after opening its settings page', () => {
+it('marks Sync as not yet available only after opening its settings page', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
 
   const sidebar = screen.getByLabelText('Settings categories');
   expect(within(sidebar).getByRole('button', { name: 'Sync' })).toBeVisible();
-  expect(within(sidebar).queryByText('In development')).not.toBeInTheDocument();
+  expect(within(sidebar).queryByText('In development · Not yet available')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: 'Sync' })).toBeVisible();
-  expect(screen.getByText('In development')).toBeVisible();
+  expect(screen.getByText('In development · Not yet available')).toBeVisible();
 });

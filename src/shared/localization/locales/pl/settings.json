@@ -40,7 +40,7 @@
   "settings.companionSync.sectionAria": "Sekcja synchronizacji",
   "settings.companionSync.title": "Synchronizuj",
   "settings.companionSync.description": "Dbaj o aktualność urządzeń w swojej grupie synchronizacji w sieci lokalnej.",
-  "settings.companionSync.status.inDevelopment": "W fazie rozwoju",
+  "settings.companionSync.status.inDevelopment": "W fazie rozwoju · Jeszcze niedostępne",
   "settings.companionSync.enableDesktop.title": "Włącz na tym pulpicie",
   "settings.companionSync.enableDesktop.aria": "Włącz synchronizację pulpitu",
   "settings.companionSync.error.open": "Nie można otworzyć synchronizacji. {error}",
