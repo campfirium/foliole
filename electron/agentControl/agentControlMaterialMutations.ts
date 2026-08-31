@@ -5,6 +5,7 @@ import type {
   NodeImageRegionGroupPayload,
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutationPayloads.js';
+import { deriveNodeTitleFromContent } from '../../lib/core/nodes/deriveNodeTitle.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
@@ -14,6 +15,7 @@ import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.j
 import { readAgentControlMaterial, type AgentMaterialReadPayload } from './agentControlMaterials.js';
 
 export const AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT = 10_000;
+export const AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT = 4_000;
 
 export interface AgentMaterialDeleteSoftResult {
   already_deleted: boolean;
@@ -60,6 +62,7 @@ export function updateAgentControlMaterial(input: {
   content?: string;
   expectedUpdatedAt: string;
   id: string;
+  reveal?: string;
   title?: string;
 }): AgentMaterialReadPayload {
   const row = readMaterialSnapshotRow(input.id);
@@ -72,10 +75,25 @@ export function updateAgentControlMaterial(input: {
   if (typeof input.content === 'string' && input.content.length > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
+  if (typeof input.reveal === 'string' && (
+    row.kind !== 'item' || input.reveal.trim().length === 0
+    || input.reveal.length > AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT
+  )) throw new AgentMaterialMutationError('invalid_request', 400);
+  if (row.kind === 'item' && typeof input.content === 'string' && input.content.trim().length === 0) {
+    throw new AgentMaterialMutationError('invalid_request', 400);
+  }
+  const hasExplicitTitle = typeof input.title === 'string';
+  const title = hasExplicitTitle
+    ? input.title!.trim()
+    : row.kind === 'item' && !row.is_title_manual && typeof input.content === 'string'
+      ? deriveNodeTitleFromContent(input.content)
+      : row.title;
   rewriteAgentControlNodeSnapshot({
     content: input.content ?? readRowContent(row),
     id: input.id,
-    title: typeof input.title === 'string' ? input.title.trim() : row.title
+    ...(hasExplicitTitle ? { isTitleManual: true } : {}),
+    ...(input.reveal === undefined ? {} : { reveal: input.reveal }),
+    title
   });
   const material = readAgentControlMaterial(input.id);
   if (!material) throw new AgentMaterialMutationError('not_found', 404);
@@ -85,7 +103,9 @@ export function updateAgentControlMaterial(input: {
 export function rewriteAgentControlNodeSnapshot(input: {
   content?: string;
   id: string;
+  isTitleManual?: boolean;
   manualChildOrder?: string[] | null;
+  reveal?: string | null;
   title?: string;
   updatedAt?: string;
   virtualFilter?: ReturnType<typeof parseVirtualNodeFilter>;
@@ -95,6 +115,8 @@ export function rewriteAgentControlNodeSnapshot(input: {
   const updatedAt = input.updatedAt ?? new Date().toISOString();
   const snapshot = toUpsertInput(row, {
     content: input.content ?? readRowContent(row),
+    isTitleManual: input.isTitleManual ?? row.is_title_manual === 1,
+    reveal: input.reveal ?? row.reveal,
     title: input.title ?? row.title,
     updatedAt
   });
@@ -155,7 +177,7 @@ function ensureMaterialIsActive(nodeId: string) {
 
 function toUpsertInput(
   row: MaterialSnapshotRow,
-  next: { content: string; title: string; updatedAt: string }
+  next: { content: string; isTitleManual?: boolean; reveal?: string | null; title: string; updatedAt: string }
 ): UpsertNodeSnapshotInput {
   return {
     anchorLink: parseJson<NodeAnchorLinkPayload>(row.anchor_link),
@@ -165,14 +187,14 @@ function toUpsertInput(
     enableShortTerm: toOptionalBoolean(row.enable_short_term),
     hideTitleHeading: row.hide_title_heading === 1,
     imageRegions: parseJson<NodeImageRegionGroupPayload[]>(row.image_regions),
-    isTitleManual: row.is_title_manual === 1,
+    isTitleManual: next.isTitleManual ?? row.is_title_manual === 1,
     kind: row.kind as NodeKind,
     manualChildOrder: parseManualChildOrder(row.manual_child_order),
     nodeId: row.id,
     parentNodeId: row.parent_id,
     position: row.position,
     priority: row.priority,
-    reveal: row.reveal,
+    reveal: next.reveal ?? row.reveal,
     sequentialReadingEnabled: toOptionalBoolean(row.sequential_reading_enabled),
     shelvedAt: row.shelved_at,
     title: next.title,

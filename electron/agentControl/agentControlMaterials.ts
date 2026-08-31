@@ -12,6 +12,7 @@ import {
   type AgentMaterialListParentSummary
 } from './agentControlMaterialListParents.js';
 import {
+  projectAgentMaterialReveal,
   projectAgentMaterialSearchResults,
   type AgentMaterialSearchResult
 } from './agentControlMaterialsProjection.js';
@@ -32,6 +33,7 @@ interface MaterialRow extends DatabaseRow {
   id: string;
   kind: string;
   parent_id: string | null;
+  reveal: string | null;
   title: string;
   updated_at: string;
 }
@@ -54,6 +56,9 @@ export interface AgentMaterialReadPayload {
   parent_id: string | null;
   parent_titles: string[];
   parents: AgentMaterialParentSummary[];
+  reveal?: string;
+  reveal_char_count?: number;
+  reveal_truncated?: boolean;
   special_kind?: AgentMaterialSpecialKind;
   title: string;
   updated_at: string;
@@ -122,13 +127,13 @@ export function normalizeOptionalLimit(value: unknown, fallback: number, max: nu
 export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPayload | null {
   const rows = openDatabaseConnection().driver.queryAll<MaterialRow>(
     `WITH RECURSIVE ancestors AS (
-       SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.anchor_link, cbd.data AS body_blob_data,
+       SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.reveal, n.anchor_link, cbd.data AS body_blob_data,
               n.deleted_at, n.updated_at, 0 AS depth
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?
        UNION ALL
-       SELECT parent.id, parent.parent_id, parent.kind, parent.title, parent.content, parent.anchor_link,
+       SELECT parent.id, parent.parent_id, parent.kind, parent.title, parent.content, parent.reveal, parent.anchor_link,
               NULL AS body_blob_data, parent.deleted_at, parent.updated_at, ancestors.depth + 1
        FROM nodes parent
        JOIN ancestors ON parent.id = ancestors.parent_id
@@ -155,6 +160,7 @@ export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPaylo
     parent_id: node.parent_id,
     parent_titles: rows.slice(1).reverse().map((row) => row.title),
     parents: rows.slice(1).reverse().map((row) => ({ id: row.id, title: row.title })),
+    ...(node.kind === 'item' ? projectAgentMaterialReveal(node.reveal, AGENT_CONTROL_MATERIAL_CONTENT_LIMIT) : {}),
     ...projectAgentMaterialIdentity(node),
     title: node.title,
     updated_at: node.updated_at

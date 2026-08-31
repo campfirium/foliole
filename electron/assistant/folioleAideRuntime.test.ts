@@ -53,6 +53,7 @@ it('atomically manages only AGENTS.md and preserves unknown Widget files', async
   ensureFolioleAideAgentsFile(paths);
 
   await expect(fs.readFile(paths.agentsPath, 'utf8')).resolves.toBe(FOLIOLE_AIDE_AGENTS_CONTENT);
+  expect(FOLIOLE_AIDE_AGENTS_CONTENT).toContain('never save ordinary chat answers');
   await expect(fs.readFile(path.join(paths.widgetRoot, 'personal.txt'), 'utf8')).resolves.toBe('keep me');
   expect((await fs.readdir(paths.widgetRoot)).sort()).toEqual(['AGENTS.md', 'Skills', 'personal.txt']);
   expect(readFolioleAideDeveloperInstructions(paths)).toContain(`Aide definition: ${paths.agentsPath}`);

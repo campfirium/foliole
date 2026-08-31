@@ -180,7 +180,7 @@ export async function handleMaterialDeleteSoft(
 }
 
 function normalizeUpdatePatch(body: Record<string, unknown>) {
-  const patch: { content?: string; title?: string } = {};
+  const patch: { content?: string; reveal?: string; title?: string } = {};
   if (Object.hasOwn(body, 'title')) {
     if (typeof body.title !== 'string') return null;
     patch.title = body.title;
@@ -189,7 +189,11 @@ function normalizeUpdatePatch(body: Record<string, unknown>) {
     if (typeof body.content !== 'string') return null;
     patch.content = body.content;
   }
-  return Object.hasOwn(patch, 'title') || Object.hasOwn(patch, 'content') ? patch : null;
+  if (Object.hasOwn(body, 'reveal')) {
+    if (typeof body.reveal !== 'string') return null;
+    patch.reveal = body.reveal;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
 }
 
 function sendInvalidRequest(
