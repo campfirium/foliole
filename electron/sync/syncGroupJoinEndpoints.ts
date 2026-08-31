@@ -1,5 +1,7 @@
 import type http from 'node:http';
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
 
@@ -32,11 +34,18 @@ export async function handleSyncGroupJoinAcceptance(
   response: http.ServerResponse,
   writeJson: JsonResponder
 ) {
-  const provider = loadDesktopSyncGroupJoinProvider();
-  if (!provider) return writeJson(request, response, 409, { error: 'sync_group_not_available' });
   try {
     const payload = JSON.parse(await readCompanionRequestBody(request)) as Record<string, unknown>;
-    const acceptance = provider.collect(String(payload.request_id ?? ''));
+    const result = await runWithDatabaseConnectionOwner(() => {
+      const provider = loadDesktopSyncGroupJoinProvider();
+      return provider
+        ? { acceptance: provider.collect(String(payload.request_id ?? '')), available: true as const }
+        : { acceptance: null, available: false as const };
+    });
+    if (!result.available) {
+      return writeJson(request, response, 409, { error: 'sync_group_not_available' });
+    }
+    const { acceptance } = result;
     writeJson(request, response, acceptance ? 200 : 409,
       acceptance ?? { error: 'sync_group_join_not_accepted' });
   } catch (error) {
