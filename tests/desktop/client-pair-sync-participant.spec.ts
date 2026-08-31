@@ -64,6 +64,7 @@ async function establishGroup(page: Page, invoke: Invoke): Promise<GroupIdentity
   if (role !== 'joiner') throw new Error(`Unsupported client-pair role: ${role}`);
   const identity = { groupId: required('FOLIOLE_PAIR_GROUP_ID'),
     groupTag: required('FOLIOLE_PAIR_GROUP_TAG') };
+  await invoke('enable_companion_sync');
   const discovered = await waitForDesktopProductState(page, {
     command: 'load_sync_group_overview', condition: { ...identity, kind: 'candidate-identity' },
     eventName: 'onSyncGroupDiscoveryChanged', timeoutMs: 90_000,
@@ -117,8 +118,18 @@ test('runs one role in the standard client-pair sync contract', async ({ desktop
   const page = desktopSession.firstWindow;
   await expectWorkspaceShell(page);
   const invoke = (command: string, args?: Record<string, unknown>) =>
-    page.evaluate(async ({ command, args }) => globalThis.electronAPI?.invoke(command, args),
-      { args, command });
+    page.evaluate(async ({ command, args }) => {
+      if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
+      let timer: ReturnType<typeof setTimeout>;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Windows command ${command} timed out.`)), 30_000);
+      });
+      try {
+        return await Promise.race([globalThis.electronAPI.invoke(command, args), timeout]);
+      } finally {
+        clearTimeout(timer!);
+      }
+    }, { args, command });
   const identity = await establishGroup(page, invoke);
   const deviceIds = await assertJoined(page, identity);
   const content = await runContent(page, invoke);

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 
 import {
   waitForMacosDeviceRequest, openMacosSyncGroupDesktopSession
@@ -18,6 +19,23 @@ import {
 } from './client-pair-windows-participant.mjs';
 
 const REPO_ROOT = '/Users/roamer/P/Foliole-sync';
+const COMMAND_TIMEOUT_MS = 30_000;
+
+async function withCommandTimeout(promise, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out.`)), COMMAND_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function invokeMac(session, command, args) {
+  return withCommandTimeout(session.invoke(command, args), `Mac command ${command}`);
+}
 
 function exactMatch(actual, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -46,6 +64,7 @@ async function observeExact(session, expected) {
 }
 
 async function joinMacToWindows(session, windows) {
+  await invokeMac(session, 'enable_companion_sync');
   const identity = await windows.event('owner-ready');
   const overview = await session.waitForState({ command: 'load_sync_group_overview',
     condition: { ...identity, kind: 'candidate-identity' },
@@ -53,10 +72,10 @@ async function joinMacToWindows(session, windows) {
     triggerCommand: 'discover_sync_groups' });
   const candidate = overview.join_candidates.find((item) =>
     item.group_id === identity.groupId && item.group_tag === identity.groupTag);
-  await session.invoke('request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+  await invokeMac(session, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
   await signalWindowsClientPair(windows.signalRoot, 'join-requested');
   await windows.event('owner-accepted');
-  await session.invoke('complete_sync_group_join');
+  await invokeMac(session, 'complete_sync_group_join');
   await signalWindowsClientPair(windows.signalRoot, 'join-complete');
   return identity;
 }
@@ -77,10 +96,13 @@ async function contentRoundTrip(session, windows, label) {
   await observeExact(session, windowsUpdated);
   await signalWindowsClientPair(windows.signalRoot, 'mac-observed-windows-update');
 
-  const macCreated = await createClientPairTopic({ label: `${label}-mac`, session });
+  const boundedSession = { invoke: (command, args) => invokeMac(session, command, args) };
+  const macCreated = await createClientPairTopic({ label: `${label}-mac`,
+    session: boundedSession });
   await signalWindowsClientPair(windows.signalRoot, 'mac-created', macCreated);
   exactMatch(await windows.event('mac-create-observed'), macCreated, 'Windows create observation');
-  const macUpdated = await updateClientPairTopic({ expected: macCreated, session });
+  const macUpdated = await updateClientPairTopic({ expected: macCreated,
+    session: boundedSession });
   await signalWindowsClientPair(windows.signalRoot, 'mac-updated', macUpdated);
   exactMatch(await windows.event('mac-update-observed'), macUpdated, 'Windows update observation');
   return { macCreated, macUpdated, windowsCreated, windowsUpdated };
@@ -98,7 +120,8 @@ async function runScenario({ owner, revision, root, runId, skipBuild }) {
   });
   let windows;
   try {
-    const macGroup = owner === 'mac' ? await session.enable() : null;
+    const macGroup = owner === 'mac'
+      ? await withCommandTimeout(session.enable(), 'Mac Sync Group setup') : null;
     const groupIdentity = macGroup ? { groupId: macGroup.sync_group.group_id,
       groupTag: macGroup.sync_group.group_tag } : null;
     windows = startWindowsClientPairParticipant({ groupIdentity,
