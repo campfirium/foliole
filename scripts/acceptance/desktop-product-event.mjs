@@ -94,6 +94,13 @@ export async function waitForDesktopProductState(page, {
         return Object.entries(condition.counts).every(([prefix, count]) =>
           titles.filter((title) => title.startsWith(prefix)).length >= count);
       }
+      if (condition.kind === 'exact-node') {
+        const node = value?.nodesById?.[condition.nodeId];
+        return node?.nodeId === condition.nodeId
+          && node?.title === condition.title
+          && node?.content === condition.content
+          && node?.updatedAt === condition.updatedAt;
+      }
       if (condition.kind === 'sync-conflict-count') {
         return Array.isArray(value) && value.length >= condition.count;
       }
