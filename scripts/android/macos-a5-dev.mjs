@@ -77,6 +77,9 @@ export function build(paths, run = checked, onStage = () => {}) {
   });
   onStage('apk-check');
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
+  if (!existsSync(paths.androidTestApk)) {
+    throw new Error(`Android test APK was not produced: ${paths.androidTestApk}`);
+  }
 }
 
 function launchAndVerify(paths) {
