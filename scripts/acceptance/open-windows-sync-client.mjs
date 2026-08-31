@@ -2,6 +2,7 @@
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -15,6 +16,7 @@ const CONTROL = 'scripts/acceptance/windows-sync-client-control.mjs';
 const CDP = 'http://127.0.0.1:19222/json/version';
 const GIT_HOST = 'zephu@192.168.0.11:foliole-dev.git';
 const PORT = '9222';
+const SSH_HOST = 'zephu@192.168.0.11';
 
 async function execute(command, args, options = {}) {
   const result = await executeFile(command, args, { maxBuffer: 10 * 1024 * 1024, ...options });
@@ -54,8 +56,35 @@ async function waitForCdp(fetchApi, timeoutMs = 120_000) {
   throw new Error('Windows client did not become controllable within 120 seconds');
 }
 
+function localPortOpen(port = 19222) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: '127.0.0.1', port });
+    socket.setTimeout(500);
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => resolve(false));
+    socket.once('timeout', () => { socket.destroy(); resolve(false); });
+  });
+}
+
+async function ensureTunnel({ launch, portOpen, repoRoot }) {
+  if (await portOpen()) return undefined;
+  const key = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab');
+  const logPath = path.join(repoRoot, '.tmp', 'artifacts', 'client-control-processes',
+    'windows-cdp-tunnel.log');
+  const pid = launch('ssh', ['-N', '-T', '-i', key, '-o', 'BatchMode=yes',
+    '-o', 'IdentitiesOnly=yes', '-o', 'ConnectTimeout=15', '-o', 'ExitOnForwardFailure=yes',
+    '-o', 'ServerAliveInterval=15', '-o', 'StrictHostKeyChecking=yes',
+    '-L', '127.0.0.1:19222:127.0.0.1:9222', SSH_HOST], { cwd: repoRoot, logPath });
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (await portOpen()) return pid;
+    await delay(250);
+  }
+  throw new Error('Windows CDP tunnel did not open');
+}
+
 export async function openWindowsSyncClient({
-  repoRoot = process.cwd(), run = execute, launch = startDetached, fetchApi = globalThis.fetch
+  repoRoot = process.cwd(), run = execute, launch = startDetached,
+  fetchApi = globalThis.fetch, portOpen = localPortOpen
 } = {}) {
   const revision = await currentCandidate(repoRoot, run);
   const gitKey = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab-git');
@@ -66,13 +95,14 @@ export async function openWindowsSyncClient({
         + '-o ConnectTimeout=15 -o StrictHostKeyChecking=yes'
     } });
   await run(process.execPath, [CONTROL, 'align', '--revision', revision], { cwd: repoRoot });
+  const tunnelPid = await ensureTunnel({ launch, portOpen, repoRoot });
   await run(process.execPath, [CONTROL, 'stop', '--port', PORT], { cwd: repoRoot });
   const logPath = path.join(repoRoot, '.tmp', 'artifacts', 'client-control-processes',
     `windows-${revision.slice(0, 10)}.log`);
   const pid = launch(process.execPath, [CONTROL, 'start', '--revision', revision,
     '--instance', 'a', '--port', PORT], { cwd: repoRoot, logPath });
   const cdp = await waitForCdp(fetchApi);
-  return { cdp: 'http://127.0.0.1:19222', logPath, pid, revision,
+  return { cdp: 'http://127.0.0.1:19222', logPath, pid, revision, tunnelPid,
     browser: cdp.Browser };
 }
 
