@@ -1,3 +1,4 @@
+import type { NativeAssistantByokCommandMap } from './nativeAssistantByokContract.js';
 import type {
   NativeAssistantLoginResult,
   NativeAssistantSendMessageArgs,
@@ -13,7 +14,7 @@ import type { NativeAssistantImageContentResult } from './nativeAssistantImageCo
 import type { NativeAssistantModelCatalog } from './nativeAssistantModelContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
-export type NativeAssistantCommandMap = {
+export type NativeAssistantCommandMap = NativeAssistantByokCommandMap & {
   [NATIVE_COMMANDS.assistantGetStatus]: { args: undefined; result: NativeAssistantStatusResult };
   [NATIVE_COMMANDS.assistantStartChatGptLogin]: { args: undefined; result: NativeAssistantLoginResult };
   [NATIVE_COMMANDS.assistantListModels]: { args: undefined; result: NativeAssistantModelCatalog };

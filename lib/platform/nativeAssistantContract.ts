@@ -5,6 +5,7 @@ import type {
 import type { NativeAssistantModelSelection } from './nativeAssistantModelContract.js';
 
 export type { NativeAssistantCommandMap } from './nativeAssistantCommandContract.js';
+export type * from './nativeAssistantByokContract.js';
 export type * from './nativeAssistantModelContract.js';
 
 export type NativeAssistantProviderId = 'codex-app-server';

@@ -1,5 +1,9 @@
 import type { NativeAideStorageInfo } from '../../../lib/platform/nativeAideStorageContract';
 import type {
+  NativeAssistantByokSettings,
+  NativeAssistantByokSettingsInput
+} from '../../../lib/platform/nativeAssistantByokContract';
+import type {
   NativeAssistantSendMessageArgs,
   NativeAssistantSendMessageResult,
   NativeAssistantLoginResult,
@@ -101,4 +105,24 @@ export async function openAssistantStorageLocation(): Promise<boolean> {
   if (!invoke) return false;
   await invoke(NATIVE_COMMANDS.assistantOpenStorageLocation);
   return true;
+}
+
+export async function loadAssistantByokSettings(): Promise<NativeAssistantByokSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantLoadByokSettings);
+}
+
+export async function saveAssistantByokSettings(
+  input: NativeAssistantByokSettingsInput
+): Promise<NativeAssistantByokSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantSaveByokSettings, input);
+}
+
+export async function disconnectAssistantByokSettings(): Promise<NativeAssistantByokSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantDisconnectByokSettings);
 }

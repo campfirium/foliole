@@ -17,6 +17,11 @@ import {
   createAssistantFailure,
   createAssistantStatus
 } from '../assistant/codexAppServerAdapterSupport.js';
+import {
+  disconnectFolioleAideByokSettings,
+  loadFolioleAideByokSettings,
+  saveFolioleAideByokSettings
+} from '../assistant/folioleAideByokSettings.js';
 import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
@@ -49,10 +54,31 @@ export async function handleAssistantCommand(
   sender?: WebContents
 ) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
+  if (command === NATIVE_COMMANDS.assistantLoadByokSettings) return loadFolioleAideByokSettings();
+  if (command === NATIVE_COMMANDS.assistantSaveByokSettings) {
+    return saveFolioleAideByokSettings(readByokSettingsInput(args));
+  }
+  if (command === NATIVE_COMMANDS.assistantDisconnectByokSettings) {
+    return disconnectFolioleAideByokSettings();
+  }
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantListModels) return getAssistantAdapter().listModels();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   return handleAssistantLocalHistoryCommand(command, args) ?? handleAssistantStorageCommand(command);
+}
+
+function readByokSettingsInput(args: Record<string, unknown>) {
+  if (typeof args.endpoint !== 'string' || typeof args.model !== 'string') {
+    throw new Error('invalid_byok_settings');
+  }
+  if (args.api_key !== undefined && typeof args.api_key !== 'string') {
+    throw new Error('invalid_byok_settings');
+  }
+  return {
+    endpoint: args.endpoint,
+    model: args.model,
+    ...(typeof args.api_key === 'string' ? { api_key: args.api_key } : {})
+  };
 }
 
 async function getAssistantStatus() {
