@@ -74,7 +74,8 @@ function expectQuestionAnswerItem(item: Record<string, unknown> | null) {
   });
 }
 
-test('creates and hydrates a real question-answer Item through the public CLI', async (_fixtures, testInfo) => {
+test('creates and hydrates a real question-answer Item through the public CLI', async ({ browserName }, testInfo) => {
+  void browserName;
   const desktopSession = await launchDesktopSession({ extraArgs: CREDENTIAL_ISOLATION_ARGS }) as DesktopSession;
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   const stateRoot = desktopSession.target.runtimeStateRoot;
