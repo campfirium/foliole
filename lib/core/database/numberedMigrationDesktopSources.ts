@@ -124,6 +124,8 @@ function migrateLocations(sqlite: DatabaseMigrationTarget) {
   addColumnIfMissing(sqlite, 'import_sources', 'source_location', 'TEXT');
   execOptionalIndex(sqlite, `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
     ON import_sources (watched_binding_id, watched_relative_path)`);
+  execOptionalIndex(sqlite, `CREATE INDEX IF NOT EXISTS idx_import_sources_location
+    ON import_sources (source_ref, source_location)`);
   if (!tableExists(sqlite, 'keep_import_items')) return;
   const rows = sqlite.prepare(`SELECT p.source_fingerprint, i.source_path, s.source_ref, s.root_path, s.path_flavor
     FROM import_sources p JOIN keep_import_items i ON i.last_node_id = p.latest_node_id

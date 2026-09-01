@@ -55,6 +55,13 @@ it('collects every Electron test exactly once', () => {
   )).not.toThrow();
 });
 
+it('routes the public database upgrade matrix through the hosted database shard', () => {
+  const targets = buildDesktopElectronShardBuckets('database', buildDesktopElectronBuckets())
+    .flatMap((bucket) => bucket.targets);
+
+  expect(targets).toContain('electron/database/publicDesktopDatabaseUpgrades.test.ts');
+});
+
 it('partitions every Electron bucket into one hosted shard', () => {
   const buckets = buildDesktopElectronBuckets();
   const sharded = DESKTOP_ELECTRON_SHARDS.flatMap((shard) => (

@@ -32,6 +32,8 @@ const controlledElectronSqliteTests = [
   'electron/database/singlePrincipalSyncGroupCleanup.test.ts',
   'electron/database/nodeSyncFieldCoverage.contract.test.ts',
   'electron/database/opaqueSyncRefMigration.test.ts',
+  'electron/database/publicDesktopDatabaseFixtures.test.ts',
+  'electron/database/publicDesktopDatabaseUpgrades.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
   'electron/database/syncDeliveryMigration.test.ts',

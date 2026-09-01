@@ -4,6 +4,9 @@ import { addColumnIfMissing, tableExists } from './numberedMigrationHelpers.js';
 export function migrateSyncConflictConvergence(sqlite: DatabaseMigrationTarget) {
   const hasNodes = tableExists(sqlite, 'nodes');
   const hasVersions = tableExists(sqlite, 'node_sync_versions');
+  if (tableExists(sqlite, 'sync_object_state')) {
+    addColumnIfMissing(sqlite, 'sync_object_state', 'base_content_hash', 'TEXT');
+  }
   if (hasNodes) addNodeConvergenceSchema(sqlite);
   if (hasVersions) addVersionConvergenceSchema(sqlite);
   if (hasNodes && hasVersions) backfillCurrentVersionBodies(sqlite);
