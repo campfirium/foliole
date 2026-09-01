@@ -13,7 +13,9 @@ export function WorkspaceRightSidebarAssistantContextFollowControl(props: {
       <AppTooltipTrigger asChild>
         <AppIconButton
           aria-checked={props.enabled}
-          className={`size-7 ${props.enabled ? 'text-accent' : 'text-foreground/48'}`}
+          className={`size-7 ${props.enabled
+            ? 'border-border bg-[var(--app-control-bg-hover-color)] text-foreground/85'
+            : 'text-foreground/48'}`}
           icon={<Link2 aria-hidden className="size-4" strokeWidth={1.8} />}
           label={props.label}
           onClick={props.onToggle}

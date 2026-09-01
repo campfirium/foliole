@@ -74,9 +74,33 @@ it('exposes the current material mode as a switch', () => {
   const toggle = screen.getByRole('switch', { name: 'Following: Current topic' });
   expect(toggle).toHaveAttribute('aria-checked', 'true');
   expect(toggle).toHaveClass('size-7');
+  expect(toggle).toHaveClass('border-border', 'bg-[var(--app-control-bg-hover-color)]', 'text-foreground/85');
   expect(toggle).not.toHaveTextContent('Following: Current topic');
   fireEvent.click(toggle);
   expect(onToggle).toHaveBeenCalledOnce();
+});
+
+it('keeps the detached state visually neutral', () => {
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantComposer
+      contextFollowDescription="Attach current material"
+      contextFollowEnabled={false}
+      contextFollowLabel="Attach the current topic"
+      inputLabel="Message"
+      messageText=""
+      onMessageTextChange={vi.fn()}
+      onSubmit={vi.fn()}
+      onToggleContextFollow={vi.fn()}
+      placeholder="Ask"
+      sendLabel="Send"
+      sending={false}
+    />
+  );
+
+  const toggle = screen.getByRole('switch', { name: 'Attach the current topic' });
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(toggle).toHaveClass('text-foreground/48');
+  expect(toggle).not.toHaveClass('border-border', 'bg-[var(--app-control-bg-hover-color)]', 'text-foreground/85');
 });
 
 it('shows attached image previews and removes them', () => {
