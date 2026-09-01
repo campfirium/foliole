@@ -48,11 +48,17 @@ export function useFolioleAideCapability() {
 
   useByokSettingsSubscription({
     invalidateStatusCheck: statusCheck.invalidate,
+    refreshStatus: statusCheck.check,
     setByokSettings,
     setDiagnostic,
     setState,
     setUnavailableReason
   });
+
+  useEffect(() => {
+    if (!('subscribeAssistantStatusRefresh' in assistantRuntime)) return;
+    return assistantRuntime.subscribeAssistantStatusRefresh(() => { void statusCheck.check(); });
+  }, [statusCheck]);
 
   useAutoCheckAide(state, statusCheck.check);
 

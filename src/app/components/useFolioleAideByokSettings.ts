@@ -13,6 +13,7 @@ import type {
 export function useByokSettingsSubscription(
   input: {
     invalidateStatusCheck: () => void;
+    refreshStatus: () => Promise<void>;
     setByokSettings: (settings: NativeAssistantByokSettings | null) => void;
     setDiagnostic: Dispatch<SetStateAction<FolioleAideCapabilityDiagnostic | null>>;
     setState: (state: FolioleAideCapabilityState) => void;
@@ -33,7 +34,9 @@ export function useByokSettingsSubscription(
         input.setDiagnostic(null);
         input.setUnavailableReason(null);
         input.setState('ready');
+        return;
       }
+      void input.refreshStatus();
     });
   }, [input]);
 }

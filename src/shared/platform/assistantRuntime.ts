@@ -31,6 +31,7 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 
 const ASSISTANT_BYOK_SETTINGS_EVENT = 'foliole-assistant-byok-settings-change';
 const ASSISTANT_MODEL_SETTINGS_EVENT = 'foliole-assistant-model-settings-change';
+const ASSISTANT_STATUS_REFRESH_EVENT = 'foliole-assistant-status-refresh';
 
 export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult | null> {
   const invoke = getRuntimeInvoke();
@@ -41,7 +42,14 @@ export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult
 export async function startAssistantChatGptLogin(): Promise<NativeAssistantLoginResult | null> {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.assistantStartChatGptLogin);
+  const result = await invoke(NATIVE_COMMANDS.assistantStartChatGptLogin);
+  if (result.state === 'ready') window.dispatchEvent(new Event(ASSISTANT_STATUS_REFRESH_EVENT));
+  return result;
+}
+
+export function subscribeAssistantStatusRefresh(listener: () => void) {
+  window.addEventListener(ASSISTANT_STATUS_REFRESH_EVENT, listener);
+  return () => window.removeEventListener(ASSISTANT_STATUS_REFRESH_EVENT, listener);
 }
 
 export async function loadAssistantModelCatalog(): Promise<NativeAssistantModelCatalog | null> {

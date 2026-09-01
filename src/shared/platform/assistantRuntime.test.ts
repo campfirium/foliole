@@ -11,7 +11,9 @@ import {
   loadAssistantStatus,
   removeAssistantThreadFromHistory,
   openAssistantStorageLocation,
-  sendAssistantMessage
+  sendAssistantMessage,
+  startAssistantChatGptLogin,
+  subscribeAssistantStatusRefresh
 } from './assistantRuntime';
 
 const bridge = vi.hoisted(() => ({ getRuntimeInvoke: vi.fn() }));
@@ -108,4 +110,16 @@ it('routes Aide storage calls through fixed native commands', async () => {
 
   expect(invoke).toHaveBeenNthCalledWith(1, NATIVE_COMMANDS.assistantGetStorageInfo);
   expect(invoke).toHaveBeenNthCalledWith(2, NATIVE_COMMANDS.assistantOpenStorageLocation);
+});
+
+it('notifies open Aide panels after ChatGPT login succeeds', async () => {
+  const invoke = vi.fn(async () => ({ provider: 'codex-app-server', state: 'ready' }));
+  const listener = vi.fn();
+  bridge.getRuntimeInvoke.mockReturnValue(invoke);
+  const unsubscribe = subscribeAssistantStatusRefresh(listener);
+
+  await startAssistantChatGptLogin();
+
+  expect(listener).toHaveBeenCalledTimes(1);
+  unsubscribe();
 });
