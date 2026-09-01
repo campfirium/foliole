@@ -2,6 +2,7 @@ import {
   ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
+import { LEGACY_DEVICE_SYNC_GROUP_SCHEMA_STATEMENTS } from './legacyDeviceSyncGroupSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
 import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
@@ -145,7 +146,7 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 63,
     migrate: (sqlite) => {
-      for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+      for (const statement of LEGACY_DEVICE_SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
     }
   },
   {
