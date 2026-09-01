@@ -4,6 +4,7 @@ export interface AideToolDefinition {
   capability: AgentControlCapability;
   description: string;
   inputSchema: Record<string, unknown>;
+  mutates: boolean;
   path: string;
 }
 
@@ -72,7 +73,9 @@ function tool(
   capability: AgentControlCapability,
   description: string,
   path: string,
-  inputSchema: Record<string, unknown>
+  inputSchema: Record<string, unknown>,
+  mutates = !['materials.read', 'materials.search', 'materials.listChildren', 'virtualFolders.list', 'virtualFolders.read']
+    .includes(capability)
 ): AideToolDefinition {
-  return { capability, description, inputSchema, path };
+  return { capability, description, inputSchema, mutates, path };
 }

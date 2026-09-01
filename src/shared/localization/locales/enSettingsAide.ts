@@ -24,9 +24,11 @@ export const EN_SETTINGS_AIDE_TRANSLATIONS = {
   'settings.models.remove': 'Remove model',
   'settings.models.select': 'Use {model}',
   'settings.models.connection.ready': 'Connection ready',
+  'settings.models.connection.notTested': 'Test again before using this model with Aide.',
   'settings.models.connection.authFailed': 'Authentication failed. Check the API key and endpoint.',
   'settings.models.connection.timeout': 'Connection timed out. Check the endpoint and try again.',
   'settings.models.connection.busy': 'The service is busy. Try again later.',
+  'settings.models.connection.toolsUnsupported': 'This model did not complete Aide’s required tool round trip. Choose a model and endpoint that support streamed Chat Completions function tools.',
   'settings.models.connection.failed': 'Could not connect. Confirm the endpoint supports OpenAI Chat Completions, then check the model and API key.',
   'settings.models.loadFailed': 'Models could not be loaded.',
   'desktop.rightPanel.assistant.openModelSettings': 'Settings'

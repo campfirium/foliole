@@ -110,11 +110,16 @@ function useAssistantStatusCheck(setters: {
       setters.setByokSettings(byok);
       setters.setCodexReady(nextCodexReady);
       setters.setDiagnostic(readDiagnostic(status));
-      if (nextCodexReady || byokReady) {
+      const selectedReady = byok?.selected_provider === 'openai-compatible'
+        ? byokReady
+        : nextCodexReady;
+      if (selectedReady) {
         setters.setState('ready');
         return;
       }
-      setters.setUnavailableReason(readUnavailableReason(status));
+      setters.setUnavailableReason(byok?.selected_provider === 'openai-compatible'
+        ? 'not_configured'
+        : readUnavailableReason(status));
       setters.setState('unavailable');
     } catch {
       if (checkId !== latestCheck.current) return;

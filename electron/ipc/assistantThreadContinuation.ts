@@ -23,12 +23,12 @@ export async function prepareAssistantThreadContinuation(
   agentControl: NativeAssistantAgentControlContext
 ): Promise<PreparedAssistantThreadContinuation> {
   if (!providerThreadId) return {
-    agentToolVersion: provider === 'codex-app-server' ? resolveAttachedToolVersion(agentControl) : 0,
+    agentToolVersion: resolveAttachedToolVersion(agentControl),
     provider
   };
   const record = getAssistantThreadIndex(provider, providerThreadId);
   if (provider === 'openai-compatible') return {
-    agentToolVersion: 0,
+    agentToolVersion: resolveAttachedToolVersion(agentControl),
     persistedContinuationMessages: listAssistantThreadMessages(provider, providerThreadId),
     provider,
     providerThreadId

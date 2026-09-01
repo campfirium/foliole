@@ -10,6 +10,7 @@ export interface StoredAssistantModel {
   model: string;
   requires_new_key: boolean;
   secret_file: string;
+  tool_contract_version?: number;
   updated_at: string;
   verified: boolean;
 }
@@ -65,7 +66,7 @@ function parseStoredSettings(value: unknown): StoredAssistantModelSettings | nul
   if (stored.version !== 2 || !Array.isArray(stored.models)) return null;
   const models = stored.models.filter(isStoredModel);
   const selected = stored.selected_model_id === NATIVE_ASSISTANT_CODEX_MODEL_ID
-    || models.some((model) => model.id === stored.selected_model_id && model.verified)
+    || models.some((model) => model.id === stored.selected_model_id)
     ? stored.selected_model_id
     : NATIVE_ASSISTANT_CODEX_MODEL_ID;
   return {
@@ -107,5 +108,7 @@ function isStoredModel(value: unknown): value is StoredAssistantModel {
   if (!hasStringFields) return false;
   model.requires_new_key = typeof model.requires_new_key === 'boolean' ? model.requires_new_key : false;
   model.verified = typeof model.verified === 'boolean' ? model.verified : true;
+  if (model.tool_contract_version !== undefined
+    && (!Number.isInteger(model.tool_contract_version) || model.tool_contract_version < 0)) return false;
   return true;
 }

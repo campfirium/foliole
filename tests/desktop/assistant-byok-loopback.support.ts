@@ -13,7 +13,16 @@ import {
 } from '../../scripts/desktop/macos-hidden-electron-credential-session.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../../scripts/desktop/macos-hidden-electron-runtime.mjs';
 
-export type LoopbackRequest = { authorization: string; body: { messages?: unknown[]; model?: string; stream?: boolean } };
+export type LoopbackRequest = {
+  authorization: string;
+  body: {
+    messages?: Array<{ content?: unknown; role?: string; tool_call_id?: string }>;
+    model?: string;
+    stream?: boolean;
+    tool_choice?: unknown;
+    tools?: unknown[];
+  };
+};
 type ResponseMode = 'auth' | 'success';
 
 export async function createByokLoopbackHarness() {
@@ -86,26 +95,17 @@ async function startLoopbackServer() {
   let mode: ResponseMode = 'success';
   const server = createServer(async (request, response) => {
     const body = await readJsonBody(request);
-    if (body.stream !== false) {
-      requests.push({ authorization: String(request.headers.authorization ?? ''), body });
-    }
     if (mode === 'auth') {
       response.writeHead(401, { 'content-type': 'application/json' });
       response.end('{"error":"sensitive-loopback-detail"}');
       return;
     }
-    if (body.stream === false) {
-      response.writeHead(200, { 'content-type': 'application/json' });
-      response.end('{"choices":[{"message":{"content":"OK"}}]}');
+    if (isProbeRequest(body)) {
+      respondToProbe(response, body);
       return;
     }
-    const turn = requests.length;
-    response.writeHead(200, { 'content-type': 'text/event-stream' });
-    response.write(`data: {"choices":[{"delta":{"content":"Loopback "}}]}\n\n`);
-    setTimeout(() => {
-      response.write(`data: {"choices":[{"delta":{"content":"reply ${turn}"}}]}\n\n`);
-      response.end('data: [DONE]\n\n');
-    }, 250);
+    requests.push({ authorization: String(request.headers.authorization ?? ''), body });
+    respondToTurn(response, body);
   });
   await listen(server);
   const address = server.address();
@@ -116,6 +116,57 @@ async function startLoopbackServer() {
     requests,
     setMode: (next: ResponseMode) => { mode = next; }
   };
+}
+
+function isProbeRequest(body: LoopbackRequest['body']) {
+  return JSON.stringify(body.tools).includes('foliole_aide_tool_contract_probe');
+}
+
+function respondToProbe(response: import('node:http').ServerResponse, body: LoopbackRequest['body']) {
+  const replayed = body.messages?.some((message) => message.tool_call_id === 'probe-1');
+  if (replayed) {
+    sendSse(response, [{ choices: [{ delta: { content: 'Probe complete' }, finish_reason: 'stop' }] }]);
+    return;
+  }
+  sendSse(response, [
+    { choices: [{ delta: { tool_calls: [{ function: { arguments: '{', name: 'foliole_aide_tool_contract_probe' }, id: 'probe-1', index: 0, type: 'function' }] } }] },
+    { choices: [{ delta: { tool_calls: [{ function: { arguments: '}' }, index: 0 }] }, finish_reason: 'tool_calls' }] }
+  ]);
+}
+
+function respondToTurn(response: import('node:http').ServerResponse, body: LoopbackRequest['body']) {
+  const prompt = readLatestUserText(body.messages ?? []);
+  const hasToolResults = body.messages?.some((message) => message.role === 'tool');
+  if (prompt.includes('Loopback first') && !hasToolResults) {
+    sendSse(response, [{ choices: [{ delta: { tool_calls: [
+      toolCall(0, 'read-root', 'list_folder', '{"parent_id":null,"limit":20}'),
+      toolCall(1, 'create-topic', 'create_material', '{"kind":"topic","parent_id":null,"title":"BYOK Agent Control Topic"}')
+    ] }, finish_reason: 'tool_calls' }] }]);
+    return;
+  }
+  const reply = prompt.includes('Loopback first') ? 1
+    : prompt.includes('Loopback image') ? 2
+      : prompt.includes('After restart') ? 3
+        : prompt.includes('Recovered after reconfigure') ? 4 : 5;
+  sendSse(response, [{ choices: [{ delta: { content: `Loopback reply ${reply}` }, finish_reason: 'stop' }] }]);
+}
+
+function toolCall(index: number, id: string, name: string, argumentsValue: string) {
+  return { function: { arguments: argumentsValue, name }, id, index, type: 'function' };
+}
+
+function readLatestUserText(messages: NonNullable<LoopbackRequest['body']['messages']>) {
+  const content = [...messages].reverse().find((message) => message.role === 'user')?.content;
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content.map((item) => item && typeof item === 'object' && 'text' in item
+    ? String((item as { text?: unknown }).text ?? '') : '').join(' ');
+}
+
+function sendSse(response: import('node:http').ServerResponse, chunks: unknown[]) {
+  response.writeHead(200, { 'content-type': 'text/event-stream' });
+  for (const chunk of chunks) response.write(`data: ${JSON.stringify(chunk)}\n\n`);
+  response.end('data: [DONE]\n\n');
 }
 
 function listen(server: Server) {

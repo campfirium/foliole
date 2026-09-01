@@ -43,6 +43,7 @@ type AssistantPanelControllerArgs = {
   codexReady: boolean;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
+  outcomeUncertainText: string;
   nodesById: Record<string, Node>;
   onCapabilityFailure: (provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => void;
   onSelectProvider: (provider: NativeAssistantProviderId) => Promise<void>;
@@ -78,6 +79,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     activeTurnRef,
     dispatchCache,
     failedText: args.failedText,
+    outcomeUncertainText: args.outcomeUncertainText,
     onCapabilityFailure: args.onCapabilityFailure,
     onProviderThreadStarted: threads.selectThreadId,
     setMessageText,

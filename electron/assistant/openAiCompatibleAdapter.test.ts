@@ -89,6 +89,9 @@ function assertOpenAiCompatibleRequest(fetchMock: ReturnType<typeof vi.fn<typeof
   expect(init?.headers).toMatchObject({ authorization: 'Bearer secret-key' });
   const body = JSON.parse(String(init?.body));
   expect(body).toMatchObject({ model: 'local-model', stream: true });
+  expect(body.tools).toEqual([
+    expect.objectContaining({ function: expect.objectContaining({ name: 'read_material' }), type: 'function' })
+  ]);
   expect(body.messages).toEqual([
     expect.objectContaining({ content: expect.stringContaining('Topic body'), role: 'system' }),
     { content: 'Earlier question', role: 'user' },
@@ -101,7 +104,8 @@ function assertOpenAiCompatibleRequest(fetchMock: ReturnType<typeof vi.fn<typeof
       role: 'user'
     }
   ]);
-  expect(body.messages[0].content).not.toMatch(/Agent Control|materials\.read|available Foliole actions/iu);
+  expect(body.messages[0].content).toMatch(/available Foliole actions|read a Topic/iu);
+  expect(body.messages[0].content).not.toMatch(/Bearer|secret-key|Codex|CLI|workspace path/iu);
   expect(JSON.stringify(body.messages)).not.toContain('old-image');
 }
 

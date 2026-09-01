@@ -2,6 +2,7 @@ import type { NativeAssistantFailureCategory } from './nativeAssistantContract.j
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export const NATIVE_ASSISTANT_CODEX_MODEL_ID = 'codex';
+export const CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION = 1;
 
 export type NativeAssistantCustomModelState =
   | 'configured'
@@ -14,6 +15,7 @@ export interface NativeAssistantCustomModel {
   id: string;
   model: string;
   state: NativeAssistantCustomModelState;
+  tool_contract_version: number;
 }
 
 export interface NativeAssistantModelSettings {

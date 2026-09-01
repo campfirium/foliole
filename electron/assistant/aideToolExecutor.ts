@@ -17,8 +17,11 @@ export interface AideToolRequest {
 export async function executeAideTool(
   request: AideToolRequest,
   options: {
+    allowedCapabilities?: readonly string[];
     descriptor?: AgentControlSessionDescriptor | null;
     fetcher?: typeof fetch;
+    onDispatch?: (mutates: boolean) => void;
+    signal?: AbortSignal;
   } = {}
 ): Promise<AideToolCallResult> {
   const definition = AIDE_TOOL_REGISTRY[request.tool];
@@ -26,12 +29,17 @@ export async function executeAideTool(
     ? getAgentControlApiSessionDescriptor()
     : options.descriptor;
   if (!definition || !descriptor) return failure('tool_unavailable');
+  if (options.allowedCapabilities
+    && !options.allowedCapabilities.includes(definition.capability)) {
+    return failure('capability_disabled');
+  }
   if (!descriptor.capabilities.includes(definition.capability)) {
     return failure('capability_disabled');
   }
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
   try {
+    options.onDispatch?.(definition.mutates);
     const response = await (options.fetcher ?? fetch)(`${descriptor.endpoint}/agent-control/v1/${definition.path}`, {
       body: JSON.stringify(body),
       headers: {
@@ -39,11 +47,14 @@ export async function executeAideTool(
         'content-type': 'application/json',
         'x-foliole-agent-id': 'foliole-aide'
       },
-      method: 'POST'
+      method: 'POST',
+      ...(options.signal ? { signal: options.signal } : {})
     });
     const payload = await response.json() as unknown;
     return result(payload, response.ok);
-  } catch {
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    if (definition.mutates) throw new Error('tool_write_outcome_uncertain');
     return failure('connection_failed');
   }
 }
