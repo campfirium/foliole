@@ -13,10 +13,29 @@ import {
 import { validatePublicDesktopDatabaseLedger } from '../../scripts/database/public-desktop-database-ledger.mjs';
 
 const fixtureRoot = path.resolve('electron/database/fixtures/public-desktop-main');
+interface FixtureProvenance {
+  creationPath: string;
+  databaseSha256: string;
+  dataOrigin: string;
+  file: string;
+  foreignKeyViolations: number;
+  schema: number;
+  sourceCommit: string;
+  sourceLibraryFileCount: number;
+  sourceLibraryFilesSha256: string;
+  sourceRelease: string;
+  sqliteIntegrity: string;
+  structure: { objectCount: number; sha256: string };
+}
+
 const ledger = validatePublicDesktopDatabaseLedger(JSON.parse(readFileSync(
   'lib/core/database/publicDesktopDatabaseLedger.json', 'utf8'
 )));
-const manifest = JSON.parse(readFileSync(path.join(fixtureRoot, 'manifest.json'), 'utf8'));
+const manifest = JSON.parse(readFileSync(path.join(fixtureRoot, 'manifest.json'), 'utf8')) as {
+  fixtures: FixtureProvenance[];
+  ledger: string;
+  manifestVersion: number;
+};
 
 describe('public Desktop database fixtures', () => {
   it('provides one provenance record for every registered schema', () => {
