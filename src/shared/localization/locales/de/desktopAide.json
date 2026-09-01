@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "Anbieter für neue Unterhaltungen",
+  "desktop.rightPanel.assistant.provider.byok": "Dein Modell · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "Dein Modell",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "Nicht konfiguriert",
   "desktop.rightPanel.assistant.model.settings": "Modell- und Leistungseinstellungen",
   "desktop.rightPanel.assistant.model.loading": "Verfügbare Modelle und Leistungseinstellungen werden geladen...",
   "desktop.rightPanel.assistant.model.unavailable": "Modell- und Leistungseinstellungen sind nicht verfügbar. Für Nachrichten wird die Codex-Standardeinstellung verwendet.",

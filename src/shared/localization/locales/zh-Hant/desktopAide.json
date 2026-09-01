@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "新對話服務提供者",
+  "desktop.rightPanel.assistant.provider.byok": "你的模型 · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "你的模型",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "未設定",
   "desktop.rightPanel.assistant.model.settings": "型號和性能設置",
   "desktop.rightPanel.assistant.model.loading": "正在載入可用模型和效能設定...",
   "desktop.rightPanel.assistant.model.unavailable": "型號和性能設定不可用。訊息將使用 Codex 預設值。",

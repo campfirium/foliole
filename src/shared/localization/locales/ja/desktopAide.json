@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "新しい会話のプロバイダー",
+  "desktop.rightPanel.assistant.provider.byok": "自分のモデル · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "自分のモデル",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "未設定",
   "desktop.rightPanel.assistant.model.settings": "モデルとパフォーマンスの設定",
   "desktop.rightPanel.assistant.model.loading": "利用可能なモデルとパフォーマンス設定をロードしています...",
   "desktop.rightPanel.assistant.model.unavailable": "モデルとパフォーマンスの設定は利用できません。メッセージでは Codex のデフォルトが使用されます。",

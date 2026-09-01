@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "Dostawca nowych rozmów",
+  "desktop.rightPanel.assistant.provider.byok": "Twój model · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "Twój model",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "Nieskonfigurowano",
   "desktop.rightPanel.assistant.model.settings": "Ustawienia modelu i wydajności",
   "desktop.rightPanel.assistant.model.loading": "Ładowanie dostępnych modeli i ustawień wydajności...",
   "desktop.rightPanel.assistant.model.unavailable": "Ustawienia modelu i wydajności są niedostępne. Wiadomości będą używać domyślnych ustawień Kodeksu.",

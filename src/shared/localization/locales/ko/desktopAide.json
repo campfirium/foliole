@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "새 대화 제공자",
+  "desktop.rightPanel.assistant.provider.byok": "내 모델 · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "내 모델",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "설정되지 않음",
   "desktop.rightPanel.assistant.model.settings": "모델 및 성능 설정",
   "desktop.rightPanel.assistant.model.loading": "사용 가능한 모델 및 성능 설정 로드 중...",
   "desktop.rightPanel.assistant.model.unavailable": "모델 및 성능 설정을 사용할 수 없습니다. 메시지는 Codex 기본값을 사용합니다.",

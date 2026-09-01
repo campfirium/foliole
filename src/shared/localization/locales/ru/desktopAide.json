@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "Провайдер для новых разговоров",
+  "desktop.rightPanel.assistant.provider.byok": "Ваша модель · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "Ваша модель",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "Не настроено",
   "desktop.rightPanel.assistant.model.settings": "Настройки модели и производительности",
   "desktop.rightPanel.assistant.model.loading": "Загрузка доступных моделей и настроек производительности...",
   "desktop.rightPanel.assistant.model.unavailable": "Настройки модели и производительности недоступны. В сообщениях будет использоваться значение Кодекса по умолчанию.",

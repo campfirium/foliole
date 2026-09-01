@@ -1,4 +1,8 @@
 {
+  "desktop.rightPanel.assistant.provider.label": "Provedor para novas conversas",
+  "desktop.rightPanel.assistant.provider.byok": "Seu modelo · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "Seu modelo",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "Não configurado",
   "desktop.rightPanel.assistant.model.settings": "Configurações de modelo e desempenho",
   "desktop.rightPanel.assistant.model.loading": "Carregando modelos disponíveis e configurações de desempenho...",
   "desktop.rightPanel.assistant.model.unavailable": "As configurações de modelo e desempenho não estão disponíveis. As mensagens usarão o padrão do Codex.",
