@@ -1,8 +1,20 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import {
+  HOME_NODE_ID,
+  INBOX_NODE_ID,
+  TRASH_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID
+} from '../../lib/core/database/specialNodeIds.js';
+import { deriveNodeTitleFromContent } from '../../lib/core/nodes/deriveNodeTitle.js';
+import {
+  allocateNewItemReviewDueDates,
+  createInitialNewItemReviewProfile
+} from '../../lib/core/review/newItemReviewSlots.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
+import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
 import { readAgentControlMaterial } from './agentControlMaterials.js';
@@ -15,21 +27,25 @@ interface NodeRow extends DatabaseRow {
   updated_at: string;
 }
 
-export function createAgentControlMaterial(input: {
-  content?: string;
-  kind: 'folder' | 'topic';
-  parentId: string | null;
-  title: string;
-}) {
+type CreateMaterialInput =
+  | { content?: string; kind: 'folder' | 'topic'; parentId: string | null; title: string }
+  | { content: string; kind: 'item'; parentId: string | null; reveal: string };
+
+export function createAgentControlMaterial(input: CreateMaterialInput) {
   const nodes = readNodes();
-  ensureParent(nodes, input.parentId);
+  const parentId = resolveParentId(input.kind, input.parentId);
+  ensureParent(nodes, parentId, input.kind);
   const now = new Date().toISOString();
   const id = randomUUID();
-  const order = insertAtParentEnd(readActiveOrder(), nodes, [id], input.parentId);
+  const order = insertAtParentEnd(readActiveOrder(), nodes, [id], parentId);
+  const itemState = input.kind === 'item' ? createItemState(nodes, now) : null;
   upsertNodeSnapshotWithOrder({
-    anchorLink: null, content: input.content ?? '', createdAt: now, isTitleManual: true,
-    kind: input.kind, nodeId: id, parentNodeId: input.parentId, position: null,
-    reveal: null, title: input.title, updatedAt: now
+    anchorLink: null, content: input.content ?? '', createdAt: now, isTitleManual: input.kind !== 'item',
+    kind: input.kind, nodeId: id, parentNodeId: parentId, position: null,
+    reveal: input.kind === 'item' ? input.reveal : null,
+    ...(itemState ? { review: itemState.review } : {}),
+    title: input.kind === 'item' ? deriveNodeTitleFromContent(input.content) : input.title,
+    updatedAt: now
   }, order);
   return readMaterialOrThrow(id);
 }
@@ -38,23 +54,24 @@ export function moveAgentControlMaterial(input: { expectedUpdatedAt: string; id:
   const nodes = readNodes();
   const node = requireActiveNode(nodes, input.id);
   if (node.updated_at !== input.expectedUpdatedAt) throw new AgentMaterialMutationError('conflict', 409);
-  ensureParent(nodes, input.parentId);
+  const parentId = resolveParentId(node.kind, input.parentId);
+  ensureParent(nodes, parentId, node.kind);
   const subtree = descendantsOf(nodes, input.id);
-  if (input.parentId && subtree.has(input.parentId)) throw new AgentMaterialMutationError('invalid_request', 400);
+  if (parentId && subtree.has(parentId)) throw new AgentMaterialMutationError('invalid_request', 400);
   const order = readActiveOrder();
   const movedIds = order.filter((id) => subtree.has(id));
   if (!movedIds.includes(node.id)) throw new AgentMaterialMutationError('not_found', 404);
   const remaining = order.filter((id) => !subtree.has(id));
   moveNodes({
-    nodeOrder: insertAtParentEnd(remaining, nodes, movedIds, input.parentId),
-    nodes: [{ nodeId: node.id, parentNodeId: input.parentId, updatedAt: new Date().toISOString() }]
+    nodeOrder: insertAtParentEnd(remaining, nodes, movedIds, parentId),
+    nodes: [{ nodeId: node.id, parentNodeId: parentId, updatedAt: new Date().toISOString() }]
   });
   return readMaterialOrThrow(node.id);
 }
 
 export function reorderAgentControlMaterials(input: { materialIds: string[]; parentId: string | null }) {
   const nodes = readNodes();
-  ensureParent(nodes, input.parentId);
+  ensureParent(nodes, input.parentId, 'topic');
   const siblings = nodes.filter((node) => !node.deleted_at && node.parent_id === input.parentId).map((node) => node.id);
   if (!sameIds(siblings, input.materialIds)) throw new AgentMaterialMutationError('conflict', 409);
   const order = readActiveOrder();
@@ -101,11 +118,55 @@ function requireActiveNode(nodes: NodeRow[], id: string) {
   return node;
 }
 
-function ensureParent(nodes: NodeRow[], parentId: string | null) {
+function ensureParent(nodes: NodeRow[], parentId: string | null, childKind: string) {
   if (!parentId) return;
-  if (requireActiveNode(nodes, parentId).kind !== 'folder') {
+  if (childKind === 'item') {
+    const parent = nodes.find((node) => node.id === parentId && !node.deleted_at);
+    if (!parent || isForbiddenItemParentId(parentId) || !isAllowedItemParent(parent)) {
+      throw new AgentMaterialMutationError('invalid_request', 400);
+    }
+    return;
+  }
+  const parent = requireActiveNode(nodes, parentId);
+  if (parent.kind === 'folder') return;
+  throw new AgentMaterialMutationError('invalid_request', 400);
+}
+
+function isForbiddenItemParentId(parentId: string) {
+  return parentId === HOME_NODE_ID || parentId === TRASH_NODE_ID || parentId === VIRTUAL_ROOT_NODE_ID;
+}
+
+function isAllowedItemParent(parent: NodeRow) {
+  if (parent.id === INBOX_NODE_ID) return true;
+  if (parent.parent_id === VIRTUAL_ROOT_NODE_ID) return false;
+  return parent.kind === 'folder' || parent.kind === 'topic';
+}
+
+function resolveParentId(kind: string, parentId: string | null) {
+  return kind === 'item' && parentId === null ? INBOX_NODE_ID : parentId;
+}
+
+function createItemState(nodes: NodeRow[], now: string) {
+  const due = allocateNewItemReviewDueDates({
+    batchSize: 1,
+    newDayStartsAtHour: loadReviewSchedulerSettings().newDayStartsAtHour,
+    nodes: readItemReviewLoad(nodes),
+    now
+  })[0];
+  if (!due) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
+  return { review: createInitialNewItemReviewProfile(due) };
+}
+
+function readItemReviewLoad(nodes: NodeRow[]) {
+  const dueById = new Map(openDatabaseConnection().driver.queryAll<{ due: string; node_id: string }>(
+    'SELECT node_id, due FROM node_review'
+  ).map((row) => [row.node_id, row.due]));
+  return nodes.map((node) => ({
+    kind: node.kind,
+    review: dueById.has(node.id) ? { due: dueById.get(node.id)! } : null
+  }));
 }
 
 function descendantsOf(nodes: NodeRow[], rootId: string) {

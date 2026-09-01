@@ -17,6 +17,7 @@ const LOCAL_ONLY_KEYS = new Set([
   'host_name',
   'device_id',
   'desktop_device_id',
+  'foliole_aide_byok_settings',
   'remote-image-learned-sources-v1',
   'readwise_books_inventory_state',
   'sync_group_last_trigger_result',

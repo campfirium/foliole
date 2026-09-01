@@ -23,25 +23,30 @@ function schema(
 }
 
 export const FOLIOLE_DYNAMIC_TOOLS: Record<string, FolioleDynamicToolDefinition> = {
-  read_material: tool('materials.read', 'Read one Foliole Topic or Folder by id.', 'materials/read',
+  read_material: tool('materials.read', 'Read one Foliole Topic, Folder, or Item by id.', 'materials/read',
     schema({ id: STRING }, ['id'])),
   search_materials: tool('materials.search', 'Search readable Foliole Topics and Folders.', 'materials/search',
     schema({ limit: LIMIT, query: STRING }, ['query'])),
   list_folder: tool('materials.listChildren', 'List the direct Topics and Folders in a Foliole Folder or at the workspace root.', 'materials/list-children',
     schema({ limit: LIMIT, parent_id: NULLABLE_STRING })),
-  create_material: tool('materials.create', 'Create a Foliole Topic or Folder.', 'materials/create',
-    schema({ content: TEXT, kind: { enum: ['folder', 'topic'], type: 'string' }, parent_id: NULLABLE_STRING, title: STRING }, ['kind', 'parent_id', 'title'])),
-  move_material: tool('materials.move', 'Move a Foliole Topic or Folder.', 'materials/move',
+  create_material: tool('materials.create', 'Create a Foliole Topic, Folder, or question-answer Item only when the user explicitly asks to save one.', 'materials/create',
+    schema({ content: TEXT, kind: { enum: ['folder', 'item', 'topic'], type: 'string' }, parent_id: NULLABLE_STRING, reveal: TEXT, title: STRING }, [], {
+      oneOf: [
+        { not: { required: ['title'] }, properties: { kind: { const: 'item' } }, required: ['content', 'kind', 'parent_id', 'reveal'] },
+        { not: { required: ['reveal'] }, properties: { kind: { enum: ['folder', 'topic'] } }, required: ['kind', 'parent_id', 'title'] }
+      ]
+    })),
+  move_material: tool('materials.move', 'Move a Foliole Topic, Folder, or Item.', 'materials/move',
     schema({ expected_updated_at: STRING, id: STRING, parent_id: NULLABLE_STRING }, ['expected_updated_at', 'id', 'parent_id'])),
   reorder_materials: tool('materials.reorder', 'Set the order of all direct children in a Foliole Folder.', 'materials/reorder',
     schema({ material_ids: IDS, parent_id: NULLABLE_STRING }, ['material_ids', 'parent_id'])),
-  restore_material: tool('materials.restore', 'Restore a Foliole Topic or Folder from trash.', 'materials/restore',
+  restore_material: tool('materials.restore', 'Restore a Foliole Topic, Folder, or Item from trash.', 'materials/restore',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
-  update_material: tool('materials.update', 'Update the title or content of a Foliole Topic.', 'materials/update',
-    schema({ content: TEXT, expected_updated_at: STRING, id: STRING, title: TEXT }, ['expected_updated_at', 'id'], {
-      anyOf: [{ required: ['content'] }, { required: ['title'] }]
+  update_material: tool('materials.update', 'Update a Foliole Topic or Item, including an Item answer.', 'materials/update',
+    schema({ content: TEXT, expected_updated_at: STRING, id: STRING, reveal: TEXT, title: TEXT }, ['expected_updated_at', 'id'], {
+      anyOf: [{ required: ['content'] }, { required: ['reveal'] }, { required: ['title'] }]
     })),
-  delete_material: tool('materials.deleteSoft', 'Move a Foliole Topic or Folder to trash.', 'materials/delete-soft',
+  delete_material: tool('materials.deleteSoft', 'Move a Foliole Topic, Folder, or Item to trash.', 'materials/delete-soft',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
   list_virtual_folders: tool('virtualFolders.list', 'List Foliole virtual Folders.', 'virtual-folders/list',
     schema({ limit: LIMIT })),

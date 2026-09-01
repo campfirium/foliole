@@ -23,6 +23,7 @@ describe('desktop setting policy', () => {
     ['readwise_import_settings', 'host', true],
     ['device_id', 'local_only', false],
     ['sync_group_last_trigger_result', 'local_only', false],
+    ['foliole_aide_byok_settings', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {
     expect(resolveDesktopSettingPolicy(key)).toMatchObject({ canonical, declared: true, scope });

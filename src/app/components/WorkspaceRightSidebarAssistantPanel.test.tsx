@@ -93,6 +93,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
       clientTurnId: expect.any(String),
       message: 'New prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' },
+      provider: 'codex-app-server',
       workspaceContext: expect.objectContaining({
         activeNodeId: 'node-1',
         path: ['Parent', 'Topic'],
@@ -135,6 +136,7 @@ it('continues a selected thread and switches to its saved node location', async 
       clientTurnId: expect.any(String),
       message: 'Follow-up',
       openingLocation: { nodeId: 'node-2', type: 'node' },
+      provider: 'codex-app-server',
       providerThreadId: 'thread-1',
       workspaceContext: expect.objectContaining({
         activeNodeId: 'node-2',
@@ -174,6 +176,7 @@ it('starts a new thread after clearing the selected history thread', async () =>
       clientTurnId: expect.any(String),
       message: 'Fresh prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' },
+      provider: 'codex-app-server',
       workspaceContext: expect.objectContaining({
         activeNodeId: 'node-1',
         activeKind: 'topic',

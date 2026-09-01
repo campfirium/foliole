@@ -8,7 +8,7 @@ test('concurrent desktop sync IPC writes keep separate sqlite transaction owners
     const record = (id: string, title: string) => ({
       ancestor_version_ids: [],
       content_hash: `hash-${id}`,
-      device_id: 'hidden-native',
+      host_name: 'hidden-native',
       object_id: id,
       object_type: 'node',
       parent_version_id: null,
