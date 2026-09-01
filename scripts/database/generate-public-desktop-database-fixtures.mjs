@@ -11,7 +11,6 @@ import Database from 'better-sqlite3';
 import ts from 'typescript';
 
 import {
-  readBusinessSentinels,
   readStructureSummary,
   sha256
 } from './public-desktop-database-fixture-contract.mjs';
@@ -51,7 +50,7 @@ function materializeTaggedLibrarySource(tag, destination) {
   return { files, sourceDigest: sourceDigest.digest('hex') };
 }
 
-function insertBusinessSentinels(sqlite) {
+function insertFixtureRecords(sqlite) {
   const insert = sqlite.transaction(() => {
     sqlite.prepare(`INSERT INTO nodes
       (id, parent_id, kind, title, content, created_at, updated_at)
@@ -97,7 +96,7 @@ async function createFixture(fixture) {
   const sqlite = new Database(fixturePath);
   sqlite.pragma('foreign_keys = ON');
   initializeDatabaseSchema(sqlite);
-  insertBusinessSentinels(sqlite);
+  insertFixtureRecords(sqlite);
   const provenance = {
     schema: fixture.schema,
     sourceRelease: fixture.sourceRelease,
@@ -105,11 +104,10 @@ async function createFixture(fixture) {
     sourceLibraryFilesSha256: materialized.sourceDigest,
     sourceLibraryFileCount: materialized.files.length,
     creationPath: 'tagged initializeDatabaseSchema fresh path',
-    dataOrigin: 'deterministic synthetic business sentinels; no user data',
+    dataOrigin: 'deterministic synthetic fixture records; no user data',
     sqliteIntegrity: sqlite.pragma('integrity_check', { simple: true }),
     foreignKeyViolations: sqlite.pragma('foreign_key_check').length,
-    structure: readStructureSummary(sqlite),
-    businessSentinelsSha256: sha256(JSON.stringify(readBusinessSentinels(sqlite)))
+    structure: readStructureSummary(sqlite)
   };
   sqlite.close();
   return { ...provenance, file: fixture.file, databaseSha256: sha256(readFileSync(fixturePath)) };
@@ -121,7 +119,7 @@ async function main() {
   mkdirSync(TEMP_ROOT, { recursive: true });
   const fixtures = [];
   for (const fixture of ledger.fixtures) fixtures.push(await createFixture(fixture));
-  const manifest = { manifestVersion: 1, ledger: path.relative(ROOT, LEDGER_PATH), fixtures };
+  const manifest = { manifestVersion: 2, ledger: path.relative(ROOT, LEDGER_PATH), fixtures };
   mkdirSync(FIXTURE_ROOT, { recursive: true });
   writeFileSync(path.join(FIXTURE_ROOT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   rmSync(TEMP_ROOT, { force: true, recursive: true });

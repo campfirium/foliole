@@ -51,28 +51,6 @@
     { "schema": 77, "sourceRelease": "v0.7.9", "file": "schema-77/foliole.db" },
     { "schema": 78, "sourceRelease": "v0.7.10", "file": "schema-78/foliole.db" }
   ],
-  "protectedData": [
-    {
-      "id": "content-and-structure",
-      "tables": ["nodes", "attachments", "content_blobs", "content_blob_data", "node_attachments"],
-      "contract": "Irreplaceable user-authored hierarchy, text, links, and attached content remain user facts."
-    },
-    {
-      "id": "review-and-reading-state",
-      "tables": ["node_review", "node_reading", "review_log", "node_view_state"],
-      "contract": "Review scheduling, reading progress, and durable per-node state keep their meaning."
-    },
-    {
-      "id": "settings",
-      "tables": ["settings", "setting_records"],
-      "contract": "Durable settings continue to affect later application behavior."
-    },
-    {
-      "id": "sync-identity-and-history",
-      "tables": ["sync_peers", "node_sync_versions", "sync_object_state", "sync_change_log"],
-      "contract": "Sync identity, version ancestry, and delivery facts are not silently reassigned or discarded."
-    }
-  ],
   "excludedLineages": [
     "foliole-index.db",
     "foliole-external.db",

@@ -20,9 +20,19 @@ function cloneLedger() {
 }
 
 describe('public Desktop database ledger', () => {
-  it('maps every frozen public release to one schema and every schema to one fixture', () => {
+  it('maps every registered public release to one schema and every schema to one fixture', () => {
     const ledger = validatePublicDesktopDatabaseLedger(readLedger());
 
+    expect(Object.keys(ledger).sort()).toEqual([
+      'compatibilityFloorSchema',
+      'databaseFile',
+      'excludedLineages',
+      'fixtures',
+      'latestRecordedSchema',
+      'ledgerVersion',
+      'publicDesktopReleases',
+      'releaseSchemaMappings'
+    ]);
     expect(ledger.publicDesktopReleases.map((release: string) => (
       resolvePublicDesktopReleaseSchema(ledger, release)
     ))).toEqual([46, 46, 48, 48, 48, 48, 61, 62, 62, 62, 62, 62, 65, 65, 66, 77, 78]);

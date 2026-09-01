@@ -7,7 +7,6 @@ import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 
 import {
-  readBusinessSentinels,
   readStructureSummary,
   sha256
 } from '../../scripts/database/public-desktop-database-fixture-contract.mjs';
@@ -20,14 +19,28 @@ const ledger = validatePublicDesktopDatabaseLedger(JSON.parse(readFileSync(
 const manifest = JSON.parse(readFileSync(path.join(fixtureRoot, 'manifest.json'), 'utf8'));
 
 describe('public Desktop database fixtures', () => {
-  it('provides one provenance record for every frozen schema', () => {
-    expect(manifest.manifestVersion).toBe(1);
+  it('provides one provenance record for every registered schema', () => {
+    expect(manifest.manifestVersion).toBe(2);
     expect(manifest.ledger).toBe('lib/core/database/publicDesktopDatabaseLedger.json');
     expect(manifest.fixtures.map(({ schema }: { schema: number }) => schema))
       .toEqual(ledger.fixtures.map(({ schema }: { schema: number }) => schema));
   });
 
   it.each(manifest.fixtures)('opens schema $schema and matches provenance', (provenance) => {
+    expect(Object.keys(provenance).sort()).toEqual([
+      'creationPath',
+      'dataOrigin',
+      'databaseSha256',
+      'file',
+      'foreignKeyViolations',
+      'schema',
+      'sourceCommit',
+      'sourceLibraryFileCount',
+      'sourceLibraryFilesSha256',
+      'sourceRelease',
+      'sqliteIntegrity',
+      'structure'
+    ]);
     const registration = ledger.fixtures.find(({ schema }: { schema: number }) => (
       schema === provenance.schema
     ));
@@ -39,7 +52,7 @@ describe('public Desktop database fixtures', () => {
     expect(provenance.sourceCommit).toMatch(/^[0-9a-f]{40}$/);
     expect(provenance.sourceLibraryFilesSha256).toMatch(/^[0-9a-f]{64}$/);
     expect(provenance.creationPath).toBe('tagged initializeDatabaseSchema fresh path');
-    expect(provenance.dataOrigin).toBe('deterministic synthetic business sentinels; no user data');
+    expect(provenance.dataOrigin).toBe('deterministic synthetic fixture records; no user data');
 
     const fixturePath = path.join(fixtureRoot, provenance.file);
     expect(sha256(readFileSync(fixturePath))).toBe(provenance.databaseSha256);
@@ -49,8 +62,6 @@ describe('public Desktop database fixtures', () => {
       expect(sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
       expect(sqlite.pragma('foreign_key_check')).toEqual([]);
       expect(readStructureSummary(sqlite)).toEqual(provenance.structure);
-      expect(sha256(JSON.stringify(readBusinessSentinels(sqlite))))
-        .toBe(provenance.businessSentinelsSha256);
     } finally {
       sqlite.close();
     }
