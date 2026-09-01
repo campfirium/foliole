@@ -29,7 +29,7 @@ export interface SettingsModelDraft {
   id: string;
   model: string;
   persisted: boolean;
-  result: 'not_tested' | 'ready' | NativeAssistantFailureCategory | null;
+  result: 'ready' | NativeAssistantFailureCategory | null;
   selectable: boolean;
   testing: boolean;
 }
@@ -91,7 +91,7 @@ async function loadInitialSettings(input: {
     const value = await loadAssistantModelSettings();
     if (input.active() && value) {
       input.setSettings(value);
-      input.setDrafts([...value.models.map(toDraft), createEmptyDraft()]);
+      input.setDrafts(value.models.length ? value.models.map(toDraft) : [createEmptyDraft()]);
     }
   } catch {
     if (input.active()) input.setLoadFailed(true);
@@ -102,6 +102,9 @@ async function loadInitialSettings(input: {
 
 function createModelActions(state: ModelState) {
   return {
+    add: () => state.setDrafts((current) => current.some((draft) => !draft.persisted)
+      ? current
+      : [...current, createEmptyDraft()]),
     remove: (draft: SettingsModelDraft) => removeDraft(state, draft),
     select: (id: string) => selectModel(state, id),
     test: (draft: SettingsModelDraft) => testDraft(state, draft),
@@ -193,7 +196,7 @@ function enqueueDraftSave(state: ModelState, draft: SettingsModelDraft, includeA
 function markDraftSaved(setDrafts: ModelState['setDrafts'], saved: NativeAssistantCustomModel) {
   setDrafts((current) => current.map((draft) => draft.id === saved.id ? {
       ...draft, hasApiKey: saved.has_api_key, persisted: true,
-      result: 'not_tested' as const, selectable: false
+      result: null, selectable: false
     } : draft));
 }
 
@@ -211,19 +214,16 @@ function replaceSavedDraft(
   model: NativeAssistantCustomModel,
   result: SettingsModelDraft['result']
 ) {
-  setDrafts((current) => {
-    const next = current.map((item) => item.id === id
+  setDrafts((current) => current.map((item) => item.id === id
       ? { ...toDraft(model), result }
-      : item);
-    return next.some((item) => !item.persisted) ? next : [...next, createEmptyDraft()];
-  });
+      : item));
 }
 
 function toDraft(model: NativeAssistantCustomModel): SettingsModelDraft {
   return {
     apiKey: '', endpoint: model.endpoint, hasApiKey: model.has_api_key, id: model.id,
     model: model.model, persisted: true,
-    result: model.state === 'configured' ? null : 'not_tested',
+    result: null,
     selectable: model.state === 'configured', testing: false
   };
 }

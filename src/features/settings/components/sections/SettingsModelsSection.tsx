@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 import type { NativeAssistantFailureCategory } from '../../../../../lib/platform/nativeAssistantContract';
 import { NATIVE_ASSISTANT_CODEX_MODEL_ID } from '../../../../../lib/platform/nativeAssistantModelSettingsContract';
@@ -6,6 +6,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import {
   AppStatusBadge,
   settingsActionTableClassName,
+  settingsActionTableAddButtonClassName,
   settingsActionTableHeaderClassName,
   settingsActionTableRowClassName,
   settingsButtonClassName,
@@ -53,6 +54,18 @@ export function SettingsModelsSection() {
             onUpdate={(patch) => state.update(draft, patch)}
           />
         ))}
+        {state.drafts.some((draft) => !draft.persisted) ? null : (
+          <div className={settingsActionTableRowClassName(MODEL_COLUMNS, 'pb-3 pt-1')}>
+            <button
+              className={settingsActionTableAddButtonClassName()}
+              onClick={state.add}
+              type="button"
+            >
+              <Plus aria-hidden size={15} strokeWidth={1.9} />
+              {t('settings.models.add')}
+            </button>
+          </div>
+        )}
       </div>
     </SettingsSection>
   );
@@ -164,13 +177,12 @@ function TestButton(props: { busy: boolean; disabled: boolean; onTest: () => voi
 }
 
 function InlineResult(props: {
-  category?: 'not_tested' | NativeAssistantFailureCategory;
+  category?: NativeAssistantFailureCategory;
   ready: boolean;
 }) {
   const t = useTranslation();
-  let key: 'settings.models.connection.authFailed' | 'settings.models.connection.busy' | 'settings.models.connection.failed' | 'settings.models.connection.notTested' | 'settings.models.connection.ready' | 'settings.models.connection.timeout' | 'settings.models.connection.toolsUnsupported';
+  let key: 'settings.models.connection.authFailed' | 'settings.models.connection.busy' | 'settings.models.connection.failed' | 'settings.models.connection.ready' | 'settings.models.connection.timeout' | 'settings.models.connection.toolsUnsupported';
   if (props.ready) key = 'settings.models.connection.ready';
-  else if (props.category === 'not_tested') key = 'settings.models.connection.notTested';
   else if (props.category === 'auth_failed') key = 'settings.models.connection.authFailed';
   else if (props.category === 'timeout') key = 'settings.models.connection.timeout';
   else if (props.category === 'busy' || props.category === 'overloaded') key = 'settings.models.connection.busy';

@@ -46,10 +46,10 @@ it('shows the ChatGPT plan and custom models as exclusive choices without a save
   expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.getByRole('radio', { name: 'Use ChatGPT plan' })).toBeChecked();
   expect(screen.getByRole('radio', { name: 'Use model-a' })).not.toBeChecked();
-  expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(2);
+  expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Add model' })).not.toBeInTheDocument();
-  expect(screen.getByPlaceholderText('Custom model')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
+  expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
 });
 
 it('moves the ChatGPT plan from not connected to connected', async () => {
@@ -113,6 +113,7 @@ it('saves a custom model draft before testing it', async () => {
   });
   renderWithLocalization(<SettingsModelsSection />);
   await screen.findByDisplayValue('model-a');
+  fireEvent.click(screen.getByRole('button', { name: 'Add model' }));
 
   const modelInputs = screen.getAllByLabelText('Model');
   const endpointInputs = screen.getAllByLabelText('API endpoint');
@@ -128,6 +129,7 @@ it('saves a custom model draft before testing it', async () => {
       api_key: 'secret', endpoint: 'https://second.example/v1/chat/completions', model: 'model-b'
     })
   ));
+  expect(screen.queryByText('Test again before using this model with Aide.')).not.toBeInTheDocument();
   fireEvent.click(screen.getAllByRole('button', { name: 'Test' }).at(-1) as HTMLButtonElement);
 
   await waitFor(() => expect(assistantRuntime.testAssistantModel).toHaveBeenCalledWith(expect.objectContaining({
@@ -136,7 +138,8 @@ it('saves a custom model draft before testing it', async () => {
     model: 'model-b'
   })));
   expect(await screen.findByText('Connection ready')).toBeInTheDocument();
-  expect(screen.getAllByPlaceholderText('Custom model')).toHaveLength(1);
+  expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
 });
 
 it('starts with two visible choices when no custom model has been saved', async () => {
@@ -149,6 +152,22 @@ it('starts with two visible choices when no custom model has been saved', async 
   expect(screen.getByRole('radio', { name: 'Use Custom model' })).toBeDisabled();
   expect(screen.getByPlaceholderText('Custom model')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Add model' })).not.toBeInTheDocument();
+});
+
+it('restores an untested draft quietly without adding another row', async () => {
+  assistantRuntime.loadAssistantModelSettings.mockResolvedValue({
+    models: [{
+      endpoint: 'https://draft.example/v1', has_api_key: true, id: 'draft-a',
+      model: 'draft-model', state: 'not_configured', tool_contract_version: 0
+    }],
+    selected_model_id: 'codex'
+  });
+  renderWithLocalization(<SettingsModelsSection />);
+
+  expect(await screen.findByDisplayValue('draft-model')).toBeInTheDocument();
+  expect(screen.getAllByLabelText('Model')).toHaveLength(1);
+  expect(screen.queryByText('Test again before using this model with Aide.')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
 });
 
 it('keeps a failed model in the form while leaving it unavailable for selection', async () => {

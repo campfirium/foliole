@@ -9,6 +9,8 @@ export async function configureByok(
 ) {
   const section = await openModelSettings(page);
   await expect(section).toContainText(/Connected|已连接/);
+  const addButton = section.getByRole('button', { name: /^(Add model|添加模型)$/ });
+  if (await addButton.isVisible().catch(() => false)) await addButton.click();
   await fillModelDraft(section, input);
   await section.getByRole('button', { name: /^(Test|测试)$/ }).last().click();
   await expect(section).toContainText(/Connection ready|连接正常/);
@@ -31,12 +33,12 @@ export async function restoreAndConfigureByok(
   await expect(modelRadio(section, input.model)).toBeChecked();
 }
 
-export async function removeByok(page: Page, model: string) {
+export async function removeByok(page: Page) {
   const section = await openModelSettings(page);
   await section.getByRole('radio', { name: /^(Use ChatGPT plan|使用 ChatGPT 套餐)$/ }).click();
   await section.getByRole('button', { name: /^(Remove model|删除模型)$/ }).click();
-  await expect(section.getByLabel(/^(Model|模型)$/).first()).not.toHaveValue(model);
-  await expect(section.getByLabel(/^(Model|模型)$/)).toHaveCount(1);
+  await expect(section.getByLabel(/^(Model|模型)$/)).toHaveCount(0);
+  await expect(section.getByRole('button', { name: /^(Add model|添加模型)$/ })).toBeVisible();
 }
 
 export async function openModelSettings(page: Page) {

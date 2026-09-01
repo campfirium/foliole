@@ -62,8 +62,10 @@ async function runFailedDraftJourney(harness: Harness) {
 
     const restored = await openModelSettings(session.page);
     await expect(restored.getByLabel(/^(Model|模型)$/).first()).toHaveValue(MODEL);
+    await expect(restored.getByLabel(/^(Model|模型)$/)).toHaveCount(1);
     await expect(restored.getByLabel(/^(API endpoint|API 地址)$/).first()).toHaveValue(harness.endpoint);
     await expect(restored.getByPlaceholder('••••••••')).toHaveValue('');
+    await expect(restored).not.toContainText(/Test again before using|请重新测试后再让/);
     await expect(modelRadio(restored, MODEL)).toBeDisabled();
     expect(harness.requests).toHaveLength(0);
   } finally {
@@ -119,7 +121,7 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
     expect(JSON.stringify(await session.page.locator('body').innerText())).not.toContain('sensitive-loopback-detail');
 
     harness.setMode('success');
-    await removeByok(session.page, MODEL);
+    await removeByok(session.page);
     await closeSettings(session.page);
     await session.page.getByRole('button', { name: /^(New|新建)$/ }).click();
     await sendAndExpect(session.page, 'Codex after removal', 'Codex regression reply');
