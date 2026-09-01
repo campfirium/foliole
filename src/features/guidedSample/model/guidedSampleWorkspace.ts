@@ -127,13 +127,13 @@ async function refreshCreatedChildNodeId(
 
 export async function ensureGuidedSampleTopicTree(
   getState: () => GuidedSampleWorkspaceState,
-  languages?: readonly string[],
+  requestedLocale?: GuidedSampleLocale,
   options: GuidedSampleCreationOptions = {}
 ): Promise<GuidedSampleCreationResult> {
   const beforeState = getState();
   const wasWorkspaceEmpty = isWorkspaceEmptyForGuidedSample(beforeState);
   const existingRootNodeId = findGuidedSampleRootNodeId(beforeState);
-  const preferredLocale = resolveGuidedSampleLocale(languages);
+  const preferredLocale = resolveGuidedSampleLocale(requestedLocale);
   const locale = preferredLocale;
   if (existingRootNodeId) {
     return {

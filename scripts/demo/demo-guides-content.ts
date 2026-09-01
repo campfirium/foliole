@@ -17,7 +17,7 @@ const SOURCE_GENERATED_AT = '1970-01-01T00:00:00.000Z';
 
 type GuideType = 'topic' | 'item';
 
-interface GuideEntry {
+export interface GuideEntry {
   children: GuideEntry[];
   indent: number;
   parentId: string | null;
@@ -26,8 +26,9 @@ interface GuideEntry {
   type: GuideType;
 }
 
-interface ParsedMarkdown {
+export interface ParsedMarkdown {
   body: string;
+  source: string;
   title: string;
 }
 
@@ -69,7 +70,7 @@ export function parseGuideOutline(source: string) {
   return roots;
 }
 
-async function discoverLocales(contentRoot: string) {
+export async function discoverLocales(contentRoot: string) {
   const entries = await readdir(contentRoot, { withFileTypes: true });
   const locales = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   if (!locales.includes('en')) throw new Error('docs/i18n/guides requires an en locale directory.');
@@ -145,7 +146,7 @@ async function buildReviewItem(contentRoot: string, locale: string, entry: Guide
   };
 }
 
-async function readGuideMarkdown(contentRoot: string, locale: string, slug: string) {
+export async function readGuideMarkdown(contentRoot: string, locale: string, slug: string) {
   const localePath = path.join(contentRoot, locale, `${slug}.md`);
   const fallbackPath = path.join(contentRoot, 'en', `${slug}.md`);
   const filePath = locale === 'en' ? localePath : await fileExists(localePath) ? localePath : fallbackPath;
@@ -161,7 +162,8 @@ function parseMarkdown(source: string, slug: string): ParsedMarkdown {
   if (titleLineIndex < 0) throw new Error(`Guide Markdown is missing an H1 title: ${slug}`);
   return {
     title: lines[titleLineIndex].replace(/^#\s+/, '').trim(),
-    body: lines.slice(titleLineIndex + 1).join('\n').trim()
+    body: lines.slice(titleLineIndex + 1).join('\n').trim(),
+    source: source.trim()
   };
 }
 
@@ -205,15 +207,15 @@ function itemFullSlug(entry: GuideEntry) {
   return entry.parentId ? `${entry.parentId}.${entry.slug}` : entry.slug;
 }
 
-function topicId(entry: GuideEntry) {
+export function topicId(entry: GuideEntry) {
   return entry.parentId ? `${entry.parentId}.${entry.slug}` : entry.slug;
 }
 
-function flattenEntries(entries: GuideEntry[]): GuideEntry[] {
+export function flattenEntries(entries: GuideEntry[]): GuideEntry[] {
   return entries.flatMap((entry) => [entry, ...flattenEntries(entry.children)]);
 }
 
-async function fileExists(filePath: string) {
+export async function fileExists(filePath: string) {
   try {
     await readFile(filePath);
     return true;
@@ -230,7 +232,7 @@ async function writeGeneratedPacks(outputPath: string, packs: Record<string, Dem
   await writeIfChanged(path.join(path.dirname(resolved), 'demoPack.ts'), source.replace('GENERATED_DEMO_PACKS: Record<string, DemoPack>', 'GENERATED_DEMO_PACKS: Record<string, DemoPack>'));
 }
 
-async function writeIfChanged(filePath: string, content: string) {
+export async function writeIfChanged(filePath: string, content: string) {
   if (await fileExists(filePath)) {
     const existing = await readFile(filePath, 'utf8');
     if (existing === content) return;

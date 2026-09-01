@@ -1,25 +1,11 @@
-import {
-  isExplicitSimplifiedChineseLanguageTag,
-  readPrimaryLanguage
-} from '../../../../lib/core/localization/systemLanguage';
+import { getStoredAppLocale, type AppLocale } from '../../../shared/localization/appLanguage';
 import { getGuidedSampleLocaleOverride } from '../../../shared/platform/runtimeConfig';
 
-export type GuidedSampleLocale = 'en-US' | 'zh-CN';
+export type GuidedSampleLocale = AppLocale;
 
-export function resolveGuidedSampleLocale(languages: readonly string[] = readNavigatorLanguages()): GuidedSampleLocale {
-  const localeOverride = getGuidedSampleLocaleOverride();
-  if (localeOverride) {
-    return localeOverride;
-  }
-  return isExplicitSimplifiedChineseLanguageTag(readPrimaryLanguage(languages)) ? 'zh-CN' : 'en-US';
-}
-
-function readNavigatorLanguages() {
-  if (typeof navigator === 'undefined') {
-    return [];
-  }
-  if (navigator.languages.length > 0) {
-    return navigator.languages;
-  }
-  return navigator.language ? [navigator.language] : [];
+export function resolveGuidedSampleLocale(locale: AppLocale = getStoredAppLocale()): GuidedSampleLocale {
+  const override = getGuidedSampleLocaleOverride();
+  if (override === 'en-US') return 'en';
+  if (override === 'zh-CN') return 'zh-Hans';
+  return locale;
 }

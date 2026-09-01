@@ -24,8 +24,7 @@ describe('importGuidedSampleTopicAssets', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(responseFor(new Uint8Array([1, 2, 3])));
 
     await importGuidedSampleTopicAssets('node-1', {
-      attachmentIds: ['58536364fbf6f93cf0ada37f58121eacff907adc9b1a57193c9ebc0cb77d270b'],
-      content: 'content'
+      attachmentIds: ['58536364fbf6f93cf0ada37f58121eacff907adc9b1a57193c9ebc0cb77d270b']
     });
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('guided-sample-assets/58536364fbf6f93cf0ada37f58121eacff907adc9b1a57193c9ebc0cb77d270b.png'));

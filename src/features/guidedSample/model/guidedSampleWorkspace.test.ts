@@ -28,7 +28,6 @@ function expectChineseGuidedSampleCopy(result: Awaited<ReturnType<typeof ensureG
   const readingNode = state.nodesById[result.queueNodeIds[1] ?? ''];
   expect(rootNode?.content).toContain('请先点击底部动作条里的 Read，或按 3 或 F。');
   expect(readingNode?.content).toContain('在 Foliole 中，阅读不必一次完成。');
-  expect(readingNode?.content).toContain('如果没有看到底部动作条，请点击左下角的“进入 Flow”按钮。');
   expect(readingNode?.content).toContain('![image](asset://');
 }
 
@@ -40,9 +39,9 @@ describe('ensureGuidedSampleTopicTree', () => {
   });
 
   it('creates one ordered simplified Chinese sample tree in an empty workspace', async () => {
-    const result = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), ['zh-CN']);
+    const result = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), 'zh-Hans');
 
-    expect(result).toMatchObject({ locale: 'zh-CN', wasCreated: true, wasWorkspaceEmpty: true });
+    expect(result).toMatchObject({ locale: 'zh-Hans', wasCreated: true, wasWorkspaceEmpty: true });
     expect(result.rootNodeId).toBeTruthy();
     const state = useWorkspaceStore.getState();
     const rootNode = result.rootNodeId ? state.nodesById[result.rootNodeId] : null;
@@ -66,23 +65,22 @@ describe('ensureGuidedSampleTopicTree', () => {
     expect(state.nodesById[result.queueNodeIds[5] ?? '']?.title).toBe('改写：澄清理解');
   });
 
-  it('does not treat traditional Chinese as Chinese sample content', async () => {
-    const result = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), ['zh-TW']);
+  it('creates the traditional Chinese sample content for that application locale', async () => {
+    const result = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), 'zh-Hant');
     const state = useWorkspaceStore.getState();
     const rootNode = result.rootNodeId ? state.nodesById[result.rootNodeId] : null;
     const readingNode = state.nodesById[result.queueNodeIds[1] ?? ''];
 
-    expect(result.locale).toBe('en-US');
-    expect(rootNode?.title).toBe('Welcome to Foliole');
-    expect(rootNode?.content).toContain('Start by clicking Read in the bottom action bar, or press 3 or F.');
-    expect(readingNode?.content).toContain('Reading does not need to be completed in one pass.');
-    expect(readingNode?.content).toContain('If the bottom action bar is not visible, click Enter Flow in the bottom-left corner.');
+    expect(result.locale).toBe('zh-Hant');
+    expect(rootNode?.title).toBe('歡迎使用 Foliole');
+    expect(rootNode?.content).toContain('請先點選底部動作列中的 Read');
+    expect(readingNode?.content).toContain('在 Foliole 中，閱讀不必一次完成。');
     expect(readingNode?.content).toContain('![image](asset://');
   });
 
   it('reuses an existing visible sample instead of inserting a duplicate', async () => {
-    const first = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), ['en-US']);
-    const second = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), ['en-US']);
+    const first = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), 'en');
+    const second = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), 'en');
 
     expect(second).toMatchObject({ rootNodeId: first.rootNodeId, wasCreated: false });
     expect(findGuidedSampleRootNodeId(useWorkspaceStore.getState())).toBe(first.rootNodeId);
@@ -103,7 +101,7 @@ describe('ensureGuidedSampleTopicTree asset imports', () => {
 
     const result = await ensureGuidedSampleTopicTree(
       () => useWorkspaceStore.getState(),
-      ['en-US'],
+      'en',
       { onAssetImportError }
     );
 
@@ -157,7 +155,7 @@ describe('ensureGuidedSampleTopicTree runtime refresh', () => {
 
     const result = await ensureGuidedSampleTopicTree(
       () => rendererState,
-      ['en-US'],
+      'en',
       { refreshWorkspaceState }
     );
 

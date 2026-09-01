@@ -11,6 +11,7 @@ This folder is the source for the Foliole Demo Guides content.
 - Topic Markdown files live under `<locale>/<topic-id>.md`; child topic files use the expanded dotted id.
 - Item Markdown files live under `<locale>/<parent-topic-slug>.<item-slug>.md`; the generated item id uses the same full dotted slug.
 - English (`en`) is required for every slug. Other locales may omit files and will fall back to English.
+- `assets.json` assigns packaged images to stable topic ids once. The Desktop guide generator injects those images into every locale's final Topic Markdown; locale Markdown files do not repeat asset URLs.
 
 ## Markdown
 

@@ -27,7 +27,10 @@ function encodeBytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-export async function importGuidedSampleTopicAssets(nodeId: string, topic: GuidedSampleTopicTemplate) {
+export async function importGuidedSampleTopicAssets(
+  nodeId: string,
+  topic: Pick<GuidedSampleTopicTemplate, 'attachmentIds'>
+) {
   for (const assetId of topic.attachmentIds ?? []) {
     const bytes = await fetchAssetBytes(assetId);
     if (!bytes) {

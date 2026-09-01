@@ -1,36 +1,34 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_LOCALES } from '../../../../lib/core/localization/appLocaleRegistry';
+import { APP_LANGUAGE_STORAGE_KEY } from '../../../shared/localization/appLanguage';
+
 import { resolveGuidedSampleLocale } from './guidedSampleLocale';
 
 describe('resolveGuidedSampleLocale', () => {
   afterEach(() => {
+    localStorage.clear();
     vi.unstubAllGlobals();
   });
 
-  it('uses Chinese content only for simplified Chinese language tags', () => {
-    expect(resolveGuidedSampleLocale(['zh-CN'])).toBe('zh-CN');
-    expect(resolveGuidedSampleLocale(['zh-Hans'])).toBe('zh-CN');
-    expect(resolveGuidedSampleLocale(['zh-SG'])).toBe('zh-CN');
+  it('preserves every registered application locale', () => {
+    for (const locale of APP_LOCALES) {
+      expect(resolveGuidedSampleLocale(locale)).toBe(locale);
+    }
   });
 
-  it('uses the explicit runtime override before browser languages', () => {
+  it('uses the stored application locale when no explicit locale is provided', () => {
+    localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'de');
+    expect(resolveGuidedSampleLocale()).toBe('de');
+  });
+
+  it('keeps the legacy sample override ahead of the application locale', () => {
     vi.stubGlobal('window', {
       electronAPI: {
-        runtimeConfig: { guidedSampleLocale: 'en-US' }
+        runtimeConfig: { guidedSampleLocale: 'zh-CN' }
       }
     });
 
-    expect(resolveGuidedSampleLocale(['zh-CN'])).toBe('en-US');
-  });
-
-  it('keeps traditional and ambiguous Chinese language tags on English content', () => {
-    expect(resolveGuidedSampleLocale(['zh-TW'])).toBe('en-US');
-    expect(resolveGuidedSampleLocale(['zh-HK'])).toBe('en-US');
-    expect(resolveGuidedSampleLocale(['zh-MO'])).toBe('en-US');
-    expect(resolveGuidedSampleLocale(['zh'])).toBe('en-US');
-  });
-
-  it('does not scan secondary browser languages for Chinese content', () => {
-    expect(resolveGuidedSampleLocale(['ko-KR', 'zh-CN'])).toBe('en-US');
+    expect(resolveGuidedSampleLocale('de')).toBe('zh-Hans');
   });
 });
