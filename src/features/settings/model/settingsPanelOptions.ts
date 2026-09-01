@@ -12,7 +12,6 @@ export type SettingsCategoryId =
   | 'external-search'
   | 'general'
   | 'mouse-gestures'
-  | 'models'
   | 'publishing'
   | 'rail'
   | 'document-menu'
@@ -37,7 +36,6 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'appearance', labelKey: 'settings.category.appearance.label', descriptionKey: 'settings.category.appearance.description' },
   { id: 'typography', labelKey: 'settings.category.typography.label', descriptionKey: 'settings.category.typography.description' },
   { id: 'editor', labelKey: 'settings.category.editor.label', descriptionKey: 'settings.category.editor.description' },
-  { id: 'models', labelKey: 'settings.category.models.label', descriptionKey: 'settings.category.models.description' },
   { id: 'web-lookup', labelKey: 'settings.category.webLookup.label', descriptionKey: 'settings.category.webLookup.description' },
   { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
   { id: 'publishing', labelKey: 'settings.category.publishing.label', descriptionKey: 'settings.category.publishing.description' },
@@ -66,7 +64,7 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
 const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
-    categoryIds: ['general', 'appearance', 'typography', 'editor', 'models', 'review', 'publishing']
+    categoryIds: ['general', 'appearance', 'typography', 'editor', 'review', 'publishing']
   },
   {
     labelKey: 'settings.group.controls',
@@ -116,6 +114,7 @@ export function getSettingsCategoryOption(id: SettingsCategoryId, t: Translate) 
 
 export function getInitialSettingsCategory(): SettingsCategoryId {
   const raw = getWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY);
+  if (raw === 'models') return 'general';
   return raw && isSettingsCategoryId(raw) ? raw : 'editor';
 }
 

@@ -67,11 +67,19 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(screen.getByText('Data')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Models' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Models' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Storage' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'External folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
+});
+
+it('shows models directly in General without adding a sidebar category', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
+
+  expect(screen.getByRole('heading', { level: 3, name: 'Models' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'General' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.queryByRole('button', { name: 'Manage AI services' })).not.toBeInTheDocument();
 });
 
 it('updates desired retention from review settings slider', async () => {

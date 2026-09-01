@@ -1,8 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'settings.category.models.label': '模型',
-  'settings.category.models.description': '在 Foliole 中直接使用 ChatGPT 或其他 AI 服务。',
+  'settings.models.section': '模型',
+  'settings.models.description': '连接并选择 Foliole Aide 使用的模型。',
+  'settings.models.searchTerms': '模型|ChatGPT|API|AI|Aide|连接',
   'settings.models.aria': 'Aide 模型设置',
   'settings.models.header.use': '使用',
   'settings.models.header.model': '模型',

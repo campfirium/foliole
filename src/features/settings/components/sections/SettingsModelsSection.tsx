@@ -18,6 +18,7 @@ import {
   SettingsSection,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
+import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import {
   type SettingsCodexConnectionState,
@@ -30,9 +31,13 @@ const MODEL_COLUMNS = '[grid-template-columns:3.5rem_minmax(110px,0.65fr)_minmax
 export function SettingsModelsSection() {
   const t = useTranslation();
   const state = useSettingsModels();
+  const searchRow = useLocalizedSettingsSearchRow('general-models');
   return (
     <SettingsSection
       ariaLabel={t('settings.models.aria')}
+      description={t('settings.models.description')}
+      searchRowId={searchRow.id}
+      title={t('settings.models.section')}
     >
       {state.loadFailed ? <p className="text-ui-sm text-destructive">{t('settings.models.loadFailed')}</p> : null}
       <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.models.aria')}>

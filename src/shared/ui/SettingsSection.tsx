@@ -11,6 +11,7 @@ export interface SettingsSectionProps {
   description?: string;
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  searchRowId?: string;
   title?: string;
 }
 
@@ -59,6 +60,7 @@ export function SettingsSection({
   description,
   expanded,
   onExpandedChange,
+  searchRowId,
   title
 }: SettingsSectionProps) {
   const hasHeader = Boolean(title || description || actions);
@@ -69,6 +71,7 @@ export function SettingsSection({
   return (
     <section
       aria-label={ariaLabel}
+      data-settings-search-row-id={searchRowId}
       className={cn(
         'relative mb-8 pt-7 before:absolute before:left-settings-panel-x before:right-settings-panel-x before:top-0 before:border-t before:border-settings-divider/70 first:pt-0 first:before:hidden last:mb-0',
         className

@@ -1,6 +1,7 @@
 export const EN_SETTINGS_AIDE_TRANSLATIONS = {
-  'settings.category.models.label': 'Models',
-  'settings.category.models.description': 'Use ChatGPT or other AI services directly in Foliole.',
+  'settings.models.section': 'Models',
+  'settings.models.description': 'Connect and choose the models used by Foliole Aide.',
+  'settings.models.searchTerms': 'model|models|ChatGPT|API|AI|Aide|connection',
   'settings.models.aria': 'Aide model settings',
   'settings.models.header.use': 'Use',
   'settings.models.header.model': 'Model',

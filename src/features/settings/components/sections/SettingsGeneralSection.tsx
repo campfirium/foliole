@@ -30,6 +30,7 @@ import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
+import { SettingsModelsSection } from './SettingsModelsSection';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -165,6 +166,7 @@ export function SettingsGeneralSection({
         <SearchEnhancementRow />
       </SettingsSection>
       <SettingsCaptureSection />
+      {previewDesktopSettings ? null : <SettingsModelsSection />}
       <SettingsAideStorageSection preview={previewDesktopSettings} />
     </>
   );

@@ -165,7 +165,7 @@ function selectWorkspaceRightSidebarProps({
     nodesById: props.nodeList.nodesById,
     onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
-    onOpenModelSettings: () => props.settings.onOpenSettings('models'),
+    onOpenModelSettings: () => props.settings.onOpenSettings('general'),
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode,
     reviewActiveQueueNodeIds: props.review.reviewQueueNodeIds,
