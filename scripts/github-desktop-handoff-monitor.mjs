@@ -99,6 +99,9 @@ function acknowledgeEvent(state, event, emittedAt) {
   for (const alertNumber of event.alertNumbers ?? []) {
     state.dependabotAlerts[String(alertNumber)] = { emittedAt, title: event.title };
   }
+  if (event.source === 'foliole/github-pr' && event.number) {
+    state.prs[String(event.number)] = event.eventId;
+  }
 }
 
 export function submitMonitorEvents(events, state, options = {}) {

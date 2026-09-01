@@ -10,7 +10,7 @@ updates:
       timezone: Asia/Shanghai
     open-pull-requests-limit: 1
     cooldown:
-      default-days: 7
+      default-days: 1
     allow:
       - dependency-name: electron
     labels:

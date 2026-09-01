@@ -77,9 +77,4 @@ describe('Dependabot dependency diff identity contract', () => {
   ])('classifies %s as a source error', (_label, overrides) => {
     expect(identifyDependabotDependencyDiff(dependencyPullRequest('electron', overrides)).status).toBe('source-error');
   });
-
-  it('has no production consumer during the prepare closure', () => {
-    const monitor = readFileSync(new URL('./github-desktop-handoff-events.mjs', import.meta.url), 'utf8');
-    expect(monitor).not.toContain('dependabot-dependency-diff-identity');
-  });
 });

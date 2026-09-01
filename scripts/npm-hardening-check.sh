@@ -72,10 +72,20 @@ if ! grep -Eq '^min-release-age=7$' .npmrc; then
   exit 1
 fi
 echo "[npm-hardening] ok: .npmrc pins min-release-age=7"
-echo "[npm-hardening] note: advisory-driven security fixes may bypass min-release-age only for named vulnerable packages"
+if ! grep -Fqx 'min-release-age-exclude[]=electron' .npmrc; then
+  echo "[npm-hardening] .npmrc must exclude only direct Electron resolution from min-release-age"
+  exit 1
+fi
+if [[ "$(grep -Ec '^min-release-age-exclude\[\]=' .npmrc)" -ne 1 ]]; then
+  echo "[npm-hardening] .npmrc must contain exactly one min-release-age exclusion"
+  exit 1
+fi
+echo "[npm-hardening] ok: only direct Electron resolution is excluded from seven-day filtering"
 
-versions_json_file=".tmp/npm-time.json"
-node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" --stdout-file "${versions_json_file}" npm view npm time --json
+node scripts/npm-hardening-electron-check.mjs "$@"
+
+versions_json_file=".tmp/electron-time.json"
+node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" --stdout-file "${versions_json_file}" npm view electron time --json
 
 selected_versions=()
 while IFS= read -r selected_version; do
@@ -119,21 +129,28 @@ cleanup() {
 }
 trap cleanup EXIT
 printf '{\n  "name": "npm-hardening-probe",\n  "private": true\n}\n' > "${probe_dir}/package.json"
-printf 'min-release-age=7\n' > "${probe_dir}/.npmrc"
+printf 'min-release-age=7\nmin-release-age-exclude[]=npm\n' > "${probe_dir}/.npmrc"
 
 if [[ -n "${recent_version}" ]]; then
   set +e
-  (cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "npm@${recent_version}" --package-lock-only > recent.log 2>&1)
+  (cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "electron@${recent_version}" --package-lock-only > recent.log 2>&1)
   recent_exit=$?
   set -e
   if [[ "${recent_exit}" -eq 0 ]]; then
-    echo "[npm-hardening] min-release-age did not block recent npm@${recent_version}"
+    echo "[npm-hardening] min-release-age did not block unlisted recent electron@${recent_version}"
     cat "${probe_dir}/recent.log"
     exit 1
   fi
-  echo "[npm-hardening] ok: min-release-age blocked recent npm@${recent_version}"
+  echo "[npm-hardening] ok: an unrelated exclusion did not exempt recent electron@${recent_version}"
+
+  named_probe_dir="${probe_dir}/named"
+  mkdir -p "${named_probe_dir}"
+  printf '{\n  "name": "npm-hardening-named-probe",\n  "private": true\n}\n' > "${named_probe_dir}/package.json"
+  printf 'min-release-age=7\nmin-release-age-exclude[]=electron\n' > "${named_probe_dir}/.npmrc"
+  (cd "${named_probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "electron@${recent_version}" --package-lock-only > named.log 2>&1)
+  echo "[npm-hardening] ok: named exclusion allowed recent direct electron@${recent_version}"
 else
-  echo "[npm-hardening] warning: no npm release newer than 7 days was found; skipped block probe"
+  echo "[npm-hardening] warning: no Electron release newer than 7 days was found; skipped exclusion probes"
 fi
 
 if [[ -z "${mature_version}" ]]; then
@@ -141,6 +158,6 @@ if [[ -z "${mature_version}" ]]; then
   exit 1
 fi
 
-(cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "npm@${mature_version}" --package-lock-only > mature.log 2>&1)
-echo "[npm-hardening] ok: min-release-age allowed mature npm@${mature_version}"
+(cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "electron@${mature_version}" --package-lock-only > mature.log 2>&1)
+echo "[npm-hardening] ok: min-release-age allowed mature electron@${mature_version}"
 echo "[npm-hardening] all dependency guardrails passed"

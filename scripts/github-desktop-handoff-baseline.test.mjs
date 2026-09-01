@@ -2,14 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 
 const github = vi.hoisted(() => ({
   checks: [{ bucket: 'fail', name: 'Windows checks' }],
+  dependabotGate: { kind: 'electron-eligible' },
   issues: [{ author: { login: 'reporter' }, labels: [], number: 9, title: 'Existing issue', url: 'https://example.test/issues/9' }],
   prs: [{ author: { login: 'dependabot' }, baseRefName: 'dev', headRefName: 'deps', isDraft: false, number: 8, title: 'Existing PR', url: 'https://example.test/pull/8' }]
+}));
+
+vi.mock('./github-dependabot-pr-eligibility.mjs', () => ({
+  dependabotPrCanEmit: vi.fn(({ errors, pr, recordError }) => {
+    if (pr.author?.login !== 'app/dependabot') return true;
+    if (['electron-eligible', 'other-dependency'].includes(github.dependabotGate.kind)) return true;
+    if (github.dependabotGate.kind === 'source-error') {
+      recordError(errors, 'github-pr-eligibility', `#${pr.number}`, new Error(github.dependabotGate.reason));
+    }
+    return false;
+  }),
+  resolveDependabotPrEligibility: vi.fn(() => github.dependabotGate)
 }));
 
 vi.mock('./github-monitor-gh.mjs', () => ({
   getPrCheckSignal: (_config, checks) => ({ eventSuffix: checks[0].name, label: checks[0].name }),
   listPrChecks: vi.fn(() => github.checks),
-  recordMonitorError: vi.fn(),
+  recordMonitorError: vi.fn((errors, source, detail, error) => {
+    errors.push({ detail, message: error.message, source });
+  }),
   runGh: vi.fn((args) => args[0] === 'pr' ? github.prs : github.issues)
 }));
 
@@ -35,7 +50,7 @@ describe('GitHub desktop handoff baselines', () => {
     expect(state.prs[8]).toContain('8:Windows checks');
   });
 
-  it('emits a verified Dependabot PR once for each new head without waiting for failed checks', () => {
+  it('emits an eligible verified Dependabot PR once for each new head without waiting for failed checks', () => {
     github.prs = [{
       author: { login: 'app/dependabot' },
       baseRefName: 'dev',
@@ -57,6 +72,71 @@ describe('GitHub desktop handoff baselines', () => {
       title: 'PR #42 local Dependabot implementation'
     });
     state.submitted[first[0].dedupeKey] = { emittedAt: '2026-07-20T04:00:00Z' };
+    state.prs['42'] = first[0].eventId;
     expect(listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt')).toEqual([]);
+  });
+
+  it('does not checkpoint an immature Electron head and emits it after eligibility changes', () => {
+    github.prs = [{
+      author: { login: 'app/dependabot' },
+      baseRefName: 'dev',
+      headRefName: 'dependabot/npm_and_yarn/electron-44.1.0',
+      headRefOid: 'same-head',
+      isDraft: false,
+      number: 43,
+      title: 'Bump electron',
+      url: 'https://example.test/pull/43'
+    }];
+    github.checks = [];
+    github.dependabotGate = { kind: 'electron-deferred' };
+    const state = { actions: {}, issues: {}, prs: {}, prsInitialized: true, submitted: {} };
+
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toEqual([]);
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toEqual([]);
+    expect(state.prs).toEqual({});
+    expect(state.submitted).toEqual({});
+
+    github.dependabotGate = { kind: 'electron-eligible' };
+    const events = listGithubMonitorEvents(configs(), state, false, [], () => 'prompt');
+    expect(events).toHaveLength(1);
+    expect(events[0].dedupeKey).toBe('pr:43:local:same-head');
+    expect(state.prs).toEqual({});
+  });
+
+  it('records one recoverable eligibility error without checkpointing the PR', () => {
+    github.prs = [{
+      author: { login: 'app/dependabot' },
+      baseRefName: 'dev',
+      headRefOid: 'source-error-head',
+      isDraft: false,
+      number: 44
+    }];
+    github.dependabotGate = { kind: 'source-error', reason: 'version-mismatch' };
+    const state = { actions: {}, issues: {}, prs: {}, prsInitialized: true, submitted: {} };
+    const errors = [];
+
+    expect(listGithubMonitorEvents(configs(), state, false, errors, () => 'prompt')).toEqual([]);
+    expect(errors).toEqual([{
+      detail: '#44',
+      message: 'version-mismatch',
+      source: 'github-pr-eligibility'
+    }]);
+    expect(state.prs).toEqual({});
+  });
+
+  it('keeps a verified non-Electron dependency on the existing route', () => {
+    github.prs = [{
+      author: { login: 'app/dependabot' },
+      baseRefName: 'dev',
+      headRefOid: 'other-head',
+      isDraft: false,
+      number: 45,
+      title: 'Dependency update'
+    }];
+    github.checks = [];
+    github.dependabotGate = { kind: 'other-dependency' };
+    const state = { actions: {}, issues: {}, prs: {}, prsInitialized: true, submitted: {} };
+
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toHaveLength(1);
   });
 });

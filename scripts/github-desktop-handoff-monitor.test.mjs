@@ -62,4 +62,28 @@ describe('github desktop handoff monitor workspace binding', () => {
       35: { emittedAt: '2026-07-23T02:00:00Z', title: 'Alerts' }
     });
   });
+
+  it('checkpoints a PR only after event submission succeeds', () => {
+    const event = {
+      dedupeKey: 'pr:42:local:head',
+      eventId: '42:local:head',
+      number: '42',
+      source: 'foliole/github-pr',
+      title: 'PR #42 local Dependabot implementation'
+    };
+    const state = { dependabotAlerts: {}, prs: {}, submitted: {} };
+
+    expect(() => submitMonitorEvents([event], state, {
+      persist: () => undefined,
+      submit: () => { throw new Error('submit failed'); }
+    })).toThrow('submit failed');
+    expect(state.prs).toEqual({});
+
+    submitMonitorEvents([event], state, {
+      now: () => '2026-09-01T00:00:00Z',
+      persist: () => undefined,
+      submit: () => ({ ok: true })
+    });
+    expect(state.prs).toEqual({ 42: '42:local:head' });
+  });
 });

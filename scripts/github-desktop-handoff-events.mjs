@@ -1,5 +1,6 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 import { buildActionsHandoffIdentity } from './github-actions-handoff-policy.mjs';
+import { dependabotPrCanEmit } from './github-dependabot-pr-eligibility.mjs';
 import { listDependabotAlertEvents } from './github-dependabot-alert-events.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
@@ -162,6 +163,7 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
   const events = [];
   for (const pr of prs) {
     if (pr.isDraft && !config.includeDrafts) continue;
+    if (!dependabotPrCanEmit({ config, errors, pr, recordError: recordMonitorError, runGh })) continue;
     let checks;
     try {
       checks = listPrChecks(config, pr);
@@ -173,7 +175,7 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
     if (!event.failingChecks) continue;
     if (!includeExisting && (state.prs[String(pr.number)] === event.eventId || (state.prs[String(pr.number)] === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) continue;
     if (includeExisting || initialized) events.push(event);
-    state.prs[String(pr.number)] = event.eventId;
+    else state.prs[String(pr.number)] = event.eventId;
   }
   state.prsInitialized = true;
   return events;

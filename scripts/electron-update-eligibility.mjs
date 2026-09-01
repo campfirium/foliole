@@ -33,6 +33,27 @@ function advisoryCoversVersion(advisory, version) {
     && advisory.fixedVersions.includes(version);
 }
 
+export function classifyElectronVersionEligibility(input) {
+  const version = stableVersion(input?.version);
+  if (!version) return sourceError('electron-version-invalid');
+  const publishedAt = utcTimestamp(input?.publishedAt);
+  const now = utcTimestamp(input?.now);
+  if (publishedAt == null) return sourceError('npm-published-at-invalid');
+  if (now == null) return sourceError('evaluation-time-invalid');
+
+  const advisory = input?.securityAdvisory;
+  if (advisory != null && !advisoryCoversVersion(advisory, version)) {
+    return sourceError('security-advisory-invalid');
+  }
+  if (advisory) return { classification: 'eligible', reason: 'verified-security-advisory', version };
+
+  const eligibleAt = new Date(publishedAt + DAY_MS).toISOString();
+  if (now - publishedAt < DAY_MS) {
+    return { classification: 'deferred', eligibleAt, reason: 'minimum-age-pending', version };
+  }
+  return { classification: 'eligible', eligibleAt, reason: 'minimum-age-met', version };
+}
+
 export function classifyElectronUpdateEligibility(input) {
   const github = input?.githubRelease;
   if (!github || github.isDraft !== false || github.isPrerelease !== false) {
@@ -45,24 +66,12 @@ export function classifyElectronUpdateEligibility(input) {
   if (!npmVersion) return sourceError('npm-latest-invalid');
   if (npmVersion !== githubVersion) return sourceError('version-mismatch');
 
-  const publishedAt = utcTimestamp(input?.npmMetadata?.publishedAt);
-  const now = utcTimestamp(input?.now);
-  if (publishedAt == null) return sourceError('npm-published-at-invalid');
-  if (now == null) return sourceError('evaluation-time-invalid');
-
-  const advisory = input?.securityAdvisory;
-  if (advisory != null && !advisoryCoversVersion(advisory, githubVersion)) {
-    return sourceError('security-advisory-invalid');
-  }
-  if (advisory) {
-    return { classification: 'eligible', reason: 'verified-security-advisory', version: githubVersion };
-  }
-
-  const eligibleAt = new Date(publishedAt + DAY_MS).toISOString();
-  if (now - publishedAt < DAY_MS) {
-    return { classification: 'deferred', eligibleAt, reason: 'minimum-age-pending', version: githubVersion };
-  }
-  return { classification: 'eligible', eligibleAt, reason: 'minimum-age-met', version: githubVersion };
+  return classifyElectronVersionEligibility({
+    now: input?.now,
+    publishedAt: input?.npmMetadata?.publishedAt,
+    securityAdvisory: input?.securityAdvisory,
+    version: githubVersion
+  });
 }
 
 export const ELECTRON_MINIMUM_AGE_MS = DAY_MS;

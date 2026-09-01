@@ -66,7 +66,14 @@ describe('GitHub desktop handoff title data', () => {
     expect(rendered).toContain('PR: #42 Repair desktop handoff labels');
     expect(rendered).toContain('Use `$gh-pr-handler` for this thread.');
     expect(rendered).toContain('Treat this as a PR handling task, not only a check inspection.');
-    expect(rendered).toContain('standing authorization to implement the PR locally');
+    expect(rendered).toContain('standing authorization');
+    expect(rendered).toContain('owns the implementation result');
+    expect(rendered).toContain('at most 25 hours from that first observation');
+    expect(rendered).toContain('do not reset the limit when another release appears');
+    expect(rendered).toContain('already satisfied by an equivalent or newer eligible version');
+    expect(rendered).toContain('real validation, push, or closure failure');
+    expect(rendered).toContain('do not end with a maturity analysis');
+    expect(rendered).toContain('npm run deps:hardening:check -- --advisory GHSA-...');
     expect(rendered).toContain('push the current local `dev` normally');
     expect(rendered).toContain('Never merge the PR through GitHub');
     expect(rendered).not.toContain('push from the PR task');

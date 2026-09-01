@@ -54,10 +54,4 @@ describe('Electron update eligibility contract', () => {
       reason: 'minimum-age-pending'
     });
   });
-
-  it('has no production consumer during the prepare closure', () => {
-    for (const file of ['github-desktop-handoff-events.mjs', 'github-desktop-handoff-monitor.mjs', 'npm-hardening-check.sh']) {
-      expect(readFileSync(new URL(file, import.meta.url), 'utf8')).not.toContain('electron-update-eligibility');
-    }
-  });
 });
