@@ -67,6 +67,7 @@ describe('locked Electron hardening contract', () => {
   it('keeps seven-day defaults and exposes only the explicit advisory argument', () => {
     const npmrc = readFileSync('.npmrc', 'utf8').trim().split(/\r?\n/u);
     const hardening = readFileSync('scripts/npm-hardening-check.sh', 'utf8');
+    const workflow = readFileSync('.github/workflows/hosted-quality-dependency-hardening.yml', 'utf8');
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
     expect(npmrc).toContain('min-release-age=7');
@@ -77,6 +78,7 @@ describe('locked Electron hardening contract', () => {
     expect(hardening).toContain('an unrelated exclusion did not exempt recent electron@');
     expect(hardening).toContain('named exclusion allowed recent direct electron@');
     expect(hardening).not.toMatch(/ADVISORY.*:-/u);
+    expect(workflow).toMatch(/Run dependency hardening checks\s+env:\s+GH_TOKEN: \$\{\{ github\.token \}\}/u);
     expect(packageJson.scripts['deps:hardening:check']).toContain('bash scripts/npm-hardening-check.sh');
   });
 });
