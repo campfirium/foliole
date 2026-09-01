@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.10",
+  "version": "0.7.11",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.10 changes shared desktop Sync Group behavior, PDF and image excerpt workflows, annotations, navigation, shortcuts, and the Electron runtime, so the supported macOS package is required.",
-    "windows": "Foliole 0.7.10 changes shared desktop Sync Group behavior, PDF and image excerpt workflows, annotations, navigation, shortcuts, and Windows host acceptance behavior, so the supported Windows package is required.",
-    "linux": "Foliole 0.7.10 changes shared desktop Sync Group behavior, PDF and image excerpt workflows, annotations, navigation, shortcuts, persistence, and the Electron runtime, so Linux Experimental is required."
+    "macos": "Foliole 0.7.11 repairs the shared desktop migration path for existing macOS libraries on older supported schemas, so the supported macOS package is required.",
+    "windows": "Foliole 0.7.11 repairs the Windows startup-blocking database migration reported in Issue #68, so the supported Windows package and direct installer are required.",
+    "linux": "Foliole 0.7.11 repairs the shared Electron migration path for existing Linux Experimental libraries on older supported schemas, so the Linux Experimental package is required."
   }
 }

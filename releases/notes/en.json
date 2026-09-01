@@ -1,4 +1,10 @@
 {
+  "0.7.11": {
+    "notes": [
+      "Fixed",
+      "Foliole now starts normally when upgrading directly from a version earlier than 0.7.6."
+    ]
+  },
   "0.7.10": {
     "notes": [
       "New",

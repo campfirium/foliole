@@ -25,6 +25,7 @@ const controlledElectronSqliteTests = [
   'electron/database/hostStateCutoverPreparation.test.ts',
   'electron/database/iosHostedSyncPackGenerator.test.ts',
   'electron/database/iosHostedSyncPackIllegalDagOracle.test.ts',
+  'electron/database/legacySyncGroupMigrationSequence.test.ts',
   'electron/database/libraryDataMigration.test.ts',
   'electron/database/mainFtsCleanup.test.ts',
   'electron/database/migrate.internalSnapshots.test.ts',
