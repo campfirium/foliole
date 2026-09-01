@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useRef, useState } from 'react';
 
 import type { NativeAssistantFailureCategory } from '../../../../../lib/platform/nativeAssistantContract';
 import {
@@ -9,6 +9,7 @@ import {
 import {
   deleteAssistantModel,
   loadAssistantModelSettings,
+  saveAssistantModelDraft,
   selectAssistantModel,
   testAssistantModel
 } from '../../../../shared/platform/assistantRuntime';
@@ -38,6 +39,7 @@ const EMPTY_SETTINGS: NativeAssistantModelSettings = {
 };
 
 type ModelState = {
+  saveQueue: MutableRefObject<Promise<void>>;
   setBusyId: (value: string | null) => void;
   setDrafts: Dispatch<SetStateAction<SettingsModelDraft[]>>;
   setSettings: (value: NativeAssistantModelSettings) => void;
@@ -50,8 +52,9 @@ export function useSettingsModels() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [codexConnection, setCodexConnection] = useState<SettingsCodexConnectionState>('checking');
   const [codexSigningIn, setCodexSigningIn] = useState(false);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   useInitialSettings(setSettings, setDrafts, setLoadFailed, setCodexConnection);
-  const state = { setBusyId, setDrafts, setSettings };
+  const state = { saveQueue, setBusyId, setDrafts, setSettings };
   return {
     ...createModelActions(state),
     busyId,
@@ -102,15 +105,17 @@ function createModelActions(state: ModelState) {
     remove: (draft: SettingsModelDraft) => removeDraft(state, draft),
     select: (id: string) => selectModel(state, id),
     test: (draft: SettingsModelDraft) => testDraft(state, draft),
-    update: (id: string, patch: Partial<Pick<SettingsModelDraft, 'apiKey' | 'endpoint' | 'model'>>) => {
-      updateDraft(state.setDrafts, id, { ...patch, result: null });
+    update: (draft: SettingsModelDraft, patch: Partial<Pick<SettingsModelDraft, 'apiKey' | 'endpoint' | 'model'>>) => {
+      const next = { ...draft, ...patch, result: null };
+      updateDraft(state.setDrafts, draft.id, next);
+      enqueueDraftSave(state, next, 'apiKey' in patch);
     }
   };
 }
 
 function createEmptyDraft(): SettingsModelDraft {
   return {
-    apiKey: '', endpoint: '', hasApiKey: false, id: `draft-${crypto.randomUUID()}`,
+    apiKey: '', endpoint: '', hasApiKey: false, id: crypto.randomUUID(),
     model: '', persisted: false, result: null, selectable: false, testing: false
   };
 }
@@ -118,9 +123,10 @@ function createEmptyDraft(): SettingsModelDraft {
 async function testDraft(state: ModelState, draft: SettingsModelDraft) {
   updateDraft(state.setDrafts, draft.id, { testing: true, result: null });
   try {
+    await state.saveQueue.current;
     const result = await testAssistantModel({
       endpoint: draft.endpoint, model: draft.model,
-      ...(draft.persisted ? { id: draft.id } : {}),
+      id: draft.id,
       ...(draft.apiKey.trim() ? { api_key: draft.apiKey.trim() } : {})
     });
     if (!result) throw new Error('models_unavailable');
@@ -142,6 +148,7 @@ async function testDraft(state: ModelState, draft: SettingsModelDraft) {
 async function selectModel(state: ModelState, id: string) {
   state.setBusyId(id);
   try {
+    await state.saveQueue.current;
     const next = await selectAssistantModel(id);
     if (next) state.setSettings(next);
   } finally {
@@ -150,12 +157,14 @@ async function selectModel(state: ModelState, id: string) {
 }
 
 async function removeDraft(state: ModelState, draft: SettingsModelDraft) {
-  if (!draft.persisted) {
+  const hasDraftValues = Boolean(draft.apiKey || draft.endpoint || draft.model);
+  if (!draft.persisted && !hasDraftValues) {
     state.setDrafts((current) => current.filter((item) => item.id !== draft.id));
     return;
   }
   state.setBusyId(draft.id);
   try {
+    await state.saveQueue.current;
     const next = await deleteAssistantModel(draft.id);
     if (next) {
       state.setSettings(next);
@@ -164,6 +173,28 @@ async function removeDraft(state: ModelState, draft: SettingsModelDraft) {
   } finally {
     state.setBusyId(null);
   }
+}
+
+function enqueueDraftSave(state: ModelState, draft: SettingsModelDraft, includeApiKey: boolean) {
+  state.saveQueue.current = state.saveQueue.current.catch(() => undefined).then(async () => {
+    const settings = await saveAssistantModelDraft({
+      endpoint: draft.endpoint,
+      id: draft.id,
+      model: draft.model,
+      ...(includeApiKey ? { api_key: draft.apiKey } : {})
+    });
+    if (!settings) return;
+    state.setSettings(settings);
+    const saved = settings.models.find((model) => model.id === draft.id);
+    if (saved) markDraftSaved(state.setDrafts, saved);
+  });
+}
+
+function markDraftSaved(setDrafts: ModelState['setDrafts'], saved: NativeAssistantCustomModel) {
+  setDrafts((current) => current.map((draft) => draft.id === saved.id ? {
+      ...draft, hasApiKey: saved.has_api_key, persisted: true,
+      result: 'not_tested' as const, selectable: false
+    } : draft));
 }
 
 function updateDraft(

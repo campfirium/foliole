@@ -86,6 +86,7 @@ describe('native command contracts', () => {
   it('keeps credentials and user-authored setting values out of command traces', () => {
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantSaveByokSettings)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantTestModel)).toBe(false);
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantSaveModelDraft)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWordPressPublishDraft)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.connectWordPressPublishSettings)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveSystemEntryDisplayNames)).toBe(false);

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
 import type {
   NativeAssistantCustomModel,
+  NativeAssistantModelDraftInput,
   NativeAssistantModelInput,
   NativeAssistantModelSettings,
   NativeAssistantModelTestResult
@@ -20,6 +21,7 @@ import {
 } from '../security/publishDeviceSecretStore.js';
 
 import { testOpenAiCompatibleModel } from './folioleAideModelConnection.js';
+import { createStoredModelDraft, validateDraftId } from './folioleAideModelDraft.js';
 import {
   normalizeAssistantModelEndpoint,
   readStoredAssistantModelSettings,
@@ -40,6 +42,18 @@ export function loadFolioleAideModelSettings(): NativeAssistantModelSettings {
   return publicSettings(loadStoredSettings());
 }
 
+export function saveFolioleAideModelDraft(
+  input: NativeAssistantModelDraftInput
+): NativeAssistantModelSettings {
+  const stored = loadStoredSettings();
+  const previous = stored.models.find((model) => model.id === input.id);
+  return publicSettings(saveCandidate(
+    stored,
+    createStoredModelDraft(input, previous),
+    input.api_key
+  ));
+}
+
 export async function testAndSaveFolioleAideModel(
   input: NativeAssistantModelInput
 ): Promise<NativeAssistantModelTestResult> {
@@ -48,11 +62,11 @@ export async function testAndSaveFolioleAideModel(
   const suppliedKey = input.api_key?.trim() ?? '';
   const candidate = normalizeModelInput(input, previous, suppliedKey);
   if (candidate.requires_new_key) {
-    return failureResult(isQualified(previous) ? stored : saveCandidate(stored, candidate), 'auth_failed');
+    return failureResult(saveCandidate(stored, candidate), 'auth_failed');
   }
   const apiKey = suppliedKey || readStoredKey(previous);
   if (!apiKey) {
-    return failureResult(isQualified(previous) ? stored : saveCandidate(stored, candidate), 'auth_failed');
+    return failureResult(saveCandidate(stored, candidate), 'auth_failed');
   }
   const failure = await testOpenAiCompatibleModel({
     apiKey,
@@ -60,7 +74,7 @@ export async function testAndSaveFolioleAideModel(
     model: candidate.model
   });
   if (failure) {
-    const saved = isQualified(previous) ? stored : saveCandidate(stored, candidate, apiKey);
+    const saved = saveCandidate(stored, candidate, apiKey);
     return failureResult(saved, failure);
   }
   const saved = saveCandidate(stored, {
@@ -112,17 +126,22 @@ export function loadFolioleAideModelRuntimeConfig(): FolioleAideModelRuntimeConf
 function saveCandidate(stored: StoredModelSettings, candidate: StoredModel, apiKey?: string) {
   const previous = stored.models.find((model) => model.id === candidate.id);
   const previousKey = readStoredKey(previous);
-  if (apiKey) writeDeviceSecret(candidate.secret_file, SECRET_LABEL, apiKey);
+  if (apiKey !== undefined) {
+    if (apiKey) writeDeviceSecret(candidate.secret_file, SECRET_LABEL, apiKey);
+    else deleteDeviceSecret(candidate.secret_file);
+  }
   try {
     return saveStoredSettings({
       ...stored,
       models: previous
         ? stored.models.map((model) => model.id === candidate.id ? candidate : model)
         : [...stored.models, candidate],
-      selected_model_id: stored.selected_model_id
+      selected_model_id: stored.selected_model_id === candidate.id && !candidate.verified
+        ? NATIVE_ASSISTANT_CODEX_MODEL_ID
+        : stored.selected_model_id
     });
   } catch (error) {
-    if (apiKey) restoreSecret(candidate.secret_file, previousKey);
+    if (apiKey !== undefined) restoreSecret(candidate.secret_file, previousKey);
     throw error;
   }
 }
@@ -135,7 +154,7 @@ function normalizeModelInput(
   const endpoint = normalizeAssistantModelEndpoint(input.endpoint);
   const model = input.model.trim();
   if (!model || model.length > 200) throw new Error('invalid_byok_model');
-  const id = previous?.id ?? randomUUID();
+  const id = previous?.id ?? (input.id ? validateDraftId(input.id) : randomUUID());
   const endpointChanged = Boolean(previous && previous.endpoint !== endpoint);
   return {
     endpoint,
@@ -188,11 +207,6 @@ function publicFields(stored: StoredModel) {
     model: stored.model,
     tool_contract_version: stored.tool_contract_version ?? 0
   };
-}
-
-function isQualified(stored?: StoredModel) {
-  return stored?.verified === true
-    && stored.tool_contract_version === CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION;
 }
 
 function readStoredKey(stored?: StoredModel) {

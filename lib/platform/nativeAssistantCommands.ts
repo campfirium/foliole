@@ -11,6 +11,7 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantGetStorageInfo: 'assistant_get_storage_info',
   assistantOpenStorageLocation: 'assistant_open_storage_location',
   assistantLoadModelSettings: 'assistant_load_model_settings',
+  assistantSaveModelDraft: 'assistant_save_model_draft',
   assistantTestModel: 'assistant_test_model',
   assistantDeleteModel: 'assistant_delete_model',
   assistantSelectModel: 'assistant_select_model',

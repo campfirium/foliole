@@ -30,6 +30,7 @@ import {
   deleteFolioleAideModel,
   loadFolioleAideModelRuntimeConfig,
   loadFolioleAideModelSettings,
+  saveFolioleAideModelDraft,
   selectFolioleAideModel,
   testAndSaveFolioleAideModel
 } from './folioleAideModelSettings.js';
@@ -84,15 +85,35 @@ it('persists a failed model and its secure key without making it selectable', as
   expect([...state.secrets.values()]).toEqual(['bad-key']);
 });
 
-it('preserves the last qualified model and secret when a changed retest fails', async () => {
+it('saves incomplete edits immediately and restores them without testing', () => {
+  const id = '6d1e03a4-4ae2-4fc8-a89e-793faea62db6';
+
+  const saved = saveFolioleAideModelDraft({
+    api_key: 'draft-key', endpoint: 'https://models.', id, model: 'draft model '
+  });
+
+  expect(toolProbe).not.toHaveBeenCalled();
+  expect(saved).toMatchObject({
+    models: [{ endpoint: 'https://models.', has_api_key: true, id, model: 'draft model ', state: 'not_configured' }],
+    selected_model_id: 'codex'
+  });
+  expect(loadFolioleAideModelSettings()).toEqual(saved);
+  expect(JSON.stringify(state.setting)).not.toContain('draft-key');
+  expect([...state.secrets.values()]).toEqual(['draft-key']);
+  expect(() => selectFolioleAideModel(id)).toThrow('model_not_configured');
+});
+
+it('invalidates a selected model immediately and keeps changed values after a failed test', async () => {
   const ready = await addModel('model-a', 'old-key');
   if (ready.state !== 'ready') throw new Error('test_setup_failed');
   const id = ready.settings.models[0]?.id ?? '';
   selectFolioleAideModel(id);
+  saveFolioleAideModelDraft({
+    api_key: 'new-key', endpoint: 'https://second.example/v1/chat/completions', id, model: 'model-b'
+  });
   toolProbe.mockResolvedValueOnce('auth_failed');
 
   const failed = await testAndSaveFolioleAideModel({
-    api_key: 'new-key',
     endpoint: 'https://second.example/v1/chat/completions',
     id,
     model: 'model-b'
@@ -100,13 +121,13 @@ it('preserves the last qualified model and secret when a changed retest fails', 
 
   expect(failed).toMatchObject({
     settings: {
-      models: [{ endpoint: 'https://models.example/v1/chat/completions', model: 'model-a', state: 'configured' }],
-      selected_model_id: id
+      models: [{ endpoint: 'https://second.example/v1/chat/completions', model: 'model-b', state: 'not_configured' }],
+      selected_model_id: 'codex'
     },
     state: 'failed'
   });
-  expect([...state.secrets.values()]).toEqual(['old-key']);
-  expect(loadFolioleAideModelRuntimeConfig()).toMatchObject({ model: 'model-a' });
+  expect([...state.secrets.values()]).toEqual(['new-key']);
+  expect(() => loadFolioleAideModelRuntimeConfig()).toThrow('byok_not_configured');
 });
 
 it('preserves a legacy selected id and secure key while requiring current tool qualification', () => {

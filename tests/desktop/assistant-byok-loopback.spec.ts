@@ -56,9 +56,16 @@ async function runFailedDraftJourney(harness: Harness) {
     await prepareAide(session.page);
     const section = await openModelSettings(session.page);
     await fillModelDraft(section, modelInput(harness.endpoint));
-    await section.getByRole('button', { name: /^(Test|测试)$/ }).last().click();
-    await expect(section).toContainText(/Authentication failed|身份验证失败/);
-    await expect(modelRadio(section, MODEL)).toBeDisabled();
+    await expect(section.getByRole('button', { name: /^(Remove model|删除模型)$/ }).last()).toBeVisible();
+    expect(harness.requests).toHaveLength(0);
+    await closeSettings(session.page);
+
+    const restored = await openModelSettings(session.page);
+    await expect(restored.getByLabel(/^(Model|模型)$/).first()).toHaveValue(MODEL);
+    await expect(restored.getByLabel(/^(API endpoint|API 地址)$/).first()).toHaveValue(harness.endpoint);
+    await expect(restored.getByPlaceholder('••••••••')).toHaveValue('');
+    await expect(modelRadio(restored, MODEL)).toBeDisabled();
+    expect(harness.requests).toHaveLength(0);
   } finally {
     await session.electronApp.close();
   }

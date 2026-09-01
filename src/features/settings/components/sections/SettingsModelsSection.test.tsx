@@ -9,6 +9,7 @@ const assistantRuntime = vi.hoisted(() => ({
   deleteAssistantModel: vi.fn(),
   loadAssistantModelSettings: vi.fn(),
   loadAssistantStatus: vi.fn(),
+  saveAssistantModelDraft: vi.fn(),
   selectAssistantModel: vi.fn(),
   startAssistantChatGptLogin: vi.fn(),
   testAssistantModel: vi.fn()
@@ -83,7 +84,14 @@ it('shows that ChatGPT connection continues in the browser', async () => {
   expect(screen.getByRole('button', { name: 'Waiting...' })).toBeDisabled();
 });
 
-it('shows a custom model draft by default and persists it only through the test action', async () => {
+it('saves a custom model draft before testing it', async () => {
+  assistantRuntime.saveAssistantModelDraft.mockImplementation(async (input) => ({
+    models: [{
+      endpoint: input.endpoint, has_api_key: Boolean(input.api_key), id: input.id,
+      model: input.model, state: 'not_configured', tool_contract_version: 0
+    }],
+    selected_model_id: 'codex'
+  }));
   assistantRuntime.testAssistantModel.mockResolvedValue({
     settings: {
       models: [{
@@ -114,13 +122,19 @@ it('shows a custom model draft by default and persists it only through the test 
     target: { value: 'https://second.example/v1/chat/completions' }
   });
   fireEvent.change(keyInputs.at(-1) as HTMLInputElement, { target: { value: 'secret' } });
+
+  await waitFor(() => expect(assistantRuntime.saveAssistantModelDraft).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      api_key: 'secret', endpoint: 'https://second.example/v1/chat/completions', model: 'model-b'
+    })
+  ));
   fireEvent.click(screen.getAllByRole('button', { name: 'Test' }).at(-1) as HTMLButtonElement);
 
-  await waitFor(() => expect(assistantRuntime.testAssistantModel).toHaveBeenCalledWith({
+  await waitFor(() => expect(assistantRuntime.testAssistantModel).toHaveBeenCalledWith(expect.objectContaining({
     api_key: 'secret',
     endpoint: 'https://second.example/v1/chat/completions',
     model: 'model-b'
-  }));
+  })));
   expect(await screen.findByText('Connection ready')).toBeInTheDocument();
   expect(screen.getAllByPlaceholderText('Custom model')).toHaveLength(1);
 });

@@ -35,7 +35,7 @@ export async function openSettingsDialog(windowPage: Page) {
   const settingsDialog = getSettingsDialog(windowPage);
 
   if (!(await settingsDialog.isVisible())) {
-    await windowPage.getByRole('button', { name: SETTINGS_BUTTON_NAME }).click();
+    await windowPage.getByLabel(SETTINGS_BUTTON_NAME).click();
   }
 
   await waitForVisible(settingsDialog);

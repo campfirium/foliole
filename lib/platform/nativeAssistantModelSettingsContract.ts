@@ -30,6 +30,13 @@ export interface NativeAssistantModelInput {
   model: string;
 }
 
+export interface NativeAssistantModelDraftInput {
+  api_key?: string;
+  endpoint: string;
+  id: string;
+  model: string;
+}
+
 export type NativeAssistantModelTestResult =
   | { settings: NativeAssistantModelSettings; state: 'ready' }
   | {
@@ -41,6 +48,10 @@ export type NativeAssistantModelTestResult =
 export type NativeAssistantModelSettingsCommandMap = {
   [NATIVE_COMMANDS.assistantLoadModelSettings]: {
     args: undefined;
+    result: NativeAssistantModelSettings;
+  };
+  [NATIVE_COMMANDS.assistantSaveModelDraft]: {
+    args: NativeAssistantModelDraftInput;
     result: NativeAssistantModelSettings;
   };
   [NATIVE_COMMANDS.assistantTestModel]: {

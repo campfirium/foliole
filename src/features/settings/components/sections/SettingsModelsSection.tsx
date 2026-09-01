@@ -50,7 +50,7 @@ export function SettingsModelsSection() {
             onRemove={() => void state.remove(draft)}
             onSelect={() => void state.select(draft.id)}
             onTest={() => void state.test(draft)}
-            onUpdate={(patch) => state.update(draft.id, patch)}
+            onUpdate={(patch) => state.update(draft, patch)}
           />
         ))}
       </div>
