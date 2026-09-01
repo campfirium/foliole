@@ -27,6 +27,7 @@ const SCREENSHOT = path.join(EVIDENCE_DIR, 't168-aide-byok-tool-loop-hidden.png'
 const MODELS_SCREENSHOT = path.join(EVIDENCE_DIR, 'aide-models-settings-hidden.png');
 const RESULT = path.join(EVIDENCE_DIR, 't168-aide-byok-tool-loop-result.json');
 const CREATED_TOPIC = 'BYOK Agent Control Topic';
+const LONG_CREATED_TOPIC = 'BYOK Long Tool Chain Topic';
 
 test('uses a real loopback Chat Completions SSE provider without weakening Codex', async ({
   browserName
@@ -77,6 +78,12 @@ async function runInitialJourney(harness: Harness, testInfo: TestInfo) {
     expect(firstTurn).toHaveLength(2);
     assertBaseRequest(firstTurn[0]);
     assertToolResultReplay(firstTurn[1]);
+
+    await sendAndExpect(session.page, 'Long loopback chain', 'Long loopback reply');
+    await expect(session.page.getByText(LONG_CREATED_TOPIC, { exact: true })).toBeVisible();
+    const longTurn = requestsForPrompt(harness.requests, 'Long loopback chain');
+    expect(longTurn).toHaveLength(11);
+    expect(longTurn.at(-1)?.body.messages?.filter((message) => message.role === 'tool')).toHaveLength(28);
 
     await attachImage(session.page);
     await sendAndExpect(session.page, 'Loopback image', 'Loopback reply 2');

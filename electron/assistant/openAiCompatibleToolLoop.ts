@@ -3,9 +3,8 @@ import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAs
 import { executeAideTool } from './aideToolExecutor.js';
 import { readOpenAiCompatibleSse, type OpenAiCompatibleToolCall } from './openAiCompatibleSse.js';
 
-const MAX_TOOL_ROUNDS = 8;
-const MAX_TOOL_CALLS = 24;
-const TURN_TIMEOUT_MS = 120_000;
+const MAX_SEQUENTIAL_TOOL_ROUNDS = 256;
+const ACTIVITY_IDLE_TIMEOUT_MS = 180_000;
 export async function runOpenAiCompatibleToolLoop(input: {
   allowedCapabilities: readonly string[];
   apiKey: string;
@@ -18,29 +17,30 @@ export async function runOpenAiCompatibleToolLoop(input: {
 }) {
   const messages = [...input.messages];
   const acceptedIds = new Set<string>();
-  let callCount = 0;
+  let toolRounds = 0;
   let responseText = '';
   let writeDispatched = false;
   let timedOut = false;
-  const timer = setTimeout(() => {
+  const deadline = createActivityDeadline(() => {
     timedOut = true;
     input.controller.abort();
-  }, TURN_TIMEOUT_MS);
+  });
   try {
-    for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
-      const completion = await requestCompletion(input, messages, responseText);
+    while (true) {
+      const completion = await requestCompletion(input, messages, responseText, deadline.refresh);
       responseText += completion.text;
       if (!completion.toolCalls.length) {
         if (!responseText.trim()) throw categorized('protocol_error');
         return responseText;
       }
-      if (round === MAX_TOOL_ROUNDS) throw categorized('tool_limit_reached');
-      callCount += completion.toolCalls.length;
-      if (callCount > MAX_TOOL_CALLS) throw categorized('tool_limit_reached');
       assertFreshToolCalls(completion.toolCalls, acceptedIds);
+      toolRounds += 1;
+      if (toolRounds > MAX_SEQUENTIAL_TOOL_ROUNDS) throw categorized('tool_limit_reached');
+      deadline.refresh();
       messages.push(assistantToolCallMessage(completion));
       for (const call of completion.toolCalls) {
         const result = await executeToolCall(call, input, () => { writeDispatched = true; });
+        deadline.refresh();
         messages.push({
           content: result.contentItems.map((item) => item.text).join('\n'),
           role: 'tool',
@@ -48,20 +48,21 @@ export async function runOpenAiCompatibleToolLoop(input: {
         });
       }
     }
-    throw categorized('protocol_error');
   } catch (error) {
     if (writeDispatched) throw categorized('tool_result_uncertain');
     if (timedOut) throw categorized('timeout');
+    if (input.controller.signal.aborted) throw categorized('interrupted');
     throw error;
   } finally {
-    clearTimeout(timer);
+    deadline.clear();
   }
 }
 
 async function requestCompletion(
   input: Parameters<typeof runOpenAiCompatibleToolLoop>[0],
   messages: unknown[],
-  priorText: string
+  priorText: string,
+  onActivity: () => void
 ) {
   const response = await fetch(input.endpoint, {
     body: JSON.stringify({
@@ -81,7 +82,22 @@ async function requestCompletion(
     signal: input.controller.signal
   });
   assertSseResponse(response);
-  return readOpenAiCompatibleSse(response.body, input.controller, (text) => input.onText(priorText + text));
+  return readOpenAiCompatibleSse(
+    response.body,
+    input.controller,
+    (text) => input.onText(priorText + text),
+    onActivity
+  );
+}
+
+function createActivityDeadline(onTimeout: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const refresh = () => {
+    clearTimeout(timer);
+    timer = setTimeout(onTimeout, ACTIVITY_IDLE_TIMEOUT_MS);
+  };
+  refresh();
+  return { clear: () => clearTimeout(timer), refresh };
 }
 
 function assertFreshToolCalls(calls: OpenAiCompatibleToolCall[], accepted: Set<string>) {

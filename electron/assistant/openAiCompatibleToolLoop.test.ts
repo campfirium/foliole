@@ -16,7 +16,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 it('executes ordered multi-call rounds and emits cumulative text with one final answer', async () => {
   const fetchMock = vi.fn<typeof fetch>()
@@ -49,13 +52,85 @@ it('rejects a repeated accepted tool-call id without executing it twice', async 
   expect(executeTool).toHaveBeenCalledTimes(1);
 });
 
-it('fails before execution when a model exceeds the total call bound', async () => {
-  const calls = Array.from({ length: 25 }, (_, index) => toolCall(index, `id-${index}`, 'read_material', '{}'));
-  const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(sse([toolDelta(calls)]));
+it('allows more than eight tool rounds and twenty-four total calls', async () => {
+  const responses = Array.from({ length: 9 }, (_, round) => sse([toolDelta(
+    Array.from({ length: 3 }, (_, index) => toolCall(index, `read-${round}-${index}`, 'read_material', '{}'))
+  )]));
+  responses.push(sse([{ choices: [{ delta: { content: 'Long task done' }, finish_reason: 'stop' }] }]));
+  const fetchMock = queuedFetch(responses);
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(run(fetchMock)).resolves.toBe('Long task done');
+  expect(executeTool).toHaveBeenCalledTimes(27);
+});
+
+it('fails closed after 256 sequential tool rounds', async () => {
+  const responses = Array.from({ length: 257 }, (_, round) => sse([
+    toolDelta([toolCall(0, `read-${round}`, 'read_material', '{}')])
+  ]));
+  const fetchMock = queuedFetch(responses);
   vi.stubGlobal('fetch', fetchMock);
 
   await expect(run(fetchMock)).rejects.toMatchObject({ category: 'tool_limit_reached' });
-  expect(executeTool).not.toHaveBeenCalled();
+  expect(executeTool).toHaveBeenCalledTimes(256);
+});
+
+it('uses one 180 second idle deadline instead of an absolute turn timeout', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  let round = 0;
+  const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
+    await vi.advanceTimersByTimeAsync(70_000);
+    round += 1;
+    return round < 3
+      ? sse([toolDelta([toolCall(0, `read-${round}`, 'read_material', '{}')])])
+      : sse([{ choices: [{ delta: { content: 'Still active' }, finish_reason: 'stop' }] }]);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(run(fetchMock)).resolves.toBe('Still active');
+  expect(vi.getMockedSystemTime()?.getTime()).toBe(210_000);
+});
+
+it('times out only after 180 seconds without activity', async () => {
+  vi.useFakeTimers();
+  const fetchMock = abortablePendingFetch();
+  vi.stubGlobal('fetch', fetchMock);
+  const result = run(fetchMock);
+  let settled = false;
+  void result.finally(() => { settled = true; }).catch(() => undefined);
+
+  await vi.advanceTimersByTimeAsync(179_999);
+  expect(settled).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(result).rejects.toMatchObject({ category: 'timeout' });
+});
+
+it('refreshes the deadline when Agent Control returns a tool result', async () => {
+  vi.useFakeTimers();
+  executeTool.mockImplementationOnce(async () => {
+    await vi.advanceTimersByTimeAsync(170_000);
+    return { contentItems: [{ text: '{"ok":true}', type: 'inputText' }], success: true };
+  });
+  const fetchMock = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(sse([toolDelta([toolCall(0, 'read-1', 'read_material', '{}')])]))
+    .mockImplementationOnce(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+      return sse([{ choices: [{ delta: { content: 'Done after tool' }, finish_reason: 'stop' }] }]);
+    });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(run(fetchMock)).resolves.toBe('Done after tool');
+});
+
+it('preserves explicit interruption classification', async () => {
+  const controller = new AbortController();
+  const fetchMock = abortablePendingFetch();
+  vi.stubGlobal('fetch', fetchMock);
+  const result = run(fetchMock, () => undefined, controller);
+  controller.abort();
+
+  await expect(result).rejects.toMatchObject({ category: 'interrupted' });
 });
 
 it('reports outcome uncertainty when the provider fails after a dispatched write', async () => {
@@ -70,15 +145,32 @@ it('reports outcome uncertainty when the provider fails after a dispatched write
 
 function run(
   fetchMock: ReturnType<typeof vi.fn<typeof fetch>>,
-  onText: (text: string) => void = () => undefined
+  onText: (text: string) => void = () => undefined,
+  controller = new AbortController()
 ) {
   void fetchMock;
   return runOpenAiCompatibleToolLoop({
     allowedCapabilities: ['materials.read', 'materials.update'],
-    apiKey: 'secret', controller: new AbortController(), endpoint: 'https://models.example/chat',
+    apiKey: 'secret', controller, endpoint: 'https://models.example/chat',
     messages: [{ content: 'Prompt', role: 'user' }], model: 'model-a', onText,
     tools: [{ function: { name: 'read_material' }, type: 'function' }]
   });
+}
+
+function queuedFetch(responses: Response[]) {
+  return vi.fn<typeof fetch>().mockImplementation(async () => {
+    const response = responses.shift();
+    if (!response) throw new Error('missing_fixture_response');
+    return response;
+  });
+}
+
+function abortablePendingFetch() {
+  return vi.fn<typeof fetch>().mockImplementation((_url, init) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), {
+      name: 'AbortError'
+    })), { once: true });
+  }));
 }
 
 function toolCall(index: number, id: string, name: string, argumentsText: string) {

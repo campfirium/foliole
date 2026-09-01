@@ -30,11 +30,16 @@ it('assembles fragmented ordered function calls and recognizes tool-call termina
 
 it('assembles cumulative text and recognizes normal completion', async () => {
   const seen: string[] = [];
+  const activities: string[] = [];
   const frames = [chunk({ content: 'Hello' }), chunk({ content: ' world' }, 'stop'), 'data: [DONE]'];
-  const result = await readOpenAiCompatibleSse(stream(frames.join('\n\n') + '\n\n'), new AbortController(), (text) => seen.push(text));
+  const result = await readOpenAiCompatibleSse(
+    stream(frames.join('\n\n') + '\n\n'), new AbortController(),
+    (text) => seen.push(text), () => activities.push('event')
+  );
 
   expect(result).toEqual({ finishReason: 'stop', text: 'Hello world', toolCalls: [] });
   expect(seen).toEqual(['Hello', 'Hello world']);
+  expect(activities).toEqual(['event', 'event', 'event']);
 });
 
 it('rejects missing done markers and incomplete tool-call identities', async () => {

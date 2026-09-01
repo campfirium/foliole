@@ -137,6 +137,10 @@ function respondToProbe(response: import('node:http').ServerResponse, body: Loop
 function respondToTurn(response: import('node:http').ServerResponse, body: LoopbackRequest['body']) {
   const prompt = readLatestUserText(body.messages ?? []);
   const hasToolResults = body.messages?.some((message) => message.role === 'tool');
+  if (prompt.includes('Long loopback chain')) {
+    respondToLongToolChain(response, body);
+    return;
+  }
   if (prompt.includes('Loopback first') && !hasToolResults) {
     sendSse(response, [{ choices: [{ delta: { tool_calls: [
       toolCall(0, 'read-root', 'list_folder', '{"parent_id":null,"limit":20}'),
@@ -149,6 +153,28 @@ function respondToTurn(response: import('node:http').ServerResponse, body: Loopb
       : prompt.includes('After restart') ? 3
         : prompt.includes('Recovered after reconfigure') ? 4 : 5;
   sendSse(response, [{ choices: [{ delta: { content: `Loopback reply ${reply}` }, finish_reason: 'stop' }] }]);
+}
+
+function respondToLongToolChain(
+  response: import('node:http').ServerResponse,
+  body: LoopbackRequest['body']
+) {
+  const completedCalls = body.messages?.filter((message) => message.role === 'tool').length ?? 0;
+  if (completedCalls < 27) {
+    const round = Math.floor(completedCalls / 3);
+    sendSse(response, [{ choices: [{ delta: { tool_calls: Array.from({ length: 3 }, (_, index) =>
+      toolCall(index, `long-read-${round}-${index}`, 'list_folder', '{"parent_id":null,"limit":1}'))
+    }, finish_reason: 'tool_calls' }] }]);
+    return;
+  }
+  if (completedCalls === 27) {
+    sendSse(response, [{ choices: [{ delta: { tool_calls: [toolCall(
+      0, 'long-write', 'create_material',
+      '{"kind":"topic","parent_id":null,"title":"BYOK Long Tool Chain Topic"}'
+    )] }, finish_reason: 'tool_calls' }] }]);
+    return;
+  }
+  sendSse(response, [{ choices: [{ delta: { content: 'Long loopback reply' }, finish_reason: 'stop' }] }]);
 }
 
 function toolCall(index: number, id: string, name: string, argumentsValue: string) {

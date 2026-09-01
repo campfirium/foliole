@@ -1,7 +1,5 @@
 import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
 
-const IDLE_TIMEOUT_MS = 45_000;
-
 export interface OpenAiCompatibleToolCall {
   argumentsText: string;
   id: string;
@@ -24,7 +22,8 @@ interface PendingToolCall {
 export async function readOpenAiCompatibleSse(
   body: ReadableStream<Uint8Array>,
   controller: AbortController,
-  onText: (text: string) => void
+  onText: (text: string) => void,
+  onActivity: () => void = () => undefined
 ): Promise<OpenAiCompatibleSseResult> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -34,7 +33,7 @@ export async function readOpenAiCompatibleSse(
   let text = '';
   let doneMarker = false;
   while (true) {
-    const chunk = await readWithIdleTimeout(reader, controller);
+    const chunk = await readWithAbort(reader, controller);
     if (chunk.done) break;
     buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/gu, '\n');
     const frames = buffer.split('\n\n');
@@ -43,10 +42,12 @@ export async function readOpenAiCompatibleSse(
       const data = readFrameData(frame);
       if (!data) continue;
       if (data === '[DONE]') {
+        onActivity();
         doneMarker = true;
         continue;
       }
       const delta = parseSseDelta(data);
+      onActivity();
       if (delta.content) {
         text += delta.content;
         onText(text);
@@ -143,29 +144,21 @@ function mergeStableField(current: string, fragment: string) {
   throw categorized('protocol_error');
 }
 
-async function readWithIdleTimeout(
+async function readWithAbort(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   controller: AbortController
 ) {
   if (controller.signal.aborted) throw categorized('interrupted');
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let onAbort: (() => void) | undefined;
   try {
     return await Promise.race([
       reader.read(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(categorized('timeout'));
-          controller.abort();
-        }, IDLE_TIMEOUT_MS);
-      }),
       new Promise<never>((_, reject) => {
         onAbort = () => reject(categorized('interrupted'));
         controller.signal.addEventListener('abort', onAbort, { once: true });
       })
     ]);
   } finally {
-    if (timer) clearTimeout(timer);
     if (onAbort) controller.signal.removeEventListener('abort', onAbort);
   }
 }
