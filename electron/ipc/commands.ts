@@ -1,6 +1,7 @@
 import { BrowserWindow, type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 
 import { handleAssistantCommand } from './assistantCommands.js';
@@ -88,7 +89,12 @@ function dispatchRoutedCommand(
     return handleAssistantCommand(request.command, args, context?.sender);
   }
   if (route === 'storage') {
-    return handleStorageCommand(request.command, args, resolveTargetWindow(context));
+    const execute = () => handleStorageCommand(
+      request.command, args, resolveTargetWindow(context)
+    );
+    return shouldCoordinateStorageDispatch(request.command)
+      ? runWithDatabaseConnectionOwner(execute)
+      : execute();
   }
   if (route === 'windowAndUtility') {
     return handleWindowAndUtilityCommand(request, context);
@@ -97,4 +103,9 @@ function dispatchRoutedCommand(
     return handleDesktopUpdateCommand(request, context);
   }
   return handleReviewCommand(request);
+}
+
+function shouldCoordinateStorageDispatch(command: string) {
+  return command !== NATIVE_COMMANDS.completeSyncGroupJoin
+    && command !== NATIVE_COMMANDS.syncCompanionNow;
 }

@@ -19,7 +19,9 @@ it('creates and updates the same exact client-pair entity', async () => {
   const nodesById = {};
   const invoke = vi.fn(async (command, args) => {
     if (command === 'load_workspace_list_snapshot') {
-      return { nodeOrder: Object.keys(nodesById), nodesById };
+      return { nodeOrder: Object.keys(nodesById), nodesById: Object.fromEntries(
+        Object.entries(nodesById).map(([id, node]) => [id, { ...node, id, nodeId: undefined }])
+      ) };
     }
     if (command === 'create_topic') {
       nodesById[args.nodeId] = args;

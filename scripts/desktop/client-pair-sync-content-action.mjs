@@ -52,7 +52,7 @@ export async function updateClientPairTopic({ expected, now = () => new Date(), 
   if (!result?.updatedNodeIds?.includes(expected.nodeId)) {
     throw new Error('Client pair topic update was not persisted.');
   }
-  return exactNode({ ...current, content, updatedAt });
+  return exactNode({ ...current, content, nodeId: expected.nodeId, updatedAt });
 }
 
 export function exactNode(node) {
