@@ -1,0 +1,55 @@
+{
+  "clock": {
+    "publishedAt": "2026-08-31T00:00:00.000Z",
+    "beforeBoundary": "2026-08-31T23:59:59.999Z",
+    "exactBoundary": "2026-09-01T00:00:00.000Z"
+  },
+  "release": {
+    "githubRelease": {
+      "tagName": "v43.5.0",
+      "isDraft": false,
+      "isPrerelease": false
+    },
+    "npmMetadata": {
+      "latest": "43.5.0",
+      "publishedAt": "2026-08-31T00:00:00.000Z"
+    }
+  },
+  "securityAdvisory": {
+    "id": "GHSA-example-electron",
+    "source": "github-advisory-database",
+    "verified": true,
+    "packageName": "electron",
+    "fixedVersions": ["43.5.0"]
+  },
+  "dependencies": {
+    "electron": {
+      "beforeManifest": { "name": "foliole", "devDependencies": { "electron": "43.4.1" } },
+      "afterManifest": { "name": "foliole", "devDependencies": { "electron": "43.5.0" } },
+      "beforeLock": {
+        "name": "foliole",
+        "lockfileVersion": 3,
+        "packages": { "": { "name": "foliole", "devDependencies": { "electron": "43.4.1" } }, "node_modules/electron": { "version": "43.4.1" } }
+      },
+      "afterLock": {
+        "name": "foliole",
+        "lockfileVersion": 3,
+        "packages": { "": { "name": "foliole", "devDependencies": { "electron": "43.5.0" } }, "node_modules/electron": { "version": "43.5.0" } }
+      }
+    },
+    "other": {
+      "beforeManifest": { "name": "foliole", "dependencies": { "example-package": "1.0.0" } },
+      "afterManifest": { "name": "foliole", "dependencies": { "example-package": "1.1.0" } },
+      "beforeLock": {
+        "name": "foliole",
+        "lockfileVersion": 3,
+        "packages": { "": { "name": "foliole", "dependencies": { "example-package": "1.0.0" } }, "node_modules/example-package": { "version": "1.0.0" } }
+      },
+      "afterLock": {
+        "name": "foliole",
+        "lockfileVersion": 3,
+        "packages": { "": { "name": "foliole", "dependencies": { "example-package": "1.1.0" } }, "node_modules/example-package": { "version": "1.1.0" } }
+      }
+    }
+  }
+}
