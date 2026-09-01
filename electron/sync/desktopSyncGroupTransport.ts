@@ -2,7 +2,6 @@ import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
@@ -38,7 +37,6 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
   });
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
-  refreshCompanionMdnsAdvertisement();
   return { complete, cursor: nextCursor };
 }
 

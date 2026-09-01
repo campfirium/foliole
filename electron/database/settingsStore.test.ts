@@ -73,6 +73,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
   saveJsonSetting('remote-image-learned-sources-v1', { entries: {} }, '2026-03-06T00:03:00.000Z');
+  saveJsonSetting('sync_group_last_trigger_result', { status: 'completed' }, '2026-03-06T00:04:00.000Z');
 
   const connection = openDatabaseConnection();
   const settingRecord = connection.sqlite
@@ -93,6 +94,9 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   const learnedSourcesCount = connection.sqlite
     .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
     .get('remote-image-learned-sources-v1') as { count: number };
+  const syncTriggerResultCount = connection.sqlite
+    .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
+    .get('sync_group_last_trigger_result') as { count: number };
   const changeCount = connection.sqlite
     .prepare(
       `SELECT COUNT(*) AS count
@@ -118,6 +122,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   expect(changeCount.count).toBe(0);
   expect(localOnlyCount.count).toBe(0);
   expect(learnedSourcesCount.count).toBe(0);
+  expect(syncTriggerResultCount.count).toBe(0);
 });
 
 it('keeps Foliole Aide BYOK settings out of canonical sync projection', () => {

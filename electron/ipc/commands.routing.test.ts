@@ -18,7 +18,8 @@ import {
   resolveCommandSecurityCapability
 } from './commandSecurityCapabilities.js';
 
-const { handleAssistantCommand, handleImportCommand, handleReviewCommand, handleStorageCommand, handleWindowAndUtilityCommand } = vi.hoisted(
+const { handleAssistantCommand, handleImportCommand, handleReviewCommand, handleStorageCommand,
+  handleWindowAndUtilityCommand } = vi.hoisted(
   () => ({
     handleAssistantCommand: vi.fn(),
     handleImportCommand: vi.fn(),
@@ -36,6 +37,9 @@ vi.mock('electron', () => ({
   }
 }));
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+}));
 vi.mock('./assistantCommands.js', () => ({ handleAssistantCommand }));
 vi.mock('./importCommands.js', () => ({ handleImportCommand }));
 vi.mock('./reviewCommands.js', () => ({ handleReviewCommand }));
