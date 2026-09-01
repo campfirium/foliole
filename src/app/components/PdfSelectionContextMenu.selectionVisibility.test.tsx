@@ -12,7 +12,6 @@ it('keeps a PDF text selection visible while its annotation toolbar is open', ()
 
   act(() => {
     result.current.openSelectionToolbar({
-      capturedAt: Date.now(),
       locator,
       selectionText: 'Selected PDF text'
     }, { left: 100, top: 80 });

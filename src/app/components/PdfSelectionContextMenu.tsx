@@ -41,7 +41,10 @@ function usePdfSelectionMenuState() {
     setNoteOpen(false);
     setNoteDraft('');
   };
-  const openSelectionToolbar = (selection: PdfSelectionSnapshot, position: { left: number; top: number }) => {
+  const openSelectionToolbar = (
+    selection: Pick<PdfSelectionSnapshot, 'locator' | 'selectionText'>,
+    position: { left: number; top: number }
+  ) => {
     setSelectionMenuState({
       ...position,
       locator: selection.locator,
