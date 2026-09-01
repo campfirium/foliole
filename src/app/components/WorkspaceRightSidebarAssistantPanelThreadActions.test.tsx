@@ -55,6 +55,7 @@ it('removes a history thread from the local list', async () => {
 
   await waitFor(() =>
     expect(assistantRuntime.removeAssistantThreadFromHistory).toHaveBeenCalledWith({
+      provider: 'codex-app-server',
       providerThreadId: 'thread-1'
     })
   );

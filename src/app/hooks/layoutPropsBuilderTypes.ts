@@ -14,6 +14,7 @@ import type {
   WorkspaceLayoutNodeListProps,
   WorkspaceLayoutReadingPositionProps,
   WorkspaceLayoutReviewProps,
+  WorkspaceLayoutSettingsProps,
   WorkspaceLayoutTrashProps
 } from '../components/workspaceLayoutPropGroups';
 
@@ -114,7 +115,7 @@ export interface BuildLayoutPropsArgs {
   onCreateChildNode: WorkspaceLayoutNodeListProps['onCreateChildNode'];
   onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings: WorkspaceLayoutSettingsProps['onOpenSettings'];
   onCloseSettings: () => void;
   onCloseImportManagement: () => void;
   onEnterImmersiveEdit: () => void;

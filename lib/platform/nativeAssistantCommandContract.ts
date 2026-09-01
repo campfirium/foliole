@@ -12,9 +12,10 @@ import type {
 } from './nativeAssistantContract.js';
 import type { NativeAssistantImageContentResult } from './nativeAssistantImageContract.js';
 import type { NativeAssistantModelCatalog } from './nativeAssistantModelContract.js';
+import type { NativeAssistantModelSettingsCommandMap } from './nativeAssistantModelSettingsContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
-export type NativeAssistantCommandMap = NativeAssistantByokCommandMap & {
+export type NativeAssistantCommandMap = NativeAssistantByokCommandMap & NativeAssistantModelSettingsCommandMap & {
   [NATIVE_COMMANDS.assistantGetStatus]: { args: undefined; result: NativeAssistantStatusResult };
   [NATIVE_COMMANDS.assistantStartChatGptLogin]: { args: undefined; result: NativeAssistantLoginResult };
   [NATIVE_COMMANDS.assistantListModels]: { args: undefined; result: NativeAssistantModelCatalog };

@@ -82,6 +82,7 @@ it('groups workspace and control settings in product order', () => {
     'Appearance',
     'Typography',
     'Editor',
+    'Models',
     'Review',
     'Publish'
   ]);

@@ -18,12 +18,18 @@ import type {
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantProviderId } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageContentResult } from '../../../lib/platform/nativeAssistantImageContract';
+import type {
+  NativeAssistantModelInput,
+  NativeAssistantModelSettings,
+  NativeAssistantModelTestResult
+} from '../../../lib/platform/nativeAssistantModelSettingsContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 const ASSISTANT_BYOK_SETTINGS_EVENT = 'foliole-assistant-byok-settings-change';
+const ASSISTANT_MODEL_SETTINGS_EVENT = 'foliole-assistant-model-settings-change';
 
 export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult | null> {
   const invoke = getRuntimeInvoke();
@@ -116,6 +122,44 @@ export async function loadAssistantByokSettings(): Promise<NativeAssistantByokSe
   return invoke(NATIVE_COMMANDS.assistantLoadByokSettings);
 }
 
+export async function loadAssistantModelSettings(): Promise<NativeAssistantModelSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantLoadModelSettings);
+}
+
+export async function testAssistantModel(
+  input: NativeAssistantModelInput
+): Promise<NativeAssistantModelTestResult | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  const result = await invoke(NATIVE_COMMANDS.assistantTestModel, input);
+  publishModelSettings(result.settings);
+  return result;
+}
+
+export async function deleteAssistantModel(id: string): Promise<NativeAssistantModelSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return publishModelSettings(await invoke(NATIVE_COMMANDS.assistantDeleteModel, { id }));
+}
+
+export async function selectAssistantModel(id: string): Promise<NativeAssistantModelSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return publishModelSettings(await invoke(NATIVE_COMMANDS.assistantSelectModel, { id }));
+}
+
+export function subscribeAssistantModelSettings(
+  listener: (settings: NativeAssistantModelSettings) => void
+) {
+  const handler = (event: Event) => {
+    listener((event as CustomEvent<NativeAssistantModelSettings>).detail);
+  };
+  window.addEventListener(ASSISTANT_MODEL_SETTINGS_EVENT, handler);
+  return () => window.removeEventListener(ASSISTANT_MODEL_SETTINGS_EVENT, handler);
+}
+
 export async function saveAssistantByokSettings(
   input: NativeAssistantByokSettingsInput
 ): Promise<NativeAssistantByokSettings | null> {
@@ -150,5 +194,23 @@ export function subscribeAssistantByokSettings(
 
 function publishByokSettings(settings: NativeAssistantByokSettings) {
   window.dispatchEvent(new CustomEvent(ASSISTANT_BYOK_SETTINGS_EVENT, { detail: settings }));
+  return settings;
+}
+
+function publishModelSettings(settings: NativeAssistantModelSettings) {
+  window.dispatchEvent(new CustomEvent(ASSISTANT_MODEL_SETTINGS_EVENT, { detail: settings }));
+  const selected = settings.models.find((model) => model.id === settings.selected_model_id);
+  const visible = selected ?? settings.models[0];
+  publishByokSettings(visible ? {
+    endpoint: visible.endpoint,
+    has_api_key: visible.has_api_key,
+    model: visible.model,
+    selected_provider: selected ? 'openai-compatible' : 'codex-app-server',
+    state: visible.state
+  } : {
+    endpoint: '', has_api_key: false, model: '',
+    selected_provider: 'codex-app-server',
+    state: 'not_configured'
+  });
   return settings;
 }

@@ -21,6 +21,7 @@ import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
 import { SettingsGeneralSection } from './sections/SettingsGeneralSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
+import { SettingsModelsSection } from './sections/SettingsModelsSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
 import { SettingsPublishingSection } from './sections/SettingsPublishingSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
@@ -189,6 +190,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
           })}
         />
       );
+    case 'models':
+      return <SettingsModelsSection />;
     case 'web-lookup':
       return <SettingsWebLookupSection />;
     case 'publishing':

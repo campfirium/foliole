@@ -1,6 +1,6 @@
 import type { AgentControlCapability } from '../agentControl/agentControlTypes.js';
 
-export interface FolioleDynamicToolDefinition {
+export interface AideToolDefinition {
   capability: AgentControlCapability;
   description: string;
   inputSchema: Record<string, unknown>;
@@ -22,7 +22,7 @@ function schema(
   return { ...OBJECT, ...extra, properties, ...(required.length ? { required } : {}) };
 }
 
-export const FOLIOLE_DYNAMIC_TOOLS: Record<string, FolioleDynamicToolDefinition> = {
+export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
   read_material: tool('materials.read', 'Read one Foliole Topic, Folder, or Item by id.', 'materials/read',
     schema({ id: STRING }, ['id'])),
   search_materials: tool('materials.search', 'Search readable Foliole Topics and Folders.', 'materials/search',
@@ -73,6 +73,6 @@ function tool(
   description: string,
   path: string,
   inputSchema: Record<string, unknown>
-): FolioleDynamicToolDefinition {
+): AideToolDefinition {
   return { capability, description, inputSchema, path };
 }

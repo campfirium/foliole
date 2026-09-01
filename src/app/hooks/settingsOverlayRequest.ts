@@ -1,3 +1,5 @@
+import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+
 import type { useWorkspaceControllerState } from './appControllerState';
 
 type AppRuntime = ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -8,8 +10,9 @@ export function clearSettingsRequest(runtime: AppRuntime) {
 }
 
 export function createOpenSettingsHandler(runtime: AppRuntime) {
-  return () => {
-    clearSettingsRequest(runtime);
+  return (category?: SettingsCategoryId) => {
+    runtime.setRequestedSettingsDialog(null);
+    runtime.setRequestedSettingsCategory(category ?? null);
     runtime.setIsSettingsOpen(true);
   };
 }

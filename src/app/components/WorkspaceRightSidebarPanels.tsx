@@ -34,6 +34,7 @@ export interface WorkspaceRightSidebarPanelProps {
   nodesById: WorkspaceRightSidebarNodesById;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
   onRevealDocumentPosition?: (position: number) => void;
+  onOpenModelSettings?: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   outlineDocument?: WorkspaceRightSidebarOutlineDocument;

@@ -45,6 +45,9 @@ beforeEach(() => {
   state.failSave = false;
   state.secret = '';
   state.setting = null;
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    json: async () => ({ choices: [] }), ok: true, status: 200
+  }));
 });
 
 it('accepts HTTPS and loopback HTTP endpoints only', () => {
@@ -58,8 +61,8 @@ it('accepts HTTPS and loopback HTTP endpoints only', () => {
     .toThrow('invalid_byok_endpoint');
 });
 
-it('stores only public settings and never returns the API key', () => {
-  const result = saveFolioleAideByokSettings({
+it('stores only public settings and never returns the API key', async () => {
+  const result = await saveFolioleAideByokSettings({
     api_key: 'secret-key',
     endpoint: 'https://models.example/v1/chat/completions',
     model: 'model-a'
@@ -76,25 +79,32 @@ it('stores only public settings and never returns the API key', () => {
   expect(FOLIOLE_AIDE_BYOK_SETTINGS_KEY).toBe('foliole_aide_byok_settings');
 });
 
-it('requires a new key when the endpoint changes', () => {
-  saveFolioleAideByokSettings({
+it('requires a new key when the endpoint changes', async () => {
+  await saveFolioleAideByokSettings({
     api_key: 'old-key',
     endpoint: 'https://one.example/v1/chat/completions',
     model: 'model-a'
   });
 
-  expect(() => saveFolioleAideByokSettings({
+  await expect(saveFolioleAideByokSettings({
     endpoint: 'https://two.example/v1/chat/completions',
     model: 'model-b'
-  })).toThrow('byok_api_key_required_for_endpoint');
-  expect(loadFolioleAideByokSettings().endpoint)
-    .toBe('https://one.example/v1/chat/completions');
+  })).rejects.toThrow('auth_failed');
+  expect(loadFolioleAideByokSettings()).toMatchObject({
+    endpoint: 'https://two.example/v1/chat/completions',
+    model: 'model-b',
+    state: 'not_configured'
+  });
   expect(state.secret).toBe('old-key');
+  await expect(saveFolioleAideByokSettings({
+    endpoint: 'https://two.example/v1/chat/completions',
+    model: 'model-b'
+  })).rejects.toThrow('auth_failed');
 });
 
-it('persists only a configured new-conversation provider and resets it on disconnect', () => {
+it('persists only a configured new-conversation provider and resets it on disconnect', async () => {
   expect(() => setFolioleAideProvider('openai-compatible')).toThrow('byok_not_configured');
-  saveFolioleAideByokSettings({
+  await saveFolioleAideByokSettings({
     api_key: 'secret-key',
     endpoint: 'https://models.example/v1/chat/completions',
     model: 'model-a'
@@ -105,19 +115,19 @@ it('persists only a configured new-conversation provider and resets it on discon
   expect(disconnectFolioleAideByokSettings().selected_provider).toBe('codex-app-server');
 });
 
-it('restores the previous secret when the public settings write fails', () => {
-  saveFolioleAideByokSettings({
+it('restores the previous secret when the public settings write fails', async () => {
+  await saveFolioleAideByokSettings({
     api_key: 'old-key',
     endpoint: 'https://one.example/v1/chat/completions',
     model: 'model-a'
   });
   state.failSave = true;
 
-  expect(() => saveFolioleAideByokSettings({
+  await expect(saveFolioleAideByokSettings({
     api_key: 'new-key',
     endpoint: 'https://two.example/v1/chat/completions',
     model: 'model-b'
-  })).toThrow('settings_write_failed');
+  })).rejects.toThrow('settings_write_failed');
   expect(state.secret).toBe('old-key');
 });
 
@@ -135,8 +145,8 @@ it('reports unavailable secure storage without exposing the secret', () => {
   });
 });
 
-it('disconnects without leaving a public or secret configuration', () => {
-  saveFolioleAideByokSettings({
+it('disconnects without leaving a public or secret configuration', async () => {
+  await saveFolioleAideByokSettings({
     api_key: 'secret-key',
     endpoint: 'https://models.example/v1/chat/completions',
     model: 'model-a'
@@ -146,5 +156,5 @@ it('disconnects without leaving a public or secret configuration', () => {
     endpoint: '', has_api_key: false, model: '', selected_provider: 'codex-app-server', state: 'not_configured'
   });
   expect(state.secret).toBe('');
-  expect(state.setting).toBeNull();
+  expect(state.setting).toMatchObject({ models: [], selected_model_id: 'codex', version: 2 });
 });

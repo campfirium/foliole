@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -48,9 +48,7 @@ it('requires local history capability before showing the composer', async () => 
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-
-  expect(await screen.findByText('Foliole Aide cannot load local history right now.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });

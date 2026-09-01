@@ -106,6 +106,7 @@ function renderAssistantPanel(
     | 'assistantWorkspaceContext'
     | 'editorAdapterRef'
     | 'nodesById'
+    | 'onOpenModelSettings'
     | 'onSelectNode'
   >
 ) {
@@ -115,6 +116,7 @@ function renderAssistantPanel(
       workspaceContextOverride={props.assistantWorkspaceContext}
       editorAdapterRef={props.editorAdapterRef}
       nodesById={props.nodesById}
+      {...(props.onOpenModelSettings ? { onOpenModelSettings: props.onOpenModelSettings } : {})}
       onSelectNode={props.onSelectNode}
     />
   );

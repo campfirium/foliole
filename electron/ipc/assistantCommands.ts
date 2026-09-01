@@ -18,10 +18,17 @@ import {
   saveFolioleAideByokSettings,
   setFolioleAideProvider
 } from '../assistant/folioleAideByokSettings.js';
+import {
+  deleteFolioleAideModel,
+  loadFolioleAideModelSettings,
+  selectFolioleAideModel,
+  testAndSaveFolioleAideModel
+} from '../assistant/folioleAideModelSettings.js';
 import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import {
   disposeAssistantCommandAdapter,
@@ -46,15 +53,35 @@ export async function handleAssistantCommand(
   sender?: WebContents
 ) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
-  if (command === NATIVE_COMMANDS.assistantLoadByokSettings) return loadFolioleAideByokSettings();
+  if (command === NATIVE_COMMANDS.assistantLoadModelSettings) {
+    return runWithDatabaseConnectionOwner(loadFolioleAideModelSettings);
+  }
+  if (command === NATIVE_COMMANDS.assistantTestModel) {
+    return testAndSaveFolioleAideModel(readModelInput(args));
+  }
+  if (command === NATIVE_COMMANDS.assistantDeleteModel) {
+    return runWithDatabaseConnectionOwner(
+      () => deleteFolioleAideModel(readStringArg(args.id, 'invalid_assistant_model_id'))
+    );
+  }
+  if (command === NATIVE_COMMANDS.assistantSelectModel) {
+    return runWithDatabaseConnectionOwner(
+      () => selectFolioleAideModel(readStringArg(args.id, 'invalid_assistant_model_id'))
+    );
+  }
+  if (command === NATIVE_COMMANDS.assistantLoadByokSettings) {
+    return runWithDatabaseConnectionOwner(loadFolioleAideByokSettings);
+  }
   if (command === NATIVE_COMMANDS.assistantSaveByokSettings) {
     return saveFolioleAideByokSettings(readByokSettingsInput(args));
   }
   if (command === NATIVE_COMMANDS.assistantDisconnectByokSettings) {
-    return disconnectFolioleAideByokSettings();
+    return runWithDatabaseConnectionOwner(disconnectFolioleAideByokSettings);
   }
   if (command === NATIVE_COMMANDS.assistantSetProvider) {
-    return setFolioleAideProvider(readAssistantProvider(args.provider));
+    return runWithDatabaseConnectionOwner(
+      () => setFolioleAideProvider(readAssistantProvider(args.provider))
+    );
   }
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantListModels) return getAssistantAdapter().listModels();
@@ -74,6 +101,19 @@ function readByokSettingsInput(args: Record<string, unknown>) {
     model: args.model,
     ...(typeof args.api_key === 'string' ? { api_key: args.api_key } : {})
   };
+}
+
+function readModelInput(args: Record<string, unknown>) {
+  const input = readByokSettingsInput(args);
+  return {
+    ...input,
+    ...(args.id === undefined ? {} : { id: readStringArg(args.id, 'invalid_assistant_model_id') })
+  };
+}
+
+function readStringArg(value: unknown, error: string) {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(error);
+  return value.trim();
 }
 
 async function getAssistantStatus() {

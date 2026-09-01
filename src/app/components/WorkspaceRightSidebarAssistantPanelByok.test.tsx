@@ -69,14 +69,14 @@ it('keeps a newer configured result when the initial capability check finishes l
     endpoint: 'http://127.0.0.1:43121/v1/chat/completions', has_api_key: true,
     model: 'local-model', selected_provider: 'openai-compatible', state: 'configured'
   }));
-  expect(await screen.findByRole('combobox', { name: 'New conversation provider' }))
-    .toHaveValue('openai-compatible');
+  expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'New conversation provider' })).not.toBeInTheDocument();
 
   await act(async () => finishInitial?.({
     endpoint: '', has_api_key: false, model: '',
     selected_provider: 'codex-app-server', state: 'not_configured'
   }));
-  expect(screen.getByRole('option', { name: 'Your model · local-model' })).toBeEnabled();
+  expect(screen.getByLabelText('Foliole Aide message')).toBeInTheDocument();
 });
 
 it('uses configured BYOK without Codex login, tools, or model controls', async () => {
@@ -110,8 +110,8 @@ it('uses configured BYOK without Codex login, tools, or model controls', async (
     />
   );
 
-  expect(await screen.findByRole('combobox', { name: 'New conversation provider' }))
-    .toHaveValue('openai-compatible');
+  expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'New conversation provider' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Model and performance settings')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'Ask locally' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));

@@ -1,7 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarAssistantPanel } from './WorkspaceRightSidebarAssistantPanel';
@@ -35,26 +34,26 @@ beforeEach(() => {
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
-it('does not probe Codex or show the composer before the user connects', () => {
+it('checks the selected model and shows the composer when it is ready', async () => {
   renderPanel();
-
-  expect(screen.getByRole('heading', { name: 'Foliole Aide' })).toBeInTheDocument();
-  expect(screen.getByText(/Use Codex directly in Foliole/)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
-  expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
-  expect(assistantRuntime.loadAssistantStatus).not.toHaveBeenCalled();
-  expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
-  expect(assistantRuntime.sendAssistantMessage).not.toHaveBeenCalled();
-});
-
-it('checks Codex only after the user connects Foliole Aide', async () => {
-  renderPanel();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   await waitFor(() => expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(1));
   expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
-  expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith();
+  expect(screen.queryByLabelText('New conversation provider')).not.toBeInTheDocument();
+});
+
+it('opens model settings from the unconfigured entry', async () => {
+  assistantRuntime.loadAssistantStatus.mockResolvedValueOnce({
+    capabilities: [], failure: { category: 'not_configured' },
+    provider: 'codex-app-server', state: 'unavailable'
+  });
+  const onOpenModelSettings = vi.fn();
+  renderPanel(onOpenModelSettings);
+
+  expect(await screen.findByText('Aide')).toBeInTheDocument();
+  expect(screen.getByText('Use ChatGPT or other AI services directly in Foliole.')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Settings' }));
+  expect(onOpenModelSettings).toHaveBeenCalledTimes(1);
 });
 
 it('keeps the composer hidden when the Codex check is unavailable', async () => {
@@ -70,22 +69,22 @@ it('keeps the composer hidden when the Codex check is unavailable', async () => 
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
-  expect(screen.getByText('Foliole Aide is not available in this build.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText('Foliole Aide is not available in this build.')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
-it('shows Retry when the Codex check fails before returning a status', async () => {
+it('opens model settings when the selected model check fails', async () => {
   assistantRuntime.loadAssistantStatus.mockRejectedValueOnce(new Error('status failed'));
+  const onOpenModelSettings = vi.fn();
 
-  renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  renderPanel(onOpenModelSettings);
 
-  expect(await screen.findByRole('button', { name: 'Retry' })).toBeEnabled();
-  expect(screen.getByText('Foliole Aide is unavailable right now. Try again.')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Settings' }));
+  expect(onOpenModelSettings).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Aide is unavailable right now. Check Models settings.')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -99,10 +98,9 @@ it('requires the sendMessage capability before showing the composer', async () =
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
-  expect(screen.getByText('Foliole Aide cannot send messages right now.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText('Foliole Aide cannot send messages right now.')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -117,43 +115,31 @@ it('keeps the composer hidden when Foliole tools are not ready', async () => {
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
-  expect(screen.getByText('Check result: Codex is unavailable; Foliole tools failed.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText(/Check result:/)).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
-it('reloads local history after Retry recovers Foliole Aide', async () => {
-  assistantRuntime.loadAssistantStatus
-    .mockResolvedValueOnce({
-      agentControl: createAgentControl('stopped'),
-      capabilities: createCapabilities({ agentControl: false, sendMessage: false }),
-      failure: { category: 'agent_control_unavailable' },
-      provider: 'codex-app-server',
-      state: 'unavailable'
-    })
-    .mockResolvedValueOnce({
-      agentControl: createAgentControl('running'),
-      capabilities: createCapabilities({ agentControl: true, sendMessage: true }),
-      provider: 'codex-app-server',
-      state: 'ready'
-    });
-  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
-    createThread({ providerThreadId: 'thread-recovered', title: 'Recovered prompt' })
-  ]);
+it('opens model settings when Foliole tools are unavailable', async () => {
+  assistantRuntime.loadAssistantStatus.mockResolvedValueOnce({
+    agentControl: createAgentControl('stopped'),
+    capabilities: createCapabilities({ agentControl: false, sendMessage: false }),
+    failure: { category: 'agent_control_unavailable' },
+    provider: 'codex-app-server',
+    state: 'unavailable'
+  });
+  const onOpenModelSettings = vi.fn();
 
-  renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  renderPanel(onOpenModelSettings);
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
-  await waitFor(() => expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(2));
-  expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
-  expect(await screen.findByRole('button', { name: /recovered prompt/i })).toBeInTheDocument();
-  expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledTimes(1);
+  expect(onOpenModelSettings).toHaveBeenCalledTimes(1);
+  expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(1);
+  expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
 it('requires running Foliole tools even when Codex reports message sending ready', async () => {
@@ -165,14 +151,13 @@ it('requires running Foliole tools even when Codex reports message sending ready
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
-it('shows an auth-specific unavailable reason when Codex rejects the session', async () => {
+it('routes Codex sign-in back to model settings', async () => {
   assistantRuntime.loadAssistantStatus.mockResolvedValueOnce({
     agentControl: createAgentControl('running'),
     capabilities: [
@@ -187,17 +172,15 @@ it('shows an auth-specific unavailable reason when Codex rejects the session', a
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText("Sign in on OpenAI's website.")).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sign in with OpenAI' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText("Sign in on OpenAI's website.")).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sign in with OpenAI' })).not.toBeInTheDocument();
   expect(screen.queryByText(/Check result:/)).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 
-it('auto-checks Codex after reload when Foliole Aide stays enabled', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
-
+it('checks the selected model after reload', async () => {
   renderPanel();
 
   await waitFor(() => expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(1));
@@ -205,7 +188,6 @@ it('auto-checks Codex after reload when Foliole Aide stays enabled', async () =>
 });
 
 it('shows an unavailable location for history threads whose topic cannot be restored', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'missing-topic', type: 'node' } })
   ]);
@@ -224,11 +206,12 @@ it('shows an unavailable location for history threads whose topic cannot be rest
   expect(onSelectNode).not.toHaveBeenCalled();
 });
 
-function renderPanel() {
+function renderPanel(onOpenModelSettings = vi.fn()) {
   renderWithLocalization(
     <WorkspaceRightSidebarAssistantPanel
       activeNodeId="node-1"
       nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onOpenModelSettings={onOpenModelSettings}
       onSelectNode={vi.fn()}
     />
   );

@@ -96,7 +96,8 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.highlights': 'Highlights',
   'desktop.rightPanel.backlinks': 'Backlinks',
   'desktop.rightPanel.assistant': 'Foliole Aide',
-  'desktop.rightPanel.assistant.title': 'Foliole Aide',
+  'desktop.rightPanel.assistant.title': 'Aide',
+  'desktop.rightPanel.assistant.emptyDescription': 'Use ChatGPT or other AI services directly in Foliole.',
   'desktop.rightPanel.performance': 'Performance',
   'desktop.rightPanel.scheduling': 'Scheduling',
   'desktop.rightPanel.aria': '{label} panel',
@@ -106,7 +107,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
     "Sign in on OpenAI's website.",
   'desktop.rightPanel.assistant.checking': 'Connecting Foliole Aide...',
   'desktop.rightPanel.assistant.unavailable':
-    'Foliole Aide is unavailable right now. Try again.',
+    'Aide is unavailable right now. Check Models settings.',
   'desktop.rightPanel.assistant.unavailable.agentControl':
     'Foliole Aide is connected, but Foliole tools are not ready yet.',
   'desktop.rightPanel.assistant.unavailable.busy':
@@ -114,7 +115,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.unavailable.interrupted':
     'Foliole Aide connection ended before the reply. Retry to reconnect.',
   'desktop.rightPanel.assistant.unavailable.launchFailed':
-    'Foliole Aide could not start. Try again.',
+    'Aide could not start. Check Models settings.',
   'desktop.rightPanel.assistant.unavailable.missingSendMessage':
     'Foliole Aide cannot send messages right now.',
   'desktop.rightPanel.assistant.unavailable.missingThreadIndex':

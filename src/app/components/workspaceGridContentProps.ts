@@ -13,7 +13,7 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceGridContentProjectionSource = Pick<
   WorkspaceLayoutProps,
-  'document' | 'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash' | 'virtualView'
+  'document' | 'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'settings' | 'trash' | 'virtualView'
 >;
 
 export function selectWorkspaceGridColumnProps({
@@ -165,6 +165,7 @@ function selectWorkspaceRightSidebarProps({
     nodesById: props.nodeList.nodesById,
     onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
+    onOpenModelSettings: () => props.settings.onOpenSettings('models'),
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode,
     reviewActiveQueueNodeIds: props.review.reviewQueueNodeIds,

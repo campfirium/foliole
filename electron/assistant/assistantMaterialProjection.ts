@@ -1,6 +1,6 @@
 import type { NativeAssistantWorkspaceContext } from '../../lib/platform/nativeAssistantContract.js';
 
-export function formatCodexMaterialProjection(context: NativeAssistantWorkspaceContext) {
+export function formatAideMaterialProjection(context: NativeAssistantWorkspaceContext) {
   return [
     ...(context.activeKind ? [`- Active Foliole object type: ${context.activeKind}.`] : []),
     ...(context.activeSpecialKind ? [`- Active Foliole special entry: ${context.activeSpecialKind}.`] : []),

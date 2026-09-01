@@ -4,8 +4,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
-import { formatCodexMaterialProjection } from './assistantMaterialProjection.js';
-import { formatAgentControlContext } from './codexAppServerAgentControlPrompt.js';
+import { formatAideProductContext } from './aideProductContext.js';
 
 export type JsonRpcRecord = Record<string, unknown>;
 
@@ -111,18 +110,7 @@ export function composeAssistantTurnInput(
 ) {
   if (!context) return message;
   const lines = [
-    'Foliole Assistant context:',
-    `- Current product surface: Foliole Desktop workspace Assistant panel.`,
-    `- Current Foliole scope: ${context.scope}.`,
-    ...(context.schemaVersion ? [`- Context packet version: ${context.schemaVersion}.`] : []),
-    ...formatCodexMaterialProjection(context),
-    ...formatAgentControlContext(context),
-    '- Do not answer location questions from the process working directory unless the user explicitly asks about the development repository.',
-    '- When the user asks what you know, can see, or have as context, summarize the concrete fields in this context packet and the available Foliole actions instead of giving only the path.',
-    '- Foliole Aide history is a local global thread index; it is not split by the currently opened folder or topic.',
-    '- Removing a thread from Foliole Aide history only removes the local Foliole history entry; do not claim it deletes the Codex conversation unless a separate Codex-side deletion is explicitly available and requested.',
-    '- Answer from the Foliole facts included above and from explicit Foliole action results you obtain during this turn.',
-    '- When needed content, Folders, or search results were not included, use the available Foliole actions; otherwise say they were not provided.',
+    ...formatAideProductContext(context, 'codex-app-server'),
     '',
     'User message:',
     message

@@ -86,10 +86,17 @@ async function startLoopbackServer() {
   let mode: ResponseMode = 'success';
   const server = createServer(async (request, response) => {
     const body = await readJsonBody(request);
-    requests.push({ authorization: String(request.headers.authorization ?? ''), body });
+    if (body.stream !== false) {
+      requests.push({ authorization: String(request.headers.authorization ?? ''), body });
+    }
     if (mode === 'auth') {
       response.writeHead(401, { 'content-type': 'application/json' });
       response.end('{"error":"sensitive-loopback-detail"}');
+      return;
+    }
+    if (body.stream === false) {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end('{"choices":[{"message":{"content":"OK"}}]}');
       return;
     }
     const turn = requests.length;
@@ -126,7 +133,6 @@ async function readJsonBody(request: import('node:http').IncomingMessage) {
 
 export async function prepareAide(page: Page) {
   await page.evaluate(() => {
-    localStorage.setItem('foliole-aide-enabled', 'true');
     localStorage.setItem('foliole-app-language', 'en');
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
   });

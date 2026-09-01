@@ -163,7 +163,8 @@ it('returns to the capability gate when a send result reports an auth failure', 
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-  expect(await screen.findByText("Sign in on OpenAI's website.")).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText("Sign in on OpenAI's website.")).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 
@@ -213,7 +214,8 @@ it('returns to the capability gate when a turn event reports missing Foliole too
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 

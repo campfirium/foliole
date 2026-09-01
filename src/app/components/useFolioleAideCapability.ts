@@ -7,11 +7,6 @@ import type {
   NativeAssistantProviderId
 } from '../../../lib/platform/nativeAssistantContract';
 import * as assistantRuntime from '../../shared/platform/assistantRuntime';
-import {
-  getFolioleAideEnabled,
-  setFolioleAideEnabled,
-  subscribeFolioleAideEnabled
-} from '../../shared/platform/folioleAideSettings';
 
 import {
   createFailureDiagnostic,
@@ -37,14 +32,11 @@ export type {
 } from './folioleAideCapabilityModel';
 
 export function useFolioleAideCapability() {
-  const [enabled, setEnabled] = useState(() => getFolioleAideEnabled());
-  const [state, setState] = useState<FolioleAideCapabilityState>(() => readInitialState(enabled));
+  const [state, setState] = useState<FolioleAideCapabilityState>('needsCheck');
   const [unavailableReason, setUnavailableReason] = useState<FolioleAideCapabilityUnavailableReason | null>(null);
   const [diagnostic, setDiagnostic] = useState<FolioleAideCapabilityDiagnostic | null>(null);
   const [byokSettings, setByokSettings] = useState<NativeAssistantByokSettings | null>(null);
   const [codexReady, setCodexReady] = useState(false);
-
-  useEnabledAideSubscription(setEnabled, setDiagnostic, setState, setUnavailableReason);
 
   const statusCheck = useAssistantStatusCheck({
     setByokSettings,
@@ -62,15 +54,8 @@ export function useFolioleAideCapability() {
     setUnavailableReason
   });
 
-  useAutoCheckEnabledAide(enabled, state, statusCheck.check);
+  useAutoCheckAide(state, statusCheck.check);
 
-  const enable = useCallback(async () => {
-    setFolioleAideEnabled(true);
-    setEnabled(true);
-    await statusCheck.check();
-  }, [statusCheck]);
-
-  const signIn = useAssistantSignIn(statusCheck.check, setDiagnostic, setState, setUnavailableReason);
   const refreshByokSettings = useByokSettingsRefresh(setByokSettings);
 
   const markUnavailableFromFailure = useCapabilityFailure({
@@ -85,8 +70,7 @@ export function useFolioleAideCapability() {
 
   return useMemo(
     () => ({
-      enabled,
-      enable,
+      enable: statusCheck.check,
       diagnostic,
       byokSettings,
       codexReady,
@@ -95,25 +79,10 @@ export function useFolioleAideCapability() {
       unavailableReason,
       retry: statusCheck.check,
       selectProvider,
-      signIn,
       state
     }),
-    [byokSettings, codexReady, diagnostic, enable, enabled, markUnavailableFromFailure, selectProvider, signIn, state, statusCheck, unavailableReason]
+    [byokSettings, codexReady, diagnostic, markUnavailableFromFailure, selectProvider, state, statusCheck, unavailableReason]
   );
-}
-
-function useEnabledAideSubscription(
-  setEnabled: (enabled: boolean) => void,
-  setDiagnostic: (diagnostic: FolioleAideCapabilityDiagnostic | null) => void,
-  setState: (state: FolioleAideCapabilityState) => void,
-  setUnavailableReason: (reason: FolioleAideCapabilityUnavailableReason | null) => void
-) {
-  useEffect(() => subscribeFolioleAideEnabled((nextEnabled) => {
-    setEnabled(nextEnabled);
-    setUnavailableReason(null);
-    setDiagnostic(null);
-    setState(readInitialState(nextEnabled));
-  }), [setDiagnostic, setEnabled, setState, setUnavailableReason]);
 }
 
 function useAssistantStatusCheck(setters: {
@@ -130,13 +99,14 @@ function useAssistantStatusCheck(setters: {
     setters.setUnavailableReason(null);
     setters.setDiagnostic(null);
     try {
-      const byokRequest = 'loadAssistantByokSettings' in assistantRuntime
-        ? assistantRuntime.loadAssistantByokSettings()
-        : Promise.resolve(null);
-      const [status, byok] = await Promise.all([assistantRuntime.loadAssistantStatus(), byokRequest]);
+      const status = await assistantRuntime.loadAssistantStatus();
+      const byok = 'loadAssistantByokSettings' in assistantRuntime
+        ? await assistantRuntime.loadAssistantByokSettings()
+        : null;
       if (checkId !== latestCheck.current) return;
       const nextCodexReady = isAssistantReady(status);
-      const byokReady = byok?.state === 'configured';
+      const byokReady = byok?.selected_provider === 'openai-compatible'
+        && byok.state === 'configured';
       setters.setByokSettings(byok);
       setters.setCodexReady(nextCodexReady);
       setters.setDiagnostic(readDiagnostic(status));
@@ -164,24 +134,6 @@ function useAssistantStatusCheck(setters: {
     latestCheck.current += 1;
   }, []);
   return useMemo(() => ({ check, invalidate }), [check, invalidate]);
-}
-
-function useAssistantSignIn(
-  check: () => Promise<void>,
-  setDiagnostic: (value: FolioleAideCapabilityDiagnostic | null) => void,
-  setState: (value: FolioleAideCapabilityState) => void,
-  setUnavailableReason: (value: FolioleAideCapabilityUnavailableReason | null) => void
-) {
-  return useCallback(async () => {
-    setState('checking');
-    setUnavailableReason(null);
-    const result = await assistantRuntime.startAssistantChatGptLogin().catch(() => null);
-    if (result?.state === 'ready') return check();
-    const category = result?.failure?.category ?? 'auth_failed';
-    setDiagnostic(createFailureDiagnostic(category, null));
-    setUnavailableReason(category);
-    setState('unavailable');
-  }, [check, setDiagnostic, setState, setUnavailableReason]);
 }
 
 function useProviderSelection(
@@ -223,16 +175,11 @@ function useCapabilityFailure(input: {
   }, [byokConfigured, refreshByokSettings, setCodexReady, setDiagnostic, setState, setUnavailableReason]);
 }
 
-function readInitialState(enabled: boolean): FolioleAideCapabilityState {
-  return enabled ? 'needsCheck' : 'notEnabled';
-}
-
-function useAutoCheckEnabledAide(
-  enabled: boolean,
+function useAutoCheckAide(
   state: FolioleAideCapabilityState,
   check: () => Promise<void>
 ) {
   useEffect(() => {
-    if (enabled && state === 'needsCheck') void check();
-  }, [check, enabled, state]);
+    if (state === 'needsCheck') void check();
+  }, [check, state]);
 }

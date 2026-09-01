@@ -209,7 +209,7 @@ export interface WorkspaceLayoutFieldTypes {
   onExportImage: () => void;
   onStartStudyMode: () => boolean;
   onToggleReviewSession: () => boolean;
-  onOpenSettings: () => void;
+  onOpenSettings: (category?: import('../../features/settings/model/settingsPanelOptions').SettingsCategoryId) => void;
   onRunRailAction?: (commandId: string) => void;
   onCloseSettings: () => void;
   onRevealAnswer: () => void;
