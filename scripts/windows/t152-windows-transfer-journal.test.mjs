@@ -133,8 +133,10 @@ it('excludes macOS metadata from an extended-attribute risk fixture', () => {
     { recursive: true });
   fs.writeFileSync(path.join(bundleRoot, 'manifest.json'), '{}\n');
   fs.writeFileSync(path.join(bundleRoot, 'payload.mjs'), 'payload\n');
-  fs.writeFileSync(`${path.join(bundleRoot, 'payload.mjs')}/..namedfork/rsrc`,
-    'resource-fork-risk');
+  if (process.platform === 'darwin') {
+    fs.writeFileSync(`${path.join(bundleRoot, 'payload.mjs')}/..namedfork/rsrc`,
+      'resource-fork-risk');
+  }
   const archive = path.join(root, 'bundle.tar');
   const entries = createExactControlBundleArchive({ archive, directoryName,
     fileFacts: [{ name: 'payload.mjs' }], localParent });

@@ -185,6 +185,7 @@ it('passes the local Agent Control API descriptor to Codex app-server turns', as
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
     message: 'Prompt body',
     openingLocation: { type: 'workspace' },
+    provider: 'codex-app-server',
     workspaceContext: { schemaVersion: 1, scope: 'workspace' }
   });
 

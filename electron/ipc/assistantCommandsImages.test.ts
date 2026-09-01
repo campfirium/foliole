@@ -74,6 +74,7 @@ it('sends, stores, reads, and removes a validated image attachment', async () =>
   })).resolves.toEqual(expect.objectContaining({ contentBase64: CONTENT_BASE64, status: 'ready' }));
 
   await handleAssistantCommand(NATIVE_COMMANDS.assistantRemoveThreadFromHistory, {
+    provider: 'codex-app-server',
     providerThreadId: 'thread-image'
   });
   await expect(fs.access(imagePath)).rejects.toThrow();
@@ -92,6 +93,7 @@ it('hydrates saved images when a tool upgrade continues in a new thread', async 
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
     message: 'Continue now',
     openingLocation: { type: 'workspace' },
+    provider: 'codex-app-server',
     providerThreadId: 'thread-old'
   });
 
@@ -115,7 +117,8 @@ async function sendImage(threadId: string) {
       sizeBytes: 8
     }],
     message: 'Describe this image',
-    openingLocation: { type: 'workspace' }
+    openingLocation: { type: 'workspace' },
+    provider: 'codex-app-server'
   }).then((result) => {
     expect(result).toMatchObject({ message: { threadId } });
     return result;
@@ -124,6 +127,7 @@ async function sendImage(threadId: string) {
 
 async function readAttachmentId(threadId: string) {
   const messages = await handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadMessages, {
+    provider: 'codex-app-server',
     providerThreadId: threadId
   }) as Array<{ images?: Array<{ id: string }>; role: string }>;
   const attachmentId = messages.find((message) => message.role === 'user')?.images?.[0]?.id;

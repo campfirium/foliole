@@ -12,9 +12,23 @@ const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 it('registers one hyphenated fixed action through the existing PowerShell entry', () => {
+  const identityPath = path.resolve('test-fixtures', 'windows-dev-identity');
+  const identityFacts = {
+    isFile: () => true,
+    isSymbolicLink: () => false,
+    mode: 0o100600,
+    size: 8
+  };
+  const fsApi = {
+    lstatSync: () => identityFacts,
+    readFileSync: () => 'identity',
+    realpathSync: () => identityPath
+  };
   expect(parseWindowsDevControlArgs(['default-sync-journey'], {}))
     .toMatchObject({ action: 'default-sync-journey' });
-  expect(windowsDevSshSpec('dev@windows', 'default-sync-journey', {}, '/Users/dev').at(-1))
+  expect(windowsDevSshSpec('dev@windows', 'default-sync-journey', {
+    FOLIOLE_WINDOWS_DEV_SSH_KEY: identityPath
+  }, path.dirname(identityPath), fsApi).at(-1))
     .toBe('default-sync-journey');
 });
 

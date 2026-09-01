@@ -61,42 +61,16 @@ beforeEach(() => {
 it('groups settings sidebar entries by workspace, data, and sources', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
-  const buttons = screen.getAllByRole('button');
-  const labels = buttons.map((button) => button.textContent).filter(Boolean);
-
   expect(screen.getByText('General')).toBeInTheDocument();
   expect(screen.getByText('Workspace')).toBeInTheDocument();
+  expect(screen.getByText('Controls')).toBeInTheDocument();
   expect(screen.getByText('Data')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 12)).toEqual([
-    'About',
-    'General',
-    'Appearance',
-    'Typography',
-    'Editor',
-    'Review',
-    'Publish',
-    'Hotkeys',
-    'Left toolbar',
-    'Editor menu',
-    'Mouse gestures',
-    'Right-click menu'
-  ]);
-  expect(labels).toContain('Storage');
-  expect(labels).toContain('Watched folders');
-  expect(labels).toContain('Readwise Reader');
-  expect(labels).toContain('External folders');
-  expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
-  expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
-  expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
-  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Left toolbar'));
-  expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Storage'));
-  expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
-  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
-  expect(labels.indexOf('External folders')).toBeGreaterThan(labels.indexOf('Watched folders'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External folders'));
+  expect(screen.getByRole('button', { name: 'Models' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Storage' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'External folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
 

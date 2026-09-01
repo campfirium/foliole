@@ -73,6 +73,7 @@ it('passes sanitized Foliole workspace context to provider turns', async () => {
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
     message: 'Prompt body',
     openingLocation: { nodeId: 'active-node', type: 'node' },
+    provider: 'codex-app-server',
     workspaceContext: createWorkspaceContext()
   });
 
