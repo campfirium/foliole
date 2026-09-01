@@ -4,7 +4,7 @@ export function buildPrHandoffData(config, pr, checks) {
   const number = String(pr.number);
   const autoImplement = (config.autoImplementAuthors ?? []).includes(pr.author?.login);
   const checkSignal = autoImplement
-    ? { eventSuffix: `local:${pr.headRefOid ?? pr.updatedAt ?? number}`, label: 'Automatic local implementation' }
+    ? { eventSuffix: 'local', label: 'Automatic local implementation' }
     : getPrCheckSignal(config, checks);
   const noChecks = checkSignal.eventSuffix === 'no-checks';
   const handoffTitle = autoImplement

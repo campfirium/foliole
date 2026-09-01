@@ -50,7 +50,7 @@ describe('GitHub desktop handoff baselines', () => {
     expect(state.prs[8]).toContain('8:Windows checks');
   });
 
-  it('emits an eligible verified Dependabot PR once for each new head without waiting for failed checks', () => {
+  it('emits an eligible verified Dependabot PR once without reopening after a rebase', () => {
     github.prs = [{
       author: { login: 'app/dependabot' },
       baseRefName: 'dev',
@@ -67,13 +67,38 @@ describe('GitHub desktop handoff baselines', () => {
     const first = listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt');
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({
-      dedupeKey: 'pr:42:local:dependabot-head-sha',
+      dedupeKey: 'pr:42:local',
       handlingMode: 'automatic-local-implementation',
       title: 'PR #42 local Dependabot implementation'
     });
     state.submitted[first[0].dedupeKey] = { emittedAt: '2026-07-20T04:00:00Z' };
     state.prs['42'] = first[0].eventId;
+    github.prs[0].headRefOid = 'rebased-dependabot-head-sha';
     expect(listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt')).toEqual([]);
+  });
+
+  it('migrates a recorded head-scoped Dependabot event without reopening the PR', () => {
+    github.prs = [{
+      author: { login: 'app/dependabot' },
+      baseRefName: 'dev',
+      headRefName: 'dependabot/npm_and_yarn/electron-44.0.0',
+      headRefOid: 'new-head',
+      isDraft: false,
+      number: 46,
+      title: 'Bump electron'
+    }];
+    github.checks = [];
+    github.dependabotGate = { kind: 'electron-eligible' };
+    const state = {
+      actions: {},
+      issues: {},
+      prs: { 46: '46:local:old-head' },
+      prsInitialized: true,
+      submitted: {}
+    };
+
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toEqual([]);
+    expect(state.prs[46]).toBe('46:local');
   });
 
   it('does not checkpoint an immature Electron head and emits it after eligibility changes', () => {
@@ -99,7 +124,7 @@ describe('GitHub desktop handoff baselines', () => {
     github.dependabotGate = { kind: 'electron-eligible' };
     const events = listGithubMonitorEvents(configs(), state, false, [], () => 'prompt');
     expect(events).toHaveLength(1);
-    expect(events[0].dedupeKey).toBe('pr:43:local:same-head');
+    expect(events[0].dedupeKey).toBe('pr:43:local');
     expect(state.prs).toEqual({});
   });
 

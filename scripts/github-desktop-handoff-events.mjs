@@ -173,7 +173,13 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
     }
     const event = prEvent(config, pr, checks, renderTemplate);
     if (!event.failingChecks) continue;
-    if (!includeExisting && (state.prs[String(pr.number)] === event.eventId || (state.prs[String(pr.number)] === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) continue;
+    const recordedEventId = state.prs[String(pr.number)];
+    const legacyLocalEvent = event.handlingMode === 'automatic-local-implementation'
+      && recordedEventId?.startsWith(`${pr.number}:local:`);
+    if (!includeExisting && (recordedEventId === event.eventId || legacyLocalEvent || (recordedEventId === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) {
+      if (legacyLocalEvent) state.prs[String(pr.number)] = event.eventId;
+      continue;
+    }
     if (includeExisting || initialized) events.push(event);
     else state.prs[String(pr.number)] = event.eventId;
   }

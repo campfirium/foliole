@@ -65,8 +65,8 @@ describe('github desktop handoff monitor workspace binding', () => {
 
   it('checkpoints a PR only after event submission succeeds', () => {
     const event = {
-      dedupeKey: 'pr:42:local:head',
-      eventId: '42:local:head',
+      dedupeKey: 'pr:42:local',
+      eventId: '42:local',
       number: '42',
       source: 'foliole/github-pr',
       title: 'PR #42 local Dependabot implementation'
@@ -84,6 +84,6 @@ describe('github desktop handoff monitor workspace binding', () => {
       persist: () => undefined,
       submit: () => ({ ok: true })
     });
-    expect(state.prs).toEqual({ 42: '42:local:head' });
+    expect(state.prs).toEqual({ 42: '42:local' });
   });
 });

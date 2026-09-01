@@ -43,7 +43,7 @@ describe('GitHub desktop handoff title data', () => {
     expect(data.eventId).toBe('42:no-checks');
   });
 
-  it('creates one local implementation event per verified Dependabot head', () => {
+  it('creates one stable local implementation event per verified Dependabot PR', () => {
     const data = buildPrHandoffData(config, {
       ...pr,
       author: { login: 'app/dependabot' },
@@ -53,7 +53,14 @@ describe('GitHub desktop handoff title data', () => {
     expect(data.handoffTitle).toBe('PR #42 local Dependabot implementation');
     expect(data.failingChecks).toBe('Automatic local implementation');
     expect(data.handlingMode).toBe('automatic-local-implementation');
-    expect(data.eventId).toBe('42:local:dependabot-head-sha');
+    expect(data.eventId).toBe('42:local');
+
+    const rebased = buildPrHandoffData(config, {
+      ...pr,
+      author: { login: 'app/dependabot' },
+      headRefOid: 'rebased-dependabot-head-sha'
+    }, []);
+    expect(rebased.eventId).toBe(data.eventId);
   });
 
   it('renders the PR handoff title as the first prompt line', () => {
