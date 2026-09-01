@@ -69,6 +69,9 @@ describe('GitHub desktop handoff title data', () => {
     expect(rendered).toContain('standing authorization');
     expect(rendered).toContain('owns the implementation result');
     expect(rendered).toContain('at most 25 hours from that first observation');
+    expect(rendered).toContain('major releases wait 24 hours');
+    expect(rendered).toContain('minor and patch releases wait 4 hours');
+    expect(rendered).toContain('choose validation depth from the Foliole locked-version-to-target span');
     expect(rendered).toContain('do not reset the limit when another release appears');
     expect(rendered).toContain('already satisfied by an equivalent or newer eligible version');
     expect(rendered).toContain('real validation, push, or closure failure');

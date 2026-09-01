@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { classifyElectronVersionEligibility } from './electron-update-eligibility.mjs';
 import {
-  readNpmPackageMetadata,
+  readElectronVersionEligibilityInput,
   readVerifiedElectronSecurityAdvisory,
   runNpmJson
 } from './electron-update-metadata.mjs';
@@ -27,11 +27,14 @@ function lockedElectronVersion(repoRoot) {
   return manifestVersion;
 }
 
-export function evaluateLockedElectron({ now, npmMetadata, securityAdvisory, version }) {
+export function evaluateLockedElectron({ now, npmMetadata, officialStableVersions, securityAdvisory,
+  stableVersionsComplete, version }) {
   return classifyElectronVersionEligibility({
     now,
+    officialStableVersions,
     publishedAt: npmMetadata?.time?.[version],
     securityAdvisory,
+    stableVersionsComplete,
     version
   });
 }
@@ -46,12 +49,25 @@ export function checkLockedElectron(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const version = options.version ?? lockedElectronVersion(repoRoot);
   const now = options.now ?? new Date().toISOString();
-  const npmMetadata = options.npmMetadata ?? readNpmPackageMetadata('electron', options.runNpm ?? runNpmJson);
+  const runGhApi = options.runGh ?? runGh;
+  const input = options.eligibilityInput ?? readElectronVersionEligibilityInput({
+    now,
+    runGh: runGhApi,
+    runNpm: options.runNpm ?? runNpmJson,
+    version
+  });
   const advisoryId = options.advisoryId ?? null;
   const securityAdvisory = advisoryId
-    ? readVerifiedElectronSecurityAdvisory({ advisoryId, runGh: options.runGh ?? runGh, version })
+    ? readVerifiedElectronSecurityAdvisory({ advisoryId, runGh: runGhApi, version })
     : null;
-  const result = evaluateLockedElectron({ now, npmMetadata, securityAdvisory, version });
+  const result = classifyElectronVersionEligibility({
+    now,
+    officialStableVersions: input.officialStableVersions,
+    publishedAt: input.npmMetadata?.publishedAt,
+    securityAdvisory,
+    stableVersionsComplete: input.stableVersionsComplete,
+    version
+  });
   if (result.classification !== 'eligible') {
     throw new Error(`locked Electron ${version} is ${result.classification}: ${result.reason}`);
   }

@@ -1,8 +1,8 @@
 {
   "clock": {
     "publishedAt": "2026-08-31T00:00:00.000Z",
-    "beforeBoundary": "2026-08-31T23:59:59.999Z",
-    "exactBoundary": "2026-09-01T00:00:00.000Z"
+    "beforeBoundary": "2026-08-31T03:59:59.999Z",
+    "exactBoundary": "2026-08-31T04:00:00.000Z"
   },
   "release": {
     "githubRelease": {
@@ -13,7 +13,9 @@
     "npmMetadata": {
       "latest": "43.5.0",
       "publishedAt": "2026-08-31T00:00:00.000Z"
-    }
+    },
+    "officialStableVersions": ["43.4.1", "43.5.0"],
+    "stableVersionsComplete": true
   },
   "securityAdvisory": {
     "id": "GHSA-example-electron",

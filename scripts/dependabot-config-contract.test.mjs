@@ -9,7 +9,7 @@ const config = parse(fs.readFileSync('.github/dependabot.yml', 'utf8'));
 const updateFor = ecosystem => config.updates.find(update => update['package-ecosystem'] === ecosystem);
 
 describe('Dependabot configuration contract', () => {
-  it('uses the one-day cooldown only for the Electron version updater on dev', () => {
+  it('lets the Electron updater signal without owning the 4/24 hour eligibility gate', () => {
     const npm = updateFor('npm');
 
     expect(npm['target-branch']).toBe('dev');
@@ -19,7 +19,7 @@ describe('Dependabot configuration contract', () => {
       timezone: 'Asia/Shanghai'
     });
     expect(npm['open-pull-requests-limit']).toBe(1);
-    expect(npm.cooldown).toEqual({ 'default-days': 1 });
+    expect(npm.cooldown).toBeUndefined();
     expect(npm.allow).toEqual([{ 'dependency-name': 'electron' }]);
     expect(npm.ignore).toBeUndefined();
     expect(npm.groups).toBeUndefined();

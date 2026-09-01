@@ -38,6 +38,16 @@ function githubRunner(kind = 'electron', release = {}) {
     if (endpoint === 'repos/electron/electron/releases/latest') {
       return { draft: false, prerelease: false, tag_name: 'v43.5.0', ...release };
     }
+    if (endpoint.includes('/git/matching-refs/tags/v43.')) {
+      return [[
+        { ref: 'refs/tags/v43.4.1' },
+        { ref: 'refs/tags/v43.5.0' },
+        { ref: 'refs/tags/v43.5.0-beta.1' }
+      ]];
+    }
+    if (endpoint === 'repos/electron/electron/releases/tags/v43.4.1') {
+      return { draft: false, prerelease: false, tag_name: 'v43.4.1' };
+    }
     throw new Error(`unexpected gh call: ${args.join(' ')}`);
   });
 }
