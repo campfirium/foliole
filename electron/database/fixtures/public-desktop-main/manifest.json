@@ -1,0 +1,150 @@
+{
+  "manifestVersion": 1,
+  "ledger": "lib/core/database/publicDesktopDatabaseLedger.json",
+  "fixtures": [
+    {
+      "schema": 46,
+      "sourceRelease": "v0.6.1",
+      "sourceCommit": "d894b50bec4b04606e1202922c8e660af50d5e38",
+      "sourceLibraryFilesSha256": "2594262115be313348d7d3b32b4710bda0df4ddb363654c787c39ee0bd441762",
+      "sourceLibraryFileCount": 244,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 62,
+        "sha256": "42ead3a9d04b600000dab727ab02559dbb30ff1f3e5e0fe8e0d82527105ab906"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-46/foliole.db",
+      "databaseSha256": "a206d34ea22553e7ed3d524ff77dfb96fa0739f13d6305a51336706447a4ae8a"
+    },
+    {
+      "schema": 48,
+      "sourceRelease": "v0.6.3",
+      "sourceCommit": "b03126af8679dc5d30935634dc251447a9c78118",
+      "sourceLibraryFilesSha256": "e4e9272fd5d8422fcb710df7a815fcc2bfb31295c493fc325d1ca49486be5268",
+      "sourceLibraryFileCount": 248,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 64,
+        "sha256": "6faad4f2000270dcf78b6703e3d66fa30b20f1c4f1eb5529f4e8787dcbc2af3c"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-48/foliole.db",
+      "databaseSha256": "7849c57e5e030cbf8a1b77356ec2d346764510a3ed75b6250e92380c00530098"
+    },
+    {
+      "schema": 61,
+      "sourceRelease": "v0.7.0",
+      "sourceCommit": "dc28566af2815f02a3a29b4038775ae65b474bba",
+      "sourceLibraryFilesSha256": "46dbcc95c723ff95c4ac81c627a6f69bd9e209917400903a388d48d6a023acca",
+      "sourceLibraryFileCount": 323,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 70,
+        "sha256": "b4f1d175ca8137c5f2a096369c1aacc79fa3b3263b93a85ece68c09e18f78d1e"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-61/foliole.db",
+      "databaseSha256": "1b524e8a4761a00a5fb2e38762a4bbd90d746628d14719a1c546e1c99a52e768"
+    },
+    {
+      "schema": 62,
+      "sourceRelease": "v0.7.1",
+      "sourceCommit": "e124a9cf2d7c8f4abe57f472954821b54c35fd2e",
+      "sourceLibraryFilesSha256": "8c4dd3cb933de7fc6f0481605a3b25e1071a955cb9453aca0001669c800986ab",
+      "sourceLibraryFileCount": 336,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 74,
+        "sha256": "af5a255e9211784227b7251e366b09427472d614e14dd03041f2a32d317443fa"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-62/foliole.db",
+      "databaseSha256": "33271a67e55e6c79007e851a84de6cafc8c08742f72a78c56797cd1a6ab0ef0c"
+    },
+    {
+      "schema": 65,
+      "sourceRelease": "v0.7.6",
+      "sourceCommit": "ec59a7c2644264de08c19dd1c947ae4ba4536160",
+      "sourceLibraryFilesSha256": "3ce2c9eedb8bbfe1b8c1e5140f8124d5992a78ebe1590a973b5d7f2d61bc2d0a",
+      "sourceLibraryFileCount": 359,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 86,
+        "sha256": "155410d0c6d7cc71ba455559442e29fd50d5b772b4ad1ee4872dfeb28dd0d77d"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-65/foliole.db",
+      "databaseSha256": "d3a481fd2c2df25ff6e61ea5741e3e695aebbdd0895e170a9a6c6c5417f1869e"
+    },
+    {
+      "schema": 66,
+      "sourceRelease": "v0.7.8",
+      "sourceCommit": "b6693e180a0b56466d971fe6605d1719d3dba1db",
+      "sourceLibraryFilesSha256": "3a8e95cae95494b9cfaf6873f072727537d2f62c1c4255befedf12409a02834e",
+      "sourceLibraryFileCount": 369,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 87,
+        "sha256": "7cc5090e53ea199a9fe3482125441af44c9ab551dc37a39aa6c08c701595fc0c"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-66/foliole.db",
+      "databaseSha256": "c77ac2faac4a8c301264b927cd7284345202848307ab3ec862461db47b068026"
+    },
+    {
+      "schema": 77,
+      "sourceRelease": "v0.7.9",
+      "sourceCommit": "45965c0938ebf2c7d7b812282fd0728cb398aaff",
+      "sourceLibraryFilesSha256": "7537273ae20d5df67464f8f7d97eab8bc28246d1dca29bc4033eb8fde6933b56",
+      "sourceLibraryFileCount": 416,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 92,
+        "sha256": "c5bdffad4716cc74bd178cd2644a7ad216cb82791b5c11f54787ff60da97c4b2"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-77/foliole.db",
+      "databaseSha256": "76200053458ea0c86e835dc160ed37cb3a8eba8455b40349fe57aaa85d6d5be3"
+    },
+    {
+      "schema": 78,
+      "sourceRelease": "v0.7.10",
+      "sourceCommit": "2508703dc94444e88c0672d84c56018632f7ba33",
+      "sourceLibraryFilesSha256": "86dea8e0e30810290601c10e8a6ad1e6d8b7d63b0adb1eb9f30a8b9e6ff716ac",
+      "sourceLibraryFileCount": 428,
+      "creationPath": "tagged initializeDatabaseSchema fresh path",
+      "dataOrigin": "deterministic synthetic business sentinels; no user data",
+      "sqliteIntegrity": "ok",
+      "foreignKeyViolations": 0,
+      "structure": {
+        "objectCount": 91,
+        "sha256": "4c1e2fd3190c2ab35a0374fc236fae500e6eab17a636ef977cac2fe6834f3e97"
+      },
+      "businessSentinelsSha256": "3590e37f4a666036bc35df8e63979d4d8d4a11dc5bdd910f3c2924fd1757c533",
+      "file": "schema-78/foliole.db",
+      "databaseSha256": "26973a8acf5ae9527ba86161619393d11b1e0d3dcd4840b9c4ea6637fd72da17"
+    }
+  ]
+}
