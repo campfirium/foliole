@@ -24,10 +24,16 @@ export function useByokSettingsSubscription(
     return assistantRuntime.subscribeAssistantByokSettings((settings) => {
       input.invalidateStatusCheck();
       input.setByokSettings(settings);
-      if (settings.state !== 'configured') return;
-      input.setDiagnostic(null);
-      input.setUnavailableReason(null);
-      input.setState('ready');
+      if (settings.selected_provider === 'openai-compatible' && settings.state !== 'configured') {
+        input.setUnavailableReason('not_configured');
+        input.setState('unavailable');
+        return;
+      }
+      if (settings.selected_provider === 'openai-compatible') {
+        input.setDiagnostic(null);
+        input.setUnavailableReason(null);
+        input.setState('ready');
+      }
     });
   }, [input]);
 }

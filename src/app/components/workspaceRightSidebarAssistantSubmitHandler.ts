@@ -30,6 +30,7 @@ type AssistantSubmitPanelArgs = {
   aideReady: boolean;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
+  outcomeUncertainText: string;
   nodesById: Record<string, Node>;
   onCapabilityFailure: (provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => void;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
@@ -120,8 +121,13 @@ function applySendResult(result: SendResultArgs) {
   const failureCategory = result.result?.failure?.category;
   if (failureCategory === 'protocol_error') void result.refreshModelCatalog();
   if (failureCategory) result.onCapabilityFailure(result.result?.provider ?? result.provider, failureCategory);
-  result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
-  result.setMessageText(result.prompt);
+  const uncertain = failureCategory === 'tool_result_uncertain';
+  result.dispatchCache(createFailedMessageAction(
+    result.threadKey,
+    result.pendingId,
+    uncertain ? result.outcomeUncertainText : result.failedText
+  ));
+  if (!uncertain) result.setMessageText(result.prompt);
 }
 
 function markContinuationPrompt(result: SendResultArgs, threadId: string) {

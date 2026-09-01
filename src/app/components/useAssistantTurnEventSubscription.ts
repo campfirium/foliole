@@ -24,6 +24,7 @@ export function useAssistantTurnEventSubscription(args: {
   activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
+  outcomeUncertainText: string;
   onCapabilityFailure: (
     provider: NativeAssistantTurnEvent['provider'],
     category: NativeAssistantFailureCategory
@@ -40,6 +41,7 @@ export function useAssistantTurnEventSubscription(args: {
           dispatchCache: args.dispatchCache,
           event,
           failedText: args.failedText,
+          outcomeUncertainText: args.outcomeUncertainText,
           onCapabilityFailure: args.onCapabilityFailure,
           onProviderThreadStarted: args.onProviderThreadStarted,
           setMessageText: args.setMessageText,
@@ -50,6 +52,7 @@ export function useAssistantTurnEventSubscription(args: {
       args.activeTurnRef,
       args.dispatchCache,
       args.failedText,
+      args.outcomeUncertainText,
       args.onCapabilityFailure,
       args.onProviderThreadStarted,
       args.setMessageText,
@@ -63,6 +66,7 @@ export function applyAssistantTurnEvent(args: {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   event: NativeAssistantTurnEvent;
   failedText: string;
+  outcomeUncertainText: string;
   onCapabilityFailure: (
     provider: NativeAssistantTurnEvent['provider'],
     category: NativeAssistantFailureCategory
@@ -86,17 +90,18 @@ export function applyAssistantTurnEvent(args: {
   }
   if (args.event.kind === 'failed') {
     const partialText = args.event.text ?? activeTurn.responseText;
+    const uncertain = args.event.failure?.category === 'tool_result_uncertain';
     if (args.event.failure?.category) {
       args.onCapabilityFailure(args.event.provider, args.event.failure.category);
     }
     args.dispatchCache(createFailedMessageAction(
       activeTurn.threadKey,
       activeTurn.clientTurnId,
-      args.failedText,
+      uncertain ? args.outcomeUncertainText : args.failedText,
       partialText
     ));
     args.activeTurnRef.current = null;
-    if (!partialText.trim()) args.setMessageText(activeTurn.prompt);
+    if (!partialText.trim() && !uncertain) args.setMessageText(activeTurn.prompt);
     args.setSending(false);
   }
 }

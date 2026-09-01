@@ -66,7 +66,9 @@ async function sendByokTurn(input: Parameters<typeof sendAssistantTurn>[0]) {
       ...(input.continuation.providerThreadId
         ? { providerThreadId: input.continuation.providerThreadId }
         : {}),
-      ...(input.workspaceContext ? { workspaceContext: input.workspaceContext } : {})
+      workspaceContext: input.workspaceContext
+        ? { ...input.workspaceContext, agentControl: input.agentControl }
+        : { agentControl: input.agentControl, schemaVersion: 1, scope: 'workspace' }
     });
   } finally {
     input.sender?.removeListener('destroyed', abort);

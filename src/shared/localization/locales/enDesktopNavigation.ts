@@ -151,6 +151,8 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.pending': 'Thinking',
   'desktop.rightPanel.assistant.failed':
     'Foliole Aide could not reply. Check the message and send again.',
+  'desktop.rightPanel.assistant.outcomeUncertain':
+    'Foliole may have changed, but Aide could not finish the reply. Check the result before trying again.',
   'desktop.rightPanel.assistant.sessionOnly': 'Messages from this app session will appear here.',
   'desktop.rightPanel.assistant.selectedThread': 'Selected thread. Saved local messages appear here; if they are unavailable, Foliole Aide shows the local preview.',
   'desktop.rightPanel.assistant.threadMessagesLoadFailed':

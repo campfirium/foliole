@@ -28,7 +28,7 @@ export interface SettingsModelDraft {
   id: string;
   model: string;
   persisted: boolean;
-  result: 'ready' | NativeAssistantFailureCategory | null;
+  result: 'not_tested' | 'ready' | NativeAssistantFailureCategory | null;
   selectable: boolean;
   testing: boolean;
 }
@@ -128,7 +128,9 @@ async function testDraft(state: ModelState, draft: SettingsModelDraft) {
     const saved = result.settings.models.find((model) => model.id === draft.id)
       ?? result.settings.models.at(-1);
     const testResult = result.state === 'ready' ? 'ready' : result.failure.category;
-    if (saved) replaceSavedDraft(state.setDrafts, draft.id, saved, testResult);
+    if (saved && (result.state === 'ready' || !draft.persisted)) {
+      replaceSavedDraft(state.setDrafts, draft.id, saved, testResult);
+    }
     else updateDraft(state.setDrafts, draft.id, { result: testResult });
   } catch {
     updateDraft(state.setDrafts, draft.id, { result: 'internal_error' });
@@ -189,7 +191,8 @@ function replaceSavedDraft(
 function toDraft(model: NativeAssistantCustomModel): SettingsModelDraft {
   return {
     apiKey: '', endpoint: model.endpoint, hasApiKey: model.has_api_key, id: model.id,
-    model: model.model, persisted: true, result: null,
+    model: model.model, persisted: true,
+    result: model.state === 'configured' ? null : 'not_tested',
     selectable: model.state === 'configured', testing: false
   };
 }

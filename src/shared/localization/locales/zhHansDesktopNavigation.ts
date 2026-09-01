@@ -138,6 +138,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.rightPanel.assistant.noPreview': '暂无预览',
   'desktop.rightPanel.assistant.pending': '正在思考',
   'desktop.rightPanel.assistant.failed': 'Foliole Aide 未能回复。请检查消息后重新发送。',
+  'desktop.rightPanel.assistant.outcomeUncertain': 'Foliole 可能已经发生变化，但 Aide 未能完成回复。请先检查结果，再决定是否重试。',
   'desktop.rightPanel.assistant.sessionOnly': '本次应用会话中的消息会显示在这里。',
   'desktop.rightPanel.assistant.selectedThread': '已选择线程。本地保存的消息会显示在这里；如果暂时不可用，Foliole Aide 会显示本地预览。',
   'desktop.rightPanel.assistant.threadMessagesLoadFailed': 'Foliole Aide 未能加载本地保存的消息，正在显示本地预览。',

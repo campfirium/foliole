@@ -29,6 +29,7 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
     byokModel: capability.byokSettings?.model ?? '',
     codexReady: capability.codexReady,
     failedText: t('desktop.rightPanel.assistant.failed'),
+    outcomeUncertainText: t('desktop.rightPanel.assistant.outcomeUncertain'),
     onCapabilityFailure: capability.markUnavailableFromFailure,
     onSelectProvider: capability.selectProvider,
     selectedProvider: capability.byokSettings?.selected_provider ?? 'codex-app-server',

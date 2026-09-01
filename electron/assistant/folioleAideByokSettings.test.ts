@@ -7,6 +7,11 @@ const state = vi.hoisted(() => ({
   secret: '',
   setting: null as unknown
 }));
+const toolProbe = vi.hoisted(() => vi.fn());
+
+vi.mock('./openAiCompatibleModelToolProbe.js', () => ({
+  probeOpenAiCompatibleModelTools: toolProbe
+}));
 
 vi.mock('../database/settingsStore.js', () => ({
   loadJsonSetting: () => state.setting,
@@ -45,9 +50,8 @@ beforeEach(() => {
   state.failSave = false;
   state.secret = '';
   state.setting = null;
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: async () => ({ choices: [] }), ok: true, status: 200
-  }));
+  toolProbe.mockReset();
+  toolProbe.mockResolvedValue(null);
 });
 
 it('accepts HTTPS and loopback HTTP endpoints only', () => {
@@ -91,9 +95,9 @@ it('requires a new key when the endpoint changes', async () => {
     model: 'model-b'
   })).rejects.toThrow('auth_failed');
   expect(loadFolioleAideByokSettings()).toMatchObject({
-    endpoint: 'https://two.example/v1/chat/completions',
-    model: 'model-b',
-    state: 'not_configured'
+    endpoint: 'https://one.example/v1/chat/completions',
+    model: 'model-a',
+    state: 'configured'
   });
   expect(state.secret).toBe('old-key');
   await expect(saveFolioleAideByokSettings({
@@ -133,9 +137,12 @@ it('restores the previous secret when the public settings write fails', async ()
 
 it('reports unavailable secure storage without exposing the secret', () => {
   state.setting = {
-    endpoint: 'https://models.example/v1/chat/completions',
-    model: 'model-a',
-    updated_at: '2026-08-31T00:00:00.000Z'
+    models: [{
+      endpoint: 'https://models.example/v1/chat/completions', id: 'model-a', model: 'model-a',
+      requires_new_key: false, secret_file: 'secret.bin', tool_contract_version: 1,
+      updated_at: '2026-08-31T00:00:00.000Z', verified: true
+    }],
+    selected_model_id: 'model-a', updated_at: '2026-08-31T00:00:00.000Z', version: 2
   };
   state.secret = 'unavailable';
 

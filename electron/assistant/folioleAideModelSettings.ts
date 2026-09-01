@@ -7,7 +7,10 @@ import type {
   NativeAssistantModelSettings,
   NativeAssistantModelTestResult
 } from '../../lib/platform/nativeAssistantModelSettingsContract.js';
-import { NATIVE_ASSISTANT_CODEX_MODEL_ID } from '../../lib/platform/nativeAssistantModelSettingsContract.js';
+import {
+  CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION,
+  NATIVE_ASSISTANT_CODEX_MODEL_ID
+} from '../../lib/platform/nativeAssistantModelSettingsContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import {
   deletePublishDeviceSecret as deleteDeviceSecret,
@@ -45,17 +48,26 @@ export async function testAndSaveFolioleAideModel(
   const suppliedKey = input.api_key?.trim() ?? '';
   const candidate = normalizeModelInput(input, previous, suppliedKey);
   if (candidate.requires_new_key) {
-    return failureResult(saveCandidate(stored, candidate), 'auth_failed');
+    return failureResult(isQualified(previous) ? stored : saveCandidate(stored, candidate), 'auth_failed');
   }
   const apiKey = suppliedKey || readStoredKey(previous);
-  if (!apiKey) return failureResult(saveCandidate(stored, candidate), 'auth_failed');
+  if (!apiKey) {
+    return failureResult(isQualified(previous) ? stored : saveCandidate(stored, candidate), 'auth_failed');
+  }
   const failure = await testOpenAiCompatibleModel({
     apiKey,
     endpoint: candidate.endpoint,
     model: candidate.model
   });
-  const saved = saveCandidate(stored, { ...candidate, verified: !failure }, apiKey);
-  if (failure) return failureResult(saved, failure);
+  if (failure) {
+    const saved = isQualified(previous) ? stored : saveCandidate(stored, candidate, apiKey);
+    return failureResult(saved, failure);
+  }
+  const saved = saveCandidate(stored, {
+    ...candidate,
+    tool_contract_version: CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION,
+    verified: true
+  }, apiKey);
   return { settings: publicSettings(saved), state: 'ready' };
 }
 
@@ -107,9 +119,7 @@ function saveCandidate(stored: StoredModelSettings, candidate: StoredModel, apiK
       models: previous
         ? stored.models.map((model) => model.id === candidate.id ? candidate : model)
         : [...stored.models, candidate],
-      selected_model_id: stored.selected_model_id === candidate.id && !candidate.verified
-        ? NATIVE_ASSISTANT_CODEX_MODEL_ID
-        : stored.selected_model_id
+      selected_model_id: stored.selected_model_id
     });
   } catch (error) {
     if (apiKey) restoreSecret(candidate.secret_file, previousKey);
@@ -158,7 +168,10 @@ function publicSettings(stored: StoredModelSettings): NativeAssistantModelSettin
 
 function publicModel(stored: StoredModel): NativeAssistantCustomModel {
   const hasApiKey = hasDeviceSecret(stored.secret_file);
-  if (!stored.verified) return { ...publicFields(stored), has_api_key: hasApiKey, state: 'not_configured' };
+  if (!stored.verified
+    || stored.tool_contract_version !== CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION) {
+    return { ...publicFields(stored), has_api_key: hasApiKey, state: 'not_configured' };
+  }
   if (!hasApiKey) return { ...publicFields(stored), has_api_key: false, state: 'secure_storage_unavailable' };
   try {
     readDeviceSecret(stored.secret_file, SECRET_LABEL);
@@ -169,7 +182,17 @@ function publicModel(stored: StoredModel): NativeAssistantCustomModel {
 }
 
 function publicFields(stored: StoredModel) {
-  return { endpoint: stored.endpoint, id: stored.id, model: stored.model };
+  return {
+    endpoint: stored.endpoint,
+    id: stored.id,
+    model: stored.model,
+    tool_contract_version: stored.tool_contract_version ?? 0
+  };
+}
+
+function isQualified(stored?: StoredModel) {
+  return stored?.verified === true
+    && stored.tool_contract_version === CURRENT_ASSISTANT_MODEL_TOOL_CONTRACT_VERSION;
 }
 
 function readStoredKey(stored?: StoredModel) {

@@ -9,11 +9,12 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { formatOpenAiCompatibleAideSystemPrompt } from './aideProductContext.js';
 import type { StoredAssistantImage } from './assistantImageStorage.js';
-import { formatToolFreeMaterialProjection } from './assistantMaterialProjection.js';
 import { loadFolioleAideByokRuntimeConfig } from './folioleAideByokSettings.js';
 import { selectRecentOpenAiCompatibleHistory } from './openAiCompatibleHistory.js';
-import { readOpenAiCompatibleSse } from './openAiCompatibleSse.js';
+import { runOpenAiCompatibleToolLoop } from './openAiCompatibleToolLoop.js';
+import { createChatCompletionsAideTools } from './openAiCompatibleTools.js';
 
 interface OpenAiCompatibleSendInput {
   clientTurnId: string;
@@ -38,28 +39,19 @@ export class OpenAiCompatibleAdapter {
     try {
       const config = loadFolioleAideByokRuntimeConfig();
       input.onEvent?.(event(input.clientTurnId, 'started', threadId));
-      const response = await fetch(config.endpoint, {
-        body: JSON.stringify({
-          messages: await createMessages(input),
-          model: config.model,
-          stream: true
+      const context = input.workspaceContext ?? { schemaVersion: 1, scope: 'workspace' as const };
+      const allowedCapabilities = context.agentControl?.capabilities ?? [];
+      const text = await runOpenAiCompatibleToolLoop({
+        ...config,
+        allowedCapabilities,
+        controller,
+        messages: await createMessages(input, context),
+        onText: (delta) => input.onEvent?.({
+          ...event(input.clientTurnId, 'delta', threadId),
+          text: delta
         }),
-        headers: {
-          accept: 'text/event-stream',
-          authorization: `Bearer ${config.apiKey}`,
-          'content-type': 'application/json'
-        },
-        method: 'POST',
-        redirect: 'error',
-        signal: controller.signal
+        tools: createChatCompletionsAideTools(allowedCapabilities)
       });
-      assertSseResponse(response);
-      const completion = await readOpenAiCompatibleSse(response.body, controller, (delta) => input.onEvent?.({
-        ...event(input.clientTurnId, 'delta', threadId),
-        text: delta
-      }));
-      if (completion.toolCalls.length > 0 || !completion.text.trim()) throw categorized('protocol_error');
-      const text = completion.text;
       input.onEvent?.({ ...event(input.clientTurnId, 'completed', threadId), text });
       return {
         message: { text, threadId, turnId: input.clientTurnId },
@@ -88,20 +80,12 @@ export class OpenAiCompatibleAdapter {
   }
 }
 
-function assertSseResponse(response: Response): asserts response is Response & { body: ReadableStream<Uint8Array> } {
-  if (!response.ok) throw categorized(responseCategory(response.status));
-  if (!response.headers.get('content-type')?.toLowerCase().includes('text/event-stream') || !response.body) {
-    throw categorized('protocol_error');
-  }
-}
-
 async function createMessages(input: {
   history: NativeAssistantThreadMessageRecord[];
   images: StoredAssistantImage[];
   message: string;
   workspaceContext?: NativeAssistantWorkspaceContext;
-}) {
-  const material = formatToolFreeMaterialProjection(input.workspaceContext);
+}, context: NativeAssistantWorkspaceContext) {
   const currentContent = [
     { text: input.message, type: 'text' },
     ...await Promise.all(input.images.map(async (image) => ({
@@ -110,17 +94,11 @@ async function createMessages(input: {
     })))
   ];
   return [
-    ...(material ? [{ content: material, role: 'system' }] : []),
+    { content: formatOpenAiCompatibleAideSystemPrompt(context), role: 'system' },
     ...selectRecentOpenAiCompatibleHistory(input.history)
       .map(({ role, text }) => ({ content: text, role })),
     { content: currentContent, role: 'user' }
   ];
-}
-
-function responseCategory(status: number): NativeAssistantFailureCategory {
-  if (status === 401 || status === 403) return 'auth_failed';
-  if (status === 429 || (status >= 502 && status <= 504)) return 'overloaded';
-  return 'protocol_error';
 }
 
 function errorCategory(error: unknown): NativeAssistantFailureCategory {
@@ -134,10 +112,6 @@ function errorCategory(error: unknown): NativeAssistantFailureCategory {
     return 'interrupted';
   }
   return error instanceof TypeError ? 'protocol_error' : 'internal_error';
-}
-
-function categorized(category: NativeAssistantFailureCategory) {
-  return Object.assign(new Error(category), { category });
 }
 
 function failure(category: NativeAssistantFailureCategory): NativeAssistantSendMessageResult {

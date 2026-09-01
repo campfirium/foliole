@@ -4,20 +4,29 @@ import path from 'node:path';
 import type { Page, TestInfo } from '@playwright/test';
 
 import {
+  closeSettings,
+  configureByok,
+  fillModelDraft,
+  modelRadio,
+  openModelSettings,
+  removeByok,
+  restoreAndConfigureByok
+} from './assistant-byok-loopback-ui.support';
+import {
   createByokLoopbackHarness,
   prepareAide,
   type LoopbackRequest
 } from './assistant-byok-loopback.support';
 import { openAssistantPanel } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
-import { openSettingsCategory } from './harness/settings';
 
 const API_KEY = 'sk-foliole-t141-loopback-secret';
 const MODEL = 'foliole-loopback-model';
 const EVIDENCE_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
-const SCREENSHOT = path.join(EVIDENCE_DIR, 't141-aide-byok-loopback-hidden.png');
+const SCREENSHOT = path.join(EVIDENCE_DIR, 't168-aide-byok-tool-loop-hidden.png');
 const MODELS_SCREENSHOT = path.join(EVIDENCE_DIR, 'aide-models-settings-hidden.png');
-const RESULT = path.join(EVIDENCE_DIR, 't141-aide-byok-loopback-result.json');
+const RESULT = path.join(EVIDENCE_DIR, 't168-aide-byok-tool-loop-result.json');
+const CREATED_TOPIC = 'BYOK Agent Control Topic';
 
 test('uses a real loopback Chat Completions SSE provider without weakening Codex', async ({
   browserName
@@ -27,6 +36,9 @@ test('uses a real loopback Chat Completions SSE provider without weakening Codex
   test.skip(process.platform !== 'darwin', 'macOS-only BYOK journey');
   const harness = await createByokLoopbackHarness();
   try {
+    harness.setMode('auth');
+    await runFailedDraftJourney(harness);
+    harness.setMode('success');
     await runInitialJourney(harness, testInfo);
     await runRelaunchJourney(harness, testInfo);
     await writeEvidence(harness.requests);
@@ -37,22 +49,38 @@ test('uses a real loopback Chat Completions SSE provider without weakening Codex
 
 type Harness = Awaited<ReturnType<typeof createByokLoopbackHarness>>;
 
+async function runFailedDraftJourney(harness: Harness) {
+  const session = await harness.launch();
+  try {
+    await prepareAide(session.page);
+    const section = await openModelSettings(session.page);
+    await fillModelDraft(section, modelInput(harness.endpoint));
+    await section.getByRole('button', { name: /^(Test|测试)$/ }).last().click();
+    await expect(section).toContainText(/Authentication failed|身份验证失败/);
+    await expect(modelRadio(section, MODEL)).toBeDisabled();
+  } finally {
+    await session.electronApp.close();
+  }
+}
+
 async function runInitialJourney(harness: Harness, testInfo: TestInfo) {
   const session = await harness.launch();
   try {
     await prepareAide(session.page);
-    await configureByok(session.page, harness.endpoint);
+    await restoreAndConfigureByok(session.page, { endpoint: harness.endpoint, model: MODEL });
     await captureModels(session.page, testInfo);
     await closeSettings(session.page);
     await openAssistantPanel(session.page);
     await sendAndExpect(session.page, 'Loopback first', 'Loopback reply 1');
-    await expect.poll(() => harness.requests.length).toBe(1);
-    assertBaseRequest(harness.requests[0]);
+    await expect(session.page.getByText(CREATED_TOPIC, { exact: true })).toBeVisible();
+    const firstTurn = requestsForPrompt(harness.requests, 'Loopback first');
+    expect(firstTurn).toHaveLength(2);
+    assertBaseRequest(firstTurn[0]);
+    assertToolResultReplay(firstTurn[1]);
 
     await attachImage(session.page);
     await sendAndExpect(session.page, 'Loopback image', 'Loopback reply 2');
-    await expect.poll(() => harness.requests.length).toBe(2);
-    assertImageAndHistoryRequest(harness.requests[1]);
+    assertImageAndHistoryRequest(requestsForPrompt(harness.requests, 'Loopback image')[0]);
     await captureAide(session.page, testInfo);
   } finally {
     await session.electronApp.close();
@@ -63,11 +91,12 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
   const session = await harness.launch();
   try {
     await prepareAide(session.page);
+    await expect(session.page.getByText(CREATED_TOPIC, { exact: true })).toBeVisible();
     await openAssistantPanel(session.page);
     await session.page.getByRole('button', { name: /Loopback first/ }).click();
     await expect(session.page.getByText('Loopback reply 2')).toBeVisible();
     await sendAndExpect(session.page, 'After restart', 'Loopback reply 3');
-    assertRestartHistoryRequest(harness.requests[2]);
+    assertRestartHistoryRequest(requestsForPrompt(harness.requests, 'After restart')[0]);
 
     harness.setMode('auth');
     const codexTurnsBeforeFailure = await harness.codexTurnCount();
@@ -76,17 +105,16 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
     expect(JSON.stringify(await session.page.locator('body').innerText())).not.toContain('sensitive-loopback-detail');
 
     harness.setMode('success');
-    await removeByok(session.page);
+    await removeByok(session.page, MODEL);
     await closeSettings(session.page);
     await session.page.getByRole('button', { name: /^(New|新建)$/ }).click();
     await sendAndExpect(session.page, 'Codex after removal', 'Codex regression reply');
     expect(await harness.codexTurnCount()).toBe(1);
 
-    await configureByok(session.page, harness.endpoint);
+    await configureByok(session.page, modelInput(harness.endpoint));
     await closeSettings(session.page);
     await session.page.getByRole('button', { name: /^(New|新建)$/ }).click();
-    const requestCount = harness.requests.length;
-    await sendAndExpect(session.page, 'Recovered after reconfigure', `Loopback reply ${requestCount + 1}`);
+    await sendAndExpect(session.page, 'Recovered after reconfigure', 'Loopback reply 4');
     await verifyCodexRegression(session.page, harness);
     await captureAide(session.page, testInfo);
   } finally {
@@ -94,30 +122,8 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
   }
 }
 
-async function configureByok(page: Page, endpoint: string) {
-  const settings = await openSettingsCategory(page, 'Models');
-  const section = settings.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
-  await section.getByRole('button', { name: /^(Add model|添加模型)$/ }).click();
-  await section.getByLabel(/^(API endpoint|API 地址)$/).fill(endpoint);
-  await section.getByLabel(/^(Model|模型)$/).fill(MODEL);
-  await section.getByLabel(/^(API key|API 密钥)$/).fill(API_KEY);
-  await section.getByRole('button', { name: /^(Test|测试)$/ }).last().click();
-  await expect(section).toContainText(/Connection ready|连接正常/);
-  await section.getByRole('switch', { name: new RegExp(`^(Use|使用) ${MODEL}$`) }).click();
-  await expect(section.getByRole('switch', { name: new RegExp(`^(Use|使用) ${MODEL}$`) })).toBeChecked();
-}
-
-async function removeByok(page: Page) {
-  const settings = await openSettingsCategory(page, 'Models');
-  const section = settings.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
-  await section.getByRole('switch', { name: /^(Use|使用) Codex$/ }).click();
-  await section.getByRole('button', { name: /^(Remove model|删除模型)$/ }).click();
-  await expect(section.getByLabel(/^(Model|模型)$/)).toHaveCount(0);
-}
-
-async function closeSettings(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
+function modelInput(endpoint: string) {
+  return { apiKey: API_KEY, endpoint, model: MODEL };
 }
 
 async function sendAndExpect(page: Page, prompt: string, answer: string) {
@@ -145,8 +151,19 @@ async function attachImage(page: Page) {
 function assertBaseRequest(request: LoopbackRequest | undefined) {
   expect(request?.authorization).toBe(`Bearer ${API_KEY}`);
   expect(request?.body).toMatchObject({ model: MODEL, stream: true });
+  expect(JSON.stringify(request?.body.tools)).toContain('create_material');
+  expect(JSON.stringify(request?.body.tools)).toContain('list_folder');
+}
+
+function assertToolResultReplay(request: LoopbackRequest | undefined) {
   const text = JSON.stringify(request?.body.messages);
-  expect(text).not.toMatch(/Agent Control|available Foliole actions/iu);
+  expect(text).toContain('read-root');
+  expect(text).toContain('create-topic');
+  expect(text).toContain(CREATED_TOPIC);
+}
+
+function requestsForPrompt(requests: LoopbackRequest[], prompt: string) {
+  return requests.filter((request) => JSON.stringify(request.body.messages).includes(prompt));
 }
 
 function assertImageAndHistoryRequest(request: LoopbackRequest | undefined) {
@@ -164,9 +181,8 @@ function assertRestartHistoryRequest(request: LoopbackRequest | undefined) {
 }
 
 async function verifyCodexRegression(page: Page, harness: Harness) {
-  const settings = await openSettingsCategory(page, 'Models');
-  const section = settings.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
-  await section.getByRole('switch', { name: /^(Use|使用) Codex$/ }).click();
+  const section = await openModelSettings(page);
+  await section.getByRole('radio', { name: /^(Use ChatGPT plan|使用 ChatGPT 套餐)$/ }).click();
   await closeSettings(page);
   await page.getByRole('button', { name: /^(New|新建)$/ }).click();
   await expect(page.getByLabel(/^(Model and performance settings|模型与性能设置)$/)).toBeVisible();
@@ -177,7 +193,7 @@ async function verifyCodexRegression(page: Page, harness: Harness) {
 async function captureAide(page: Page, testInfo: TestInfo) {
   await mkdir(EVIDENCE_DIR, { recursive: true });
   await page.locator('[data-panel-scale-id="right-panel:assistant"]').screenshot({ path: SCREENSHOT });
-  await testInfo.attach('t141-aide-byok-loopback', { contentType: 'image/png', path: SCREENSHOT });
+  await testInfo.attach('t168-aide-byok-tool-loop', { contentType: 'image/png', path: SCREENSHOT });
 }
 
 async function captureModels(page: Page, testInfo: TestInfo) {
@@ -196,7 +212,8 @@ async function writeEvidence(requests: LoopbackRequest[]) {
     authenticated: request.authorization === `Bearer ${API_KEY}`,
     messageCount: request.body.messages?.length ?? 0,
     model: request.body.model,
-    stream: request.body.stream
+    stream: request.body.stream,
+    tools: request.body.tools?.length ?? 0
   }));
   await writeFile(RESULT, `${JSON.stringify({ requests: summary, status: 'passed' }, null, 2)}\n`);
 }

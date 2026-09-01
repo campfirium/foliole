@@ -12,6 +12,7 @@ import {
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
   listAssistantThreadMessages: vi.fn(),
+  loadAssistantByokSettings: vi.fn(),
   loadAssistantStatus: vi.fn(),
   removeAssistantThreadFromHistory: vi.fn(),
   sendAssistantMessage: vi.fn(),
@@ -29,6 +30,10 @@ beforeEach(() => {
     provider: 'codex-app-server',
     state: 'ready'
   });
+  assistantRuntime.loadAssistantByokSettings.mockResolvedValue({
+    endpoint: '', has_api_key: false, model: '',
+    selected_provider: 'codex-app-server', state: 'not_configured'
+  });
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
   assistantRuntime.listAssistantThreadMessages.mockResolvedValue([]);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
@@ -40,6 +45,19 @@ it('checks the selected model and shows the composer when it is ready', async ()
   await waitFor(() => expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(1));
   expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
   expect(screen.queryByLabelText('New conversation provider')).not.toBeInTheDocument();
+});
+
+it('fails closed when the selected custom model has not passed the current tool contract', async () => {
+  assistantRuntime.loadAssistantByokSettings.mockResolvedValueOnce({
+    endpoint: 'https://models.example/chat', has_api_key: true, model: 'legacy-model',
+    selected_provider: 'openai-compatible', state: 'not_configured'
+  });
+
+  renderPanel();
+
+  expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
+  expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
 it('opens model settings from the unconfigured entry', async () => {

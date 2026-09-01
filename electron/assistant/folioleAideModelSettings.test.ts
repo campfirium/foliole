@@ -6,6 +6,11 @@ const state = vi.hoisted(() => ({
   secrets: new Map<string, string>(),
   setting: null as unknown
 }));
+const toolProbe = vi.hoisted(() => vi.fn());
+
+vi.mock('./openAiCompatibleModelToolProbe.js', () => ({
+  probeOpenAiCompatibleModelTools: toolProbe
+}));
 
 vi.mock('../database/settingsStore.js', () => ({
   loadJsonSetting: () => state.setting,
@@ -32,9 +37,8 @@ import {
 beforeEach(() => {
   state.secrets.clear();
   state.setting = null;
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: async () => ({ choices: [] }), ok: true, status: 200
-  }));
+  toolProbe.mockReset();
+  toolProbe.mockResolvedValue(null);
 });
 
 it('adds multiple tested models without storing API keys in public settings', async () => {
@@ -61,7 +65,7 @@ it('keeps exactly one global model selected and protects it from deletion', asyn
 });
 
 it('persists a failed model and its secure key without making it selectable', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 401 } as Response);
+  toolProbe.mockResolvedValueOnce('auth_failed');
   const result = await addModel('model-a', 'bad-key');
 
   expect(result).toMatchObject({ state: 'failed', failure: { category: 'auth_failed' } });
@@ -80,12 +84,12 @@ it('persists a failed model and its secure key without making it selectable', as
   expect([...state.secrets.values()]).toEqual(['bad-key']);
 });
 
-it('keeps changed fields after a failed retest and stops using the invalidated model', async () => {
+it('preserves the last qualified model and secret when a changed retest fails', async () => {
   const ready = await addModel('model-a', 'old-key');
   if (ready.state !== 'ready') throw new Error('test_setup_failed');
   const id = ready.settings.models[0]?.id ?? '';
   selectFolioleAideModel(id);
-  vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 401 } as Response);
+  toolProbe.mockResolvedValueOnce('auth_failed');
 
   const failed = await testAndSaveFolioleAideModel({
     api_key: 'new-key',
@@ -96,16 +100,16 @@ it('keeps changed fields after a failed retest and stops using the invalidated m
 
   expect(failed).toMatchObject({
     settings: {
-      models: [{ endpoint: 'https://second.example/v1/chat/completions', model: 'model-b', state: 'not_configured' }],
-      selected_model_id: 'codex'
+      models: [{ endpoint: 'https://models.example/v1/chat/completions', model: 'model-a', state: 'configured' }],
+      selected_model_id: id
     },
     state: 'failed'
   });
-  expect([...state.secrets.values()]).toEqual(['new-key']);
-  expect(() => loadFolioleAideModelRuntimeConfig()).toThrow('byok_not_configured');
+  expect([...state.secrets.values()]).toEqual(['old-key']);
+  expect(loadFolioleAideModelRuntimeConfig()).toMatchObject({ model: 'model-a' });
 });
 
-it('migrates the legacy model and secure key without changing the active choice', () => {
+it('preserves a legacy selected id and secure key while requiring current tool qualification', () => {
   state.setting = {
     endpoint: 'https://models.example/v1/chat/completions',
     model: 'legacy-model',
@@ -119,7 +123,8 @@ it('migrates the legacy model and secure key without changing the active choice'
     models: [{ id: 'imported-model', model: 'legacy-model' }],
     selected_model_id: 'imported-model'
   });
-  expect(loadFolioleAideModelRuntimeConfig().apiKey).toBe('legacy-key');
+  expect(settings.models[0]?.state).toBe('not_configured');
+  expect(() => loadFolioleAideModelRuntimeConfig()).toThrow('byok_not_configured');
   expect(state.setting).toMatchObject({ version: 2 });
 });
 

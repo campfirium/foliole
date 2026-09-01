@@ -163,13 +163,18 @@ function TestButton(props: { busy: boolean; disabled: boolean; onTest: () => voi
   return <button className={settingsButtonClassName('w-full px-2')} disabled={props.disabled || props.busy} onClick={props.onTest} type="button">{t('settings.models.test')}</button>;
 }
 
-function InlineResult(props: { category?: NativeAssistantFailureCategory; ready: boolean }) {
+function InlineResult(props: {
+  category?: 'not_tested' | NativeAssistantFailureCategory;
+  ready: boolean;
+}) {
   const t = useTranslation();
-  let key: 'settings.models.connection.authFailed' | 'settings.models.connection.busy' | 'settings.models.connection.failed' | 'settings.models.connection.ready' | 'settings.models.connection.timeout';
+  let key: 'settings.models.connection.authFailed' | 'settings.models.connection.busy' | 'settings.models.connection.failed' | 'settings.models.connection.notTested' | 'settings.models.connection.ready' | 'settings.models.connection.timeout' | 'settings.models.connection.toolsUnsupported';
   if (props.ready) key = 'settings.models.connection.ready';
+  else if (props.category === 'not_tested') key = 'settings.models.connection.notTested';
   else if (props.category === 'auth_failed') key = 'settings.models.connection.authFailed';
   else if (props.category === 'timeout') key = 'settings.models.connection.timeout';
   else if (props.category === 'busy' || props.category === 'overloaded') key = 'settings.models.connection.busy';
+  else if (props.category === 'model_tools_unsupported') key = 'settings.models.connection.toolsUnsupported';
   else key = 'settings.models.connection.failed';
   return <div className={`border-t border-settings-divider/55 px-4 py-2 text-ui-xs ${props.ready ? 'text-foreground/60' : 'text-destructive'}`}>{t(key)}</div>;
 }

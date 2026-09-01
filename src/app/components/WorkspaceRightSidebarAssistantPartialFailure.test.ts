@@ -21,6 +21,7 @@ it('keeps a partial reply and does not restore the sent prompt when the turn lat
     activeTurnRef,
     dispatchCache,
     failedText: 'Foliole Aide could not reply.',
+    outcomeUncertainText: 'Foliole may have changed. Check first.',
     onCapabilityFailure: vi.fn(),
     onProviderThreadStarted: vi.fn(),
     setMessageText,
@@ -59,4 +60,35 @@ it('keeps a partial reply and does not restore the sent prompt when the turn lat
   expect(common.onProviderThreadStarted).toHaveBeenCalledWith('thread-1');
   expect(setMessageText).not.toHaveBeenCalled();
   expect(setSending).toHaveBeenCalledWith(false);
+});
+
+it('shows the outcome warning and does not invite a blind retry after a write interruption', () => {
+  const activeTurnRef: { current: AssistantActiveTurn | null } = {
+    current: {
+      clientTurnId: 'client-2', prompt: 'Rename the topic', provider: 'openai-compatible',
+      responseText: '', threadKey: 'thread-2'
+    }
+  };
+  const dispatchCache = vi.fn();
+  const setMessageText = vi.fn();
+
+  applyAssistantTurnEvent({
+    activeTurnRef,
+    dispatchCache,
+    event: {
+      clientTurnId: 'client-2', failure: { category: 'tool_result_uncertain' },
+      kind: 'failed', provider: 'openai-compatible'
+    },
+    failedText: 'Generic failure',
+    outcomeUncertainText: 'Foliole may have changed. Check first.',
+    onCapabilityFailure: vi.fn(),
+    onProviderThreadStarted: vi.fn(),
+    setMessageText,
+    setSending: vi.fn()
+  });
+
+  expect(dispatchCache).toHaveBeenLastCalledWith(expect.objectContaining({
+    message: expect.objectContaining({ text: 'Foliole may have changed. Check first.' })
+  }));
+  expect(setMessageText).not.toHaveBeenCalled();
 });
