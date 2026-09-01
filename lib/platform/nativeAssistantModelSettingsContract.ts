@@ -1,4 +1,4 @@
-import type { NativeAssistantFailureCategory } from './nativeAssistantContract.js';
+import type { NativeAssistantFailure } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export const NATIVE_ASSISTANT_CODEX_MODEL_ID = 'codex';
@@ -10,6 +10,7 @@ export type NativeAssistantCustomModelState =
   | 'secure_storage_unavailable';
 
 export interface NativeAssistantCustomModel {
+  api_key_length: number;
   endpoint: string;
   has_api_key: boolean;
   id: string;
@@ -40,7 +41,7 @@ export interface NativeAssistantModelDraftInput {
 export type NativeAssistantModelTestResult =
   | { settings: NativeAssistantModelSettings; state: 'ready' }
   | {
-      failure: { category: NativeAssistantFailureCategory };
+      failure: NativeAssistantFailure;
       settings: NativeAssistantModelSettings;
       state: 'failed';
     };

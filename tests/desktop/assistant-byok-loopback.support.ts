@@ -125,12 +125,21 @@ function isProbeRequest(body: LoopbackRequest['body']) {
 function respondToProbe(response: import('node:http').ServerResponse, body: LoopbackRequest['body']) {
   const replayed = body.messages?.some((message) => message.tool_call_id === 'probe-1');
   if (replayed) {
+    if (!JSON.stringify(body.messages).includes('probe-signature')) {
+      response.writeHead(400, { 'content-type': 'application/json' });
+      response.end('{"error":"missing opaque tool-call extension"}');
+      return;
+    }
     sendSse(response, [{ choices: [{ delta: { content: 'Probe complete' }, finish_reason: 'stop' }] }]);
     return;
   }
   sendSse(response, [
-    { choices: [{ delta: { tool_calls: [{ function: { arguments: '{', name: 'foliole_aide_tool_contract_probe' }, id: 'probe-1', index: 0, type: 'function' }] } }] },
-    { choices: [{ delta: { tool_calls: [{ function: { arguments: '}' }, index: 0 }] }, finish_reason: 'tool_calls' }] }
+    { choices: [{ delta: { tool_calls: [{
+      extra_content: { provider: { opaque_signature: 'probe-signature' } },
+      function: { arguments: '{', name: 'foliole_aide_tool_contract_probe' },
+      id: 'probe-1', index: 0, type: 'function'
+    }] } }] },
+    { choices: [{ delta: { tool_calls: [{ function: { arguments: '}' }, index: 0 }] }, finish_reason: 'stop' }] }
   ]);
 }
 
@@ -143,7 +152,10 @@ function respondToTurn(response: import('node:http').ServerResponse, body: Loopb
   }
   if (prompt.includes('Loopback first') && !hasToolResults) {
     sendSse(response, [{ choices: [{ delta: { tool_calls: [
-      toolCall(0, 'read-root', 'list_folder', '{"parent_id":null,"limit":20}'),
+      {
+        ...toolCall(0, 'read-root', 'list_folder', '{"parent_id":null,"limit":20}'),
+        extra_content: { provider: { opaque_signature: 'turn-signature' } }
+      },
       toolCall(1, 'create-topic', 'create_material', '{"kind":"topic","parent_id":null,"title":"BYOK Agent Control Topic"}')
     ] }, finish_reason: 'tool_calls' }] }]);
     return;

@@ -1,4 +1,4 @@
-import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
+import type { NativeAssistantFailure } from '../../lib/platform/nativeAssistantContract.js';
 
 import { probeOpenAiCompatibleModelTools } from './openAiCompatibleModelToolProbe.js';
 
@@ -8,15 +8,15 @@ export async function testOpenAiCompatibleModel(input: {
   apiKey: string;
   endpoint: string;
   model: string;
-}): Promise<NativeAssistantFailureCategory | null> {
+}): Promise<NativeAssistantFailure | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
   try {
     return await probeOpenAiCompatibleModelTools({ ...input, signal: controller.signal });
   } catch (error) {
     return error && typeof error === 'object' && 'name' in error && error.name === 'AbortError'
-      ? 'timeout'
-      : 'protocol_error';
+      ? { category: 'timeout' }
+      : { category: 'protocol_error' };
   } finally {
     clearTimeout(timer);
   }

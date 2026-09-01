@@ -1,10 +1,11 @@
 import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
 
-export interface OpenAiCompatibleToolCall {
-  argumentsText: string;
-  id: string;
-  name: string;
-}
+import {
+  createOpenAiCompatibleToolCallAssembler,
+  type OpenAiCompatibleToolCall
+} from './openAiCompatibleToolCallAssembler.js';
+
+export type { OpenAiCompatibleToolCall } from './openAiCompatibleToolCallAssembler.js';
 
 export interface OpenAiCompatibleSseResult {
   finishReason: string | null;
@@ -12,11 +13,17 @@ export interface OpenAiCompatibleSseResult {
   toolCalls: OpenAiCompatibleToolCall[];
 }
 
-interface PendingToolCall {
-  argumentsText: string;
-  id: string;
-  name: string;
-  type: string;
+export function formatOpenAiCompatibleToolCall(call: OpenAiCompatibleToolCall) {
+  return {
+    ...call.extensionFields,
+    function: {
+      ...call.functionExtensionFields,
+      arguments: call.argumentsText,
+      name: call.name
+    },
+    id: call.id,
+    type: 'function'
+  };
 }
 
 export async function readOpenAiCompatibleSse(
@@ -27,7 +34,7 @@ export async function readOpenAiCompatibleSse(
 ): Promise<OpenAiCompatibleSseResult> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  const toolCalls: PendingToolCall[] = [];
+  const toolCalls = createOpenAiCompatibleToolCallAssembler();
   let buffer = '';
   let finishReason: string | null = null;
   let text = '';
@@ -52,7 +59,7 @@ export async function readOpenAiCompatibleSse(
         text += delta.content;
         onText(text);
       }
-      appendToolCallFragments(toolCalls, delta.toolCallFragments);
+      toolCalls.append(delta.toolCallFragments);
       if (delta.finishReason !== null) finishReason = delta.finishReason;
     }
   }
@@ -60,7 +67,7 @@ export async function readOpenAiCompatibleSse(
   return {
     finishReason,
     text,
-    toolCalls: finalizeToolCalls(toolCalls)
+    toolCalls: toolCalls.finalize()
   };
 }
 
@@ -91,57 +98,8 @@ function parseSseDelta(data: string) {
   return {
     content: typeof content === 'string' ? content : '',
     finishReason: typeof finishReason === 'string' ? finishReason : null,
-    toolCallFragments: parseToolCallFragments(delta.tool_calls)
+    toolCallFragments: delta.tool_calls
   };
-}
-
-function parseToolCallFragments(value: unknown) {
-  if (value === undefined || value === null) return [];
-  if (!Array.isArray(value)) throw categorized('protocol_error');
-  return value.map((fragment) => {
-    if (!isRecord(fragment) || !Number.isInteger(fragment.index) || Number(fragment.index) < 0) {
-      throw categorized('protocol_error');
-    }
-    const fn = fragment.function;
-    if (fn !== undefined && !isRecord(fn)) throw categorized('protocol_error');
-    return {
-      argumentsText: readOptionalString(fn?.arguments),
-      id: readOptionalString(fragment.id),
-      index: Number(fragment.index),
-      name: readOptionalString(fn?.name),
-      type: readOptionalString(fragment.type)
-    };
-  });
-}
-
-function appendToolCallFragments(
-  calls: PendingToolCall[],
-  fragments: ReturnType<typeof parseToolCallFragments>
-) {
-  for (const fragment of fragments) {
-    const call = calls[fragment.index] ?? { argumentsText: '', id: '', name: '', type: '' };
-    call.argumentsText += fragment.argumentsText;
-    call.id = mergeStableField(call.id, fragment.id);
-    call.name = mergeStableField(call.name, fragment.name);
-    call.type = mergeStableField(call.type, fragment.type);
-    calls[fragment.index] = call;
-  }
-}
-
-function finalizeToolCalls(calls: PendingToolCall[]): OpenAiCompatibleToolCall[] {
-  return Array.from({ length: calls.length }, (_, index) => {
-    const call = calls[index];
-    if (!call || !call.id || !call.name || call.type !== 'function') {
-      throw categorized('protocol_error');
-    }
-    return { argumentsText: call.argumentsText, id: call.id, name: call.name };
-  });
-}
-
-function mergeStableField(current: string, fragment: string) {
-  if (!fragment) return current;
-  if (!current || current === fragment) return fragment;
-  throw categorized('protocol_error');
 }
 
 async function readWithAbort(
@@ -161,12 +119,6 @@ async function readWithAbort(
   } finally {
     if (onAbort) controller.signal.removeEventListener('abort', onAbort);
   }
-}
-
-function readOptionalString(value: unknown) {
-  if (value === undefined || value === null) return '';
-  if (typeof value !== 'string') throw categorized('protocol_error');
-  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

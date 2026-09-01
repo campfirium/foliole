@@ -24,7 +24,10 @@ afterEach(() => {
 it('executes ordered multi-call rounds and emits cumulative text with one final answer', async () => {
   const fetchMock = vi.fn<typeof fetch>()
     .mockResolvedValueOnce(sse([toolDelta([
-      toolCall(0, 'read-1', 'read_material', '{"id":"topic-1"}'),
+      {
+        ...toolCall(0, 'read-1', 'read_material', '{"id":"topic-1"}'),
+        extra_content: { provider: { opaque_signature: 'signature-1' } }
+      },
       toolCall(1, 'write-1', 'update_material', '{"id":"topic-1"}')
     ], 'Checking ')]))
     .mockResolvedValueOnce(sse([{ choices: [{ delta: { content: 'Done' }, finish_reason: 'stop' }] }]));
@@ -36,9 +39,14 @@ it('executes ordered multi-call rounds and emits cumulative text with one final 
   expect(deltas).toEqual(['Checking ', 'Checking Done']);
   const secondBody = body(fetchMock, 1);
   expect(secondBody.messages).toEqual(expect.arrayContaining([
-    expect.objectContaining({ role: 'assistant', tool_calls: expect.any(Array) }),
-    expect.objectContaining({ role: 'tool', tool_call_id: 'read-1' }),
-    expect.objectContaining({ role: 'tool', tool_call_id: 'write-1' })
+    expect.objectContaining({
+      role: 'assistant',
+      tool_calls: expect.arrayContaining([expect.objectContaining({
+        extra_content: { provider: { opaque_signature: 'signature-1' } }, id: 'read-1'
+      })])
+    }),
+    expect.objectContaining({ name: 'read_material', role: 'tool', tool_call_id: 'read-1' }),
+    expect.objectContaining({ name: 'update_material', role: 'tool', tool_call_id: 'write-1' })
   ]));
 });
 

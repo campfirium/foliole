@@ -26,11 +26,13 @@ export type NativeAssistantFailureCategory =
   | 'tool_result_uncertain'
   | 'overloaded'
   | 'persistence_failed'
+  | 'provider_region_unsupported'
   | 'protocol_error'
   | 'timeout';
 
 export interface NativeAssistantFailure {
   category: NativeAssistantFailureCategory;
+  message?: string;
 }
 
 export interface NativeAssistantCapabilityStatus {

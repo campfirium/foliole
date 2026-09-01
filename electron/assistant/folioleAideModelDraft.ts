@@ -1,19 +1,25 @@
 import type { NativeAssistantModelDraftInput } from '../../lib/platform/nativeAssistantModelSettingsContract.js';
 
 import type { StoredAssistantModel as StoredModel } from './folioleAideModelSettingsStorage.js';
+import { areAssistantModelEndpointsEquivalent } from './folioleAideModelSettingsStorage.js';
 
 export function createStoredModelDraft(
   input: NativeAssistantModelDraftInput,
   previous?: StoredModel
 ): StoredModel {
   const id = previous?.id ?? validateDraftId(input.id);
+  const suppliedKey = input.api_key?.trim();
   return {
+    ...(suppliedKey !== undefined
+      ? { api_key_length: suppliedKey.length }
+      : previous?.api_key_length !== undefined ? { api_key_length: previous.api_key_length } : {}),
     endpoint: validateDraftText(input.endpoint, 2048, 'invalid_byok_endpoint'),
     id,
     model: validateDraftText(input.model, 200, 'invalid_byok_model'),
-    requires_new_key: input.api_key !== undefined
-      ? !input.api_key.trim()
-      : previous?.requires_new_key === true || previous?.endpoint !== input.endpoint,
+    requires_new_key: suppliedKey !== undefined
+      ? !suppliedKey
+      : previous?.requires_new_key === true
+        || Boolean(previous && !areAssistantModelEndpointsEquivalent(previous.endpoint, input.endpoint)),
     secret_file: previous?.secret_file ?? `foliole-aide-model-${id}.bin`,
     updated_at: new Date().toISOString(),
     verified: false

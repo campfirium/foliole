@@ -5,6 +5,7 @@ import { NATIVE_ASSISTANT_CODEX_MODEL_ID } from '../../lib/platform/nativeAssist
 const LEGACY_SECRET_FILE = 'foliole-aide-byok-secret.bin';
 
 export interface StoredAssistantModel {
+  api_key_length?: number;
   endpoint: string;
   id: string;
   model: string;
@@ -50,7 +51,23 @@ export function normalizeAssistantModelEndpoint(value: string) {
   }
   if (endpoint.username || endpoint.password || endpoint.hash) throw new Error('invalid_byok_endpoint');
   if (endpoint.protocol !== 'https:' && !isLoopbackHttp(endpoint)) throw new Error('invalid_byok_endpoint');
+  appendChatCompletionsPathForKnownBase(endpoint);
   return endpoint.toString();
+}
+
+export function areAssistantModelEndpointsEquivalent(left: string, right: string) {
+  try {
+    return normalizeAssistantModelEndpoint(left) === normalizeAssistantModelEndpoint(right);
+  } catch {
+    return left === right;
+  }
+}
+
+function appendChatCompletionsPathForKnownBase(endpoint: URL) {
+  const path = endpoint.pathname.replace(/\/+$/u, '');
+  if (/(?:^|\/)(?:v\d+(?:beta\d*)?|openai)$/iu.test(path)) {
+    endpoint.pathname = `${path}/chat/completions`;
+  }
 }
 
 function isLoopbackHttp(endpoint: URL) {
@@ -110,5 +127,9 @@ function isStoredModel(value: unknown): value is StoredAssistantModel {
   model.verified = typeof model.verified === 'boolean' ? model.verified : true;
   if (model.tool_contract_version !== undefined
     && (!Number.isInteger(model.tool_contract_version) || model.tool_contract_version < 0)) return false;
+  if (model.api_key_length !== undefined
+    && (!Number.isInteger(model.api_key_length) || model.api_key_length < 0 || model.api_key_length > 4096)) {
+    return false;
+  }
   return true;
 }

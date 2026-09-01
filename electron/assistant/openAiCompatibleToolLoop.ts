@@ -1,7 +1,11 @@
 import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
 
 import { executeAideTool } from './aideToolExecutor.js';
-import { readOpenAiCompatibleSse, type OpenAiCompatibleToolCall } from './openAiCompatibleSse.js';
+import {
+  formatOpenAiCompatibleToolCall,
+  readOpenAiCompatibleSse,
+  type OpenAiCompatibleToolCall
+} from './openAiCompatibleSse.js';
 
 const MAX_SEQUENTIAL_TOOL_ROUNDS = 256;
 const ACTIVITY_IDLE_TIMEOUT_MS = 180_000;
@@ -43,6 +47,7 @@ export async function runOpenAiCompatibleToolLoop(input: {
         deadline.refresh();
         messages.push({
           content: result.contentItems.map((item) => item.text).join('\n'),
+          name: call.name,
           role: 'tool',
           tool_call_id: call.id
         });
@@ -135,11 +140,7 @@ function assistantToolCallMessage(completion: {
   return {
     content: completion.text || null,
     role: 'assistant',
-    tool_calls: completion.toolCalls.map((call) => ({
-      function: { arguments: call.argumentsText, name: call.name },
-      id: call.id,
-      type: 'function'
-    }))
+    tool_calls: completion.toolCalls.map(formatOpenAiCompatibleToolCall)
   };
 }
 

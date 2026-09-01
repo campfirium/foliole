@@ -1,6 +1,6 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useRef, useState } from 'react';
 
-import type { NativeAssistantFailureCategory } from '../../../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantFailure } from '../../../../../lib/platform/nativeAssistantContract';
 import {
   NATIVE_ASSISTANT_CODEX_MODEL_ID,
   type NativeAssistantCustomModel,
@@ -24,12 +24,13 @@ export type { SettingsCodexConnectionState } from './settingsCodexConnection';
 
 export interface SettingsModelDraft {
   apiKey: string;
+  apiKeyLength: number;
   endpoint: string;
   hasApiKey: boolean;
   id: string;
   model: string;
   persisted: boolean;
-  result: 'ready' | NativeAssistantFailureCategory | null;
+  result: 'ready' | NativeAssistantFailure | null;
   selectable: boolean;
   testing: boolean;
 }
@@ -47,7 +48,7 @@ type ModelState = {
 
 export function useSettingsModels() {
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
-  const [drafts, setDrafts] = useState<SettingsModelDraft[]>(() => [createEmptyDraft()]);
+  const [drafts, setDrafts] = useState<SettingsModelDraft[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [codexConnection, setCodexConnection] = useState<SettingsCodexConnectionState>('checking');
@@ -94,7 +95,10 @@ async function loadInitialSettings(input: {
       input.setDrafts(value.models.length ? value.models.map(toDraft) : [createEmptyDraft()]);
     }
   } catch {
-    if (input.active()) input.setLoadFailed(true);
+    if (input.active()) {
+      input.setDrafts([createEmptyDraft()]);
+      input.setLoadFailed(true);
+    }
   }
   const connection = await readCodexConnection();
   if (input.active()) input.setCodexConnection(connection);
@@ -118,7 +122,7 @@ function createModelActions(state: ModelState) {
 
 function createEmptyDraft(): SettingsModelDraft {
   return {
-    apiKey: '', endpoint: '', hasApiKey: false, id: crypto.randomUUID(),
+    apiKey: '', apiKeyLength: 0, endpoint: '', hasApiKey: false, id: crypto.randomUUID(),
     model: '', persisted: false, result: null, selectable: false, testing: false
   };
 }
@@ -136,13 +140,13 @@ async function testDraft(state: ModelState, draft: SettingsModelDraft) {
     state.setSettings(result.settings);
     const saved = result.settings.models.find((model) => model.id === draft.id)
       ?? result.settings.models.at(-1);
-    const testResult = result.state === 'ready' ? 'ready' : result.failure.category;
-    if (saved && (result.state === 'ready' || !draft.persisted)) {
+    const testResult = result.state === 'ready' ? 'ready' : result.failure;
+    if (saved) {
       replaceSavedDraft(state.setDrafts, draft.id, saved, testResult);
     }
     else updateDraft(state.setDrafts, draft.id, { result: testResult });
   } catch {
-    updateDraft(state.setDrafts, draft.id, { result: 'internal_error' });
+    updateDraft(state.setDrafts, draft.id, { result: { category: 'internal_error' } });
   } finally {
     updateDraft(state.setDrafts, draft.id, { testing: false });
   }
@@ -195,7 +199,7 @@ function enqueueDraftSave(state: ModelState, draft: SettingsModelDraft, includeA
 
 function markDraftSaved(setDrafts: ModelState['setDrafts'], saved: NativeAssistantCustomModel) {
   setDrafts((current) => current.map((draft) => draft.id === saved.id ? {
-      ...draft, hasApiKey: saved.has_api_key, persisted: true,
+      ...draft, apiKeyLength: saved.api_key_length, hasApiKey: saved.has_api_key, persisted: true,
       result: null, selectable: false
     } : draft));
 }
@@ -221,7 +225,8 @@ function replaceSavedDraft(
 
 function toDraft(model: NativeAssistantCustomModel): SettingsModelDraft {
   return {
-    apiKey: '', endpoint: model.endpoint, hasApiKey: model.has_api_key, id: model.id,
+    apiKey: '', apiKeyLength: model.api_key_length, endpoint: model.endpoint,
+    hasApiKey: model.has_api_key, id: model.id,
     model: model.model, persisted: true,
     result: null,
     selectable: model.state === 'configured', testing: false

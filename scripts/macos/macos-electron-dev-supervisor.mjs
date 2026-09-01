@@ -16,6 +16,7 @@ import { createElectronRuntimeWatcher } from '../desktop/electron-dev-runtime-wa
 import { withResourceGate } from '../lib/resource-gate.mjs';
 import { requestMacosElectronRuntimeRestart, requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
+import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
 import {
   MACOS_DAILY_LIBRARY_HOME,
   resolveMacosElectronDevPaths,
@@ -184,6 +185,10 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   const paths = options.paths ?? resolveMacosElectronDevPaths(options.cwd);
   const existing = readElectronDevSnapshot(paths, options.isAlive ?? processIsAlive);
   if (existing.supervisorAlive) throw new Error(`macOS Electron daily debug already running pid=${existing.client.supervisorPid}`);
+  await (options.prepareSignature ?? prepareMacosElectronDevSignature)({
+    appRoot: paths.appRoot,
+    platform
+  });
   const dailyEnv = createMacosDailyEnvironment({
     env: options.env ?? process.env,
     homeDir: options.homeDir,

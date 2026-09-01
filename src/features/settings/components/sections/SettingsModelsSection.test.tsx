@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -21,6 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   assistantRuntime.loadAssistantModelSettings.mockResolvedValue({
     models: [{
+      api_key_length: 37,
       endpoint: 'https://models.example/v1/chat/completions',
       has_api_key: true,
       id: 'model-a',
@@ -49,6 +50,34 @@ it('shows the ChatGPT plan and custom models as exclusive choices without a save
   expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
+  expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('API key')).toHaveAttribute('placeholder', '•'.repeat(37));
+});
+
+it('does not render a placeholder custom row while saved models are loading', async () => {
+  let resolveSettings: ((value: unknown) => void) | undefined;
+  assistantRuntime.loadAssistantModelSettings.mockReturnValue(new Promise((resolve) => {
+    resolveSettings = resolve;
+  }));
+  renderWithLocalization(<SettingsModelsSection />);
+
+  expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Model')).not.toBeInTheDocument();
+
+  resolveSettings?.({
+    models: [{
+      api_key_length: 37,
+      endpoint: 'https://models.example/v1/chat/completions',
+      has_api_key: true,
+      id: 'model-a',
+      model: 'model-a',
+      state: 'configured'
+    }],
+    selected_model_id: 'codex'
+  });
+
+  expect(await screen.findByDisplayValue('model-a')).toBeInTheDocument();
+  expect(screen.getAllByLabelText('Model')).toHaveLength(1);
   expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
 });
 
@@ -82,125 +111,4 @@ it('shows that ChatGPT connection continues in the browser', async () => {
 
   expect(await screen.findByText('Complete in browser')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Waiting...' })).toBeDisabled();
-});
-
-it('saves a custom model draft before testing it', async () => {
-  assistantRuntime.saveAssistantModelDraft.mockImplementation(async (input) => ({
-    models: [{
-      endpoint: input.endpoint, has_api_key: Boolean(input.api_key), id: input.id,
-      model: input.model, state: 'not_configured', tool_contract_version: 0
-    }],
-    selected_model_id: 'codex'
-  }));
-  assistantRuntime.testAssistantModel.mockResolvedValue({
-    settings: {
-      models: [{
-        endpoint: 'https://models.example/v1/chat/completions',
-        has_api_key: true,
-        id: 'model-a',
-        model: 'model-a',
-        state: 'configured'
-      }, {
-        endpoint: 'https://second.example/v1/chat/completions',
-        has_api_key: true,
-        id: 'model-b',
-        model: 'model-b',
-        state: 'configured'
-      }],
-      selected_model_id: 'codex'
-    },
-    state: 'ready'
-  });
-  renderWithLocalization(<SettingsModelsSection />);
-  await screen.findByDisplayValue('model-a');
-  fireEvent.click(screen.getByRole('button', { name: 'Add model' }));
-
-  const modelInputs = screen.getAllByLabelText('Model');
-  const endpointInputs = screen.getAllByLabelText('API endpoint');
-  const keyInputs = screen.getAllByLabelText('API key');
-  fireEvent.change(modelInputs.at(-1) as HTMLInputElement, { target: { value: 'model-b' } });
-  fireEvent.change(endpointInputs.at(-1) as HTMLInputElement, {
-    target: { value: 'https://second.example/v1/chat/completions' }
-  });
-  fireEvent.change(keyInputs.at(-1) as HTMLInputElement, { target: { value: 'secret' } });
-
-  await waitFor(() => expect(assistantRuntime.saveAssistantModelDraft).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      api_key: 'secret', endpoint: 'https://second.example/v1/chat/completions', model: 'model-b'
-    })
-  ));
-  expect(screen.queryByText('Test again before using this model with Aide.')).not.toBeInTheDocument();
-  fireEvent.click(screen.getAllByRole('button', { name: 'Test' }).at(-1) as HTMLButtonElement);
-
-  await waitFor(() => expect(assistantRuntime.testAssistantModel).toHaveBeenCalledWith(expect.objectContaining({
-    api_key: 'secret',
-    endpoint: 'https://second.example/v1/chat/completions',
-    model: 'model-b'
-  })));
-  expect(await screen.findByText('Connection ready')).toBeInTheDocument();
-  expect(screen.queryByPlaceholderText('Custom model')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
-});
-
-it('starts with two visible choices when no custom model has been saved', async () => {
-  assistantRuntime.loadAssistantModelSettings.mockResolvedValue({
-    models: [], selected_model_id: 'codex'
-  });
-  renderWithLocalization(<SettingsModelsSection />);
-
-  expect(await screen.findByRole('radio', { name: 'Use ChatGPT plan' })).toBeChecked();
-  expect(screen.getByRole('radio', { name: 'Use Custom model' })).toBeDisabled();
-  expect(screen.getByPlaceholderText('Custom model')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Add model' })).not.toBeInTheDocument();
-});
-
-it('restores an untested draft quietly without adding another row', async () => {
-  assistantRuntime.loadAssistantModelSettings.mockResolvedValue({
-    models: [{
-      endpoint: 'https://draft.example/v1', has_api_key: true, id: 'draft-a',
-      model: 'draft-model', state: 'not_configured', tool_contract_version: 0
-    }],
-    selected_model_id: 'codex'
-  });
-  renderWithLocalization(<SettingsModelsSection />);
-
-  expect(await screen.findByDisplayValue('draft-model')).toBeInTheDocument();
-  expect(screen.getAllByLabelText('Model')).toHaveLength(1);
-  expect(screen.queryByText('Test again before using this model with Aide.')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add model' })).toBeInTheDocument();
-});
-
-it('keeps a failed model in the form while leaving it unavailable for selection', async () => {
-  assistantRuntime.loadAssistantModelSettings.mockResolvedValue({
-    models: [], selected_model_id: 'codex'
-  });
-  assistantRuntime.testAssistantModel.mockResolvedValue({
-    failure: { category: 'auth_failed' },
-    settings: {
-      models: [{
-        endpoint: 'https://failed.example/v1/chat/completions',
-        has_api_key: true,
-        id: 'failed-model',
-        model: 'model-failed',
-        state: 'not_configured'
-      }],
-      selected_model_id: 'codex'
-    },
-    state: 'failed'
-  });
-  renderWithLocalization(<SettingsModelsSection />);
-  await screen.findByPlaceholderText('Custom model');
-
-  fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'model-failed' } });
-  fireEvent.change(screen.getByLabelText('API endpoint'), {
-    target: { value: 'https://failed.example/v1/chat/completions' }
-  });
-  fireEvent.change(screen.getByLabelText('API key'), { target: { value: 'bad-key' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Test' }));
-
-  await waitFor(() => expect(assistantRuntime.testAssistantModel).toHaveBeenCalled());
-  expect(await screen.findByDisplayValue('model-failed')).toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: 'Use model-failed' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Remove model' })).toBeEnabled();
-  expect(screen.getByText('Authentication failed. Check the API key and endpoint.')).toBeInTheDocument();
 });

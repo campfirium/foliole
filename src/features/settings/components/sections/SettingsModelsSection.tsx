@@ -1,6 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 
-import type { NativeAssistantFailureCategory } from '../../../../../lib/platform/nativeAssistantContract';
+import type {
+  NativeAssistantFailure,
+  NativeAssistantFailureCategory
+} from '../../../../../lib/platform/nativeAssistantContract';
 import { NATIVE_ASSISTANT_CODEX_MODEL_ID } from '../../../../../lib/platform/nativeAssistantModelSettingsContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -144,7 +147,7 @@ function CustomModelRow(props: {
         <ModelRadio active={props.active} disabled={!props.draft.selectable || props.busy} label={props.draft.model || t('settings.models.custom')} onSelect={props.onSelect} />
         <input aria-label={t('settings.models.header.model')} className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ model: event.target.value })} placeholder={props.draft.persisted ? undefined : t('settings.models.custom')} value={props.draft.model} />
         <input aria-label={t('settings.models.header.endpoint')} className={settingsFieldClassName('font-mono text-[0.78rem]')} onChange={(event) => props.onUpdate({ endpoint: event.target.value })} spellCheck={false} type="url" value={props.draft.endpoint} />
-        <input aria-label={t('settings.models.header.key')} autoComplete="off" className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ apiKey: event.target.value })} placeholder={props.draft.hasApiKey ? '••••••••' : undefined} type="password" value={props.draft.apiKey} />
+        <input aria-label={t('settings.models.header.key')} autoComplete="off" className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ apiKey: event.target.value })} placeholder={storedKeyMask(props.draft)} type="password" value={props.draft.apiKey} />
         <TestButton busy={props.draft.testing} disabled={!canTest} onTest={props.onTest} />
         {props.draft.persisted ? (
           <button aria-label={t('settings.models.remove')} className={settingsUtilityIconButtonClassName(false)} disabled={props.active || props.busy} onClick={props.onRemove} type="button">
@@ -154,12 +157,17 @@ function CustomModelRow(props: {
       </div>
       {props.draft.result ? (
         <InlineResult
-          {...(props.draft.result === 'ready' ? {} : { category: props.draft.result })}
+          {...(props.draft.result === 'ready' ? {} : { failure: props.draft.result })}
           ready={props.draft.result === 'ready'}
         />
       ) : null}
     </>
   );
+}
+
+function storedKeyMask(draft: SettingsModelDraft) {
+  if (!draft.hasApiKey || draft.apiKeyLength <= 0) return undefined;
+  return '•'.repeat(draft.apiKeyLength);
 }
 
 function ModelRadio(props: { active: boolean; disabled: boolean; label: string; onSelect: () => void }) {
@@ -177,16 +185,18 @@ function TestButton(props: { busy: boolean; disabled: boolean; onTest: () => voi
 }
 
 function InlineResult(props: {
-  category?: NativeAssistantFailureCategory;
+  failure?: NativeAssistantFailure;
   ready: boolean;
 }) {
   const t = useTranslation();
+  const category: NativeAssistantFailureCategory | undefined = props.failure?.category;
   let key: 'settings.models.connection.authFailed' | 'settings.models.connection.busy' | 'settings.models.connection.failed' | 'settings.models.connection.ready' | 'settings.models.connection.timeout' | 'settings.models.connection.toolsUnsupported';
   if (props.ready) key = 'settings.models.connection.ready';
-  else if (props.category === 'auth_failed') key = 'settings.models.connection.authFailed';
-  else if (props.category === 'timeout') key = 'settings.models.connection.timeout';
-  else if (props.category === 'busy' || props.category === 'overloaded') key = 'settings.models.connection.busy';
-  else if (props.category === 'model_tools_unsupported') key = 'settings.models.connection.toolsUnsupported';
+  else if (category === 'auth_failed') key = 'settings.models.connection.authFailed';
+  else if (category === 'timeout') key = 'settings.models.connection.timeout';
+  else if (category === 'busy' || category === 'overloaded') key = 'settings.models.connection.busy';
+  else if (category === 'model_tools_unsupported') key = 'settings.models.connection.toolsUnsupported';
   else key = 'settings.models.connection.failed';
-  return <div className={`border-t border-settings-divider/55 px-4 py-2 text-ui-xs ${props.ready ? 'text-foreground/60' : 'text-destructive'}`}>{t(key)}</div>;
+  const message = props.failure?.message ?? t(key);
+  return <div className={`border-t border-settings-divider/55 px-4 py-2 text-ui-xs ${props.ready ? 'text-foreground/60' : 'text-destructive'}`}>{message}</div>;
 }

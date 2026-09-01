@@ -66,13 +66,14 @@ it('keeps exactly one global model selected and protects it from deletion', asyn
 });
 
 it('persists a failed model and its secure key without making it selectable', async () => {
-  toolProbe.mockResolvedValueOnce('auth_failed');
+  toolProbe.mockResolvedValueOnce({ category: 'auth_failed' });
   const result = await addModel('model-a', 'bad-key');
 
   expect(result).toMatchObject({ state: 'failed', failure: { category: 'auth_failed' } });
   const reloaded = loadFolioleAideModelSettings();
   expect(reloaded).toMatchObject({
     models: [{
+      api_key_length: 7,
       endpoint: 'https://models.example/v1/chat/completions',
       has_api_key: true,
       model: 'model-a',
@@ -94,13 +95,33 @@ it('saves incomplete edits immediately and restores them without testing', () =>
 
   expect(toolProbe).not.toHaveBeenCalled();
   expect(saved).toMatchObject({
-    models: [{ endpoint: 'https://models.', has_api_key: true, id, model: 'draft model ', state: 'not_configured' }],
+    models: [{
+      api_key_length: 9, endpoint: 'https://models.', has_api_key: true,
+      id, model: 'draft model ', state: 'not_configured'
+    }],
     selected_model_id: 'codex'
   });
   expect(loadFolioleAideModelSettings()).toEqual(saved);
   expect(JSON.stringify(state.setting)).not.toContain('draft-key');
   expect([...state.secrets.values()]).toEqual(['draft-key']);
   expect(() => selectFolioleAideModel(id)).toThrow('model_not_configured');
+});
+
+it('reuses the saved key when a provider base URL normalizes to the same endpoint', async () => {
+  const id = '6d1e03a4-4ae2-4fc8-a89e-793faea62db6';
+  saveFolioleAideModelDraft({
+    api_key: 'saved-key', endpoint: 'https://openrouter.ai/api/v1', id, model: 'openrouter/free'
+  });
+
+  const result = await testAndSaveFolioleAideModel({
+    endpoint: 'https://openrouter.ai/api/v1', id, model: 'openrouter/free'
+  });
+
+  expect(result.state).toBe('ready');
+  expect(toolProbe).toHaveBeenCalledWith(expect.objectContaining({
+    apiKey: 'saved-key',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions'
+  }));
 });
 
 it('invalidates a selected model immediately and keeps changed values after a failed test', async () => {
@@ -111,7 +132,7 @@ it('invalidates a selected model immediately and keeps changed values after a fa
   saveFolioleAideModelDraft({
     api_key: 'new-key', endpoint: 'https://second.example/v1/chat/completions', id, model: 'model-b'
   });
-  toolProbe.mockResolvedValueOnce('auth_failed');
+  toolProbe.mockResolvedValueOnce({ category: 'auth_failed' });
 
   const failed = await testAndSaveFolioleAideModel({
     endpoint: 'https://second.example/v1/chat/completions',

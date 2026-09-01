@@ -175,6 +175,7 @@ function assertToolResultReplay(request: LoopbackRequest | undefined) {
   const text = JSON.stringify(request?.body.messages);
   expect(text).toContain('read-root');
   expect(text).toContain('create-topic');
+  expect(text).toContain('turn-signature');
   expect(text).toContain(CREATED_TOPIC);
 }
 
