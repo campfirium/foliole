@@ -73,7 +73,8 @@ it('exposes the current material mode as a switch', () => {
 
   const toggle = screen.getByRole('switch', { name: 'Following: Current topic' });
   expect(toggle).toHaveAttribute('aria-checked', 'true');
-  expect(toggle).toHaveAttribute('title', 'Attach current material');
+  expect(toggle).toHaveClass('size-7');
+  expect(toggle).not.toHaveTextContent('Following: Current topic');
   fireEvent.click(toggle);
   expect(onToggle).toHaveBeenCalledOnce();
 });

@@ -1,5 +1,7 @@
 import { Link2 } from 'lucide-react';
 
+import { AppIconButton, AppTooltip, AppTooltipContent, AppTooltipContentLayout, AppTooltipTrigger } from '../../shared/ui';
+
 export function WorkspaceRightSidebarAssistantContextFollowControl(props: {
   description: string;
   enabled: boolean;
@@ -7,16 +9,20 @@ export function WorkspaceRightSidebarAssistantContextFollowControl(props: {
   onToggle: () => void;
 }) {
   return (
-    <button
-      aria-checked={props.enabled}
-      className={`flex min-w-0 items-center gap-1.5 text-ui-xs leading-5 ${props.enabled ? 'text-accent' : 'text-foreground/48'}`}
-      onClick={props.onToggle}
-      role="switch"
-      title={props.description}
-      type="button"
-    >
-      <Link2 aria-hidden className="size-3.5 shrink-0" strokeWidth={1.8} />
-      <span className="truncate">{props.label}</span>
-    </button>
+    <AppTooltip>
+      <AppTooltipTrigger asChild>
+        <AppIconButton
+          aria-checked={props.enabled}
+          className={`size-7 ${props.enabled ? 'text-accent' : 'text-foreground/48'}`}
+          icon={<Link2 aria-hidden className="size-4" strokeWidth={1.8} />}
+          label={props.label}
+          onClick={props.onToggle}
+          role="switch"
+        />
+      </AppTooltipTrigger>
+      <AppTooltipContent align="start" side="top">
+        <AppTooltipContentLayout description={props.description} title={props.label} />
+      </AppTooltipContent>
+    </AppTooltip>
   );
 }
