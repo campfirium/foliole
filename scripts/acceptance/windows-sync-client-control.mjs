@@ -13,6 +13,7 @@ const KEY = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-la
 const ROOT = 'D:\\C\\foliole-sync';
 const NODE = 'C:\\Program Files\\nodejs\\node.exe';
 const NPM = 'C:\\Program Files\\nodejs\\npm.cmd';
+const ELECTRON_INSTALL = path.win32.join(ROOT, 'node_modules', 'electron', 'install.js');
 
 function quote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
@@ -76,6 +77,8 @@ if ($head -ne ${quote(config.revision)} -or $dirty.Count -ne 0) {
 }
 & ${quote(NPM)} ci
 if ($LASTEXITCODE -ne 0) { throw 'Windows sync dependencies failed to materialize' }
+& ${quote(NODE)} ${quote(ELECTRON_INSTALL)}
+if ($LASTEXITCODE -ne 0) { throw 'Windows sync Electron runtime failed to materialize' }
 & ${quote(NPM)} run electron:rebuild:native
 if ($LASTEXITCODE -ne 0) { throw 'Windows sync Electron native ABI rebuild failed' }
 Write-Output ("aligned=" + $head)

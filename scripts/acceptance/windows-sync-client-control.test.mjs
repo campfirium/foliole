@@ -28,8 +28,10 @@ it('materializes locked dependencies and the Electron ABI while aligning', () =>
     action: 'align', revision: 'c'.repeat(40)
   });
   expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' ci");
+  expect(script).toContain("'C:\\Program Files\\nodejs\\node.exe' 'D:\\C\\foliole-sync\\node_modules\\electron\\install.js'");
   expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' run electron:rebuild:native");
   expect(script).toContain('Windows sync dependencies failed to materialize');
+  expect(script).toContain('Windows sync Electron runtime failed to materialize');
   expect(script).toContain('Windows sync Electron native ABI rebuild failed');
 });
 
