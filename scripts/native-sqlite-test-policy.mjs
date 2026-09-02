@@ -8,6 +8,7 @@ const controlledElectronSqliteTests = [
   'electron/database/betterSqliteDbPort.ownership.test.ts',
   'electron/database/companionDatabaseLifecycle.host.test.ts',
   'electron/database/companionDatabaseLifecycle.test.ts',
+  'electron/database/companionDatabaseFreshInitialization.test.ts',
   'electron/database/companionHostStateCutover.test.ts',
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/companionOpaqueSyncRefMigration.test.ts',
