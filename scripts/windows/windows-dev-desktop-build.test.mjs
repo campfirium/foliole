@@ -34,6 +34,7 @@ it('materializes the frozen dependency graph for a sync candidate', async () => 
 
   await runWindowsDevDesktopBuild(vi.fn(), paths, checked, { materializeDependencies: true });
 
+  expect(checked.mock.calls[0][3].timeoutMs).toBe(45 * 60_000);
   expect(checked.mock.calls.map(([, , args, , stage]) => ({ args, stage }))).toEqual([
     { args: [paths.systemNpmCli, 'ci'], stage: 'desktop-dependencies' },
     { args: ['D:\\C\\foliole\\node_modules\\electron\\install.js'],
