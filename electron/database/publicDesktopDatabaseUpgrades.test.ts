@@ -34,6 +34,7 @@ import {
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 
 const fixtureRoot = path.resolve('electron/database/fixtures/public-desktop-main');
@@ -62,6 +63,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   closeDatabaseConnection();
+  await waitForManagedSafetySnapshotSettlements();
   if (tempRoot) await rm(tempRoot, { force: true, recursive: true });
 });
 
