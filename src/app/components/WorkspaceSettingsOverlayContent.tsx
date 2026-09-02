@@ -15,6 +15,7 @@ interface WorkspaceSettingsOverlayContentProps {
   onClose: () => void;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   requestedCategory: SettingsCategoryId | null;
+  requestedRowId: string | null;
 }
 
 type ImportSettingsState = ReturnType<typeof useImportSourceWorkspaceState>;
@@ -31,7 +32,8 @@ export async function prewarmWorkspaceSettingsOverlayContent() {
 export function WorkspaceSettingsOverlayContent({
   onClose,
   onRunSupportCommand,
-  requestedCategory
+  requestedCategory,
+  requestedRowId
 }: WorkspaceSettingsOverlayContentProps) {
   const importSettings = useImportSourceWorkspaceState();
   const keepPreview = useKeepPreviewDialog({
@@ -50,6 +52,7 @@ export function WorkspaceSettingsOverlayContent({
         onRunSupportCommand={onRunSupportCommand}
         readwiseReaderCategoryContent={<ReadwiseReaderCategoryContent importSettings={importSettings} />}
         requestedCategory={requestedCategory}
+        requestedRowId={requestedRowId}
       />
       {keepPreview.keepPreviewDialog ? (
         <KeepImportPreviewDialog

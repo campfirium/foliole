@@ -41,6 +41,7 @@ export interface WorkspaceSettingsOverlayProps {
   onClose: () => void;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   requestedCategory: SettingsCategoryId | null;
+  requestedRowId?: string | null;
 }
 
 interface WorkspaceSettingsOverlaySource {
@@ -48,6 +49,7 @@ interface WorkspaceSettingsOverlaySource {
   onCloseSettings: () => void;
   onRunRailAction?: ((commandId: string) => void) | undefined;
   requestedSettingsCategory: SettingsCategoryId | null;
+  requestedSettingsRowId: string | null;
 }
 
 export function selectWorkspaceSettingsOverlayProps(
@@ -57,7 +59,8 @@ export function selectWorkspaceSettingsOverlayProps(
     isSettingsOpen: props.isSettingsOpen,
     onClose: props.onCloseSettings,
     onRunSupportCommand: props.onRunRailAction,
-    requestedCategory: props.requestedSettingsCategory
+    requestedCategory: props.requestedSettingsCategory,
+    requestedRowId: props.requestedSettingsRowId
   };
 }
 
@@ -65,7 +68,8 @@ export function WorkspaceSettingsOverlay({
   isSettingsOpen,
   onClose,
   onRunSupportCommand,
-  requestedCategory
+  requestedCategory,
+  requestedRowId = null
 }: WorkspaceSettingsOverlayProps) {
   const { isDemo } = useDemoRuntimeState();
 
@@ -92,6 +96,7 @@ export function WorkspaceSettingsOverlay({
         onClose={onClose}
         onRunSupportCommand={onRunSupportCommand}
         requestedCategory={requestedCategory}
+        requestedRowId={requestedRowId}
       />
     </Suspense>
   );

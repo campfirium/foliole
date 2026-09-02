@@ -75,6 +75,24 @@ it('searches settings rows and jumps to the matching category row', async () => 
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
+it('jumps directly to a requested settings row', async () => {
+  renderWithMouseGestureProvider(
+    <SettingsPanel {...createProps()} requestedCategory="general" requestedRowId="general-models" />
+  );
+
+  const row = await waitFor(() => {
+    const target = document.querySelector('[data-settings-search-row-id="general-models"]');
+    expect(target).not.toBeNull();
+    expect(target).toHaveClass('bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]');
+    return target;
+  });
+  expect(row).not.toBeNull();
+  expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: 'smooth',
+    block: 'start'
+  });
+});
+
 it('shows the External folders category without a visibility switch', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="external-search" />);
 

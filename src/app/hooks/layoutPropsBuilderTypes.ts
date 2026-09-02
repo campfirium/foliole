@@ -67,6 +67,7 @@ export interface BuildLayoutPropsArgs {
   isSettingsOpen: boolean;
   requestedSettingsCategory: SettingsCategoryId | null;
   requestedSettingsDialog: 'readwise-reader' | null;
+  requestedSettingsRowId: string | null;
   isStudyMode: boolean;
   isReviewEditing: boolean;
   isListCollapsed: boolean;

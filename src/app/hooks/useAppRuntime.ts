@@ -5,12 +5,14 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import type { SettingsSearchRowId } from '../../features/settings/model/settingsSearch';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
 import { useMoveToNodeSourceState } from './appMoveToNodeSourceState';
 import { useEditorDraftFlushRegistry, type EditorDraftFreshFlush } from './useAppRuntimeEditorDraftFlush';
+import { useSettingsRequestState } from './useSettingsRequestState';
 
 export interface ReadingPositionSyncState {
   commandId?: string;
@@ -22,17 +24,6 @@ export interface ReadingPositionSyncState {
   targetViewportRatio?: number;
 }
 
-
-function useSettingsRequestState() {
-  const [requestedSettingsCategory, setRequestedSettingsCategory] = useState<SettingsCategoryId | null>(null);
-  const [requestedSettingsDialog, setRequestedSettingsDialog] = useState<'readwise-reader' | null>(null);
-  return {
-    requestedSettingsCategory,
-    requestedSettingsDialog,
-    setRequestedSettingsCategory,
-    setRequestedSettingsDialog
-  };
-}
 
 function useRecentHistory() {
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
@@ -93,6 +84,7 @@ function buildRuntimeState(args: {
   refs: ReturnType<typeof createRuntimeRefs>;
   requestedSettingsCategory: SettingsCategoryId | null;
   requestedSettingsDialog: 'readwise-reader' | null;
+  requestedSettingsRowId: SettingsSearchRowId | null;
   setIsCommandPaletteOpen: Dispatch<SetStateAction<boolean>>;
   setIsGoToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
   setIsImportManagementOpen: Dispatch<SetStateAction<boolean>>;
@@ -103,6 +95,7 @@ function buildRuntimeState(args: {
   setIsViewingTrashNode: Dispatch<SetStateAction<boolean>>;
   setRequestedSettingsCategory: (value: SettingsCategoryId | null) => void;
   setRequestedSettingsDialog: (value: 'readwise-reader' | null) => void;
+  setRequestedSettingsRowId: (value: SettingsSearchRowId | null) => void;
   state: {
     isCommandPaletteOpen: boolean;
     isGoToNodePaletteOpen: boolean;
@@ -122,6 +115,7 @@ function buildRuntimeState(args: {
     recentNodeIds: args.recentHistory.recentNodeIds,
     requestedSettingsCategory: args.requestedSettingsCategory,
     requestedSettingsDialog: args.requestedSettingsDialog,
+    requestedSettingsRowId: args.requestedSettingsRowId,
     recordRecentCommand: args.recentHistory.recordRecentCommand,
     recordRecentNode: args.recentHistory.recordRecentNode,
     setIsCommandPaletteOpen: args.setIsCommandPaletteOpen,
@@ -133,6 +127,7 @@ function buildRuntimeState(args: {
     setIsSettingsOpen: args.setIsSettingsOpen,
     setRequestedSettingsCategory: args.setRequestedSettingsCategory,
     setRequestedSettingsDialog: args.setRequestedSettingsDialog,
+    setRequestedSettingsRowId: args.setRequestedSettingsRowId,
     setIsViewingTrashNode: args.setIsViewingTrashNode
   };
 }
@@ -178,6 +173,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     return subscribeOpenClozeGuardSettings(() => {
       settingsRequest.setRequestedSettingsDialog(null);
       settingsRequest.setRequestedSettingsCategory('editor');
+      settingsRequest.setRequestedSettingsRowId(null);
       flags.setIsSettingsOpen(true);
     });
   }, [flags, settingsRequest]);
@@ -193,6 +189,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       refs,
       requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
       requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
+      requestedSettingsRowId: settingsRequest.requestedSettingsRowId,
       setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
       setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
       setIsImportManagementOpen: flags.setIsImportManagementOpen,
@@ -203,6 +200,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       setIsViewingTrashNode: flags.setIsViewingTrashNode,
       setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
       setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
+      setRequestedSettingsRowId: settingsRequest.setRequestedSettingsRowId,
       state: {
         isCommandPaletteOpen: flags.isCommandPaletteOpen,
         isGoToNodePaletteOpen: flags.isGoToNodePaletteOpen,

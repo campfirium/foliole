@@ -163,6 +163,7 @@ export type WorkspaceLayoutSettingsProps = Pick<WorkspaceLayoutFieldTypes,
   | 'isSettingsOpen'
   | 'requestedSettingsCategory'
   | 'requestedSettingsDialog'
+  | 'requestedSettingsRowId'
   | 'onOpenSettings'
   | 'onRunRailAction'
   | 'onCloseSettings'

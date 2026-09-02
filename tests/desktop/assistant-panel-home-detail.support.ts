@@ -77,6 +77,7 @@ export async function installAssistantIpcMock(
       const command = request?.command;
       globalThis.__folioleAssistantInvokeRequests.push(request);
       if (command === 'assistant_get_status') return fixture.status;
+      if (command === 'desktop_update_check') return { phase: 'not-applicable' };
       if (command === 'assistant_list_thread_index') {
         if (fixture.options.historyFailureOnce && !historyFailed) {
           historyFailed = true;

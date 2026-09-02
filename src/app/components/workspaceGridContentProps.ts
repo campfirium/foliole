@@ -1,4 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { SETTINGS_MODELS_SEARCH_ROW_ID } from '../../features/settings/model/settingsSearchRowCatalog';
 import { definedProps } from '../../shared/lib/definedProps';
 
 import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
@@ -165,7 +166,7 @@ function selectWorkspaceRightSidebarProps({
     nodesById: props.nodeList.nodesById,
     onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
-    onOpenModelSettings: () => props.settings.onOpenSettings('general'),
+    onOpenModelSettings: () => props.settings.onOpenSettings('general', SETTINGS_MODELS_SEARCH_ROW_ID),
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode,
     reviewActiveQueueNodeIds: props.review.reviewQueueNodeIds,

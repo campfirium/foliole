@@ -78,7 +78,7 @@ export const EXTERNAL_LIBRARY_KEYS = defineLayoutKeys<WorkspaceLayoutExternalLib
 ] as const);
 
 export const SETTINGS_KEYS = defineLayoutKeys<WorkspaceLayoutSettingsProps>()([
-  'isSettingsOpen', 'requestedSettingsCategory', 'requestedSettingsDialog', 'onOpenSettings', 'onRunRailAction',
+  'isSettingsOpen', 'requestedSettingsCategory', 'requestedSettingsDialog', 'requestedSettingsRowId', 'onOpenSettings', 'onRunRailAction',
   'onCloseSettings'
 ] as const);
 

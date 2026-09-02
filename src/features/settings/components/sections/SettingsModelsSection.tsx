@@ -18,6 +18,7 @@ import {
   SettingsSection,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
+import { SETTINGS_MODELS_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import {
@@ -31,7 +32,7 @@ const MODEL_COLUMNS = '[grid-template-columns:3.5rem_minmax(110px,0.65fr)_minmax
 export function SettingsModelsSection() {
   const t = useTranslation();
   const state = useSettingsModels();
-  const searchRow = useLocalizedSettingsSearchRow('general-models');
+  const searchRow = useLocalizedSettingsSearchRow(SETTINGS_MODELS_SEARCH_ROW_ID);
   return (
     <SettingsSection
       ariaLabel={t('settings.models.aria')}

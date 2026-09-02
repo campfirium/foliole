@@ -15,16 +15,24 @@ const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
   'duration-150'
 ];
 
-export function useSettingsSearchState(setActiveCategory: (category: SettingsCategoryId) => void) {
+export function useSettingsSearchState(
+  setActiveCategory: (category: SettingsCategoryId) => void,
+  requestedRowId: string | null = null
+) {
   const t = useTranslation();
   const [query, setQuery] = useState('');
   const [activeResultIndex, setActiveResultIndex] = useState(0);
+  const [targetBlock, setTargetBlock] = useState<ScrollLogicalPosition>('center');
   const [targetRowId, setTargetRowId] = useState<string | null>(null);
   const categories = useMemo(() => getSettingsCategories(t), [t]);
   const rows = useMemo(() => createSettingsSearchRows(t), [t]);
   const results = useMemo(() => querySettingsSearch(categories, rows, query), [categories, query, rows]);
 
   useEffect(() => setActiveResultIndex(0), [query]);
+  useEffect(() => {
+    setTargetBlock('start');
+    setTargetRowId(requestedRowId);
+  }, [requestedRowId]);
 
   const updateQuery = (nextQuery: string) => {
     setQuery(nextQuery);
@@ -32,6 +40,7 @@ export function useSettingsSearchState(setActiveCategory: (category: SettingsCat
   };
   const selectResult = (result: SettingsSearchResult) => {
     setActiveCategory(result.categoryId);
+    setTargetBlock('center');
     setTargetRowId(result.rowId ?? null);
   };
 
@@ -41,6 +50,7 @@ export function useSettingsSearchState(setActiveCategory: (category: SettingsCat
     results,
     selectResult,
     setActiveResultIndex,
+    targetBlock,
     targetRowId,
     updateQuery
   };
@@ -49,18 +59,19 @@ export function useSettingsSearchState(setActiveCategory: (category: SettingsCat
 export function useSettingsSearchTarget(
   activeCategory: SettingsCategoryId,
   targetRowId: string | null,
-  scrollContainerRef: RefObject<HTMLDivElement | null>
+  scrollContainerRef: RefObject<HTMLDivElement | null>,
+  block: ScrollLogicalPosition = 'center'
 ) {
   useEffect(() => {
     if (!targetRowId) return undefined;
     const target = scrollContainerRef.current?.querySelector<HTMLElement>(`[data-settings-search-row-id="${targetRowId}"]`);
     if (!target) return undefined;
-    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.scrollIntoView({ block, behavior: 'smooth' });
     target.classList.add(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
     const timeout = window.setTimeout(() => target.classList.remove(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES), 1600);
     return () => {
       window.clearTimeout(timeout);
       target.classList.remove(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
     };
-  }, [activeCategory, scrollContainerRef, targetRowId]);
+  }, [activeCategory, block, scrollContainerRef, targetRowId]);
 }

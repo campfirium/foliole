@@ -77,7 +77,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
             />
           )}
         </div>
-        <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
+        <div className="app-scrollbar min-h-0 flex-1 scroll-pt-20 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
           {props.contentNotice ? <div className="mb-6 px-settings-panel-x">{props.contentNotice}</div> : null}
           <div className="mb-7 px-5 pb-6">
             <div className="flex items-center gap-3">

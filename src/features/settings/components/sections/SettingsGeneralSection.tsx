@@ -161,12 +161,12 @@ export function SettingsGeneralSection({
     <>
       <SettingsLanguageSection />
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
+      {previewDesktopSettings ? null : <SettingsModelsSection />}
       <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />
       </SettingsSection>
       <SettingsCaptureSection />
-      {previewDesktopSettings ? null : <SettingsModelsSection />}
       <SettingsAideStorageSection preview={previewDesktopSettings} />
     </>
   );

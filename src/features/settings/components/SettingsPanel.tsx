@@ -37,6 +37,7 @@ interface SettingsPanelProps {
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   readwiseReaderCategoryContent?: ReactNode;
   requestedCategory?: SettingsCategoryId | null;
+  requestedRowId?: string | null;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -121,6 +122,7 @@ type SettingsPanelBodyProps = {
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   previewDesktopSettings?: boolean;
   readwiseReaderCategoryContent?: ReactNode;
+  requestedRowId?: string | null;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
@@ -181,11 +183,11 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const [isBackdropTransparent, setIsBackdropTransparent] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const searchQueryRef = useRef('');
-  const search = useSettingsSearchState(props.setActiveCategory);
+  const search = useSettingsSearchState(props.setActiveCategory, props.requestedRowId ?? null);
   searchQueryRef.current = search.query;
   const categoryProps = createSettingsCategoryProps(props, setIsBackdropTransparent, preview.setIsPreviewActive);
   useSettingsPanelEscape(preview.isPreviewActive, searchQueryRef, props.onClose);
-  useSettingsSearchTarget(props.activeCategory, search.targetRowId, scrollContainerRef);
+  useSettingsSearchTarget(props.activeCategory, search.targetRowId, scrollContainerRef, search.targetBlock);
 
   return (
     <SettingsPanelDialog

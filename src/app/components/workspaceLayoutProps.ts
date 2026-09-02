@@ -82,6 +82,7 @@ export interface WorkspaceLayoutFieldTypes {
   isSettingsOpen: boolean;
   requestedSettingsCategory: SettingsCategoryId | null;
   requestedSettingsDialog: 'readwise-reader' | null;
+  requestedSettingsRowId: string | null;
   isAnswerRevealed: boolean;
   isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;
@@ -209,7 +210,7 @@ export interface WorkspaceLayoutFieldTypes {
   onExportImage: () => void;
   onStartStudyMode: () => boolean;
   onToggleReviewSession: () => boolean;
-  onOpenSettings: (category?: import('../../features/settings/model/settingsPanelOptions').SettingsCategoryId) => void;
+  onOpenSettings: (category?: import('../../features/settings/model/settingsPanelOptions').SettingsCategoryId, rowId?: string) => void;
   onRunRailAction?: (commandId: string) => void;
   onCloseSettings: () => void;
   onRevealAnswer: () => void;

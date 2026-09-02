@@ -36,6 +36,7 @@ export function createLayoutDataArgs(
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     requestedSettingsCategory: args.runtime.requestedSettingsCategory,
     requestedSettingsDialog: args.runtime.requestedSettingsDialog,
+    requestedSettingsRowId: args.runtime.requestedSettingsRowId,
     ...createLayoutViewState(args),
     ...createLayoutReviewData(args),
     nav,

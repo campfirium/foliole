@@ -21,6 +21,12 @@ const authGateScreenshotPath = path.join(
   'artifacts',
   'assistant-panel-auth-gate.png'
 );
+const modelSettingsScreenshotPath = path.join(
+  process.cwd(),
+  '.tmp',
+  'artifacts',
+  'assistant-model-settings-deep-link.png'
+);
 const selectedThreadNotice = /(this panel shows new messages from this app session|这个面板会显示本次应用会话的新消息)/;
 
 test('Aide keeps the home composer at the bottom of the panel', async ({ desktopApp, desktopWindow }, testInfo) => {
@@ -92,6 +98,33 @@ test('Aide panel keeps home and conversation detail separate', async ({ desktopA
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-home-detail', {
     path: screenshotPath,
+    contentType: 'image/png'
+  });
+});
+
+test('Aide setup opens settings at the model section', async ({ desktopApp, desktopWindow }, testInfo) => {
+  await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-aide-enabled', 'true');
+  });
+  await desktopWindow.reload();
+  await installAssistantIpcMock(desktopApp, {
+    status: {
+      capabilities: [], failure: { category: 'not_configured' },
+      provider: 'codex-app-server', state: 'unavailable'
+    }
+  });
+  await openAssistantPanel(desktopWindow);
+
+  const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
+  await surface.getByRole('button', { name: /^(Settings|设置)$/ }).click();
+
+  const section = desktopWindow.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
+  await expect(section).toBeInViewport();
+  await mkdir(path.dirname(modelSettingsScreenshotPath), { recursive: true });
+  await desktopWindow.getByRole('dialog').screenshot({ path: modelSettingsScreenshotPath });
+  await testInfo.attach('assistant-model-settings-deep-link', {
+    path: modelSettingsScreenshotPath,
     contentType: 'image/png'
   });
 });

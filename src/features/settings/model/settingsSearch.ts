@@ -10,6 +10,8 @@ export interface SettingsSearchRowMeta {
   title: string;
 }
 
+export type SettingsSearchRowId = SettingsSearchRowMeta['id'];
+
 export interface SettingsSearchResult {
   categoryId: SettingsCategoryId;
   description: string;
