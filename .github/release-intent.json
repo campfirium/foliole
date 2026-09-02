@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.11",
+  "version": "0.7.12",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.11 repairs the shared desktop migration path for existing macOS libraries on older supported schemas, so the supported macOS package is required.",
-    "windows": "Foliole 0.7.11 repairs the Windows startup-blocking database migration reported in Issue #68, so the supported Windows package and direct installer are required.",
-    "linux": "Foliole 0.7.11 repairs the shared Electron migration path for existing Linux Experimental libraries on older supported schemas, so the Linux Experimental package is required."
+    "macos": "Foliole 0.7.12 adds custom OpenAI-compatible models and the completed Aide workflow to the supported macOS desktop app, so the macOS package is required.",
+    "windows": "Foliole 0.7.12 adds custom OpenAI-compatible models and the completed Aide workflow to the supported Windows desktop app, so the Windows package and direct installer are required.",
+    "linux": "Foliole 0.7.12 adds the same Electron Aide capabilities to Linux Experimental, so the Linux Experimental package is required."
   }
 }

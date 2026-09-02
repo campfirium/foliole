@@ -7,6 +7,11 @@ import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 import { handleInvokeRequest } from './commands.js';
 
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
+
 const {
   defaultReviewSchedulerSettings,
   mockApp,

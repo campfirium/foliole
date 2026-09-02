@@ -95,9 +95,9 @@ it('requires a new key when the endpoint changes', async () => {
     model: 'model-b'
   })).rejects.toThrow('auth_failed');
   expect(loadFolioleAideByokSettings()).toMatchObject({
-    endpoint: 'https://one.example/v1/chat/completions',
-    model: 'model-a',
-    state: 'configured'
+    endpoint: 'https://two.example/v1/chat/completions',
+    model: 'model-b',
+    state: 'not_configured'
   });
   expect(state.secret).toBe('old-key');
   await expect(saveFolioleAideByokSettings({

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
@@ -40,7 +41,7 @@ it('signs the DEV Electron bundle with one stable product identity', async () =>
   expect(plist.get('CFBundleName')).toBe(MACOS_ELECTRON_DEV_BUNDLE_NAME);
   expect(plist.get('CFBundleDisplayName')).toBe(MACOS_ELECTRON_DEV_BUNDLE_NAME);
   expect(sign).toHaveBeenCalledWith(expect.objectContaining({
-    app: '/repo/node_modules/electron/dist/Electron.app',
+    app: path.join('/repo', 'node_modules', 'electron', 'dist', 'Electron.app'),
     identity: MACOS_ELECTRON_DEV_SIGNING_IDENTITY,
     optionsForFile: expect.any(Function),
     platform: 'darwin'
@@ -50,7 +51,7 @@ it('signs the DEV Electron bundle with one stable product identity', async () =>
     timestamp: 'none'
   });
   expect(run).toHaveBeenCalledWith('/usr/bin/codesign', [
-    '--verify', '--deep', '--strict', '/repo/node_modules/electron/dist/Electron.app'
+    '--verify', '--deep', '--strict', path.join('/repo', 'node_modules', 'electron', 'dist', 'Electron.app')
   ]);
 });
 

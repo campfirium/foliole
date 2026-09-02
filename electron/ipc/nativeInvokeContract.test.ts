@@ -8,6 +8,11 @@ import { handleInvokeRequest } from './commands.js';
 
 const mockWindow = {};
 
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),

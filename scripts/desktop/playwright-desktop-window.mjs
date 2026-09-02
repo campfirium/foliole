@@ -7,7 +7,7 @@ function delay(ms) {
 async function isDesktopRootPage(page) {
   try {
     await page.waitForLoadState('domcontentloaded', { timeout: 500 });
-    return page.evaluate(() =>
+    return await page.evaluate(() =>
       globalThis.location.href !== 'about:blank' &&
       globalThis.document.readyState !== 'loading' &&
       Boolean(globalThis.document.getElementById('root'))

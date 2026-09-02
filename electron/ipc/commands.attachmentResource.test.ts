@@ -6,6 +6,11 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 import { handleInvokeRequest } from './commands.js';
 
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
+
 const { resolveAttachmentResource } = vi.hoisted(() => ({
   resolveAttachmentResource: vi.fn()
 }));

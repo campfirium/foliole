@@ -1,5 +1,7 @@
 import type http from 'node:http';
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
 import { isCapabilityEnabled } from './agentControlCapabilities.js';
 import {
@@ -162,10 +164,11 @@ async function handleRequest(
     handleVerify(request, response, options);
     return;
   }
-  if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) {
-    return;
-  }
-  if (await handleAgentControlVirtualFolderRoute(request, response, options, url.pathname)) {
+  const capability = capabilityForProtectedPath(request.method, url.pathname);
+  if (capability && await runWithDatabaseConnectionOwner(async () => {
+    if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) return true;
+    return handleAgentControlVirtualFolderRoute(request, response, options, url.pathname);
+  })) {
     return;
   }
   recordRequest({

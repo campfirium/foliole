@@ -50,7 +50,7 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
   expect(result).toMatchObject({ message: { text: 'Ready', threadId: 'thread-1' }, state: 'ready' });
   expectManagedSkillRoot(capturedSkillRootRequests[0]);
   expect(capturedTurnInputs).toHaveLength(1);
-  expect(capturedTurnInputs[0]).toContain('read a Topic or Folder');
+  expect(capturedTurnInputs[0]).toContain('read a Topic, Folder, or Item');
   expect(capturedTurnInputs[0]).not.toContain('update a Topic');
   expect(capturedTurnInputs[0]).not.toContain('MCP');
   expect(capturedTurnInputs[0]).not.toContain('FOLIOLE_AGENT_DESCRIPTOR');
