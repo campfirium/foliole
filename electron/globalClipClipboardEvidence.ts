@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 
 import type { NativeImage } from 'electron';
 
-import type { ClipboardEvidenceAccess, LegacyClipboardData } from './clipboardAccess.js';
+import type { ClipboardEvidenceAccess, ClipboardReadAccess, LegacyClipboardData } from './clipboardAccess.js';
+
+const INITIAL_SNAPSHOT_TIMEOUT_MS = 1500;
 
 export interface ClipboardSnapshot {
   fingerprint: string;
@@ -45,9 +47,40 @@ function isImageEmpty(image: NativeImage) {
   }
 }
 
+function captureInitialClipboard(
+  clipboardRef: ClipboardEvidenceAccess,
+  timeoutMs = INITIAL_SNAPSHOT_TIMEOUT_MS
+): Promise<ClipboardReadAccess> {
+  if (!clipboardRef.capture) return Promise.resolve(clipboardRef);
+  const capture = clipboardRef.capture.bind(clipboardRef);
+  return new Promise((resolve, reject) => {
+    const timer = globalThis.setTimeout(
+      () => reject(new Error('clipboard snapshot timed out')),
+      timeoutMs
+    );
+    capture().then(
+      (captured) => {
+        globalThis.clearTimeout(timer);
+        resolve(captured);
+      },
+      (error) => {
+        globalThis.clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export async function readClipboardSnapshot(
-  clipboardRef: ClipboardEvidenceAccess
+  clipboardRef: ClipboardReadAccess
 ): Promise<ClipboardSnapshot> {
+  const captured = 'capture' in clipboardRef && typeof clipboardRef.capture === 'function'
+    ? await clipboardRef.capture()
+    : clipboardRef;
+  return readCapturedClipboardSnapshot(captured);
+}
+
+async function readCapturedClipboardSnapshot(clipboardRef: ClipboardReadAccess): Promise<ClipboardSnapshot> {
   const formats = [...await safeRead(() => clipboardRef.availableFormats(), [])].sort();
   const formatFingerprints = await Promise.all(formats.map(async (format) => {
     const bytes = await safeRead(() => clipboardRef.readBuffer(format), Buffer.alloc(0));
@@ -69,12 +102,13 @@ export async function readClipboardSnapshot(
 export async function readRestorableClipboardSnapshot(
   clipboardRef: ClipboardEvidenceAccess
 ): Promise<RestorableClipboardSnapshot> {
-  const snapshot = await readClipboardSnapshot(clipboardRef);
-  const text = await safeRead(() => clipboardRef.readText(), '');
-  const html = await safeRead(() => clipboardRef.readHTML(), '');
-  const rtf = await safeRead(() => clipboardRef.readRTF(), '');
-  const bookmark = await safeRead(() => clipboardRef.readBookmark(), { title: '', url: '' });
-  const image = await safeRead(() => clipboardRef.readImage(), null);
+  const captured = await captureInitialClipboard(clipboardRef);
+  const snapshot = await readCapturedClipboardSnapshot(captured);
+  const text = await safeRead(() => captured.readText(), '');
+  const html = await safeRead(() => captured.readHTML(), '');
+  const rtf = await safeRead(() => captured.readRTF(), '');
+  const bookmark = await safeRead(() => captured.readBookmark(), { title: '', url: '' });
+  const image = await safeRead(() => captured.readImage(), null);
   const data: LegacyClipboardData = {};
   if (text || bookmark.url) data.text = text || bookmark.url;
   if (html) data.html = html;

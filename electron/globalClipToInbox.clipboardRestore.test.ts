@@ -30,6 +30,7 @@ vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(async () => null) }));
 
+import { hasClipboardChanged, readClipboardSnapshot } from './globalClipClipboardEvidence.js';
 import { runGlobalClipToInbox } from './globalClipToInbox.js';
 
 function createClipboardSource(initialText: string, initialFormats = ['text/plain']) {
@@ -66,6 +67,25 @@ function createToastController() {
 beforeEach(() => {
   vi.clearAllMocks();
   clipboardImage.isEmpty.mockReturnValue(true);
+});
+
+it('detects payload changes when a direct custom MIME type stays the same', async () => {
+  const state = { payload: 'first' };
+  const source = {
+    availableFormats: vi.fn(() => ['web application/x-foliole-test']),
+    readBookmark: vi.fn(() => ({ title: '', url: '' })),
+    readBuffer: vi.fn(() => Buffer.from(state.payload)),
+    readHTML: vi.fn(() => ''),
+    readImage: vi.fn(() => clipboardImage as never),
+    readRTF: vi.fn(() => ''),
+    readText: vi.fn(() => '')
+  };
+
+  const before = await readClipboardSnapshot(source);
+  state.payload = 'second';
+  const after = await readClipboardSnapshot(source);
+
+  expect(hasClipboardChanged(before, after)).toBe(true);
 });
 
 it('restores the original clipboard after strict text import succeeds', async () => {

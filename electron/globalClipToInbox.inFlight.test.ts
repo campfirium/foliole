@@ -82,3 +82,41 @@ it('raises the open capture panel when the global shortcut repeats during captur
   resolvePanel(panelResult);
   await expect(firstRun).resolves.toBeNull();
 });
+
+it('reports a clipboard snapshot failure without leaving capture in flight', async () => {
+  const presentIssue = vi.fn(async () => true);
+  const log = vi.fn();
+  const clipboardRef = {
+    ...createClipboardSnapshotSource('current clipboard'),
+    capture: vi.fn(async () => {
+      throw new Error('clipboard read failed');
+    })
+  };
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await expect(runGlobalClipToInbox({ clipboardRef, log, presentIssue })).resolves.toBeNull();
+  }
+
+  expect(clipboardRef.capture).toHaveBeenCalledTimes(2);
+  expect(presentIssue).toHaveBeenCalledTimes(2);
+  expect(log).toHaveBeenCalledWith('global_clip_copy_adapter_failed', { error: expect.any(Error) });
+  expect(log).not.toHaveBeenCalledWith('global_clip_capture_in_flight');
+});
+
+it('times out a stuck initial clipboard read and releases capture', async () => {
+  vi.useFakeTimers();
+  const presentIssue = vi.fn(async () => true);
+  const log = vi.fn();
+  const clipboardRef = {
+    ...createClipboardSnapshotSource('current clipboard'),
+    capture: vi.fn(() => new Promise<never>(() => undefined))
+  };
+
+  const run = runGlobalClipToInbox({ clipboardRef, log, presentIssue });
+  await vi.advanceTimersByTimeAsync(1500);
+
+  await expect(run).resolves.toBeNull();
+  expect(presentIssue).toHaveBeenCalledWith('copyFailed');
+  expect(log).toHaveBeenCalledWith('global_clip_copy_adapter_failed', { error: expect.any(Error) });
+  vi.useRealTimers();
+});

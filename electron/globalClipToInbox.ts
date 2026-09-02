@@ -172,9 +172,10 @@ async function runGlobalClipToInboxOnce(args: {
   waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
   waitForReady: typeof waitForDatabaseReady;
 }) {
-  const before = await readRestorableClipboardSnapshot(args.clipboardRef);
+  let before: Awaited<ReturnType<typeof readRestorableClipboardSnapshot>>;
   let copyResult;
   try {
+    before = await readRestorableClipboardSnapshot(args.clipboardRef);
     copyResult = await runCopyAttempt({
       before: before.snapshot,
       clipboardRef: args.clipboardRef,
