@@ -74,6 +74,10 @@ $dirty = @(git status --short)
 if ($head -ne ${quote(config.revision)} -or $dirty.Count -ne 0) {
   throw 'Windows sync checkout did not settle on the requested clean revision'
 }
+& ${quote(NPM)} ci
+if ($LASTEXITCODE -ne 0) { throw 'Windows sync dependencies failed to materialize' }
+& ${quote(NPM)} run electron:rebuild:native
+if ($LASTEXITCODE -ne 0) { throw 'Windows sync Electron native ABI rebuild failed' }
 Write-Output ("aligned=" + $head)
 `;
 }

@@ -23,6 +23,16 @@ it('pins the Windows sync checkout and exact candidate revision', () => {
   expect(script).toContain("--revision 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'");
 });
 
+it('materializes locked dependencies and the Electron ABI while aligning', () => {
+  const script = buildWindowsSyncClientPowerShell({
+    action: 'align', revision: 'c'.repeat(40)
+  });
+  expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' ci");
+  expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' run electron:rebuild:native");
+  expect(script).toContain('Windows sync dependencies failed to materialize');
+  expect(script).toContain('Windows sync Electron native ABI rebuild failed');
+});
+
 it('stops only the isolated Foliole Electron listener on the requested port', () => {
   const script = buildWindowsSyncClientPowerShell({ action: 'stop', port: 9222 });
   expect(script).toContain('Get-NetTCPConnection -State Listen -LocalPort 9222');
