@@ -109,6 +109,10 @@ final class FolioleCompanionSyncGroupJoinScenario {
             throw new IllegalStateException("acceptance_group_identity_missing");
         }
         Context context = instrumentation.getTargetContext();
+        if (!preferredEndpoint.isEmpty()) {
+            assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag);
+            return preferredEndpoint;
+        }
         List<String> matches = new ArrayList<>();
         int mismatches = 0;
         for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
@@ -127,18 +131,25 @@ final class FolioleCompanionSyncGroupJoinScenario {
         if (mismatches > 0) {
             throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
-        if (!preferredEndpoint.isEmpty()) {
-            if (!matches.contains(preferredEndpoint)) {
-                throw new IllegalStateException(
-                    "acceptance_group_endpoint_missing: matches=" + matches
-                );
-            }
-            return preferredEndpoint;
-        }
         if (matches.size() != 1) {
             throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
         return matches.get(0);
+    }
+
+    private static void assertEndpointIdentity(
+        Context context, String endpoint, String groupId, String groupTag
+    ) throws Exception {
+        JSObject response = FolioleCompanionDesktopHttpClient.request(
+            context, endpoint + "/companion/discovery", "GET", new JSONObject(), null
+        );
+        String bodyKey = FolioleCompanionHostBridgeContractDefinitions
+            .networkBodyResponseKey(context);
+        JSONObject discovery = new JSONObject(response.getString(bodyKey));
+        if (!groupId.equals(discovery.optString("group_id"))
+            || !groupTag.equals(discovery.optString("group_tag"))) {
+            throw new IllegalStateException("acceptance_group_endpoint_identity_mismatch");
+        }
     }
 
     private static Activity start(Instrumentation instrumentation) {
