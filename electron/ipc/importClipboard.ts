@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-import { clipboard } from 'electron';
-
 import { decideClipboardPasteSource } from '../../lib/clipboard/clipboardPasteSource.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
@@ -10,6 +8,7 @@ import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import type { NativeTextImportArgs, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
 import { importImageAttachmentBytes, normalizeImageFileName } from '../attachments/importImageAttachmentBytes.js';
+import { electronClipboardAccess } from '../clipboardAccess.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { buildImportNodeMutationPatch, withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
@@ -111,7 +110,7 @@ function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: s
 }
 
 async function runClipboardImageImport(args?: NativeTextImportArgs) {
-  const image = clipboard.readImage();
+  const image = await electronClipboardAccess.readImage();
   if (image.isEmpty()) {
     return null;
   }
@@ -186,9 +185,9 @@ function createClipboardTextPreparedRecord(input: {
   return { ...record, hideTitleHeading: false };
 }
 
-function readClipboardTextContent() {
-  const html = clipboard.readHTML().trim();
-  const text = clipboard.readText().trim();
+async function readClipboardTextContent() {
+  const html = (await electronClipboardAccess.readHTML()).trim();
+  const text = (await electronClipboardAccess.readText()).trim();
   const source = decideClipboardPasteSource({ html, plainText: text });
   if (!source) {
     return null;
@@ -199,8 +198,8 @@ function readClipboardTextContent() {
   };
 }
 
-function runClipboardTextImport(args?: NativeTextImportArgs) {
-  const textContent = readClipboardTextContent();
+async function runClipboardTextImport(args?: NativeTextImportArgs) {
+  const textContent = await readClipboardTextContent();
   if (!textContent) {
     return null;
   }

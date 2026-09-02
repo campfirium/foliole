@@ -9,13 +9,19 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { clipboard } = vi.hoisted(() => ({
   clipboard: {
     availableFormats: vi.fn((): string[] => []),
-    read: vi.fn(() => ''),
+    read: vi.fn((format?: string) => {
+      void format;
+      return '';
+    }),
     readBuffer: vi.fn(() => Buffer.alloc(0)),
     readText: vi.fn(() => '')
   }
 }));
 
-vi.mock('electron', () => ({ clipboard }));
+vi.mock('../clipboardAccess.js', () => ({
+  electronClipboardAccess: clipboard,
+  readElectronClipboardTextType: vi.fn((type: string) => clipboard.read(type))
+}));
 
 import { collectClipboardFilePaths, parseWindowsFileDropListPayload } from './clipboardFilePaths.js';
 

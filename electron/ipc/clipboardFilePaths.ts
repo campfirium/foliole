@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import { promisify } from 'node:util';
 
-import { clipboard } from 'electron';
+import { electronClipboardAccess, readElectronClipboardTextType } from '../clipboardAccess.js';
 
 const WINDOWS_FILE_NAME_FORMAT = 'FileNameW';
 const URI_LIST_FORMAT = 'text/uri-list';
@@ -110,30 +110,28 @@ async function readWindowsFileDropList() {
 }
 
 export async function collectClipboardFilePaths(options: ClipboardFilePathCollectorOptions = {}) {
-  const formats = clipboard.availableFormats();
+  const formats = await electronClipboardAccess.availableFormats();
   const fileNameFormat = formats.find((format) => format === WINDOWS_FILE_NAME_FORMAT || format.includes(WINDOWS_FILE_NAME_FORMAT));
   const legacyFileNameFormat = formats.find((format) => format === 'FileName' || format.includes('FileName'));
   const uriListFormat = formats.find((format) => format === URI_LIST_FORMAT || format.includes(URI_LIST_FORMAT));
   const filePaths = new Set<string>();
   if (fileNameFormat) {
-    for (const filePath of parsePathList(clipboard.read(fileNameFormat))) {
-      filePaths.add(filePath);
-    }
-    for (const filePath of parseWindowsFileNameBuffer(clipboard.readBuffer(fileNameFormat))) {
+    for (const filePath of parseWindowsFileNameBuffer(await electronClipboardAccess.readBuffer(fileNameFormat))) {
       filePaths.add(filePath);
     }
   }
   if (!fileNameFormat && legacyFileNameFormat) {
-    for (const filePath of parsePathList(clipboard.read(legacyFileNameFormat))) {
+    const bytes = await electronClipboardAccess.readBuffer(legacyFileNameFormat);
+    for (const filePath of parsePathList(bytes.toString('utf8'))) {
       filePaths.add(filePath);
     }
   }
   if (uriListFormat) {
-    for (const filePath of parseUriList(clipboard.read(uriListFormat))) {
+    for (const filePath of parseUriList(await readElectronClipboardTextType(URI_LIST_FORMAT))) {
       filePaths.add(filePath);
     }
   }
-  for (const filePath of parseTextFilePaths(clipboard.readText())) {
+  for (const filePath of parseTextFilePaths(await electronClipboardAccess.readText())) {
     filePaths.add(filePath);
   }
   for (const filePath of await (options.readWindowsFileDropList ?? readWindowsFileDropList)()) {

@@ -54,7 +54,7 @@ export async function importWithGlobalClipToast(args: {
     return result;
   } finally {
     if (args.clipboardRestore) {
-      restoreClipboardIfUnchanged({ ...args.clipboardRestore, log: args.log });
+      await restoreClipboardIfUnchanged({ ...args.clipboardRestore, log: args.log });
     }
   }
 }
@@ -70,7 +70,7 @@ export async function handleGlobalCapturePanelResult(args: {
 }) {
   if (args.panelResult.type === 'cancelled') {
     if (args.clipboardRestore) {
-      restoreClipboardIfUnchanged({ ...args.clipboardRestore, log: args.log });
+      await restoreClipboardIfUnchanged({ ...args.clipboardRestore, log: args.log });
     }
     args.log('global_clip_capture_cancelled');
     return null;

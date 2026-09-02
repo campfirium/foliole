@@ -1,12 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { clipboard, dialog, nativeImage, type BrowserWindow } from 'electron';
+import { dialog, nativeImage, type BrowserWindow } from 'electron';
 
 import type {
   NativeCopyAttachmentImageResult,
   NativeExportAttachmentImageResult
 } from '../../lib/platform/nativeUtilityContract.js';
+import { electronClipboardAccess } from '../clipboardAccess.js';
 import { findAttachmentRecordById } from '../database/attachments.js';
 
 import { resolveAttachmentFile } from './resourceResolver.js';
@@ -45,7 +46,7 @@ function resolveDialogFilters(fileName: string, mimeType: string | null) {
   return [{ extensions: ['png'], name: 'PNG images' }];
 }
 
-export function copyAttachmentImageToClipboard(attachmentId: string): NativeCopyAttachmentImageResult {
+export async function copyAttachmentImageToClipboard(attachmentId: string): Promise<NativeCopyAttachmentImageResult> {
   const resolved = resolveAttachmentFile(attachmentId);
   if (resolved.status !== 'ready') {
     return { status: resolved.status };
@@ -56,7 +57,7 @@ export function copyAttachmentImageToClipboard(attachmentId: string): NativeCopy
     return { status: 'invalid_image' };
   }
 
-  clipboard.writeImage(image);
+  await electronClipboardAccess.writeImage(image);
   return { status: 'copied' };
 }
 

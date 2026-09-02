@@ -22,7 +22,7 @@ const { clipboard, clipboardImage, notifyManagedInboxUpdated, runPreparedImport 
   };
 });
 
-vi.mock('electron', () => ({ clipboard }));
+vi.mock('../clipboardAccess.js', () => ({ electronClipboardAccess: clipboard }));
 vi.mock('./clipboardFilePaths.js', () => ({ collectClipboardFilePaths: vi.fn(async () => []) }));
 vi.mock('../database/importPipeline.js', () => ({ runPreparedImport }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));

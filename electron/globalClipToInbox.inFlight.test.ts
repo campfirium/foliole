@@ -70,7 +70,7 @@ it('raises the open capture panel when the global shortcut repeats during captur
     waitForReady: vi.fn(async () => undefined)
   });
   for (let index = 0; index < 10 && showCapturePanel.mock.calls.length === 0; index += 1) {
-    await Promise.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
   }
 
   await expect(runGlobalClipToInbox({ log, raiseCapturePanel })).resolves.toBeNull();

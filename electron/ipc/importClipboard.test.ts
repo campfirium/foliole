@@ -50,7 +50,10 @@ const {
   };
 });
 
-vi.mock('electron', () => ({ clipboard }));
+vi.mock('../clipboardAccess.js', () => ({
+  electronClipboardAccess: clipboard,
+  readElectronClipboardTextType: vi.fn((type: string) => clipboard.read(type))
+}));
 vi.mock('../database/importPipeline.js', () => ({ runPreparedImport }));
 vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes,
@@ -136,7 +139,9 @@ beforeEach(() => {
 
 it('imports a PDF copied as a Windows FileNameW text clipboard entry', async () => {
   clipboard.availableFormats.mockReturnValue(['FileNameW']);
-  clipboard.read.mockImplementation((format?: string) => (format === 'FileNameW' ? '"C:\\Users\\me\\Desktop\\document.pdf"\u0000' : ''));
+  clipboard.readBuffer.mockImplementation((format?: string) =>
+    format === 'FileNameW' ? Buffer.from('"C:\\Users\\me\\Desktop\\document.pdf"\u0000', 'utf16le') : Buffer.alloc(0)
+  );
 
   await expect(runClipboardImport()).resolves.toMatchObject({
     source_kind: 'pdf',
@@ -175,7 +180,9 @@ it('imports a JPG copied as a Windows FileNameW clipboard entry through the loca
 
 it('reports unsupported copied file formats instead of falling back to clipboard text', async () => {
   clipboard.availableFormats.mockReturnValue(['FileNameW']);
-  clipboard.read.mockImplementation((format?: string) => (format === 'FileNameW' ? 'C:\\Users\\me\\Desktop\\archive.zip\u0000' : ''));
+  clipboard.readBuffer.mockImplementation((format?: string) =>
+    format === 'FileNameW' ? Buffer.from('C:\\Users\\me\\Desktop\\archive.zip\u0000', 'utf16le') : Buffer.alloc(0)
+  );
   clipboard.readText.mockReturnValue('C:\\Users\\me\\Desktop\\archive.zip');
 
   await expect(runClipboardImport()).rejects.toThrow('Clipboard file format is not supported');

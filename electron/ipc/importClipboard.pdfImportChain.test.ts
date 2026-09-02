@@ -11,7 +11,10 @@ let mockedAppDataDir = '/tmp/foliole-clipboard-pdf-import-tests';
 const { clipboard } = vi.hoisted(() => ({
   clipboard: {
     availableFormats: vi.fn((): string[] => []),
-    read: vi.fn(() => ''),
+    read: vi.fn((format?: string) => {
+      void format;
+      return '';
+    }),
     readBuffer: vi.fn(() => Buffer.alloc(0)),
     readHTML: vi.fn(() => ''),
     readImage: vi.fn(() => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })),
@@ -29,6 +32,11 @@ vi.mock('electron', () => ({
       await fs.rm(filePath, { force: true, recursive: true });
     })
   }
+}));
+
+vi.mock('../clipboardAccess.js', () => ({
+  electronClipboardAccess: clipboard,
+  readElectronClipboardTextType: vi.fn((type: string) => clipboard.read(type))
 }));
 
 vi.mock('./paths.js', () => ({

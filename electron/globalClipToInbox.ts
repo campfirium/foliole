@@ -1,11 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import {
-  clipboard,
-  type Clipboard
-} from 'electron';
-
+import { electronClipboardAccess, type ClipboardEvidenceAccess } from './clipboardAccess.js';
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import {
@@ -54,10 +50,7 @@ export function resolveWindowsCopyCommandForTests() {
 }
 
 export interface GlobalClipToInboxDeps {
-  clipboardRef?: Pick<
-    Clipboard,
-    'availableFormats' | 'clear' | 'readBookmark' | 'readBuffer' | 'readHTML' | 'readImage' | 'readRTF' | 'readText' | 'write'
-  >;
+  clipboardRef?: ClipboardEvidenceAccess;
   log?: (event: string, payload?: Record<string, unknown>) => void;
   platform?: NodeJS.Platform;
   runImport?: typeof runClipboardImport;
@@ -88,7 +81,7 @@ async function waitForClipboardChange(
 ) {
   const startedAt = Date.now();
   while (Date.now() - startedAt <= COPY_WAIT_TIMEOUT_MS) {
-    const after = readClipboardSnapshot(clipboardRef);
+    const after = await readClipboardSnapshot(clipboardRef);
     if (hasClipboardChanged(before, after)) return true;
     await delay(COPY_POLL_INTERVAL_MS);
   }
@@ -131,7 +124,7 @@ async function runCopyAttempt(args: {
 }
 
 export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
-  const clipboardRef = deps.clipboardRef ?? clipboard;
+  const clipboardRef = deps.clipboardRef ?? electronClipboardAccess;
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
   const platform = deps.platform ?? (deps.sendCopyShortcut ? 'win32' : process.platform);
@@ -179,7 +172,7 @@ async function runGlobalClipToInboxOnce(args: {
   waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
   waitForReady: typeof waitForDatabaseReady;
 }) {
-  const before = readRestorableClipboardSnapshot(args.clipboardRef);
+  const before = await readRestorableClipboardSnapshot(args.clipboardRef);
   let copyResult;
   try {
     copyResult = await runCopyAttempt({
@@ -196,7 +189,7 @@ async function runGlobalClipToInboxOnce(args: {
     return null;
   }
   if (await reportGlobalClipCopyIssue(copyResult.permission, args.log, args.presentIssue)) return null;
-  const after = readClipboardSnapshot(args.clipboardRef);
+  const after = await readClipboardSnapshot(args.clipboardRef);
   if (copyResult.copyWritten || hasClipboardChanged(before.snapshot, after)) {
     const toast = args.showDesktopToast('pending');
     return importWithGlobalClipToast({

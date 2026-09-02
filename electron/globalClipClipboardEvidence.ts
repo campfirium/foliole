@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 
-import type { Clipboard, NativeImage } from 'electron';
+import type { NativeImage } from 'electron';
 
-type ClipboardData = Parameters<Clipboard['write']>[0];
+import type { ClipboardEvidenceAccess, LegacyClipboardData } from './clipboardAccess.js';
 
 export interface ClipboardSnapshot {
   fingerprint: string;
@@ -12,7 +12,7 @@ export interface ClipboardSnapshot {
 }
 
 export interface RestorableClipboardSnapshot {
-  data: ClipboardData;
+  data: LegacyClipboardData;
   snapshot: ClipboardSnapshot;
 }
 
@@ -29,27 +29,11 @@ function hashBuffer(value: Buffer) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function safeReadBuffer(clipboardRef: Pick<Clipboard, 'readBuffer'>, format: string) {
+async function safeRead<T>(read: () => T | Promise<T>, fallback: T) {
   try {
-    return clipboardRef.readBuffer(format);
+    return await read();
   } catch {
-    return Buffer.alloc(0);
-  }
-}
-
-function safeReadText(read: () => string) {
-  try {
-    return read();
-  } catch {
-    return '';
-  }
-}
-
-function safeReadBookmark(read: () => { title: string; url: string }) {
-  try {
-    return read();
-  } catch {
-    return { title: '', url: '' };
+    return fallback;
   }
 }
 
@@ -61,18 +45,18 @@ function isImageEmpty(image: NativeImage) {
   }
 }
 
-export function readClipboardSnapshot(
-  clipboardRef: Pick<Clipboard, 'availableFormats' | 'readBuffer' | 'readHTML' | 'readImage' | 'readText'>
-): ClipboardSnapshot {
-  const formats = [...clipboardRef.availableFormats()].sort();
-  const formatFingerprints = formats.map((format) => {
-    const bytes = safeReadBuffer(clipboardRef, format);
+export async function readClipboardSnapshot(
+  clipboardRef: ClipboardEvidenceAccess
+): Promise<ClipboardSnapshot> {
+  const formats = [...await safeRead(() => clipboardRef.availableFormats(), [])].sort();
+  const formatFingerprints = await Promise.all(formats.map(async (format) => {
+    const bytes = await safeRead(() => clipboardRef.readBuffer(format), Buffer.alloc(0));
     return `${format}:${bytes.length}:${hashBuffer(bytes)}`;
-  });
-  const image = clipboardRef.readImage();
-  const html = safeReadText(() => clipboardRef.readHTML());
-  const text = safeReadText(() => clipboardRef.readText());
-  const hasImage = !isImageEmpty(image);
+  }));
+  const image = await safeRead(() => clipboardRef.readImage(), null);
+  const html = await safeRead(() => clipboardRef.readHTML(), '');
+  const text = await safeRead(() => clipboardRef.readText(), '');
+  const hasImage = image ? !isImageEmpty(image) : false;
   const parts = [
     `formats=${formatFingerprints.join('|')}`,
     `html=${hashText(html)}`,
@@ -82,21 +66,21 @@ export function readClipboardSnapshot(
   return { fingerprint: hashText(parts.join('\n')), formats, hasImage, text };
 }
 
-export function readRestorableClipboardSnapshot(
-  clipboardRef: Pick<Clipboard, 'availableFormats' | 'readBookmark' | 'readBuffer' | 'readHTML' | 'readImage' | 'readRTF' | 'readText'>
-): RestorableClipboardSnapshot {
-  const snapshot = readClipboardSnapshot(clipboardRef);
-  const text = safeReadText(() => clipboardRef.readText());
-  const html = safeReadText(() => clipboardRef.readHTML());
-  const rtf = safeReadText(() => clipboardRef.readRTF());
-  const bookmark = safeReadBookmark(() => clipboardRef.readBookmark());
-  const image = clipboardRef.readImage();
-  const data: ClipboardData = {};
+export async function readRestorableClipboardSnapshot(
+  clipboardRef: ClipboardEvidenceAccess
+): Promise<RestorableClipboardSnapshot> {
+  const snapshot = await readClipboardSnapshot(clipboardRef);
+  const text = await safeRead(() => clipboardRef.readText(), '');
+  const html = await safeRead(() => clipboardRef.readHTML(), '');
+  const rtf = await safeRead(() => clipboardRef.readRTF(), '');
+  const bookmark = await safeRead(() => clipboardRef.readBookmark(), { title: '', url: '' });
+  const image = await safeRead(() => clipboardRef.readImage(), null);
+  const data: LegacyClipboardData = {};
   if (text || bookmark.url) data.text = text || bookmark.url;
   if (html) data.html = html;
   if (rtf) data.rtf = rtf;
   if (bookmark.title) data.bookmark = bookmark.title;
-  if (!isImageEmpty(image)) data.image = image;
+  if (image && !isImageEmpty(image)) data.image = image;
   return { data, snapshot };
 }
 
@@ -111,19 +95,19 @@ export function createClipboardRestoreContext(
   return { afterCopy, beforeCopy };
 }
 
-export function restoreClipboardIfUnchanged(args: {
-  clipboardRef: Pick<Clipboard, 'availableFormats' | 'clear' | 'readBuffer' | 'readHTML' | 'readImage' | 'readText' | 'write'>;
+export async function restoreClipboardIfUnchanged(args: {
+  clipboardRef: ClipboardEvidenceAccess;
   context: ClipboardRestoreContext;
   log: (event: string, payload?: Record<string, unknown>) => void;
 }) {
-  const current = readClipboardSnapshot(args.clipboardRef);
+  const current = await readClipboardSnapshot(args.clipboardRef);
   if (hasClipboardChanged(args.context.afterCopy, current)) {
     args.log('global_clip_clipboard_restore_skipped_changed');
     return false;
   }
   try {
-    args.clipboardRef.clear();
-    args.clipboardRef.write(args.context.beforeCopy.data);
+    await args.clipboardRef.clear();
+    await args.clipboardRef.write(args.context.beforeCopy.data);
     args.log('global_clip_clipboard_restored');
     return true;
   } catch (error) {
