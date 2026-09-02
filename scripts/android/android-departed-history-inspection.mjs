@@ -26,7 +26,7 @@ function currentGroupEvidence(database) {
       || !tableExists(database, 'sync_groups')) {
     return { activeSyncGroupMemberCount: 0, syncGroupId: null, syncGroupTimelineId: null };
   }
-  const rows = all(database, `SELECT groups.group_id, groups.timeline_id
+  const rows = all(database, `SELECT groups.group_id
     FROM sync_group_local_state local JOIN sync_groups groups ON groups.group_id = local.group_id
     WHERE local.singleton_id = 1 LIMIT 2`);
   if (rows.length !== 1) {
@@ -36,7 +36,7 @@ function currentGroupEvidence(database) {
     ? count(database, `SELECT COUNT(*) AS count FROM sync_group_members
       WHERE group_id = ? AND state = 'active'`, rows[0].group_id) : 0;
   return { activeSyncGroupMemberCount: active, syncGroupId: rows[0].group_id,
-    syncGroupTimelineId: rows[0].timeline_id };
+    syncGroupTimelineId: null };
 }
 
 function emptyStoredEvidence(storedSyncGroupCount) {
@@ -54,7 +54,7 @@ function emptyStoredEvidence(storedSyncGroupCount) {
 
 function storedGroupEvidence(database) {
   if (!tableExists(database, 'sync_groups')) return emptyStoredEvidence(0);
-  const groups = all(database, 'SELECT group_id, timeline_id FROM sync_groups LIMIT 2');
+  const groups = all(database, 'SELECT group_id FROM sync_groups LIMIT 2');
   if (groups.length !== 1) return emptyStoredEvidence(groups.length);
   const group = groups[0];
   const members = tableExists(database, 'sync_group_members')
@@ -81,7 +81,7 @@ function storedGroupEvidence(database) {
     storedSyncGroupDepartureCount: departures,
     storedSyncGroupId: group.group_id,
     storedSyncGroupMemberCount: members,
-    storedSyncGroupTimelineId: group.timeline_id
+    storedSyncGroupTimelineId: null
   };
 }
 

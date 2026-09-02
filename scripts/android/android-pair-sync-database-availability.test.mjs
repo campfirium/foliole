@@ -80,11 +80,9 @@ describe('pair sync database availability', () => {
 
   it('reports one stored legacy group without treating it as a local binding', () => {
     const database = { prepare: () => ({
-      all: () => [{ group_id: 'group-1', timeline_id: 'timeline-1' }],
+      all: () => [{ group_id: 'group-1' }],
       get: () => ({ present: 1 })
     }) };
-    expect(inspectStoredSyncGroup(database)).toEqual({
-      group_id: 'group-1', timeline_id: 'timeline-1'
-    });
+    expect(inspectStoredSyncGroup(database)).toEqual({ group_id: 'group-1' });
   });
 });

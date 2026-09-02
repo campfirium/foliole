@@ -10,7 +10,7 @@ import { authorizationFingerprint } from './android-sync-group-authorization-ins
 function database() {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);
-    CREATE TABLE sync_groups (group_id TEXT PRIMARY KEY, timeline_id TEXT, workgroup_key TEXT);
+    CREATE TABLE sync_groups (group_id TEXT PRIMARY KEY, workgroup_key TEXT);
     CREATE TABLE sync_group_members (group_id TEXT, host_name TEXT, state TEXT,
       authorization_id TEXT, left_at TEXT);
     CREATE TABLE sync_group_member_departures (group_id TEXT, host_name TEXT,
@@ -20,7 +20,7 @@ function database() {
     INSERT INTO companion_meta VALUES ('device_id', 'device-a5');
     INSERT INTO companion_meta VALUES ('host_name', 'host-a5');
     INSERT INTO companion_meta VALUES ('workspace_sync_endpoint_url', 'http://desktop.invalid');
-    INSERT INTO sync_groups VALUES ('group-1', 'timeline-1', 'workgroup-key');
+    INSERT INTO sync_groups VALUES ('group-1', 'workgroup-key');
     INSERT INTO sync_group_members VALUES
       ('group-1', 'host-a5', 'active', 'authorization-a5', NULL),
       ('group-1', 'host-desktop', 'active', 'authorization-desktop', NULL),
@@ -50,7 +50,7 @@ it('separates current participation from retained group history after product Le
     storedLocalMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
     storedSyncGroupCount: 1, storedSyncGroupDepartureCount: 1,
     storedSyncGroupId: 'group-1', storedSyncGroupMemberCount: 3,
-    storedSyncGroupTimelineId: 'timeline-1', syncGroupId: null,
+    storedSyncGroupTimelineId: null, syncGroupId: null,
     syncGroupTimelineId: null, workspaceSyncEndpointPresent: true
   });
   expect(JSON.stringify(evidence)).not.toContain('authorization-a5');
@@ -61,7 +61,7 @@ it('separates current participation from retained group history after product Le
 
 it('does not choose a stored history when more than one group exists', () => {
   const db = database();
-  db.exec("INSERT INTO sync_groups VALUES ('group-2', 'timeline-2', NULL)");
+  db.exec("INSERT INTO sync_groups VALUES ('group-2', NULL)");
   expect(inspectDepartedHistory(db)).toMatchObject({
     storedLocalDepartureMatchCount: 0, storedSyncGroupCount: 2,
     storedSyncGroupId: null, storedSyncGroupTimelineId: null

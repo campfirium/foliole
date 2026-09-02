@@ -13,7 +13,7 @@ function columnExists(database, table, column) {
 export function inspectSyncGroupBinding(database) {
   if (!tableExists(database, 'sync_groups')) return null;
   if (tableExists(database, 'sync_group_local_state')) {
-    const local = database.prepare(`SELECT groups.group_id, groups.timeline_id
+    const local = database.prepare(`SELECT groups.group_id
       FROM sync_group_local_state local JOIN sync_groups groups ON groups.group_id = local.group_id
       WHERE local.singleton_id = 1 LIMIT 1`).get();
     if (local) return local;
@@ -23,7 +23,7 @@ export function inspectSyncGroupBinding(database) {
 
 export function inspectStoredSyncGroup(database) {
   if (!tableExists(database, 'sync_groups')) return null;
-  const statement = database.prepare('SELECT group_id, timeline_id FROM sync_groups LIMIT 2');
+  const statement = database.prepare('SELECT group_id FROM sync_groups LIMIT 2');
   if (typeof statement.all !== 'function') return null;
   const groups = statement.all();
   return groups.length === 1 ? groups[0] : null;

@@ -12,20 +12,22 @@ function tableExists(database, table) {
 
 export function pendingDeliveryCountsByPeerFingerprint(database) {
   if (!tableExists(database, 'sync_delivery_receipts')) return {};
-  const statement = database.prepare(`SELECT member.authorization_id AS peer_id, COUNT(*) AS count
+  const statement = database.prepare(`SELECT device.device_identity_key AS peer_id,
+      COUNT(*) AS count
     FROM sync_object_state state
     JOIN sync_group_local_state local ON local.singleton_id = 1
-    JOIN sync_group_members member ON member.group_id = local.group_id
-      AND member.state = 'active' AND member.host_name <> local.local_host_name
-      AND state.updated_at >= member.joined_at
+    JOIN sync_group_devices device ON device.group_id = local.group_id
+      AND device.state = 'active'
+      AND device.device_identity_key <> local.local_device_identity_key
+      AND state.updated_at >= device.joined_at
     WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state'
       AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt
-        WHERE receipt.authorization_id = member.authorization_id
+        WHERE receipt.peer_id = device.device_identity_key
           AND receipt.object_type = state.object_type AND receipt.object_id = state.object_id
           AND receipt.payload_identity = CASE WHEN state.object_type = 'node'
             THEN state.current_version_id ELSE state.content_hash END
           AND receipt.status IN ('accepted', 'confirmed'))
-    GROUP BY member.authorization_id ORDER BY member.authorization_id`);
+    GROUP BY device.device_identity_key ORDER BY device.device_identity_key`);
   if (typeof statement.all !== 'function') return {};
   return Object.fromEntries(statement.all().map(({ count, peer_id: peerId }) => [
     fingerprint(peerId), Number(count)
@@ -34,16 +36,16 @@ export function pendingDeliveryCountsByPeerFingerprint(database) {
 
 export function currentDeliveryStatusCountsByPeerFingerprint(database) {
   if (!tableExists(database, 'sync_delivery_receipts')) return {};
-  const statement = database.prepare(`SELECT receipt.authorization_id AS peer_id,
-      receipt.status, COUNT(*) AS count
+  const statement = database.prepare(`SELECT receipt.peer_id, receipt.status,
+      COUNT(*) AS count
     FROM sync_delivery_receipts receipt
     JOIN sync_object_state state
       ON state.object_type = receipt.object_type AND state.object_id = receipt.object_id
       AND state.sync_dirty = 1
       AND receipt.payload_identity = CASE WHEN state.object_type = 'node'
         THEN state.current_version_id ELSE state.content_hash END
-    GROUP BY receipt.authorization_id, receipt.status
-    ORDER BY receipt.authorization_id, receipt.status`);
+    GROUP BY receipt.peer_id, receipt.status
+    ORDER BY receipt.peer_id, receipt.status`);
   if (typeof statement.all !== 'function') return {};
   const rows = statement.all();
   const result = {};

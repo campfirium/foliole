@@ -107,7 +107,6 @@ async function createAndroidFact({ buildIdentity, env, evidenceRoot, execute, pa
 
 function assertBaseline(overview, readiness) {
   if (overview.sync_group?.group_id !== readiness.syncGroupId
-      || overview.sync_group?.timeline_id !== readiness.syncGroupTimelineId
       || activeMemberIds(overview).length !== readiness.activeSyncGroupMemberCount) {
     throw new Error('Mac restart did not preserve the existing Sync Group baseline.');
   }
