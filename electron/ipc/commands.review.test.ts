@@ -6,6 +6,11 @@ import { applyReviewGrade } from '../database/reviewMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),

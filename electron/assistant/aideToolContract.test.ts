@@ -32,20 +32,20 @@ it('registers every Agent Control product capability exactly once on its protect
   }
 });
 
-it('mechanically projects identical names, descriptions, and schemas to both providers', () => {
+it('projects identical tool identities with provider-compatible schemas', () => {
   const capabilities = ['materials.read', 'materials.create', 'virtualFolders.restore'];
   const [namespace] = createFolioleDynamicTools(capabilities);
   const chatTools = createChatCompletionsAideTools(capabilities);
 
   expect(chatTools.map((tool) => ({
     description: tool.function.description,
-    inputSchema: tool.function.parameters,
     name: tool.function.name
-  }))).toEqual(namespace?.tools.map(({ description, inputSchema, name }) => ({
+  }))).toEqual(namespace?.tools.map(({ description, name }) => ({
     description,
-    inputSchema,
     name
   })));
+  expect(namespace?.tools.every(({ inputSchema }) => inputSchema.additionalProperties === false)).toBe(true);
+  expect(JSON.stringify(chatTools)).not.toContain('"additionalProperties":false');
 });
 
 it('enforces conditional Item and Folder creation branches exactly as declared', () => {

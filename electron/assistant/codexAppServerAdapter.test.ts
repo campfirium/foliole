@@ -127,7 +127,7 @@ function createAdapter(process: FakeCodexProcess) {
     expect(seenInputs[0]).toContain('Active path: Parent / Topic');
     expect(seenInputs[0]).toContain('Active Foliole document body status: ready, 11 chars.');
     expect(seenInputs[0]).toContain('Active Foliole material id: topic-1');
-    expect(seenInputs[0]).toContain('read a Topic or Folder');
+    expect(seenInputs[0]).toContain('read a Topic, Folder, or Item');
     expect(seenInputs[0]).toContain('read the active Foliole item');
     expect(seenInputs[0]).toContain('User message:\nSummarize');
     expect(process.kill).not.toHaveBeenCalled();

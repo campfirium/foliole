@@ -154,7 +154,7 @@ it('maps an idle stream to timeout and dispose to interrupted', async () => {
   const timeoutAdapter = new OpenAiCompatibleAdapter();
   const timeoutResult = timeoutAdapter.sendMessage(baseInput());
   await vi.advanceTimersByTimeAsync(0);
-  await vi.advanceTimersByTimeAsync(45_001);
+  await vi.advanceTimersByTimeAsync(180_001);
   await expect(timeoutResult).resolves.toMatchObject({ failure: { category: 'timeout' } });
 
   const interruptedAdapter = new OpenAiCompatibleAdapter();
