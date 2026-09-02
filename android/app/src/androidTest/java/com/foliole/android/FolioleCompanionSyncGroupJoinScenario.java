@@ -129,7 +129,9 @@ final class FolioleCompanionSyncGroupJoinScenario {
         }
         if (!preferredEndpoint.isEmpty()) {
             if (!matches.contains(preferredEndpoint)) {
-                throw new IllegalStateException("acceptance_group_endpoint_missing");
+                throw new IllegalStateException(
+                    "acceptance_group_endpoint_missing: matches=" + matches
+                );
             }
             return preferredEndpoint;
         }
