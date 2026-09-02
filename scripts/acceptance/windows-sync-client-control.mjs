@@ -68,8 +68,8 @@ git fetch origin sync
 if ($LASTEXITCODE -ne 0) { throw 'Windows sync fetch failed' }
 $target = (git rev-parse FETCH_HEAD).Trim()
 if ($target -ne ${quote(config.revision)}) { throw "fetched wrong revision: $target" }
-git merge --ff-only $target
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync fast-forward failed' }
+git reset --hard $target
+if ($LASTEXITCODE -ne 0) { throw 'Windows sync exact alignment failed' }
 $head = (git rev-parse HEAD).Trim()
 $dirty = @(git status --short)
 if ($head -ne ${quote(config.revision)} -or $dirty.Count -ne 0) {

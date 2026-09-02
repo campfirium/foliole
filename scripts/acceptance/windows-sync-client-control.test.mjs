@@ -27,6 +27,9 @@ it('materializes locked dependencies and the Electron ABI while aligning', () =>
   const script = buildWindowsSyncClientPowerShell({
     action: 'align', revision: 'c'.repeat(40)
   });
+  expect(script).toContain('git reset --hard $target');
+  expect(script).not.toContain('git merge --ff-only');
+  expect(script).toContain('Windows sync exact alignment failed');
   expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' ci");
   expect(script).toContain("'C:\\Program Files\\nodejs\\node.exe' 'D:\\C\\foliole-sync\\node_modules\\electron\\install.js'");
   expect(script).toContain("'C:\\Program Files\\nodejs\\npm.cmd' run electron:rebuild:native");
