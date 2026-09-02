@@ -33,6 +33,11 @@ export function joinCompanionSyncGroup(args: {
   deviceName: string;
   displayName: string;
   platform: string;
+  provider: {
+    device: SyncGroupDeviceIdentity;
+    deviceName: string;
+    platform: string;
+  };
   workgroupKey: string;
 }) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
@@ -44,6 +49,13 @@ export function joinCompanionSyncGroup(args: {
       [args.device.group_id, args.displayName, args.workgroupKey, now, now]
     );
     await saveDevice(tx, args.device, args.deviceName, args.platform, now);
+    if (args.provider.device.group_id !== args.device.group_id
+        || args.provider.device.identity_key === args.device.identity_key) {
+      throw new Error('sync_group_provider_identity_invalid');
+    }
+    await saveDevice(
+      tx, args.provider.device, args.provider.deviceName, args.provider.platform, now
+    );
     await tx.run(
       `INSERT INTO sync_group_local_state
        (singleton_id, group_id, local_device_identity_key, state, updated_at)

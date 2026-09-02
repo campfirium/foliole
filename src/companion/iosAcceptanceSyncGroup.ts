@@ -45,7 +45,11 @@ export async function joinIosAcceptanceSyncGroup(databasePath: string) {
     databasePath, endpointUrl: discovered.endpointUrl, groupId: discovered.discovery.group_id
   });
   const group = await completeCompanionSyncGroupJoin({
-    databasePath, endpointUrl: discovered.endpointUrl, requestId: pending.request_id
+    databasePath, endpointUrl: discovered.endpointUrl,
+    providerDeviceId: discovered.discovery.provider_device_id,
+    providerDeviceName: discovered.discovery.provider_device_name,
+    providerPlatform: discovered.discovery.provider_platform,
+    requestId: pending.request_id
   });
   const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
   const groupTag = workgroupKey ? await deriveWorkgroupTag(workgroupKey) : null;

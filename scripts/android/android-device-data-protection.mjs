@@ -4,7 +4,9 @@ import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
-import { assertReadableDatabase } from './android-data-protection-validation.mjs';
+import {
+  assertReadableDatabase, isUninstalledBaseline
+} from './android-data-protection-validation.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
 
@@ -101,6 +103,13 @@ async function runBackup(options) {
     ...options, databaseInspector: inspectProtectionIdentity, keepPulledDatabase: true
   });
   try {
+    if (isUninstalledBaseline(snapshot)) {
+      const backup = { created: false, reason: 'application-not-installed', validated: true };
+      await writeManifest(options.manifest, { backup, snapshot });
+      printSummary('before install', snapshot);
+      console.log('[android-data] baseline: fresh install');
+      return;
+    }
     assertReadableDatabase(snapshot, 'before install');
     const backup = await backupDatabase(options, snapshot);
     if (!backup.created) throw new Error(`Android data backup was not created: ${backup.reason}`);
@@ -120,11 +129,20 @@ function isDataCleared(before, after) {
 
 async function runCheck(options) {
   const before = JSON.parse(await readFile(options.manifest, 'utf8'));
-  assertReadableDatabase(before.snapshot, 'before install');
+  const freshInstall = isUninstalledBaseline(before.snapshot);
+  if (!freshInstall) assertReadableDatabase(before.snapshot, 'before install');
   const after = await collectAndroidDeviceSnapshot({
     ...options, databaseInspector: inspectProtectionIdentity
   });
   assertReadableDatabase(after, 'after install');
+  if (freshInstall && !after.packageInfo?.installed) {
+    throw new Error('after install Android application is missing');
+  }
+  if (freshInstall) {
+    printSummary('after install', after);
+    console.log('[android-data] status: OK (fresh install)');
+    return;
+  }
   assertProtectionPreserved(before.snapshot, after);
   printSummary('after install', after);
   const beforeInstallTime = before.snapshot?.packageInfo?.firstInstallTime;

@@ -37,6 +37,16 @@ function mapCandidates(snapshot: Parameters<Parameters<typeof startCompanionSync
   }));
 }
 
+function pendingFromCandidate(
+  result: Awaited<ReturnType<typeof requestCompanionSyncGroupJoin>>,
+  candidate: CompanionSyncGroupDiscovery
+): PendingSyncGroupJoinRequest {
+  return { endpointUrl: result.endpoint_url, expiresAt: result.expires_at,
+    groupId: result.group_id, providerDeviceId: candidate.providerDeviceId,
+    providerDeviceName: candidate.providerDeviceName,
+    providerPlatform: candidate.providerPlatform, requestId: result.request_id };
+}
+
 function useJoinCompletion(args: {
   config: SyncGroupJoinArgs;
   pendingRequest: PendingSyncGroupJoinRequest | null;
@@ -50,6 +60,9 @@ function useJoinCompletion(args: {
     completionRef.current ??= completeCompanionSyncGroupJoin({
       databasePath: args.config.bootstrapState.database_path,
       endpointUrl: request.endpointUrl,
+      providerDeviceId: request.providerDeviceId,
+      providerDeviceName: request.providerDeviceName,
+      providerPlatform: request.providerPlatform,
       requestId: request.requestId
     }).then((group) => {
       args.setPendingRequest(null); args.setStatus('idle'); args.config.onError(null);
@@ -128,8 +141,7 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
         endpointUrl: candidate.endpointUrl,
         groupId: candidate.groupId
       });
-      const next = { endpointUrl: result.endpoint_url, expiresAt: result.expires_at,
-        groupId: result.group_id, requestId: result.request_id };
+      const next = pendingFromCandidate(result, candidate);
       pendingRequestRef.current = next;
       setPendingRequest(next); setStatus('awaiting-acceptance');
       await args.onSaveEndpoint(result.endpoint_url);

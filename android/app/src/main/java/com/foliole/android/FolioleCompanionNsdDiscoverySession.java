@@ -47,7 +47,7 @@ final class FolioleCompanionNsdDiscoverySession {
             if (FolioleCompanionNsdDiscovery.sameServiceType(serviceType, service.getServiceType())) resolve(service);
         }
         @Override public void onServiceLost(NsdServiceInfo service) {
-            synchronized (candidates) { candidates.remove(service.getServiceName()); }
+            removeServiceCandidates(service.getServiceName());
             emit("lost", candidates.isEmpty() ? "searching" : "results", null);
         }
         @Override public void onDiscoveryStopped(String type) {
@@ -162,11 +162,13 @@ final class FolioleCompanionNsdDiscoverySession {
             byte[] own = service.getAttributes().get("runtime_instance_id");
             if (own != null && FolioleCompanionSyncGroupProvider.runtimeInstanceId().equals(
                 new String(own, StandardCharsets.UTF_8))) return;
-            JSObject candidate = candidate(service);
+            Map<String, JSObject> resolved = FolioleCompanionNsdServiceCandidates.create(
+                context, service, protocol(service)
+            );
             boolean changed;
             synchronized (candidates) {
-                changed = candidates.containsKey(service.getServiceName());
-                candidates.put(service.getServiceName(), candidate);
+                changed = removeServiceCandidatesLocked(service.getServiceName());
+                candidates.putAll(resolved);
             }
             emit(changed ? "changed" : "found", "results", null);
         } catch (Exception contractError) {
@@ -174,15 +176,14 @@ final class FolioleCompanionNsdDiscoverySession {
         }
     }
 
-    private JSObject candidate(NsdServiceInfo service) throws Exception {
-        String host = FolioleCompanionNsdAddresses.endpointHosts(service).stream().findFirst()
-            .orElseThrow(() -> new IllegalStateException("NSD address unavailable"));
-        JSObject result = new JSObject();
-        result.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context),
-            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, host, service.getPort()));
-        result.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "nsd");
-        result.put(FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtCandidateKey(context), protocol(service));
-        return result;
+    private void removeServiceCandidates(String serviceName) {
+        synchronized (candidates) { removeServiceCandidatesLocked(serviceName); }
+    }
+
+    private boolean removeServiceCandidatesLocked(String serviceName) {
+        return candidates.keySet().removeIf(
+            key -> FolioleCompanionNsdServiceCandidates.belongsToService(key, serviceName)
+        );
     }
 
     private JSObject protocol(NsdServiceInfo service) throws Exception {

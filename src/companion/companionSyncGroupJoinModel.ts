@@ -16,5 +16,8 @@ export interface PendingSyncGroupJoinRequest {
   endpointUrl: string;
   expiresAt: string;
   groupId: string;
+  providerDeviceId: string;
+  providerDeviceName: string;
+  providerPlatform: string;
   requestId: string;
 }

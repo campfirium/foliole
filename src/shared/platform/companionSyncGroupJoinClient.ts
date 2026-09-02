@@ -49,6 +49,9 @@ export async function requestCompanionSyncGroupJoin(args: {
 export async function completeCompanionSyncGroupJoin(args: {
   databasePath: string;
   endpointUrl: string;
+  providerDeviceId: string;
+  providerDeviceName: string;
+  providerPlatform: string;
   requestId: string;
 }) {
   const endpointUrl = normalizeEndpointUrl(args.endpointUrl);
@@ -65,14 +68,38 @@ export async function completeCompanionSyncGroupJoin(args: {
   keyIds.delete(args.requestId);
   const info = parseSyncGroupJoinGroupInfo(JSON.parse(plaintext));
   const facts = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: args.databasePath });
+  const provider = providerFromDiscovery(args, info.group_id);
   return joinCompanionSyncGroup({
     device: createSyncGroupDeviceIdentity({ device_anchor: facts.device_anchor, group_id: info.group_id,
       library_path: facts.canonical_library_path, path_flavor: facts.path_flavor }),
     deviceName: facts.device_name,
     displayName: info.display_name,
     platform: facts.platform,
+    provider,
     workgroupKey: info.workgroup_key
   });
+}
+
+export function providerFromDiscovery(args: {
+  providerDeviceId: string;
+  providerDeviceName: string;
+  providerPlatform: string;
+}, groupId: string) {
+  let parts: unknown;
+  try { parts = JSON.parse(args.providerDeviceId); } catch { throw new Error('sync_group_provider_identity_invalid'); }
+  if (!Array.isArray(parts) || parts.length !== 4 || parts[0] !== 1 || parts[1] !== groupId
+      || typeof parts[2] !== 'string' || typeof parts[3] !== 'string') {
+    throw new Error('sync_group_provider_identity_invalid');
+  }
+  const device = createSyncGroupDeviceIdentity({
+    device_anchor: parts[2], group_id: groupId, library_path: parts[3],
+    path_flavor: args.providerPlatform === 'win32' ? 'windows' : 'posix'
+  });
+  if (device.identity_key !== args.providerDeviceId) throw new Error('sync_group_provider_identity_invalid');
+  const deviceName = args.providerDeviceName.trim();
+  const platform = args.providerPlatform.trim();
+  if (!deviceName || !platform) throw new Error('sync_group_provider_identity_invalid');
+  return { device, deviceName, platform };
 }
 
 export function cancelCompanionSyncGroupJoin(requestId: string) {

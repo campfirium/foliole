@@ -10,7 +10,9 @@ import { backupDatabase } from './android-data-backup-files.mjs';
 import {
   assertProtectionPreserved, inspectProtectionIdentity
 } from './android-device-data-protection.mjs';
-import { assertReadableDatabase } from './android-data-protection-validation.mjs';
+import {
+  assertReadableDatabase, isUninstalledBaseline
+} from './android-data-protection-validation.mjs';
 import { pullAttachmentArchive, pullDatabaseFile } from './android-device-snapshot.mjs';
 
 describe('Android device data protection', () => {
@@ -92,6 +94,21 @@ describe('Android device data protection', () => {
     expect(() => assertReadableDatabase({ database: { error: 'bad db', exists: true, unreadable: true } }, 'after install')).toThrow('database is unreadable');
     expect(() => assertReadableDatabase({ error: 'adb unavailable' }, 'before install')).toThrow('snapshot failed');
     expect(() => assertReadableDatabase({ database: { exists: true } }, 'after install')).not.toThrow();
+  });
+
+  it('accepts a missing database only when the application is not installed', () => {
+    expect(isUninstalledBaseline({
+      database: { exists: false }, packageInfo: { installed: false }
+    })).toBe(true);
+    expect(isUninstalledBaseline({
+      database: { exists: false }, packageInfo: { installed: true }
+    })).toBe(false);
+    expect(isUninstalledBaseline({
+      database: { exists: true }, packageInfo: { installed: false }
+    })).toBe(false);
+    expect(isUninstalledBaseline({
+      database: { exists: false }, error: 'adb unavailable', packageInfo: { installed: false }
+    })).toBe(false);
   });
 
   it('reads protection identity from the current single-principal schema', () => {

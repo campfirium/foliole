@@ -5,6 +5,7 @@ import { createCompanionDatabase, migrateCompanionDatabase } from './companionDa
 import { rehashCompanionHostState } from './companionHostStateHashes.js';
 import { transferCompanionSourceHosts } from './companionSourceHostOwnershipMigration.js';
 import { renameCompanionLocalSyncGroupDevice } from './companionSyncGroupDeviceRename.js';
+import { INBOX_NODE_ID } from './specialNodeIds.js';
 
 export type CompanionJournalMode = 'delete' | 'wal';
 
@@ -51,6 +52,7 @@ export async function bootstrapCompanionDatabase(
   await db.transaction(async (tx) => {
     if (!hasSchema) {
       await createCompanionDatabase(tx, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+      await initializeFreshCompanionWorkspace(tx, request.now);
       await writeMeta(tx, 'device_id', existingDeviceId, request.now);
       await writeMeta(tx, 'host_name', currentHostName, request.now);
     }
@@ -191,6 +193,17 @@ async function rewriteCompanionHostObjectIds(db: DbPort, previous: string, curre
 
 async function writeMeta(db: DbPort, key: string, value: string, now: string) {
   await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)', [key, value, now]);
+}
+
+async function initializeFreshCompanionWorkspace(db: DbPort, now: string) {
+  await db.run(
+    `INSERT INTO nodes (
+       id, parent_id, kind, title, is_title_manual, hide_title_heading,
+       content, sync_dirty, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', 'Inbox', 1, 0, '', 0, ?, ?, NULL)`,
+    [INBOX_NODE_ID, now, now]
+  );
+  await db.run('INSERT INTO node_order (node_id, position) VALUES (?, 0)', [INBOX_NODE_ID]);
 }
 
 function message(error: unknown) {
