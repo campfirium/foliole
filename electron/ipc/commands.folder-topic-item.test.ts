@@ -6,6 +6,11 @@ import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedM
 
 import { handleInvokeRequest } from './commands.js';
 
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
+
 const { defaultReviewSchedulerSettings, openExternal, syncAppMenuState } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
     algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
