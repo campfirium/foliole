@@ -64,6 +64,7 @@
 
 ## Validation
 
+- 升级 Electron major 时，必须把所有 Electron 原生模块作为同一兼容集合联合审查和验证；除 ABI、加载与行为合同外，适用路径必须覆盖进程退出、worker 终止、原生对象回收与资源清理。
 - 桌面验收以当前原生宿主为主；只有用户明确要求、目标命中另一平台专属边界、发布/安装包或方案承诺跨宿主一致性时，才追加另一宿主。任何宿主的证据不得外推为另一宿主结论。
 - 当前宿主先运行 `npm run quality:fast`，再按目标选择 T1 Hidden Native、T2 Visible Native 或 T3 人工检查。默认使用 `npm run test:e2e:desktop:native:hidden -- <spec>`；无显式 spec 的 hidden health 只证明 runner 可用，不构成功能验收。
 - 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。

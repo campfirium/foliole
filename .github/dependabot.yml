@@ -11,6 +11,7 @@ updates:
     open-pull-requests-limit: 1
     allow:
       - dependency-name: electron
+      - dependency-name: better-sqlite3
     labels:
       - dependencies
     commit-message:
