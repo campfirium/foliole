@@ -72,6 +72,9 @@ it('can join an already-running external group without coupling join to a journe
   expect(source).toContain('getString("joinOnly", "false")');
   expect(source).toContain('if (!joinOnly)');
   expect(source.indexOf('if (!joinOnly)')).toBeLessThan(source.indexOf('companion-sync-discover'));
+  expect(source).toContain('getString("expectedEndpoint", "")');
+  expect(source).toContain('matches.contains(preferredEndpoint)');
+  expect(source).toContain('acceptance_group_endpoint_missing');
 });
 
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {

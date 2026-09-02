@@ -103,6 +103,8 @@ final class FolioleCompanionSyncGroupJoinScenario {
     private static String expectedEndpoint(Instrumentation instrumentation) throws Exception {
         String groupId = InstrumentationRegistry.getArguments().getString("expectedGroupId", "");
         String groupTag = InstrumentationRegistry.getArguments().getString("expectedGroupTag", "");
+        String preferredEndpoint = InstrumentationRegistry.getArguments()
+            .getString("expectedEndpoint", "");
         if (!groupId.matches("^group-[0-9a-f-]{36}$") || !groupTag.matches("^[0-9a-f]{32}$")) {
             throw new IllegalStateException("acceptance_group_identity_missing");
         }
@@ -122,7 +124,16 @@ final class FolioleCompanionSyncGroupJoinScenario {
             if (idMatches && tagMatches) matches.add(endpoint);
             else if (idMatches || tagMatches) mismatches += 1;
         }
-        if (mismatches > 0 || matches.size() != 1) {
+        if (mismatches > 0) {
+            throw new IllegalStateException("acceptance_group_identity_not_unique");
+        }
+        if (!preferredEndpoint.isEmpty()) {
+            if (!matches.contains(preferredEndpoint)) {
+                throw new IllegalStateException("acceptance_group_endpoint_missing");
+            }
+            return preferredEndpoint;
+        }
+        if (matches.size() != 1) {
             throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
         return matches.get(0);
