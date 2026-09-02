@@ -1,9 +1,20 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { activatePinnedNpm, readPinnedNpm, verifyPinnedNpm } from './pinned-npm.mjs';
+import {
+  activatePinnedNpm,
+  isHostedPinnedNpmRegistryFailure,
+  readPinnedNpm,
+  verifyPinnedNpm
+} from './pinned-npm.mjs';
 
 const PINNED_NPM = readPinnedNpm();
+const HOSTED_ENV = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' };
+const TRANSIENT_FAILURE = [
+  'Internal Error: Error when performing the request to',
+  `https://registry.npmjs.org/npm/-/npm-${PINNED_NPM.version}.tgz`
+].join(' ');
+const QUIET_STREAM = { write: vi.fn() };
 
 function successfulRunner(version = PINNED_NPM.version) {
   return vi.fn((command, args) => ({
@@ -32,6 +43,77 @@ describe('pinned npm quality tooling', () => {
     expect(log).toHaveBeenCalledWith(`[pinned-npm] ok: ${PINNED_NPM.descriptor}`);
   });
 
+  it('retries one hosted npm registry failure and then succeeds', () => {
+    const runner = successfulRunner();
+    runner
+      .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+      .mockReturnValueOnce({ status: 1, stdout: '', stderr: TRANSIENT_FAILURE });
+    const sleep = vi.fn();
+    const log = vi.fn();
+
+    activatePinnedNpm({
+      env: HOSTED_ENV,
+      log,
+      platform: 'linux',
+      runner,
+      sleep,
+      stderr: QUIET_STREAM,
+      stdout: QUIET_STREAM
+    });
+
+    expect(runner).toHaveBeenCalledTimes(4);
+    expect(sleep).toHaveBeenCalledExactlyOnceWith(5_000);
+    expect(log.mock.calls.flat()).toContain(
+      '[pinned-npm] retry classification=npm-registry-transient backoff_ms=5000'
+    );
+  });
+
+  it('stops after the second hosted npm registry failure', () => {
+    const runner = successfulRunner();
+    runner
+      .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+      .mockReturnValueOnce({ status: 1, stdout: '', stderr: TRANSIENT_FAILURE })
+      .mockReturnValueOnce({ status: 1, stdout: '', stderr: TRANSIENT_FAILURE });
+    const sleep = vi.fn();
+
+    expect(() => activatePinnedNpm({
+      env: HOSTED_ENV,
+      platform: 'linux',
+      runner,
+      sleep,
+      stderr: QUIET_STREAM,
+      stdout: QUIET_STREAM
+    }))
+      .toThrow(`corepack install --global ${PINNED_NPM.descriptor} exited 1`);
+    expect(runner).toHaveBeenCalledTimes(3);
+    expect(sleep).toHaveBeenCalledExactlyOnceWith(5_000);
+  });
+
+  it('does not retry deterministic or unclassified activation failures', () => {
+    const failures = [
+      `${TRANSIENT_FAILURE} HTTP 404`,
+      'corepack configuration is malformed'
+    ];
+    for (const failure of failures) {
+      const runner = successfulRunner();
+      runner
+        .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+        .mockReturnValueOnce({ status: 1, stdout: '', stderr: failure });
+      const sleep = vi.fn();
+      expect(() => activatePinnedNpm({
+        env: HOSTED_ENV,
+        platform: 'linux',
+        runner,
+        sleep,
+        stderr: QUIET_STREAM,
+        stdout: QUIET_STREAM
+      }))
+        .toThrow(`corepack install --global ${PINNED_NPM.descriptor} exited 1`);
+      expect(runner).toHaveBeenCalledTimes(2);
+      expect(sleep).not.toHaveBeenCalled();
+    }
+  });
+
   it('fails closed when the active npm does not match the repository pin', () => {
     expect(() => verifyPinnedNpm({ runner: successfulRunner('0.0.0'), platform: 'linux' }))
       .toThrow(`expected ${PINNED_NPM.descriptor}, received npm@0.0.0`);
@@ -47,5 +129,20 @@ describe('pinned npm quality tooling', () => {
       ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd install --global ${PINNED_NPM.descriptor}`]],
       ['cmd.exe', ['/d', '/s', '/c', 'npm.cmd --version']]
     ]);
+  });
+
+  it('requires hosted identity and the exact pinned registry tarball', () => {
+    expect(isHostedPinnedNpmRegistryFailure(TRANSIENT_FAILURE, {
+      env: HOSTED_ENV,
+      version: PINNED_NPM.version
+    })).toBe(true);
+    expect(isHostedPinnedNpmRegistryFailure(TRANSIENT_FAILURE, {
+      env: {},
+      version: PINNED_NPM.version
+    })).toBe(false);
+    expect(isHostedPinnedNpmRegistryFailure('fetch failed', {
+      env: HOSTED_ENV,
+      version: PINNED_NPM.version
+    })).toBe(false);
   });
 });
