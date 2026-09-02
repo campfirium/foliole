@@ -25,3 +25,22 @@ it('keeps the ordinary desktop build free of route-specific native work', async 
         stage: 'desktop-build' },
     ]);
 });
+
+it('materializes the frozen dependency graph for a sync candidate', async () => {
+  const paths = {
+    repoRoot: 'D:\\C\\foliole', systemNode: 'node.exe', systemNpmCli: 'npm-cli.js'
+  };
+  const checked = vi.fn(async () => ({ output: '' }));
+
+  await runWindowsDevDesktopBuild(vi.fn(), paths, checked, { materializeDependencies: true });
+
+  expect(checked.mock.calls.map(([, , args, , stage]) => ({ args, stage }))).toEqual([
+    { args: [paths.systemNpmCli, 'ci'], stage: 'desktop-dependencies' },
+    { args: ['D:\\C\\foliole\\node_modules\\electron\\install.js'],
+      stage: 'desktop-electron-runtime' },
+    { args: [paths.systemNpmCli, 'run', 'build'], stage: 'desktop-build' },
+    { args: [paths.systemNpmCli, 'run', 'electron:compile'], stage: 'desktop-build' },
+    { args: [paths.systemNpmCli, 'run', 'electron:rebuild:native'],
+      stage: 'desktop-native-rebuild' }
+  ]);
+});

@@ -118,7 +118,9 @@ export async function runWindowsDevBuild({
       });
     }
     if (requiresWindowsDevDesktopBuild(action)) {
-      output += await runWindowsDevDesktopBuild(execute, paths, checked);
+      output += await runWindowsDevDesktopBuild(execute, paths, checked, {
+        materializeDependencies: preparesWindowsSyncGroupCandidate(action)
+      });
     }
     let actionResult = await runRouteControl({
       action, buildIdentity: context.runId, checked, deviceAction, evidenceRoot: context.root,

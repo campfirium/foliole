@@ -1,11 +1,24 @@
-export async function runWindowsDevDesktopBuild(execute, paths, checked) {
+import path from 'node:path';
+
+export async function runWindowsDevDesktopBuild(execute, paths, checked,
+  { materializeDependencies = false } = {}) {
   let output = '';
-  for (const script of ['build', 'electron:compile']) {
-    const result = await checked(execute, paths.systemNode,
-      [paths.systemNpmCli, 'run', script], {
-        cwd: paths.repoRoot, timeoutCode: 'desktop_build_timeout', timeoutMs: 15 * 60_000,
-        windowsHide: true
-      }, 'desktop-build');
+  const commands = materializeDependencies ? [
+    { args: [paths.systemNpmCli, 'ci'], stage: 'desktop-dependencies' },
+    { args: [path.win32.join(paths.repoRoot, 'node_modules', 'electron', 'install.js')],
+      stage: 'desktop-electron-runtime' }
+  ] : [];
+  commands.push(...['build', 'electron:compile'].map((script) => ({
+    args: [paths.systemNpmCli, 'run', script], stage: 'desktop-build'
+  })));
+  if (materializeDependencies) commands.push({
+    args: [paths.systemNpmCli, 'run', 'electron:rebuild:native'], stage: 'desktop-native-rebuild'
+  });
+  for (const command of commands) {
+    const result = await checked(execute, paths.systemNode, command.args, {
+      cwd: paths.repoRoot, timeoutCode: `${command.stage}_timeout`, timeoutMs: 20 * 60_000,
+      windowsHide: true
+    }, command.stage);
     output += result.output;
   }
   return output;
