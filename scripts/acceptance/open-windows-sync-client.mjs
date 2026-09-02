@@ -94,9 +94,9 @@ export async function openWindowsSyncClient({
       GIT_SSH_COMMAND: `ssh -i '${gitKey}' -o BatchMode=yes -o IdentitiesOnly=yes `
         + '-o ConnectTimeout=15 -o StrictHostKeyChecking=yes'
     } });
-  await run(process.execPath, [CONTROL, 'align', '--revision', revision], { cwd: repoRoot });
   const tunnelPid = await ensureTunnel({ launch, portOpen, repoRoot });
   await run(process.execPath, [CONTROL, 'stop', '--port', PORT], { cwd: repoRoot });
+  await run(process.execPath, [CONTROL, 'align', '--revision', revision], { cwd: repoRoot });
   const logPath = path.join(repoRoot, '.tmp', 'artifacts', 'client-control-processes',
     `windows-${revision.slice(0, 10)}.log`);
   const pid = launch(process.execPath, [CONTROL, 'start', '--revision', revision,

@@ -19,6 +19,8 @@ it('pushes, aligns, replaces, and opens the committed sync client', async () => 
   expect(calls.find((call) => call.includes('push'))).toContain('sync:refs/heads/sync');
   expect(calls.find((call) => call.includes('align'))).toContain('a'.repeat(40));
   expect(calls.find((call) => call.includes('stop'))).toContain('9222');
+  expect(calls.findIndex((call) => call.includes('stop')))
+    .toBeLessThan(calls.findIndex((call) => call.includes('align')));
   expect(launch.mock.calls[0][1]).toContain('start');
   expect(result).toMatchObject({ browser: 'Foliole fixture', pid: 42,
     revision: 'a'.repeat(40) });
