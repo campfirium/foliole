@@ -29,10 +29,16 @@ final class FolioleCompanionSyncGroupJoinScenario {
             waitForFocus(activity, 30_000);
             Log.i(LOG_TAG, "stage=focused");
             WebView webView = activity.findViewById(R.id.webview);
-            JSONObject prejoinFact = FolioleCompanionSyncGroupMaintenanceScenario.createFact(
-                instrumentation, webView
+            boolean joinOnly = Boolean.parseBoolean(
+                InstrumentationRegistry.getArguments().getString("joinOnly", "false")
             );
-            Log.i(LOG_TAG, "stage=prejoin-fact-created");
+            JSONObject prejoinFact = null;
+            if (!joinOnly) {
+                prejoinFact = FolioleCompanionSyncGroupMaintenanceScenario.createFact(
+                    instrumentation, webView
+                );
+                Log.i(LOG_TAG, "stage=prejoin-fact-created");
+            }
             FolioleCompanionSettingsNavigation.open(instrumentation, webView);
             Log.i(LOG_TAG, "stage=settings-open");
             FolioleCompanionSemanticActions.clickVisible(
@@ -77,9 +83,13 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );
-            return new JSONObject().put("ok", true).put("targetTestId", "sync-group-device-join")
-                .put("joined", true).put("restarted", true)
-                .put("prejoinFactText", prejoinFact.getString("factText"));
+            JSONObject receipt = new JSONObject()
+                .put("ok", true).put("targetTestId", "sync-group-device-join")
+                .put("joined", true).put("restarted", true);
+            if (prejoinFact != null) {
+                receipt.put("prejoinFactText", prejoinFact.getString("factText"));
+            }
+            return receipt;
         } finally {
             Activity finalActivity = activity;
             instrumentation.runOnMainSync(finalActivity::finish);

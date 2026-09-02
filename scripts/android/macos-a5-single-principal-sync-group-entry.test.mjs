@@ -64,6 +64,16 @@ it('creates the fixed A5 nonempty fact before requesting either desktop-created 
   expect(reverse).not.toContain("protectData('backup'");
 });
 
+it('can join an already-running external group without coupling join to a journey fact', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupJoinScenario.java',
+    'utf8'
+  );
+  expect(source).toContain('getString("joinOnly", "false")');
+  expect(source).toContain('if (!joinOnly)');
+  expect(source.indexOf('if (!joinOnly)')).toBeLessThan(source.indexOf('companion-sync-discover'));
+});
+
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {
   const database = { prepare: () => ({ all: (...ids) => ids
     .filter((id) => id !== 'missing').map((id) => ({ id })) }) };
