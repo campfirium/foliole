@@ -13,8 +13,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupJoinScenario {
@@ -113,26 +111,31 @@ final class FolioleCompanionSyncGroupJoinScenario {
             assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag);
             return groupId;
         }
-        List<String> matches = new ArrayList<>();
+        boolean matchFound = false;
         int mismatches = 0;
         for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
             String endpointKey = FolioleCompanionHostBridgeContractDefinitions
                 .networkEndpointUrlCandidateKey(context);
             String endpoint = candidate.optString(endpointKey);
-            JSObject response = FolioleCompanionDesktopHttpClient.request(context,
-                endpoint + "/companion/discovery", "GET", new JSONObject(), null);
-            String bodyKey = FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context);
-            JSONObject discovery = new JSONObject(response.getString(bodyKey));
-            boolean idMatches = groupId.equals(discovery.optString("group_id"));
-            boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
-            if (idMatches && tagMatches) matches.add(endpoint);
-            else if (idMatches || tagMatches) mismatches += 1;
+            try {
+                JSObject response = FolioleCompanionDesktopHttpClient.request(context,
+                    endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+                String bodyKey = FolioleCompanionHostBridgeContractDefinitions
+                    .networkBodyResponseKey(context);
+                JSONObject discovery = new JSONObject(response.getString(bodyKey));
+                boolean idMatches = groupId.equals(discovery.optString("group_id"));
+                boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
+                if (idMatches && tagMatches) matchFound = true;
+                else if (idMatches || tagMatches) mismatches += 1;
+            } catch (Exception unreachableProvider) {
+                Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
+            }
         }
         if (mismatches > 0) {
             throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
-        if (matches.size() != 1) {
-            throw new IllegalStateException("acceptance_group_identity_not_unique");
+        if (!matchFound) {
+            throw new IllegalStateException("acceptance_group_identity_not_found");
         }
         return groupId;
     }

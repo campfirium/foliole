@@ -106,6 +106,9 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('expectedGroupId');
   expect(source).toContain('expectedGroupTag');
   expect(source).toContain('acceptance_group_identity_not_unique');
+  expect(source).toContain('acceptance_group_identity_not_found');
+  expect(source).toContain('stage=provider-unreachable');
+  expect(source).not.toContain('matches.size() != 1');
   expect(source).toContain('clickUniqueVisibleMatchingAttribute');
   expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
