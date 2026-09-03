@@ -1,5 +1,6 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolContract.js';
 
+import { COMPLETE_MEMBER_DATA_PLANE_CONTRACT } from './completeMemberDataPlaneContract.js';
 import {
   SYNC_PACK_DATABASE_ENTRY,
   SYNC_PACK_FORMAT,
@@ -115,6 +116,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   formatVersion: SYNC_PACK_FORMAT_VERSION,
   payloadCopyIndex: 4,
   payloadPlans,
+  preparedMemberDataPlane: COMPLETE_MEMBER_DATA_PLANE_CONTRACT,
   packSchema: PACK_SCHEMA,
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   schemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
