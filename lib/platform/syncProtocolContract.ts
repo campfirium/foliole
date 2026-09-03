@@ -26,16 +26,6 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;
 
-export const COMPLETE_MEMBER_DATA_PLANE_CAPABILITY = 'complete-member-data-plane';
-
-export const PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR = Object.freeze({
-  ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-  capabilities: Object.freeze([
-    ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities,
-    COMPLETE_MEMBER_DATA_PLANE_CAPABILITY
-  ].sort())
-});
-
 export type SyncProtocolDescriptor = {
   capabilities: string[] | readonly string[];
   max_supported_version: number;
