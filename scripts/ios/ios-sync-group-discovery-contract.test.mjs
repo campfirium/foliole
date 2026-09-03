@@ -46,6 +46,7 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).not.toContain('addUIInterruptionMonitor');
   expect(physicalTest).not.toContain('alert.buttons[$0].tap()');
   expect(physicalTest).toContain('waitForLocalNetworkDecision(allow: true)');
+  expect(physicalTest).toContain('decision.tap()');
   expect(physicalTest).toContain('NSPredicate(format: "exists == false")');
   expect(physicalTest).toContain('Fri-local-network-allow');
   expect(physicalTest).toContain('testPreparesLocalNetworkPermission()');

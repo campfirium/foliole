@@ -192,13 +192,15 @@ extension FoliolePhysicalSyncGroupUITests {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let alert = springboard.alerts.firstMatch
         guard alert.waitForExistence(timeout: 8) else { return }
-        XCTAssertTrue(labels.contains { alert.buttons[$0].exists },
-                      "Missing Local Network decision button.")
+        let decision = labels.lazy.map { alert.buttons[$0] }.first { $0.exists }
+        XCTAssertNotNil(decision, "Missing Local Network decision button.")
+        guard let decision else { return }
         attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
+        decision.tap()
         let dismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: alert
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 180), .completed,
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 30), .completed,
                        "The Local Network decision was not completed on Fri.")
     }
 
