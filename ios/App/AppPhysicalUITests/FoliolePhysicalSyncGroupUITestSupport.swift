@@ -120,26 +120,6 @@ extension FoliolePhysicalSyncGroupUITests {
             .filter { !$0.isEmpty }
     }
 
-    func tapRequestedJoinProvider(in app: XCUIApplication) {
-        guard let platform = optionalEnvironment("FOLIOLE_PHYSICAL_JOIN_PROVIDER_PLATFORM") else {
-            tapButton(named: "Join", in: app, timeout: 90)
-            return
-        }
-        let candidates = app.buttons.matching(NSPredicate(
-            format: "label BEGINSWITH %@ AND label ENDSWITH %@", "Join: ", "(\(platform))"
-        ))
-        XCTAssertTrue(candidates.firstMatch.waitForExistence(timeout: 90),
-                      "Fri did not show the requested Sync Group provider platform: \(platform)")
-        XCTAssertEqual(candidates.count, 1,
-                       "Fri must select exactly one Sync Group provider for joining.")
-        candidates.firstMatch.tap()
-    }
-
-    func optionalEnvironment(_ key: String) -> String? {
-        let value = ProcessInfo.processInfo.environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value?.isEmpty == false ? value : nil
-    }
-
     func requiredEnvironment(_ key: String) -> String {
         let value = ProcessInfo.processInfo.environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
         XCTAssertFalse(value?.isEmpty ?? true, "Missing required physical acceptance value: \(key)")

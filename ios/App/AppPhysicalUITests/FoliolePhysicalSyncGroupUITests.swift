@@ -32,7 +32,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         }
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
-        tapRequestedJoinProvider(in: app)
+        tapButton(named: "Join", in: app, timeout: 90)
 
         XCTAssertTrue(
             app.staticTexts["Asking a Sync Group member to approve this device"]

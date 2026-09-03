@@ -102,7 +102,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           <CompanionHandoffReminderSettingsPanel page={props.page} settings={props.handoffReminderSettings}
             onChange={props.onChangeHandoffReminderSettings} onOpenPage={props.onOpenSettingsPage} />
         ) : null}
-        <CompanionSyncDiscoveryDialog devices={props.syncGroup || props.joinRequest ? [] : props.discoveries}
+        <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
           onJoin={(url) => void props.onRequestJoin(url).catch(() => undefined)}
           onRefresh={() => void props.onDiscover()} />

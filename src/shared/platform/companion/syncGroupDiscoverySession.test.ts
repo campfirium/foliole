@@ -59,3 +59,27 @@ it('reports an old bridge as incompatible without a timed fallback', async () =>
   expect(snapshots).toEqual([expect.objectContaining({ status: 'incompatible' })]);
   expect(runtime.load).not.toHaveBeenCalled();
 });
+
+it('publishes one join result when several members advertise the same Sync Group', async () => {
+  runtime.start.mockResolvedValue({ candidates: [
+    { endpoint_url: 'http://mac:38642', source: 'bonjour' },
+    { endpoint_url: 'http://windows:38641', source: 'bonjour' }
+  ], change: 'found', error_code: null, status: 'results' });
+  runtime.load.mockResolvedValue([
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38642', discovery: {
+      group_display_name: 'Studio', group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'mac', provider_device_name: 'Maci', provider_platform: 'macOS'
+    } },
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://windows:38641', discovery: {
+      group_display_name: 'Studio', group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'windows', provider_device_name: 'V', provider_platform: 'windows'
+    } }
+  ]);
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+
+  await startCompanionSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot));
+
+  expect(snapshots.at(-1)?.candidates).toEqual([
+    expect.objectContaining({ endpoint_url: 'http://mac:38642', group_id: 'group-1' })
+  ]);
+});

@@ -3,6 +3,15 @@ import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery
 import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
 
+function uniqueSyncGroups<T extends { discovery: { group_id: string; group_tag: string } }>(candidates: T[]) {
+  const groups = new Map<string, T>();
+  for (const candidate of candidates) {
+    const identity = `${candidate.discovery.group_id}:${candidate.discovery.group_tag}`;
+    if (!groups.has(identity)) groups.set(identity, candidate);
+  }
+  return [...groups.values()];
+}
+
 export async function startCompanionSyncGroupDiscoverySession(
   onSnapshot: (snapshot: SyncGroupDiscoverySnapshot) => void
 ) {
@@ -23,7 +32,9 @@ export async function startCompanionSyncGroupDiscoverySession(
       source: candidate.source
     })));
     if (!active) return;
-    const compatible = candidates.filter((candidate) => candidate.compatibility.status === 'compatible');
+    const compatible = uniqueSyncGroups(
+      candidates.filter((candidate) => candidate.compatibility.status === 'compatible')
+    );
     const status = compatible.length > 0
       ? 'results'
       : candidates.length > 0 ? 'incompatible' : 'connection_failed';
