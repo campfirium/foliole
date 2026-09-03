@@ -160,6 +160,27 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-edited-topic")
     }
 
+    func testCreatesAndEditsRequestedHighlight() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openRequestedTopic(in: app)
+        createHighlight(for: requiredEnvironment("FOLIOLE_PHYSICAL_SELECTION_TEXT"), in: app)
+        addCommentToHighlight(
+            text: requiredEnvironment("FOLIOLE_PHYSICAL_SELECTION_TEXT"),
+            comment: requiredEnvironment("FOLIOLE_PHYSICAL_ANNOTATION_NOTE"), in: app
+        )
+        attachScreenshot(named: "Fri-highlight-edited")
+    }
+
+    func testRestoresRequestedTopicFromTrash() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        restoreTopicFromTrash(
+            title: requiredEnvironment("FOLIOLE_PHYSICAL_TRASH_TITLE"), in: app
+        )
+        attachScreenshot(named: "Fri-trash-restored")
+    }
+
     func testPausesAutomaticSync() throws {
         let app = acceptanceApplication()
         app.launch()

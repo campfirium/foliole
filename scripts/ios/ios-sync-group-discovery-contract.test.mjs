@@ -37,7 +37,8 @@ it('keeps the Bonjour service declaration in the final iOS application plist', (
 it('handles the iOS Local Network system card before waiting for a Device candidate', () => {
   const physicalTest = [
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift',
-    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift'
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift',
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupMutationUITestSupport.swift'
   ].map(read).join('\n');
   const appDelegate = read('ios/App/App/AppDelegate.swift');
 
@@ -70,6 +71,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('testWaitsForRequestedFact()');
   expect(physicalTest).toContain('testWaitsForRequestedTopicText()');
   expect(physicalTest).toContain('testAppendsToRequestedTopic()');
+  expect(physicalTest).toContain('testCreatesAndEditsRequestedHighlight()');
+  expect(physicalTest).toContain('testRestoresRequestedTopicFromTrash()');
   expect(physicalTest).toContain('testPausesAutomaticSync()');
   expect(physicalTest).toContain('testPullsRequestedFactWithSyncNow()');
   expect(physicalTest).toContain('testResumesAutomaticSync()');
@@ -80,6 +83,9 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TOPIC_PREFIX');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_APPEND_TEXT');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_EXPECTED_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SELECTION_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_ANNOTATION_NOTE');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TRASH_TITLE');
   expect(physicalTest).toContain('tapButton(named: "Join", in: app, timeout: 90)');
   expect(physicalTest).toContain('app.wait(for: .notRunning');
   expect(physicalTest).not.toMatch(/coordinate\s*:/u);
