@@ -14,12 +14,15 @@ enum FolioleCompanionSyncPackTransfer {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        let signed = try FolioleCompanionSignedClientRequests.claim(
+            url: endpoint, method: "GET", headers: headers, body: nil
+        )
 
         let (temporaryURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw error("Sync pack download returned an invalid HTTP status.")
         }
-        let archiveURL = try moveDownloadToCache(temporaryURL)
+        let archiveURL = try moveDownloadToCache(temporaryURL, signed: signed, response: http)
         defer { try? FileManager.default.removeItem(at: archiveURL) }
         do {
             return try validateAndStore(
@@ -72,9 +75,19 @@ enum FolioleCompanionSyncPackTransfer {
         }
     }
 
-    private static func moveDownloadToCache(_ temporaryURL: URL) throws -> URL {
+    private static func moveDownloadToCache(
+        _ temporaryURL: URL,
+        signed: FolioleCompanionSignedClientRequest?,
+        response: HTTPURLResponse
+    ) throws -> URL {
         let destination = try cacheDirectory().appendingPathComponent("\(UUID().uuidString).syncpack")
-        try FileManager.default.moveItem(at: temporaryURL, to: destination)
+        if let signed {
+            let decrypted = try signed.decrypt(Data(contentsOf: temporaryURL), response: response).0
+            try decrypted.write(to: destination, options: .atomic)
+            try? FileManager.default.removeItem(at: temporaryURL)
+        } else {
+            try FileManager.default.moveItem(at: temporaryURL, to: destination)
+        }
         return destination
     }
 

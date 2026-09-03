@@ -52,14 +52,19 @@ enum FolioleCompanionDesktopHttpClient {
             throw invalid("Desktop URL must use HTTP or HTTPS.")
         }
         var request = URLRequest(url: endpoint)
-        request.httpMethod = method.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let normalizedMethod = method.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        request.httpMethod = normalizedMethod
         request.timeoutInterval = 30
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        if let body { request.httpBody = Data(body.utf8) }
+        let signed = try FolioleCompanionSignedClientRequests.claim(
+            url: endpoint, method: normalizedMethod, headers: headers, body: body.map { Data($0.utf8) }
+        )
+        request.httpBody = signed?.body ?? body.map { Data($0.utf8) }
         let (data, response) = try await FolioleCompanionDesktopHttpTransport.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw invalid("Desktop response was not HTTP.") }
+        let responseBody = try signed?.decrypt(data, response: http).0 ?? data
         return [
-            try key("body", in: contract.networkResponseKeys): String(decoding: data, as: UTF8.self),
+            try key("body", in: contract.networkResponseKeys): String(decoding: responseBody, as: UTF8.self),
             try key("status", in: contract.networkResponseKeys): http.statusCode
         ]
     }
@@ -76,15 +81,19 @@ enum FolioleCompanionDesktopHttpClient {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 30
-        request.httpBody = Data(body.utf8)
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        let signed = try FolioleCompanionSignedClientRequests.claim(
+            url: endpoint, method: "POST", headers: headers, body: Data(body.utf8)
+        )
+        request.httpBody = signed?.body ?? Data(body.utf8)
         let (data, response) = try await FolioleCompanionDesktopHttpTransport.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw invalid("Desktop response was not HTTP.") }
         guard (200..<300).contains(http.statusCode) else { throw invalid("Desktop returned \(http.statusCode).") }
-        guard let contentType = http.value(forHTTPHeaderField: "Content-Type") else {
+        let decrypted = try signed?.decrypt(data, response: http)
+        guard let contentType = decrypted?.1 ?? http.value(forHTTPHeaderField: "Content-Type") else {
             throw invalid("Desktop content body batch response has no Content-Type.")
         }
-        return try parseMultipart(data, contentType: contentType, hashHeader: contract.responseHeaderKey)
+        return try parseMultipart(decrypted?.0 ?? data, contentType: contentType, hashHeader: contract.responseHeaderKey)
     }
 
     static func parseMultipart(_ data: Data, contentType: String, hashHeader: String) throws -> [FolioleCompanionContentBlobPart] {

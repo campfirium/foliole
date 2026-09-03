@@ -152,8 +152,13 @@ export type CompanionNodeMutationSurface =
   | 'topic-content-edit'
   | 'trash-restore';
 
-// Admit iOS interaction surfaces one by one only after separate acceptance.
-const IOS_NODE_MUTATION_SURFACES = new Set<CompanionNodeMutationSurface>();
+const IOS_NODE_MUTATION_SURFACES = new Set<CompanionNodeMutationSurface>([
+  'existing-highlight-edit',
+  'quick-capture',
+  'selection-annotation',
+  'topic-content-edit',
+  'trash-restore'
+]);
 
 export function supportsCompanionNodeMutationSurface(surface: CompanionNodeMutationSurface) {
   const runtime = getCompanionRuntimeCapability();

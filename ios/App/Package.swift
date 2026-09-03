@@ -38,6 +38,7 @@ let package = Package(
                 "FolioleCompanionSyncGroupResources.swift",
                 "FolioleCompanionSyncGroupSnapshot.swift",
                 "FolioleCompanionSyncGroupWorkgroup.swift",
+                "FolioleCompanionWorkgroupClient.swift",
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackArchive.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",

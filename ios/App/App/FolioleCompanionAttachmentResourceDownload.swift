@@ -49,6 +49,9 @@ enum FolioleCompanionAttachmentResourceDownloader {
         urlRequest.httpMethod = "GET"
         urlRequest.timeoutInterval = 60
         request.headers.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+        let signed = try FolioleCompanionSignedClientRequests.claim(
+            url: endpoint, method: "GET", headers: request.headers, body: nil
+        )
         let (sourceURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: urlRequest)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw invalid("Desktop attachment response failed.")
@@ -56,7 +59,13 @@ enum FolioleCompanionAttachmentResourceDownloader {
         let outputURL = temporaryRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent(request.contentHash)
         try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try FileManager.default.moveItem(at: sourceURL, to: outputURL)
+        if let signed {
+            let decrypted = try signed.decrypt(Data(contentsOf: sourceURL), response: http).0
+            try decrypted.write(to: outputURL, options: .atomic)
+            try? FileManager.default.removeItem(at: sourceURL)
+        } else {
+            try FileManager.default.moveItem(at: sourceURL, to: outputURL)
+        }
         guard try digestHex(outputURL) == request.contentHash else {
             try? FileManager.default.removeItem(at: outputURL)
             throw invalid("Attachment resource hash mismatch.")

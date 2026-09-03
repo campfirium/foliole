@@ -13,7 +13,7 @@ import {
   saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
-import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import {
   createSelectionAnnotatedHighlightContent,
@@ -115,8 +115,8 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
 }
 
 export async function persistCompanionSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
-  if (isAvailableNativeAndroidCompanionRuntime()) {
-    return persistAndroidSelectionAnnotation(args);
+  if (isAvailableNativeCompanionRuntime()) {
+    return persistNativeSelectionAnnotation(args);
   }
   const draft = await buildAnnotationDraft(args);
   if (!draft) {
@@ -132,7 +132,7 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
   };
 }
 
-async function persistAndroidSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
+async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
   return runCompanionSyncOptionalMutationTask(async () => {
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });

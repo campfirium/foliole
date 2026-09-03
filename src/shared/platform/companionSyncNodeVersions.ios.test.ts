@@ -28,7 +28,7 @@ afterEach(() => {
   database = null;
 });
 
-it('persists an iOS node version through the shared core while keeping mutation UI gated', async () => {
+it('persists an iOS node version through the shared core with mutation UI available', async () => {
   database = new Database(':memory:');
   installCompanionNodeSchema(database);
   const connection = createConnection(database);
@@ -41,7 +41,7 @@ it('persists an iOS node version through the shared core while keeping mutation 
   await expect(applyCompanionSyncNodeVersions([iosNodeVersion()], manager as never))
     .resolves.toEqual(['ios-node-1']);
 
-  expect(supportsCompanionNodeMutationSurface('quick-capture')).toBe(false);
+  expect(supportsCompanionNodeMutationSurface('quick-capture')).toBe(true);
   expect(manager.createConnection).toHaveBeenCalledWith(
     'foliole-companion',
     false,

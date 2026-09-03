@@ -28,7 +28,7 @@ const nativeWrites = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
-  isAvailableNativeAndroidCompanionRuntime: () => true
+  isAvailableNativeCompanionRuntime: () => true
 }));
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
@@ -122,7 +122,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('serializes unawaited note, cloze, and highlight mutations against device truth', async () => {
+it('serializes unawaited native note, cloze, and highlight mutations against device truth', async () => {
   const { persistCompanionSelectionAnnotation } = await import('./companionSelectionAnnotationActions');
   const staleSnapshot = device.snapshot;
 

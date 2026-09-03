@@ -42,6 +42,35 @@ enum FolioleCompanionSyncGroupWorkgroup {
         )
     }
 
+    static func encryptClientRequest(
+        _ body: Data, groupTag: String, workgroupKey: String,
+        method: String, path: String, contentType: String
+    ) throws -> Data {
+        let envelope = try encrypt(
+            body, key: workgroupKey, groupTag: groupTag, method: method,
+            path: path, direction: "request", contentType: contentType
+        )
+        return try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys])
+    }
+
+    static func decryptClientResponse(
+        _ body: Data, groupTag: String, workgroupKey: String,
+        method: String, path: String, contentType: String
+    ) throws -> Data {
+        guard let envelope = try JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+            throw invalid("workgroup_aead_envelope_invalid")
+        }
+        let plaintext = try decrypt(
+            envelope, key: workgroupKey, groupTag: groupTag, method: method,
+            path: path, direction: "response", contentType: contentType
+        )
+        guard let timestamp = envelope["timestamp_ms"], let nonce = envelope["nonce"] as? String else {
+            throw invalid("workgroup_aead_envelope_invalid")
+        }
+        try consumeNonce("response:\(groupTag):\(timestamp):\(nonce)")
+        return plaintext
+    }
+
     static func response(
         _ request: FolioleCompanionHttpMessage, status: Int, contentType: String,
         body: Data, groupTag: String, workgroupKey: String
