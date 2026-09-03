@@ -1,6 +1,9 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import {
+  publishCompanionSyncMutationRevision
+} from './companion/sync/mutation/companionSyncMutationRevision';
+import {
   loadIosCompanionWorkspaceSyncState,
   saveIosCompanionWorkspaceSyncState
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
@@ -153,11 +156,13 @@ export async function persistCompanionWorkspaceSnapshot(args: {
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   if (usesSharedOwner()) {
-    return updateIosWorkspaceSyncState((current) => normalizePersistedSyncState({
+    const state = await updateIosWorkspaceSyncState((current) => normalizePersistedSyncState({
       ...args,
       syncEvents: current.sync_events,
       syncOnboardingStatus: current.sync_onboarding_status
     }));
+    publishCompanionSyncMutationRevision();
+    return state;
   }
   const nextState = normalizePersistedSyncState({
     ...args,

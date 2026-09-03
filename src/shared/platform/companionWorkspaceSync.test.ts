@@ -48,6 +48,9 @@ vi.mock('./companion/network/signedRequest', () => ({
   createSignedRequestHeaders: signedRequestMock.create
 }));
 
+import {
+  getCompanionSyncMutationRevision
+} from './companion/sync/mutation/companionSyncMutationRevision';
 import { clearCompanionAppData } from './companionAppData';
 import {
   loadCompanionReadableArticle,
@@ -250,8 +253,9 @@ function registerSnapshotPersistenceTest() {
     });
   });
 
-  it('refreshes native companion state without snapshot replacement bridge calls', async () => {
+  it('publishes native snapshot commits for Sync Group provider refresh', async () => {
     const updatedSnapshot = createUpdatedStoredSnapshot();
+    const revision = getCompanionSyncMutationRevision();
     capacitorMock.getPlatform.mockReturnValue('android');
     capacitorMock.isNativePlatform.mockReturnValue(true);
     nativeWorkspaceState.load.mockResolvedValue({
@@ -271,6 +275,7 @@ function registerSnapshotPersistenceTest() {
 
     expect(nativeWorkspaceState.load).toHaveBeenCalled();
     expect(capacitorMock.plugin.loadWorkspaceSyncState).not.toHaveBeenCalled();
+    expect(getCompanionSyncMutationRevision()).toBe(revision + 1);
   });
 }
 
