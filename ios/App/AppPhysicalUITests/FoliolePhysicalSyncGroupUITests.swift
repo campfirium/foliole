@@ -143,6 +143,15 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-received-fact")
     }
 
+    func testWaitsForRequestedTopicText() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openBrowse(in: app)
+        waitForVisibleTopicText(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
+                                text: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"), in: app)
+        attachScreenshot(named: "Fri-received-topic-edit")
+    }
+
     func testAppendsToRequestedTopic() throws {
         let app = acceptanceApplication()
         app.launch()
@@ -184,6 +193,18 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         openBrowse(in: app)
         waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
         attachScreenshot(named: "Fri-relaunch-restored")
+    }
+
+    func testStopsForForegroundCatchUp() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+                      "Fri did not restore its accepted Sync Group before stopping.")
+        app.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 30),
+                      "Fri remained runnable instead of entering the catch-up interval.")
+        attachScreenshot(named: "Fri-stopped-for-foreground-catch-up")
     }
 
 }

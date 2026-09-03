@@ -69,6 +69,16 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertEqual(topics.count, 1, "Fri must show the requested synced topic exactly once.")
     }
 
+    func waitForVisibleTopicText(prefix: String, text: String, in app: XCUIApplication) {
+        let topics = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
+                      "Fri did not show the topic selected for content verification.")
+        XCTAssertEqual(topics.count, 1, "Fri must verify exactly one matching topic.")
+        topics.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
+            .firstMatch.waitForExistence(timeout: 120), "Fri did not show the requested synced topic edit.")
+    }
+
     func appendToVisibleTopic(prefix: String, text: String, in app: XCUIApplication) {
         openBrowse(in: app)
         let topics = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
