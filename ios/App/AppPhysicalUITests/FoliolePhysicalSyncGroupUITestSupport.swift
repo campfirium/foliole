@@ -49,13 +49,71 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func captureFriFact(in app: XCUIApplication) {
+        captureFact(named: "Multi-device sync \(isTwoDeviceJourney ? "B" : "D") fact", in: app)
+    }
+
+    func captureFact(named title: String, in app: XCUIApplication) {
         tapButton(named: "Capture", in: app, timeout: 30)
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
         editor.tap()
-        editor.typeText("Multi-device sync \(isTwoDeviceJourney ? "B" : "D") fact")
+        editor.typeText(title)
         tapButton(named: "Save", in: app, timeout: 30)
         waitForDisappearance(editor, timeout: 30, message: "The Fri business fact was not saved.")
+    }
+
+    func waitForVisibleTopic(prefix: String, in app: XCUIApplication) {
+        let topics = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
+                      "Fri did not show the requested synced topic: \(prefix)")
+        XCTAssertEqual(topics.count, 1, "Fri must show the requested synced topic exactly once.")
+    }
+
+    func appendToVisibleTopic(prefix: String, text: String, in app: XCUIApplication) {
+        openBrowse(in: app)
+        let topics = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
+                      "Fri did not show the topic selected for editing.")
+        XCTAssertEqual(topics.count, 1, "Fri must edit exactly one matching topic.")
+        topics.firstMatch.tap()
+        tapButton(named: "Edit topic", in: app, timeout: 30)
+        let editor = app.textViews["Topic body"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
+        editor.tap()
+        editor.typeText("\n\n\(text)")
+        tapButton(named: "Done", in: app, timeout: 30)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
+            .firstMatch.waitForExistence(timeout: 30), "Fri did not visibly save the requested edit.")
+        tapButton(named: "Exit", in: app, timeout: 30)
+    }
+
+    func setAutomaticSyncPaused(_ paused: Bool, in app: XCUIApplication) {
+        openSyncSettings(in: app)
+        tapButton(named: "Details", in: app, timeout: 30)
+        let requested = paused ? "Pause Sync" : "Resume Sync"
+        let resulting = paused ? "Resume Sync" : "Pause Sync"
+        tapButton(named: requested, in: app, timeout: 30)
+        XCTAssertTrue(app.buttons[resulting].waitForExistence(timeout: 30),
+                      "Fri did not persist the requested automatic Sync participation state.")
+    }
+
+    func waitForDeviceNames(_ names: [String], in app: XCUIApplication) {
+        for name in names {
+            XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 60),
+                          "Fri did not show Sync Group Device: \(name)")
+        }
+    }
+
+    func requestedDeviceNames() -> [String] {
+        requiredEnvironment("FOLIOLE_PHYSICAL_DEVICE_NAMES").split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    func requiredEnvironment(_ key: String) -> String {
+        let value = ProcessInfo.processInfo.environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        XCTAssertFalse(value?.isEmpty ?? true, "Missing required physical acceptance value: \(key)")
+        return value ?? ""
     }
 
     func forkVisibleConflictSeed(in app: XCUIApplication) {

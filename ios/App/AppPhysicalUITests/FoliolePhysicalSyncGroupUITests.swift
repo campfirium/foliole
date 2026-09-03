@@ -117,4 +117,73 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-local-network-denied")
     }
 
+    func testShowsRequestedSyncGroupDevices() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        tapButton(named: "Details", in: app, timeout: 30)
+        waitForDeviceNames(requestedDeviceNames(), in: app)
+        attachScreenshot(named: "Fri-sync-group-devices")
+    }
+
+    func testCapturesRequestedFact() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        captureFact(named: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        attachScreenshot(named: "Fri-captured-fact")
+    }
+
+    func testWaitsForRequestedFact() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        attachScreenshot(named: "Fri-received-fact")
+    }
+
+    func testAppendsToRequestedTopic() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        appendToVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
+                             text: requiredEnvironment("FOLIOLE_PHYSICAL_APPEND_TEXT"), in: app)
+        attachScreenshot(named: "Fri-edited-topic")
+    }
+
+    func testPausesAutomaticSync() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        setAutomaticSyncPaused(true, in: app)
+        attachScreenshot(named: "Fri-automatic-sync-paused")
+    }
+
+    func testPullsRequestedFactWithSyncNow() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        attachScreenshot(named: "Fri-manual-sync-received")
+    }
+
+    func testResumesAutomaticSync() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        setAutomaticSyncPaused(false, in: app)
+        attachScreenshot(named: "Fri-automatic-sync-resumed")
+    }
+
+    func testRestoresGroupAndRequestedFactAfterRelaunch() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+                      "Fri did not restore its accepted Sync Group.")
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        attachScreenshot(named: "Fri-relaunch-restored")
+    }
+
 }
