@@ -45,14 +45,14 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-settings-sync", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=sync-open");
-            String expectedEndpoint = expectedEndpoint(instrumentation);
+            String expectedGroupId = expectedGroupId(instrumentation);
             FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-discover", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=discovery-requested");
             FolioleCompanionWebViewSemanticAdapter.clickUniqueVisibleMatchingAttribute(
-                instrumentation, webView, "companion-sync-group-join", "data-sync-endpoint",
-                expectedEndpoint, stageDeadline());
+                instrumentation, webView, "companion-sync-group-join", "data-sync-group-id",
+                expectedGroupId, stageDeadline());
             Log.i(LOG_TAG, "stage=device-visible");
             Log.i(LOG_TAG, "stage=device-requested");
             String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
@@ -100,7 +100,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
         return System.nanoTime() + TimeUnit.SECONDS.toNanos(STAGE_TIMEOUT_SECONDS);
     }
 
-    private static String expectedEndpoint(Instrumentation instrumentation) throws Exception {
+    private static String expectedGroupId(Instrumentation instrumentation) throws Exception {
         String groupId = InstrumentationRegistry.getArguments().getString("expectedGroupId", "");
         String groupTag = InstrumentationRegistry.getArguments().getString("expectedGroupTag", "");
         String preferredEndpoint = InstrumentationRegistry.getArguments()
@@ -111,7 +111,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
         Context context = instrumentation.getTargetContext();
         if (!preferredEndpoint.isEmpty()) {
             assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag);
-            return preferredEndpoint;
+            return groupId;
         }
         List<String> matches = new ArrayList<>();
         int mismatches = 0;
@@ -134,7 +134,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
         if (matches.size() != 1) {
             throw new IllegalStateException("acceptance_group_identity_not_unique");
         }
-        return matches.get(0);
+        return groupId;
     }
 
     private static void assertEndpointIdentity(

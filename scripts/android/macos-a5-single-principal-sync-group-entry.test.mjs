@@ -75,6 +75,8 @@ it('can join an already-running external group without coupling join to a journe
   expect(source).toContain('getString("expectedEndpoint", "")');
   expect(source).toContain('assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag)');
   expect(source).toContain('acceptance_group_endpoint_identity_mismatch');
+  expect(source).toContain('"data-sync-group-id"');
+  expect(source).not.toContain('"data-sync-endpoint"');
 });
 
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {

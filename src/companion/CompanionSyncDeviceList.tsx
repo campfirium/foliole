@@ -9,7 +9,8 @@ function resolveGroupTitle(group: CompanionSyncGroupDiscovery, fallback: string)
 
 function JoinAction(props: {
   disabled: boolean;
-  endpointUrl: string;
+  groupId: string;
+  groupTag: string;
   isConnecting: boolean;
   onClick(): void;
 }) {
@@ -19,7 +20,8 @@ function JoinAction(props: {
       aria-busy={props.isConnecting || undefined}
       className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
-      data-sync-endpoint={props.endpointUrl}
+      data-sync-group-id={props.groupId}
+      data-sync-group-tag={props.groupTag}
       data-testid="companion-sync-group-join"
       onClick={props.onClick}
       type="button"
@@ -58,7 +60,8 @@ function GroupRow(props: {
         </div>
         <JoinAction
           disabled={props.disabled || !isCompatible}
-          endpointUrl={props.group.endpointUrl}
+          groupId={props.group.groupId}
+          groupTag={props.group.groupTag}
           isConnecting={props.isConnecting}
           onClick={() => props.onJoin(props.group.endpointUrl)}
         />

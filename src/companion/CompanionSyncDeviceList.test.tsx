@@ -29,6 +29,12 @@ it('presents discovered entries as Sync Groups', () => {
 
   expect(screen.getByRole('heading', { name: 'Found 2 Sync Groups' })).toBeVisible();
   expect(screen.getAllByRole('button', { name: 'Join' })).toHaveLength(2);
+  expect(screen.getAllByRole('button', { name: 'Join' })[0]).toHaveAttribute(
+    'data-sync-group-id', 'group-1'
+  );
+  expect(screen.getAllByRole('button', { name: 'Join' })[0]).not.toHaveAttribute(
+    'data-sync-endpoint'
+  );
   expect(screen.queryByText('macOS')).not.toBeInTheDocument();
   expect(screen.queryByText('maci.local:38642')).not.toBeInTheDocument();
 });
