@@ -21,6 +21,7 @@ function resolveDevicePlatform(device: CompanionSyncGroupDiscovery, fallback: st
 }
 
 function JoinAction(props: {
+  accessibilityLabel: string;
   disabled: boolean;
   endpointUrl: string;
   isConnecting: boolean;
@@ -29,6 +30,7 @@ function JoinAction(props: {
   const t = useTranslation();
   return (
     <button
+      aria-label={props.accessibilityLabel}
       aria-busy={props.isConnecting || undefined}
       className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
@@ -73,6 +75,7 @@ function DeviceRow(props: {
           )}
         </div>
         <JoinAction
+          accessibilityLabel={`${t('companion.sync.discovery.connect')}: ${deviceTitle} (${devicePlatform})`}
           disabled={props.disabled || !isCompatible}
           endpointUrl={props.device.endpointUrl}
           isConnecting={props.isConnecting}

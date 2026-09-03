@@ -80,6 +80,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TOPIC_PREFIX');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_APPEND_TEXT');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_EXPECTED_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_JOIN_PROVIDER_PLATFORM');
+  expect(physicalTest).toContain('tapRequestedJoinProvider(in: app)');
   expect(physicalTest).toContain('app.wait(for: .notRunning');
   expect(physicalTest).not.toMatch(/coordinate\s*:/u);
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
