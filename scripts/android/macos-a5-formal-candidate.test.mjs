@@ -9,9 +9,12 @@ import {
 const REVISION = 'a'.repeat(40);
 const TREE = 'b'.repeat(40);
 
-function gitResults(values) {
+function gitResults(values, calls = []) {
   let index = 0;
-  return () => `${values[index++] ?? ''}\n`;
+  return (_command, args) => {
+    calls.push(args);
+    return `${values[index++] ?? ''}\n`;
+  };
 }
 
 it('keeps ordinary workspace actions separate from formal acceptance', () => {
@@ -21,9 +24,14 @@ it('keeps ordinary workspace actions separate from formal acceptance', () => {
   expect(() => parseMacosA5Invocation(['deploy', 'extra'])).toThrow('Usage');
 });
 
-it('freezes the committed dev revision and tree without inspecting the worktree', () => {
-  const expected = beginFormalA5Candidate('/repo', gitResults([REVISION, TREE]));
+it('freezes the current checkout revision and tree without naming a branch', () => {
+  const calls = [];
+  const expected = beginFormalA5Candidate('/repo', gitResults([REVISION, TREE], calls));
   expect(expected).toEqual({ revision: REVISION, tree: TREE });
+  expect(calls).toEqual([
+    ['rev-parse', '--verify', 'HEAD^{commit}'],
+    ['rev-parse', '--verify', `${REVISION}^{tree}`]
+  ]);
 });
 
 it('rejects incomplete Git object identities', () => {
