@@ -76,5 +76,6 @@ it('keeps one Mac journey separate from source and client lifecycle control', ()
   expect(journey).toContain('chromium.connectOverCDP');
   expect(journey).toContain('browser.close()');
   expect(journey).not.toMatch(/child_process|\bssh\b|\bgit\b|receipt/iu);
+  expect(launcher).toContain("FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1'");
   expect(launcher).not.toMatch(/create_sync_group|request_sync_group_join|create_topic/iu);
 });
