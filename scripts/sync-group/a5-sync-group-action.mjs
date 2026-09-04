@@ -77,7 +77,7 @@ export async function runMacosA5SyncGroupMaintenance({
         ? 'FolioleAcceptanceConflictForkTest' : 'FolioleCompanionSyncGroupMaintenanceTest';
   const testClass = `${APP_ID}.${className}#${method}`;
   const instrumentationArgs = action === 'observe-journey-facts'
-    ? ['-e', 'expectedJourneyCounts', JSON.stringify(expectedJourneyCounts ?? {})]
+    ? ['-e', 'expectedJourneyCounts', `'${JSON.stringify(expectedJourneyCounts ?? {})}'`]
     : action === 'fork-conflict' ? ['-e', 'conflictToken', conflictToken ?? ''] : [];
   const raw = await mechanics({ appId, buildIdentity, env, evidenceRoot, execute, installMain,
     instrumentationArgs, needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,

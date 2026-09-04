@@ -88,6 +88,27 @@ it('maps the fixed device port to an explicit isolated macOS listener', async ()
     '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
 });
 
+it('quotes journey counts across the adb shell boundary', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'instrumentation',
+    stdout: [
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"journeyFactsObserved":true}',
+      'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+      'INSTRUMENTATION_CODE: -1'
+    ].join('\n')
+  } : successfulAdbResult(args));
+  await runMacosA5SyncGroupMaintenance({
+    action: 'observe-journey-facts', buildIdentity: 'quoted-counts', env: {}, evidenceRoot: root,
+    execute, expectedJourneyCounts: { A: 1, B: 1, C: 1 },
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
+  });
+  const instrument = execute.mock.calls.find(([, args]) => args.includes('instrument'))?.[1];
+  expect(instrument).toContain('\'{"A":1,"B":1,"C":1}\'');
+});
+
 it('accepts an already absent owned reverse listener before the single bind', async () => {
   const root = createTestRoot();
   roots.push(root);
