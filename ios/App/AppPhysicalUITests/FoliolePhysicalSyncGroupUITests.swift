@@ -5,6 +5,11 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    override func tearDownWithError() throws {
+        try super.tearDownWithError()
+        keepPhysicalAcceptanceAwakeAfterFailure(testRun, application: acceptanceApplication())
+    }
+
     func testPreparesLocalNetworkPermission() throws {
         let app = acceptanceApplication()
         app.launch()

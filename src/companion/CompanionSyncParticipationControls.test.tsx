@@ -6,20 +6,24 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
 
 const providerMocks = vi.hoisted(() => ({
-  load: vi.fn(), setEnabled: vi.fn()
+  setEnabled: vi.fn()
 }));
 
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-  loadCompanionSyncGroupProviderState: providerMocks.load,
   setCompanionSyncEnabled: providerMocks.setEnabled
+}));
+
+vi.mock('./useCompanionSyncParticipation', () => ({
+  useCompanionSyncParticipation: () => ({
+    lifecycle_active: true, participating: false, sync_enabled: true, sync_paused: true
+  })
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  const paused = { lifecycle_active: true, participating: false, pending_requests: [], port: 38641,
-    state: 'paused', sync_enabled: true, sync_paused: true };
-  providerMocks.load.mockResolvedValue(paused);
-  providerMocks.setEnabled.mockResolvedValue({ ...paused, sync_enabled: false });
+  providerMocks.setEnabled.mockResolvedValue({
+    lifecycle_active: true, participating: false, sync_enabled: false, sync_paused: true
+  });
 });
 
 it('keeps the global Sync control separate from the local member pause action', async () => {

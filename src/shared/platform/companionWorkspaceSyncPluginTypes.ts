@@ -21,7 +21,7 @@ export interface CompanionNativeDiscoveryEvent extends CompanionDiscoveryCandida
   status: 'searching' | 'results' | 'permission_required' | 'unavailable' | 'stopped';
 }
 
-export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
+export interface CompanionSyncGroupProviderState {
   pending_requests: Array<{
     device_name: string;
     platform: string;
