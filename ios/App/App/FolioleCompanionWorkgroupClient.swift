@@ -40,7 +40,7 @@ enum FolioleCompanionSignedClientRequests {
         method: String, nonce: String, path: String, timestamp: String,
         deviceId: String, workgroupKey: String
     ) throws -> [String: Any] {
-        guard let signedAt = ISO8601DateFormatter().date(from: timestamp),
+        guard let signedAt = requestDate(timestamp),
               abs(signedAt.timeIntervalSinceNow) <= 60 else { throw invalid("expired_timestamp") }
         guard let endpoint = URL(string: endpointUrl),
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? ""),
@@ -108,6 +108,12 @@ enum FolioleCompanionSignedClientRequests {
 
     private static func path(_ url: URL) -> String {
         url.path + (url.query.map { "?\($0)" } ?? "")
+    }
+
+    private static func requestDate(_ timestamp: String) -> Date? {
+        let browserFormatter = ISO8601DateFormatter()
+        browserFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return browserFormatter.date(from: timestamp) ?? ISO8601DateFormatter().date(from: timestamp)
     }
 }
 

@@ -9,6 +9,9 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func openSyncSettings(in app: XCUIApplication) {
+        if app.buttons["Exit"].waitForExistence(timeout: 3) {
+            app.buttons["Exit"].tap()
+        }
         tapButton(named: "Settings", in: app, timeout: 45)
         let sync = app.buttons.matching(
             NSPredicate(format: "label BEGINSWITH %@", "Sync ")
@@ -29,18 +32,14 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func waitForJourneyFacts(_ origins: [String], in app: XCUIApplication) {
         for origin in origins {
-            let fact = app.staticTexts.matching(
-                NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
-            ).firstMatch
+            let fact = visibleTopics(prefix: "Multi-device sync \(origin) fact", in: app).firstMatch
             XCTAssertTrue(fact.waitForExistence(timeout: 120),
                           "Missing \(origin) business fact on Fri.")
         }
     }
 
     func waitForJourneyFactCount(_ origin: String, count: Int, in app: XCUIApplication) {
-        let facts = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Multi-device sync \(origin) fact")
-        )
+        let facts = visibleTopics(prefix: "Multi-device sync \(origin) fact", in: app)
         let enough = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "count >= %d", count), object: facts
         )
@@ -63,14 +62,14 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func waitForVisibleTopic(prefix: String, in app: XCUIApplication) {
-        let topics = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        let topics = visibleTopics(prefix: prefix, in: app)
         XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
                       "Fri did not show the requested synced topic: \(prefix)")
         XCTAssertEqual(topics.count, 1, "Fri must show the requested synced topic exactly once.")
     }
 
     func waitForVisibleTopicText(prefix: String, text: String, in app: XCUIApplication) {
-        let topics = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        let topics = visibleTopics(prefix: prefix, in: app)
         XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
                       "Fri did not show the topic selected for content verification.")
         XCTAssertEqual(topics.count, 1, "Fri must verify exactly one matching topic.")
@@ -81,7 +80,7 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func appendToVisibleTopic(prefix: String, text: String, in app: XCUIApplication) {
         openBrowse(in: app)
-        let topics = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+        let topics = visibleTopics(prefix: prefix, in: app)
         XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
                       "Fri did not show the topic selected for editing.")
         XCTAssertEqual(topics.count, 1, "Fri must edit exactly one matching topic.")
@@ -128,9 +127,7 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func forkVisibleConflictSeed(in app: XCUIApplication) {
         openBrowse(in: app)
-        let topics = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "T152 conflict t152-conflict-")
-        )
+        let topics = visibleTopics(prefix: "T152 conflict t152-conflict-", in: app)
         XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
                       "Fri did not receive the conflict seed through product sync.")
         XCTAssertEqual(topics.count, 1, "Fri must fork exactly one attempt conflict seed.")
@@ -150,6 +147,10 @@ extension FoliolePhysicalSyncGroupUITests {
 
     var isTwoDeviceJourney: Bool {
         ProcessInfo.processInfo.environment["FOLIOLE_T152_TWO_DEVICE"] == "1"
+    }
+
+    private func visibleTopics(prefix: String, in app: XCUIApplication) -> XCUIElementQuery {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Open topic \(prefix)"))
     }
 
     func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval, message: String) {

@@ -82,6 +82,18 @@ final class FolioleCompanionWorkgroupClientTests: XCTestCase {
         ))
     }
 
+    func testAcceptsBrowserIsoTimestampWithFractionalSeconds() throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let prepared = try FolioleCompanionSignedClientRequests.prepare(
+            body: nil, bodyHash: sha256(Data()), endpointUrl: "http://desktop.local",
+            groupId: "group-a", method: "GET", nonce: UUID().uuidString.lowercased(), path: path,
+            timestamp: formatter.string(from: Date()), deviceId: "device-a", workgroupKey: key
+        )
+
+        XCTAssertNotNil(prepared["headers"])
+    }
+
     private func claimedRequest() throws -> FolioleCompanionSignedClientRequest {
         let headers = try XCTUnwrap(
             try prepare(body: nil, nonce: UUID().uuidString.lowercased())["headers"] as? [String: String]
