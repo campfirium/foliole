@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { usePublicCommands } from '../../../shared/commands/publicCommandContext';
@@ -104,7 +104,9 @@ function createMouseUpHandler(args: GestureLifecycleArgs) {
 
 function useWindowGestureLifecycle(args: GestureLifecycleArgs) {
   const argsRef = useRef(args);
-  argsRef.current = args;
+  useLayoutEffect(() => {
+    argsRef.current = args;
+  });
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => createMouseMoveHandler(argsRef.current)(event);
