@@ -22,6 +22,7 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func openBrowse(in app: XCUIApplication) {
+        if app.buttons["Exit"].waitForExistence(timeout: 3) { app.buttons["Exit"].tap() }
         tapButton(named: "Browse", in: app, timeout: 30)
     }
 
