@@ -5,11 +5,6 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    override func tearDownWithError() throws {
-        try super.tearDownWithError()
-        keepPhysicalAcceptanceAwakeAfterFailure(testRun, application: acceptanceApplication())
-    }
-
     func testPreparesLocalNetworkPermission() throws {
         let app = acceptanceApplication()
         app.launch()
@@ -227,6 +222,9 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30),
                       "Fri remained runnable instead of entering the catch-up interval.")
         attachScreenshot(named: "Fri-stopped-for-foreground-catch-up")
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
+                      "Fri did not return to the foreground after the catch-up interval.")
     }
 
 }
