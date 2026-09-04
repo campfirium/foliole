@@ -132,17 +132,18 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     await testInfo.attach('mouse-gesture-settings', { path: screenshotPath });
     await desktopWindow.keyboard.press('Escape');
     await expect(settings).toBeHidden();
+    await expect(settings).toHaveCount(0);
 
     await seedGestureWorkspace(desktopWindow);
-    await drawGesture(desktopWindow, [[-80, 0]]);
+    await drawGesture(desktopWindow, [[-80, 0]], '←');
     await expectActiveEditorState(desktopWindow, FIRST_ID, FIRST_CONTENT);
     await expect(desktopWindow.getByRole('menu')).toBeHidden();
-    await drawGesture(desktopWindow, [[80, 0]]);
+    await drawGesture(desktopWindow, [[80, 0]], '→');
     await expectActiveEditorState(desktopWindow, SECOND_ID, SECOND_CONTENT);
 
-    await drawGesture(desktopWindow, [[-70, 0], [0, 90]]);
+    await drawGesture(desktopWindow, [[-70, 0], [0, 90]], '← ↓');
     await expect.poll(() => desktopWindow.locator('.markdown-editor-host .cm-scroller').evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
-    await drawGesture(desktopWindow, [[-70, 0], [0, -90]]);
+    await drawGesture(desktopWindow, [[-70, 0], [0, -90]], '← ↑');
     await expect.poll(() => desktopWindow.locator('.markdown-editor-host .cm-scroller').evaluate((node) => node.scrollTop)).toBe(0);
     await expectCustomSearchGesture(desktopWindow);
 
