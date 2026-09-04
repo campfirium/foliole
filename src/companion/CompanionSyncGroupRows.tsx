@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
-import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
 import {
   CompanionSyncGroupJoinApproval,
@@ -65,7 +64,6 @@ function SyncGroupDevices(props: {
   group: SyncGroupPayload;
   onTogglePause(): void;
   paused: boolean;
-  providerState: CompanionSyncGroupProviderState | null;
 }) {
   const t = useTranslation();
   return (
@@ -79,8 +77,8 @@ function SyncGroupDevices(props: {
               <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(device.platform)}</span>
             </span>
             {isLocal ? (
-              <button className="min-h-11 shrink-0 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent disabled:opacity-45"
-                data-testid="companion-sync-pause-toggle" disabled={!props.providerState}
+              <button className="min-h-11 shrink-0 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent"
+                data-testid="companion-sync-pause-toggle"
                 onClick={props.onTogglePause} type="button">
                 {t(props.paused ? 'companion.sync.participation.resume' : 'companion.sync.participation.pause')}
               </button>
@@ -101,7 +99,6 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload; onLeave
   const provider = useSyncGroupProviderState();
   const participation = useCompanionSyncParticipation();
   function togglePause() {
-    if (!provider.state) return;
     void setCompanionSyncPaused(!participation.sync_paused);
   }
   return (
@@ -114,7 +111,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload; onLeave
       </div>
       <CompanionSyncGroupJoinApproval provider={provider} />
       <SyncGroupDevices group={props.group} onTogglePause={togglePause}
-        paused={participation.sync_paused} providerState={provider.state} />
+        paused={participation.sync_paused} />
     </section>
   );
 }

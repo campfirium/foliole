@@ -66,3 +66,21 @@ it('shows persistent membership and keeps Leave independent from participation c
   fireEvent.click(screen.getByTestId('companion-sync-group-leave-confirm'));
   await waitFor(() => expect(onLeave).toHaveBeenCalledOnce());
 });
+
+it('keeps pause available while join approval state is unavailable', async () => {
+  providerMocks.load.mockRejectedValue(new Error('provider state unavailable'));
+  renderWithLocalization(<CompanionSyncGroupRows group={{
+    created_at: '2026-08-08T00:00:00.000Z', display_name: 'Studio', group_id: 'group-1',
+    local_device_identity_key: 'device-pixel', devices: [{
+      canonical_library_path: '/pixel', contract_version: 1, device_anchor: 'pixel-anchor',
+      device_identity_key: 'device-pixel', device_name: 'Pixel', joined_at: '2026-08-08T00:00:00.000Z',
+      last_seen_at: null, left_at: null, platform: 'android-capacitor', state: 'active',
+      updated_at: '2026-08-08T00:00:00.000Z'
+    }]
+  }} onLeave={vi.fn().mockResolvedValue(undefined)} />);
+
+  const pause = await screen.findByRole('button', { name: 'Pause Sync' });
+  expect(pause).toBeEnabled();
+  fireEvent.click(pause);
+  expect(providerMocks.setPaused).toHaveBeenCalledWith(true);
+});
