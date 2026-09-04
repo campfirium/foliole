@@ -198,6 +198,13 @@ extension FoliolePhysicalSyncGroupUITests {
         guard let decision else { return }
         attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
         decision.tap()
+        if allow {
+            let wlanOnlyLabels = ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
+            if let wlanOnly = wlanOnlyLabels.lazy.map({ springboard.buttons[$0] })
+                .first(where: { $0.waitForExistence(timeout: 3) }) {
+                wlanOnly.tap()
+            }
+        }
         let dismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: alert
         )
