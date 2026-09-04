@@ -114,6 +114,9 @@ it('marks a frontmatter-only match unmapped without changing the highlight conte
   }>('SELECT anchor_link, anchor_resolution_status, content FROM nodes WHERE id = ?', [seeded.childId]);
   expect(after).toMatchObject({ anchor_link: before?.anchor_link, anchor_resolution_status: 'unmapped_missing',
     content: before?.content });
+  const second = buildAnchorRepairPlan(openDatabaseConnection().driver, seeded.receipt, repairedAt,
+    { trustCurrentBaseline: true });
+  expect({ apply: second.apply.length, unmap: second.unmap.length }).toEqual({ apply: 0, unmap: 0 });
 });
 
 it('uses the shared imported-body boundary for generated H1 locators', () => {

@@ -117,8 +117,7 @@ function addAnchorDecision(input: {
     return;
   }
   if (!allRawMatch) return manual('frontmatter_locator_text_mismatch');
-  const alreadyUnmapped = input.child.anchor_link === input.anchor.anchorLink &&
-    input.child.anchor_source_version_id === input.parent.current_version_id &&
+  const alreadyUnmapped = input.child.anchor_source_version_id === input.parent.current_version_id &&
     input.child.anchor_resolution_status?.startsWith('unmapped_');
   if (alreadyUnmapped) {
     input.partial.noRepair.push({ childId: input.anchor.childId, parentId: input.parentId,
