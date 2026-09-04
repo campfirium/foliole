@@ -4,7 +4,9 @@ extension FoliolePhysicalSyncGroupUITests {
     func openRequestedTopic(in app: XCUIApplication) {
         openBrowse(in: app)
         let prefix = requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX")
-        let topic = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
+        let topic = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Open topic \(prefix)")
+        ).firstMatch
         XCTAssertTrue(topic.waitForExistence(timeout: 120), "Fri did not show the requested mutation topic.")
         topic.tap()
     }
