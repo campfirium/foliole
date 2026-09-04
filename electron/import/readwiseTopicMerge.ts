@@ -3,7 +3,6 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
 import { resolveReadwiseHighlightUpdate } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
@@ -22,58 +21,23 @@ import {
   filterNewHighlightSidecar,
   localizeReadwiseTopicMergeTexts
 } from './readwiseTopicMergeLocalization.js';
-
-interface SourceNodeRow extends DatabaseRow {
-  content: string;
-  kind: string;
-  source_kind: string | null;
-  source_locator: string | null;
-  source_name: string | null;
-  title: string;
-}
+import {
+  readReadwiseTopicHighlightContents,
+  readReadwiseTopicMergeSourceNode,
+  type ReadwiseTopicMergeSourceNode
+} from './readwiseTopicMergeState.js';
 
 function normalizeHighlightContent(content: string) {
   return content.replace(/\r\n?/g, '\n').trim();
 }
 
-function readSourceNode(nodeId: string) {
-  return (
-    openDatabaseConnection().driver.queryOne<SourceNodeRow>(
-      `SELECT content,
-              title,
-              kind,
-              import_sources.source_kind,
-              import_sources.source_locator,
-              import_sources.source_name
-       FROM nodes
-       LEFT JOIN import_sources
-         ON import_sources.latest_node_id = nodes.id
-       WHERE nodes.id = ?`,
-      [nodeId]
-    ) ?? null
-  );
-}
-
-function readExistingChildHighlightContents(nodeId: string) {
-  return openDatabaseConnection().driver
-    .queryAll<{ content: string }>(
-      `SELECT content
-       FROM nodes
-       WHERE parent_id = ?
-         AND deleted_at IS NULL
-       ORDER BY created_at ASC`,
-      [nodeId]
-    )
-    .map((row) => row.content);
-}
-
 function readExistingHighlightContents(nodeId: string) {
   return Array.from(
-    new Set(readExistingChildHighlightContents(nodeId))
+    new Set(readReadwiseTopicHighlightContents(nodeId))
   );
 }
 
-function resolveSourceKind(sourceNode: SourceNodeRow, highlightFilePath: string) {
+function resolveSourceKind(sourceNode: ReadwiseTopicMergeSourceNode, highlightFilePath: string) {
   try {
     return resolveImportKind(highlightFilePath);
   } catch {
@@ -89,7 +53,7 @@ function resolveSourceKind(sourceNode: SourceNodeRow, highlightFilePath: string)
 
 function createPreparedManualHighlightMerge(
   sourceNodeId: string,
-  sourceNode: SourceNodeRow,
+  sourceNode: ReadwiseTopicMergeSourceNode,
   highlightFilePath: string,
   highlightSidecar: ImportSidecarHighlight[]
 ) {
@@ -114,7 +78,7 @@ async function prepareLocalizedManualHighlightMerge(input: {
   existingHighlightContentSet: Set<string>;
   highlightFilePath: string;
   nodeId: string;
-  sourceNode: SourceNodeRow;
+  sourceNode: ReadwiseTopicMergeSourceNode;
 }) {
   const localized = await localizeReadwiseTopicMergeTexts(input.sourceNode.content, input.highlightFilePath);
   const localizedHighlightSidecar = filterNewHighlightSidecar(
@@ -175,7 +139,12 @@ export async function mergeReadwiseTopicHighlightsFromFile(
     return { merged_highlight_count: 0, node_id: nodeId, status: 'noop' };
   }
 
-  const sourceNode = readSourceNode(nodeId);
+  let sourceNode: ReturnType<typeof readReadwiseTopicMergeSourceNode>;
+  try {
+    sourceNode = readReadwiseTopicMergeSourceNode(nodeId);
+  } catch {
+    return { merged_highlight_count: 0, node_id: nodeId, status: 'error' };
+  }
   if (!sourceNode || sourceNode.kind !== 'topic') {
     return { merged_highlight_count: 0, node_id: nodeId, status: 'error' };
   }

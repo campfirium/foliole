@@ -1,3 +1,4 @@
+import { NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import { recordPreparedImportFailure } from '../database/importPipeline.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
@@ -80,6 +81,15 @@ export async function runKeepImportSourceImportAttempt(
   } catch (error) {
     if (isKeepImportAbortError(error)) {
       throw error;
+    }
+    if (error instanceof NodeBodyUnavailableError) {
+      return {
+        detail: error.message,
+        failureReason: error.message,
+        importId: `keep-body-unavailable-${source.sourceName}`,
+        importStatus: null,
+        noOp: true
+      };
     }
     const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
     return recordFailedKeepImportAttempt({

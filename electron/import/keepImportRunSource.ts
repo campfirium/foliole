@@ -13,6 +13,7 @@ import type { KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import { shouldDeferReadwiseToSourceUpdate } from './keepImportReadwiseSourceUpdate.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistBlockedKeepImportState } from './keepImportServiceState.js';
+import { guardKeepImportSourceBody } from './keepImportSourceBodyGuard.js';
 import { classifySource, isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
 import { applySuccessfulSourceHandling } from './keepImportSourceHandling.js';
 import { runKeepImportSourceImportAttempt } from './keepImportSourceImportAttempt.js';
@@ -129,7 +130,7 @@ async function runImportAttempt(
   };
 }
 
-export async function runSingleKeepImportSource(
+async function runSingleKeepImportSourceResolved(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
   options: { forceTopicImport?: boolean; notifyUpdate?: boolean; onProgress?: KeepImportProgressSink | undefined } = {}
@@ -176,6 +177,14 @@ export async function runSingleKeepImportSource(
     { ...options, forceTopicImport: options.forceTopicImport || readwiseHighlightUpdate, notifyUpdate },
     preview.status
   );
+}
+
+export async function runSingleKeepImportSource(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  options: { forceTopicImport?: boolean; notifyUpdate?: boolean; onProgress?: KeepImportProgressSink | undefined } = {}
+): Promise<KeepImportRunEntry> {
+  return guardKeepImportSourceBody(source, () => runSingleKeepImportSourceResolved(config, source, options));
 }
 
 async function runReadwiseDestination(

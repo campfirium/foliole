@@ -21,6 +21,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -108,9 +109,14 @@ it('rebuilds readwise article content and replaces imported child highlights', a
 
   const connection = openDatabaseConnection();
   const first = readKeepImportNodeId();
-  connection.sqlite
-    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
-    .run('# Entry\n\nEdited in app.\n', new Date().toISOString(), first.last_node_id);
+  writeNodeBody({
+    content: '# Entry\n\nEdited in app.\n',
+    driver: connection.driver,
+    nodeId: first.last_node_id,
+    title: 'Entry',
+    updatedAt: new Date().toISOString()
+  });
+  connection.driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', first.last_node_id]);
   seedStaleChildren(first.last_node_id);
 
   await expect(reimportCurrentTopicSource(first.last_node_id)).resolves.toMatchObject({

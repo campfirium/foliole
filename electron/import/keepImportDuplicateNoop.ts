@@ -1,3 +1,4 @@
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -5,21 +6,25 @@ import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipelin
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
 
-interface ExistingImportSource {
+interface ExistingImportSource extends NodeBodyRow {
   latest_node_id: string | null;
 }
 
 function readDuplicateNodeId(prepared: PreparedImportRecord) {
   const row = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT s.latest_node_id
+      `SELECT s.latest_node_id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
        FROM import_sources s
        JOIN nodes n ON n.id = s.latest_node_id
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE s.source_fingerprint = ?
          AND s.last_content_fingerprint = ?
          AND n.deleted_at IS NULL`
     )
     .get(prepared.sourceFingerprint, prepared.contentFingerprint) as ExistingImportSource | undefined;
+  if (row?.latest_node_id) {
+    requireResolvedNodeBody(row, row.latest_node_id);
+  }
   return row?.latest_node_id ?? null;
 }
 

@@ -8,6 +8,7 @@ import {
   type KeepImportItemRow,
   type UpsertKeepImportItemInput
 } from '../../lib/core/database/keepImportItems.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -33,14 +34,14 @@ export function readKeepImportNodeState(nodeId: string) {
 }
 
 export function readKeepImportNodeContent(nodeId: string) {
-  return (
-    openDatabaseConnection().driver.queryOne<{ content: string }>(
-      `SELECT content
-       FROM nodes
-       WHERE id = ? AND deleted_at IS NULL`,
+  const row = openDatabaseConnection().driver.queryOne<NodeBodyRow & { id: string }>(
+      `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+       FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.id = ? AND n.deleted_at IS NULL`,
       [nodeId]
-    )?.content ?? null
   );
+  return row ? requireResolvedNodeBody(row, row.id).content : null;
 }
 
 export function listRemovedKeepImportItems() {
