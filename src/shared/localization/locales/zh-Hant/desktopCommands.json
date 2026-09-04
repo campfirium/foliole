@@ -56,6 +56,7 @@
   "desktop.command.goToNode": "去...",
   "desktop.command.moveToNode": "移至...",
   "desktop.command.goParent": "轉到父級",
+  "desktop.command.goToLastChild": "向下",
   "desktop.command.findInTopic": "在主題中尋找",
   "desktop.command.compareWithDraft": "與草稿比較",
   "desktop.command.reviewSourceUpdate": "查看來源更新",

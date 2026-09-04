@@ -56,6 +56,7 @@
   "desktop.command.goToNode": "Gehe zu...",
   "desktop.command.moveToNode": "Verschieben nach...",
   "desktop.command.goParent": "Gehe zum übergeordneten Element",
+  "desktop.command.goToLastChild": "Nach unten",
   "desktop.command.findInTopic": "Im Thema suchen",
   "desktop.command.compareWithDraft": "Mit Entwurf vergleichen",
   "desktop.command.reviewSourceUpdate": "Aktualisierung der Überprüfungsquelle",

@@ -56,6 +56,7 @@
   "desktop.command.goToNode": "ここに移動...",
   "desktop.command.moveToNode": "次の場所に移動します...",
   "desktop.command.goParent": "親に移動",
+  "desktop.command.goToLastChild": "下へ移動",
   "desktop.command.findInTopic": "トピック内で検索",
   "desktop.command.compareWithDraft": "ドラフトとの比較",
   "desktop.command.reviewSourceUpdate": "レビュー ソースの更新",

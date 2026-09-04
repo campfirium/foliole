@@ -58,6 +58,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.goToNode': 'Go to...',
   'desktop.command.moveToNode': 'Move to...',
   'desktop.command.goParent': 'Go Up',
+  'desktop.command.goToLastChild': 'Go Down',
   'desktop.command.findInTopic': 'Find in Topic',
   'desktop.command.compareWithDraft': 'Compare with Draft',
   'desktop.command.reviewSourceUpdate': 'Review Source Update',

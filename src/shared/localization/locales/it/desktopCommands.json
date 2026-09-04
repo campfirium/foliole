@@ -56,6 +56,7 @@
   "desktop.command.goToNode": "Vai a...",
   "desktop.command.moveToNode": "Sposta in...",
   "desktop.command.goParent": "Vai a Principale",
+  "desktop.command.goToLastChild": "Vai giù",
   "desktop.command.findInTopic": "Trova nell'argomento",
   "desktop.command.compareWithDraft": "Confronta con Bozza",
   "desktop.command.reviewSourceUpdate": "Controlla l'aggiornamento dell'origine",

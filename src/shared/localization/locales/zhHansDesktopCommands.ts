@@ -60,6 +60,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.goToNode': '跳转到...',
   'desktop.command.moveToNode': '移动到...',
   'desktop.command.goParent': '返回上级',
+  'desktop.command.goToLastChild': '向下',
   'desktop.command.findInTopic': '在主题内查找',
   'desktop.command.compareWithDraft': '与改稿对比',
   'desktop.command.reviewSourceUpdate': '查看来源更新',

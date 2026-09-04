@@ -56,6 +56,7 @@
   "desktop.command.goToNode": "가다...",
   "desktop.command.moveToNode": "다음으로 이동하세요...",
   "desktop.command.goParent": "상위 항목으로 이동",
+  "desktop.command.goToLastChild": "아래로 이동",
   "desktop.command.findInTopic": "주제에서 찾기",
   "desktop.command.compareWithDraft": "초안과 비교",
   "desktop.command.reviewSourceUpdate": "리뷰 소스 업데이트",
