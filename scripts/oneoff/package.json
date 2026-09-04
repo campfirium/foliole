@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "t175:readwise-body-recovery": "cd ../.. && node scripts/electron-sqlite-runner.mjs scripts/oneoff/readwise-body-recovery.ts"
+  }
+}

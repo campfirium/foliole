@@ -49,7 +49,9 @@ export function buildElectronNodeEnv(env = process.env, repoRoot = process.cwd()
 
 export function buildElectronNodeArgs(scriptPath, scriptArgs = []) {
   const extension = path.extname(scriptPath).toLowerCase();
-  const stripTypesArgs = extension === '.ts' ? ['--experimental-strip-types'] : [];
+  const stripTypesArgs = extension === '.ts'
+    ? ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-strip-types']
+    : [];
   return [...stripTypesArgs, scriptPath, ...scriptArgs];
 }
 

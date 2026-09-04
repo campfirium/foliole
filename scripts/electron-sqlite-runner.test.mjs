@@ -36,8 +36,10 @@ describe('electron sqlite runner', () => {
     expect(ensureElectronBinary('D:/C/foliole', loadElectron)).toBe('/prepared/electron');
   });
 
-  it('runs TypeScript scripts through Electron-as-Node with strip-types enabled', () => {
+  it('runs TypeScript scripts through Electron-as-Node with source extension resolution', () => {
     expect(buildElectronNodeArgs('scripts/sqlite/sqlite-maintenance.ts', ['backup'])).toEqual([
+      '--experimental-loader',
+      './scripts/android/ts-js-extension-loader.mjs',
       '--experimental-strip-types',
       'scripts/sqlite/sqlite-maintenance.ts',
       'backup'
