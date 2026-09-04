@@ -18,7 +18,7 @@ function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
 }
 
-function resolveInitialSearchFrom(content: string) {
+export function resolveInitialSearchFrom(content: string) {
   const frontmatterMatch = /^---\n[\s\S]*?\n---(?:\n+|$)/.exec(normalizeLineEndings(content));
   return frontmatterMatch ? frontmatterMatch[0].length : 0;
 }
