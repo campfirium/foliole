@@ -11,6 +11,8 @@ const SECOND_ID = 'playwright-t174-second';
 const FIRST_CONTENT = '# First gesture topic\n\nBack target';
 const SECOND_CONTENT = ['# Gesture target', ...Array.from({ length: 240 }, (_, index) => `Paragraph ${index}`)].join('\n\n');
 const CUSTOM_COMMAND_ID = 'workspace.openSearch';
+const LANGUAGE_KEY = 'foliole-app-language';
+const MOUSE_GESTURE_BINDINGS_KEY = 'foliole-mouse-gesture-bindings-v1';
 
 async function focusVisibleSession(session: Awaited<ReturnType<typeof launchDesktopSession>>) {
   if (process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1') return;
@@ -24,22 +26,38 @@ async function focusVisibleSession(session: Awaited<ReturnType<typeof launchDesk
 }
 
 async function configurePersistentCustomGesture(page: DesktopSession['firstWindow']) {
-  await page.evaluate((commandId) => {
-    window.localStorage.setItem('foliole-app-language', 'en');
-    window.localStorage.setItem(
-      'foliole-mouse-gesture-bindings-v1',
-      JSON.stringify([
-        {
-          commandId,
-          directions: ['left', 'right', 'up'],
-          gesture: 'left-right-up',
-          isCustom: true
-        }
-      ])
-    );
-  }, CUSTOM_COMMAND_ID);
+  await page.evaluate(async ({ bindingsKey, commandId, languageKey }) => {
+    const runtimeSettings = await window.electronAPI?.invoke('load_app_settings_state');
+    const settings = runtimeSettings && typeof runtimeSettings === 'object'
+      ? { ...runtimeSettings as Record<string, unknown> }
+      : {};
+    settings[languageKey] = 'en';
+    settings[bindingsKey] = JSON.stringify([
+      {
+        commandId,
+        directions: ['left', 'right', 'up'],
+        gesture: 'left-right-up',
+        isCustom: true
+      }
+    ]);
+    window.localStorage.setItem(languageKey, settings[languageKey] as string);
+    window.localStorage.setItem(bindingsKey, settings[bindingsKey] as string);
+    await window.electronAPI?.invoke('save_app_settings_state', { settings });
+  }, {
+    bindingsKey: MOUSE_GESTURE_BINDINGS_KEY,
+    commandId: CUSTOM_COMMAND_ID,
+    languageKey: LANGUAGE_KEY
+  });
   await page.reload();
   await expectWorkspaceShell(page);
+  await expect.poll(() => page.evaluate(({ bindingsKey, commandId }) => {
+    const raw = window.localStorage.getItem(bindingsKey);
+    if (!raw) return false;
+    const bindings = JSON.parse(raw) as Array<{ commandId?: unknown; gesture?: unknown }>;
+    return bindings.some((binding) =>
+      binding.commandId === commandId && binding.gesture === 'left-right-up'
+    );
+  }, { bindingsKey: MOUSE_GESTURE_BINDINGS_KEY, commandId: CUSTOM_COMMAND_ID })).toBe(true);
 }
 
 async function seedGestureWorkspace(page: DesktopSession['firstWindow']) {
