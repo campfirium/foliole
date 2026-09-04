@@ -65,9 +65,9 @@ export function resolveEditorMouseGestureCommand(
 export function validateCustomEditorMouseGesture(
   directions: EditorMouseGestureDirection[],
   bindings: EditorMouseGestureBinding[]
-): 'valid' | 'too-short' | 'conflict' {
+): 'valid' | 'empty' | 'conflict' {
   const normalized = normalizeEditorMouseGestureDirections(directions);
-  if (normalized.length < 3) return 'too-short';
+  if (!normalized.length) return 'empty';
   const gesture = toEditorMouseGestureId(normalized);
   return [...BASE_EDITOR_MOUSE_GESTURES, ...bindings].some((item) => item.gesture === gesture)
     ? 'conflict'

@@ -56,8 +56,10 @@ describe('editorMouseGestures', () => {
 
 describe('custom editor mouse gestures', () => {
 
-  it('requires at least three segments and rejects complete sequence conflicts', () => {
-    expect(validateCustomEditorMouseGesture(['left', 'up'], [])).toBe('too-short');
+  it('accepts any nonempty new sequence and reports existing gesture definitions', () => {
+    expect(validateCustomEditorMouseGesture([], [])).toBe('empty');
+    expect(validateCustomEditorMouseGesture(['left'], [])).toBe('conflict');
+    expect(validateCustomEditorMouseGesture(['left', 'up'], [])).toBe('conflict');
     expect(validateCustomEditorMouseGesture(['left', 'up', 'down'], [])).toBe('valid');
     expect(
       validateCustomEditorMouseGesture(

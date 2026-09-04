@@ -84,9 +84,7 @@ function openCommandPicker(name: string) {
 function openRecording(command: string) {
   fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: command } });
   fireEvent.click(screen.getByRole('button', { name: `Record gesture for ${command}` }));
-  const surface = screen.getByText(
-    'Right-drag here to draw a gesture with at least three direction changes.'
-  ).parentElement as HTMLElement;
+  const surface = screen.getByText('Right-drag here to record a gesture.').parentElement as HTMLElement;
   expect(surface.closest('[role="dialog"]')).not.toBeNull();
   return surface;
 }
@@ -193,41 +191,28 @@ describe('mouse gesture command picker', () => {
 describe('custom mouse gesture recording', () => {
   beforeEach(() => window.localStorage.clear());
 
-  it('records a three-segment gesture, rejects short and duplicate sequences, and cancels without saving', () => {
+  it('binds a two-segment gesture and confirms before replacing an assigned gesture', () => {
     renderSection();
     let surface = openRecording('Search');
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-    drawRecording(surface, [
-      [60, 100],
-      [100, 100],
-      [100, 60]
-    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    surface = openRecording('Search');
+    drawRecording(surface, [[140, 100], [140, 140]]);
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(
-      screen.queryByText('Right-drag here to draw a gesture with at least three direction changes.')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Right-drag here to record a gesture.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose command for Right → Down' })).toHaveTextContent('Search');
 
     fireEvent.change(screen.getByLabelText('Search commands'), {
       target: { value: 'Command Palette' }
     });
     fireEvent.click(screen.getByRole('button', { name: 'Record gesture for Command Palette' }));
-    surface = screen.getByText(
-      'Right-drag here to draw a gesture with at least three direction changes.'
-    ).parentElement as HTMLElement;
+    surface = screen.getByText('Right-drag here to record a gesture.').parentElement as HTMLElement;
     drawRecording(surface, [[60, 100]]);
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(screen.getByText('Gesture is too short.')).toBeInTheDocument();
-    drawRecording(surface, [
-      [60, 100],
-      [100, 100],
-      [100, 60]
-    ]);
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(screen.getByText('Gesture already exists.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(
-      screen.getByRole('button', { name: 'Record gesture for Command Palette' })
-    ).toBeInTheDocument();
+    expect(screen.getByText(/currently used for “Go Back”/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(screen.queryByText('Right-drag here to record a gesture.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose command for Left' })).toHaveTextContent('Command Palette');
   });
 });

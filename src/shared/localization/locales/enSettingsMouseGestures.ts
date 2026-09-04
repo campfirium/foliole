@@ -48,12 +48,12 @@ export const EN_SETTINGS_MOUSE_GESTURES_TRANSLATIONS = {
   'settings.mouseGestures.bindings.choose': 'Choose command for {label}',
   'settings.mouseGestures.bindings.filter': 'Filter commands',
   'settings.mouseGestures.record.add': 'Record gesture for {command}',
-  'settings.mouseGestures.record.prompt':
-    'Right-drag here to draw a gesture with at least three direction changes.',
+  'settings.mouseGestures.record.prompt': 'Right-drag here to record a gesture.',
   'settings.mouseGestures.record.save': 'Save',
+  'settings.mouseGestures.record.replace': 'Replace',
   'settings.mouseGestures.record.cancel': 'Cancel',
-  'settings.mouseGestures.record.tooShort': 'Gesture is too short.',
-  'settings.mouseGestures.record.conflict': 'Gesture already exists.',
+  'settings.mouseGestures.record.conflict':
+    'This gesture is currently used for “{command}”. Select Replace to change the binding.',
   'settings.mouseGestures.gesture.custom': 'Custom gesture',
   'settings.mouseGestures.direction.up': 'Up',
   'settings.mouseGestures.direction.down': 'Down',

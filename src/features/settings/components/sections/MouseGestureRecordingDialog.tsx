@@ -13,14 +13,15 @@ import {
 import type { EditorMouseGestureDirection } from '../../../editor/model/editorMouseGestures';
 
 import { MouseGestureRecordingRow } from './MouseGestureRecordingRow';
-import type { MouseGestureRecordingError } from './useMouseGestureRecorder';
 
 export function MouseGestureRecordingDialog(props: {
   command: CommandPaletteItem | undefined;
+  conflictCommandTitle: string | null;
   directions: EditorMouseGestureDirection[];
-  error: MouseGestureRecordingError;
   onCancel: () => void;
   onMouseDown: MouseEventHandler<HTMLDivElement>;
+  onMouseMove: MouseEventHandler<HTMLDivElement>;
+  onMouseUp: MouseEventHandler<HTMLDivElement>;
   onSave: () => void;
 }) {
   const t = useTranslation();
@@ -43,10 +44,12 @@ export function MouseGestureRecordingDialog(props: {
             </AppDialogTitle>
           </header>
           <MouseGestureRecordingRow
+            conflictCommandTitle={props.conflictCommandTitle}
             directions={props.directions}
-            error={props.error}
             onCancel={props.onCancel}
             onMouseDown={props.onMouseDown}
+            onMouseMove={props.onMouseMove}
+            onMouseUp={props.onMouseUp}
             onSave={props.onSave}
           />
         </AppDialogContent>

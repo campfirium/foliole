@@ -112,6 +112,7 @@ function useMouseGestureBindingView() {
   const recorder = useMouseGestureRecorder({
     bindings: gestureSettings.bindings,
     onSave: gestureSettings.addCustomGesture,
+    onReplace: gestureSettings.setBinding,
     threshold: gestureSettings.settings.segmentThresholdPx
   });
   const matches = useMemo(
@@ -133,7 +134,10 @@ function useMouseGestureBindingView() {
       )
     : [];
   const recordingCommand = commands.find((command) => command.id === recorder.commandId);
-  return { commands, gestureSettings, openGestureId, query, recorder, recordingCommand, rows, setOpenGestureId, setQuery, unboundMatches };
+  const conflictCommandTitle = commands.find(
+    (command) => command.id === recorder.conflict?.commandId
+  )?.title ?? recorder.conflict?.commandId ?? null;
+  return { commands, conflictCommandTitle, gestureSettings, openGestureId, query, recorder, recordingCommand, rows, setOpenGestureId, setQuery, unboundMatches };
 }
 
 function BindingRows(props: {
@@ -200,10 +204,12 @@ export function SettingsMouseGestureBindings() {
       </SettingsSection>
       <MouseGestureRecordingDialog
         command={view.recordingCommand}
+        conflictCommandTitle={view.conflictCommandTitle}
         directions={view.recorder.directions}
-        error={view.recorder.error}
         onCancel={view.recorder.cancel}
         onMouseDown={view.recorder.beginDrawing}
+        onMouseMove={view.recorder.continueDrawing}
+        onMouseUp={view.recorder.endDrawing}
         onSave={view.recorder.save}
       />
     </>

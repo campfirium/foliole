@@ -9,28 +9,73 @@ import type {
   EditorMouseGestureBinding,
   EditorMouseGestureDirection
 } from '../../../editor/model/editorMouseGestures';
-import { validateCustomEditorMouseGesture } from '../../../editor/model/editorMouseGestures';
+import {
+  normalizeEditorMouseGestureDirections,
+  toEditorMouseGestureId
+} from '../../../editor/model/editorMouseGestures';
 
-export type MouseGestureRecordingError = 'conflict' | 'too-short' | null;
+function resolveRecordedGesture(
+  directions: EditorMouseGestureDirection[],
+  bindings: EditorMouseGestureBinding[]
+) {
+  const normalized = normalizeEditorMouseGestureDirections(directions);
+  if (!normalized.length) return null;
+  const gestureId = toEditorMouseGestureId(normalized);
+  return {
+    existing: bindings.find((binding) => binding.gesture === gestureId),
+    gestureId,
+    normalized
+  };
+}
+
+function createStartRecording(
+  setCommandId: (commandId: string) => void,
+  setDirections: (directions: EditorMouseGestureDirection[]) => void,
+  setConflict: (conflict: EditorMouseGestureBinding | null) => void
+) {
+  return (commandId: string) => {
+    setCommandId(commandId);
+    setDirections([]);
+    setConflict(null);
+  };
+}
+
+function recordGestureMovement(args: {
+  buttons: number;
+  clientX: number;
+  clientY: number;
+  clearConflict: () => void;
+  preventDefault: () => void;
+  setDirections: (directions: EditorMouseGestureDirection[]) => void;
+  threshold: number;
+  trackingRef: MutableRefObject<GestureTrackingState | null>;
+}) {
+  const tracking = args.trackingRef.current;
+  if (!tracking || (args.buttons & 2) !== 2) return;
+  if (!appendTrackedGestureDirection(tracking, args.clientX, args.clientY, args.threshold)) return;
+  args.preventDefault();
+  args.setDirections([...tracking.directions]);
+  args.clearConflict();
+}
 
 function useRecordingListeners(args: {
   active: boolean;
   cancel: () => void;
+  clearConflict: () => void;
   setDirections: (directions: EditorMouseGestureDirection[]) => void;
-  setError: (error: MouseGestureRecordingError) => void;
   threshold: number;
   trackingRef: MutableRefObject<GestureTrackingState | null>;
 }) {
   useEffect(() => {
     if (!args.active) return;
     const handleMove = (event: MouseEvent) => {
-      const tracking = args.trackingRef.current;
-      if (!tracking || (event.buttons & 2) !== 2) return;
-      if (!appendTrackedGestureDirection(tracking, event.clientX, event.clientY, args.threshold))
-        return;
-      event.preventDefault();
-      args.setDirections([...tracking.directions]);
-      args.setError(null);
+      recordGestureMovement({
+        ...args,
+        buttons: event.buttons,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        preventDefault: () => event.preventDefault()
+      });
     };
     const handleUp = (event: MouseEvent) => {
       if (event.button === 2) args.trackingRef.current = null;
@@ -51,59 +96,94 @@ function useRecordingListeners(args: {
   }, [args]);
 }
 
+function createDrawingHandlers(args: {
+  clearConflict: () => void;
+  setDirections: (directions: EditorMouseGestureDirection[]) => void;
+  threshold: number;
+  trackingRef: MutableRefObject<GestureTrackingState | null>;
+}) {
+  const beginDrawing = (event: ReactMouseEvent) => {
+    if (event.button !== 2) return;
+    event.preventDefault();
+    args.setDirections([]);
+    args.clearConflict();
+    args.trackingRef.current = {
+      directions: [],
+      lastPoint: { x: event.clientX, y: event.clientY }
+    };
+  };
+  const continueDrawing = (event: ReactMouseEvent) => recordGestureMovement({
+    ...args,
+    buttons: event.buttons,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    preventDefault: () => event.preventDefault()
+  });
+  const endDrawing = (event: ReactMouseEvent) => {
+    if (event.button === 2) args.trackingRef.current = null;
+  };
+  return { beginDrawing, continueDrawing, endDrawing };
+}
+
 export function useMouseGestureRecorder(args: {
   bindings: EditorMouseGestureBinding[];
   onSave: (directions: EditorMouseGestureDirection[], commandId: string) => boolean;
+  onReplace: (gestureId: string, commandId: string) => void;
   threshold: number;
 }) {
   const [commandId, setCommandId] = useState<string | null>(null);
   const [directions, setDirections] = useState<EditorMouseGestureDirection[]>([]);
-  const [error, setError] = useState<MouseGestureRecordingError>(null);
+  const [conflict, setConflict] = useState<EditorMouseGestureBinding | null>(null);
   const trackingRef = useRef<GestureTrackingState | null>(null);
+  const start = createStartRecording(setCommandId, setDirections, setConflict);
   const cancel = useCallback(() => {
     trackingRef.current = null;
     setCommandId(null);
     setDirections([]);
-    setError(null);
+    setConflict(null);
   }, []);
 
   useRecordingListeners({
     active: Boolean(commandId),
     cancel,
+    clearConflict: () => setConflict(null),
     setDirections,
-    setError,
     threshold: args.threshold,
     trackingRef
   });
 
-  const beginDrawing = (event: ReactMouseEvent) => {
-    if (event.button !== 2) return;
-    event.preventDefault();
-    setDirections([]);
-    setError(null);
-    trackingRef.current = { directions: [], lastPoint: { x: event.clientX, y: event.clientY } };
-  };
+  const drawing = createDrawingHandlers({
+    clearConflict: () => setConflict(null),
+    setDirections,
+    threshold: args.threshold,
+    trackingRef
+  });
   const save = () => {
     if (!commandId) return;
-    const validation = validateCustomEditorMouseGesture(directions, args.bindings);
-    if (validation !== 'valid') {
-      setError(validation);
+    const recorded = resolveRecordedGesture(directions, args.bindings);
+    if (!recorded) return;
+    const { existing, gestureId, normalized } = recorded;
+    if (existing?.commandId && conflict?.gesture !== gestureId) {
+      setConflict(existing);
       return;
     }
-    if (args.onSave(directions, commandId)) cancel();
+    if (existing) {
+      args.onReplace(gestureId, commandId);
+      cancel();
+      return;
+    }
+    if (args.onSave(normalized, commandId)) cancel();
   };
 
   return {
-    beginDrawing,
+    beginDrawing: drawing.beginDrawing,
     cancel,
     commandId,
+    conflict,
+    continueDrawing: drawing.continueDrawing,
     directions,
-    error,
+    endDrawing: drawing.endDrawing,
     save,
-    start: (nextCommandId: string) => {
-      setCommandId(nextCommandId);
-      setDirections([]);
-      setError(null);
-    }
+    start
   };
 }
