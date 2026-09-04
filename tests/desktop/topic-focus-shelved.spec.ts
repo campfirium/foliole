@@ -45,8 +45,7 @@ test('Shelved ignores Topic Focus without changing the global preference', async
 
   await desktopWindow.locator('[data-node-id="special-virtual-shelved"]').first().click();
   await expect(desktopWindow.getByRole('treeitem', { name: 'Shelved focus contract topic' })).toBeVisible();
-  await expect(desktopWindow.getByRole('button', { name: 'Focus active topics' })).toHaveCount(0);
-  await expect(desktopWindow.getByRole('button', { name: 'Show all topics' })).toHaveCount(0);
+  await expect(desktopWindow.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
   expect(await desktopWindow.evaluate((key) => localStorage.getItem(key), FOCUS_SETTING_KEY)).toBe('true');
 
   await mkdir(path.dirname(SCREENSHOT), { recursive: true });

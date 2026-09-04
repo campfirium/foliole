@@ -18,7 +18,7 @@ interface WorkspaceTopicTreeHeaderBridgeProps {
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   setSearchQuery: (value: string) => void;
   showCreateTopic?: boolean;
-  showTopicFocus: boolean;
+  topicFocusAvailable: boolean;
   viewHideDismissedTopics: boolean;
 }
 
@@ -42,7 +42,7 @@ export function WorkspaceTopicTreeHeaderBridge(props: WorkspaceTopicTreeHeaderBr
       }
       searchQuery={props.searchQuery}
       {...definedProps({ showCreateTopic: props.showCreateTopic })}
-      showTopicFocus={props.showTopicFocus}
+      topicFocusAvailable={props.topicFocusAvailable}
       sortDirection={contentSort.sort.direction}
       sortKey={contentSort.sort.key}
       viewHideDismissedTopics={props.viewHideDismissedTopics}

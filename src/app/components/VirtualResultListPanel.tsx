@@ -19,7 +19,7 @@ interface VirtualResultListPanelProps {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   preserveItemOrder?: boolean;
-  showTopicFocus?: boolean;
+  topicFocusAvailable?: boolean;
 }
 
 function resolveVirtualFolderId(props: VirtualResultListPanelProps) {
@@ -54,7 +54,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
       onSelectNode={props.onSelectNode}
       preserveItemOrder={props.preserveItemOrder ?? false}
       showCreateTopic={false}
-      {...(props.showTopicFocus !== undefined ? { showTopicFocus: props.showTopicFocus } : {})}
+      {...(props.topicFocusAvailable !== undefined ? { topicFocusAvailable: props.topicFocusAvailable } : {})}
       virtualFolderView={virtualFolderView}
     />
   );

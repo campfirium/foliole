@@ -35,7 +35,7 @@ interface WorkspaceTopicTreeShellArgs {
   t: Translate;
   scrollTargetNodeId?: string | null;
   showCreateTopic?: boolean;
-  showTopicFocus: boolean;
+  topicFocusAvailable: boolean;
   viewHideDismissedTopics: boolean;
   visibleRows: NodeTreeRow[];
   tabStopNodeId?: string;
@@ -56,7 +56,7 @@ export function renderWorkspaceTopicTreeShell(args: WorkspaceTopicTreeShellArgs)
         setCollapsedNodeIds={args.setCollapsedNodeIds}
         setSearchQuery={args.setSearchQuery}
         {...definedProps({ showCreateTopic: args.showCreateTopic })}
-        showTopicFocus={args.showTopicFocus}
+        topicFocusAvailable={args.topicFocusAvailable}
         viewHideDismissedTopics={args.viewHideDismissedTopics}
       />
       {renderWorkspaceTopicTreeBody({

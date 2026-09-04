@@ -187,7 +187,7 @@ it('renders built-in virtual lists with the shared topic header', () => {
   expect(screen.queryByText('List deleted topics with linked sources.')).toBeNull();
   expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Focus active topics' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create topic' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'First result' })).toBeInTheDocument();
 });

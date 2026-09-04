@@ -83,7 +83,7 @@ it('hides fully dismissed topic branches and keeps active descendants after the 
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all topics' }));
   expect(within(itemColumn).getByRole('treeitem', { name: 'Active Child' })).toBeInTheDocument();
 
-  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Focus active topics' }));
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Hide dismissed and shelved topics' }));
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics)).toBe('true');
   expect(within(itemColumn).getByRole('treeitem', { name: 'Dismissed Parent' })).toBeInTheDocument();
