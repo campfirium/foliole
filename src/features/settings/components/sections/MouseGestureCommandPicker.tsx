@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 import type { CommandPaletteItem } from '../../../../shared/commands/types';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { onWindowPriorityEscape } from '../../../../shared/platform/keyboard';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -76,8 +77,16 @@ export function MouseGestureCommandPicker(props: {
   useEffect(() => {
     if (!props.open) return undefined;
     const frame = window.requestAnimationFrame(() => searchRef.current?.focus());
-    return () => window.cancelAnimationFrame(frame);
-  }, [props.open]);
+    const unlistenEscape = onWindowPriorityEscape(() => {
+      setQuery('');
+      props.onOpenChange(false);
+      return true;
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      unlistenEscape();
+    };
+  }, [props.onOpenChange, props.open]);
 
   const chooseLabel = t('settings.mouseGestures.bindings.choose', { label: props.gestureLabel });
   const changeBinding = (commandId: string | null) => {
