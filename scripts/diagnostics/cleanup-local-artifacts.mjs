@@ -18,10 +18,11 @@ export const CLEANUP_ROOTS = [
   'artifacts/windows-internal',
   'trees'
 ];
-const PROTECTED_ROOTS = new Set(['.tmp/artifacts']);
+const PROTECTED_ROOTS = new Set(['.tmp/artifacts', '.tmp/worktrees']);
 
-function isProtectedEntry(rootName, entryName) {
-  return PROTECTED_ROOTS.has(`${rootName}/${entryName}`);
+function isProtectedEntry(rootName, entryName, entryPath) {
+  return PROTECTED_ROOTS.has(`${rootName}/${entryName}`)
+    || existsSync(resolve(entryPath, '.git'));
 }
 
 function resolveAllowedRoot(rootArg) {
@@ -70,10 +71,8 @@ function collectEntries(rootDir, nowMs, days) {
       continue;
     }
     for (const entry of readdirSync(rootPath, { withFileTypes: true })) {
-      if (isProtectedEntry(rootName, entry.name)) {
-        continue;
-      }
       const entryPath = resolve(rootPath, entry.name);
+      if (isProtectedEntry(rootName, entry.name, entryPath)) continue;
       const stats = lstatSync(entryPath);
       if (stats.mtimeMs <= cutoffMs) {
         results.push({
@@ -95,10 +94,10 @@ function removeEmptyChildren(rootDir) {
       continue;
     }
     for (const entry of readdirSync(rootPath, { withFileTypes: true })) {
-      if (!entry.isDirectory() || isProtectedEntry(rootName, entry.name)) {
+      const entryPath = resolve(rootPath, entry.name);
+      if (!entry.isDirectory() || isProtectedEntry(rootName, entry.name, entryPath)) {
         continue;
       }
-      const entryPath = resolve(rootPath, entry.name);
       if (readdirSync(entryPath).length === 0) {
         rmSync(entryPath, { force: true, recursive: true });
       }

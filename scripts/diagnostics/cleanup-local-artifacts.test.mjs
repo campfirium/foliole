@@ -92,6 +92,23 @@ describe('cleanup-local-artifacts', () => {
     }
   });
 
+  it('protects Git worktrees from general cleanup', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-worktree-test-'));
+    try {
+      const worktree = join(root, '.tmp', 'old-acceptance');
+      mkdirSync(worktree, { recursive: true });
+      touch(join(worktree, '.git'), oldTime);
+      utimesSync(worktree, oldTime, oldTime);
+
+      const result = runCleanup({ apply: true, days: 7, dryRun: false, nowMs, rootDir: root });
+
+      expect(result.entries).toEqual([]);
+      expect(existsSync(worktree)).toBe(true);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it('rejects arbitrary cleanup roots from the CLI', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-rejected-root-'));
     try {
