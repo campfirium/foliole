@@ -67,7 +67,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
         editor.tap()
         editor.typeText(title)
-        let keyboardDone = app.keyboards.buttons["Done"]
+        let keyboardDone = app.toolbars["Toolbar"].buttons["Done"]
         XCTAssertTrue(keyboardDone.waitForExistence(timeout: 15), "The Capture keyboard cannot be dismissed.")
         keyboardDone.tap()
         tapEnabledButton(named: "Save", in: app, timeout: 30)
