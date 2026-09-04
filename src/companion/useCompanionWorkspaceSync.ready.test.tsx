@@ -84,14 +84,26 @@ describe('useCompanionWorkspaceSync ready gate', () => {
     expect(result.current.status).toBe('idle');
   });
 
-  it('enables the initial automatic sync before any explicit sync has completed', async () => {
+  it('enables automatic sync when the group and persistent controls are ready', async () => {
     const { shouldEnableCompanionAutoSync } = await import('./useCompanionWorkspaceSync');
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, participating: true, state: createSyncState(null)
+      groupReady: true, syncEnabled: true, syncPaused: false
     })).toBe(true);
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, participating: true,
-      state: { ...createSyncState(null), last_synced_at: '2026-04-25T09:06:00.000Z' }
+      groupReady: false, syncEnabled: true, syncPaused: false
+    })).toBe(false);
+  });
+
+  it('keeps transient lifecycle inactivity out of the persisted automatic sync controls', async () => {
+    const { shouldEnableCompanionAutoSync } = await import('./useCompanionWorkspaceSync');
+    expect(shouldEnableCompanionAutoSync({
+      groupReady: true, syncEnabled: true, syncPaused: false
     })).toBe(true);
+    expect(shouldEnableCompanionAutoSync({
+      groupReady: true, syncEnabled: true, syncPaused: true
+    })).toBe(false);
+    expect(shouldEnableCompanionAutoSync({
+      groupReady: true, syncEnabled: false, syncPaused: false
+    })).toBe(false);
   });
 });
