@@ -86,7 +86,11 @@ async function expectActiveEditorState(page: DesktopSession['firstWindow'], node
   });
 }
 
-async function drawGesture(page: DesktopSession['firstWindow'], segments: Array<[number, number]>) {
+async function drawGesture(
+  page: DesktopSession['firstWindow'],
+  segments: Array<[number, number]>,
+  expectedHint?: string
+) {
   const surface = page.locator('.markdown-editor-host');
   await expect(surface).toBeVisible();
   const box = await surface.boundingBox();
@@ -100,11 +104,14 @@ async function drawGesture(page: DesktopSession['firstWindow'], segments: Array<
     y += dy;
     await page.mouse.move(x, y, { steps: 4 });
   }
+  if (expectedHint) {
+    await expect(page.locator('[data-editor-gesture-hint="true"]')).toHaveText(expectedHint);
+  }
   await page.mouse.up({ button: 'right' });
 }
 
 async function expectCustomSearchGesture(page: DesktopSession['firstWindow']) {
-  await drawGesture(page, [[-70, 0], [70, 0], [0, -70]]);
+  await drawGesture(page, [[-70, 0], [70, 0], [0, -70]], '← → ↑');
   const search = page.getByRole('dialog', { name: /Search/i });
   await expect(search).toBeVisible();
   await page.keyboard.press('Escape');
@@ -144,6 +151,9 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     secondSession = await launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } });
     await focusVisibleSession(secondSession);
     await expectWorkspaceShell(secondSession.firstWindow);
+    await secondSession.firstWindow.waitForFunction(() =>
+      Boolean(globalThis.window?.__folioleWorkspaceDebug?.isHydrated?.())
+    );
     await expectPersistentCustomGesture(secondSession.firstWindow);
     await expectCustomSearchGesture(secondSession.firstWindow);
   } finally {
