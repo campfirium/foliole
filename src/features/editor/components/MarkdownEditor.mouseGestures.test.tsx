@@ -202,8 +202,10 @@ function runContextMenuFallbackTest() {
   );
 
   const surface = container.firstChild as HTMLElement;
+  mockSurfaceRect(surface);
   dispatchSurfaceEvent(surface, mouse('mousedown', 120, 120));
   dispatchSurfaceEvent(surface, mouse('contextmenu', 120, 120, 0));
+  drawGesture(surface, [mouse('mouseup', 120, 120, 0)]);
 
   expect(mockSetScrollTop).not.toHaveBeenCalled();
   expect(onContextMenu).toHaveBeenCalledTimes(1);
