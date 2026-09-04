@@ -179,9 +179,31 @@ it('keeps the top toolbar focus tooltip above the trigger', async () => {
   fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
 
   const tooltip = await screen.findByRole('tooltip');
-  expect(tooltip).toHaveTextContent('Focus active topics by hiding dismissed branches.');
+  expect(tooltip).toHaveTextContent('Focus active topics by hiding inactive branches.');
   expect(tooltip.parentElement).toHaveAttribute('data-side', 'top');
   expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
+});
+
+it('omits topic focus when the current view does not support it', () => {
+  renderWithLocalization(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+      showTopicFocus={false}
+      sortDirection="desc"
+      sortKey="lastOpenedAt"
+      viewHideDismissedTopics
+    />
+  );
+
+  expect(screen.queryByRole('button', { name: 'Focus active topics' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Show all topics' })).toBeNull();
 });
 
 it('shows the focus tooltip as the next toggle action when focus is active', async () => {

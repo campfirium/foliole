@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "Mostrar todos os tópicos",
   "desktop.nodeList.focusActiveTopics": "Concentre-se em tópicos ativos",
   "desktop.nodeList.showAllTopicBranches": "Mostrar todas as ramificações do tópico.",
-  "desktop.nodeList.focusActiveTopicsDescription": "Concentre os tópicos ativos ocultando as ramificações dispensadas.",
+  "desktop.nodeList.focusActiveTopicsDescription": "Concentre-se nos tópicos ativos ocultando as ramificações inativas.",
   "desktop.nodeList.create": "Criar",
   "desktop.nodeList.createFolder": "Criar pasta",
   "desktop.nodeList.createTopic": "Criar tópico",

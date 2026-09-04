@@ -48,7 +48,8 @@ export function areWorkspaceTopicTreePropsEqual(
     onFocusEditor: previous.onFocusEditor !== next.onFocusEditor,
     onOpenPostponeTopicPanel: previous.onOpenPostponeTopicPanel !== next.onOpenPostponeTopicPanel,
     onSelectNode: previous.onSelectNode !== next.onSelectNode,
-    showCreateTopic: previous.showCreateTopic !== next.showCreateTopic
+    showCreateTopic: previous.showCreateTopic !== next.showCreateTopic,
+    showTopicFocus: previous.showTopicFocus !== next.showTopicFocus
   };
   if (isEditorInputDiagnosticEnabled()) {
     logEditorInputDiagnostic('workspace-topic-tree-memo-compare', changed);

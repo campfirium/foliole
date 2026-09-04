@@ -45,6 +45,7 @@ export interface WorkspaceTopicTreeProps {
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   showCreateTopic?: boolean;
+  showTopicFocus?: boolean;
 }
 
 function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
@@ -73,7 +74,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
     sort,
-    hideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
+    hideDismissedTopics: props.showTopicFocus !== false && dismissedTopicVisibility.viewHideDismissedTopics,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });
   return { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility };
@@ -159,6 +160,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     setSearchQuery,
     t,
     ...definedProps({ showCreateTopic: props.showCreateTopic }),
+    showTopicFocus: props.showTopicFocus !== false,
     viewHideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     visibleRows,
     ...definedProps({ tabStopNodeId: resolveWorkspaceTopicTreeTabStopNodeId(Boolean(props.onFocusEditor), focusedNodeId, visibleRows) })

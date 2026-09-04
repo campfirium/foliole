@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "すべてのトピックを表示",
   "desktop.nodeList.focusActiveTopics": "アクティブなトピックに焦点を当てる",
   "desktop.nodeList.showAllTopicBranches": "すべてのトピック ブランチを表示します。",
-  "desktop.nodeList.focusActiveTopicsDescription": "閉じられたブランチを非表示にして、アクティブなトピックに焦点を当てます。",
+  "desktop.nodeList.focusActiveTopicsDescription": "非アクティブなブランチを非表示にして、アクティブなトピックに集中します。",
   "desktop.nodeList.create": "作成",
   "desktop.nodeList.createFolder": "フォルダーの作成",
   "desktop.nodeList.createTopic": "トピックの作成",

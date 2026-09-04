@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "Mostrar todos los temas",
   "desktop.nodeList.focusActiveTopics": "Enfocar temas activos",
   "desktop.nodeList.showAllTopicBranches": "Mostrar todas las ramas del tema.",
-  "desktop.nodeList.focusActiveTopicsDescription": "Enfoque los temas activos ocultando las ramas descartadas.",
+  "desktop.nodeList.focusActiveTopicsDescription": "Enfoca los temas activos ocultando las ramas inactivas.",
   "desktop.nodeList.create": "Crear",
   "desktop.nodeList.createFolder": "Crear carpeta",
   "desktop.nodeList.createTopic": "Crear tema",

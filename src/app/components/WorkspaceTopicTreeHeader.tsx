@@ -20,9 +20,15 @@ interface WorkspaceTopicTreeHeaderProps {
   onToggleCollapseAll: () => void;
   searchQuery: string;
   showCreateTopic?: boolean;
+  showTopicFocus?: boolean;
   viewHideDismissedTopics?: boolean;
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
+}
+
+function closeTopicSearch(onSearchQueryChange: (searchQuery: string) => void, setIsSearchOpen: (isOpen: boolean) => void) {
+  onSearchQueryChange('');
+  setIsSearchOpen(false);
 }
 
 export function WorkspaceTopicTreeHeader({
@@ -37,6 +43,7 @@ export function WorkspaceTopicTreeHeader({
   onSearchQueryChange,
   searchQuery,
   showCreateTopic = true,
+  showTopicFocus = true,
   sortDirection,
   sortKey,
   viewHideDismissedTopics = false
@@ -49,11 +56,6 @@ export function WorkspaceTopicTreeHeader({
       setIsSearchOpen(true);
     }
   }, [searchQuery]);
-
-  const closeSearch = () => {
-    onSearchQueryChange('');
-    setIsSearchOpen(false);
-  };
 
   return (
     <AppToolbar
@@ -74,6 +76,7 @@ export function WorkspaceTopicTreeHeader({
         onToggleDismissedTopicsVisibility={onToggleDismissedTopicsVisibility}
         onToggleCollapseAll={onToggleCollapseAll}
         showCreateTopic={showCreateTopic}
+        showTopicFocus={showTopicFocus}
         sortDirection={sortDirection}
         sortKey={sortKey}
         viewHideDismissedTopics={viewHideDismissedTopics}
@@ -81,7 +84,7 @@ export function WorkspaceTopicTreeHeader({
       {isSearchOpen ? (
         <NodeListSearchOverlay
           onChangeSearchQuery={onSearchQueryChange}
-          onClose={closeSearch}
+          onClose={() => closeTopicSearch(onSearchQueryChange, setIsSearchOpen)}
           searchQuery={searchQuery}
         />
       ) : null}
@@ -135,28 +138,30 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
         label={props.hasCollapsedNodes ? t('desktop.nodeList.expandAllTopics') : t('desktop.nodeList.collapseAllTopics')}
         onClick={props.onToggleCollapseAll}
       />
-      <AppTooltip>
-        <AppTooltipTrigger asChild>
-          <span className="inline-flex">
-            <AppIconButton
-              aria-pressed={props.viewHideDismissedTopics}
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:text-foreground"
-              icon={
-                props.viewHideDismissedTopics
-                  ? <Focus size={16} strokeWidth={1.9} />
-                  : <Scan size={16} strokeWidth={1.9} />
-              }
-              label={props.viewHideDismissedTopics ? t('desktop.nodeList.showAllTopics') : t('desktop.nodeList.focusActiveTopics')}
-              onClick={props.onToggleDismissedTopicsVisibility}
-            />
-          </span>
-        </AppTooltipTrigger>
-        <AppTooltipContent align="center" avoidCollisions={false} side="top" sideOffset={8}>
-          {props.viewHideDismissedTopics
-            ? t('desktop.nodeList.showAllTopicBranches')
-            : t('desktop.nodeList.focusActiveTopicsDescription')}
-        </AppTooltipContent>
-      </AppTooltip>
+      {props.showTopicFocus !== false ? (
+        <AppTooltip>
+          <AppTooltipTrigger asChild>
+            <span className="inline-flex">
+              <AppIconButton
+                aria-pressed={props.viewHideDismissedTopics}
+                className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:text-foreground"
+                icon={
+                  props.viewHideDismissedTopics
+                    ? <Focus size={16} strokeWidth={1.9} />
+                    : <Scan size={16} strokeWidth={1.9} />
+                }
+                label={props.viewHideDismissedTopics ? t('desktop.nodeList.showAllTopics') : t('desktop.nodeList.focusActiveTopics')}
+                onClick={props.onToggleDismissedTopicsVisibility}
+              />
+            </span>
+          </AppTooltipTrigger>
+          <AppTooltipContent align="center" avoidCollisions={false} side="top" sideOffset={8}>
+            {props.viewHideDismissedTopics
+              ? t('desktop.nodeList.showAllTopicBranches')
+              : t('desktop.nodeList.focusActiveTopicsDescription')}
+          </AppTooltipContent>
+        </AppTooltip>
+      ) : null}
       {props.showCreateTopic !== false ? (
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"

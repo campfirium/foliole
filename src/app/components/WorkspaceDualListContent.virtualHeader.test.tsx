@@ -7,11 +7,13 @@ import {
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createWorkspaceContentNode, renderWorkspaceContent } from './WorkspaceDualListContent.testUtils';
 
 beforeEach(() => {
+  window.localStorage.clear();
   useWorkspaceStore.setState({ updateVirtualNodeFilter: vi.fn() });
 });
 
@@ -64,6 +66,7 @@ it('leaves the Virtual root content column empty', () => {
 });
 
 it('shows only result topics in the Shelved topic list column', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics, 'true');
   renderWorkspaceContent({
     activeNodeId: VIRTUAL_SHELVED_NODE_ID,
     activeVirtualNodeId: VIRTUAL_SHELVED_NODE_ID,
@@ -85,8 +88,10 @@ it('shows only result topics in the Shelved topic list column', () => {
   expect(screen.queryByText('List topics that are shelved.')).toBeNull();
   expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Focus active topics' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Focus active topics' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Show all topics' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Shelved Topic' })).toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics)).toBe('true');
 });
 
 it('shows Removed in the shared topic list column without the removed source toolbar', () => {

@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "Pokaż wszystkie tematy",
   "desktop.nodeList.focusActiveTopics": "Skoncentruj się na aktywnych tematach",
   "desktop.nodeList.showAllTopicBranches": "Pokaż wszystkie gałęzie tematyczne.",
-  "desktop.nodeList.focusActiveTopicsDescription": "Skoncentruj aktywne tematy, ukrywając odrzucone gałęzie.",
+  "desktop.nodeList.focusActiveTopicsDescription": "Skup się na aktywnych tematach, ukrywając nieaktywne gałęzie.",
   "desktop.nodeList.create": "Utwórz",
   "desktop.nodeList.createFolder": "Utwórz folder",
   "desktop.nodeList.createTopic": "Utwórz temat",

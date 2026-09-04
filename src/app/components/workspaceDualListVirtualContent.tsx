@@ -119,6 +119,7 @@ export function renderVirtualContentColumn(
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}
       preserveItemOrder={preservesCollectionOrder}
+      showTopicFocus={!isShelvedView}
     />
   );
 }

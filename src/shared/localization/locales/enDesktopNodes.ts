@@ -15,7 +15,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.showAllTopics': 'Show all topics',
   'desktop.nodeList.focusActiveTopics': 'Focus active topics',
   'desktop.nodeList.showAllTopicBranches': 'Show all topic branches.',
-  'desktop.nodeList.focusActiveTopicsDescription': 'Focus active topics by hiding dismissed branches.',
+  'desktop.nodeList.focusActiveTopicsDescription': 'Focus active topics by hiding inactive branches.',
   'desktop.nodeList.create': 'Create',
   'desktop.nodeList.createFolder': 'Create folder',
   'desktop.nodeList.createTopic': 'Create Topic',

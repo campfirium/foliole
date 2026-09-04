@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "Показать все темы",
   "desktop.nodeList.focusActiveTopics": "Сосредоточьтесь на активных темах",
   "desktop.nodeList.showAllTopicBranches": "Показать все ветки темы.",
-  "desktop.nodeList.focusActiveTopicsDescription": "Сосредоточьте внимание на активных темах, скрывая закрытые ветки.",
+  "desktop.nodeList.focusActiveTopicsDescription": "Сосредоточьтесь на активных темах, скрыв неактивные ветви.",
   "desktop.nodeList.create": "Создать",
   "desktop.nodeList.createFolder": "Создать папку",
   "desktop.nodeList.createTopic": "Создать тему",

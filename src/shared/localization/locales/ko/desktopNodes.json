@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "모든 주제 표시",
   "desktop.nodeList.focusActiveTopics": "활성 주제에 집중",
   "desktop.nodeList.showAllTopicBranches": "모든 주제 분기를 표시합니다.",
-  "desktop.nodeList.focusActiveTopicsDescription": "해제된 분기를 숨겨 활성 주제에 집중하세요.",
+  "desktop.nodeList.focusActiveTopicsDescription": "비활성 브랜치를 숨겨 활성 주제에 집중합니다.",
   "desktop.nodeList.create": "만들기",
   "desktop.nodeList.createFolder": "폴더 생성",
   "desktop.nodeList.createTopic": "주제 만들기",

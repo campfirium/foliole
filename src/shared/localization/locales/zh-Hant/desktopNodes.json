@@ -17,7 +17,7 @@
   "desktop.nodeList.showAllTopics": "顯示所有主題",
   "desktop.nodeList.focusActiveTopics": "聚焦活躍話題",
   "desktop.nodeList.showAllTopicBranches": "顯示所有主題分支。",
-  "desktop.nodeList.focusActiveTopicsDescription": "透過隱藏已解散的分支來聚焦活躍主題。",
+  "desktop.nodeList.focusActiveTopicsDescription": "隱藏非活躍主題分支，聚焦活躍主題。",
   "desktop.nodeList.create": "創建",
   "desktop.nodeList.createFolder": "建立資料夾",
   "desktop.nodeList.createTopic": "創建主題",
