@@ -35,6 +35,14 @@ function writeBlobOnlyLocalEdit(database: DatabaseSync, nodeId: string, content:
     .run(hash, now, nodeId);
 }
 
+function findImportedNodeId(databasePath: string) {
+  const database = openDatabase(databasePath);
+  const row = database.prepare('SELECT id FROM nodes WHERE title = ? AND deleted_at IS NULL')
+    .get('T175 Article') as { id: string } | undefined;
+  database.close();
+  return row?.id ?? null;
+}
+
 async function writeReadwiseFixture(readwiseRoot: string, includeSecondHighlight: boolean) {
   const articleDirectory = path.join(readwiseRoot, 'Articles');
   const fullDocumentDirectory = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
@@ -73,6 +81,9 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   await expectWorkspaceShell(desktopWindow);
   const readwiseRoot = testInfo.outputPath('readwise-root');
   await writeReadwiseFixture(readwiseRoot, false);
+  const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
+  if (!libraryHome) throw new Error('missing isolated library home');
+  const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
   const settings = createDefaultImportManagerSettings();
   settings.readwiseRootPath = readwiseRoot;
   settings.readwiseReaderConfig = {
@@ -84,17 +95,12 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   settings.readwiseSources = applyReadwiseRootPath(settings.readwiseSources, readwiseRoot)
     .map((source) => ({ ...source, keepState: 'enabled' as const }));
 
-  const firstRun = await desktopWindow.evaluate(async (nextSettings) => {
-    await window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings });
-    return window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings });
-  }, settings);
-  expect(firstRun).toMatchObject({ imported_count: 1, status: 'completed' });
-  const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
-  if (!libraryHome) throw new Error('missing isolated library home');
-  const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
+  await desktopWindow.evaluate((nextSettings) => (
+    window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings })
+  ), settings);
+  await expect.poll(() => findImportedNodeId(databasePath), { timeout: 10_000 }).not.toBeNull();
   const database = openDatabase(databasePath);
-  const imported = database.prepare('SELECT id FROM nodes WHERE title = ? AND deleted_at IS NULL')
-    .get('T175 Article') as { id: string };
+  const imported = { id: findImportedNodeId(databasePath) as string };
   const firstBody = database.prepare(
     `SELECT CAST(cbd.data AS TEXT) AS body
      FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
