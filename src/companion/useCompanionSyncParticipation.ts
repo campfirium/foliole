@@ -15,7 +15,7 @@ export function useCompanionSyncParticipation() {
   );
   useEffect(() => {
     let cancelled = false;
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => undefined;
     const refresh = () => {
       void loadCompanionSyncParticipationState().catch(() => undefined);
     };
