@@ -178,7 +178,8 @@ extension FoliolePhysicalSyncGroupUITests {
                           "The expired physical acceptance request was not reset.")
             return
         }
-        guard app.buttons["Sync Now"].exists else { return }
+        guard app.staticTexts["Current Sync Group"].exists
+                || app.buttons["Sync Now"].exists else { return }
         tapButton(named: "Details", in: app, timeout: 15)
         tapButton(named: "Leave Sync Group", in: app, timeout: 15)
         tapButton(named: "Leave Sync Group", in: app, timeout: 15)
