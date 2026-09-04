@@ -18,6 +18,7 @@ import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicat
 import { startSyncGroupProvider, stopSyncGroupProvider,
   waitForSyncGroupProviderReady } from './ios-sync-group-provider-runner.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
+import { prepareIosAcceptanceCache, resolveIosAcceptanceCache } from './ios-local-storage.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
   parseBootstrapSnapshot,
@@ -37,10 +38,10 @@ const REQUIRED_TABLES = ['companion_meta', 'nodes', 'sync_object_state'];
 
 export function createAcceptanceBuildArgs(udid, options = {}) {
   const repoRoot = options.repoRoot ?? path.resolve(import.meta.dirname, '../..');
-  const artifactDir = options.artifactDir ?? path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance');
+  const derivedData = options.derivedData ?? resolveIosAcceptanceCache(repoRoot).derivedData;
   const resourceMode = options.resourceMode ?? resolveIosResourceMode();
   return createSimulatorAcceptanceBuildArgs({
-    bundleId: BUNDLE_ID, derivedData: path.join(artifactDir, 'DerivedData'), repoRoot,
+    bundleId: BUNDLE_ID, derivedData, repoRoot,
     resourceArgs: iosXcodebuildResourceArgs(resourceMode), udid
   });
 }
@@ -124,7 +125,8 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
 
 function createOptions(repoRoot, artifactDir) {
   const resourceMode = resolveIosResourceMode();
-  return { artifactDir, repoRoot, resourceMode };
+  return { artifactDir, derivedData: prepareIosAcceptanceCache(repoRoot).derivedData,
+    repoRoot, resourceMode };
 }
 
 function prepareApp(options, udid, scenario) {
@@ -147,7 +149,7 @@ function bootSimulator(options, udid) {
 }
 
 function installFreshAcceptanceApp(options, udid) {
-  const app = path.join(options.artifactDir, 'DerivedData/Build/Products/Debug-iphonesimulator/App.app');
+  const app = path.join(options.derivedData, 'Build/Products/Debug-iphonesimulator/App.app');
   run(options, 'codesign', ['--verify', '--deep', '--strict', app]);
   run(options, 'xcrun', ['simctl', 'install', udid, app]);
   return verifyAcceptanceAppSignature(captureAllowFailure(options, 'codesign', ['-d', '--verbose=4', app]), BUNDLE_ID);

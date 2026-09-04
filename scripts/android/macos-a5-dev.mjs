@@ -39,6 +39,9 @@ import { checked, captured, execute } from './macos-a5-process.mjs';
 import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
 import { acquireMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
 import {
+  maintainBeforeProduction, prepareCacheEntry
+} from '../diagnostics/local-artifact-cache-production.mjs';
+import {
   assertSafeMacosA5Environment, macosA5GradleEnv, macosA5Paths
 } from './macos-a5-runtime-paths.mjs';
 
@@ -148,6 +151,12 @@ async function captureAnnotation(
 export async function runMacosA5Action(action, repoRoot = process.cwd(), { formal = false } = {}) {
   const actionContract = assertRegisteredMacosA5Action(action);
   if (formal) assertFormalMacosA5Action(actionContract);
+  const sharedCacheRoot = path.join(path.resolve(repoRoot), '.cache');
+  if (actionContract.requiresHiddenDesktopRuntime) {
+    prepareCacheEntry({ entryName: 'native-hidden-electron', rootDir: repoRoot });
+  } else {
+    maintainBeforeProduction({ rootDir: repoRoot });
+  }
   const formalCandidate = formal && actionContract.formalSourceClass === 'frozen-build'
     ? beginFormalA5Candidate(repoRoot) : null;
   let context = createMacosA5ExecutionContext({
@@ -167,9 +176,10 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
     });
     const paths = macosA5Paths(context);
-    const actionEnv = macosA5GradleEnv(macosA5ActionEnv(
-      process.env, formal, actionContract.requiresHiddenDesktopRuntime
-    ));
+    const actionEnv = macosA5GradleEnv({
+      ...macosA5ActionEnv(process.env, formal, actionContract.requiresHiddenDesktopRuntime),
+      FOLIOLE_SHARED_CACHE_ROOT: sharedCacheRoot
+    });
     assertSafeMacosA5Environment(paths);
     if (receipt) captureFormalA5Toolchain(receipt, paths, (command, args, options) =>
       spawnSync(command, args, { ...options, env: actionEnv }));

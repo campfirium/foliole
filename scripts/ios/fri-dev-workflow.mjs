@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs';
+import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_DEV_APP_ID = 'com.foliole.ios.devworkflow';
@@ -37,7 +38,7 @@ function execute(command, args, options = {}) {
   }
 }
 
-export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot }) {
+export function buildFriDevWorkflowCommands({ derivedData, evidenceRoot, repoRoot }) {
   return [
     { command: 'npm', args: ['run', 'android:web:build'], stage: 'companion-build' },
     { command: 'npx', args: ['cap', 'sync', 'ios'], stage: 'capacitor-ios-sync' },
@@ -47,6 +48,7 @@ export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot }) {
         '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
         '--scheme', 'AppPhysicalUITests',
         '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
+        '--derived-data', derivedData,
         '--only-testing', FRI_DEV_TEST],
       env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
       stage: 'fri-dev-xcuitest'
@@ -71,7 +73,8 @@ export async function runFriDevWorkflow({
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await readiness();
-  for (const entry of buildFriDevWorkflowCommands({ evidenceRoot, repoRoot })) {
+  const derivedData = prepareIosAcceptanceCache(repoRoot).derivedData;
+  for (const entry of buildFriDevWorkflowCommands({ derivedData, evidenceRoot, repoRoot })) {
     run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
   return { evidenceRoot, testIdentifier: FRI_DEV_TEST };

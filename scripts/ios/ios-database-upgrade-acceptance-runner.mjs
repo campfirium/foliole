@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { resolveIosDatabaseUpgradeContractFixture } from './ios-database-upgrade-contract-fixture.mjs';
+import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 import {
   readUpgradeSnapshot,
   verifyIosDatabaseUpgradeAcceptance
@@ -34,7 +35,7 @@ export async function runIosDatabaseUpgradeAcceptance(
   const resourceMode = resolveIosResourceMode();
   const options = {
     artifactDir, bundleId: 'com.foliole.ios.bootstrap-acceptance',
-    derivedData: path.join(artifactDir, 'DerivedData'), repoRoot,
+    derivedData: prepareIosAcceptanceCache(repoRoot).derivedData, repoRoot,
     resourceArgs: iosXcodebuildResourceArgs(resourceMode), resourceMode
   };
   mkdirSync(options.artifactDir, { recursive: true });

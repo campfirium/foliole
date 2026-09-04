@@ -14,6 +14,7 @@ import {
 } from '../desktop/electron-dev-control-state.mjs';
 import { createElectronRuntimeWatcher } from '../desktop/electron-dev-runtime-watch.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
+import { maintainBeforeProduction } from '../diagnostics/local-artifact-cache-production.mjs';
 import { requestMacosElectronRuntimeRestart, requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
@@ -185,6 +186,7 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   const paths = options.paths ?? resolveMacosElectronDevPaths(options.cwd);
   const existing = readElectronDevSnapshot(paths, options.isAlive ?? processIsAlive);
   if (existing.supervisorAlive) throw new Error(`macOS Electron daily debug already running pid=${existing.client.supervisorPid}`);
+  (options.maintain ?? maintainBeforeProduction)({ rootDir: paths.appRoot });
   await (options.prepareSignature ?? prepareMacosElectronDevSignature)({
     appRoot: paths.appRoot,
     platform

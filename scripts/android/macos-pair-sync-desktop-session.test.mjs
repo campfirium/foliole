@@ -114,6 +114,7 @@ describe('macOS pair sync desktop session', () => {
       electronLauncher: { launch },
       env: {
         ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600/',
+        FOLIOLE_SHARED_CACHE_ROOT: '/shared-cache',
         FOLIOLE_VITE_HMR: '0'
       },
       libraryHome: path.join(path.parse(process.cwd()).root, 'tmp', 'library'),
@@ -125,7 +126,7 @@ describe('macOS pair sync desktop session', () => {
     });
 
     expect(prepareHiddenRuntime).toHaveBeenCalledWith({
-      appRoot: repoRoot, cacheRoot: runtimeRoot,
+      appRoot: repoRoot, cacheRoot: '/shared-cache',
       env: expect.objectContaining({ FOLIOLE_VITE_HMR: '0' })
     });
 

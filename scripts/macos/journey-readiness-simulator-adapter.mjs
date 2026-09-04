@@ -9,11 +9,11 @@ import { verifyAcceptanceAppSignature } from '../ios/ios-simulator-acceptance-ru
 
 const BUNDLE_ID = 'com.foliole.ios';
 
-export function createSignedSimulatorBuildArgs(repoRoot, artifactDir, udid) {
+export function createSignedSimulatorBuildArgs(repoRoot, derivedData, udid) {
   return [
     '-project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '-scheme', 'App', '-configuration', 'Debug',
     '-destination', `platform=iOS Simulator,id=${udid}`,
-    '-derivedDataPath', path.join(artifactDir, 'DerivedData'),
+    '-derivedDataPath', derivedData,
     `PRODUCT_BUNDLE_IDENTIFIER=${BUNDLE_ID}`, 'build'
   ];
 }
@@ -38,7 +38,8 @@ function createRunner(repoRoot, commandLog) {
   };
 }
 
-export function createSimulatorProviders({ artifactDir, cleanupSource = () => {}, repoRoot }) {
+export function createSimulatorProviders({ artifactDir, cleanupSource = () => {},
+  derivedData, repoRoot }) {
   const commandLog = [];
   const runner = createRunner(repoRoot, commandLog);
   let owned = null;
@@ -59,8 +60,8 @@ export function createSimulatorProviders({ artifactDir, cleanupSource = () => {}
     },
     integrity: async () => {
       if (!owned) throw new Error('owned Simulator identity was not established');
-      runner.run('xcodebuild', createSignedSimulatorBuildArgs(repoRoot, artifactDir, owned.udid));
-      const app = path.join(artifactDir, 'DerivedData/Build/Products/Debug-iphonesimulator/App.app');
+      runner.run('xcodebuild', createSignedSimulatorBuildArgs(repoRoot, derivedData, owned.udid));
+      const app = path.join(derivedData, 'Build/Products/Debug-iphonesimulator/App.app');
       runner.run('codesign', ['--verify', '--deep', '--strict', app]);
       const identifier = verifyAcceptanceAppSignature(
         runner.captureAllowFailure('codesign', ['-d', '--verbose=4', app]), BUNDLE_ID

@@ -13,12 +13,16 @@ it('builds, replaces, and opens the committed sync client', async () => {
   });
   const stop = vi.fn(async () => undefined);
   const launch = vi.fn(() => 42);
+  const maintain = vi.fn();
   const fetchApi = vi.fn(async () => ({ ok: true,
     json: async () => ({ Browser: 'Foliole fixture' }) }));
-  const result = await openMacSyncClient({ repoRoot: '/repo', run, stop, launch, fetchApi });
+  const result = await openMacSyncClient({
+    repoRoot: '/repo', run, stop, launch, fetchApi, maintain
+  });
   expect(calls).toContainEqual(['npm', 'run', 'build']);
   expect(calls).toContainEqual(['npm', 'run', 'electron:compile']);
   expect(stop).toHaveBeenCalledWith({ repoRoot: '/repo' });
+  expect(maintain).toHaveBeenCalledWith({ rootDir: '/repo' });
   expect(launch.mock.calls[0][1]).toContain('a'.repeat(40));
   expect(result).toMatchObject({ browser: 'Foliole fixture', pid: 42,
     revision: 'a'.repeat(40) });

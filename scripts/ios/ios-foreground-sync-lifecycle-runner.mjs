@@ -9,6 +9,7 @@ import {
   waitForIosBridgeResult
 } from './ios-acceptance-infrastructure-error.mjs';
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
+import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
 import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
@@ -43,7 +44,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
 ) {
   const resourceMode = resolveIosResourceMode();
   const options = {
-    artifactDir, derivedData: path.join(artifactDir, 'DerivedData'), repoRoot, resourceMode,
+    artifactDir, derivedData: prepareIosAcceptanceCache(repoRoot).derivedData, repoRoot, resourceMode,
     resourceArgs: iosXcodebuildResourceArgs(resourceMode)
   };
   prepareArtifactDirectory(artifactDir);

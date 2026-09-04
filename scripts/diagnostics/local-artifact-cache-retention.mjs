@@ -55,7 +55,14 @@ function listEntries(rootDir, relativeRoot) {
 
 function artifactCandidates(rootDir, nowMs) {
   const cutoffMs = nowMs - ARTIFACT_RETENTION_DAYS * DAY_MS;
-  return listEntries(rootDir, ARTIFACT_ROOT)
+  return listEntries(rootDir, ARTIFACT_ROOT).flatMap((category) => {
+    if (!lstatSync(category.path).isDirectory() || lstatSync(category.path).isSymbolicLink()) {
+      return [];
+    }
+    return listEntries(rootDir, `${ARTIFACT_ROOT}/${category.name}`).map((entry) => ({
+      ...entry, categoryName: category.name, runName: entry.name
+    }));
+  })
     .filter((entry) => entry.mtimeMs <= cutoffMs)
     .map((entry) => ({ ...entry, reason: 'expired', scope: 'artifact' }));
 }
@@ -99,10 +106,14 @@ function removeCandidates(entries, removeEntry) {
   return { deletedCount, failures };
 }
 
-function refreshRootEntry({ entryName, nowMs, relativeRoot, rootDir }) {
+function assertEntryName(entryName) {
   if (!entryName || entryName.includes('/') || entryName.includes('\\') || entryName === '.' || entryName === '..') {
     throw new Error('retention entry must be one first-level directory name');
   }
+}
+
+function refreshRootEntry({ entryName, nowMs, relativeRoot, rootDir }) {
+  assertEntryName(entryName);
   const entryPath = resolve(rootDir, relativeRoot, entryName);
   const stats = lstatSync(entryPath);
   if (!stats.isDirectory() || stats.isSymbolicLink()) {
@@ -113,8 +124,11 @@ function refreshRootEntry({ entryName, nowMs, relativeRoot, rootDir }) {
   return entryPath;
 }
 
-export function refreshArtifactBatch({ entryName, nowMs = Date.now(), rootDir = repoRoot }) {
-  return refreshRootEntry({ entryName, nowMs, relativeRoot: ARTIFACT_ROOT, rootDir });
+export function refreshArtifactRun({ categoryName, nowMs = Date.now(), rootDir = repoRoot, runName }) {
+  assertEntryName(categoryName);
+  return refreshRootEntry({
+    entryName: runName, nowMs, relativeRoot: `${ARTIFACT_ROOT}/${categoryName}`, rootDir
+  });
 }
 
 export function refreshCacheEntry({ entryName, nowMs = Date.now(), rootDir = repoRoot }) {

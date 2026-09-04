@@ -8,10 +8,11 @@ import { pathToFileURL } from 'node:url';
 import { enforceJourneyReadiness } from '../journey-readiness-contract.mjs';
 import { writeReceiptAtomically } from '../journey-readiness-cli.mjs';
 import { runJourneyQualification } from '../journey-readiness-controller.mjs';
-import { withArtifactBatch } from '../diagnostics/local-artifact-cache-production.mjs';
+import { withArtifactRun } from '../diagnostics/local-artifact-cache-production.mjs';
 import { runIosDeviceAnchorAcceptance } from '../ios/ios-device-anchor-acceptance-runner.mjs';
 import { runIosAcceptanceAttempts } from '../ios/ios-acceptance-attempts.mjs';
 import { runIosBootstrapAcceptanceAttempt } from '../ios/ios-bootstrap-acceptance-attempt.mjs';
+import { prepareIosAcceptanceCache } from '../ios/ios-local-storage.mjs';
 import {
   assertConfinedEvidencePath, assertLocalCandidateStillFrozen, cleanupLocalSourceCapsule,
   createLocalDefinition,
@@ -38,18 +39,22 @@ export function resolveLocalQualificationScenario(env = process.env) {
 }
 
 async function qualify() {
-  return withArtifactBatch({ entryName: 'journey-readiness', rootDir: REPO_ROOT }, async () => {
+  const runName = runId();
+  return withArtifactRun({
+    categoryName: 'journey-readiness', rootDir: REPO_ROOT, runName
+  }, async () => {
     const scenario = resolveLocalQualificationScenario();
-    const artifactDir = path.join(REPO_ROOT, '.tmp/artifacts/journey-readiness', runId());
+    const artifactDir = path.join(REPO_ROOT, '.tmp/artifacts/journey-readiness', runName);
     mkdirSync(artifactDir, { recursive: true });
     assertConfinedEvidencePath(REPO_ROOT, artifactDir);
+    const derivedData = prepareIosAcceptanceCache(REPO_ROOT).derivedData;
     const frozen = prepareLocalCandidate(REPO_ROOT);
     const capsule = materializeLocalSourceCapsule(REPO_ROOT, artifactDir, frozen);
     const candidate = capsule.candidate;
     const definition = createLocalDefinition({ candidate });
     const providers = {
       ...createMacProviders({ artifactDir, candidate, repoRoot: REPO_ROOT }),
-      ...createSimulatorProviders({ artifactDir, repoRoot: capsule.buildRoot,
+      ...createSimulatorProviders({ artifactDir, derivedData, repoRoot: capsule.buildRoot,
         cleanupSource: () => cleanupLocalSourceCapsule(capsule) })
     };
     const receiptPath = path.join(artifactDir, 'receipt.json');

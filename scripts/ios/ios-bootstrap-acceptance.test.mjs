@@ -31,7 +31,7 @@ import { parseStateWritebackSnapshot, verifyStateWritebackAcceptance } from './i
 import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
 
 describe('iOS bootstrap acceptance contract', () => {
-  it('isolates Simulator evidence and DerivedData by acceptance scenario', () => {
+  it('isolates Simulator evidence by scenario while reusing shared DerivedData', () => {
     expect(resolveAcceptanceArtifactDir('/repo', 'sync-pack-runtime')).toBe(
       path.join('/repo', '.tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime')
     );
@@ -46,7 +46,7 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain(path.join(
-      process.cwd(), '.tmp/artifacts/ios-bridge-acceptance/DerivedData/PackageCache'
+      process.cwd(), '.cache/ios-acceptance-build/DerivedData/PackageCache'
     ));
     expect(args).toContain('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');

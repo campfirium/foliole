@@ -30,12 +30,12 @@ describe('local journey readiness adapters', () => {
   });
 
   it('builds a locally signed Simulator app with the fixed iOS identity', () => {
-    const args = createSignedSimulatorBuildArgs('/repo', '/evidence', 'SIM-1');
+    const args = createSignedSimulatorBuildArgs('/repo', '/cache/DerivedData', 'SIM-1');
 
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
-    expect(args).toContain(path.join('/evidence', 'DerivedData'));
+    expect(args).toContain('/cache/DerivedData');
   });
 
   it('keeps business criteria and controller digests outside host qualification provenance', () => {

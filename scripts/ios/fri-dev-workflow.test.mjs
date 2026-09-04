@@ -20,7 +20,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 describe('Fri development workflow', () => {
   it('builds, syncs, operates, and reopens the current workspace on Fri', () => {
     const commands = buildFriDevWorkflowCommands({
-      evidenceRoot: '/evidence', repoRoot: '/repo'
+      derivedData: '/cache/DerivedData', evidenceRoot: '/evidence', repoRoot: '/repo'
     });
 
     expect(commands.map(({ command, stage }) => [command, stage])).toEqual([
@@ -36,6 +36,7 @@ describe('Fri development workflow', () => {
       '--project', '/repo/ios/App/App.xcodeproj',
       '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', '/evidence/xcuitest',
+      '--derived-data', '/cache/DerivedData',
       '--only-testing', FRI_DEV_TEST
     ]);
     expect(commands[2].args).not.toContain('--allow-wireless');

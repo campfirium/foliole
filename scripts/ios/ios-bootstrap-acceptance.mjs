@@ -29,7 +29,7 @@ async function main() {
   if (process.platform !== 'darwin') throw new Error('iOS bootstrap acceptance requires macOS with Xcode.');
   const scenario = resolveAcceptanceScenario(process.env.FOLIOLE_IOS_ACCEPTANCE_SCENARIO);
   const artifactRoot = resolveAcceptanceArtifactDir(REPO_ROOT, scenario);
-  await withIosAcceptanceArtifacts(REPO_ROOT, async () => {
+  await withIosAcceptanceArtifacts(REPO_ROOT, scenario, async () => {
     if (await runStandaloneIosAcceptanceScenario(scenario, REPO_ROOT, artifactRoot)) return;
     await runIosAcceptanceAttempts({
       artifactRoot,

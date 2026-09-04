@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 import { createSyncGroupDeviceIdentity, isSameSyncGroupDevice } from '../../lib/platform/syncGroupUnifiedContract.ts';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
+import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import {
   createSimulatorAcceptanceBuildArgs,
@@ -26,7 +27,7 @@ const ACCEPTANCE_ENV_KEYS = [
 
 export async function runIosDeviceAnchorAcceptance(repoRoot, artifactDir) {
   mkdirSync(artifactDir, { recursive: true });
-  const options = { artifactDir, derivedData: path.join(artifactDir, 'DerivedData'),
+  const options = { artifactDir, derivedData: prepareIosAcceptanceCache(repoRoot).derivedData,
     repoRoot, resourceMode: resolveIosResourceMode() };
   const revision = assertFrozenRevision(options);
   let owned = null;

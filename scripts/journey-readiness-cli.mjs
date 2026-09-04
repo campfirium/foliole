@@ -7,7 +7,7 @@ import path from 'node:path';
 import { enforceJourneyReadiness } from './journey-readiness-contract.mjs';
 import { runJourneyQualification } from './journey-readiness-controller.mjs';
 import { createPassingProviders, localFixtureDefinition } from './journey-readiness-fixture.mjs';
-import { withArtifactBatch } from './diagnostics/local-artifact-cache-production.mjs';
+import { withArtifactRun } from './diagnostics/local-artifact-cache-production.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -38,7 +38,12 @@ async function main() {
   const receiptPath = confinedReceiptPath(
     process.argv[outputIndex + 1] ?? '.tmp/artifacts/journey-readiness/dry-run/receipt.json'
   );
-  await withArtifactBatch({ entryName: 'journey-readiness', rootDir: REPO_ROOT }, async () => {
+  const runName = path.relative(
+    path.join(REPO_ROOT, '.tmp/artifacts/journey-readiness'), receiptPath
+  ).split(path.sep)[0];
+  await withArtifactRun({
+    categoryName: 'journey-readiness', rootDir: REPO_ROOT, runName
+  }, async () => {
     const definition = localFixtureDefinition();
     const receipt = await runJourneyQualification({
       definition, locator: receiptPath, providers: createPassingProviders(),

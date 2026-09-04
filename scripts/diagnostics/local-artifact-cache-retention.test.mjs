@@ -50,19 +50,31 @@ function withFixture(run) {
 }
 
 describe('local artifact and cache retention', () => {
-  it('deletes only expired first-level artifact batches without following symlinks', () => withFixture((root) => {
-    const oldBatch = makeEntry(root, ARTIFACT_ROOT, 'old-batch', 2, 2);
-    const recentBatch = makeEntry(root, ARTIFACT_ROOT, 'recent-batch', 2, 0.5);
+  it('applies the exact one-day and thirty-day expiration boundaries', () => withFixture((root) => {
+    const artifact = makeEntry(root, `${ARTIFACT_ROOT}/category`, 'one-day', 2, 1);
+    const cache = makeEntry(root, CACHE_ROOT, 'thirty-days', 2, 30);
+
+    const result = runRetention({ apply: true, nowMs, rootDir: root });
+
+    expect(result.entries.map((entry) => entry.path).sort()).toEqual([artifact, cache].sort());
+    expect(existsSync(artifact)).toBe(false);
+    expect(existsSync(cache)).toBe(false);
+  }));
+
+  it('ages nested artifact runs independently without following symlinks', () => withFixture((root) => {
+    const oldBatch = makeEntry(root, `${ARTIFACT_ROOT}/category`, 'old-run', 2, 2);
+    const recentBatch = makeEntry(root, `${ARTIFACT_ROOT}/category`, 'recent-run', 2, 0.5);
     const outside = makeEntry(root, 'private', 'only-copy', 2, 2);
-    const link = join(root, ARTIFACT_ROOT, 'linked-batch');
+    const link = join(root, ARTIFACT_ROOT, 'category', 'linked-run');
     symlinkSync(outside, link);
     const oldLinkTime = new Date(nowMs - 2 * DAY_MS);
     lutimesSync(link, oldLinkTime, oldLinkTime);
+    setTime(join(root, ARTIFACT_ROOT, 'category'), 0);
 
     const result = runRetention({ apply: true, nowMs, rootDir: root, scope: 'artifact' });
 
     expect(result.ok).toBe(true);
-    expect(result.entries.map((entry) => entry.name).sort()).toEqual(['linked-batch', 'old-batch']);
+    expect(result.entries.map((entry) => entry.runName).sort()).toEqual(['linked-run', 'old-run']);
     expect(existsSync(oldBatch)).toBe(false);
     expect(existsSync(recentBatch)).toBe(true);
     expect(readFileSync(join(outside, 'payload'))).toHaveLength(2);
@@ -95,8 +107,8 @@ describe('local artifact and cache retention', () => {
   }));
 
   it('reports partial deletion failures and remains safely reentrant', () => withFixture((root) => {
-    const first = makeEntry(root, ARTIFACT_ROOT, 'first', 2, 2);
-    const second = makeEntry(root, ARTIFACT_ROOT, 'second', 2, 2);
+    const first = makeEntry(root, `${ARTIFACT_ROOT}/fixture`, 'first', 2, 2);
+    const second = makeEntry(root, `${ARTIFACT_ROOT}/fixture`, 'second', 2, 2);
     const failed = runRetention({
       apply: true,
       nowMs,

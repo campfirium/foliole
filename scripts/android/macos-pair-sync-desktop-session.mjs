@@ -108,7 +108,9 @@ export async function openMacosPairSyncDesktopSession({
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   const rendererUrl = resolveFrozenRendererUrl(repoRoot, rendererExists);
   record('session_started');
-  const runtime = prepareHiddenRuntime({ appRoot: repoRoot, cacheRoot: runtimeRoot, env });
+  const runtime = prepareHiddenRuntime({
+    appRoot: repoRoot, cacheRoot: env.FOLIOLE_SHARED_CACHE_ROOT ?? runtimeRoot, env
+  });
   if (runtime.runtimeIdentity !== 'stable-source-bound' || !runtime.runtimeFingerprint) {
     runtime.cleanup();
     const error = new Error('macos_hidden_electron_keychain_identity_unverified');

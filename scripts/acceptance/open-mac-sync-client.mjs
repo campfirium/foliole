@@ -7,6 +7,7 @@ import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
+import { maintainBeforeProduction } from '../diagnostics/local-artifact-cache-production.mjs';
 
 const executeFile = promisify(execFile);
 const CDP = 'http://127.0.0.1:19224';
@@ -106,12 +107,14 @@ async function waitForCdp(fetchApi, timeoutMs = 120_000) {
 
 export async function openMacSyncClient({
   repoRoot = process.cwd(), run = execute, launch = startDetached,
-  stop = stopExistingMacClient, fetchApi = globalThis.fetch
+  stop = stopExistingMacClient, fetchApi = globalThis.fetch,
+  maintain = maintainBeforeProduction
 } = {}) {
   const revision = await currentCandidate(repoRoot, run);
   await run('npm', ['run', 'build'], { cwd: repoRoot });
   await run('npm', ['run', 'electron:compile'], { cwd: repoRoot });
   await stop({ repoRoot });
+  maintain({ rootDir: repoRoot });
   const artifactRoot = path.join(repoRoot, '.tmp', 'artifacts', 'client-control-runtime',
     `mac-${revision.slice(0, 10)}`);
   const stateRoot = path.join(artifactRoot, 'state');

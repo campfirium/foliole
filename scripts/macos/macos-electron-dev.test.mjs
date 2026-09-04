@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -33,6 +34,11 @@ describe('macOS Electron dev entry', () => {
       expect(resolveMacosElectronDevAction(['node', 'entry', action])).toBe(action);
     }
     expect(() => resolveMacosElectronDevAction(['node', 'entry', 'publish'])).toThrow('unsupported');
+  });
+
+  it('maintains repository-local storage before starting daily production', () => {
+    const source = fs.readFileSync('scripts/macos/macos-electron-dev-supervisor.mjs', 'utf8');
+    expect(source).toContain('maintainBeforeProduction)({ rootDir: paths.appRoot })');
   });
 
   it('resolves a persistent explicit Demo library without changing the isolated runtime root', () => {
