@@ -18,6 +18,10 @@ import { enterReviewModeSession, type StartStudyModeOptions } from './reviewMode
 import { runReviewModeToggle } from './reviewModeToggle';
 
 const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([
+  APP_COMMAND_IDS.goBack,
+  APP_COMMAND_IDS.goForward,
+  APP_COMMAND_IDS.goParent,
+  APP_COMMAND_IDS.goToLastChild,
   APP_COMMAND_IDS.undo,
   APP_COMMAND_IDS.redo,
   APP_COMMAND_IDS.scrollDocumentBottom,

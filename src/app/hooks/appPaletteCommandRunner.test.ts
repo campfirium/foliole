@@ -95,4 +95,17 @@ describe('createPaletteCommandRunner', () => {
     expect(scrollDocumentBottom).toHaveBeenCalledTimes(1);
     expect(args.recordRecentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.scrollDocumentBottom);
   });
+
+  it('rechecks navigation at execution time when the palette snapshot is stale', () => {
+    const goBack = vi.fn();
+    const { args, run } = createRunner({
+      goBack,
+      paletteItems: [{ enabled: false, id: APP_COMMAND_IDS.goBack, title: 'Go back' }]
+    });
+
+    run(APP_COMMAND_IDS.goBack);
+
+    expect(goBack).toHaveBeenCalledTimes(1);
+    expect(args.recordRecentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.goBack);
+  });
 });
