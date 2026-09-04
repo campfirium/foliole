@@ -82,6 +82,31 @@ it('completes an accepted request when the active discovery session publishes a 
   expect(result.current.pendingRequest).toBeNull();
 });
 
+it('polls for approval without requiring another discovery event', async () => {
+  runtime.request.mockResolvedValueOnce({
+    endpoint_url: candidate.endpoint_url,
+    expires_at: new Date(Date.now() + 120_000).toISOString(),
+    group_id: candidate.group_id,
+    request_id: 'request-poll'
+  });
+  runtime.complete.mockRejectedValueOnce(new Error('sync_group_join_acceptance_http_409'));
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError: vi.fn(),
+    onSaveEndpoint: vi.fn(async () => undefined)
+  }));
+
+  await act(() => result.current.discover());
+  act(() => runtime.callback?.({
+    candidates: [candidate], change: 'found', error_code: null, status: 'results'
+  }));
+  await waitFor(() => expect(result.current.discoveries).toHaveLength(1));
+  await act(() => result.current.request(candidate.endpoint_url));
+
+  await waitFor(() => expect(result.current.joined).toBe(true), { timeout: 2_000 });
+  expect(runtime.complete).toHaveBeenCalledTimes(2);
+});
+
 it('restores the join action and reports a Device request failure', async () => {
   const onError = vi.fn();
   runtime.request.mockRejectedValueOnce(new Error('device_identity_unavailable'));

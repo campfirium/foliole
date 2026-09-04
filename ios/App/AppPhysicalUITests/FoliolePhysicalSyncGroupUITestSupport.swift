@@ -162,6 +162,12 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func resetExistingSyncGroup(in app: XCUIApplication) {
+        if app.buttons["Cancel"].exists {
+            app.buttons["Cancel"].tap()
+            XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
+                          "The expired physical acceptance request was not reset.")
+            return
+        }
         guard app.buttons["Sync Now"].exists else { return }
         tapButton(named: "Details", in: app, timeout: 15)
         tapButton(named: "Leave Sync Group", in: app, timeout: 15)

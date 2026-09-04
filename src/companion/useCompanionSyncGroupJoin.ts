@@ -95,6 +95,27 @@ function usePersistedJoinState(databasePath: string | null, setJoined: (value: b
   }, [databasePath, setJoined]);
 }
 
+function useJoinAcceptancePolling(
+  pendingRequest: PendingSyncGroupJoinRequest | null,
+  complete: (request?: PendingSyncGroupJoinRequest | null) => Promise<unknown>
+) {
+  useEffect(() => {
+    if (!pendingRequest) return;
+    let active = true;
+    let timer: number | null = null;
+    const poll = async () => {
+      if (!active || Date.now() >= new Date(pendingRequest.expiresAt).getTime()) return;
+      try { await complete(pendingRequest); }
+      catch { if (active) timer = window.setTimeout(poll, 1_000); }
+    };
+    timer = window.setTimeout(poll, 250);
+    return () => {
+      active = false;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [complete, pendingRequest]);
+}
+
 export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const [discoveries, setDiscoveries] = useState<CompanionSyncGroupDiscovery[]>([]);
   const [pendingRequest, setPendingRequest] = useState<PendingSyncGroupJoinRequest | null>(null);
@@ -156,5 +177,6 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   useEffect(() => () => { void stopRef.current?.(); }, []);
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
   usePersistedJoinState(args.bootstrapState.database_path, setJoined);
+  useJoinAcceptancePolling(pendingRequest, complete);
   return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };
 }
