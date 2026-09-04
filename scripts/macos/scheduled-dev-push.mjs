@@ -80,18 +80,13 @@ export function executeScheduledPush(options = {}) {
   }
   if (options.dryRun) return { ...state, pushed: false };
   gitCommand(['push', '--porcelain', 'origin', 'HEAD:dev'], { label: 'push origin/dev' });
-  (options.dispatch ?? run)(process.execPath, [
-    path.join(repositoryRoot, 'scripts/macos/launch-internal-update.mjs')
-  ], {
-    cwd: repositoryRoot, label: 'dispatch Foliole Internal update'
-  });
   return { ...state, pushed: true };
 }
 
 function formatResult(result, dryRun) {
   if (result.status === 'current') return '[scheduled-dev-push] skipped: origin/dev is current';
   if (dryRun) return `[scheduled-dev-push] dry-run: ${result.localOnly} local commit(s) ready`;
-  return `[scheduled-dev-push] pushed ${result.localOnly} commit(s) and dispatched Internal update`;
+  return `[scheduled-dev-push] pushed ${result.localOnly} commit(s)`;
 }
 
 function main() {

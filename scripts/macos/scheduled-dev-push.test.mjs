@@ -25,7 +25,7 @@ it('classifies the two-sided Git distance without interpreting worktree state', 
   expect(classifyCommitDistance('1\t2')).toEqual({ localOnly: 2, remoteOnly: 1, status: 'diverged' });
 });
 
-it('pushes only a local-ahead dev history and then dispatches Internal update', () => {
+it('pushes only a local-ahead dev history without dispatching an Internal update', () => {
   const git = gitFixture('0\t2');
   const dispatch = vi.fn(() => '');
 
@@ -34,7 +34,7 @@ it('pushes only a local-ahead dev history and then dispatches Internal update', 
     ['push', '--porcelain', 'origin', 'HEAD:dev'],
     { label: 'push origin/dev' }
   );
-  expect(dispatch).toHaveBeenCalledOnce();
+  expect(dispatch).not.toHaveBeenCalled();
 });
 
 it.each([
@@ -64,16 +64,4 @@ it('dry-run fetches and checks history but never writes remote state', () => {
     .toMatchObject({ localOnly: 3, pushed: false, status: 'ready' });
   expect(git.mock.calls.some(([args]) => args[0] === 'push')).toBe(false);
   expect(dispatch).not.toHaveBeenCalled();
-});
-
-it('dispatches the repository-owned Internal update entry after pushing', () => {
-  const git = gitFixture('0\t1');
-  const dispatch = vi.fn();
-  const repositoryRoot = process.cwd();
-
-  executeScheduledPush({ dispatch, git, repositoryRoot });
-
-  expect(dispatch.mock.calls[0][1][0])
-    .toBe(`${repositoryRoot}/scripts/macos/launch-internal-update.mjs`);
-  expect(dispatch.mock.calls[0][2]).toMatchObject({ cwd: repositoryRoot });
 });
