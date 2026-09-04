@@ -9,6 +9,17 @@ const FIRST_ID = 'playwright-t174-first';
 const SECOND_ID = 'playwright-t174-second';
 const CUSTOM_COMMAND_ID = 'workspace.openSearch';
 
+async function focusVisibleSession(session: Awaited<ReturnType<typeof launchDesktopSession>>) {
+  if (process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1') return;
+  const target = await session.electronApp.browserWindow(session.firstWindow);
+  await target.evaluate((window) => {
+    window.show();
+    window.focus();
+    window.webContents.focus();
+  });
+  await expect.poll(() => target.evaluate((window) => window.isFocused())).toBe(true);
+}
+
 async function configurePersistentCustomGesture(page: DesktopSession['firstWindow']) {
   await page.evaluate((commandId) => {
     window.localStorage.setItem('foliole-app-language', 'en');
@@ -85,6 +96,7 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     await seedGestureWorkspace(desktopWindow);
     await drawGesture(desktopWindow, [[-80, 0]]);
     await expect.poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(FIRST_ID);
+    await expect(desktopWindow.getByRole('menu')).toBeHidden();
     await drawGesture(desktopWindow, [[80, 0]]);
     await expect.poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(SECOND_ID);
 
@@ -97,6 +109,7 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     const stateRoot = desktopSession.target.runtimeStateRoot;
     await desktopSession.electronApp.close();
     secondSession = await launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } });
+    await focusVisibleSession(secondSession);
     await expectWorkspaceShell(secondSession.firstWindow);
     await expectCustomSearchGesture(secondSession.firstWindow);
   } finally {

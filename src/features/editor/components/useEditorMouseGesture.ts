@@ -103,10 +103,13 @@ function createMouseUpHandler(args: GestureLifecycleArgs) {
 }
 
 function useWindowGestureLifecycle(args: GestureLifecycleArgs) {
+  const argsRef = useRef(args);
+  argsRef.current = args;
+
   useEffect(() => {
-    const handleMouseMove = createMouseMoveHandler(args);
-    const handleMouseUp = createMouseUpHandler(args);
-    const handleClear = () => clearInteraction(args);
+    const handleMouseMove = (event: MouseEvent) => createMouseMoveHandler(argsRef.current)(event);
+    const handleMouseUp = (event: MouseEvent) => createMouseUpHandler(argsRef.current)(event);
+    const handleClear = () => clearInteraction(argsRef.current);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') handleClear();
     };
@@ -119,19 +122,13 @@ function useWindowGestureLifecycle(args: GestureLifecycleArgs) {
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('blur', handleClear);
       window.removeEventListener('keydown', handleKeyDown);
-      discardInteraction(args);
+      discardInteraction(argsRef.current);
     };
-  }, [
-    args.bindings,
-    args.hostRef,
-    args.runCommand,
-    args.settings.segmentThresholdPx,
-    args.settings.trailColor,
-    args.settings.trailLineWidth,
-    args.settings.trailOpacity,
-    args.settings.trailPointThresholdPx,
-    args.settings.trailVisible
-  ]);
+  }, []);
+
+  useEffect(() => {
+    if (!args.settings.enabled) clearInteraction(argsRef.current);
+  }, [args.settings.enabled]);
 }
 
 function arbitrateContextMenu(
