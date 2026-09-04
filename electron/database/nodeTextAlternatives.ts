@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -23,18 +24,21 @@ interface AlternativeRow extends DbRow, DatabaseRow {
 
 export function loadNodeTextAlternativePreview(nodeId: string) {
   const driver = openDatabaseConnection().driver;
-  const row = driver.queryOne<AlternativeRow & { current_content: string }>(
-    `SELECT a.*, n.content AS current_content FROM node_text_alternatives a
+  const row = driver.queryOne<AlternativeRow & NodeBodyRow>(
+    `SELECT a.*, n.content, n.body_blob_hash, cbd.data AS body_blob_data FROM node_text_alternatives a
      JOIN nodes n ON n.id = a.node_id
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE a.node_id = ? AND a.status = 'available'
      ORDER BY a.updated_at DESC, a.alternative_id ASC LIMIT 1`,
     [nodeId]
   );
   if (!row) return null;
+  const body = resolveNodeBody(row);
+  if (body.status === 'unavailable') return null;
   return {
     alternative_id: row.alternative_id,
     checked_at: row.updated_at,
-    current_content: row.current_content,
+    current_content: body.content,
     current_highlight_count: 0,
     kind: 'sync_alternative',
     source_node_id: row.node_id,

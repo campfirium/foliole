@@ -1,5 +1,5 @@
-import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -24,7 +24,7 @@ export interface AgentMaterialDeleteSoftResult {
   material_id: string;
 }
 
-interface MaterialSnapshotRow extends DatabaseRow {
+interface MaterialSnapshotRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
   body_blob_data: Uint8Array | string | null;
   content: string;
@@ -159,7 +159,7 @@ function readMaterialSnapshotRow(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<MaterialSnapshotRow>(
     `SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term,
             n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title,
-            n.is_title_manual, n.hide_title_heading, n.content, cbd.data AS body_blob_data,
+            n.is_title_manual, n.hide_title_heading, n.content, n.body_blob_hash, cbd.data AS body_blob_data,
             n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.position,
             n.created_at, n.updated_at, n.deleted_at
      FROM nodes n
@@ -204,7 +204,7 @@ function toUpsertInput(
 }
 
 function readRowContent(row: MaterialSnapshotRow) {
-  return decodeTextBodyBlobData(row.body_blob_data) ?? row.content;
+  return requireResolvedNodeBody(row, row.id).content;
 }
 
 function toOptionalBoolean(value: number | null) {

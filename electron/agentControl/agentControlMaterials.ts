@@ -1,7 +1,7 @@
 import type http from 'node:http';
 
-import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { WorkspaceSearchResult } from '../../lib/core/database/workspaceSearch.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
@@ -24,7 +24,7 @@ export const AGENT_CONTROL_MATERIAL_CHILD_PREVIEW_LIMIT = 220;
 export const AGENT_CONTROL_MATERIAL_SEARCH_LIMIT = 20;
 export const AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT = 40;
 
-interface MaterialRow extends DatabaseRow {
+interface MaterialRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
   body_blob_data: Uint8Array | string | null;
   content: string;
@@ -127,14 +127,15 @@ export function normalizeOptionalLimit(value: unknown, fallback: number, max: nu
 export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPayload | null {
   const rows = openDatabaseConnection().driver.queryAll<MaterialRow>(
     `WITH RECURSIVE ancestors AS (
-       SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.reveal, n.anchor_link, cbd.data AS body_blob_data,
+       SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.body_blob_hash, n.reveal, n.anchor_link, cbd.data AS body_blob_data,
               n.deleted_at, n.updated_at, 0 AS depth
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?
        UNION ALL
-       SELECT parent.id, parent.parent_id, parent.kind, parent.title, parent.content, parent.reveal, parent.anchor_link,
-              NULL AS body_blob_data, parent.deleted_at, parent.updated_at, ancestors.depth + 1
+       SELECT parent.id, parent.parent_id, parent.kind, parent.title, parent.content, parent.body_blob_hash,
+              parent.reveal, parent.anchor_link, NULL AS body_blob_data,
+              parent.deleted_at, parent.updated_at, ancestors.depth + 1
        FROM nodes parent
        JOIN ancestors ON parent.id = ancestors.parent_id
      )
@@ -144,7 +145,7 @@ export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPaylo
   );
   const node = rows[0];
   if (!node) return null;
-  const content = decodeTextBodyBlobData(node.body_blob_data) ?? node.content;
+  const content = requireResolvedNodeBody(node, node.id).content;
   const truncated = content.length > AGENT_CONTROL_MATERIAL_CONTENT_LIMIT;
   const children = readAgentControlMaterialChildren(node.id);
   return {
@@ -186,7 +187,7 @@ function readAgentControlMaterialChildren(nodeId: string) {
 
 function readAgentControlMaterialChildrenWithLimit(nodeId: string | null, limit: number) {
   const rows = openDatabaseConnection().driver.queryAll<MaterialRow>(
-    `SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.anchor_link, cbd.data AS body_blob_data,
+    `SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.body_blob_hash, n.anchor_link, cbd.data AS body_blob_data,
             n.deleted_at, n.updated_at, 0 AS depth
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
@@ -212,7 +213,7 @@ function countAgentControlMaterialChildren(nodeId: string | null) {
 }
 
 function toChildSummary(row: MaterialRow): AgentMaterialChildSummary {
-  const content = decodeTextBodyBlobData(row.body_blob_data) ?? row.content;
+  const content = requireResolvedNodeBody(row, row.id).content;
   return {
     ...projectAgentMaterialIdentity(row),
     content_preview: content.slice(0, AGENT_CONTROL_MATERIAL_CHILD_PREVIEW_LIMIT),

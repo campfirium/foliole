@@ -172,3 +172,51 @@ it('keeps image excerpt regions byte-for-byte while relocating the image occurre
   expect(JSON.parse(child.anchor_link ?? '{}').locator).toMatchObject({ from: 5, originalText: image });
   expect(child.image_regions).toBe(imageRegions);
 });
+
+it('uses Blob-only parent content when remapping anchors', () => {
+  const previousContent = 'Lead\n\nTarget sentence.';
+  seedNode({ content: previousContent, nodeId: 'node-parent', parentNodeId: null });
+  seedNode({
+    anchorLink: {
+      id: 'anchor-blob', kind: 'highlight',
+      locator: {
+        from: 'Lead\n\n'.length,
+        originalText: 'Target sentence.',
+        to: previousContent.length
+      }
+    },
+    content: 'Target sentence.', nodeId: 'node-child', parentNodeId: 'node-parent'
+  });
+  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-parent']);
+
+  applyParentContentChange({
+    driver: openDatabaseConnection().driver,
+    nextContent: `Intro\n${previousContent}`,
+    nodeId: 'node-parent',
+    updatedAt: '2026-05-13T00:00:01.000Z'
+  });
+
+  const locator = JSON.parse(readNode('node-child').anchor_link ?? '{}').locator;
+  expect(locator.from).toBe('Intro\nLead\n\n'.length);
+});
+
+it('does not rewrite a parent or anchors when its Blob is unavailable', () => {
+  seedNode({ content: 'Authority', nodeId: 'node-parent', parentNodeId: null });
+  seedNode({
+    anchorLink: { id: 'anchor-missing', kind: 'highlight', locator: { from: 0, originalText: 'Authority', to: 9 } },
+    content: 'Authority', nodeId: 'node-child', parentNodeId: 'node-parent'
+  });
+  const connection = openDatabaseConnection();
+  const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
+    'SELECT body_blob_hash FROM nodes WHERE id = ?', ['node-parent']
+  )?.body_blob_hash ?? '';
+  connection.driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['stale inline', 'node-parent']);
+  connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
+  const before = readNode('node-child').anchor_link;
+
+  expect(() => applyParentContentChange({
+    driver: connection.driver, nextContent: 'Replacement', nodeId: 'node-parent', updatedAt: '2026-05-13T00:00:01.000Z'
+  })).toThrow(`node_body_unavailable:node-parent`);
+  expect(readNode('node-parent').content).toBe('stale inline');
+  expect(readNode('node-child').anchor_link).toBe(before);
+});

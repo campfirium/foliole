@@ -3,6 +3,7 @@ import {
   runPreparedImport as runPreparedImportViaDriver,
   type RunPreparedImportOptions
 } from '../../lib/core/database/index.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
@@ -27,12 +28,14 @@ function appendDegradedReason(currentReason: string | null, nextReason: string |
 }
 
 function readImportNodeContent(nodeId: string) {
-  return openDatabaseConnection().driver.queryOne<{ content: string; title: string }>(
-    `SELECT content, title
-     FROM nodes
-     WHERE id = ? AND deleted_at IS NULL`,
+  const row = openDatabaseConnection().driver.queryOne<NodeBodyRow & { id: string; title: string }>(
+    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data, n.title
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.id = ? AND n.deleted_at IS NULL`,
     [nodeId]
-  ) ?? null;
+  );
+  if (!row) return null;
+  return { content: requireResolvedNodeBody(row, row.id).content, title: row.title };
 }
 
 const SMALL_IMAGE_MAX_SIDE = 128;

@@ -1,12 +1,13 @@
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 
 import { openDatabaseConnection } from './connection.js';
 import type { PdfPageTextInput } from './pdfPageTextRows.js';
 
-interface PdfReferenceNodeRow extends DatabaseRow {
+interface PdfReferenceNodeRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
   created_at: string;
   deleted_at: string | null;
@@ -50,12 +51,17 @@ function listPdfReferenceNodes(attachmentId: string) {
        n.sequential_reading_enabled, n.shelved_at, n.title, n.is_title_manual,
        n.hide_title_heading, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions,
        n.import_content_fingerprint, n.import_source_fingerprint, n.position,
-       n.created_at, n.deleted_at
+       n.created_at, n.deleted_at, n.content, n.body_blob_hash, cbd.data AS body_blob_data
      FROM nodes n
      INNER JOIN node_attachments na ON na.node_id = n.id AND na.role = 'reference'
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE na.attachment_id = ?
        AND n.deleted_at IS NULL
-       AND n.content LIKE ?`,
+       AND CASE
+         WHEN n.body_blob_hash IS NULL THEN n.content
+         WHEN cbd.hash IS NOT NULL THEN CAST(cbd.data AS TEXT)
+         ELSE ''
+       END LIKE ?`,
     [attachmentId, `%${PDF_READER_PLACEHOLDER_TEXT}%`]
   );
 }
@@ -129,18 +135,16 @@ export function syncPdfBodyBlobsForReferenceNodes(
   const nodes = listPdfReferenceNodes(attachmentId);
   const updatedNodeIds: string[] = [];
   for (const node of nodes) {
+    if (resolveNodeBody(node).status === 'unavailable') continue;
     const bodyContent = buildPdfBodyContent(node.title, pages);
     if (!bodyContent) {
       continue;
     }
-    const bodyBlobHash = upsertTextBodyBlob(openDatabaseConnection().driver, bodyContent, now);
     const openingText = resolveNodeOpeningText(bodyContent, node.title);
+    writeNodeBody({ content: bodyContent, driver: openDatabaseConnection().driver, nodeId: node.id, title: node.title, updatedAt: now });
     openDatabaseConnection().driver.execute(
-      `UPDATE nodes
-       SET body_blob_hash = ?, opening_text = ?, updated_at = ?,
-           last_modified_by_host_name = ?, sync_dirty = 1
-       WHERE id = ?`,
-      [bodyBlobHash, openingText, now, hostName, node.id]
+      `UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
+      [hostName, node.id]
     );
     upsertNodePackState(node, bodyContent, openingText, hostName, now);
     updatedNodeIds.push(node.id);

@@ -1,4 +1,4 @@
-import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
@@ -11,9 +11,11 @@ export function refreshReadwiseBookPlaceholderNode(book: ReadwiseBookInventoryIt
   }
   const connection = openDatabaseConnection();
   connection.driver.transaction(() => {
-    connection.sqlite
-      .prepare('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
-      .run(buildReadwiseBookPlaceholderContent(book), null, new Date().toISOString(), placeholderNodeId);
-    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, [placeholderNodeId]);
+    applyParentContentChange({
+      driver: connection.driver,
+      nextContent: buildReadwiseBookPlaceholderContent(book),
+      nodeId: placeholderNodeId,
+      updatedAt: new Date().toISOString()
+    });
   });
 }

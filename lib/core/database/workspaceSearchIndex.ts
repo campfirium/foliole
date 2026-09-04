@@ -1,4 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
+import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+
+const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
 
 const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
     SELECT id, ''
@@ -23,7 +26,7 @@ const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
 
 const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO search.node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
+  SELECT trim(n.title), COALESCE(paths.path, ''), ${NODE_BODY_CONTENT_SQL}, n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
@@ -60,7 +63,7 @@ const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
 
 const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO search.node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
+  SELECT trim(n.title), COALESCE(paths.path, ''), ${NODE_BODY_CONTENT_SQL}, n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id

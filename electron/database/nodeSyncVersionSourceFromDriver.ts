@@ -1,11 +1,13 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
-export interface NodeSyncVersionSourceRow extends DatabaseRow {
+export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
   anchor_resolution_status: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
   anchor_source_version_id: string | null;
   body_blob_hash: string | null;
+  body_blob_data: unknown;
   content: string;
   created_at: string;
   current_version_id: string | null;
@@ -50,10 +52,14 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
   return driver.queryOne<NodeSyncVersionSourceRow>(
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
        sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
-       hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, reveal,
+       hide_title_heading, content, nodes.body_blob_hash, cbd.data AS body_blob_data,
+       opening_text, virtual_filter, reveal,
        anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_content_fingerprint, import_source_fingerprint,
        node_order.position AS position, current_version_id, sync_dirty, created_at, updated_at, deleted_at
-     FROM nodes LEFT JOIN node_order ON node_order.node_id = nodes.id WHERE nodes.id = ?`,
+     FROM nodes
+     LEFT JOIN node_order ON node_order.node_id = nodes.id
+     LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
+     WHERE nodes.id = ?`,
     [nodeId]
   );
 }

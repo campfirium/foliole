@@ -1,5 +1,5 @@
-import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from '../../lib/core/database/workspaceBodyStatus.js';
 import { buildWorkspaceSnapshotNode } from '../../lib/core/database/workspaceSnapshotHelpers.js';
@@ -10,7 +10,7 @@ import type {
 } from '../../lib/platform/nativeContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
-interface ImportedNodeRow extends DatabaseRow {
+interface ImportedNodeRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
   body_blob_data: Uint8Array | string | null;
   body_blob_hash: string | null;
@@ -147,9 +147,13 @@ function readNodeOrder(driver: DatabaseDriver) {
 }
 
 function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): NativeNodeSnapshotArgs {
+  const body = resolveNodeBody(row);
+  if (body.status === 'unavailable') {
+    throw new Error(`node_body_unavailable:${row.id}`);
+  }
   const node = buildWorkspaceSnapshotNode({
     ...row,
-    content: decodeTextBodyBlobData(row.body_blob_data) ?? row.content
+    content: body.content
   });
   const position = nodeOrder.indexOf(node.id);
   return {
@@ -195,7 +199,12 @@ export function buildImportNodeMutationPatch(
   }
   const nodeOrder = readNodeOrder(driver);
   const nodeRows = readImportedNodeRows(driver, nodeIds);
-  const nodes = nodeRows.map((row) => toNodeMutationSnapshot(row, nodeOrder));
+  let nodes: NativeNodeSnapshotArgs[];
+  try {
+    nodes = nodeRows.map((row) => toNodeMutationSnapshot(row, nodeOrder));
+  } catch {
+    return null;
+  }
   if (nodes.length !== nodeIds.length) {
     return null;
   }

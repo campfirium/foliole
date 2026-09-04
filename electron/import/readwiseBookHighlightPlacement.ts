@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
 import { createContextExcerptLocator } from '../../lib/core/import/controlledContextMatch.js';
 import {
@@ -13,9 +14,7 @@ import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwise
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
-interface ImportedBookSection {
-  [column: string]: unknown;
-  content: string;
+interface ImportedBookSection extends NodeBodyRow {
   id: string;
   title: string;
 }
@@ -34,8 +33,9 @@ interface SectionHighlightLocator {
 function readImportedBookSections(rootNodeId: string) {
   const connection = openDatabaseConnection();
   return connection.driver.queryAll<ImportedBookSection>(
-    `WITH RECURSIVE book_sections(id, parent_id, title, content, anchor_link, sort_path) AS (
-       SELECT n.id, n.parent_id, n.title, n.content, n.anchor_link, n.created_at || ':' || n.id AS sort_path
+    `WITH RECURSIVE book_sections(id, parent_id, title, content, body_blob_hash, anchor_link, sort_path) AS (
+       SELECT n.id, n.parent_id, n.title, n.content, n.body_blob_hash, n.anchor_link,
+              n.created_at || ':' || n.id AS sort_path
        FROM nodes n
        WHERE n.id = ? AND n.deleted_at IS NULL
        UNION ALL
@@ -43,18 +43,21 @@ function readImportedBookSections(rootNodeId: string) {
               child.parent_id,
               child.title,
               child.content,
+              child.body_blob_hash,
               child.anchor_link,
               book_sections.sort_path || '.' || child.created_at || ':' || child.id
        FROM nodes child
        JOIN book_sections ON child.parent_id = book_sections.id
        WHERE child.deleted_at IS NULL
      )
-     SELECT id, title, content
+     SELECT book_sections.id, book_sections.title, book_sections.content,
+            book_sections.body_blob_hash, cbd.data AS body_blob_data
      FROM book_sections
+     LEFT JOIN content_blob_data cbd ON cbd.hash = book_sections.body_blob_hash
      WHERE id <> ? AND anchor_link IS NULL
      ORDER BY sort_path, id`,
     [rootNodeId, rootNodeId]
-  );
+  ).map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
 }
 
 function buildSectionHighlightLocators(sections: ImportedBookSection[]) {

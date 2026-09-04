@@ -178,3 +178,38 @@ it('keeps file deletion outside rollbackable orphan cleanup transactions', async
   deleteAttachmentFiles(filesToDelete);
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
+
+it('keeps an inline attachment referenced by a Blob-only active node', async () => {
+  const markdown = '![Shared](asset://hash-blob-shared.png)';
+  seedNode('node-delete', markdown);
+  seedNode('node-keep', markdown);
+  const filePath = await seedAttachment({
+    attachmentId: 'hash-blob-shared', mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'shared.png', role: 'image'
+  });
+  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-keep']);
+
+  deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-keep'] });
+
+  expect(readCounts('hash-blob-shared').attachmentRows).toBe(1);
+  await expect(fs.stat(filePath)).resolves.toBeDefined();
+});
+
+it('aborts permanent deletion before mutation when any retained Blob body is unavailable', async () => {
+  seedNode('node-delete', '![Shared](asset://hash-unavailable.png)');
+  seedNode('node-missing', 'Other body');
+  const filePath = await seedAttachment({
+    attachmentId: 'hash-unavailable', mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'missing.png', role: 'image'
+  });
+  const connection = openDatabaseConnection();
+  const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
+    'SELECT body_blob_hash FROM nodes WHERE id = ?', ['node-missing']
+  )?.body_blob_hash ?? '';
+  connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
+
+  expect(() => deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-missing'] }))
+    .toThrow('node_body_unavailable:node-missing');
+  expect(connection.driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', ['node-delete']))
+    .toEqual({ id: 'node-delete' });
+  expect(readCounts('hash-unavailable').attachmentRows).toBe(1);
+  await expect(fs.stat(filePath)).resolves.toBeDefined();
+});

@@ -1,6 +1,7 @@
 import type { PersistedNodeViewState } from '../../platform/persistedNodeViewState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
@@ -88,10 +89,10 @@ function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
       bodyStatusExpression: `CASE
          WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
          WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing'
-         WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty'
+         WHEN TRIM(${buildNodeBodyContentSql()}) = '' THEN 'empty'
          ELSE 'ready'
        END`,
-      contentExpression: 'COALESCE(CAST(cbd.data AS TEXT), n.content)'
+      contentExpression: buildNodeBodyContentSql()
     };
   }
   return {

@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { loadNodeSourceDetails } from '../../lib/core/database/nodeSourceDetails.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -76,4 +77,22 @@ it('prefers the pdf import source when a node also has a markdown source', () =>
 
   expect(details?.importSource?.source_kind).toBe('pdf');
   expect(details?.importSource?.pdf_index_status).toBe('ready');
+});
+
+it('exposes Blob authority and represents missing Blob data as unavailable', () => {
+  const connection = openDatabaseConnection();
+  const hash = upsertTextBodyBlob(connection.driver, 'Blob authority', '2026-04-24T00:00:00.000Z');
+  connection.driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, body_blob_hash, created_at, updated_at)
+     VALUES ('node-blob', 'topic', 'Blob', 'stale inline', ?, ?, ?)`,
+    [hash, '2026-04-24T00:00:00.000Z', '2026-04-24T00:00:00.000Z']
+  );
+
+  expect(loadNodeSourceDetails(connection.driver, 'node-blob')).toMatchObject({
+    sourceNodeBodyStatus: 'resolved', sourceNodeContent: 'Blob authority'
+  });
+  connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
+  expect(loadNodeSourceDetails(connection.driver, 'node-blob')).toMatchObject({
+    sourceNodeBodyStatus: 'unavailable', sourceNodeContent: null
+  });
 });

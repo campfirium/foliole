@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -77,6 +78,16 @@ it('promotes the alternate body through a new formal child version', async () =>
     sync_dirty: 1
   });
   expect(row?.current_version_id).toMatch(/^ver_[0-9a-f-]{36}$/);
+});
+
+it('previews Blob-only authority and hides an alternative while the Blob is unavailable', () => {
+  const driver = openDatabaseConnection().driver;
+  const hash = upsertTextBodyBlob(driver, 'Blob current body', '2026-07-25T00:00:00.000Z');
+  driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ? WHERE id = ?', ['', hash, 'topic-1']);
+  expect(loadNodeTextAlternativePreview('topic-1')?.current_content).toBe('Blob current body');
+
+  driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
+  expect(loadNodeTextAlternativePreview('topic-1')).toBeNull();
 });
 
 function seedAlternative() {

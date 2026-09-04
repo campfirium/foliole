@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadNodeBodyResolution, resolveNodeBody, type NodeBodyRow } from './nodeBodyResolution.js';
 
 interface ImportSourceRow extends DatabaseRow {
   first_imported_at: string;
@@ -52,9 +53,8 @@ interface PdfPageDimensionRow extends DatabaseRow {
   page_width: number | null;
 }
 
-interface NodeContextRow extends DatabaseRow {
+interface NodeContextRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
-  content: string;
   id: string;
   parent_id: string | null;
 }
@@ -65,44 +65,37 @@ export interface NodeSourceDetails {
   inheritedFromParent: boolean;
   keepImportItem: KeepImportItemRow | null;
   pdfPageDimensions: PdfPageDimensionRow[];
-  sourceNodeContent: string;
+  sourceNodeContent: string | null;
+  sourceNodeBodyStatus: 'resolved' | 'unavailable';
   sourceNodeId: string;
 }
 
 function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
   const node = driver.queryOne<NodeContextRow>(
-    `SELECT id, parent_id, anchor_link, content
-     FROM nodes
-     WHERE id = ?`,
+    `SELECT n.id, n.parent_id, n.anchor_link, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.id = ?`,
     [nodeId]
   );
   if (!node) {
     return null;
   }
   if (node.anchor_link && node.parent_id) {
+    const body = loadNodeBodyResolution(driver, node.parent_id);
     return {
       inheritedFromParent: true,
-      sourceNodeContent: readNodeContent(driver, node.parent_id),
+      sourceNodeContent: body?.status === 'resolved' ? body.content : null,
+      sourceNodeBodyStatus: body?.status ?? 'unavailable',
       sourceNodeId: node.parent_id
     };
   }
+  const body = resolveNodeBody(node);
   return {
     inheritedFromParent: false,
-    sourceNodeContent: node.content,
+    sourceNodeContent: body.status === 'resolved' ? body.content : null,
+    sourceNodeBodyStatus: body.status,
     sourceNodeId: node.id
   };
-}
-
-function readNodeContent(driver: DatabaseDriver, nodeId: string) {
-  return (
-    driver.queryOne<{ content: string }>(
-      `SELECT content
-       FROM nodes
-       WHERE id = ?
-       LIMIT 1`,
-      [nodeId]
-    )?.content ?? ''
-  );
 }
 
 function readImportSource(driver: DatabaseDriver, nodeId: string) {
@@ -220,6 +213,7 @@ export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, ru
     keepImportItem: readKeepImportItem(driver, context.sourceNodeId),
     pdfPageDimensions: readPdfPageDimensions(driver, context.sourceNodeId),
     sourceNodeContent: context.sourceNodeContent,
+    sourceNodeBodyStatus: context.sourceNodeBodyStatus,
     sourceNodeId: context.sourceNodeId
   };
 }

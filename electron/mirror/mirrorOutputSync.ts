@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { NativeMirrorOutputRebuildResult } from '../../lib/platform/nativeUtilityContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
@@ -24,8 +25,8 @@ interface MirrorSyncOptions {
 }
 
 function hydrateMirrorSnapshotBodies(snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>) {
-  const rows = openDatabaseConnection().driver.queryAll<{ content: string; id: string }>(
-    `SELECT n.id, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content
+  const rows = openDatabaseConnection().driver.queryAll<NodeBodyRow & { id: string }>(
+    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
      FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE (n.kind = 'topic' OR n.anchor_link IS NOT NULL)
@@ -35,7 +36,7 @@ function hydrateMirrorSnapshotBodies(snapshot: NonNullable<ReturnType<typeof loa
   for (const row of rows) {
     const node = snapshot.nodesById[row.id];
     if (node) {
-      node.content = row.content;
+      node.content = requireResolvedNodeBody(row, row.id).content;
     }
   }
   return snapshot;

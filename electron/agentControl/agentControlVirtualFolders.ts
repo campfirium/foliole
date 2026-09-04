@@ -1,5 +1,5 @@
-import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
 import { isManualVirtualNodeFilter, parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
@@ -23,9 +23,7 @@ interface FolderRow extends DatabaseRow {
   virtual_filter: string | null;
 }
 
-export interface AgentVirtualFolderTopicRow extends DatabaseRow {
-  body_blob_data: Uint8Array | string | null;
-  content: string;
+export interface AgentVirtualFolderTopicRow extends DatabaseRow, NodeBodyRow {
   id: string;
   kind: string;
   title: string;
@@ -133,7 +131,7 @@ export function readCollectionVirtualFolderRow(id: string) {
 
 function readActiveTopics() {
   return openDatabaseConnection().driver.queryAll<AgentVirtualFolderTopicRow>(
-    `SELECT n.id, n.kind, n.title, n.content, n.updated_at, cbd.data AS body_blob_data
+    `SELECT n.id, n.kind, n.title, n.content, n.body_blob_hash, n.updated_at, cbd.data AS body_blob_data
      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE n.kind = 'topic' AND n.deleted_at IS NULL
      ORDER BY COALESCE(n.position, 999999), lower(n.title), n.id`,
@@ -155,8 +153,8 @@ export function readCollectionVirtualFolderTopics(name: string) {
   return matchingTopics(name, readActiveTopics());
 }
 
-export function readTopicContent(row: Pick<AgentVirtualFolderTopicRow, 'body_blob_data' | 'content'>) {
-  return decodeTextBodyBlobData(row.body_blob_data) ?? row.content;
+export function readTopicContent(row: Pick<AgentVirtualFolderTopicRow, 'body_blob_data' | 'body_blob_hash' | 'content' | 'id'>) {
+  return requireResolvedNodeBody(row, row.id).content;
 }
 
 function orderedMemberTopics(folder: FolderRow, rows: AgentVirtualFolderTopicRow[]) {

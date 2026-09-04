@@ -33,6 +33,7 @@ import { openDatabaseConnection, closeDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
+import { placeReadwiseBookHighlights } from './readwiseBookHighlightPlacement.js';
 import { loadReadwiseBookEpub } from './readwiseBookManualActions.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { createMultiChapterBookEpub } from './readwiseBooksEndToEnd.fixture.js';
@@ -138,11 +139,38 @@ async function importManualReadwiseBook() {
       )
       .get() as { latest_node_id: string }
   ).latest_node_id;
-  return readImportedBook(importedNodeId);
+  return { ...readImportedBook(importedNodeId), importedNodeId };
 }
 
-it('anchors readwise book highlights under the matched imported chapters', async () => {
-  const { chapters, connection, derivedRootChildren } = await importManualReadwiseBook();
+async function verifyBlobOnlyPlacement(input: {
+  chapterOneId: string;
+  chapterTwoId: string;
+  connection: ReturnType<typeof openDatabaseConnection>['sqlite'];
+  importedNodeId: string;
+}) {
+  input.connection.prepare('UPDATE nodes SET content = ? WHERE id IN (?, ?)')
+    .run('', input.chapterOneId, input.chapterTwoId);
+  const args = {
+    highlightMarkdownPath: path.join(tempRoot, 'Readwise', 'Books', 'Manual Book.md'),
+    importedAt: '2026-08-01T00:00:00.000Z',
+    readwiseConfig: createDefaultReadwiseReaderConfig(),
+    rootNodeId: input.importedNodeId
+  };
+  await expect(placeReadwiseBookHighlights(args)).resolves.toEqual({ matchedCount: 2, unmatchedCount: 0 });
+
+  const unavailableHash = input.connection.prepare('SELECT body_blob_hash FROM nodes WHERE id = ?')
+    .get(input.chapterOneId) as { body_blob_hash: string };
+  const childCount = input.connection.prepare('SELECT COUNT(*) AS count FROM nodes WHERE parent_id IN (?, ?)')
+    .get(input.chapterOneId, input.chapterTwoId) as { count: number };
+  input.connection.prepare('DELETE FROM content_blob_data WHERE hash = ?').run(unavailableHash.body_blob_hash);
+  await expect(placeReadwiseBookHighlights({ ...args, importedAt: '2026-08-01T00:01:00.000Z' }))
+    .rejects.toThrow(`node_body_unavailable:${input.chapterOneId}`);
+  expect(input.connection.prepare('SELECT COUNT(*) AS count FROM nodes WHERE parent_id IN (?, ?)')
+    .get(input.chapterOneId, input.chapterTwoId)).toEqual(childCount);
+}
+
+it('anchors readwise book highlights under Blob-only imported chapters', async () => {
+  const { chapters, connection, derivedRootChildren, importedNodeId } = await importManualReadwiseBook();
   const chapterOne = chapters.find((row) => row.title === 'Chapter 1');
   const chapterTwo = chapters.find((row) => row.title === 'Chapter 2');
 
@@ -190,4 +218,11 @@ it('anchors readwise book highlights under the matched imported chapters', async
       title: 'later insight'
     }
   ]);
+
+  await verifyBlobOnlyPlacement({
+    chapterOneId: chapterOne!.id,
+    chapterTwoId: chapterTwo!.id,
+    connection,
+    importedNodeId
+  });
 });

@@ -2,18 +2,18 @@ import { repairTextAnchorLocatorInContent, type TextAnchorLocator } from '../anc
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver } from './driver.js';
+import { resolveNodeBody, type NodeBodyRow } from './nodeBodyResolution.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
-interface CandidateRow {
+interface CandidateRow extends NodeBodyRow {
   [column: string]: unknown;
   anchor_link: string | null;
   id: string;
-  parent_content: string;
 }
 
 export interface ImportedAnchorLocatorRepairResult {
   repairedNodeIds: string[];
-  skipped: Array<{ nodeId: string; reason: 'ambiguous' | 'invalid_anchor_link' | 'non_imported' | 'non_text_locator' | 'no_locator' }>;
+  skipped: Array<{ nodeId: string; reason: 'ambiguous' | 'body_unavailable' | 'invalid_anchor_link' | 'non_imported' | 'non_text_locator' | 'no_locator' }>;
   write: boolean;
 }
 
@@ -43,9 +43,11 @@ function isTextLocatorGroup(locator: unknown): locator is { ranges: TextAnchorLo
 
 function readRepairCandidates(driver: DatabaseDriver, parentNodeId?: string) {
   return driver.queryAll<CandidateRow>(
-    `SELECT child.id, child.anchor_link, parent.content AS parent_content
+    `SELECT child.id, child.anchor_link, parent.content, parent.body_blob_hash,
+            cbd.data AS body_blob_data
      FROM nodes child
      INNER JOIN nodes parent ON parent.id = child.parent_id AND parent.deleted_at IS NULL
+     LEFT JOIN content_blob_data cbd ON cbd.hash = parent.body_blob_hash
      WHERE child.deleted_at IS NULL
        AND child.anchor_link IS NOT NULL
        AND (? IS NULL OR child.parent_id = ?)`,
@@ -98,7 +100,12 @@ export function repairImportedAnchorLocators(input: {
     if (!row.anchor_link) {
       return;
     }
-    const repaired = repairRawAnchorLink(row.anchor_link, row.parent_content);
+    const body = resolveNodeBody(row);
+    if (body.status === 'unavailable') {
+      skipped.push({ nodeId: row.id, reason: 'body_unavailable' });
+      return;
+    }
+    const repaired = repairRawAnchorLink(row.anchor_link, body.content);
     if (!('value' in repaired)) {
       skipped.push({ nodeId: row.id, reason: repaired.reason });
       return;

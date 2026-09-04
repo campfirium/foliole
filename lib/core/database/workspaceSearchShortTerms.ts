@@ -1,4 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
+import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
 import {
   type WorkspacePdfCrossPageSearchRow,
   type WorkspacePdfSearchRow,
@@ -28,10 +29,11 @@ export function crossPagePdfRowMatchesShortTerms(row: WorkspacePdfCrossPageSearc
 }
 
 export function loadShortTermNodeRows(driver: DatabaseDriver, shortTerms: string[], limit: number) {
-  const clauses = shortTerms.map(() => `instr(lower(COALESCE(n.title, '') || ' ' || COALESCE(CAST(cbd.data AS TEXT), n.content)), ?) > 0`);
+  const bodySql = buildNodeBodyContentSql();
+  const clauses = shortTerms.map(() => `instr(lower(COALESCE(n.title, '') || ' ' || ${bodySql}), ?) > 0`);
   return driver.queryAll<WorkspaceSearchRow>(
     `${VISIBLE_NODES_CTE_SQL}
-SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at, 200 AS rank
+SELECT n.id, n.title, ${bodySql} AS content, n.updated_at, 200 AS rank
   FROM nodes n
   INNER JOIN visible_nodes visible
     ON visible.id = n.id

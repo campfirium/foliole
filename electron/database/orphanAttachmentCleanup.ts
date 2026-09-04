@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { NodeBodyUnavailableError, resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
@@ -10,8 +11,8 @@ import { recordAttachmentDeleted } from './attachmentBlobs.js';
 import { openDatabaseConnection } from './connection.js';
 import { deletePdfPageTextRowsForAttachment } from './pdfPageTextRows.js';
 
-interface NodeContentRow extends DatabaseRow {
-  content: string;
+interface NodeContentRow extends DatabaseRow, NodeBodyRow {
+  id: string;
 }
 
 interface AttachmentLinkRow extends DatabaseRow {
@@ -26,6 +27,7 @@ interface AttachmentFileRow extends DatabaseRow {
 interface AttachmentCleanupPlan {
   inlineAttachmentIds: string[];
   mountedAttachmentIds: string[];
+  retainedInlineAttachmentIds: string[];
 }
 
 function collectInlineAttachmentIds(text: string) {
@@ -53,11 +55,36 @@ function listDeletedNodeContentRows(nodeIds: string[]) {
     return [];
   }
   return openDatabaseConnection().driver.queryAll<NodeContentRow>(
-    `SELECT content
-     FROM nodes
-     WHERE id IN (${buildInClause(nodeIds.length)})`,
+    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.id IN (${buildInClause(nodeIds.length)})`,
     nodeIds
   );
+}
+
+function listRetainedNodeContentRows(nodeIds: string[]) {
+  const exclusion = nodeIds.length ? `WHERE n.id NOT IN (${buildInClause(nodeIds.length)})` : '';
+  return openDatabaseConnection().driver.queryAll<NodeContentRow>(
+    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     ${exclusion}`,
+    nodeIds
+  );
+}
+
+function collectBodyAttachmentIds(rows: NodeContentRow[]) {
+  const attachmentIds = new Set<string>();
+  const unavailableNodeIds: string[] = [];
+  for (const row of rows) {
+    const body = resolveNodeBody(row);
+    if (body.status === 'unavailable') {
+      unavailableNodeIds.push(row.id);
+      continue;
+    }
+    for (const attachmentId of collectInlineAttachmentIds(body.content)) attachmentIds.add(attachmentId);
+  }
+  if (unavailableNodeIds.length) throw new NodeBodyUnavailableError(unavailableNodeIds);
+  return attachmentIds;
 }
 
 function listDeletedMountedAttachmentIds(nodeIds: string[]) {
@@ -78,40 +105,16 @@ function listDeletedMountedAttachmentIds(nodeIds: string[]) {
 }
 
 export function createAttachmentCleanupPlan(nodeIds: string[]): AttachmentCleanupPlan {
-  const inlineAttachmentIds = new Set<string>();
-  for (const row of listDeletedNodeContentRows(nodeIds)) {
-    for (const attachmentId of collectInlineAttachmentIds(row.content)) {
-      inlineAttachmentIds.add(attachmentId);
-    }
-  }
+  const inlineAttachmentIds = collectBodyAttachmentIds(listDeletedNodeContentRows(nodeIds));
+  const retainedInlineAttachmentIds = collectBodyAttachmentIds(listRetainedNodeContentRows(nodeIds));
 
   return {
     inlineAttachmentIds: toUniqueSortedArray(inlineAttachmentIds),
     mountedAttachmentIds: Array.from(new Set(listDeletedMountedAttachmentIds(nodeIds))).sort((left, right) =>
       left.localeCompare(right)
-    )
+    ),
+    retainedInlineAttachmentIds: toUniqueSortedArray(retainedInlineAttachmentIds)
   };
-}
-
-function listStillReferencedInlineAttachmentIds(candidateIds: string[]) {
-  if (candidateIds.length === 0) {
-    return new Set<string>();
-  }
-  const candidateIdSet = new Set(candidateIds);
-  const rows = openDatabaseConnection().driver.queryAll<NodeContentRow>(
-    `SELECT content
-     FROM nodes
-     WHERE content LIKE '%asset://%'`
-  );
-  const referencedAttachmentIds = new Set<string>();
-  for (const row of rows) {
-    for (const attachmentId of collectInlineAttachmentIds(row.content)) {
-      if (candidateIdSet.has(attachmentId)) {
-        referencedAttachmentIds.add(attachmentId);
-      }
-    }
-  }
-  return referencedAttachmentIds;
 }
 
 function listStillMountedAttachmentIds(candidateIds: string[]) {
@@ -131,7 +134,7 @@ function listStillMountedAttachmentIds(candidateIds: string[]) {
 }
 
 function resolveOrphanAttachmentIds(plan: AttachmentCleanupPlan) {
-  const inlineStillReferenced = listStillReferencedInlineAttachmentIds(plan.inlineAttachmentIds);
+  const inlineStillReferenced = new Set(plan.retainedInlineAttachmentIds);
   const mountedStillReferenced = listStillMountedAttachmentIds(plan.mountedAttachmentIds);
   const orphanAttachmentIds = new Set<string>();
 

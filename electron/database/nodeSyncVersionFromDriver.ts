@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { resolveNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 
 import { upsertNodeSyncState } from './nodeSyncStateRows.js';
@@ -21,14 +22,17 @@ export function flushNodeSyncVersionWithDriver(
   driver.transaction(() => {
     const row = loadNodeSyncVersionSourceFromDriver(driver, nodeId);
     if (!row || (row.sync_dirty !== 1 && row.current_version_id)) return;
+    const body = resolveNodeBody(row);
+    if (body.status === 'unavailable') return;
+    const resolvedRow = { ...row, content: body.content };
     const resolvedVersionId = versionId ?? createOpaqueVersionRef(randomUUID());
-    const contentHash = computeNodeSyncVersionHashFromDriver(driver, row, nodeId);
+    const contentHash = computeNodeSyncVersionHashFromDriver(driver, resolvedRow, nodeId);
     driver.execute(
       `INSERT INTO node_sync_versions (
          version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [resolvedVersionId, row.id, row.current_version_id, hostName, now, contentHash, row.content,
-        JSON.stringify(buildNodeSyncSnapshotFromDriver(driver, row, nodeId))]
+      [resolvedVersionId, row.id, row.current_version_id, hostName, now, contentHash, body.content,
+        JSON.stringify(buildNodeSyncSnapshotFromDriver(driver, resolvedRow, nodeId))]
     );
     if (row.current_version_id) {
       driver.execute(

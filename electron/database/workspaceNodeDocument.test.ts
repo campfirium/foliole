@@ -53,6 +53,19 @@ it('loads node content from body blob data before inline content', () => {
   expect(loadWorkspaceNodeDocument('node-1')?.content).toBe('blob body');
 });
 
+it('does not expose stale inline content when Blob data is unavailable', () => {
+  const connection = openDatabaseConnection();
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, parent_id, kind, title, is_title_manual, hide_title_heading,
+       content, body_blob_hash, created_at, updated_at
+     ) VALUES ('node-1', NULL, 'topic', 'Node 1', 1, 0, 'stale inline', 'missing-hash', ?, ?)`,
+    ['2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+  );
+
+  expect(loadWorkspaceNodeDocument('node-1')).toBeNull();
+});
+
 it('includes the node updated timestamp in loaded documents', () => {
   const connection = openDatabaseConnection();
   connection.driver.execute(

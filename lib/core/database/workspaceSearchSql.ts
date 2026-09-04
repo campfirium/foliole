@@ -1,4 +1,5 @@
 import type { DatabaseRow } from './driver.js';
+import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSearchRow extends DatabaseRow {
@@ -36,8 +37,9 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
 }
 
 export const MAX_RESULTS = 40;
+const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
 export const TITLE_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
   FROM nodes n
   INNER JOIN visible_nodes visible
     ON visible.id = n.id
@@ -47,14 +49,14 @@ SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.
   ORDER BY n.updated_at DESC
   LIMIT ?`;
 export const CONTENT_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
   FROM nodes n
   INNER JOIN visible_nodes visible
     ON visible.id = n.id
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
   WHERE instr(lower(trim(n.title)), ?) = 0
-    AND instr(lower(COALESCE(CAST(cbd.data AS TEXT), n.content)), ?) > 0
+    AND instr(lower(${NODE_BODY_CONTENT_SQL}), ?) > 0
   ORDER BY n.updated_at DESC
   LIMIT ?`;
 export const NODE_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}

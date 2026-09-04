@@ -1,7 +1,6 @@
-import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
-
-import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { writeNodeBody } from './nodeBodyMutation.js';
+import { requireResolvedNodeBody } from './nodeBodyResolution.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 import {
   remapRawStoredAnchorLink,
@@ -10,6 +9,8 @@ import {
 
 interface ParentNodeRow {
   [column: string]: unknown;
+  body_blob_data: unknown;
+  body_blob_hash: string | null;
   content: string;
   id: string;
   title: string;
@@ -36,9 +37,10 @@ type RawAnchorRemapResult =
 
 function readParentNode(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<ParentNodeRow>(
-    `SELECT id, title, content
-     FROM nodes
-     WHERE id = ? AND deleted_at IS NULL`,
+    `SELECT n.id, n.title, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+     FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.id = ? AND n.deleted_at IS NULL`,
     [nodeId]
   ) ?? null;
 }
@@ -61,28 +63,6 @@ function remapRawAnchorLink(value: string, imageRegions: string | null, previous
   });
 }
 
-function writeParentContent(input: {
-  driver: DatabaseDriver;
-  nextContent: string;
-  nodeId: string;
-  title: string;
-  updatedAt: string;
-}) {
-  const bodyBlobHash = upsertTextBodyBlob(input.driver, input.nextContent, input.updatedAt);
-  input.driver.execute(
-    `UPDATE nodes
-     SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ?
-     WHERE id = ?`,
-    [
-      input.nextContent,
-      bodyBlobHash,
-      resolveNodeOpeningText(input.nextContent, input.title),
-      input.updatedAt,
-      input.nodeId
-    ]
-  );
-}
-
 export function applyParentContentChange(input: {
   driver: DatabaseDriver;
   nextContent: string;
@@ -92,7 +72,8 @@ export function applyParentContentChange(input: {
   updatedAt: string;
 }): ParentContentChangeResult {
   const parent = readParentNode(input.driver, input.nodeId);
-  const previousContent = input.previousContent ?? parent?.content ?? '';
+  const resolvedParent = parent ? requireResolvedNodeBody(parent, parent.id) : null;
+  const previousContent = input.previousContent ?? resolvedParent?.content ?? '';
   const title = input.title ?? parent?.title ?? '';
   if (previousContent === input.nextContent) {
     return {
@@ -104,9 +85,9 @@ export function applyParentContentChange(input: {
     };
   }
 
-  writeParentContent({
+  writeNodeBody({
+    content: input.nextContent,
     driver: input.driver,
-    nextContent: input.nextContent,
     nodeId: input.nodeId,
     title,
     updatedAt: input.updatedAt
