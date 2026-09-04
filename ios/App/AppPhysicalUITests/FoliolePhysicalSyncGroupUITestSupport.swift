@@ -87,6 +87,7 @@ extension FoliolePhysicalSyncGroupUITests {
                       "Fri did not show the topic selected for editing.")
         XCTAssertEqual(topics.count, 1, "Fri must edit exactly one matching topic.")
         topics.firstMatch.tap()
+        revealReadingChrome(in: app)
         tapButton(named: "Edit topic", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
@@ -134,6 +135,7 @@ extension FoliolePhysicalSyncGroupUITests {
                       "Fri did not receive the conflict seed through product sync.")
         XCTAssertEqual(topics.count, 1, "Fri must fork exactly one attempt conflict seed.")
         topics.firstMatch.tap()
+        revealReadingChrome(in: app)
         tapButton(named: "Edit topic", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30),

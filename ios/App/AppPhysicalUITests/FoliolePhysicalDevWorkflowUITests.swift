@@ -33,6 +33,30 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
                        "Capture sheet remained open after the real device tap.")
     }
 
+    func testKeepsDeviceAwakeDuringPreparation() throws {
+        guard let rawDuration = ProcessInfo.processInfo.environment[
+            "FOLIOLE_PHYSICAL_KEEP_AWAKE_SECONDS"
+        ], let duration = TimeInterval(rawDuration), (1...3600).contains(duration) else {
+            throw XCTSkip("Run this lease explicitly with a duration between 1 and 3600 seconds.")
+        }
+
+        let app = XCUIApplication()
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
+                      "The acceptance app did not enter the foreground for the keep-awake lease.")
+
+        let deadline = Date().addingTimeInterval(duration)
+        while Date() < deadline {
+            XCTAssertEqual(app.state, .runningForeground,
+                           "The acceptance app left the foreground during preparation.")
+            let remaining = deadline.timeIntervalSinceNow
+            if remaining <= 0 { break }
+            Thread.sleep(forTimeInterval: min(5, remaining))
+        }
+    }
+
     private func attachScreenshot(named name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
