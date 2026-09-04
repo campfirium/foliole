@@ -1,7 +1,8 @@
 import path from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
+import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const TOPIC_ID = 'playwright-t174-menu-arbitration';
