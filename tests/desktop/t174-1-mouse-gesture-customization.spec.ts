@@ -2,11 +2,14 @@ import path from 'node:path';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
+import { collectActiveEditorState } from './harness/contextualContentHistory';
 import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 const FIRST_ID = 'playwright-t174-first';
 const SECOND_ID = 'playwright-t174-second';
+const FIRST_CONTENT = '# First gesture topic\n\nBack target';
+const SECOND_CONTENT = ['# Gesture target', ...Array.from({ length: 240 }, (_, index) => `Paragraph ${index}`)].join('\n\n');
 const CUSTOM_COMMAND_ID = 'workspace.openSearch';
 
 async function focusVisibleSession(session: Awaited<ReturnType<typeof launchDesktopSession>>) {
@@ -40,18 +43,25 @@ async function configurePersistentCustomGesture(page: DesktopSession['firstWindo
 }
 
 async function seedGestureWorkspace(page: DesktopSession['firstWindow']) {
-  const longBody = ['# Gesture target', ...Array.from({ length: 240 }, (_, index) => `Paragraph ${index}`)].join('\n\n');
   await page.waitForFunction(() => Boolean(globalThis.window?.__folioleWorkspaceDebug));
-  await page.evaluate(async ({ firstId, secondId, content }) => {
+  await page.evaluate(async ({ firstContent, firstId, secondContent, secondId }) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     await api?.seedNodes?.([
-      { content: '# First gesture topic\n\nBack target', id: firstId, kind: 'topic', title: 'Gesture First' },
-      { content, id: secondId, kind: 'topic', title: 'Gesture Second' }
+      { content: firstContent, id: firstId, kind: 'topic', title: 'Gesture First' },
+      { content: secondContent, id: secondId, kind: 'topic', title: 'Gesture Second' }
     ]);
     await api?.openNode?.(firstId);
     await api?.openNode?.(secondId);
-  }, { content: longBody, firstId: FIRST_ID, secondId: SECOND_ID });
-  await expect.poll(() => page.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(SECOND_ID);
+  }, { firstContent: FIRST_CONTENT, firstId: FIRST_ID, secondContent: SECOND_CONTENT, secondId: SECOND_ID });
+  await expectActiveEditorState(page, SECOND_ID, SECOND_CONTENT);
+}
+
+async function expectActiveEditorState(page: DesktopSession['firstWindow'], nodeId: string, content: string) {
+  await expect.poll(() => collectActiveEditorState(page, nodeId)).toEqual({
+    activeNodeId: nodeId,
+    editorContent: content,
+    nodeContent: content
+  });
 }
 
 async function drawGesture(page: DesktopSession['firstWindow'], segments: Array<[number, number]>) {
@@ -95,10 +105,10 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
 
     await seedGestureWorkspace(desktopWindow);
     await drawGesture(desktopWindow, [[-80, 0]]);
-    await expect.poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(FIRST_ID);
+    await expectActiveEditorState(desktopWindow, FIRST_ID, FIRST_CONTENT);
     await expect(desktopWindow.getByRole('menu')).toBeHidden();
     await drawGesture(desktopWindow, [[80, 0]]);
-    await expect.poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(SECOND_ID);
+    await expectActiveEditorState(desktopWindow, SECOND_ID, SECOND_CONTENT);
 
     await drawGesture(desktopWindow, [[-70, 0], [0, 90]]);
     await expect.poll(() => desktopWindow.locator('.markdown-editor-host .cm-scroller').evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
