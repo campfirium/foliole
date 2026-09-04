@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
@@ -165,15 +166,19 @@ describe('DocumentPanelSection secondary views', () => {
   });
 
   it('shows the folder list shell for ordinary folder nodes', () => {
-    renderSectionWithProps({
-      activeNodeId: 'node-1',
-      editorNodeId: 'node-1',
-      nodeOrder: ['node-1', 'node-2'],
-      nodesById: {
-        'node-1': { ...baseNode, kind: 'folder', content: 'Folder prose should stay hidden' },
-        'node-2': { ...baseNode, id: 'node-2', parentNodeId: 'node-1', title: 'Child topic', content: '# Child topic' }
-      }
-    });
+    render(
+      <MouseGestureSettingsProvider>
+        {createSectionElement({
+          activeNodeId: 'node-1',
+          editorNodeId: 'node-1',
+          nodeOrder: ['node-1', 'node-2'],
+          nodesById: {
+            'node-1': { ...baseNode, kind: 'folder', content: 'Folder prose should stay hidden' },
+            'node-2': { ...baseNode, id: 'node-2', parentNodeId: 'node-1', title: 'Child topic', content: '# Child topic' }
+          }
+        })}
+      </MouseGestureSettingsProvider>
+    );
 
     expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Node 1' })).toBeInTheDocument();

@@ -7,7 +7,10 @@ import { LocalizationProvider } from '../../../../shared/localization/Localizati
 import { AppConfirmationProvider } from '../../../../shared/ui';
 import { MouseGestureSettingsProvider } from '../../context/MouseGestureSettingsProvider';
 
-import { SettingsMouseGesturesSection } from './SettingsMouseGesturesSection';
+import {
+  SettingsMouseGesturesHeaderControl,
+  SettingsMouseGesturesSection
+} from './SettingsMouseGesturesSection';
 
 const COMMANDS = [
   {
@@ -40,12 +43,32 @@ const COMMANDS = [
   }
 ];
 
+const GROUPED_GESTURE_LABELS = [
+  'Up',
+  'Up → Down',
+  'Up → Left',
+  'Up → Right',
+  'Down',
+  'Down → Up',
+  'Down → Left',
+  'Down → Right',
+  'Left',
+  'Left → Up',
+  'Left → Down',
+  'Left → Right',
+  'Right',
+  'Right → Up',
+  'Right → Down',
+  'Right → Left'
+];
+
 function renderSection() {
   return render(
     <LocalizationProvider>
       <AppConfirmationProvider>
         <PublicCommandProvider items={COMMANDS} runCommand={() => undefined}>
           <MouseGestureSettingsProvider>
+            <SettingsMouseGesturesHeaderControl />
             <SettingsMouseGesturesSection />
           </MouseGestureSettingsProvider>
         </PublicCommandProvider>
@@ -61,9 +84,11 @@ function openCommandPicker(name: string) {
 function openRecording(command: string) {
   fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: command } });
   fireEvent.click(screen.getByRole('button', { name: `Record gesture for ${command}` }));
-  return screen.getByText(
+  const surface = screen.getByText(
     'Right-drag here to draw a gesture with at least three direction changes.'
   ).parentElement as HTMLElement;
+  expect(surface.closest('[role="dialog"]')).not.toBeNull();
+  return surface;
 }
 
 function drawRecording(surface: HTMLElement, points: Array<[number, number]>) {
@@ -89,17 +114,19 @@ function drawRecording(surface: HTMLElement, points: Array<[number, number]>) {
 describe('SettingsMouseGesturesSection', () => {
   beforeEach(() => window.localStorage.clear());
 
-  it('shows the enabled switch, collapsed display controls, twelve bindings, and inline command search states', () => {
+  it('shows the enabled switch, collapsed display controls, grouped bindings, and inline command search states', () => {
     renderSection();
     expect(screen.getByRole('switch', { name: 'Mouse gestures' })).toHaveAttribute(
       'aria-checked',
       'true'
     );
-    expect(screen.getByRole('button', { name: 'Display' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Gesture appearance' })).toHaveAttribute(
       'aria-expanded',
       'false'
     );
-    expect(screen.getAllByRole('img')).toHaveLength(12);
+    expect(screen.getAllByRole('img').map((item) => item.getAttribute('aria-label'))).toEqual(
+      GROUPED_GESTURE_LABELS
+    );
 
     fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: 'top' } });
     expect(screen.getByRole('img', { name: 'Left → Up' })).toBeInTheDocument();
@@ -169,11 +196,13 @@ describe('custom mouse gesture recording', () => {
   it('records a three-segment gesture, rejects short and duplicate sequences, and cancels without saving', () => {
     renderSection();
     let surface = openRecording('Search');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     drawRecording(surface, [
       [60, 100],
       [100, 100],
       [100, 60]
     ]);
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(
       screen.queryByText('Right-drag here to draw a gesture with at least three direction changes.')

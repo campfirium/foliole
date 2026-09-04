@@ -50,6 +50,7 @@ export function DocumentPanelFolderContent({
       <FolderListView
         folderNodeId={activeNodeId}
         folderTitle={folderTitle}
+        mouseGesturesEnabled
         nodeOrder={nodeOrder}
         nodesById={nodesById}
         onChangeSortDirection={onChangeFolderListSortDirection}

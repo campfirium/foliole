@@ -79,3 +79,26 @@ it('exposes an independent disclosure without unmounting its content', () => {
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByLabelText('Account ID')).toBeVisible();
 });
+
+it('can place the disclosure indicator at the end while keeping the full title row clickable', () => {
+  function EndDisclosureSection() {
+    const [expanded, setExpanded] = useState(false);
+    return (
+      <SettingsSection
+        disclosureIconPosition="end"
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+        title="Gesture appearance"
+      >
+        <input aria-label="Trail color" />
+      </SettingsSection>
+    );
+  }
+
+  render(<EndDisclosureSection />);
+  const toggle = screen.getByRole('button', { name: 'Gesture appearance' });
+  expect(toggle.lastElementChild?.tagName.toLowerCase()).toBe('svg');
+  fireEvent.click(screen.getByText('Gesture appearance'));
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByLabelText('Trail color')).toBeVisible();
+});

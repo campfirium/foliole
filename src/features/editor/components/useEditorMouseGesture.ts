@@ -9,6 +9,7 @@ import {
 } from '../model/editorMouseGestures';
 import type { EditorMouseGestureSettings } from '../model/editorMouseGestureSettings';
 
+import { arbitrateEditorGestureContextMenu } from './editorMouseGestureContextMenu';
 import {
   appendTrackedGestureDirection,
   syncGestureTrail,
@@ -18,7 +19,6 @@ import {
 
 interface GestureInteractionState extends GestureTrackingState {
   gestureIntent: boolean;
-  interactionRect: DOMRect;
   pendingContextMenu: {
     event: ReactMouseEvent<HTMLDivElement>;
     open: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -31,13 +31,10 @@ interface GestureLifecycleArgs {
   runCommand: (commandId: string) => void;
   settings: EditorMouseGestureSettings;
   setDirections: React.Dispatch<React.SetStateAction<GestureTrackingState['directions']>>;
+  setHintPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number } | null>>;
   setTrail: React.Dispatch<React.SetStateAction<GestureTrailState | null>>;
   suppressNextContextMenuRef: React.MutableRefObject<boolean>;
   trackingRef: React.MutableRefObject<GestureInteractionState | null>;
-}
-
-function isPointInsideRect(rect: DOMRect, clientX: number, clientY: number) {
-  return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
 }
 
 function clearInteraction(args: GestureLifecycleArgs) {
@@ -45,6 +42,7 @@ function clearInteraction(args: GestureLifecycleArgs) {
   args.suppressNextContextMenuRef.current = false;
   args.setTrail(null);
   args.setDirections([]);
+  args.setHintPosition(null);
 }
 
 function discardInteraction(args: GestureLifecycleArgs) {
@@ -56,20 +54,21 @@ function createMouseMoveHandler(args: GestureLifecycleArgs) {
   return (event: MouseEvent) => {
     const tracking = args.trackingRef.current;
     if (!tracking) return;
-    if ((event.buttons & 2) !== 2) {
-      clearInteraction(args);
+    const advanced = appendTrackedGestureDirection(
+      tracking,
+      event.clientX,
+      event.clientY,
+      args.settings.segmentThresholdPx
+    );
+    if (!advanced) {
+      if (tracking.gestureIntent) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       return;
     }
-    if (
-      !appendTrackedGestureDirection(
-        tracking,
-        event.clientX,
-        event.clientY,
-        args.settings.segmentThresholdPx
-      )
-    )
-      return;
     event.preventDefault();
+    event.stopPropagation();
     tracking.gestureIntent = true;
     syncGestureTrail(
       args.hostRef.current,
@@ -84,20 +83,29 @@ function createMouseMoveHandler(args: GestureLifecycleArgs) {
 
 function createMouseUpHandler(args: GestureLifecycleArgs) {
   return (event: MouseEvent) => {
-    if (event.button !== 2) return;
     const tracking = args.trackingRef.current;
-    clearInteraction(args);
     if (!tracking) return;
-    if (!isPointInsideRect(tracking.interactionRect, event.clientX, event.clientY)) return;
+    if (
+      appendTrackedGestureDirection(
+        tracking,
+        event.clientX,
+        event.clientY,
+        args.settings.segmentThresholdPx
+      )
+    ) {
+      tracking.gestureIntent = true;
+    }
+    clearInteraction(args);
     if (!tracking.gestureIntent) {
       tracking.pendingContextMenu?.open(tracking.pendingContextMenu.event);
       return;
     }
     args.suppressNextContextMenuRef.current = true;
+    event.preventDefault();
+    event.stopPropagation();
     const gesture = resolveEditorMouseGesture(tracking.directions, args.bindings);
     const commandId = resolveEditorMouseGestureCommand(args.bindings, gesture);
     if (!commandId) return;
-    event.preventDefault();
     args.runCommand(commandId);
   };
 }
@@ -115,13 +123,13 @@ function useWindowGestureLifecycle(args: GestureLifecycleArgs) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') handleClear();
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove, true);
+    window.addEventListener('mouseup', handleMouseUp, true);
     window.addEventListener('blur', handleClear);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove, true);
+      window.removeEventListener('mouseup', handleMouseUp, true);
       window.removeEventListener('blur', handleClear);
       window.removeEventListener('keydown', handleKeyDown);
       discardInteraction(argsRef.current);
@@ -133,42 +141,16 @@ function useWindowGestureLifecycle(args: GestureLifecycleArgs) {
   }, [args.settings.enabled]);
 }
 
-function arbitrateContextMenu(
-  event: ReactMouseEvent<HTMLDivElement>,
-  onContextMenu: ((event: ReactMouseEvent<HTMLDivElement>) => void) | undefined,
-  enabled: boolean,
-  suppressNextContextMenuRef: React.MutableRefObject<boolean>,
-  trackingRef: React.MutableRefObject<GestureInteractionState | null>
-) {
-  if (!enabled) {
-    onContextMenu?.(event);
-    return;
-  }
-  if (suppressNextContextMenuRef.current) {
-    suppressNextContextMenuRef.current = false;
-    event.preventDefault();
-    return;
-  }
-  const tracking = trackingRef.current;
-  if (!tracking) {
-    onContextMenu?.(event);
-    return;
-  }
-  event.preventDefault();
-  if (!tracking.gestureIntent && onContextMenu) {
-    tracking.pendingContextMenu = { event, open: onContextMenu };
-  }
-}
-
 export function useEditorMouseGesture(
   hostRef: React.MutableRefObject<HTMLDivElement | null>,
   bindings: EditorMouseGestureBinding[],
   settings: EditorMouseGestureSettings
 ) {
-  const { runCommand } = usePublicCommands();
+  const { items, runCommand } = usePublicCommands();
   const trackingRef = useRef<GestureInteractionState | null>(null);
   const suppressNextContextMenuRef = useRef(false);
   const [directions, setDirections] = useState<GestureTrackingState['directions']>([]);
+  const [hintPosition, setHintPosition] = useState<{ x: number; y: number } | null>(null);
   const [trail, setTrail] = useState<GestureTrailState | null>(null);
 
   useWindowGestureLifecycle({
@@ -177,6 +159,7 @@ export function useEditorMouseGesture(
     runCommand,
     settings,
     setDirections,
+    setHintPosition,
     setTrail,
     suppressNextContextMenuRef,
     trackingRef
@@ -184,15 +167,16 @@ export function useEditorMouseGesture(
 
   const handleMouseDownCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 2 || !settings.enabled) return;
+    const rect = event.currentTarget.getBoundingClientRect();
     trackingRef.current = {
       directions: [],
       gestureIntent: false,
-      interactionRect: event.currentTarget.getBoundingClientRect(),
       lastPoint: { x: event.clientX, y: event.clientY },
       pendingContextMenu: null
     };
     suppressNextContextMenuRef.current = false;
     setDirections([]);
+    setHintPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     syncGestureTrail(hostRef.current, event.clientX, event.clientY, settings, setTrail);
   };
 
@@ -200,7 +184,7 @@ export function useEditorMouseGesture(
     event: ReactMouseEvent<HTMLDivElement>,
     onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void
   ) => {
-    arbitrateContextMenu(
+    arbitrateEditorGestureContextMenu(
       event,
       onContextMenu,
       settings.enabled,
@@ -209,10 +193,16 @@ export function useEditorMouseGesture(
     );
   };
 
+  const activeGesture = resolveEditorMouseGesture(directions, bindings);
+  const activeCommandId = resolveEditorMouseGestureCommand(bindings, activeGesture);
+  const activeCommandTitle = items.find((item) => item.id === activeCommandId)?.title ?? null;
+
   return {
+    activeCommandTitle,
     directions: settings.hintVisible ? directions : [],
     handleContextMenu,
     handleMouseDownCapture,
+    hintPosition,
     trail
   };
 }

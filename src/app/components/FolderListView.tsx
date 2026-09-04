@@ -13,6 +13,7 @@ import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
 import { renderFolderListItem } from './folderListItemRender';
 import { resolveFolderManualChildOrder, resolveListedFolderNodes } from './folderListManualOrdering';
+import { FolderListMouseGestureSurface } from './FolderListMouseGestureSurface';
 import { FolderListNavigationOverlay, type FolderListNavigationOverlayProps } from './FolderListNavigationOverlay';
 import type { FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
@@ -47,6 +48,7 @@ interface FolderListViewProps {
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
   itemLayout?: FolderListItemLayout;
+  mouseGesturesEnabled?: boolean;
   navigationOverlay?: FolderListNavigationOverlayProps;
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
@@ -168,43 +170,48 @@ export function FolderListView(props: FolderListViewProps) {
     filteredNodes: state.filteredNodes,
     onSelectNode: props.onSelectNode
   });
-  return (
+  const content = (
+    <section aria-label={props.regionLabel ?? t('desktop.folderList.view')} className="mx-auto flex w-full flex-1 flex-col">
+      <FolderListViewLayout
+        currentViewActions={props.currentViewActions ?? currentViewActions}
+        {...definedProps({ emptyState: props.emptyState })}
+        filteredNodes={state.filteredNodes}
+        folderTitle={resolvedFolderTitle}
+        headerMode={props.showEmbeddedHeader === false ? 'hidden' : 'full'}
+        itemCountLabel={state.itemCountLabel}
+        navigationOverlay={props.navigationOverlay ? <FolderListNavigationOverlay {...props.navigationOverlay} /> : null}
+        onChangeSearchQuery={state.setSearchQuery}
+        onChangeSortDirection={state.updateSortDirection}
+        onChangeSortKey={state.updateSortKey}
+        onRenderItem={(node) => renderFolderListViewItem({
+          node,
+          nodeOpenStateById,
+          props,
+          selection,
+          state
+        })}
+        searchQuery={state.searchQuery}
+        {...definedProps({
+          searchAction: props.searchAction,
+          searchAriaLabel: props.searchAriaLabel,
+          searchDescription: props.searchDescription,
+          searchPlaceholder: props.searchPlaceholder,
+          searchReadOnly: props.searchReadOnly
+        })}
+        searchResultLabel={state.searchResultLabel}
+        scrollElementRef={scrollElementRef}
+        sortDirection={state.sortDirection}
+        sortKey={state.sortKey}
+        sortOptions={props.sortOptions}
+        t={t}
+      />
+    </section>
+  );
+  return props.mouseGesturesEnabled ? (
+    <FolderListMouseGestureSurface surfaceRef={scrollElementRef}>{content}</FolderListMouseGestureSurface>
+  ) : (
     <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label={props.regionLabel ?? t('desktop.folderList.view')} className="mx-auto flex w-full flex-1 flex-col">
-        <FolderListViewLayout
-          currentViewActions={props.currentViewActions ?? currentViewActions}
-          {...definedProps({ emptyState: props.emptyState })}
-          filteredNodes={state.filteredNodes}
-          folderTitle={resolvedFolderTitle}
-          headerMode={props.showEmbeddedHeader === false ? 'hidden' : 'full'}
-          itemCountLabel={state.itemCountLabel}
-          navigationOverlay={props.navigationOverlay ? <FolderListNavigationOverlay {...props.navigationOverlay} /> : null}
-          onChangeSearchQuery={state.setSearchQuery}
-          onChangeSortDirection={state.updateSortDirection}
-          onChangeSortKey={state.updateSortKey}
-          onRenderItem={(node) => renderFolderListViewItem({
-            node,
-            nodeOpenStateById,
-            props,
-            selection,
-            state
-          })}
-          searchQuery={state.searchQuery}
-          {...definedProps({
-            searchAction: props.searchAction,
-            searchAriaLabel: props.searchAriaLabel,
-            searchDescription: props.searchDescription,
-            searchPlaceholder: props.searchPlaceholder,
-            searchReadOnly: props.searchReadOnly
-          })}
-          searchResultLabel={state.searchResultLabel}
-          scrollElementRef={scrollElementRef}
-          sortDirection={state.sortDirection}
-          sortKey={state.sortKey}
-          sortOptions={props.sortOptions}
-          t={t}
-        />
-      </section>
+      {content}
     </div>
   );
 }

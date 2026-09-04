@@ -16,16 +16,23 @@ import {
 describe('editorMouseGestureSettings', () => {
   beforeEach(() => window.localStorage.clear());
 
-  it('creates the default twelve-gesture truth when storage is empty', () => {
+  it('creates the default sixteen-gesture truth when storage is empty', () => {
     expect(getEditorMouseGestureSettings()).toEqual(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS);
     expect(
       JSON.parse(
         window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureBindings) ?? '[]'
       )
-    ).toHaveLength(12);
+    ).toHaveLength(16);
     expect(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor).toBe(
       DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR
     );
+    expect(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.hintVisible).toBe(false);
+  });
+
+  it('preserves an explicit direction hint preference', () => {
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureHintVisible, 'true');
+
+    expect(getEditorMouseGestureSettings().hintVisible).toBe(true);
   });
 
   it('converts legal legacy choices once and then only reads the new truth', () => {
@@ -79,7 +86,7 @@ describe('editorMouseGestureSettings persistence', () => {
     ).toBe(true);
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.mouseGesturesEnabled, 'false');
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailColor, '#123456');
-    expect(getEditorMouseGestureSettings().bindings).toHaveLength(13);
+    expect(getEditorMouseGestureSettings().bindings).toHaveLength(17);
 
     resetEditorMouseGestureBindings();
     const reset = getEditorMouseGestureSettings();

@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeAll, beforeEach, expect, it } from 'vitest';
 
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 
@@ -113,12 +114,24 @@ it('updates remaining review scheduler controls from review settings section', a
 });
 
 it('updates mouse gesture settings from the dedicated section and persists them', async () => {
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />, {
+    publicCommandItems: [
+      {
+        enabled: true,
+        id: APP_COMMAND_IDS.scrollDocumentBottom,
+        keywords: ['scroll', 'bottom'],
+        section: 'Navigation',
+        title: 'Scroll to bottom'
+      }
+    ]
+  });
 
   fireEvent.click(screen.getByRole('button', { name: 'Mouse gestures' }));
-  fireEvent.change(screen.getByLabelText('Left then up mouse gesture action'), {
-    target: { value: 'scroll-bottom' }
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Choose command for Left → Up' }), {
+    key: 'Enter'
   });
+  fireEvent.click(screen.getByRole('menuitem', { name: /Scroll to bottom/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Gesture appearance' }));
   fireEvent.change(screen.getByLabelText('Mouse gesture trail color hex'), {
     target: { value: '#ff5500' }
   });
@@ -136,7 +149,18 @@ it('updates mouse gesture settings from the dedicated section and persists them'
   });
 
   await waitFor(() => {
-    expect(window.localStorage.getItem('foliole-mouse-gesture-left-up-action')).toBe('scroll-bottom');
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureBindings) ?? '[]'
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          commandId: APP_COMMAND_IDS.scrollDocumentBottom,
+          gesture: 'left-up'
+        })
+      ])
+    );
     expect(window.localStorage.getItem('foliole-mouse-gesture-trail-color')).toBe('#ff5500');
     expect(window.localStorage.getItem('foliole-mouse-gesture-trail-line-width')).toBe('4.5');
     expect(window.localStorage.getItem('foliole-mouse-gesture-trail-opacity')).toBe('0.6');

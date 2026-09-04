@@ -47,18 +47,29 @@ export function GestureTrailOverlay({
 const DIRECTION_SYMBOLS = { down: '↓', left: '←', right: '→', up: '↑' } as const;
 
 export function GestureDirectionHintOverlay({
-  directions
+  commandTitle,
+  directions,
+  position
 }: {
+  commandTitle: string | null;
   directions: Array<keyof typeof DIRECTION_SYMBOLS>;
+  position: { x: number; y: number } | null;
 }) {
-  if (!directions.length) return null;
+  const t = useTranslation();
+  if (!directions.length || !position) return null;
+  const directionLabel = directions.map((direction) => DIRECTION_SYMBOLS[direction]).join('');
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute right-4 top-4 z-surface-overlay rounded-md border border-border bg-elevated px-2 py-1 text-ui-md text-foreground shadow-popover"
+      className="pointer-events-none absolute z-surface-overlay ml-3 mt-3 flex select-none items-baseline gap-2 whitespace-nowrap text-ui-sm font-medium text-foreground/55"
       data-editor-gesture-hint="true"
+      style={{ left: position.x, top: position.y } as CSSProperties}
     >
-      {directions.map((direction) => DIRECTION_SYMBOLS[direction]).join(' ')}
+      <span className="font-semibold text-foreground/70">{directionLabel}</span>
+      <span>{commandTitle ?? t('settings.mouseGestures.bindings.unbound')}</span>
     </div>
   );
 }
+import type { CSSProperties } from 'react';
+
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';

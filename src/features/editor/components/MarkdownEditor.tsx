@@ -79,7 +79,11 @@ function MarkdownEditorSurface(args: {
         style={args.editorStyle}
       />
       <GestureTrailOverlay path={args.gestureTrailPath} trail={args.mouseGesture.trail} />
-      <GestureDirectionHintOverlay directions={args.mouseGesture.directions} />
+      <GestureDirectionHintOverlay
+        commandTitle={args.mouseGesture.activeCommandTitle}
+        directions={args.mouseGesture.directions}
+        position={args.mouseGesture.hintPosition}
+      />
     </div>
   );
 }

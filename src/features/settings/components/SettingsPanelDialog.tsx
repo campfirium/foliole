@@ -82,7 +82,15 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
           <div className="mb-7 px-5 pb-6">
             <div className="flex items-center gap-3">
               <AppDialogTitle>{props.title}</AppDialogTitle>
-              {props.headerActions ? <div className="shrink-0">{props.headerActions}</div> : null}
+              {props.headerActions ? (
+                <div
+                  className={
+                    props.activeCategory === 'mouse-gestures' ? 'ml-auto shrink-0' : 'shrink-0'
+                  }
+                >
+                  {props.headerActions}
+                </div>
+              ) : null}
             </div>
             <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
           </div>

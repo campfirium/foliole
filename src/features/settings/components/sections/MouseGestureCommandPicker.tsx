@@ -1,5 +1,5 @@
 import { ChevronDown, Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject, type WheelEvent } from 'react';
 
 import type { CommandPaletteItem } from '../../../../shared/commands/types';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
@@ -32,18 +32,29 @@ function CommandPickerContent(props: {
   searchRef: RefObject<HTMLInputElement>;
 }) {
   const t = useTranslation();
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrollCommands = (event: WheelEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (listRef.current) listRef.current.scrollTop += event.deltaY;
+  };
   return (
     <AppDropdownMenuContent
       align="end"
       aria-label={props.chooseLabel}
       className="w-80 max-w-[var(--radix-dropdown-menu-content-available-width)] p-2"
       collisionPadding={12}
+      onWheel={scrollCommands}
     >
       <label className="relative block">
         <Search aria-hidden="true" className="absolute left-2.5 top-2.5 text-muted-foreground" size={16} />
         <input aria-label={t('settings.mouseGestures.bindings.filter')} className={settingsFieldClassName('pl-8')} onChange={(event) => props.onQueryChange(event.target.value)} onKeyDown={(event) => event.stopPropagation()} ref={props.searchRef} value={props.query} />
       </label>
-      <div className="app-scrollbar mt-2 max-h-[min(18rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto">
+      <div
+        className="app-scrollbar mt-2 max-h-[min(18rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto"
+        data-mouse-gesture-command-list="true"
+        ref={listRef}
+      >
         <AppDropdownMenuItem onSelect={() => props.onChange(null)}>
           {t('settings.mouseGestures.bindings.unbound')}
         </AppDropdownMenuItem>

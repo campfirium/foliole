@@ -9,6 +9,7 @@ export interface SettingsSectionProps {
   children: ReactNode;
   className?: string;
   description?: string;
+  disclosureIconPosition?: 'end' | 'start';
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
   searchRowId?: string;
@@ -21,6 +22,7 @@ function SettingsSectionHeader(props: {
   contentId: string;
   description: string | undefined;
   descriptionId: string;
+  disclosureIconPosition: 'end' | 'start';
   expanded: boolean | undefined;
   isDisclosure: boolean;
   onExpandedChange: ((expanded: boolean) => void) | undefined;
@@ -38,18 +40,16 @@ function SettingsSectionHeader(props: {
           aria-describedby={props.description ? props.descriptionId : undefined}
           aria-expanded={props.expanded}
           aria-label={props.title}
-          className="group flex w-full items-start gap-2 rounded-sm px-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className={cn(
+            'group flex w-full items-start gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            props.disclosureIconPosition === 'end' && 'justify-between'
+          )}
           onClick={() => props.onExpandedChange?.(!props.expanded)}
           type="button"
         >
-          <ChevronRight
-            aria-hidden="true"
-            className={cn(
-              'mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground',
-              props.expanded && 'rotate-90'
-            )}
-            strokeWidth={1.8}
-          />
+          {props.disclosureIconPosition === 'start' ? (
+            <DisclosureChevron expanded={props.expanded} />
+          ) : null}
           <span className="min-w-0">
             <span className="block text-ui-lg font-semibold text-foreground">{props.title}</span>
             {props.description ? (
@@ -61,10 +61,26 @@ function SettingsSectionHeader(props: {
               </span>
             ) : null}
           </span>
+          {props.disclosureIconPosition === 'end' ? (
+            <DisclosureChevron expanded={props.expanded} />
+          ) : null}
         </button>
       </h3>
       {props.actions ? <div className="shrink-0">{props.actions}</div> : null}
     </div>
+  );
+}
+
+function DisclosureChevron({ expanded }: { expanded: boolean | undefined }) {
+  return (
+    <ChevronRight
+      aria-hidden="true"
+      className={cn(
+        'mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground',
+        expanded && 'rotate-90'
+      )}
+      strokeWidth={1.8}
+    />
   );
 }
 
@@ -98,6 +114,7 @@ export function SettingsSection({
   children,
   className,
   description,
+  disclosureIconPosition = 'start',
   expanded,
   onExpandedChange,
   searchRowId,
@@ -125,6 +142,7 @@ export function SettingsSection({
             contentId={contentId}
             description={description}
             descriptionId={descriptionId}
+            disclosureIconPosition={disclosureIconPosition}
             expanded={expanded}
             isDisclosure={isDisclosure}
             onExpandedChange={onExpandedChange}
@@ -138,7 +156,7 @@ export function SettingsSection({
         id={isDisclosure ? contentId : undefined}
         className={cn(
           'overflow-hidden',
-          isDisclosure && 'pl-7',
+          isDisclosure && disclosureIconPosition === 'start' && 'pl-7',
           '[&>[data-settings-row]+[data-settings-row]]:before:block'
         )}
       >

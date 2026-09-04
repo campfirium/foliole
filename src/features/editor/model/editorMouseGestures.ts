@@ -12,12 +12,6 @@ export interface EditorMouseGestureBinding extends EditorMouseGestureDefinition 
 }
 
 const DIRECTIONS: EditorMouseGestureDirection[] = ['up', 'down', 'left', 'right'];
-const OPPOSITE_DIRECTIONS: Record<EditorMouseGestureDirection, EditorMouseGestureDirection> = {
-  down: 'up',
-  left: 'right',
-  right: 'left',
-  up: 'down'
-};
 
 export function toEditorMouseGestureId(directions: EditorMouseGestureDirection[]) {
   return directions.join('-');
@@ -36,13 +30,11 @@ export function normalizeEditorMouseGestureDirections(
 export const BASE_EDITOR_MOUSE_GESTURES: EditorMouseGestureDefinition[] = DIRECTIONS.flatMap(
   (first) => [
     { directions: [first], gesture: first, isCustom: false },
-    ...DIRECTIONS.filter((second) => second !== first && second !== OPPOSITE_DIRECTIONS[first]).map(
-      (second) => ({
-        directions: [first, second],
-        gesture: `${first}-${second}`,
-        isCustom: false
-      })
-    )
+    ...DIRECTIONS.filter((second) => second !== first).map((second) => ({
+      directions: [first, second],
+      gesture: `${first}-${second}`,
+      isCustom: false
+    }))
   ]
 );
 

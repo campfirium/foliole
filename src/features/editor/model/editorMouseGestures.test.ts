@@ -9,21 +9,25 @@ import {
 } from './editorMouseGestures';
 
 describe('editorMouseGestures', () => {
-  it('provides all one-direction and non-reversing right-angle two-direction gestures', () => {
-    expect(BASE_EDITOR_MOUSE_GESTURES).toHaveLength(12);
+  it('groups every one- and two-direction gesture by its first direction', () => {
+    expect(BASE_EDITOR_MOUSE_GESTURES).toHaveLength(16);
     expect(BASE_EDITOR_MOUSE_GESTURES.map((item) => item.gesture)).toEqual([
       'up',
+      'up-down',
       'up-left',
       'up-right',
       'down',
+      'down-up',
       'down-left',
       'down-right',
       'left',
       'left-up',
       'left-down',
+      'left-right',
       'right',
       'right-up',
-      'right-down'
+      'right-down',
+      'right-left'
     ]);
   });
 

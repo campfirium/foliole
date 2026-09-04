@@ -69,3 +69,18 @@ it('marks Sync as not yet available only after opening its settings page', () =>
   expect(screen.getByRole('heading', { level: 2, name: 'Sync' })).toBeVisible();
   expect(screen.getByText('In development · Not yet available')).toBeVisible();
 });
+
+it('places the mouse gesture switch in the category header', () => {
+  renderWithMouseGestureProvider(
+    <SettingsPanel {...createProps()} requestedCategory="mouse-gestures" />
+  );
+
+  const title = screen.getByRole('heading', { level: 2, name: 'Mouse gestures' });
+  const toggle = screen.getByRole('switch', { name: 'Mouse gestures' });
+  expect(title.parentElement).toContainElement(toggle);
+  expect(screen.getByRole('button', { name: 'Gesture appearance' })).toHaveAttribute(
+    'aria-expanded',
+    'false'
+  );
+  expect(screen.getByRole('heading', { level: 3, name: 'Gesture actions' })).toBeVisible();
+});

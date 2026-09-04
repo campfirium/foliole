@@ -18,7 +18,7 @@ async function openChineseMouseGestureSettings(page: Page) {
 
 async function expectTwoBindingColumns(section: Locator) {
   const cells = section.locator('[data-mouse-gesture-binding]');
-  await expect(cells).toHaveCount(12);
+  await expect(cells).toHaveCount(16);
   const [first, second, third] = await Promise.all([
     cells.nth(0).boundingBox(),
     cells.nth(1).boundingBox(),
@@ -55,12 +55,18 @@ async function expectBoundedPicker(page: Page, section: Locator) {
   await expect(menu.getByText('后退', { exact: true })).toBeVisible();
   await expect(menu.getByText('Go Back', { exact: true })).toHaveCount(0);
   await expect(menu.getByText('Undo', { exact: true })).toHaveCount(0);
+  const commandList = menu.locator('[data-mouse-gesture-command-list="true"]');
+  await commandList.hover();
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => commandList.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
   return menu;
 }
 
 test('shows two binding columns and one bounded localized command picker', async ({ desktopWindow }, testInfo) => {
   const dialog = await openChineseMouseGestureSettings(desktopWindow);
   const section = dialog.getByRole('region', { name: '鼠标手势绑定设置区' });
+  await dialog.getByRole('button', { name: '手势外观' }).click();
+  await expect(dialog.getByRole('switch', { name: '显示方向提示' })).not.toBeChecked();
   await expectTwoBindingColumns(section);
   await attachScreenshot(dialog, testInfo, 't174-5-mouse-gesture-bindings-two-column');
 
@@ -73,6 +79,6 @@ test('shows two binding columns and one bounded localized command picker', async
   await last.scrollIntoViewIfNeeded();
   await last.getByRole('button').click();
   await expect(desktopWindow.getByLabel('筛选命令')).toHaveCount(1);
-  await dialog.getByRole('heading', { name: '绑定' }).click();
+  await dialog.getByRole('heading', { name: '手势动作' }).click();
   await expect(desktopWindow.getByLabel('筛选命令')).toHaveCount(0);
 });

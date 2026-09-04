@@ -2,6 +2,7 @@ import { fireEvent, render, screen, type RenderOptions } from '@testing-library/
 import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 
+import type { CommandPaletteItem } from '../../../shared/commands/types';
 import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
 import { DisplayScaleProvider } from '../context/DisplayScaleProvider';
@@ -43,23 +44,33 @@ function createHotkeySettings(overrides?: Partial<typeof DEFAULT_HOTKEY_SETTINGS
 
 export function renderWithMouseGestureProvider(
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'> & { hotkeySettings?: Partial<typeof DEFAULT_HOTKEY_SETTINGS> }
+  options?: Omit<RenderOptions, 'wrapper'> & {
+    hotkeySettings?: Partial<typeof DEFAULT_HOTKEY_SETTINGS>;
+    publicCommandItems?: CommandPaletteItem[];
+  }
 ) {
   const hotkeySettings = createHotkeySettings(options?.hotkeySettings);
+  const publicCommandItems = options?.publicCommandItems;
   const renderOptions = options ? { ...options } : {};
   delete renderOptions.hotkeySettings;
+  delete renderOptions.publicCommandItems;
   return render(ui, {
     wrapper: ({ children }) => (
       <LocalizationProvider>
         <AppearanceSettingsProvider>
           <DisplayScaleProvider>
-          <ExternalFoldersSettingsProvider>
-            <MouseGestureSettingsProvider>
-              <ReviewSchedulerSettingsProvider>
-                <HotkeySettingsProvider {...hotkeySettings}>{children}</HotkeySettingsProvider>
-              </ReviewSchedulerSettingsProvider>
-            </MouseGestureSettingsProvider>
-          </ExternalFoldersSettingsProvider>
+            <ExternalFoldersSettingsProvider>
+              <MouseGestureSettingsProvider>
+                <ReviewSchedulerSettingsProvider>
+                  <HotkeySettingsProvider
+                    {...hotkeySettings}
+                    {...(publicCommandItems ? { publicCommandItems } : {})}
+                  >
+                    {children}
+                  </HotkeySettingsProvider>
+                </ReviewSchedulerSettingsProvider>
+              </MouseGestureSettingsProvider>
+            </ExternalFoldersSettingsProvider>
           </DisplayScaleProvider>
         </AppearanceSettingsProvider>
       </LocalizationProvider>

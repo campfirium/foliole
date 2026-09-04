@@ -1,90 +1,13 @@
-import { act, fireEvent, render } from '@testing-library/react';
-import { useRef } from 'react';
+import { act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PublicCommandProvider } from '../../../shared/commands/publicCommandContext';
-import type { EditorMouseGestureBinding } from '../model/editorMouseGestures';
-import { DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS } from '../model/editorMouseGestureSettings';
-
-import { useEditorMouseGesture } from './useEditorMouseGesture';
-
-const CUSTOM_BINDING: EditorMouseGestureBinding = {
-  commandId: 'workspace.search',
-  directions: ['left', 'right', 'up'],
-  gesture: 'left-right-up',
-  isCustom: true
-};
-const UNBOUND_LEFT: EditorMouseGestureBinding = {
-  commandId: null,
-  directions: ['left'],
-  gesture: 'left',
-  isCustom: false
-};
-
-function GestureSurface(props: {
-  bindings: EditorMouseGestureBinding[];
-  enabled: boolean;
-  onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => void;
-}) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const gesture = useEditorMouseGesture(hostRef, props.bindings, {
-    ...DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
-    enabled: props.enabled
-  });
-  return (
-    <div
-      data-directions={gesture.directions.join('-')}
-      data-testid="surface"
-      onContextMenu={(event) => gesture.handleContextMenu(event, props.onContextMenu)}
-      onMouseDownCapture={gesture.handleMouseDownCapture}
-      ref={hostRef}
-    />
-  );
-}
-
-function renderSurface(options: {
-  bindings?: EditorMouseGestureBinding[];
-  enabled?: boolean;
-  runCommand?: (commandId: string) => void;
-} = {}) {
-  const onContextMenu = vi.fn<(event: React.MouseEvent<HTMLDivElement>) => void>();
-  const runCommand = options.runCommand ?? vi.fn();
-  const view = render(
-    <PublicCommandProvider items={[]} runCommand={runCommand}>
-      <GestureSurface
-        bindings={options.bindings ?? [CUSTOM_BINDING]}
-        enabled={options.enabled ?? true}
-        onContextMenu={onContextMenu}
-      />
-    </PublicCommandProvider>
-  );
-  const surface = view.getByTestId('surface');
-  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
-  return { ...view, onContextMenu, runCommand, surface };
-}
-
-function windowMouse(type: string, clientX: number, clientY: number, buttons = 2) {
-  act(() => {
-    window.dispatchEvent(new MouseEvent(type, {
-      bubbles: true,
-      button: 2,
-      buttons,
-      clientX,
-      clientY
-    }));
-  });
-}
-
-function rightDown(surface: HTMLElement, clientX = 200, clientY = 200) {
-  fireEvent.mouseDown(surface, { button: 2, buttons: 2, clientX, clientY });
-}
-
-function rightClick(surface: HTMLElement, order: 'context-first' | 'mouseup-first') {
-  rightDown(surface, 120, 140);
-  if (order === 'context-first') fireEvent.contextMenu(surface, { clientX: 120, clientY: 140 });
-  windowMouse('mouseup', 120, 140, 0);
-  if (order === 'mouseup-first') fireEvent.contextMenu(surface, { clientX: 120, clientY: 140 });
-}
+import {
+  dispatchWindowMouse as windowMouse,
+  renderGestureSurface as renderSurface,
+  rightClick,
+  rightDown,
+  UNBOUND_LEFT
+} from './useEditorMouseGesture.testSupport';
 
 describe('useEditorMouseGesture', () => {
   it('opens a normal menu once after release when contextmenu arrives first', () => {
@@ -123,6 +46,17 @@ describe('useEditorMouseGesture', () => {
 });
 
 describe('useEditorMouseGesture intent', () => {
+  it('anchors feedback to the press point while the pointer keeps moving', () => {
+    const { surface } = renderSurface({ bindings: [UNBOUND_LEFT] });
+    rightDown(surface, 200, 180);
+    const move = windowMouse('mousemove', 160, 180);
+    expect(move.defaultPrevented).toBe(true);
+    expect(surface).toHaveAttribute('data-hint-position', '200,180');
+    windowMouse('mousemove', 120, 180);
+    expect(surface).toHaveAttribute('data-hint-position', '200,180');
+    expect(windowMouse('mouseup', 120, 180, 0).defaultPrevented).toBe(true);
+  });
+
   it('locks gesture intent for an unbound direction and suppresses the menu', () => {
     const { onContextMenu, runCommand, surface } = renderSurface({ bindings: [UNBOUND_LEFT] });
     rightDown(surface);
@@ -155,6 +89,86 @@ describe('useEditorMouseGesture intent', () => {
     fireEvent.contextMenu(surface, { clientX: 200, clientY: 160 });
     expect(runCommand).toHaveBeenCalledWith('workspace.search');
     expect(onContextMenu).not.toHaveBeenCalled();
+  });
+
+  it('executes a gesture started in the editor when release crosses its edge', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{ ...UNBOUND_LEFT, commandId: 'document.scrollBottom' }],
+      runCommand
+    });
+    rightDown(surface, 40, 200);
+    windowMouse('mousemove', -20, 200);
+    windowMouse('mouseup', -20, 200, 0);
+    expect(runCommand).toHaveBeenCalledWith('document.scrollBottom');
+  });
+});
+
+describe('useEditorMouseGesture fast release sampling', () => {
+  it('finishes when right-button state is released despite an unreliable button number', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{ ...UNBOUND_LEFT, commandId: 'workspace.goBack' }],
+      runCommand
+    });
+    rightDown(surface, 200, 200);
+    windowMouse('mousemove', 150, 200);
+    windowMouse('mouseup', 150, 200, 0, 0);
+    expect(runCommand).toHaveBeenCalledWith('workspace.goBack');
+  });
+
+  it('finishes an active gesture despite stale mouseup button-state fields', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{ ...UNBOUND_LEFT, commandId: 'workspace.goBack' }],
+      runCommand
+    });
+    rightDown(surface, 200, 200);
+    windowMouse('mousemove', 150, 200);
+    windowMouse('mouseup', 150, 200, 2, 0);
+    expect(runCommand).toHaveBeenCalledWith('workspace.goBack');
+  });
+});
+
+describe('useEditorMouseGesture fast movement sampling', () => {
+  it('does not discard a gesture when one fast move reports no pressed buttons', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{ ...UNBOUND_LEFT, commandId: 'workspace.goBack' }],
+      runCommand
+    });
+    rightDown(surface, 200, 200);
+    windowMouse('mousemove', 150, 200, 0);
+    windowMouse('mouseup', 150, 200, 0);
+    expect(runCommand).toHaveBeenCalledWith('workspace.goBack');
+  });
+
+  it('includes a fast final segment that arrives only with mouse release', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{
+        commandId: 'document.scrollBottom',
+        directions: ['left', 'down'],
+        gesture: 'left-down',
+        isCustom: false
+      }],
+      runCommand
+    });
+    rightDown(surface, 200, 200);
+    windowMouse('mousemove', 150, 200);
+    windowMouse('mouseup', 150, 250, 0);
+    expect(runCommand).toHaveBeenCalledWith('document.scrollBottom');
+  });
+
+  it('recognizes a fast one-stroke gesture that first crosses the threshold on release', () => {
+    const runCommand = vi.fn();
+    const { surface } = renderSurface({
+      bindings: [{ ...UNBOUND_LEFT, commandId: 'workspace.goBack' }],
+      runCommand
+    });
+    rightDown(surface, 200, 200);
+    windowMouse('mouseup', 150, 200, 0);
+    expect(runCommand).toHaveBeenCalledWith('workspace.goBack');
   });
 });
 

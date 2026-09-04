@@ -10,6 +10,7 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
+import { SettingsMouseGesturesHeaderControl } from './sections/SettingsMouseGesturesSection';
 import {
   SettingsPanelDialog,
   type SettingsPanelCategoryProps
@@ -198,9 +199,13 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       description={props.description}
       headerNotice={props.headerNotice}
       hotkeys={hotkeys}
-      headerActions={props.activeCategory === 'companion-sync' ? (
-        <AppStatusBadge label={t('settings.companionSync.status.inDevelopment')} />
-      ) : undefined}
+      headerActions={
+        props.activeCategory === 'companion-sync' ? (
+          <AppStatusBadge label={t('settings.companionSync.status.inDevelopment')} />
+        ) : props.activeCategory === 'mouse-gestures' ? (
+          <SettingsMouseGesturesHeaderControl />
+        ) : undefined
+      }
       isBackdropTransparent={isBackdropTransparent}
       isPreviewActive={preview.isPreviewActive}
       onActiveResultIndexChange={search.setActiveResultIndex}

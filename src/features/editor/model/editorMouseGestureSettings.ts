@@ -34,7 +34,7 @@ export interface EditorMouseGestureSettings {
 export const DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS: EditorMouseGestureSettings = {
   bindings: DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
   enabled: true,
-  hintVisible: true,
+  hintVisible: false,
   segmentThresholdPx: 18,
   trailColor: DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR,
   trailLineWidth: 3,
@@ -68,7 +68,7 @@ export function getEditorMouseGestureSettings(): EditorMouseGestureSettings {
     ),
     hintVisible: normalizeBoolean(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureHintVisible),
-      true
+      false
     ),
     segmentThresholdPx: normalizeNumber(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureSegmentThreshold),
