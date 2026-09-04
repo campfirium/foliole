@@ -35,12 +35,19 @@ function writeBlobOnlyLocalEdit(database: DatabaseSync, nodeId: string, content:
     .run(hash, now, nodeId);
 }
 
-function findImportedNodeId(databasePath: string) {
+function prepareBlobOnlyLocalEdit(databasePath: string) {
   const database = openDatabase(databasePath);
   const row = database.prepare('SELECT id FROM nodes WHERE title = ? AND deleted_at IS NULL')
     .get('T175 Article') as { id: string } | undefined;
+  if (!row) throw new Error('missing imported Readwise article');
+  const firstBody = database.prepare(
+    `SELECT CAST(cbd.data AS TEXT) AS body
+     FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.id = ?`
+  ).get(row.id) as { body: string };
+  writeBlobOnlyLocalEdit(database, row.id, `${firstBody.body}\n\n${LOCAL_APPENDIX}`);
   database.close();
-  return row?.id ?? null;
+  return row.id;
 }
 
 async function writeReadwiseFixture(readwiseRoot: string, includeSecondHighlight: boolean) {
@@ -98,16 +105,19 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   await desktopWindow.evaluate((nextSettings) => (
     window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings })
   ), settings);
-  await expect.poll(() => findImportedNodeId(databasePath), { timeout: 10_000 }).not.toBeNull();
-  const database = openDatabase(databasePath);
-  const imported = { id: findImportedNodeId(databasePath) as string };
-  const firstBody = database.prepare(
-    `SELECT CAST(cbd.data AS TEXT) AS body
-     FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id = ?`
-  ).get(imported.id) as { body: string };
-  writeBlobOnlyLocalEdit(database, imported.id, `${firstBody.body}\n\n${LOCAL_APPENDIX}`);
-  database.close();
+  await expect.poll(async () => desktopWindow.evaluate(async () => {
+    try {
+      await window.electronAPI.invoke('load_workspace_snapshot', {});
+      return true;
+    } catch {
+      return false;
+    }
+  }), { timeout: 10_000 }).toBe(true);
+  const firstRun = await desktopWindow.evaluate((nextSettings) => (
+    window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
+  ), settings);
+  expect(firstRun).toMatchObject({ imported_count: 1, status: 'completed' });
+  const imported = { id: prepareBlobOnlyLocalEdit(databasePath) };
 
   await writeReadwiseFixture(readwiseRoot, true);
   const refreshed = await desktopWindow.evaluate((nextSettings) => (
