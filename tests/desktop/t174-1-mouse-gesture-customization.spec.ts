@@ -120,6 +120,7 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     await settings.screenshot({ path: screenshotPath });
     await testInfo.attach('mouse-gesture-settings', { path: screenshotPath });
     await desktopWindow.keyboard.press('Escape');
+    await expect(settings).toBeHidden();
 
     await seedGestureWorkspace(desktopWindow);
     await drawGesture(desktopWindow, [[-80, 0]]);
