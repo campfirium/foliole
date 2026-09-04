@@ -14,6 +14,17 @@ const CUSTOM_COMMAND_ID = 'workspace.openSearch';
 const LANGUAGE_KEY = 'foliole-app-language';
 const MOUSE_GESTURE_BINDINGS_KEY = 'foliole-mouse-gesture-bindings-v1';
 
+async function expectPersistentCustomGesture(page: DesktopSession['firstWindow']) {
+  await expect.poll(() => page.evaluate(({ bindingsKey, commandId }) => {
+    const raw = window.localStorage.getItem(bindingsKey);
+    if (!raw) return false;
+    const bindings = JSON.parse(raw) as Array<{ commandId?: unknown; gesture?: unknown }>;
+    return bindings.some((binding) =>
+      binding.commandId === commandId && binding.gesture === 'left-right-up'
+    );
+  }, { bindingsKey: MOUSE_GESTURE_BINDINGS_KEY, commandId: CUSTOM_COMMAND_ID })).toBe(true);
+}
+
 async function focusVisibleSession(session: Awaited<ReturnType<typeof launchDesktopSession>>) {
   if (process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1') return;
   const target = await session.electronApp.browserWindow(session.firstWindow);
@@ -50,14 +61,7 @@ async function configurePersistentCustomGesture(page: DesktopSession['firstWindo
   });
   await page.reload();
   await expectWorkspaceShell(page);
-  await expect.poll(() => page.evaluate(({ bindingsKey, commandId }) => {
-    const raw = window.localStorage.getItem(bindingsKey);
-    if (!raw) return false;
-    const bindings = JSON.parse(raw) as Array<{ commandId?: unknown; gesture?: unknown }>;
-    return bindings.some((binding) =>
-      binding.commandId === commandId && binding.gesture === 'left-right-up'
-    );
-  }, { bindingsKey: MOUSE_GESTURE_BINDINGS_KEY, commandId: CUSTOM_COMMAND_ID })).toBe(true);
+  await expectPersistentCustomGesture(page);
 }
 
 async function seedGestureWorkspace(page: DesktopSession['firstWindow']) {
@@ -140,6 +144,7 @@ test('customizes mouse gestures and preserves execution across relaunch', async 
     secondSession = await launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } });
     await focusVisibleSession(secondSession);
     await expectWorkspaceShell(secondSession.firstWindow);
+    await expectPersistentCustomGesture(secondSession.firstWindow);
     await expectCustomSearchGesture(secondSession.firstWindow);
   } finally {
     await secondSession?.close();
