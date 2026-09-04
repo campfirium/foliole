@@ -79,7 +79,16 @@ it('keeps workspace ownership independent from content history and localizes con
     owner: 'workspace',
     t
   });
+  const localizedWorkspace = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-1',
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: history,
+    owner: 'workspace',
+    t: zhHans
+  });
 
   expect(content.undoWorkspaceActionTitle).toBe('撤销创建批注');
   expect(workspace.canUndoWorkspaceAction).toBe(false);
+  expect(localizedWorkspace.undoWorkspaceActionTitle).toBe('撤销');
+  expect(localizedWorkspace.redoWorkspaceActionTitle).toBe('重做');
 });

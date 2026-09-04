@@ -24,6 +24,8 @@ import { MouseGestureGlyph } from './MouseGestureGlyph';
 import { MouseGestureRecordingRow } from './MouseGestureRecordingRow';
 import { useMouseGestureRecorder } from './useMouseGestureRecorder';
 
+import { cn } from '@/shared/lib/utils';
+
 const DIRECTION_KEYS: Record<EditorMouseGestureDirection, TranslationKey> = {
   down: 'settings.mouseGestures.direction.down',
   left: 'settings.mouseGestures.direction.left',
@@ -44,29 +46,44 @@ function matchesCommand(item: CommandPaletteItem, query: string) {
 function GestureBindingRow(props: {
   binding: EditorMouseGestureBinding;
   commands: CommandPaletteItem[];
+  index: number;
+  open: boolean;
   onChange: (commandId: string | null) => void;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslation();
   const label = props.binding.directions
     .map((direction) => t(DIRECTION_KEYS[direction]))
     .join(' → ');
   return (
-    <div className="grid grid-cols-[minmax(100px,180px)_minmax(0,1fr)] items-center gap-4 border-t border-settings-divider/55 px-5 py-3 first:border-t-0">
+    <div className={bindingCellClassName(props.index)} data-mouse-gesture-binding={props.binding.gesture}>
       <MouseGestureGlyph directions={props.binding.directions} label={label} />
       <MouseGestureCommandPicker
         commandId={props.binding.commandId}
         commands={props.commands}
         gestureLabel={label}
+        open={props.open}
         onChange={props.onChange}
+        onOpenChange={props.onOpenChange}
       />
     </div>
   );
 }
 
-function AddGestureRow(props: { command: CommandPaletteItem; onStart: () => void }) {
+function bindingCellClassName(index: number) {
+  return cn(
+    'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-5 py-3',
+    index > 0 && 'border-t border-settings-divider/55',
+    index < 2 && 'lg:border-t-0',
+    index >= 2 && 'lg:border-t lg:border-settings-divider/55',
+    index % 2 === 0 && 'lg:border-r lg:border-settings-divider/55'
+  );
+}
+
+function AddGestureRow(props: { command: CommandPaletteItem; index: number; onStart: () => void }) {
   const t = useTranslation();
   return (
-    <div className="grid grid-cols-[minmax(100px,180px)_minmax(0,1fr)] items-center gap-4 border-t border-settings-divider/55 px-5 py-3 first:border-t-0">
+    <div className={bindingCellClassName(props.index)}>
       <button
         aria-label={t('settings.mouseGestures.record.add', { command: props.command.title })}
         className="justify-self-start"
@@ -92,6 +109,7 @@ function useMouseGestureBindingView() {
   const commands = usePublicCommands().items;
   const gestureSettings = useMouseGestureSettings();
   const [query, setQuery] = useState('');
+  const [openGestureId, setOpenGestureId] = useState<string | null>(null);
   const recorder = useMouseGestureRecorder({
     bindings: gestureSettings.bindings,
     onSave: gestureSettings.addCustomGesture,
@@ -116,7 +134,7 @@ function useMouseGestureBindingView() {
       )
     : [];
   const recordingCommand = commands.find((command) => command.id === recorder.commandId);
-  return { commands, gestureSettings, query, recorder, recordingCommand, rows, setQuery, unboundMatches };
+  return { commands, gestureSettings, openGestureId, query, recorder, recordingCommand, rows, setOpenGestureId, setQuery, unboundMatches };
 }
 
 function BindingResetButton(props: {
@@ -157,24 +175,26 @@ function BindingRows(props: {
   recorder: ReturnType<typeof useMouseGestureRecorder>;
   recordingCommand: CommandPaletteItem | undefined;
   rows: EditorMouseGestureBinding[];
+  openGestureId: string | null;
+  setOpenGestureId: (gestureId: string | null) => void;
   unboundMatches: CommandPaletteItem[];
 }) {
   const t = useTranslation();
   return (
-    <>
+    <div className="grid grid-cols-1 lg:grid-cols-2" data-mouse-gesture-binding-grid="true">
       {props.recordingCommand ? (
-        <MouseGestureRecordingRow command={props.recordingCommand} directions={props.recorder.directions} error={props.recorder.error} onCancel={props.recorder.cancel} onMouseDown={props.recorder.beginDrawing} onSave={props.recorder.save} />
+        <div className="lg:col-span-2"><MouseGestureRecordingRow command={props.recordingCommand} directions={props.recorder.directions} error={props.recorder.error} onCancel={props.recorder.cancel} onMouseDown={props.recorder.beginDrawing} onSave={props.recorder.save} /></div>
       ) : null}
-      {props.rows.map((binding) => (
-        <GestureBindingRow binding={binding} commands={props.commands} key={binding.gesture} onChange={(commandId) => props.gestureSettings.setBinding(binding.gesture, commandId)} />
+      {props.rows.map((binding, index) => (
+        <GestureBindingRow binding={binding} commands={props.commands} index={index} key={binding.gesture} open={props.openGestureId === binding.gesture} onChange={(commandId) => props.gestureSettings.setBinding(binding.gesture, commandId)} onOpenChange={(open) => props.setOpenGestureId(open ? binding.gesture : null)} />
       ))}
-      {props.unboundMatches.map((command) => (
-        <AddGestureRow command={command} key={command.id} onStart={() => props.recorder.start(command.id)} />
+      {props.unboundMatches.map((command, index) => (
+        <AddGestureRow command={command} index={props.rows.length + index} key={command.id} onStart={() => props.recorder.start(command.id)} />
       ))}
       {props.query.trim() && !props.rows.length && !props.unboundMatches.length ? (
-        <SettingsEmptyState description="" title={t('settings.mouseGestures.bindings.noResults')} />
+        <div className="lg:col-span-2"><SettingsEmptyState description="" title={t('settings.mouseGestures.bindings.noResults')} /></div>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -194,7 +214,7 @@ export function SettingsMouseGestureBindings() {
       actions={
         <label className="relative block w-64">
           <Search aria-hidden="true" className="absolute left-2.5 top-2.5 text-muted-foreground" size={16} />
-          <input aria-label={t('settings.mouseGestures.bindings.search')} className={settingsFieldClassName('pl-8')} onChange={(event) => view.setQuery(event.target.value)} placeholder={t('settings.mouseGestures.bindings.search')} value={view.query} />
+          <input aria-label={t('settings.mouseGestures.bindings.search')} className={settingsFieldClassName('pl-8')} onChange={(event) => { view.setOpenGestureId(null); view.setQuery(event.target.value); }} placeholder={t('settings.mouseGestures.bindings.search')} value={view.query} />
         </label>
       }
       ariaLabel={t('settings.mouseGestures.bindings.sectionAria')}

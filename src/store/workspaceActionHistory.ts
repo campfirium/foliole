@@ -1,3 +1,5 @@
+import type { Translate } from '../shared/localization/LocalizationProvider';
+
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
 import { applyWorkspaceHistoryEntry } from './workspaceHistoryEntryApply';
 import type { WorkspaceState } from './workspaceStore';
@@ -169,15 +171,17 @@ function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet,
   };
 }
 
-export function getWorkspaceUndoTitle(history: WorkspaceActionHistoryState) {
+export function getWorkspaceUndoTitle(history: WorkspaceActionHistoryState, t?: Translate) {
   const entry = history.pendingAction?.entry ?? history.pendingCreate?.entry ??
     history.undoStack[history.undoStack.length - 1] ?? null;
-  return entry ? `Undo ${entry.title}` : 'Undo';
+  if (!t) return entry ? `Undo ${entry.title}` : 'Undo';
+  return entry ? t('desktop.command.undoOperation', { operation: entry.title }) : t('desktop.command.undo');
 }
 
-export function getWorkspaceRedoTitle(history: WorkspaceActionHistoryState) {
+export function getWorkspaceRedoTitle(history: WorkspaceActionHistoryState, t?: Translate) {
   const entry = history.redoStack[history.redoStack.length - 1] ?? null;
-  return entry ? `Redo ${entry.title}` : 'Redo';
+  if (!t) return entry ? `Redo ${entry.title}` : 'Redo';
+  return entry ? t('desktop.command.redoOperation', { operation: entry.title }) : t('desktop.command.redo');
 }
 
 export function createWorkspaceActionHistoryActions(set: WorkspaceSet, get: WorkspaceGet) {

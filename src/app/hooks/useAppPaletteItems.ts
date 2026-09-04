@@ -82,10 +82,10 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
         ),
     redoWorkspaceActionTitle: contentOwner
       ? getEditorOperationRedoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
-      : getWorkspaceRedoTitle(args.appActionHistory),
+      : getWorkspaceRedoTitle(args.appActionHistory, args.t),
     undoWorkspaceActionTitle: contentOwner
       ? getEditorOperationUndoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
-      : getWorkspaceUndoTitle(args.appActionHistory)
+      : getWorkspaceUndoTitle(args.appActionHistory, args.t)
   };
 }
 

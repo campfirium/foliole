@@ -54,6 +54,10 @@ function renderSection() {
   );
 }
 
+function openCommandPicker(name: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name }), { key: 'Enter' });
+}
+
 function openRecording(command: string) {
   fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: command } });
   fireEvent.click(screen.getByRole('button', { name: `Record gesture for ${command}` }));
@@ -109,11 +113,11 @@ describe('SettingsMouseGesturesSection', () => {
 
   it('changes a binding through a searchable projection of the public command catalog', () => {
     renderSection();
-    fireEvent.click(screen.getByRole('button', { name: 'Choose command for Up' }));
+    openCommandPicker('Choose command for Up');
     fireEvent.change(screen.getByLabelText('Filter commands'), { target: { value: 'palette' } });
     const picker = screen.getByLabelText('Filter commands').parentElement
       ?.parentElement as HTMLElement;
-    fireEvent.click(within(picker).getByRole('button', { name: /Command Palette/ }));
+    fireEvent.click(within(picker).getByRole('menuitem', { name: /Command Palette/ }));
     expect(screen.getByRole('button', { name: 'Choose command for Up' })).toHaveTextContent(
       'Command Palette'
     );
@@ -121,10 +125,10 @@ describe('SettingsMouseGesturesSection', () => {
 
   it('confirms before restoring only the default gesture bindings', async () => {
     renderSection();
-    fireEvent.click(screen.getByRole('button', { name: 'Choose command for Up' }));
+    openCommandPicker('Choose command for Up');
     const picker = screen.getByLabelText('Filter commands').parentElement
       ?.parentElement as HTMLElement;
-    fireEvent.click(within(picker).getByRole('button', { name: /Command Palette/ }));
+    fireEvent.click(within(picker).getByRole('menuitem', { name: /Command Palette/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Restore default bindings' }));
     const dialog = screen
       .getByText('Restore default gesture bindings?')
@@ -135,6 +139,27 @@ describe('SettingsMouseGesturesSection', () => {
         'Unbound'
       )
     );
+  });
+
+});
+
+describe('mouse gesture command picker', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('keeps one picker open and closes it with Escape', () => {
+    renderSection();
+    openCommandPicker('Choose command for Up');
+    expect(screen.getAllByLabelText('Filter commands')).toHaveLength(1);
+
+    openCommandPicker('Choose command for Down');
+    expect(screen.getAllByLabelText('Filter commands')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Choose command for Down' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByLabelText('Filter commands')).not.toBeInTheDocument();
   });
 });
 
