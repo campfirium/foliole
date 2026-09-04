@@ -16,6 +16,7 @@ describe('iOS Sync Group participation host contract', () => {
       expect(participation).toContain(`@objc func ${method}`);
     }
     expect(participation).toContain('UserDefaults.standard');
+    expect(participation.match(/Task \{ @MainActor in/gu)).toHaveLength(3);
     expect(participation).toContain('UIApplication.shared.applicationState == .active');
     expect(participation).toContain('"participating": lifecycleActive && enabled && !paused');
   });

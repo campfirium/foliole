@@ -35,7 +35,9 @@ private enum FolioleCompanionSyncParticipation {
 
 extension FolioleCompanionSyncPlugin {
     @objc func loadSyncParticipationState(_ call: CAPPluginCall) {
-        call.resolve(FolioleCompanionSyncParticipation.load())
+        Task { @MainActor in
+            call.resolve(FolioleCompanionSyncParticipation.load())
+        }
     }
 
     @objc func setSyncEnabled(_ call: CAPPluginCall) {
@@ -43,7 +45,9 @@ extension FolioleCompanionSyncPlugin {
             call.reject("sync_enabled is required")
             return
         }
-        call.resolve(FolioleCompanionSyncParticipation.setEnabled(value))
+        Task { @MainActor in
+            call.resolve(FolioleCompanionSyncParticipation.setEnabled(value))
+        }
     }
 
     @objc func setSyncPaused(_ call: CAPPluginCall) {
@@ -51,6 +55,8 @@ extension FolioleCompanionSyncPlugin {
             call.reject("sync_paused is required")
             return
         }
-        call.resolve(FolioleCompanionSyncParticipation.setPaused(value))
+        Task { @MainActor in
+            call.resolve(FolioleCompanionSyncParticipation.setPaused(value))
+        }
     }
 }
