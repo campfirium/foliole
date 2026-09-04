@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { resolveInitialSearchFrom } from '../../lib/core/database/importHighlightAnchors.js';
+import { resolveImportedBodySearchFrom } from '../../lib/core/database/importHighlightBodyMatching.js';
 
 import type { AnchorRepairPlan, TextLocator } from './readwise-anchor-repair-types.js';
 
@@ -80,7 +80,7 @@ export function verifyAnchorRepairState(
       throw new Error(`anchor_repair_snapshot_failed:${mutation.childId}`);
     }
     if (mutation.nextStatus === 'resolved') {
-      const visibleFrom = resolveInitialSearchFrom(row.parent_body);
+      const visibleFrom = resolveImportedBodySearchFrom(row.parent_body);
       const valid = readLocators(row.anchor_link).every((range) => range.from >= visibleFrom &&
         row.parent_body.slice(range.from, range.to) === range.originalText);
       if (!valid) throw new Error(`anchor_repair_visible_locator_failed:${mutation.childId}`);

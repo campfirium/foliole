@@ -7,105 +7,16 @@ import {
   prepareHighlightExcerptCandidate
 } from '../import/highlightExcerptMatch.js';
 
+import {
+  classifyImportedBodyCandidate,
+  findUniqueAvailableImportedBodyOccurrence
+} from './importHighlightBodyMatching.js';
+
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
   from?: number;
   kind: 'highlight' | 'cloze';
   to?: number;
-}
-
-function normalizeLineEndings(value: string) {
-  return value.replace(/\r\n?/g, '\n');
-}
-
-export function resolveInitialSearchFrom(content: string) {
-  const frontmatterMatch = /^---\n[\s\S]*?\n---(?:\n+|$)/.exec(normalizeLineEndings(content));
-  return frontmatterMatch ? frontmatterMatch[0].length : 0;
-}
-
-function normalizeLooseWhitespaceWithMap(value: string) {
-  const raw = normalizeLineEndings(value);
-  let normalized = '';
-  const rawIndexes: number[] = [];
-  let pendingWhitespaceStart: number | null = null;
-
-  for (let index = 0; index < raw.length; index += 1) {
-    const character = raw[index];
-    if (character === undefined) {
-      continue;
-    }
-    if (/\s/.test(character)) {
-      if (pendingWhitespaceStart === null) {
-        pendingWhitespaceStart = index;
-      }
-      continue;
-    }
-
-    if (pendingWhitespaceStart !== null && normalized.length > 0) {
-      normalized += ' ';
-      rawIndexes.push(pendingWhitespaceStart);
-      pendingWhitespaceStart = null;
-    }
-
-    normalized += character;
-    rawIndexes.push(index);
-  }
-
-  return { normalized: normalized.trim(), rawIndexes };
-}
-
-function findAvailableOccurrence(
-  content: string,
-  excerpt: string,
-  minSearchFrom: number,
-  searchFrom: number,
-  occupiedRanges: Array<{ from: number; to: number }>
-) {
-  const attempts = [Math.max(searchFrom, minSearchFrom), minSearchFrom];
-  for (const startFrom of attempts) {
-    let startIndex = startFrom;
-    while (startIndex <= content.length) {
-      const foundAt = content.indexOf(excerpt, startIndex);
-      if (foundAt < 0) {
-        break;
-      }
-      const candidate = { from: foundAt, to: foundAt + excerpt.length };
-      const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
-      if (!overlaps) {
-        return candidate;
-      }
-      startIndex = foundAt + 1;
-    }
-  }
-  const normalizedContent = normalizeLooseWhitespaceWithMap(content);
-  const normalizedExcerpt = normalizeLooseWhitespaceWithMap(excerpt).normalized;
-  if (!normalizedContent.normalized || !normalizedExcerpt) {
-    return null;
-  }
-  for (const startFrom of attempts) {
-    let normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= Math.max(startFrom, minSearchFrom));
-    if (normalizedStartIndex < 0) {
-      normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= minSearchFrom);
-    }
-    while (normalizedStartIndex <= normalizedContent.normalized.length) {
-      const foundAt = normalizedContent.normalized.indexOf(normalizedExcerpt, normalizedStartIndex);
-      if (foundAt < 0) {
-        break;
-      }
-      const rawStart = normalizedContent.rawIndexes[foundAt];
-      const rawEnd = normalizedContent.rawIndexes[foundAt + normalizedExcerpt.length - 1];
-      if (rawStart === undefined || rawEnd === undefined) {
-        break;
-      }
-      const candidate = { from: rawStart, to: rawEnd + 1 };
-      const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
-      if (!overlaps) {
-        return candidate;
-      }
-      normalizedStartIndex = foundAt + 1;
-    }
-  }
-  return null;
 }
 
 function isUntrimmedLocatorCandidate(candidate: string, locatorText: string, highlightText: string) {
@@ -169,8 +80,6 @@ export function applyImportedHighlightAnchors(input: {
     return { content, highlights: [] as AnchoredImportedHighlightRecord[] };
   }
 
-  const minSearchFrom = resolveInitialSearchFrom(content);
-  let searchFrom = minSearchFrom;
   const occupiedRanges: Array<{ from: number; to: number }> = [];
   const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
   const locator = createContextExcerptLocator(content);
@@ -179,14 +88,17 @@ export function applyImportedHighlightAnchors(input: {
     if (!highlight.content.trim()) {
       return;
     }
+    const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
+    if (classifyImportedBodyCandidate(content, highlightText).status === 'ambiguous') {
+      return;
+    }
     const range = collectAnchorExcerptCandidates(locator, highlight)
-      .map((excerpt) => findAvailableOccurrence(content, excerpt, minSearchFrom, searchFrom, occupiedRanges))
+      .map((excerpt) => findUniqueAvailableImportedBodyOccurrence(content, excerpt, occupiedRanges))
       .find((candidate) => candidate !== null);
     if (!range) {
       return;
     }
     const anchorId = `imported-highlight-${crypto.randomUUID()}`;
-    searchFrom = range.to;
     occupiedRanges.push(range);
     locatedHighlights.push({
       ...highlight,

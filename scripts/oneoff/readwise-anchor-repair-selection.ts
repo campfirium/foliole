@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { resolveInitialSearchFrom } from '../../lib/core/database/importHighlightAnchors.js';
+import {
+  classifyImportedBodyOccurrence,
+  resolveImportedBodySearchFrom
+} from '../../lib/core/database/importHighlightBodyMatching.js';
 
 import type {
   AnchorRepairMutation,
@@ -52,19 +55,6 @@ function readLocators(value: unknown): TextLocator[] | null {
     : null;
 }
 
-function countMatches(content: string, text: string, from: number) {
-  if (!text) return { count: 0, first: -1 };
-  let count = 0;
-  let first = -1;
-  let index = content.indexOf(text, from);
-  while (index >= 0) {
-    if (first < 0) first = index;
-    count += 1;
-    index = content.indexOf(text, index + 1);
-  }
-  return { count, first };
-}
-
 function withLocators(anchor: RawAnchor, locators: TextLocator[]) {
   const current = readLocators(anchor.locator);
   const locator = current?.length === 1 ? locators[0] : { ranges: locators };
@@ -112,7 +102,7 @@ function addAnchorDecision(input: {
 }) {
   const parsed = parseAnchor(input.child.anchor_link);
   const locators = parsed ? readLocators(parsed.locator) : null;
-  const visibleFrom = resolveInitialSearchFrom(input.parent.body);
+  const visibleFrom = resolveImportedBodySearchFrom(input.parent.body);
   const manual = (reason: string) => input.partial.manualReview.push({
     childId: input.anchor.childId, parentId: input.parentId, reason, title: input.parent.title
   });
@@ -136,11 +126,11 @@ function addAnchorDecision(input: {
   if (!sourceSnapshotMatches(input.child, input.anchor, input.sourceGeneratedAt)) {
     return manual('child_changed_after_t175_3');
   }
-  const matches = locators.map((range) => countMatches(input.parent.body, range.originalText, visibleFrom));
-  const missing = matches.some((match) => match.count === 0);
-  const ambiguous = !missing && matches.some((match) => match.count > 1);
+  const matches = locators.map((range) => classifyImportedBodyOccurrence(input.parent.body, range.originalText));
+  const missing = matches.some((match) => match.status === 'missing');
+  const ambiguous = !missing && matches.some((match) => match.status === 'ambiguous');
   const nextRanges = missing || ambiguous ? null : locators.map((range, index) => ({
-    ...range, from: matches[index]?.first ?? -1, to: (matches[index]?.first ?? -1) + range.originalText.length
+    ...range, from: matches[index]?.range?.from ?? -1, to: matches[index]?.range?.to ?? -1
   }));
   const nextStatus = missing ? 'unmapped_missing' : ambiguous ? 'unmapped_ambiguous' : 'resolved';
   const mutation: AnchorRepairMutation = {

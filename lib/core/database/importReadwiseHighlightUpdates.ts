@@ -15,6 +15,19 @@ function toUnmatchedHighlightRecords(input: PreparedImportRecord, existingHighli
     .map((highlight) => ({ content: highlight.content, label: highlight.label, locatorText: null }));
 }
 
+function toUnanchoredMatchedHighlightRecords(
+  highlights: NonNullable<PreparedImportRecord['matchedHighlights']>,
+  anchoredContents: Set<string>,
+  existingHighlightContentSet: Set<string>
+) {
+  return highlights
+    .filter((highlight) => {
+      const normalized = normalizeImportedHighlightContent(highlight.content);
+      return normalized.length > 0 && !anchoredContents.has(normalized) && !existingHighlightContentSet.has(normalized);
+    })
+    .map((highlight) => ({ content: highlight.content, label: highlight.label, locatorText: null }));
+}
+
 function extractTopFrontmatter(content: string) {
   const normalized = content.replace(/\r\n?/g, '\n');
   const match = /^---\n[\s\S]*?\n---(?:\n+|$)/.exec(normalized);
@@ -63,11 +76,15 @@ export function resolveReadwiseHighlightUpdate(input: {
     content,
     highlights: newMatchedHighlights
   });
+  const anchoredContents = new Set(
+    anchoredImport.highlights.map((highlight) => normalizeImportedHighlightContent(highlight.content))
+  );
 
   return {
     content: anchoredImport.content,
     highlights: [
       ...anchoredImport.highlights,
+      ...toUnanchoredMatchedHighlightRecords(newMatchedHighlights, anchoredContents, existingHighlightContentSet),
       ...toUnmatchedHighlightRecords(input.prepared, existingHighlightContentSet)
     ]
   };

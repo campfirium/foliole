@@ -116,6 +116,18 @@ it('marks a frontmatter-only match unmapped without changing the highlight conte
     content: before?.content });
 });
 
+it('uses the shared imported-body boundary for generated H1 locators', () => {
+  const titleOnly = seedRecovered({ bodyText: '# Heading target\n\nVisible body.\n',
+    id: 'article-heading-only', visibleText: 'Heading target' });
+  const firstPlan = applyPlan(titleOnly.receipt).plan;
+  expect(firstPlan.unmap).toMatchObject([{ childId: titleOnly.childId, nextStatus: 'unmapped_missing' }]);
+
+  const titleAndBody = seedRecovered({ bodyText: '# Shared target\n\nShared target appears in body.\n',
+    id: 'article-heading-and-body', visibleText: 'Shared target' });
+  const secondPlan = applyPlan(titleAndBody.receipt).plan;
+  expect(secondPlan.apply[0]?.newRanges?.[0]?.from).toBe(titleAndBody.body.lastIndexOf('Shared target'));
+});
+
 it('marks multiple visible matches ambiguous and never scans nodes outside the source receipt', () => {
   const seeded = seedRecovered({ bodyText: [
     '---', 'summary: Repeated text.', '---', '', 'Repeated text.', '', 'Repeated text.'
