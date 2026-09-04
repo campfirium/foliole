@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { isFourWayNavigationCommandId } from '../../../lib/core/nodes/fourWayNavigationCommands';
 
 function hasOpenModalSurface() {
-  return Boolean(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]'));
+  return Boolean(document.querySelector(
+    'dialog[open], [role="dialog"][aria-modal="true"]:not([data-state="closed"])'
+  ));
 }
 
 export function useFourWayNavigationCommandGate(args: {

@@ -44,6 +44,24 @@ it('blocks native or DOM navigation while an app modal surface is open', () => {
   expect(runCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleList);
 });
 
+it('allows navigation while a dismissed modal finishes its exit animation', () => {
+  const modal = document.createElement('section');
+  modal.dataset.navigationGateTest = 'true';
+  modal.dataset.state = 'closed';
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('role', 'dialog');
+  document.body.append(modal);
+  const runCommand = vi.fn();
+  const { result } = renderHook(() => useFourWayNavigationCommandGate({
+    isCommandSurfaceOpen: false,
+    runCommand
+  }));
+
+  result.current(APP_COMMAND_IDS.goBack);
+
+  expect(runCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.goBack);
+});
+
 it('blocks four-way navigation while a command surface is open', () => {
   const runCommand = vi.fn();
   const { result } = renderHook(() => useFourWayNavigationCommandGate({
