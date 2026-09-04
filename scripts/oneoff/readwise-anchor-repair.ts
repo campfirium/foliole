@@ -51,6 +51,14 @@ function hostName(driver: ReturnType<typeof createBetterSqlite3Driver>) {
   return value;
 }
 
+function assertCurrentBaselineScope(receipt: BodyRecoveryReceipt) {
+  const parentCount = receipt.plan.apply.length;
+  const anchorCount = receipt.plan.apply.reduce((sum, candidate) => sum + candidate.anchors.length, 0);
+  if (parentCount !== 157 || anchorCount !== 312) {
+    throw new Error(`t175_6_scope_mismatch:parents=${parentCount}:anchors=${anchorCount}`);
+  }
+}
+
 async function main() {
   const dbPath = requiredAbsolutePath('--db-path');
   const sourceReceiptPath = requiredAbsolutePath('--source-receipt');
@@ -58,12 +66,14 @@ async function main() {
   const apply = process.argv.includes('--apply');
   const now = new Date().toISOString();
   const sourceReceipt = await readReceipt(sourceReceiptPath, dbPath);
+  const trustCurrentBaseline = process.argv.includes('--t175-6-current-baseline');
+  if (trustCurrentBaseline) assertCurrentBaselineScope(sourceReceipt);
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma('foreign_keys = ON');
   const driver = createBetterSqlite3Driver(sqlite);
   try {
     assertSqliteIntegrity(sqlite);
-    const plan = buildAnchorRepairPlan(driver, sourceReceipt, now);
+    const plan = buildAnchorRepairPlan(driver, sourceReceipt, now, { trustCurrentBaseline });
     if (!apply) {
       const receipt = await writeAnchorRepairReceipts({ dbPath, mode: 'dry-run', outputDir, plan, sourceReceiptPath });
       console.log(JSON.stringify({ counts: { manualReview: plan.manualReview.length, noRepair: plan.noRepair.length,

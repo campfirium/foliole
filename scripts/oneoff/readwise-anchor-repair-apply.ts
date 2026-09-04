@@ -10,17 +10,19 @@ export interface AnchorRepairApplyResult {
 function assertMutationInput(driver: DatabaseDriver, mutation: AnchorRepairMutation) {
   const row = driver.queryOne<{
     anchor_link: string;
+    anchor_resolution_status: string | null;
     body_blob_hash: string;
     child_version_id: string;
     parent_version_id: string;
   }>(
-    `SELECT c.anchor_link, c.current_version_id AS child_version_id,
+    `SELECT c.anchor_link, c.anchor_resolution_status, c.current_version_id AS child_version_id,
             p.body_blob_hash, p.current_version_id AS parent_version_id
      FROM nodes c JOIN nodes p ON p.id = c.parent_id
      WHERE c.id = ? AND p.id = ? AND c.deleted_at IS NULL AND p.deleted_at IS NULL`,
     [mutation.childId, mutation.parentId]
   );
   if (!row || row.anchor_link !== mutation.expectedAnchorLink ||
+    row.anchor_resolution_status !== mutation.expectedStatus ||
     row.child_version_id !== mutation.expectedChildVersionId ||
     row.body_blob_hash !== mutation.expectedParentBodyHash ||
     row.parent_version_id !== mutation.expectedParentVersionId) {

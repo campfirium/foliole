@@ -32,6 +32,7 @@ export interface AnchorRepairMutation {
   expectedChildVersionId: string;
   expectedParentBodyHash: string;
   expectedParentVersionId: string;
+  expectedStatus: string | null;
   nextAnchorLink: string;
   nextStatus: AnchorResolutionStatus;
   oldRanges: TextLocator[];

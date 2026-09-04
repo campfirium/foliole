@@ -150,6 +150,20 @@ it('fails closed when a child changed after the T175-3 receipt', () => {
   expect(plan.manualReview).toMatchObject([{ reason: 'child_changed_after_t175_3' }]);
 });
 
+it('locks a later current baseline for the scoped T175-6 correction', () => {
+  const seeded = seedRecovered({ id: 'article-current-baseline', visibleText: 'Target sentence.' });
+  const driver = openDatabaseConnection().driver;
+  driver.execute('UPDATE nodes SET updated_at = ?, sync_dirty = 1 WHERE id = ?',
+    ['2026-09-04T03:00:00.000Z', seeded.childId]);
+  flushNodeSyncVersionWithDriver(driver, seeded.childId, 'Test Mac', '2026-09-04T03:00:00.000Z');
+  const plan = buildAnchorRepairPlan(driver, seeded.receipt, repairedAt, { trustCurrentBaseline: true });
+  expect(plan.apply).toHaveLength(1);
+  expect(plan.manualReview).toHaveLength(0);
+  driver.execute('UPDATE nodes SET anchor_resolution_status = ? WHERE id = ?', ['unmapped_missing', seeded.childId]);
+  expect(() => applyAnchorRepairPlan({ driver, hostName: 'Test Mac', now: repairedAt, plan }))
+    .toThrow(`anchor_repair_input_drift:${seeded.childId}`);
+});
+
 it('rolls back locator and version when an in-transaction mutation fails', () => {
   const seeded = seedRecovered({ id: 'article-rollback', visibleText: 'Target sentence.' });
   const driver = openDatabaseConnection().driver;

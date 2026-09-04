@@ -89,7 +89,8 @@ function sourceSnapshotMatches(row: ChildRow, anchor: ReceiptAnchor, generatedAt
 }
 
 function stablePayload(plan: Omit<AnchorRepairPlan, 'generatedAt' | 'planHash'>) {
-  return { apply: plan.apply, sourcePlanHash: plan.sourcePlanHash, unmap: plan.unmap };
+  return { apply: plan.apply, manualReview: plan.manualReview, noRepair: plan.noRepair,
+    sourcePlanHash: plan.sourcePlanHash, unmap: plan.unmap };
 }
 
 function addAnchorDecision(input: {
@@ -99,6 +100,7 @@ function addAnchorDecision(input: {
   parentId: string;
   partial: Omit<AnchorRepairPlan, 'generatedAt' | 'planHash'>;
   sourceGeneratedAt: string;
+  trustCurrentBaseline: boolean;
 }) {
   const parsed = parseAnchor(input.child.anchor_link);
   const locators = parsed ? readLocators(parsed.locator) : null;
@@ -123,7 +125,7 @@ function addAnchorDecision(input: {
       reason: 'already_unmapped', title: input.parent.title });
     return;
   }
-  if (!sourceSnapshotMatches(input.child, input.anchor, input.sourceGeneratedAt)) {
+  if (!input.trustCurrentBaseline && !sourceSnapshotMatches(input.child, input.anchor, input.sourceGeneratedAt)) {
     return manual('child_changed_after_t175_3');
   }
   const matches = locators.map((range) => classifyImportedBodyOccurrence(input.parent.body, range.originalText));
@@ -136,7 +138,7 @@ function addAnchorDecision(input: {
   const mutation: AnchorRepairMutation = {
     childId: input.anchor.childId, expectedAnchorLink: input.child.anchor_link,
     expectedChildVersionId: input.child.current_version_id, expectedParentBodyHash: input.parent.body_blob_hash,
-    expectedParentVersionId: input.parent.current_version_id,
+    expectedParentVersionId: input.parent.current_version_id, expectedStatus: input.child.anchor_resolution_status,
     nextAnchorLink: nextRanges ? withLocators(parsed, nextRanges) : input.child.anchor_link,
     nextStatus, oldRanges: locators, newRanges: nextRanges, parentId: input.parentId,
     reason: missing ? 'visible_match_missing' : ambiguous ? 'visible_match_ambiguous' : 'unique_visible_match',
@@ -148,7 +150,8 @@ function addAnchorDecision(input: {
 export function buildAnchorRepairPlan(
   driver: DatabaseDriver,
   receipt: BodyRecoveryReceipt,
-  generatedAt = new Date().toISOString()
+  generatedAt = new Date().toISOString(),
+  options: { trustCurrentBaseline?: boolean } = {}
 ): AnchorRepairPlan {
   const partial: Omit<AnchorRepairPlan, 'generatedAt' | 'planHash'> = {
     apply: [], manualReview: [], noRepair: [], sourcePlanHash: receipt.plan.planHash, unmap: []
@@ -157,8 +160,9 @@ export function buildAnchorRepairPlan(
   for (const candidate of receipt.plan.apply) {
     const expected = recovered.get(candidate.nodeId);
     const parent = readParent(driver, candidate.nodeId);
-    if (!expected || !parent || parent.body !== candidate.recoveryContent ||
-      parent.body_blob_hash !== expected.bodyHash || parent.current_version_id !== expected.versionId) {
+    const historicalParentMismatch = !expected || !parent || parent.body !== candidate.recoveryContent ||
+      parent.body_blob_hash !== expected.bodyHash || parent.current_version_id !== expected.versionId;
+    if (!parent || (!options.trustCurrentBaseline && historicalParentMismatch)) {
       candidate.anchors.forEach((anchor) => partial.manualReview.push({ childId: anchor.childId,
         parentId: candidate.nodeId, reason: 'parent_changed_after_t175_3', title: parent?.title ?? candidate.nodeId }));
       continue;
@@ -171,7 +175,7 @@ export function buildAnchorRepairPlan(
         continue;
       }
       addAnchorDecision({ anchor, child, parent, parentId: candidate.nodeId, partial,
-        sourceGeneratedAt: receipt.plan.generatedAt });
+        sourceGeneratedAt: receipt.plan.generatedAt, trustCurrentBaseline: options.trustCurrentBaseline === true });
     }
   }
   const planHash = createHash('sha256').update(JSON.stringify(stablePayload(partial))).digest('hex');
