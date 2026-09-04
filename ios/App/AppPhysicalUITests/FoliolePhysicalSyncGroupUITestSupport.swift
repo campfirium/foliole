@@ -27,6 +27,13 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func enableAutomaticSync(in app: XCUIApplication) {
+        if app.buttons["Pause Sync"].exists { return }
+        if app.buttons["Resume Sync"].exists {
+            app.buttons["Resume Sync"].tap()
+            XCTAssertTrue(app.buttons["Pause Sync"].waitForExistence(timeout: 30),
+                          "Automatic Sync did not resume after joining the Sync Group.")
+            return
+        }
         let toggle = app.switches["Sync"].firstMatch
         XCTAssertTrue(toggle.waitForExistence(timeout: 30), "The automatic Sync switch is unavailable.")
         if (toggle.value as? String) != "1" { toggle.tap() }

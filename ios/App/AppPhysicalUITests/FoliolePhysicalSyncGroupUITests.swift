@@ -35,7 +35,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         tapButton(named: "Join", in: app, timeout: 90)
 
         XCTAssertTrue(
-            app.buttons["Sync Now"].waitForExistence(timeout: 120),
+            app.buttons["Leave Sync Group"].waitForExistence(timeout: 120)
+                || app.buttons["Sync Now"].exists,
             "The accepted Sync Group was not activated on the physical iPhone."
         )
         enableAutomaticSync(in: app)

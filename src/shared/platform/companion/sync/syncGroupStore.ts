@@ -45,7 +45,9 @@ export function joinCompanionSyncGroup(args: {
     const now = new Date().toISOString();
     await tx.run(
       `INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(group_id) DO UPDATE SET display_name = excluded.display_name,
+         workgroup_key = excluded.workgroup_key, updated_at = excluded.updated_at`,
       [args.device.group_id, args.displayName, args.workgroupKey, now, now]
     );
     await saveDevice(tx, args.device, args.deviceName, args.platform, now);
@@ -123,7 +125,10 @@ async function saveDevice(
     `INSERT INTO sync_group_devices (
       group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
       platform, state, joined_at, left_at, last_seen_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, NULL, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, NULL, ?, ?)
+    ON CONFLICT(group_id, device_identity_key) DO UPDATE SET
+      device_name = excluded.device_name, platform = excluded.platform, state = 'active',
+      left_at = NULL, last_seen_at = excluded.last_seen_at, updated_at = excluded.updated_at`,
     [device.group_id, device.identity_key, device.device_anchor, device.canonical_library_path,
       deviceName, platform, now, now, now]
   );
