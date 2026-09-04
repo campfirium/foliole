@@ -3,11 +3,19 @@ import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery
 import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
 
-function uniqueSyncGroups<T extends { discovery: { group_id: string; group_tag: string } }>(candidates: T[]) {
+function isDesktopProvider(platform: string) {
+  return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
+}
+
+function uniqueSyncGroups<T extends {
+  discovery: { group_id: string; group_tag: string; provider_platform: string };
+}>(candidates: T[]) {
   const groups = new Map<string, T>();
   for (const candidate of candidates) {
     const identity = `${candidate.discovery.group_id}:${candidate.discovery.group_tag}`;
-    if (!groups.has(identity)) groups.set(identity, candidate);
+    const current = groups.get(identity);
+    if (!current || (!isDesktopProvider(current.discovery.provider_platform)
+      && isDesktopProvider(candidate.discovery.provider_platform))) groups.set(identity, candidate);
   }
   return [...groups.values()];
 }
