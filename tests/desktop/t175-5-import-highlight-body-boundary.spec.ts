@@ -86,7 +86,9 @@ test('shows a body highlight without highlighting the generated article title', 
   expect(children).toHaveLength(2);
   expect(children.find((child) => child.content === TITLE_TEXT)?.anchor_link).toBeNull();
   expect(children.find((child) => child.content === BODY_TEXT)?.anchor_link).not.toBeNull();
-  expect(await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode(nodeId), parent.id)).toBe(true);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.getByRole('treeitem', { name: TITLE_TEXT }).click();
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toContainText(BODY_TEXT);
 
   const visibleHighlights = await desktopWindow.locator(
