@@ -1,4 +1,4 @@
-# Foliole Dependabot health: {{alertCount}} new alerts
+# Foliole Dependabot health: {{alertCount}} open alerts
 
 Source: {{source}}
 Repository: {{repository}}

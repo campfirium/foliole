@@ -22,6 +22,7 @@ function actionRunEvent(config, workflowSelector, run, renderTemplate, identity)
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
+    reconcileOpen: true,
     title: identity.handoffTitle,
     ...data,
     ttlSeconds: config.defaultTtlSeconds
@@ -82,6 +83,7 @@ function prEvent(config, pr, checks, renderTemplate) {
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
+    reconcileOpen: true,
     ...data,
     title: data.handoffTitle,
     ttlSeconds: config.defaultTtlSeconds
@@ -121,16 +123,16 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       recordMonitorError(errors, 'github-actions', workflow, error);
       continue;
     }
+    const latestAllowedRunId = String(runs.find((candidate) => allowedBranch(config, candidate))?.databaseId ?? '');
     for (const run of runs) {
       if (!allowedBranch(config, run)) continue;
       const identity = buildActionsHandoffIdentity(workflow, run);
       if (!identity) continue;
-      const observed = recordObservedRun(config, workflowState, run, includeExisting);
+      const runId = String(run.databaseId);
+      const observed = recordObservedRun(config, workflowState, run, includeExisting || runId === latestAllowedRunId);
+      if (runId !== latestAllowedRunId) continue;
       if (!observed.handoffEligible) continue;
-      const event = actionRunEvent(config, workflow, run, renderTemplate, identity);
-      if (!state.submitted[event.dedupeKey]) {
-        events.push(event);
-      }
+      events.push(actionRunEvent(config, workflow, run, renderTemplate, identity));
     }
     workflowState.initialized = true;
     workflowState.latestObservedRunId = String(runs.find((run) => allowedBranch(config, run))?.databaseId ?? '');
@@ -141,7 +143,6 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
 
 function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
   if (!config?.enabled) return [];
-  const initialized = Boolean(state.prsInitialized);
   let prs;
   try {
     prs = runGh([
@@ -173,15 +174,7 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
     }
     const event = prEvent(config, pr, checks, renderTemplate);
     if (!event.failingChecks) continue;
-    const recordedEventId = state.prs[String(pr.number)];
-    const legacyLocalEvent = event.handlingMode === 'automatic-local-implementation'
-      && recordedEventId?.startsWith(`${pr.number}:local:`);
-    if (!includeExisting && (recordedEventId === event.eventId || legacyLocalEvent || (recordedEventId === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) {
-      if (legacyLocalEvent) state.prs[String(pr.number)] = event.eventId;
-      continue;
-    }
-    if (includeExisting || initialized) events.push(event);
-    else state.prs[String(pr.number)] = event.eventId;
+    events.push(event);
   }
   state.prsInitialized = true;
   return events;

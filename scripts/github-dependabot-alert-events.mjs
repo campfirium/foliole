@@ -45,7 +45,8 @@ function buildAlertEvent(config, alerts, renderTemplate) {
     alertNumbers,
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', eventId),
     prompt,
-    title: `Foliole Dependabot health: ${ordered.length} new alert${ordered.length === 1 ? '' : 's'}`,
+    reconcileOpen: true,
+    title: `Foliole Dependabot health: ${ordered.length} open alert${ordered.length === 1 ? '' : 's'}`,
     ttlSeconds: config.defaultTtlSeconds
   };
 }
@@ -64,11 +65,9 @@ export function listDependabotAlertEvents(config, state, errors, renderTemplate)
     recordMonitorError(errors, 'github-dependabot-alerts', 'list', error);
     return [];
   }
-  const processed = state.dependabotAlerts ?? {};
-  const pending = alerts.filter((alert) => !processed[String(alert.number)]);
-  if (!pending.length) return [];
+  if (!alerts.length) return [];
   try {
-    return [buildAlertEvent(config, pending, renderTemplate)];
+    return [buildAlertEvent(config, alerts, renderTemplate)];
   } catch (error) {
     recordMonitorError(errors, 'github-dependabot-alerts', 'render', error);
     return [];

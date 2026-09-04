@@ -70,7 +70,8 @@ describe('Dependabot alert handoff events', () => {
       alertNumbers: ['34', '35'],
       dedupeKey: 'foliole:dependabot-alerts:34-35',
       source: 'foliole/dependabot-alerts',
-      title: 'Foliole Dependabot health: 2 new alerts'
+      reconcileOpen: true,
+      title: 'Foliole Dependabot health: 2 open alerts'
     });
     expect(events[0].prompt).toContain('#34 | low | dompurify | runtime | package-lock.json | 3.1.4');
     expect(events[0].prompt).toContain('Do not merge, close, dismiss, or run broad npm audit fix.');
@@ -80,14 +81,14 @@ describe('Dependabot alert handoff events', () => {
     ]);
   });
 
-  it('only includes alerts that have not been submitted successfully', () => {
+  it('reconciles every currently open alert even after earlier delivery', () => {
     github.alerts = [alert(34), alert(35)];
     const state = { dependabotAlerts: { 34: { emittedAt: '2026-07-23T01:00:00Z' } } };
 
     const [event] = listDependabotAlertEvents(config(), state, [], renderTemplate);
 
-    expect(event.alertNumbers).toEqual(['35']);
-    expect(event.prompt).not.toContain('#34 |');
+    expect(event.alertNumbers).toEqual(['34', '35']);
+    expect(event.prompt).toContain('#34 |');
   });
 
   it('records API failures without advancing alert state', () => {

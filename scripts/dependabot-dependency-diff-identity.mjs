@@ -57,6 +57,46 @@ function lockPackagePath(name) {
   return `node_modules/${name}`;
 }
 
+function withoutPackages(value) {
+  const copy = cloneJson(value);
+  delete copy.packages;
+  return copy;
+}
+
+function packageNameFromLockPath(packagePath) {
+  const marker = 'node_modules/';
+  const index = packagePath.lastIndexOf(marker);
+  if (index < 0) return null;
+  const remainder = packagePath.slice(index + marker.length);
+  if (!remainder) return null;
+  if (!remainder.startsWith('@')) return remainder.split('/')[0] || null;
+  const [scope, name] = remainder.split('/');
+  return scope && name ? `${scope}/${name}` : null;
+}
+
+function identifyLockOnlyDiff(beforeLock, afterLock) {
+  const beforeRoot = beforeLock.packages?.[''];
+  const afterRoot = afterLock.packages?.[''];
+  if (!beforeRoot || !afterRoot) return sourceError('lockfile-root-missing');
+  if (!equal(beforeRoot, afterRoot) || !equal(withoutPackages(beforeLock), withoutPackages(afterLock))) {
+    return unknown('lockfile-root-or-metadata-changed');
+  }
+  const paths = new Set([
+    ...Object.keys(beforeLock.packages ?? {}),
+    ...Object.keys(afterLock.packages ?? {})
+  ]);
+  paths.delete('');
+  const changedPaths = [...paths].filter((packagePath) => (
+    !equal(beforeLock.packages?.[packagePath], afterLock.packages?.[packagePath])
+  ));
+  const changedNames = changedPaths.map(packageNameFromLockPath);
+  const dependencyNames = [...new Set(changedNames.filter(Boolean))].sort();
+  if (!changedPaths.length || changedNames.some((name) => !name)) {
+    return unknown('lockfile-has-no-verifiable-package-change');
+  }
+  return { dependencyKind: 'other', dependencyNames };
+}
+
 function directLockIntentMatches(beforeLock, afterLock, changes) {
   const changedNames = new Set(changes.map((change) => change.name));
   const directNames = new Set([
@@ -100,19 +140,32 @@ export function identifyDependabotDependencyDiff(input) {
   }
   const manifestFile = input.files.find((file) => file.path === 'package.json');
   const lockFile = input.files.find((file) => file.path === 'package-lock.json');
-  if (!manifestFile || !lockFile || input.files.length !== 2) return unknown('dependency-files-incomplete');
+  if (!lockFile || input.files.length > 2) return unknown('dependency-files-incomplete');
 
   let beforeManifest;
   let afterManifest;
   let beforeLock;
   let afterLock;
   try {
-    beforeManifest = parseJson(manifestFile.before);
-    afterManifest = parseJson(manifestFile.after);
     beforeLock = parseJson(lockFile.before);
     afterLock = parseJson(lockFile.after);
+    if (manifestFile) {
+      beforeManifest = parseJson(manifestFile.before);
+      afterManifest = parseJson(manifestFile.after);
+    }
   } catch {
     return sourceError('dependency-diff-unparseable');
+  }
+  if (!manifestFile) {
+    const lockOnly = identifyLockOnlyDiff(beforeLock, afterLock);
+    if (lockOnly.status) return lockOnly;
+    return {
+      ...lockOnly,
+      headSha: input.pr.headSha,
+      prNumber: input.pr.number,
+      reason: 'lockfile-transitive-diff-identified',
+      status: 'identified'
+    };
   }
   if (!equal(withoutDependencySections(beforeManifest), withoutDependencySections(afterManifest))) {
     return unknown('manifest-has-nondependency-changes');

@@ -45,6 +45,43 @@ describe('Dependabot dependency diff identity contract', () => {
     });
   });
 
+  it('identifies a verified lockfile-only transitive dependency update', () => {
+    const beforeLock = {
+      lockfileVersion: 3,
+      name: 'foliole',
+      packages: {
+        '': { devDependencies: { eslint: '9.39.5' }, name: 'foliole' },
+        'node_modules/eslint': { version: '9.39.5' },
+        'node_modules/eslint/node_modules/@humanfs/node': { version: '0.16.7' }
+      }
+    };
+    const afterLock = JSON.parse(JSON.stringify(beforeLock));
+    afterLock.packages['node_modules/eslint/node_modules/@humanfs/node'].version = '0.16.8';
+    const input = dependencyPullRequest('other', {
+      files: [{ path: 'package-lock.json', before: beforeLock, after: afterLock }]
+    });
+
+    expect(identifyDependabotDependencyDiff(input)).toMatchObject({
+      dependencyKind: 'other',
+      dependencyNames: ['@humanfs/node'],
+      reason: 'lockfile-transitive-diff-identified',
+      status: 'identified'
+    });
+  });
+
+  it('rejects a lockfile-only update that changes root dependency intent', () => {
+    const beforeLock = { lockfileVersion: 3, packages: { '': { dependencies: { react: '1.0.0' } } } };
+    const afterLock = { lockfileVersion: 3, packages: { '': { dependencies: { react: '2.0.0' } } } };
+    const input = dependencyPullRequest('other', {
+      files: [{ path: 'package-lock.json', before: beforeLock, after: afterLock }]
+    });
+
+    expect(identifyDependabotDependencyDiff(input)).toMatchObject({
+      reason: 'lockfile-root-or-metadata-changed',
+      status: 'unknown'
+    });
+  });
+
   it('does not guess when author, base, manifest, and lock intent are not all verified', () => {
     expect(identifyDependabotDependencyDiff(dependencyPullRequest('electron', {
       pr: { authorLogin: 'dependabot', baseRefName: 'dev', headSha: 'untrusted-head', number: 69 }

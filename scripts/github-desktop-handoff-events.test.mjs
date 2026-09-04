@@ -62,18 +62,23 @@ function renderTemplate(_template, data) {
 }
 
 describe('GitHub desktop handoff action events', () => {
-  it('baselines the first scan without emitting existing failures', () => {
+  it('emits the latest existing failure for visibility reconciliation on the first scan', () => {
     gh.runs = [run({ databaseId: 101 })];
     const state = { actions: {}, submitted: {}, issues: {}, prs: {} };
 
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
-    expect(events).toEqual([]);
+    expect(events).toEqual([expect.objectContaining({
+      dedupeKey: 'foliole:github-actions:101',
+      reconcileOpen: true
+    })]);
     expect(state.actions[T7_WORKFLOW]).toMatchObject({
       initialized: true,
       latestObservedRunId: '101'
     });
-    expect(listGithubMonitorEvents(config(), state, false, [], renderTemplate)).toEqual([]);
+    expect(listGithubMonitorEvents(config(), state, false, [], renderTemplate)).toEqual([
+      expect.objectContaining({ dedupeKey: 'foliole:github-actions:101', reconcileOpen: true })
+    ]);
   });
 
   it('emits a running run after it completes as a failure', () => {
@@ -156,7 +161,7 @@ describe('GitHub desktop handoff action events', () => {
       workflowPath: T7_WORKFLOW
     });
   });
-  it('emits each recurring T7 Hosted Quality failure once by run id', () => {
+  it('re-emits the latest failing T7 run with a stable reconciliation identity', () => {
     const state = {
       actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
@@ -185,7 +190,9 @@ describe('GitHub desktop handoff action events', () => {
       runTier: 'T7'
     });
     state.submitted[secondEvents[0].dedupeKey] = { emittedAt: '2026-07-05T17:45:22Z' };
-    expect(listGithubMonitorEvents(t7Config, state, false, [], renderTemplate)).toEqual([]);
+    expect(listGithubMonitorEvents(t7Config, state, false, [], renderTemplate)).toEqual([
+      expect.objectContaining({ dedupeKey: 'foliole:github-actions:202', reconcileOpen: true })
+    ]);
   });
 
   it('retries a newly observed failure until event submission is acknowledged', () => {

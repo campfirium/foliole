@@ -82,6 +82,7 @@ function submitEvent(event) {
     event.source,
     '--dedupe-key',
     event.dedupeKey,
+    ...(event.reconcileOpen ? ['--reconcile-open'] : []),
     '--title',
     event.title,
     '--prompt',
@@ -123,7 +124,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
   const state = emit ? persistedState : cloneJson(persistedState);
   const errors = [];
   const events = listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate)
-    .filter((event) => includeExisting || !state.submitted[event.dedupeKey]);
+    .filter((event) => event.reconcileOpen || includeExisting || !state.submitted[event.dedupeKey]);
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
   if (emit) writeJson(STATE_FILE, state);

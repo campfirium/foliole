@@ -40,17 +40,16 @@ function configs() {
 }
 
 describe('GitHub desktop handoff baselines', () => {
-  it('records existing PRs and issues without emitting them on the first successful scan', () => {
+  it('emits existing actionable PRs while retaining the issue baseline', () => {
     const state = { actions: {}, issues: {}, prs: {}, submitted: {} };
 
     const events = listGithubMonitorEvents(configs(), state, false, [], () => 'prompt');
 
-    expect(events).toEqual([]);
+    expect(events).toEqual([expect.objectContaining({ dedupeKey: 'pr:8:Windows checks', reconcileOpen: true })]);
     expect(state).toMatchObject({ issues: { 9: '9' }, issuesInitialized: true, prsInitialized: true });
-    expect(state.prs[8]).toContain('8:Windows checks');
   });
 
-  it('emits an eligible verified Dependabot PR once without reopening after a rebase', () => {
+  it('re-emits a stable reconciliation identity for an open Dependabot PR after a rebase', () => {
     github.prs = [{
       author: { login: 'app/dependabot' },
       baseRefName: 'dev',
@@ -74,10 +73,12 @@ describe('GitHub desktop handoff baselines', () => {
     state.submitted[first[0].dedupeKey] = { emittedAt: '2026-07-20T04:00:00Z' };
     state.prs['42'] = first[0].eventId;
     github.prs[0].headRefOid = 'rebased-dependabot-head-sha';
-    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt')).toEqual([]);
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt')).toEqual([
+      expect.objectContaining({ dedupeKey: 'pr:42:local', reconcileOpen: true })
+    ]);
   });
 
-  it('migrates a recorded head-scoped Dependabot event without reopening the PR', () => {
+  it('reconciles a recorded head-scoped Dependabot event through its stable PR identity', () => {
     github.prs = [{
       author: { login: 'app/dependabot' },
       baseRefName: 'dev',
@@ -97,8 +98,9 @@ describe('GitHub desktop handoff baselines', () => {
       submitted: {}
     };
 
-    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toEqual([]);
-    expect(state.prs[46]).toBe('46:local');
+    expect(listGithubMonitorEvents(configs(), state, false, [], () => 'prompt')).toEqual([
+      expect.objectContaining({ dedupeKey: 'pr:46:local', reconcileOpen: true })
+    ]);
   });
 
   it('does not checkpoint an immature Electron head and emits it after eligibility changes', () => {
