@@ -69,7 +69,7 @@ async function loadNativeDiscoveryCandidates(
   const runtime = getCompanionRuntimeCapability();
   const direct = runtime.kind === 'android-native'
     ? [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)]
-    : [];
+    : runtime.kind === 'ios-native' ? [directCandidate(preferredEndpointUrl)] : [];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
     const native = (payload.candidates ?? []).map((candidate) => ({

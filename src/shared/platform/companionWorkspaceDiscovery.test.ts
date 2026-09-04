@@ -79,13 +79,17 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
   });
 
-  it('does not probe Android emulator fallbacks when iOS Bonjour finds no desktop', async () => {
+  it('probes the accepted endpoint without Android emulator fallbacks when iOS Bonjour is empty', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
+    capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
+      desktopResponse({ hostName: 'Mac', peerId: 'desktop-ios', platform: 'macOS' })
+    );
 
-    await expect(discoverCompanionDesktops('http://10.0.2.2:38641')).resolves.toEqual([]);
+    const result = await discoverCompanionDesktop('http://accepted-mac.local:38641');
 
-    expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
+    expect(result.endpointUrl).toBe('http://accepted-mac.local:38641');
+    expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledTimes(1);
   });
 
   it('discovers a native Android desktop candidate beyond the emulator default', async () => {
