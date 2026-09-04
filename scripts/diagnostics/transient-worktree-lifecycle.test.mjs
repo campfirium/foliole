@@ -30,6 +30,7 @@ function fixture() {
   roots.push(root);
   const repo = join(root, 'repo');
   execFileSync('git', ['init', '--initial-branch=dev', repo]);
+  git(repo, 'config', 'core.fsmonitor', 'false');
   git(repo, 'config', 'user.email', 'test@example.com');
   git(repo, 'config', 'user.name', 'Test');
   writeFileSync(join(repo, 'README.md'), 'base\n');
@@ -73,6 +74,12 @@ afterEach(() => {
 });
 
 describe('transient worktree lifecycle', () => {
+  it('keeps fixture repositories independent of host file-system monitors', () => {
+    const { repo } = fixture();
+
+    expect(git(repo, 'config', '--local', '--get', 'core.fsmonitor')).toBe('false');
+  });
+
   it('matches Windows aliases and path casing through native identity', () => {
     const realpath = (path) => path.replace('RUNNER~1', 'runneradmin');
     expect(pathsReferToSameLocation(

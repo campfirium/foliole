@@ -111,6 +111,8 @@ it('keeps one shared cache while two production runs expire older storage', asyn
 it('sweeps eligible transient worktrees on repeated production maintenance', () => {
   const rootDir = makeFixture();
   execFileSync('git', ['init', '--initial-branch=dev', rootDir]);
+  git(rootDir, 'config', 'core.fsmonitor', 'false');
+  expect(git(rootDir, 'config', '--local', '--get', 'core.fsmonitor')).toBe('false');
   git(rootDir, 'config', 'user.email', 'test@example.com');
   git(rootDir, 'config', 'user.name', 'Test');
   writeFileSync(path.join(rootDir, 'README.md'), 'base\n');
