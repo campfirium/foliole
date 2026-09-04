@@ -51,8 +51,9 @@ test('arbitrates normal right click and unbound gesture as exclusive outcomes', 
   const screenshotPath = path.join(process.cwd(), '.tmp/artifacts/t174-2-normal-context-menu.png');
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('normal-context-menu-after-release', { path: screenshotPath });
-  await desktopWindow.keyboard.press('Escape');
+  await desktopWindow.mouse.click(point.x, point.y);
   await expect(menu).toBeHidden();
+  await desktopWindow.evaluate(() => globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 7));
 
   await desktopWindow.mouse.move(point.x, point.y);
   await desktopWindow.mouse.down({ button: 'right' });
