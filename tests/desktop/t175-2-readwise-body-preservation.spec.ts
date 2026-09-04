@@ -3,10 +3,13 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import type { Page } from '@playwright/test';
+
 import {
   applyReadwiseRootPath,
   createDefaultImportManagerSettings
 } from '../../lib/core/import/importManagerSettings';
+import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -81,6 +84,28 @@ async function writeReadwiseFixture(readwiseRoot: string, includeSecondHighlight
   );
 }
 
+async function runReadwiseAfterStartupOwnership(
+  desktopWindow: Page,
+  settings: ReturnType<typeof createDefaultImportManagerSettings>
+) {
+  let completed: NativeReadwiseImportRunResult | null = null;
+  await expect.poll(async () => {
+    const result = await desktopWindow.evaluate((nextSettings) => (
+      window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
+    ), settings);
+    if (result.status === 'failed') {
+      const reasons = result.failed_sources?.map((source) => source.reason) ?? [];
+      if (reasons.length === 0 || reasons.some((reason) => !reason.includes('owned by another asynchronous transaction'))) {
+        throw new Error(`Readwise import failed: ${JSON.stringify(result)}`);
+      }
+      return false;
+    }
+    completed = result;
+    return true;
+  }, { timeout: 10_000 }).toBe(true);
+  return completed;
+}
+
 test('Readwise re-import preserves a Blob-only local body and appends highlights across reload', async ({
   desktopApp,
   desktopWindow
@@ -102,9 +127,7 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   settings.readwiseSources = applyReadwiseRootPath(settings.readwiseSources, readwiseRoot)
     .map((source) => ({ ...source, keepState: 'enabled' as const }));
 
-  const firstRun = await desktopWindow.evaluate((nextSettings) => (
-    window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
-  ), settings);
+  const firstRun = await runReadwiseAfterStartupOwnership(desktopWindow, settings);
   expect(firstRun).toMatchObject({ imported_count: 1, status: 'completed' });
   const imported = { id: prepareBlobOnlyLocalEdit(databasePath) };
 
