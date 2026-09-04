@@ -11,6 +11,7 @@ BUILD_ROOT = REPO_ROOT / "build"
 LEAF_SOURCE = BRAND_ROOT / "foliole-leaf-tight.png"
 SIZE = 1024
 BRAND_GREEN = (141, 165, 109, 255)
+DEV_SKY_BLUE = (94, 176, 224, 255)
 MACOS_ARTWORK_SCALE = 0.825
 
 
@@ -108,6 +109,26 @@ def render_macos(leaf: Image.Image) -> Image.Image:
     return output
 
 
+def render_macos_dev(leaf: Image.Image) -> Image.Image:
+    shell = vertical_gradient(SIZE, [(0, (133, 199, 237, 255)), (0.47, DEV_SKY_BLUE), (1, (54, 130, 181, 255))])
+    canvas = masked_layer(shell, rounded_square_mask(SIZE))
+    disc_fill = vertical_gradient(SIZE, [(0, (255, 255, 255, 255)), (0.29, (255, 255, 255, 255)), (0.63, (244, 245, 241, 255)), (1, (221, 224, 215, 255))])
+    canvas.alpha_composite(masked_layer(disc_fill, circle_mask(SIZE, 0.14)))
+    mask = leaf_mask(leaf, SIZE)
+    shadow = Image.new("L", (SIZE, SIZE), 0)
+    shadow.paste(mask, (7, 10))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(7)).point(lambda value: round(value * 0.25))
+    canvas.alpha_composite(masked_layer(Image.new("RGBA", (SIZE, SIZE), (35, 39, 40, 255)), shadow))
+    leaf_fill = vertical_gradient(SIZE, [(0, (116, 188, 231, 255)), (0.48, (74, 159, 213, 255)), (1, (40, 113, 166, 255))])
+    canvas.alpha_composite(masked_layer(leaf_fill, mask))
+    artwork_size = round(SIZE * MACOS_ARTWORK_SCALE)
+    artwork = canvas.resize((artwork_size, artwork_size), Image.Resampling.LANCZOS)
+    output = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    centered = round((SIZE - artwork_size) / 2)
+    output.alpha_composite(artwork, (centered, centered))
+    return output
+
+
 def save_png(image: Image.Image, path: Path, size: int = SIZE) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     output = image if image.size == (size, size) else image.resize((size, size), Image.Resampling.LANCZOS)
@@ -128,11 +149,14 @@ def main() -> None:
     leaf = Image.open(LEAF_SOURCE).convert("RGBA")
     windows = render_windows(leaf)
     macos = render_macos(leaf)
+    macos_dev = render_macos_dev(leaf)
     save_png(windows, BRAND_ROOT / "foliole-app-icon.png")
     save_png(windows, BRAND_ROOT / "foliole-app-icon-windows.png")
     save_png(macos, BRAND_ROOT / "foliole-app-icon-macos.png")
+    save_png(macos_dev, BRAND_ROOT / "foliole-dev-app-icon-macos.png")
     save_png(windows, BUILD_ROOT / "icon.png")
     save_png(macos, BUILD_ROOT / "icon-macos.png")
+    save_png(macos_dev, BUILD_ROOT / "icon-dev-macos.png")
     save_ico(windows, BUILD_ROOT / "icon.ico", [16, 24, 32, 48, 64, 128, 256])
     save_icns(macos, BUILD_ROOT / "icon.icns")
     for public_root in (REPO_ROOT / "public", REPO_ROOT / "src" / "companion" / "public"):

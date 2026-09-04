@@ -53,6 +53,11 @@ function resolveRuntimeAppName(initialAppName: string, env: NodeJS.ProcessEnv) {
   return resolveFolioleRuntimeAppName(initialAppName, env);
 }
 
+function resolveMacosIconPath(appRoot: string, env: NodeJS.ProcessEnv) {
+  const iconName = env.FOLIOLE_MACOS_DAILY_DEBUG === '1' ? 'icon-dev-macos.png' : 'icon-macos.png';
+  return path.join(appRoot, 'build', iconName);
+}
+
 function readFlagValue(argv: string[], name: string) {
   const prefix = `${name}=`;
   for (let index = 0; index < argv.length; index += 1) {
@@ -156,7 +161,7 @@ export function configureRuntimeAppIdentity(
   const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
   app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
   const appRoot = resolvePathOverride(env.FOLIOLE_ELECTRON_APP_ROOT) ?? process.cwd();
-  applyMacosDockPresentation(app, path.join(appRoot, 'build', 'icon-macos.png'), platform, env);
+  applyMacosDockPresentation(app, resolveMacosIconPath(appRoot, env), platform, env);
   const sampleLaunch = hasFlagOrValue(argv, '--sample-locale');
   const previewSandbox = env.FOLIOLE_PREVIEW_SANDBOX === '1' || hasFlag(argv, '--preview-sandbox') || sampleLaunch;
   if (previewSandbox) {
