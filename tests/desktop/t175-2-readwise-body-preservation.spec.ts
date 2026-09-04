@@ -90,9 +90,17 @@ async function runReadwiseAfterStartupOwnership(
 ) {
   let completed: NativeReadwiseImportRunResult | null = null;
   await expect.poll(async () => {
-    const result = await desktopWindow.evaluate((nextSettings) => (
-      window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
-    ), settings);
+    let result: NativeReadwiseImportRunResult;
+    try {
+      result = await desktopWindow.evaluate((nextSettings) => (
+        window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
+      ), settings);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('owned by another asynchronous transaction')) {
+        return false;
+      }
+      throw error;
+    }
     if (result.status === 'failed') {
       const reasons = result.failed_sources?.map((source) => source.reason) ?? [];
       if (reasons.length === 0 || reasons.some((reason) => !reason.includes('owned by another asynchronous transaction'))) {
