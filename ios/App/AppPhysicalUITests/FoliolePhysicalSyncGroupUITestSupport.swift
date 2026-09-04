@@ -9,6 +9,7 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func openSyncSettings(in app: XCUIApplication) {
+        resolveOptionalCellularDataDecision()
         if app.buttons["Exit"].waitForExistence(timeout: 3) {
             app.buttons["Exit"].tap()
         }
@@ -198,18 +199,20 @@ extension FoliolePhysicalSyncGroupUITests {
         guard let decision else { return }
         attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
         decision.tap()
-        if allow {
-            let wlanOnlyLabels = ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
-            if let wlanOnly = wlanOnlyLabels.lazy.map({ springboard.buttons[$0] })
-                .first(where: { $0.waitForExistence(timeout: 3) }) {
-                wlanOnly.tap()
-            }
-        }
+        if allow { resolveOptionalCellularDataDecision() }
         let dismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: alert
         )
         XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 30), .completed,
                        "The Local Network decision was not completed on Fri.")
+    }
+
+    func resolveOptionalCellularDataDecision() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let wlanOnly = springboard.buttons.matching(NSPredicate(
+            format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
+        )).firstMatch
+        if wlanOnly.waitForExistence(timeout: 3) { wlanOnly.tap() }
     }
 
     func attachScreenshot(named name: String) {
