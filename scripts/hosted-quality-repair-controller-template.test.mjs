@@ -16,7 +16,9 @@ describe('hosted-quality repair handoff', () => {
     expect(template).toContain('Workflow file: {{workflowPath}}');
     expect(template).toContain('Run tier: {{runTier}}');
     expect(template).toContain('read the run, its jobs, and failed logs');
-    expect(template).toContain('standing authorization for that commit only, not for a push');
+    expect(template).toContain('standing authorization for the bounded commit sequence');
+    expect(template).toContain('including failures exposed by its registered orchestrator revalidation');
+    expect(template).not.toContain('one scoped local repair commit');
     expect(template).toContain('repairState=waiting-for-dev-delivery');
     expect(template).toContain('registered dev Remote Quality orchestrator');
     expect(template).toContain('Never treat a later scheduled T7 Hosted Quality run as repair evidence');
@@ -41,6 +43,7 @@ describe('hosted-quality repair handoff', () => {
     expect(skill).toContain('gh run view <run-id>');
     expect(skill).toContain('--log-failed');
     expect(skill).toContain('Use `commit-note`');
+    expect(skill).toContain('do not impose an artificial commit-count limit');
     expect(skill).toContain('repairState=waiting-for-dev-delivery');
     expect(skill).toContain('reachable from remote `dev`');
     expect(skill).toContain('Never describe task creation, Desktop navigation, or prompt delivery');
