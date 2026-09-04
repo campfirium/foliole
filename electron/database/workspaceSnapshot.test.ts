@@ -236,4 +236,8 @@ it('preserves text anchor locators after sqlite reload', () => {
       originalText: 'Alpha'
     }
   });
+  openDatabaseConnection().driver.execute(
+    "UPDATE nodes SET anchor_resolution_status = 'unmapped_missing' WHERE id = ?", ['node-highlight']
+  );
+  expect(loadWorkspaceSnapshot()?.nodesById['node-highlight']?.anchorLink).toBeNull();
 });

@@ -133,7 +133,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.virtual_filter,
        ${contentExpression} AS content,
        n.reveal,
-       n.anchor_link,
+       CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link,
        n.image_regions,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
