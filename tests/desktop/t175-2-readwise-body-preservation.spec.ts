@@ -102,17 +102,6 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   settings.readwiseSources = applyReadwiseRootPath(settings.readwiseSources, readwiseRoot)
     .map((source) => ({ ...source, keepState: 'enabled' as const }));
 
-  await desktopWindow.evaluate((nextSettings) => (
-    window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings })
-  ), settings);
-  await expect.poll(async () => desktopWindow.evaluate(async () => {
-    try {
-      await window.electronAPI.invoke('load_workspace_snapshot', {});
-      return true;
-    } catch {
-      return false;
-    }
-  }), { timeout: 10_000 }).toBe(true);
   const firstRun = await desktopWindow.evaluate((nextSettings) => (
     window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings })
   ), settings);
