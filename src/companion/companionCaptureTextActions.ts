@@ -4,6 +4,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
+import { createCompanionUuid } from '../shared/platform/companionUuid';
 
 import {
   toCompanionNativeNodeVersion
@@ -38,7 +39,7 @@ function createCaptureNode(content: string, timestamp: string): WorkspaceNodeSna
     content,
     createdAt: timestamp,
     hideTitleHeading: false,
-    id: `node-${crypto.randomUUID()}`,
+    id: `node-${createCompanionUuid()}`,
     isTitleManual: false,
     kind: 'topic',
     openingText: null,

@@ -94,6 +94,17 @@ it('uses one canonical payload for the version snapshot and desktop-compatible h
   }));
 });
 
+it('creates a mobile-safe version id when the WebView lacks randomUUID', async () => {
+  const originalRandomUUID = crypto.randomUUID;
+  Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined });
+  try {
+    await expect(toCompanionNativeNodeVersion(folderNode(), 'ios-device'))
+      .resolves.toMatchObject({ version_id: expect.stringMatching(/^ver_[0-9a-f-]{36}$/) });
+  } finally {
+    Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: originalRandomUUID });
+  }
+});
+
 it('keeps canonical empty relations explicit for new non-folder nodes', () => {
   const node = folderNode();
   delete node.attachments;
@@ -108,7 +119,8 @@ it('keeps canonical empty relations explicit for new non-folder nodes', () => {
 });
 
 it('fails instead of persisting a non-SHA fallback hash', async () => {
-  vi.stubGlobal('crypto', {});
+  const getRandomValues = crypto.getRandomValues.bind(crypto);
+  vi.stubGlobal('crypto', { getRandomValues });
   try {
     await expect(toCompanionNativeNodeVersion(folderNode(), 'android-device'))
       .rejects.toThrow('sync_node_version_hash_unavailable');

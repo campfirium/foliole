@@ -13,6 +13,7 @@ import {
   saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
+import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import {
@@ -59,7 +60,7 @@ function createNode(args: {
     content: args.content,
     createdAt: args.timestamp,
     hideTitleHeading: false,
-    id: `node-${crypto.randomUUID()}`,
+    id: `node-${createCompanionUuid()}`,
     imageRegions: args.payload.imageRegions ?? null,
     isTitleManual: false,
     kind: args.kind,
