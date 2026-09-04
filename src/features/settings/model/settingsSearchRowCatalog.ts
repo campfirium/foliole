@@ -9,7 +9,7 @@ interface SearchRowDefinition {
   categoryId: SettingsCategoryId;
   descriptionKey: TranslationKey;
   id: string;
-  searchTermsKey?: TranslationKey;
+  searchTermsKeys?: TranslationKey[];
   titleKey: TranslationKey;
 }
 
@@ -46,10 +46,11 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('review', 'review-priority-weight', 'settings.search.reviewPriorityWeight.title', 'settings.search.reviewPriorityWeight.description'),
   row('review', 'review-reading-initial-interval', 'settings.search.reviewInitialInterval.title', 'settings.search.reviewInitialInterval.description'),
   row('review', 'review-reading-interval-growth', 'settings.search.reviewIntervalGrowth.title', 'settings.search.reviewIntervalGrowth.description'),
-  row('mouse-gestures', 'mouse-gestures-active-area', 'settings.search.gestureActiveArea.title', 'settings.search.gestureActiveArea.description'),
-  row('mouse-gestures', 'mouse-gestures-line-color', 'settings.search.gestureLineColor.title', 'settings.search.gestureLineColor.description'),
-  row('mouse-gestures', 'mouse-gestures-line-width', 'settings.search.gestureLineWidth.title', 'settings.search.gestureLineWidth.description'),
-  row('mouse-gestures', 'mouse-gestures-direction-threshold', 'settings.search.gestureThreshold.title', 'settings.search.gestureThreshold.description'),
+  row('mouse-gestures', 'mouse-gestures-appearance', 'settings.mouseGestures.display.title', 'settings.category.mouseGestures.description',
+    'settings.search.gestureLineColor.title', 'settings.search.gestureLineWidth.title',
+    'settings.search.gestureThreshold.title', 'settings.mouseGestures.trail.opacity.title',
+    'settings.mouseGestures.thresholds.pointSpacing.title'),
+  row('mouse-gestures', 'mouse-gestures-bindings', 'settings.mouseGestures.bindings.title', 'settings.mouseGestures.enabled.description'),
   row('general', 'capture-confirmation-position', 'settings.capture.position.title', 'settings.capture.position.description'),
   row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
   row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
@@ -65,14 +66,14 @@ function row(
   id: string,
   titleKey: TranslationKey,
   descriptionKey: TranslationKey,
-  searchTermsKey?: TranslationKey
+  ...searchTermsKeys: TranslationKey[]
 ): SearchRowDefinition {
   return {
     categoryId,
     descriptionKey,
     id,
     titleKey,
-    ...(searchTermsKey ? { searchTermsKey } : {})
+    ...(searchTermsKeys.length ? { searchTermsKeys } : {})
   };
 }
 
@@ -82,7 +83,7 @@ function splitSearchTerms(value: string) {
 
 export function createSettingsSearchRows(t: Translate): SettingsSearchRowMeta[] {
   return SETTINGS_SEARCH_ROW_DEFINITIONS.map((definition) => {
-    const searchTerms = definition.searchTermsKey ? splitSearchTerms(t(definition.searchTermsKey)) : [];
+    const searchTerms = definition.searchTermsKeys?.flatMap((key) => splitSearchTerms(t(key))) ?? [];
     return {
       categoryId: definition.categoryId,
       description: t(definition.descriptionKey),

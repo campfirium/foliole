@@ -24,6 +24,8 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated
 }));
 
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -123,14 +125,19 @@ it('overwrites local article edits even when the source file is unchanged', asyn
     .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
     .get('draft-import-source-401', 'entry.md') as { last_node_id: string };
 
-  connection.sqlite
-    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
-    .run('# Entry\n\nEdited in app\n', new Date().toISOString(), first.last_node_id);
+  writeNodeBody({
+    content: '# Entry\n\nEdited in app\n',
+    driver: connection.driver,
+    nodeId: first.last_node_id,
+    title: 'Entry',
+    updatedAt: new Date().toISOString()
+  });
 
   const result = await reimportCurrentTopicSource(first.last_node_id);
+  const body = loadNodeBodyResolution(connection.driver, first.last_node_id);
   const node = connection.sqlite
-    .prepare('SELECT content, deleted_at FROM nodes WHERE id = ?')
-    .get(first.last_node_id) as { content: string; deleted_at: string | null };
+    .prepare('SELECT deleted_at FROM nodes WHERE id = ?')
+    .get(first.last_node_id) as { deleted_at: string | null };
   const latestRun = connection.sqlite
     .prepare(
       `SELECT duplicate_semantic, node_id, result_status
@@ -145,7 +152,8 @@ it('overwrites local article edits even when the source file is unchanged', asyn
     node_id: first.last_node_id,
     status: 'reimported'
   });
-  expect(node).toEqual({ content: '# Entry\n\nSource body\n', deleted_at: null });
+  expect(body).toMatchObject({ content: '# Entry\n\nSource body\n', source: 'blob', status: 'resolved' });
+  expect(node.deleted_at).toBeNull();
   expect(latestRun).toMatchObject({
     duplicate_semantic: 'updated',
     node_id: first.last_node_id,

@@ -21,6 +21,7 @@ export function SettingsMouseGesturesSection() {
         disclosureIconPosition="end"
         expanded={displayExpanded}
         onExpandedChange={setDisplayExpanded}
+        searchRowId="mouse-gestures-appearance"
         title={t('settings.mouseGestures.display.title')}
       >
         <MouseGestureDisplayRows />

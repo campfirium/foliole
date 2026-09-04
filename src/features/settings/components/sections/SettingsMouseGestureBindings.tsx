@@ -192,6 +192,7 @@ export function SettingsMouseGestureBindings() {
           </label>
         }
         ariaLabel={t('settings.mouseGestures.bindings.sectionAria')}
+        searchRowId="mouse-gestures-bindings"
         title={t('settings.mouseGestures.bindings.title')}
         titleActions={
           <MouseGestureBindingReset

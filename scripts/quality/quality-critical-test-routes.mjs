@@ -5,6 +5,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { IMPORT_SETTINGS_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-import-settings.mjs';
+
 export const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('../run-vitest-with-summary.mjs', import.meta.url));
 
 const BACKLINKS_CONTRACT_TESTS = [
@@ -124,6 +126,7 @@ export const CRITICAL_TEST_ROUTES = [
     ],
     tests: IMPORT_SELECTION_CONTRACT_TESTS
   },
+  ...IMPORT_SETTINGS_CRITICAL_TEST_ROUTES,
   {
     triggers: [
       /^src\/features\/settings\/components\/sections\/SettingsDocumentMenuSection\.tsx$/u

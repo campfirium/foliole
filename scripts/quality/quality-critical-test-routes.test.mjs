@@ -17,6 +17,13 @@ const HOSTED_QUALITY_GAP_ROUTES = [
     'src/features/nodes/model/virtualNodeDetail.ts'
   ], ['src/features/nodes/model/virtualNodeResultIndex.test.ts']],
   ['import selection metadata', ['electron/ipc/importTextFile.ts'], ['electron/ipc/commands.window-and-utility.test.ts']],
+  ['current source reimport', ['lib/core/database/nodeBodyMutation.ts'], [
+    'electron/import/currentSourceReimport.test.ts'
+  ]],
+  ['mouse gesture settings search', [
+    'src/features/settings/components/sections/SettingsMouseGestureBindings.tsx',
+    'src/features/settings/model/settingsSearchRowCatalog.ts'
+  ], ['src/features/settings/components/SettingsPanel.search.test.tsx']],
   ['z-index token boundary', [
     'src/features/settings/components/sections/SettingsDocumentMenuSection.tsx'
   ], ['src/app/zIndexTokenBoundary.test.ts']],

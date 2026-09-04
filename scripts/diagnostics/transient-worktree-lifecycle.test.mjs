@@ -13,6 +13,7 @@ import {
   registerTransientWorktree,
   sweepTransientWorktrees
 } from './transient-worktree-lifecycle.mjs';
+import { pathsReferToSameLocation } from './transient-worktree-path-identity.mjs';
 
 const roots = [];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -48,11 +49,36 @@ function addAcceptance(repo, root, name = 'acceptance', createdAt) {
   return path;
 }
 
+function removeRegisteredFixtureWorktrees(root) {
+  const repo = join(root, 'repo');
+  if (!existsSync(repo)) return;
+  const worktrees = git(repo, 'worktree', 'list', '--porcelain', '-z')
+    .split('\0')
+    .filter((entry) => entry.startsWith('worktree '))
+    .map((line) => line.slice('worktree '.length));
+  for (const worktree of worktrees.slice(1)) {
+    git(repo, 'worktree', 'remove', '--force', '--force', worktree);
+  }
+  git(repo, 'worktree', 'prune');
+}
+
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) {
+    removeRegisteredFixtureWorktrees(root);
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 describe('transient worktree lifecycle', () => {
+  it('matches Windows aliases and path casing through native identity', () => {
+    const realpath = (path) => path.replace('RUNNER~1', 'runneradmin');
+    expect(pathsReferToSameLocation(
+      'C:\\Users\\RUNNER~1\\Temp\\worktree',
+      'c:\\users\\runneradmin\\temp\\worktree',
+      { platform: 'win32', realpath }
+    )).toBe(true);
+  });
+
   it('creates and registers acceptance and development worktrees in one action', () => {
     const { repo, root } = fixture();
     const acceptance = join(root, 'acceptance');

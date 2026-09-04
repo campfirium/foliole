@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+import {
+  canonicalWorktreePath,
+  pathsReferToSameLocation
+} from './transient-worktree-path-identity.mjs';
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = resolve(scriptDirectory, '../..');
@@ -17,10 +22,6 @@ function git(cwd, args) {
     throw new Error(result.stderr.trim() || `git ${args.join(' ')} failed`);
   }
   return result.stdout.trim();
-}
-
-function canonical(path) {
-  return realpathSync(resolve(path));
 }
 
 function parseWorktrees(output) {
@@ -40,8 +41,8 @@ function listWorktrees(repoRoot) {
 }
 
 function findWorktree(repoRoot, worktreePath) {
-  const expected = canonical(worktreePath);
-  const entry = listWorktrees(repoRoot).find((item) => canonical(item.worktree) === expected);
+  const entry = listWorktrees(repoRoot)
+    .find((item) => pathsReferToSameLocation(item.worktree, worktreePath));
   if (!entry) throw new Error(`not a registered worktree: ${worktreePath}`);
   return entry;
 }
@@ -63,7 +64,7 @@ function readMarker(worktreePath) {
     || !['acceptance', 'development'].includes(marker.kind)
     || typeof marker.targetRef !== 'string'
     || !Number.isFinite(Date.parse(marker.createdAt))
-    || canonical(marker.worktreePath) !== canonical(worktreePath)
+    || !pathsReferToSameLocation(marker.worktreePath, worktreePath)
   ) {
     throw new Error(`invalid transient marker: ${worktreePath}`);
   }
@@ -90,7 +91,7 @@ export function registerTransientWorktree({
   worktreePath
 }) {
   const entry = findWorktree(repoRoot, worktreePath);
-  if (canonical(repoRoot) === canonical(worktreePath)) {
+  if (pathsReferToSameLocation(repoRoot, worktreePath)) {
     throw new Error('main worktree cannot be transient');
   }
   assertKind(entry, kind);
@@ -101,7 +102,7 @@ export function registerTransientWorktree({
     kind,
     schemaVersion: 1,
     targetRef,
-    worktreePath: canonical(worktreePath)
+    worktreePath: canonicalWorktreePath(worktreePath)
   };
   writeFileSync(markerPath(worktreePath), `${JSON.stringify(marker, null, 2)}\n`, 'utf8');
   return marker;

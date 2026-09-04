@@ -114,6 +114,20 @@ it('finds advanced review scheduler rows from settings search', async () => {
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
+it('routes advanced mouse gesture terms to the current appearance section', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), {
+    target: { value: 'Line color' }
+  });
+  fireEvent.click(screen.getByRole('option', { name: /Gesture appearance/ }));
+
+  await waitFor(() => {
+    expect(document.querySelector('[data-settings-search-row-id="mouse-gestures-appearance"]'))
+      .toHaveClass('bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]');
+  });
+});
+
 it('searches categories without mixing in action help actions', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
   const input = screen.getByRole('textbox', { name: 'Search settings' });
@@ -144,12 +158,10 @@ it('uses the active app language for settings navigation and search results', as
   expect(screen.getByRole('button', { name: '复习' })).toHaveAttribute('aria-current', 'page');
 
   fireEvent.click(screen.getByRole('button', { name: '鼠标手势' }));
-  expect(screen.getAllByText('生效区域').length).toBeGreaterThan(0);
-  expect(screen.getByText('线条颜色')).toBeInTheDocument();
-  expect(screen.getByText('方向阈值（px）')).toBeInTheDocument();
-  expect(screen.queryByText('Active area')).not.toBeInTheDocument();
-  expect(screen.queryByText('Line color')).not.toBeInTheDocument();
-  expect(screen.queryByText('Direction threshold (px)')).not.toBeInTheDocument();
+  expect(screen.getByText('手势外观')).toBeInTheDocument();
+  expect(screen.getByText('手势动作')).toBeInTheDocument();
+  expect(screen.queryByText('Gesture appearance')).not.toBeInTheDocument();
+  expect(screen.queryByText('Gesture actions')).not.toBeInTheDocument();
 });
 
 it('supports keyboard selection and clears query with Escape before closing settings', () => {
