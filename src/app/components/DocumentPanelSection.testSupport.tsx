@@ -4,6 +4,7 @@ import { beforeEach, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 
+import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import type { loadRuntimeNodeSourceDetails as loadRuntimeNodeSourceDetailsRuntime } from '../../shared/platform/nodeSourceRuntimeRepository';
@@ -191,7 +192,9 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
 export function createSectionElement(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
   return (
     <LocalizationProvider>
-      <DocumentPanelSection {...buildSectionProps(overrides)} />
+      <MouseGestureSettingsProvider>
+        <DocumentPanelSection {...buildSectionProps(overrides)} />
+      </MouseGestureSettingsProvider>
     </LocalizationProvider>
   );
 }

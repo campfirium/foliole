@@ -20,10 +20,21 @@ const HOSTED_QUALITY_GAP_ROUTES = [
   ['current source reimport', ['lib/core/database/nodeBodyMutation.ts'], [
     'electron/import/currentSourceReimport.test.ts'
   ]],
+  ['Readwise topic merge', ['lib/core/database/importHighlightBodyMatching.ts'], [
+    'electron/import/readwiseTopicMerge.test.ts'
+  ]],
   ['mouse gesture settings search', [
     'src/features/settings/components/sections/SettingsMouseGestureBindings.tsx',
     'src/features/settings/model/settingsSearchRowCatalog.ts'
   ], ['src/features/settings/components/SettingsPanel.search.test.tsx']],
+  ['mouse gesture folder integration', [
+    'src/app/components/FolderListMouseGestureSurface.tsx',
+    'src/features/settings/context/MouseGestureSettingsProvider.tsx'
+  ], [
+    'src/app/components/DocumentPanelFolderSpecialContent.test.tsx',
+    'src/app/components/DocumentPanelSection.folderNavigation.test.tsx',
+    'src/app/components/DocumentPanelSection.hookCrash.test.tsx'
+  ]],
   ['z-index token boundary', [
     'src/features/settings/components/sections/SettingsDocumentMenuSection.tsx'
   ], ['src/app/zIndexTokenBoundary.test.ts']],

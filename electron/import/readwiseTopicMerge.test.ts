@@ -147,10 +147,7 @@ it('keeps unmatched manual highlight content as child nodes without changing the
     content: child.content
   }))).toEqual([
     {
-      anchorLink: expect.objectContaining({
-        kind: 'highlight',
-        locator: expect.objectContaining({ originalText: '# Article' })
-      }),
+      anchorLink: null,
       content: '# Article'
     },
     {

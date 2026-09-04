@@ -39,7 +39,9 @@ function git(cwd, ...args) {
 }
 
 afterEach(() => {
-  for (const root of fixtureRoots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of fixtureRoots.splice(0)) {
+    rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+  }
 });
 
 it('refreshes the active cache entry before maintaining other local storage', () => {

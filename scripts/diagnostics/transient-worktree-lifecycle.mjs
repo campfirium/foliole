@@ -186,8 +186,9 @@ export function sweepTransientWorktrees({
       if (Date.parse(marker.createdAt) > expiryMs) continue;
       const activeLock = entry.locked && statSync(lockPath(entry.worktree)).mtimeMs > expiryMs;
       if (activeLock) continue;
+      const canonicalPath = canonicalWorktreePath(entry.worktree);
       finishTransientWorktree({ repoRoot, worktreePath: entry.worktree });
-      removed.push(entry.worktree);
+      removed.push(canonicalPath);
     } catch (error) {
       failures.push({ message: error.message, path: entry.worktree });
     }
