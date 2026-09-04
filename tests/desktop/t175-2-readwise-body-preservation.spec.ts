@@ -84,23 +84,23 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
   settings.readwiseSources = applyReadwiseRootPath(settings.readwiseSources, readwiseRoot)
     .map((source) => ({ ...source, keepState: 'enabled' as const }));
 
-  await desktopWindow.evaluate(async (nextSettings) => {
+  const firstRun = await desktopWindow.evaluate(async (nextSettings) => {
     await window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings });
     return window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings });
   }, settings);
+  expect(firstRun).toMatchObject({ imported_count: 1, status: 'completed' });
   const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
   if (!libraryHome) throw new Error('missing isolated library home');
   const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
   const database = openDatabase(databasePath);
-  const imported = database.prepare(
-    'SELECT latest_node_id FROM import_sources WHERE source_name = ?'
-  ).get(SOURCE_NAME) as { latest_node_id: string };
+  const imported = database.prepare('SELECT id FROM nodes WHERE title = ? AND deleted_at IS NULL')
+    .get('T175 Article') as { id: string };
   const firstBody = database.prepare(
     `SELECT CAST(cbd.data AS TEXT) AS body
      FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE n.id = ?`
-  ).get(imported.latest_node_id) as { body: string };
-  writeBlobOnlyLocalEdit(database, imported.latest_node_id, `${firstBody.body}\n\n${LOCAL_APPENDIX}`);
+  ).get(imported.id) as { body: string };
+  writeBlobOnlyLocalEdit(database, imported.id, `${firstBody.body}\n\n${LOCAL_APPENDIX}`);
   database.close();
 
   await writeReadwiseFixture(readwiseRoot, true);
@@ -113,14 +113,14 @@ test('Readwise re-import preserves a Blob-only local body and appends highlights
 
   const document = await desktopWindow.evaluate((nodeId) => (
     window.electronAPI.invoke('load_node_document', { nodeId })
-  ), imported.latest_node_id);
+  ), imported.id);
   expect(document.content).toContain('author: Updated');
   expect(document.content).toContain(LOCAL_APPENDIX);
 
   const verified = openDatabase(databasePath);
   const children = verified.prepare(
     'SELECT content, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC'
-  ).all(imported.latest_node_id) as Array<{ anchor_link: string; content: string }>;
+  ).all(imported.id) as Array<{ anchor_link: string; content: string }>;
   verified.close();
   expect(children.map((child) => child.content)).toEqual(['Alpha sentence.', 'Beta sentence.']);
   children.forEach((child) => {
