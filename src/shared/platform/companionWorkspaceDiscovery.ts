@@ -64,7 +64,7 @@ async function loadNativeDiscoveryCandidates(
   }
   if (!options.allowWhileNotParticipating) {
     const participation = await FolioleCompanionSync.loadSyncParticipationState().catch(() => null);
-    if (participation?.participating !== true) return [];
+    if (participation?.sync_enabled !== true || participation.sync_paused) return [];
   }
   const runtime = getCompanionRuntimeCapability();
   const direct = runtime.kind === 'android-native'

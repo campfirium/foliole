@@ -143,6 +143,23 @@ it('keeps ordinary discovery stopped while allowing explicit Leave routing when 
   expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
 });
 
+it('does not let a transient native inactive snapshot veto a foreground discovery caller', async () => {
+  capacitorMock.plugin.loadSyncParticipationState.mockResolvedValue({
+    lifecycle_active: false, participating: false, sync_enabled: true, sync_paused: false
+  });
+  capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+    candidates: [nsdCandidate('http://192.168.1.44:38641')]
+  });
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
+    desktopResponse({ hostName: 'Mac', peerId: 'desktop-mac', platform: 'macOS' })
+  );
+
+  const result = await discoverCompanionDesktop('http://old:38641');
+
+  expect(result.discovery.provider_device_id).toBe('desktop-mac');
+  expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
+});
+
 describe('companionWorkspaceDiscovery compatibility', () => {
   it('returns multiple desktops and deduplicates emulator aliases by peer id', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({

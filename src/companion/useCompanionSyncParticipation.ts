@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import {
   getCompanionSyncParticipationSnapshot,
   loadCompanionSyncParticipationState,
@@ -13,7 +14,24 @@ export function useCompanionSyncParticipation() {
     getCompanionSyncParticipationSnapshot
   );
   useEffect(() => {
-    void loadCompanionSyncParticipationState().catch(() => undefined);
+    let cancelled = false;
+    let unsubscribe = () => undefined;
+    const refresh = () => {
+      void loadCompanionSyncParticipationState().catch(() => undefined);
+    };
+    refresh();
+    void subscribeNativeAppForeground(refresh).then((nextUnsubscribe) => {
+      if (cancelled) {
+        nextUnsubscribe();
+        return;
+      }
+      unsubscribe = nextUnsubscribe;
+      refresh();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
   return state;
 }
