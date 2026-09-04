@@ -14,6 +14,11 @@ const TRANSIENT_FAILURE = [
   'Internal Error: Error when performing the request to',
   `https://registry.npmjs.org/npm/-/npm-${PINNED_NPM.version}.tgz`
 ].join(' ');
+const TERMINATED_SOCKET_FAILURE = [
+  `Installing npm@${PINNED_NPM.version}...`,
+  'TypeError: terminated',
+  "[cause]: SocketError: other side closed code: 'UND_ERR_SOCKET'"
+].join('\n');
 const QUIET_STREAM = { write: vi.fn() };
 
 function successfulRunner(version = PINNED_NPM.version) {
@@ -66,6 +71,27 @@ describe('pinned npm quality tooling', () => {
     expect(log.mock.calls.flat()).toContain(
       '[pinned-npm] retry classification=npm-registry-transient backoff_ms=5000'
     );
+  });
+
+  it('retries a hosted pinned npm socket termination without a printed tarball URL', () => {
+    const runner = successfulRunner();
+    runner
+      .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+      .mockReturnValueOnce({ status: 1, stdout: TERMINATED_SOCKET_FAILURE, stderr: '' });
+    const sleep = vi.fn();
+
+    activatePinnedNpm({
+      env: HOSTED_ENV,
+      platform: 'win32',
+      runner,
+      sleep,
+      stderr: QUIET_STREAM,
+      stdout: QUIET_STREAM,
+      windowsShell: 'cmd.exe'
+    });
+
+    expect(runner).toHaveBeenCalledTimes(4);
+    expect(sleep).toHaveBeenCalledExactlyOnceWith(5_000);
   });
 
   it('stops after the second hosted npm registry failure', () => {
@@ -131,7 +157,7 @@ describe('pinned npm quality tooling', () => {
     ]);
   });
 
-  it('requires hosted identity and the exact pinned registry tarball', () => {
+  it('requires hosted identity and pinned npm install context', () => {
     expect(isHostedPinnedNpmRegistryFailure(TRANSIENT_FAILURE, {
       env: HOSTED_ENV,
       version: PINNED_NPM.version
@@ -144,5 +170,9 @@ describe('pinned npm quality tooling', () => {
       env: HOSTED_ENV,
       version: PINNED_NPM.version
     })).toBe(false);
+    expect(isHostedPinnedNpmRegistryFailure(TERMINATED_SOCKET_FAILURE, {
+      env: HOSTED_ENV,
+      version: PINNED_NPM.version
+    })).toBe(true);
   });
 });

@@ -96,10 +96,9 @@ export function findDefaultGitBashPath(env = process.env) {
 export function resolvePilotPreflight(env = process.env, options = {}) {
   const workdir = normalizeWindowsPath(env.FOLIOLE_WINDOWS_NATIVE_WORKDIR || env.WINDOWS_NATIVE_WORKDIR || DEFAULT_WORKDIR);
   const configuredGitBashPath = normalizeWindowsPath(env.FOLIOLE_WINDOWS_GIT_BASH || env.npm_config_script_shell || '');
-  const detectedGitBashPath = options.gitBashCandidates
+  const gitBashPath = configuredGitBashPath || (options.gitBashCandidates
     ? findGitBashPath(options.gitBashCandidates)
-    : findDefaultGitBashPath(env);
-  const gitBashPath = configuredGitBashPath || detectedGitBashPath;
+    : findDefaultGitBashPath(env));
   const nativePaths = resolveWindowsNativePaths(workdir);
   const errors = [];
   const warnings = [];

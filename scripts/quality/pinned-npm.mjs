@@ -56,7 +56,8 @@ function isGithubHosted(env) {
 export function isHostedPinnedNpmRegistryFailure(output, options = {}) {
   if (!isGithubHosted(options.env ?? process.env)) return false;
   const tarballUrl = `https://registry.npmjs.org/npm/-/npm-${options.version}.tgz`;
-  return output.includes(tarballUrl) &&
+  const installMarker = `Installing npm@${options.version}`;
+  return (output.includes(tarballUrl) || output.includes(installMarker)) &&
     !DETERMINISTIC_REGISTRY_FAILURE.some((pattern) => pattern.test(output)) &&
     TRANSIENT_REGISTRY_FAILURE.some((pattern) => pattern.test(output));
 }

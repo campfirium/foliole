@@ -32,10 +32,16 @@ describe('windows-native-pilot-preflight', () => {
   });
 
   it('rejects protected roots and whitespace pilot paths', () => {
+    const options = {};
+    Object.defineProperty(options, 'gitBashCandidates', {
+      get() {
+        throw new Error('configured Git Bash must bypass discovery');
+      }
+    });
     const result = resolvePilotPreflight({
       FOLIOLE_WINDOWS_NATIVE_WORKDIR: 'D:\\X\\U\\Foliole Data',
       FOLIOLE_WINDOWS_GIT_BASH: 'C:\\Program Files\\Git\\bin\\bash.exe'
-    });
+    }, options);
 
     expect(result.ok).toBe(false);
     expect(result.errors).toContain('workdir must not contain whitespace for the first pilot: D:\\X\\U\\Foliole Data');
