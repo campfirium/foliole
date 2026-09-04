@@ -1,16 +1,20 @@
 import { useMemo, useState, type ReactNode } from 'react';
 
-import type { EditorMouseGestureId } from '../../editor/model/editorMouseGestures';
+import type {
+  EditorMouseGestureDirection,
+  EditorMouseGestureId
+} from '../../editor/model/editorMouseGestures';
 import {
-  getEditorMouseGestureBindings,
+  addCustomEditorMouseGesture,
   getEditorMouseGestureSettings,
-  setEditorMouseGestureAction,
+  resetEditorMouseGestureBindings,
+  setEditorMouseGestureBinding,
+  setEditorMouseGestureBoolean,
   setEditorMouseGestureSegmentThreshold,
   setEditorMouseGestureTrailColor,
   setEditorMouseGestureTrailLineWidth,
   setEditorMouseGestureTrailOpacity,
-  setEditorMouseGestureTrailPointThreshold,
-  type EditorMouseGestureActionSetting
+  setEditorMouseGestureTrailPointThreshold
 } from '../../editor/model/editorMouseGestureSettings';
 
 import {
@@ -27,10 +31,27 @@ function useMouseGestureSettingsState() {
 
   return useMemo(
     () => ({
-      bindings: getEditorMouseGestureBindings(settings),
+      bindings: settings.bindings,
       settings,
-      setAction: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => {
-        setEditorMouseGestureAction(gestureId, action);
+      addCustomGesture: (directions: EditorMouseGestureDirection[], commandId: string) => {
+        const added = addCustomEditorMouseGesture(directions, commandId);
+        if (added) syncSettings();
+        return added;
+      },
+      resetBindings: () => {
+        resetEditorMouseGestureBindings();
+        syncSettings();
+      },
+      setBinding: (gestureId: EditorMouseGestureId, commandId: string | null) => {
+        setEditorMouseGestureBinding(gestureId, commandId);
+        syncSettings();
+      },
+      setEnabled: (value: boolean) => {
+        setEditorMouseGestureBoolean('enabled', value);
+        syncSettings();
+      },
+      setHintVisible: (value: boolean) => {
+        setEditorMouseGestureBoolean('hintVisible', value);
         syncSettings();
       },
       setSegmentThreshold: (value: number) => {
@@ -52,6 +73,10 @@ function useMouseGestureSettingsState() {
       setTrailPointThreshold: (value: number) => {
         setEditorMouseGestureTrailPointThreshold(value);
         syncSettings();
+      },
+      setTrailVisible: (value: boolean) => {
+        setEditorMouseGestureBoolean('trailVisible', value);
+        syncSettings();
       }
     }),
     [settings]
@@ -60,7 +85,11 @@ function useMouseGestureSettingsState() {
 
 export function MouseGestureSettingsProvider({ children }: { children: ReactNode }) {
   const value = useMouseGestureSettingsState();
-  return <MouseGestureSettingsContext.Provider value={value}>{children}</MouseGestureSettingsContext.Provider>;
+  return (
+    <MouseGestureSettingsContext.Provider value={value}>
+      {children}
+    </MouseGestureSettingsContext.Provider>
+  );
 }
 
 export { useMouseGestureSettings };

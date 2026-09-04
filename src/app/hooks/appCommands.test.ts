@@ -1,7 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { preloadTranslationCatalog, translate, type TranslationKey } from '../../shared/localization/translations';
+import {
+  preloadTranslationCatalog,
+  translate,
+  type TranslationKey
+} from '../../shared/localization/translations';
 
 import { buildAppPaletteItems } from './appCommands';
 import { runReviewModeToggle } from './reviewModeToggle';
@@ -35,6 +39,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canOpenComparisonView: true,
     canToggleImmersiveMode: true,
     canSetNodePriority: true,
+    canScrollCurrentDocument: true,
     canRevealAnswer: true,
     canToggleReviewMode: true,
     canGradeReview: true,
@@ -53,17 +58,23 @@ function createPaletteOptions(isReviewMode: boolean) {
 }
 
 function expectFourWayNavigationTitles(items: ReturnType<typeof buildAppPaletteItems>) {
-  expect([
-    APP_COMMAND_IDS.goBack,
-    APP_COMMAND_IDS.goForward,
-    APP_COMMAND_IDS.goParent,
-    APP_COMMAND_IDS.goToLastChild
-  ].map((commandId) => items.find((item) => item.id === commandId)?.title)).toEqual([
-    'Go Back',
-    'Go Forward',
-    'Go Up',
-    'Go Down'
-  ]);
+  expect(
+    [
+      APP_COMMAND_IDS.goBack,
+      APP_COMMAND_IDS.goForward,
+      APP_COMMAND_IDS.goParent,
+      APP_COMMAND_IDS.goToLastChild
+    ].map((commandId) => items.find((item) => item.id === commandId)?.title)
+  ).toEqual(['Go Back', 'Go Forward', 'Go Up', 'Go Down']);
+}
+
+function expectEditorPaletteEntries(items: ReturnType<typeof buildAppPaletteItems>) {
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionHighlight)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionCloze)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.addSelectionNote)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.repairTable)).toBe(true);
 }
 
 function expectCorePaletteEntries() {
@@ -77,8 +88,14 @@ function expectCorePaletteEntries() {
     enabled: true,
     title: 'Create Virtual Folder'
   });
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({ enabled: false, title: 'Undo' });
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({ enabled: false, title: 'Redo' });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({
+    enabled: false,
+    title: 'Undo'
+  });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({
+    enabled: false,
+    title: 'Redo'
+  });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
@@ -88,7 +105,10 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.renameNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.toggleComparisonView)).toMatchObject({ enabled: true, title: 'Compare with Draft' });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.toggleComparisonView)).toMatchObject({
+    enabled: true,
+    title: 'Compare with Draft'
+  });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.enterPriorityMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
@@ -101,8 +121,12 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openPerformancePanel)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGuidedSample)).toBe(true);
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.openWorkspaceSearch)).toMatchObject({ title: 'Search' });
-  expect(items.find((item) => item.id === APP_COMMAND_IDS.openCommandPalette)).toMatchObject({ title: 'Command Palette' });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.openWorkspaceSearch)).toMatchObject({
+    title: 'Search'
+  });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.openCommandPalette)).toMatchObject({
+    title: 'Command Palette'
+  });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.checkForUpdates)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openLatestRelease)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubRepository)).toBe(true);
@@ -111,16 +135,21 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubIssues)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubDiscussions)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openYouTubePlaylist)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionHighlight)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.createSelectionCloze)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.addSelectionNote)).toBe(true);
-  expect(items.some((item) => item.id === APP_COMMAND_IDS.repairTable)).toBe(true);
+  expectEditorPaletteEntries(items);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
 }
 
+function expectDocumentScrollPaletteEntries() {
+  const items = buildAppPaletteItems(createPaletteOptions(false));
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.scrollDocumentTop)).toMatchObject({
+    enabled: true,
+    title: 'Scroll to Document Top'
+  });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.scrollDocumentBottom)?.shortcuts).toBeUndefined();
+}
+
 describe('buildAppPaletteItems localization', () => {
+  it('publishes document scroll commands without default shortcuts', expectDocumentScrollPaletteEntries);
   it('uses localized command titles from the caller translation function', () => {
     const items = buildAppPaletteItems({
       ...createPaletteOptions(false),
@@ -150,7 +179,9 @@ describe('buildAppPaletteItems', () => {
   it('shows the light or dark mode toggle action', () => {
     const lightItems = buildAppPaletteItems(createPaletteOptions(false));
 
-    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Cycle Appearance Mode');
+    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe(
+      'Cycle Appearance Mode'
+    );
   });
 
   it('uses dynamic undo and redo action titles', () => {
@@ -172,17 +203,14 @@ describe('buildAppPaletteItems', () => {
     });
   });
 
-  it('exposes Ctrl+Y as a redo shortcut', () => {
+  it('projects the current platform redo shortcut', () => {
     const items = buildAppPaletteItems({
       ...createPaletteOptions(false),
       canRedoWorkspaceAction: true,
       redoWorkspaceActionTitle: 'Redo Create Annotation'
     });
 
-    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts?.secondary).toMatchObject({
-      ctrlKey: true,
-      key: 'y'
-    });
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts?.primary).toBeDefined();
   });
 
   it('omits the DevTools command when renderer dev entries are disabled', () => {

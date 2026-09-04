@@ -10,7 +10,11 @@ import { useMouseGestureSettings } from '../../settings/context/MouseGestureSett
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
 import { useEditorAdapter } from './markdownEditorAdapter';
-import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
+import {
+  GestureDirectionHintOverlay,
+  GestureTrailOverlay,
+  buildGestureTrailPath
+} from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useMarkdownEditorPropsDiagnostic } from './markdownEditorInputDiagnostic';
 import { useMarkdownEditorModelEffects } from './markdownEditorModelEffects';
@@ -75,6 +79,7 @@ function MarkdownEditorSurface(args: {
         style={args.editorStyle}
       />
       <GestureTrailOverlay path={args.gestureTrailPath} trail={args.mouseGesture.trail} />
+      <GestureDirectionHintOverlay directions={args.mouseGesture.directions} />
     </div>
   );
 }
@@ -95,7 +100,7 @@ function useMarkdownEditorSurfaceModel(args: {
   settings: ReturnType<typeof useMouseGestureSettings>['settings'];
   value: string;
 }) {
-  const mouseGesture = useEditorMouseGesture(args.adapterRef, args.hostRef, args.bindings, args.settings);
+  const mouseGesture = useEditorMouseGesture(args.hostRef, args.bindings, args.settings);
   const markdownImageReferences = useMemo(
     () => (args.value.includes('![') && args.value.includes('](') ? collectMarkdownImageReferences(args.value) : []),
     [args.value]

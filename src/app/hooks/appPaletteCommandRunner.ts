@@ -8,16 +8,23 @@ import {
   createPaletteEditorCommandActions,
   type PaletteEditorCommandRunnerArgs
 } from './appPaletteEditorCommandActions';
-import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
+import {
+  createPaletteHelpCommandActions,
+  type PaletteHelpCommandRunnerArgs
+} from './appPaletteHelpCommandRunner';
 import { runResetImportDataCommand } from './appPaletteResetImportCommand';
 import { createPaletteSettingsActions } from './appPaletteSettingsCommandActions';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 import { runReviewModeToggle } from './reviewModeToggle';
 
-const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.undo, APP_COMMAND_IDS.redo]);
+const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([
+  APP_COMMAND_IDS.undo,
+  APP_COMMAND_IDS.redo
+]);
 const CONTEXTUAL_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.reviewSourceUpdate]);
 
-interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, PaletteEditorCommandRunnerArgs {
+interface PaletteCommandRunnerArgs
+  extends PaletteHelpCommandRunnerArgs, PaletteEditorCommandRunnerArgs {
   clearSettingsRequest: () => void;
   closeTrashView: () => void;
   createFolder: () => void;
@@ -28,6 +35,8 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   exitStudyMode: () => void;
   goBack: () => void;
   goForward: () => void;
+  scrollDocumentBottom: () => boolean | void;
+  scrollDocumentTop: () => boolean | void;
   goToLastChild: () => void;
   goToNode: () => void;
   moveToNode: () => void;
@@ -90,7 +99,10 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   undoWorkspaceAction: () => boolean;
 }
 
-function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+function createPaletteReviewCommandActions(
+  args: PaletteCommandRunnerArgs,
+  toggleReviewMode: () => void
+) {
   return {
     deleteCurrentReviewItem: () => args.deleteCurrentReviewItem(),
     deleteReviewSourceTopic: () => args.deleteReviewSourceTopic(),
@@ -131,6 +143,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createVirtualFolder: args.createVirtualFolder,
     goBack: args.goBack,
     goForward: args.goForward,
+    ...createDocumentScrollActions(args),
     goToLastChild: args.goToLastChild,
     goToNode: () => args.setGoToNodePaletteOpen(true),
     moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
@@ -176,6 +189,13 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
   };
 }
 
+function createDocumentScrollActions(args: PaletteCommandRunnerArgs) {
+  return {
+    scrollDocumentBottom: args.scrollDocumentBottom,
+    scrollDocumentTop: args.scrollDocumentTop
+  };
+}
+
 export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
   const toggleReviewMode = () =>
     runReviewModeToggle(args.isReviewMode, {
@@ -192,9 +212,10 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
     });
 
   return (id: string) => {
-    const canRun = FRESH_STATE_COMMAND_IDS.has(id)
-      || CONTEXTUAL_COMMAND_IDS.has(id)
-      || args.paletteItems.some((item) => item.id === id && item.enabled);
+    const canRun =
+      FRESH_STATE_COMMAND_IDS.has(id) ||
+      CONTEXTUAL_COMMAND_IDS.has(id) ||
+      args.paletteItems.some((item) => item.id === id && item.enabled);
     if (!canRun) {
       return;
     }

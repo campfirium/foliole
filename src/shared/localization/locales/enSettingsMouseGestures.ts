@@ -12,7 +12,8 @@ export const EN_SETTINGS_MOUSE_GESTURES_TRANSLATIONS = {
   'settings.mouseGestures.thresholds.title': 'Thresholds',
   'settings.mouseGestures.thresholds.directionAria': 'Mouse gesture direction threshold',
   'settings.mouseGestures.thresholds.pointSpacing.title': 'Trail point spacing (px)',
-  'settings.mouseGestures.thresholds.pointSpacing.description': 'Minimum distance between points in the visible trail.',
+  'settings.mouseGestures.thresholds.pointSpacing.description':
+    'Minimum distance between points in the visible trail.',
   'settings.mouseGestures.thresholds.pointAria': 'Mouse gesture trail point threshold',
   'settings.mouseGestures.area.sectionAria': 'Mouse gesture area section',
   'settings.mouseGestures.area.title': 'Area',
@@ -24,10 +25,38 @@ export const EN_SETTINGS_MOUSE_GESTURES_TRANSLATIONS = {
   'settings.mouseGestures.gesture.leftUp': 'Left then up',
   'settings.mouseGestures.gesture.leftDown': 'Left then down',
   'settings.mouseGestures.gesture.reserved': 'Reserved one-stroke gesture. Disabled by default.',
-  'settings.mouseGestures.gesture.topShortcut': 'Default shortcut for jumping to the top of the document.',
-  'settings.mouseGestures.gesture.bottomShortcut': 'Default shortcut for jumping to the bottom of the document.',
+  'settings.mouseGestures.gesture.topShortcut':
+    'Default shortcut for jumping to the top of the document.',
+  'settings.mouseGestures.gesture.bottomShortcut':
+    'Default shortcut for jumping to the bottom of the document.',
   'settings.mouseGestures.action.aria': '{label} mouse gesture action',
   'settings.mouseGestures.action.disabled': 'Disabled',
   'settings.mouseGestures.action.scrollTop': 'Scroll to top',
-  'settings.mouseGestures.action.scrollBottom': 'Scroll to bottom'
+  'settings.mouseGestures.action.scrollBottom': 'Scroll to bottom',
+  'settings.mouseGestures.enabled.title': 'Mouse gestures',
+  'settings.mouseGestures.enabled.description': 'Use right-button drags in the main document.',
+  'settings.mouseGestures.display.title': 'Display',
+  'settings.mouseGestures.display.trail': 'Show gesture trail',
+  'settings.mouseGestures.display.hint': 'Show direction hint',
+  'settings.mouseGestures.bindings.reset': 'Restore default bindings',
+  'settings.mouseGestures.bindings.resetTitle': 'Restore default gesture bindings?',
+  'settings.mouseGestures.bindings.resetDescription':
+    'Custom gestures will be removed and the twelve basic gestures will return to their default commands.',
+  'settings.mouseGestures.bindings.search': 'Search commands',
+  'settings.mouseGestures.bindings.noResults': 'No commands found.',
+  'settings.mouseGestures.bindings.unbound': 'Unbound',
+  'settings.mouseGestures.bindings.choose': 'Choose command for {label}',
+  'settings.mouseGestures.bindings.filter': 'Filter commands',
+  'settings.mouseGestures.record.add': 'Record gesture for {command}',
+  'settings.mouseGestures.record.prompt':
+    'Right-drag here to draw a gesture with at least three direction changes.',
+  'settings.mouseGestures.record.save': 'Save',
+  'settings.mouseGestures.record.cancel': 'Cancel',
+  'settings.mouseGestures.record.tooShort': 'Gesture is too short.',
+  'settings.mouseGestures.record.conflict': 'Gesture already exists.',
+  'settings.mouseGestures.gesture.custom': 'Custom gesture',
+  'settings.mouseGestures.direction.up': 'Up',
+  'settings.mouseGestures.direction.down': 'Down',
+  'settings.mouseGestures.direction.left': 'Left',
+  'settings.mouseGestures.direction.right': 'Right'
 } as const;

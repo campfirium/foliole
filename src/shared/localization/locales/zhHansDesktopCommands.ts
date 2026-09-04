@@ -55,6 +55,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.customizeDocumentMenu': '自定义菜单...',
   'desktop.command.goBack': '后退',
   'desktop.command.goForward': '前进',
+  'desktop.command.scrollDocumentTop': '滚动到文档顶部',
+  'desktop.command.scrollDocumentBottom': '滚动到文档底部',
   'desktop.command.goToNode': '跳转到...',
   'desktop.command.moveToNode': '移动到...',
   'desktop.command.goParent': '返回上级',

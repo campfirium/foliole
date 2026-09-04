@@ -2,9 +2,16 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
-import { preloadTranslationCatalog, translate, type TranslationKey } from '../../shared/localization/translations';
+import {
+  preloadTranslationCatalog,
+  translate,
+  type TranslationKey
+} from '../../shared/localization/translations';
 
-import { type BuildAppPaletteItemsOptions, getAppPaletteCommands } from './appPaletteCommandCatalog';
+import {
+  type BuildAppPaletteItemsOptions,
+  getAppPaletteCommands
+} from './appPaletteCommandCatalog';
 
 const enabledOptions: BuildAppPaletteItemsOptions = {
   canReadReviewTopic: true,
@@ -34,6 +41,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canToggleDevReviewStatusBarPersistence: true,
   canRevealAnswer: true,
   canSetNodePriority: true,
+  canScrollCurrentDocument: true,
   canToggleImmersiveMode: true,
   canToggleReviewMode: true,
   canUndoWorkspaceAction: true,
@@ -66,9 +74,18 @@ describe('getAppPaletteCommands localization', () => {
       sectionId: 'Workspace',
       title: '命令面板'
     });
-    expect(items.find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title).toBe('Publish to the site');
-    expect(sections.map((section) => section.title).slice(0, 4)).toEqual(['导航', '创建', '工作区', '编辑器']);
-    expect(sections.flatMap((section) => section.items).map((item) => item.title)).not.toContain('desktop.command.openCommandPalette');
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title).toBe(
+      'Publish to the site'
+    );
+    expect(sections.map((section) => section.title).slice(0, 4)).toEqual([
+      '导航',
+      '创建',
+      '工作区',
+      '编辑器'
+    ]);
+    expect(sections.flatMap((section) => section.items).map((item) => item.title)).not.toContain(
+      'desktop.command.openCommandPalette'
+    );
   });
 });
 
@@ -79,8 +96,11 @@ describe('getAppPaletteCommands', () => {
   });
 
   it('names the site publishing target alongside the other destination commands', () => {
-    expect(getAppPaletteCommands(enabledOptions).find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title)
-      .toBe('Publish to the site');
+    expect(
+      getAppPaletteCommands(enabledOptions).find(
+        (item) => item.id === APP_COMMAND_IDS.publishToFoliole
+      )?.title
+    ).toBe('Publish to the site');
   });
 
   it('keeps command palette sections aligned with the information architecture', () => {
@@ -109,26 +129,47 @@ describe('getAppPaletteCommands', () => {
 
   it('uses dynamic labels for the dev review status bar memory toggle', () => {
     expect(
-      getAppPaletteCommands({ ...enabledOptions, isDevReviewStatusBarPersistenceEnabled: false }).find(
-        (item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence
-      )?.title
+      getAppPaletteCommands({
+        ...enabledOptions,
+        isDevReviewStatusBarPersistenceEnabled: false
+      }).find((item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence)?.title
     ).toBe('DEV Enable Review Status Bar Memory');
     expect(
-      getAppPaletteCommands({ ...enabledOptions, isDevReviewStatusBarPersistenceEnabled: true }).find(
-        (item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence
-      )?.title
+      getAppPaletteCommands({
+        ...enabledOptions,
+        isDevReviewStatusBarPersistenceEnabled: true
+      }).find((item) => item.id === APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence)?.title
     ).toBe('DEV Disable Review Status Bar Memory');
   });
+});
+
+describe('command palette help entries', () => {
 
   it('keeps help knowledge entries out of ordinary command results', () => {
     const items = getAppPaletteCommands(enabledOptions);
     const helpCommand = items.find((item) => item.id === APP_COMMAND_IDS.openHelpSearch);
-    const relearnResults = buildCommandMenuSections(items, [], 'relearn').flatMap((section) => section.items);
-    const priorityResults = buildCommandMenuSections(items, [], 'priority').flatMap((section) => section.items);
+    const relearnResults = buildCommandMenuSections(items, [], 'relearn').flatMap(
+      (section) => section.items
+    );
+    const priorityResults = buildCommandMenuSections(items, [], 'priority').flatMap(
+      (section) => section.items
+    );
 
     expect(helpCommand).toMatchObject({ enabled: true, title: 'DEV Open Help Search' });
     expect(items.some((item) => item.id.startsWith('actionHelp.'))).toBe(false);
     expect(relearnResults.map((item) => item.title)).not.toContain('Relearn');
     expect(priorityResults.map((item) => item.title)).not.toContain('Relearn');
+  });
+});
+
+describe('document scroll palette commands', () => {
+  it('uses current-document availability', () => {
+    const enabled = getAppPaletteCommands(enabledOptions);
+    expect(enabled.find((item) => item.id === APP_COMMAND_IDS.scrollDocumentTop)).toMatchObject({
+      enabled: true,
+      section: 'Navigation'
+    });
+    const disabled = getAppPaletteCommands({ ...enabledOptions, canScrollCurrentDocument: false });
+    expect(disabled.find((item) => item.id === APP_COMMAND_IDS.scrollDocumentBottom)?.enabled).toBe(false);
   });
 });

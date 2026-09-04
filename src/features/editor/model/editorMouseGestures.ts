@@ -1,47 +1,83 @@
 export type EditorMouseGestureDirection = 'left' | 'right' | 'up' | 'down';
-export const EDITOR_MOUSE_GESTURE_IDS = ['left', 'right', 'left-up', 'left-down'] as const;
-export type EditorMouseGestureId = (typeof EDITOR_MOUSE_GESTURE_IDS)[number];
-export type EditorMouseGestureActionId = 'scroll-top' | 'scroll-bottom';
+export type EditorMouseGestureId = string;
 
-export interface EditorMouseGestureBinding {
-  action: EditorMouseGestureActionId;
+export interface EditorMouseGestureDefinition {
+  directions: EditorMouseGestureDirection[];
   gesture: EditorMouseGestureId;
+  isCustom: boolean;
 }
 
-export const DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS: EditorMouseGestureBinding[] = [
-  { action: 'scroll-top', gesture: 'left-up' },
-  { action: 'scroll-bottom', gesture: 'left-down' }
-];
+export interface EditorMouseGestureBinding extends EditorMouseGestureDefinition {
+  commandId: string | null;
+}
+
+const DIRECTIONS: EditorMouseGestureDirection[] = ['up', 'down', 'left', 'right'];
+const OPPOSITE_DIRECTIONS: Record<EditorMouseGestureDirection, EditorMouseGestureDirection> = {
+  down: 'up',
+  left: 'right',
+  right: 'left',
+  up: 'down'
+};
+
+export function toEditorMouseGestureId(directions: EditorMouseGestureDirection[]) {
+  return directions.join('-');
+}
+
+export function normalizeEditorMouseGestureDirections(
+  directions: EditorMouseGestureDirection[],
+  maxSegments = 8
+) {
+  return directions.reduce<EditorMouseGestureDirection[]>((result, direction) => {
+    if (result.length < maxSegments && result.at(-1) !== direction) result.push(direction);
+    return result;
+  }, []);
+}
+
+export const BASE_EDITOR_MOUSE_GESTURES: EditorMouseGestureDefinition[] = DIRECTIONS.flatMap(
+  (first) => [
+    { directions: [first], gesture: first, isCustom: false },
+    ...DIRECTIONS.filter((second) => second !== first && second !== OPPOSITE_DIRECTIONS[first]).map(
+      (second) => ({
+        directions: [first, second],
+        gesture: `${first}-${second}`,
+        isCustom: false
+      })
+    )
+  ]
+);
+
+export const EDITOR_MOUSE_GESTURE_IDS = BASE_EDITOR_MOUSE_GESTURES.map(
+  (gesture) => gesture.gesture
+);
 
 export function resolveEditorMouseGesture(
-  directions: EditorMouseGestureDirection[]
+  directions: EditorMouseGestureDirection[],
+  bindings: EditorMouseGestureBinding[] = []
 ): EditorMouseGestureId | null {
-  if (directions.length === 0) {
-    return null;
-  }
-
-  if (directions[0] === 'right') {
-    return 'right';
-  }
-  if (directions[0] === 'left' && directions.length === 1) {
-    return 'left';
-  }
-  if (directions[0] === 'left' && directions[1] === 'down') {
-    return 'left-down';
-  }
-  if (directions[0] === 'left' && directions[1] === 'up') {
-    return 'left-up';
-  }
-  return null;
+  const gesture = toEditorMouseGestureId(normalizeEditorMouseGestureDirections(directions));
+  if (!gesture) return null;
+  return [...BASE_EDITOR_MOUSE_GESTURES, ...bindings].some((item) => item.gesture === gesture)
+    ? gesture
+    : null;
 }
 
-export function resolveEditorMouseGestureAction(
+export function resolveEditorMouseGestureCommand(
   bindings: EditorMouseGestureBinding[],
   gesture: EditorMouseGestureId | null
-): EditorMouseGestureActionId | null {
-  if (!gesture) {
-    return null;
-  }
+) {
+  return gesture
+    ? (bindings.find((binding) => binding.gesture === gesture)?.commandId ?? null)
+    : null;
+}
 
-  return bindings.find((binding) => binding.gesture === gesture)?.action ?? null;
+export function validateCustomEditorMouseGesture(
+  directions: EditorMouseGestureDirection[],
+  bindings: EditorMouseGestureBinding[]
+): 'valid' | 'too-short' | 'conflict' {
+  const normalized = normalizeEditorMouseGestureDirections(directions);
+  if (normalized.length < 3) return 'too-short';
+  const gesture = toEditorMouseGestureId(normalized);
+  return [...BASE_EDITOR_MOUSE_GESTURES, ...bindings].some((item) => item.gesture === gesture)
+    ? 'conflict'
+    : 'valid';
 }

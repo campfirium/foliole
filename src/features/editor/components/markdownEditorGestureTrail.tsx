@@ -10,7 +10,13 @@ export function GestureTrailOverlay({
   trail
 }: {
   path: string;
-  trail: { color: string; height: number; lineWidth: number; opacity: number; width: number } | null;
+  trail: {
+    color: string;
+    height: number;
+    lineWidth: number;
+    opacity: number;
+    width: number;
+  } | null;
 }) {
   if (!trail || !path) {
     return null;
@@ -35,5 +41,24 @@ export function GestureTrailOverlay({
         strokeWidth={trail.lineWidth}
       />
     </svg>
+  );
+}
+
+const DIRECTION_SYMBOLS = { down: '↓', left: '←', right: '→', up: '↑' } as const;
+
+export function GestureDirectionHintOverlay({
+  directions
+}: {
+  directions: Array<keyof typeof DIRECTION_SYMBOLS>;
+}) {
+  if (!directions.length) return null;
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute right-4 top-4 z-surface-overlay rounded-md border border-border bg-elevated px-2 py-1 text-ui-md text-foreground shadow-popover"
+      data-editor-gesture-hint="true"
+    >
+      {directions.map((direction) => DIRECTION_SYMBOLS[direction]).join(' ')}
+    </div>
   );
 }

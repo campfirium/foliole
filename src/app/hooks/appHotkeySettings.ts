@@ -27,6 +27,8 @@ export interface AppHotkeySettings {
     nextLabel: string
   ) => HotkeyUpdateResult;
   shortcutMap: Record<string, import('../../shared/commands/types').CommandShortcutSet | undefined>;
+  publicCommandItems?: CommandPaletteItem[];
+  onRunPublicCommand?: (commandId: string) => void;
 }
 
 export function buildHotkeySettings(

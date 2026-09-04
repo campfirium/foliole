@@ -75,5 +75,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.toggleDismissedTopicsVisibility, title: 'Toggle Topic Focus', section: 'Workspace', keywords: ['dismissed', 'topics', 'hide', 'show', 'focus'] },
   { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority...', section: 'Editor', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
+  { id: APP_COMMAND_IDS.scrollDocumentTop, title: 'Scroll to Document Top', section: 'Navigation', keywords: ['scroll', 'document', 'top', 'start'] },
+  { id: APP_COMMAND_IDS.scrollDocumentBottom, title: 'Scroll to Document Bottom', section: 'Navigation', keywords: ['scroll', 'document', 'bottom', 'end'] },
   ...REVIEW_PALETTE_COMMANDS
 ];

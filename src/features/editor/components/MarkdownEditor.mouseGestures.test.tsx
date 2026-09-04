@@ -1,12 +1,13 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
+import { PublicCommandProvider } from '../../../shared/commands/publicCommandContext';
 import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
-import { SettingsMouseGesturesSection } from '../../settings/components/sections/SettingsMouseGesturesSection';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 import {
   DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
-  setEditorMouseGestureAction,
+  setEditorMouseGestureBinding,
   setEditorMouseGestureTrailColor,
   setEditorMouseGestureTrailLineWidth,
   setEditorMouseGestureTrailOpacity
@@ -25,6 +26,12 @@ const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
 const mockCtor = vi.fn();
+const mockRunCommand = vi.fn();
+const PUBLIC_COMMAND_IDS = new Set<string>([
+  APP_COMMAND_IDS.scrollDocumentTop,
+  APP_COMMAND_IDS.scrollDocumentBottom,
+  APP_COMMAND_IDS.openWorkspaceSearch
+]);
 
 function createMockCodeMirrorEditorAdapterClass() {
   return class {
@@ -65,10 +72,36 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
 import { MarkdownEditor } from './MarkdownEditor';
 
 function renderWithMouseGestureProvider(ui: React.ReactElement) {
+  const runCommand = (commandId: string) => {
+    if (!PUBLIC_COMMAND_IDS.has(commandId)) return;
+    mockRunCommand(commandId);
+    if (commandId === APP_COMMAND_IDS.scrollDocumentTop) mockSetScrollTop(0);
+    if (commandId === APP_COMMAND_IDS.scrollDocumentBottom) {
+      const metrics = mockGetScrollMetrics();
+      mockSetScrollTop(metrics.scrollHeight - metrics.clientHeight);
+    }
+  };
   return render(ui, {
     wrapper: ({ children }) => (
       <LocalizationProvider>
-        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+        <PublicCommandProvider
+          items={[
+            {
+              enabled: true,
+              id: APP_COMMAND_IDS.scrollDocumentTop,
+              title: 'Scroll to Document Top'
+            },
+            {
+              enabled: true,
+              id: APP_COMMAND_IDS.scrollDocumentBottom,
+              title: 'Scroll to Document Bottom'
+            },
+            { enabled: true, id: APP_COMMAND_IDS.openWorkspaceSearch, title: 'Search' }
+          ]}
+          runCommand={runCommand}
+        >
+          <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+        </PublicCommandProvider>
       </LocalizationProvider>
     )
   });
@@ -96,6 +129,10 @@ function dispatchSurfaceEvent(surface: HTMLElement, event: MouseEvent) {
   });
 }
 
+function mouse(type: string, clientX: number, clientY: number, buttons = 2) {
+  return new MouseEvent(type, { bubbles: true, button: 2, buttons, clientX, clientY });
+}
+
 beforeEach(() => {
   mockCtor.mockClear();
   mockDestroy.mockClear();
@@ -109,8 +146,8 @@ beforeEach(() => {
   mockSetSelection.mockClear();
   mockSetScrollTop.mockClear();
   mockOnScroll.mockClear();
+  mockRunCommand.mockClear();
   window.localStorage.clear();
-  setEditorMouseGestureAction('right', DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.gestureActions.right);
   setEditorMouseGestureTrailColor(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor);
   setEditorMouseGestureTrailLineWidth(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailLineWidth);
   setEditorMouseGestureTrailOpacity(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailOpacity);
@@ -119,19 +156,21 @@ beforeEach(() => {
 function runLeftDownGestureTest() {
   mockGetScrollMetrics.mockReturnValue({ clientHeight: 300, scrollHeight: 1200, scrollTop: 420 });
   const onContextMenu = vi.fn();
-  const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />);
+  const { container } = renderWithMouseGestureProvider(
+    <MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />
+  );
 
   const surface = container.firstChild as HTMLElement;
   mockSurfaceRect(surface);
   drawGesture(surface, [
-    new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 200, clientY: 200 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 160, clientY: 200 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 160, clientY: 240 })
+    mouse('mousedown', 200, 200),
+    mouse('mousemove', 160, 200),
+    mouse('mousemove', 160, 240)
   ]);
 
   expect(container.querySelector('[data-editor-gesture-trail="true"]')).not.toBeNull();
-  drawGesture(surface, [new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 160, clientY: 240 })]);
-  dispatchSurfaceEvent(surface, new MouseEvent('contextmenu', { bubbles: true, button: 2, clientX: 160, clientY: 240 }));
+  drawGesture(surface, [mouse('mouseup', 160, 240, 0)]);
+  dispatchSurfaceEvent(surface, mouse('contextmenu', 160, 240, 0));
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(900);
   expect(onContextMenu).not.toHaveBeenCalled();
@@ -140,15 +179,17 @@ function runLeftDownGestureTest() {
 
 function runLeftUpGestureTest() {
   mockGetScrollMetrics.mockReturnValue({ clientHeight: 250, scrollHeight: 1000, scrollTop: 0 });
-  const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />);
+  const { container } = renderWithMouseGestureProvider(
+    <MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />
+  );
 
   const surface = container.firstChild as HTMLElement;
   mockSurfaceRect(surface);
   drawGesture(surface, [
-    new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 220, clientY: 220 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 220 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 180 }),
-    new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 180, clientY: 180 })
+    mouse('mousedown', 220, 220),
+    mouse('mousemove', 180, 220),
+    mouse('mousemove', 180, 180),
+    mouse('mouseup', 180, 180, 0)
   ]);
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(0);
@@ -156,28 +197,32 @@ function runLeftUpGestureTest() {
 
 function runContextMenuFallbackTest() {
   const onContextMenu = vi.fn();
-  const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />);
+  const { container } = renderWithMouseGestureProvider(
+    <MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />
+  );
 
   const surface = container.firstChild as HTMLElement;
-  dispatchSurfaceEvent(surface, new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 120, clientY: 120 }));
-  dispatchSurfaceEvent(surface, new MouseEvent('contextmenu', { bubbles: true, button: 2, clientX: 120, clientY: 120 }));
+  dispatchSurfaceEvent(surface, mouse('mousedown', 120, 120));
+  dispatchSurfaceEvent(surface, mouse('contextmenu', 120, 120, 0));
 
   expect(mockSetScrollTop).not.toHaveBeenCalled();
   expect(onContextMenu).toHaveBeenCalledTimes(1);
 }
 
 function runOneStrokeGestureStyleTest() {
-  setEditorMouseGestureAction('right', 'scroll-top');
+  setEditorMouseGestureBinding('right', APP_COMMAND_IDS.scrollDocumentTop);
   setEditorMouseGestureTrailColor('#ff5500');
   setEditorMouseGestureTrailLineWidth(5);
   setEditorMouseGestureTrailOpacity(0.6);
-  const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />);
+  const { container } = renderWithMouseGestureProvider(
+    <MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />
+  );
 
   const surface = container.firstChild as HTMLElement;
   mockSurfaceRect(surface);
   drawGesture(surface, [
-    new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 120 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 220, clientY: 120 })
+    mouse('mousedown', 180, 120),
+    mouse('mousemove', 220, 120)
   ]);
 
   const trail = container.querySelector('[data-editor-gesture-trail="true"]');
@@ -185,43 +230,19 @@ function runOneStrokeGestureStyleTest() {
   expect(trail).toHaveAttribute('stroke-width', '5');
   expect(trail).toHaveAttribute('stroke-opacity', '0.6');
 
-  drawGesture(surface, [new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 220, clientY: 120 })]);
-  expect(mockSetScrollTop).toHaveBeenCalledWith(0);
-}
-
-function runSettingsSectionIntegrationTest() {
-  const { container } = renderWithMouseGestureProvider(
-    <>
-      <SettingsMouseGesturesSection />
-      <MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />
-    </>
-  );
-
-  fireEvent.change(screen.getByLabelText('Right mouse gesture action'), { target: { value: 'scroll-top' } });
-  fireEvent.change(screen.getByLabelText('Mouse gesture trail color hex'), { target: { value: '#ff5500' } });
-  fireEvent.change(screen.getByLabelText('Mouse gesture trail line width'), { target: { value: '4' } });
-  fireEvent.change(screen.getByLabelText('Mouse gesture trail opacity'), { target: { value: '0.6' } });
-
-  const editorSurface = container.querySelector('.markdown-editor-host')?.parentElement as HTMLElement;
-  mockSurfaceRect(editorSurface);
-  drawGesture(editorSurface, [
-    new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 120 }),
-    new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 220, clientY: 120 })
-  ]);
-
-  const trail = container.querySelector('[data-editor-gesture-trail="true"]');
-  expect(trail).toHaveAttribute('stroke', '#ff5500');
-  expect(trail).toHaveAttribute('stroke-width', '4');
-  expect(trail).toHaveAttribute('stroke-opacity', '0.6');
-
-  drawGesture(editorSurface, [new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 220, clientY: 120 })]);
+  drawGesture(surface, [mouse('mouseup', 220, 120, 0)]);
   expect(mockSetScrollTop).toHaveBeenCalledWith(0);
 }
 
 describe('MarkdownEditor mouse gestures', () => {
-  it('runs left-down gesture to scroll to bottom and suppresses context menu once', runLeftDownGestureTest);
+  it(
+    'runs left-down gesture to scroll to bottom and suppresses context menu once',
+    runLeftDownGestureTest
+  );
   it('runs left-up gesture to scroll to top', runLeftUpGestureTest);
-  it('keeps normal context menu behavior when no valid gesture is formed', runContextMenuFallbackTest);
+  it(
+    'keeps normal context menu behavior when no valid gesture is formed',
+    runContextMenuFallbackTest
+  );
   it('supports one-stroke gestures and uses custom trail styling', runOneStrokeGestureStyleTest);
-  it('uses mouse gesture settings updated from the settings section immediately', runSettingsSectionIntegrationTest);
 });

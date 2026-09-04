@@ -2,6 +2,7 @@ import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNod
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { canScrollCurrentDocument } from './appPaletteDocumentScrollActions';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { useAppPaletteItems } from './useAppPaletteItems';
 import { useFormalImport } from './useFormalImport';
@@ -18,6 +19,7 @@ export function useControllerPaletteItems(args: {
 }) {
   return useAppPaletteItems({
     activeNodeId: args.ws.activeNodeId,
+    canScrollCurrentDocument: canScrollCurrentDocument(args.controller.runtime.editorRef.current),
     formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,

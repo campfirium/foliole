@@ -1,0 +1,179 @@
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { PublicCommandProvider } from '../../../../shared/commands/publicCommandContext';
+import { LocalizationProvider } from '../../../../shared/localization/LocalizationProvider';
+import { AppConfirmationProvider } from '../../../../shared/ui';
+import { MouseGestureSettingsProvider } from '../../context/MouseGestureSettingsProvider';
+
+import { SettingsMouseGesturesSection } from './SettingsMouseGesturesSection';
+
+const COMMANDS = [
+  {
+    enabled: true,
+    id: APP_COMMAND_IDS.goBack,
+    keywords: ['back', 'history'],
+    section: 'Navigation',
+    title: 'Go Back'
+  },
+  {
+    enabled: true,
+    id: APP_COMMAND_IDS.scrollDocumentTop,
+    keywords: ['scroll', 'top'],
+    section: 'Navigation',
+    title: 'Scroll to Document Top'
+  },
+  {
+    enabled: true,
+    id: APP_COMMAND_IDS.openWorkspaceSearch,
+    keywords: ['find'],
+    section: 'Workspace',
+    title: 'Search'
+  },
+  {
+    enabled: true,
+    id: APP_COMMAND_IDS.openCommandPalette,
+    keywords: ['palette'],
+    section: 'Workspace',
+    title: 'Command Palette'
+  }
+];
+
+function renderSection() {
+  return render(
+    <LocalizationProvider>
+      <AppConfirmationProvider>
+        <PublicCommandProvider items={COMMANDS} runCommand={() => undefined}>
+          <MouseGestureSettingsProvider>
+            <SettingsMouseGesturesSection />
+          </MouseGestureSettingsProvider>
+        </PublicCommandProvider>
+      </AppConfirmationProvider>
+    </LocalizationProvider>
+  );
+}
+
+function openRecording(command: string) {
+  fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: command } });
+  fireEvent.click(screen.getByRole('button', { name: `Record gesture for ${command}` }));
+  return screen.getByText(
+    'Right-drag here to draw a gesture with at least three direction changes.'
+  ).parentElement as HTMLElement;
+}
+
+function drawRecording(surface: HTMLElement, points: Array<[number, number]>) {
+  act(() => {
+    surface.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100
+      })
+    );
+    for (const [clientX, clientY] of points) {
+      window.dispatchEvent(
+        new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX, clientY })
+      );
+    }
+    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0 }));
+  });
+}
+
+describe('SettingsMouseGesturesSection', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('shows the enabled switch, collapsed display controls, twelve bindings, and inline command search states', () => {
+    renderSection();
+    expect(screen.getByRole('switch', { name: 'Mouse gestures' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: 'Display' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(screen.getAllByRole('img')).toHaveLength(12);
+
+    fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: 'top' } });
+    expect(screen.getByRole('img', { name: 'Left → Up' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: 'Search' } });
+    expect(screen.getByRole('button', { name: 'Record gesture for Search' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Search commands'), {
+      target: { value: 'nothing matches' }
+    });
+    expect(screen.getByText('No commands found.')).toBeInTheDocument();
+  });
+
+  it('changes a binding through a searchable projection of the public command catalog', () => {
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose command for Up' }));
+    fireEvent.change(screen.getByLabelText('Filter commands'), { target: { value: 'palette' } });
+    const picker = screen.getByLabelText('Filter commands').parentElement
+      ?.parentElement as HTMLElement;
+    fireEvent.click(within(picker).getByRole('button', { name: /Command Palette/ }));
+    expect(screen.getByRole('button', { name: 'Choose command for Up' })).toHaveTextContent(
+      'Command Palette'
+    );
+  });
+
+  it('confirms before restoring only the default gesture bindings', async () => {
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose command for Up' }));
+    const picker = screen.getByLabelText('Filter commands').parentElement
+      ?.parentElement as HTMLElement;
+    fireEvent.click(within(picker).getByRole('button', { name: /Command Palette/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Restore default bindings' }));
+    const dialog = screen
+      .getByText('Restore default gesture bindings?')
+      .closest('[role="dialog"]') as HTMLElement;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Restore default bindings' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Choose command for Up' })).toHaveTextContent(
+        'Unbound'
+      )
+    );
+  });
+});
+
+describe('custom mouse gesture recording', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('records a three-segment gesture, rejects short and duplicate sequences, and cancels without saving', () => {
+    renderSection();
+    let surface = openRecording('Search');
+    drawRecording(surface, [
+      [60, 100],
+      [100, 100],
+      [100, 60]
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(
+      screen.queryByText('Right-drag here to draw a gesture with at least three direction changes.')
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Search commands'), {
+      target: { value: 'Command Palette' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Record gesture for Command Palette' }));
+    surface = screen.getByText(
+      'Right-drag here to draw a gesture with at least three direction changes.'
+    ).parentElement as HTMLElement;
+    drawRecording(surface, [[60, 100]]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByText('Gesture is too short.')).toBeInTheDocument();
+    drawRecording(surface, [
+      [60, 100],
+      [100, 100],
+      [100, 60]
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByText('Gesture already exists.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(
+      screen.getByRole('button', { name: 'Record gesture for Command Palette' })
+    ).toBeInTheDocument();
+  });
+});

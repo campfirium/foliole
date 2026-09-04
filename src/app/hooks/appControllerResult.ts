@@ -20,12 +20,17 @@ export function buildAppControllerResult(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }): AppControllerResult {
   return {
-    hotkeySettings: args.auxiliaryState.hotkeySettings,
+    hotkeySettings: {
+      ...args.auxiliaryState.hotkeySettings,
+      publicCommandItems: args.auxiliaryState.paletteState.items,
+      onRunPublicCommand: args.auxiliaryState.paletteState.onRunCommand
+    },
     goToNodeState: args.auxiliaryState.goToNodeState,
     moveToNodeState: args.auxiliaryState.moveToNodeState,
     layoutProps: args.layoutProps,
     onStartNextDemoPreviewDayFlow: () => {
-      if (!args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true })) return false;
+      if (!args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true }))
+        return false;
       args.layoutProps.nodeList.onOpenNotesView();
       args.controller.study.startStudyMode({ force: true });
       return true;

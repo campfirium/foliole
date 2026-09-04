@@ -1,149 +1,52 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
+import { useState } from 'react';
 
-import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
-  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsFieldClassName,
-  settingsValueBoxClassName
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
 } from '../../../../shared/ui';
-import type { EditorMouseGestureId } from '../../../editor/model/editorMouseGestures';
-import {
-  EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS,
-  type EditorMouseGestureActionSetting
-} from '../../../editor/model/editorMouseGestureSettings';
 import { useMouseGestureSettings } from '../../context/MouseGestureSettingsProvider';
-import { settingsSearchRowProps } from '../../model/settingsSearch';
-import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
-import {
-  MouseGestureThresholdsSection,
-  MouseGestureTrailSection
-} from './SettingsMouseGestureAdvancedSections';
-
-const GESTURE_ROWS: Array<{
-  gestureId: EditorMouseGestureId;
-  descriptionKey: TranslationKey;
-  labelKey: TranslationKey;
-}> = [
-  { gestureId: 'left', labelKey: 'settings.mouseGestures.gesture.left', descriptionKey: 'settings.mouseGestures.gesture.reserved' },
-  { gestureId: 'right', labelKey: 'settings.mouseGestures.gesture.right', descriptionKey: 'settings.mouseGestures.gesture.reserved' },
-  { gestureId: 'left-up', labelKey: 'settings.mouseGestures.gesture.leftUp', descriptionKey: 'settings.mouseGestures.gesture.topShortcut' },
-  { gestureId: 'left-down', labelKey: 'settings.mouseGestures.gesture.leftDown', descriptionKey: 'settings.mouseGestures.gesture.bottomShortcut' }
-];
-
-const ACTION_LABEL_KEYS: Record<EditorMouseGestureActionSetting, TranslationKey> = {
-  disabled: 'settings.mouseGestures.action.disabled',
-  'scroll-top': 'settings.mouseGestures.action.scrollTop',
-  'scroll-bottom': 'settings.mouseGestures.action.scrollBottom'
-};
-
-function GestureIcon({ gestureId }: { gestureId: EditorMouseGestureId }) {
-  const iconClassName = 'h-4 w-4';
-  const containerClassName = settingsValueBoxClassName('inline-flex items-center gap-1 px-2.5 py-1.5');
-
-  if (gestureId === 'left') {
-    return <span className={containerClassName}><ArrowLeft className={iconClassName} /></span>;
-  }
-  if (gestureId === 'right') {
-    return <span className={containerClassName}><ArrowRight className={iconClassName} /></span>;
-  }
-  return (
-    <span className={containerClassName}>
-      <ArrowLeft className={iconClassName} />
-      {gestureId === 'left-up' ? <ArrowUp className={iconClassName} /> : <ArrowDown className={iconClassName} />}
-    </span>
-  );
-}
-
-function MouseGestureAreaSection() {
-  const t = useTranslation();
-  const activeAreaRow = useLocalizedSettingsSearchRow('mouse-gestures-active-area');
-  return (
-    <SettingsSection
-      ariaLabel={t('settings.mouseGestures.area.sectionAria')}
-      title={t('settings.mouseGestures.area.title')}
-    >
-      <SettingsRow
-        {...settingsSearchRowProps(activeAreaRow)}
-        description={activeAreaRow.description}
-        readonly
-        title={activeAreaRow.title}
-      >
-        <SettingsControlSlot>
-          <div className={settingsValueBoxClassName('w-full text-foreground')}>
-            {t('settings.mouseGestures.area.mainPanel')}
-          </div>
-        </SettingsControlSlot>
-      </SettingsRow>
-    </SettingsSection>
-  );
-}
-
-function MouseGestureBindingsSection(props: {
-  onActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
-}) {
-  const t = useTranslation();
-  const { settings } = useMouseGestureSettings();
-  return (
-    <SettingsSection
-      ariaLabel={t('settings.mouseGestures.bindings.sectionAria')}
-      title={t('settings.mouseGestures.bindings.title')}
-    >
-      {GESTURE_ROWS.map((gesture) => {
-        const label = t(gesture.labelKey);
-        return (
-        <SettingsRow description={t(gesture.descriptionKey)} key={gesture.gestureId} title={label}>
-          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <GestureIcon gestureId={gesture.gestureId} />
-            <select
-              aria-label={t('settings.mouseGestures.action.aria', { label })}
-              className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
-              onChange={(event) => {
-                const action = parseLiteralUnion(event.target.value, EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS);
-                if (action) props.onActionChange(gesture.gestureId, action);
-              }}
-              value={settings.gestureActions[gesture.gestureId]}
-            >
-              {EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS.map((action) => (
-                <option key={action} value={action}>
-                  {t(ACTION_LABEL_KEYS[action])}
-                </option>
-              ))}
-            </select>
-          </SettingsControlSlot>
-        </SettingsRow>
-        );
-      })}
-    </SettingsSection>
-  );
-}
+import { MouseGestureDisplayRows } from './SettingsMouseGestureAdvancedSections';
+import { SettingsMouseGestureBindings } from './SettingsMouseGestureBindings';
 
 export function SettingsMouseGesturesSection() {
-  const {
-    setAction,
-    setSegmentThreshold,
-    setTrailColor,
-    setTrailLineWidth,
-    setTrailOpacity,
-    setTrailPointThreshold
-  } = useMouseGestureSettings();
+  const t = useTranslation();
+  const { settings, setEnabled } = useMouseGestureSettings();
+  const [displayExpanded, setDisplayExpanded] = useState(false);
 
   return (
     <>
-      <MouseGestureAreaSection />
-      <MouseGestureBindingsSection onActionChange={setAction} />
-      <MouseGestureTrailSection
-        onTrailColorChange={setTrailColor}
-        onTrailLineWidthChange={setTrailLineWidth}
-        onTrailOpacityChange={setTrailOpacity}
-      />
-      <MouseGestureThresholdsSection onSegmentThresholdChange={setSegmentThreshold} onTrailPointThresholdChange={setTrailPointThreshold} />
+      <SettingsSection>
+        <SettingsRow
+          description={t('settings.mouseGestures.enabled.description')}
+          title={t('settings.mouseGestures.enabled.title')}
+        >
+          <SettingsControlSlot>
+            <button
+              aria-checked={settings.enabled}
+              aria-label={t('settings.mouseGestures.enabled.title')}
+              className={settingsSwitchClassName(settings.enabled)}
+              onClick={() => setEnabled(!settings.enabled)}
+              role="switch"
+              type="button"
+            >
+              <span className={settingsSwitchKnobClassName(settings.enabled)} />
+            </button>
+          </SettingsControlSlot>
+        </SettingsRow>
+      </SettingsSection>
+      <SettingsSection
+        expanded={displayExpanded}
+        onExpandedChange={setDisplayExpanded}
+        title={t('settings.mouseGestures.display.title')}
+      >
+        <MouseGestureDisplayRows />
+      </SettingsSection>
+      <SettingsMouseGestureBindings />
     </>
   );
 }

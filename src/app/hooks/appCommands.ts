@@ -1,11 +1,17 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
-import { isContentRegionScaleCommandId, runContentRegionScaleCommand } from '../../shared/commands/contentRegionScaleCommands';
+import {
+  isContentRegionScaleCommandId,
+  runContentRegionScaleCommand
+} from '../../shared/commands/contentRegionScaleCommands';
 import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { definedProps } from '../../shared/lib/definedProps';
 
-import { getAppPaletteCommands, type BuildAppPaletteItemsOptions } from './appPaletteCommandCatalog';
+import {
+  getAppPaletteCommands,
+  type BuildAppPaletteItemsOptions
+} from './appPaletteCommandCatalog';
 
 interface RunAppCommandActions {
   undo: () => boolean | void;
@@ -19,7 +25,8 @@ interface RunAppCommandActions {
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
   publishToFoliole?: () => void | Promise<void>;
-  publishToDiscourse?: () => void | Promise<void>; publishToWordPress?: () => void | Promise<void>;
+  publishToDiscourse?: () => void | Promise<void>;
+  publishToWordPress?: () => void | Promise<void>;
   splitTopic?: () => void | Promise<void>;
   findInTopic: () => void;
   toggleComparisonView?: () => void;
@@ -31,6 +38,8 @@ interface RunAppCommandActions {
   repairTable: () => boolean | void;
   goBack: () => void;
   goForward: () => void;
+  scrollDocumentBottom?: () => boolean | void;
+  scrollDocumentTop?: () => boolean | void;
   goToLastChild: () => void;
   goToNode: () => void;
   moveToNode: () => void;
@@ -105,7 +114,9 @@ export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): Comm
   }));
 }
 
-function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+function createWorkspaceCommandHandlers(
+  actions: RunAppCommandActions
+): Record<string, () => CommandActionResult> {
   return {
     [APP_COMMAND_IDS.undo]: actions.undo,
     [APP_COMMAND_IDS.redo]: actions.redo,
@@ -136,10 +147,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.openYouTubePlaylist]: actions.openYouTubePlaylist,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
-    [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
-    [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
-    [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),
-    [APP_COMMAND_IDS.splitTopic]: actions.splitTopic ?? (() => false),
+    ...createOptionalWorkspaceCommandHandlers(actions),
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,
     [APP_COMMAND_IDS.findInTopic]: actions.findInTopic,
     [APP_COMMAND_IDS.toggleComparisonView]: actions.toggleComparisonView ?? (() => false),
@@ -165,10 +173,23 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
   };
 }
 
-function createNavigationCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+function createOptionalWorkspaceCommandHandlers(actions: RunAppCommandActions) {
+  return {
+    [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
+    [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
+    [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),
+    [APP_COMMAND_IDS.splitTopic]: actions.splitTopic ?? (() => false)
+  };
+}
+
+function createNavigationCommandHandlers(
+  actions: RunAppCommandActions
+): Record<string, () => CommandActionResult> {
   return {
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,
+    [APP_COMMAND_IDS.scrollDocumentBottom]: actions.scrollDocumentBottom ?? (() => false),
+    [APP_COMMAND_IDS.scrollDocumentTop]: actions.scrollDocumentTop ?? (() => false),
     [APP_COMMAND_IDS.goToLastChild]: actions.goToLastChild,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
     [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
@@ -180,7 +201,9 @@ function createNavigationCommandHandlers(actions: RunAppCommandActions): Record<
   };
 }
 
-function createReviewCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
+function createReviewCommandHandlers(
+  actions: RunAppCommandActions
+): Record<string, () => CommandActionResult> {
   return {
     [APP_COMMAND_IDS.startStudyMode]: actions.toggleReviewMode,
     [APP_COMMAND_IDS.revealReviewAnswer]: actions.revealReviewAnswer,

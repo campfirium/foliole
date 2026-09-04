@@ -1,55 +1,50 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR } from '../../../shared/config/defaultAppearanceColors';
-import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
-import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
+import {
+  getWhitelistedLocalStorageItem,
+  setWhitelistedLocalStorageItem
+} from '../../../shared/platform/storage';
 
 import {
-  type EditorMouseGestureActionId,
-  type EditorMouseGestureBinding,
-  type EditorMouseGestureId,
-  EDITOR_MOUSE_GESTURE_IDS
-} from './editorMouseGestures';
+  DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
+  readEditorMouseGestureBindings
+} from './editorMouseGestureBindings';
+import { type EditorMouseGestureBinding } from './editorMouseGestures';
 
-export const EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS = ['disabled', 'scroll-top', 'scroll-bottom'] as const;
-export const EDITOR_MOUSE_GESTURE_AREA_OPTIONS = ['main-panel'] as const;
-
-export type EditorMouseGestureActionSetting = (typeof EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS)[number];
-type EditorMouseGestureAreaId = (typeof EDITOR_MOUSE_GESTURE_AREA_OPTIONS)[number];
+export {
+  addCustomEditorMouseGesture,
+  DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
+  hasCustomEditorMouseGestureBindings,
+  resetEditorMouseGestureBindings,
+  setEditorMouseGestureBinding
+} from './editorMouseGestureBindings';
 
 export interface EditorMouseGestureSettings {
-  area: EditorMouseGestureAreaId;
-  gestureActions: Record<EditorMouseGestureId, EditorMouseGestureActionSetting>;
+  bindings: EditorMouseGestureBinding[];
+  enabled: boolean;
+  hintVisible: boolean;
   segmentThresholdPx: number;
   trailColor: string;
   trailLineWidth: number;
   trailOpacity: number;
   trailPointThresholdPx: number;
+  trailVisible: boolean;
 }
 
 export const DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS: EditorMouseGestureSettings = {
-  area: 'main-panel',
-  gestureActions: {
-    left: 'disabled',
-    right: 'disabled',
-    'left-up': 'scroll-top',
-    'left-down': 'scroll-bottom'
-  },
+  bindings: DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
+  enabled: true,
+  hintVisible: true,
   segmentThresholdPx: 18,
   trailColor: DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR,
   trailLineWidth: 3,
   trailOpacity: 0.25,
-  trailPointThresholdPx: 6
+  trailPointThresholdPx: 6,
+  trailVisible: true
 };
 
-const STORAGE_KEYS: Record<EditorMouseGestureId, string> = {
-  left: APP_SETTINGS_STORAGE_KEYS.mouseGestureLeftAction,
-  right: APP_SETTINGS_STORAGE_KEYS.mouseGestureRightAction,
-  'left-up': APP_SETTINGS_STORAGE_KEYS.mouseGestureLeftUpAction,
-  'left-down': APP_SETTINGS_STORAGE_KEYS.mouseGestureLeftDownAction
-};
-
-function normalizeActionSetting(value: string | null, fallback: EditorMouseGestureActionSetting) {
-  return parseLiteralUnion(value, EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS) ?? fallback;
+function normalizeBoolean(value: string | null, fallback: boolean) {
+  return value === 'true' ? true : value === 'false' ? false : fallback;
 }
 
 function normalizeColor(value: string | null, fallback: string) {
@@ -58,108 +53,90 @@ function normalizeColor(value: string | null, fallback: string) {
 }
 
 function normalizeNumber(value: string | null, fallback: number, min: number, max: number) {
-  if (value === null || value.trim() === '') {
-    return fallback;
-  }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-  return Math.max(min, Math.min(max, Math.round(parsed * 100) / 100));
-}
-
-function buildGestureActions() {
-  return EDITOR_MOUSE_GESTURE_IDS.reduce<Record<EditorMouseGestureId, EditorMouseGestureActionSetting>>(
-    (actions, gestureId) => {
-      actions[gestureId] = normalizeActionSetting(
-        getWhitelistedLocalStorageItem(STORAGE_KEYS[gestureId]),
-        DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.gestureActions[gestureId]
-      );
-      return actions;
-    },
-    {} as Record<EditorMouseGestureId, EditorMouseGestureActionSetting>
-  );
+  const parsed = value === null || value.trim() === '' ? Number.NaN : Number(value);
+  return Number.isFinite(parsed)
+    ? Math.max(min, Math.min(max, Math.round(parsed * 100) / 100))
+    : fallback;
 }
 
 export function getEditorMouseGestureSettings(): EditorMouseGestureSettings {
   return {
-    area: DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.area,
-    gestureActions: buildGestureActions(),
+    bindings: readEditorMouseGestureBindings(),
+    enabled: normalizeBoolean(
+      getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGesturesEnabled),
+      true
+    ),
+    hintVisible: normalizeBoolean(
+      getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureHintVisible),
+      true
+    ),
     segmentThresholdPx: normalizeNumber(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureSegmentThreshold),
-      DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.segmentThresholdPx,
+      18,
       8,
       48
     ),
     trailColor: normalizeColor(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailColor),
-      DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor
+      DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR
     ),
     trailLineWidth: normalizeNumber(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailLineWidth),
-      DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailLineWidth,
+      3,
       1,
       12
     ),
     trailOpacity: normalizeNumber(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailOpacity),
-      DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailOpacity,
+      0.25,
       0.05,
       1
     ),
     trailPointThresholdPx: normalizeNumber(
       getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailPointThreshold),
-      DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailPointThresholdPx,
+      6,
       2,
       24
+    ),
+    trailVisible: normalizeBoolean(
+      getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailVisible),
+      true
     )
   };
 }
 
-export function setEditorMouseGestureAction(gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS[gestureId], normalizeActionSetting(action, 'disabled'));
+export function setEditorMouseGestureBoolean(
+  key: 'enabled' | 'hintVisible' | 'trailVisible',
+  value: boolean
+) {
+  const storageKey =
+    key === 'enabled'
+      ? APP_SETTINGS_STORAGE_KEYS.mouseGesturesEnabled
+      : key === 'hintVisible'
+        ? APP_SETTINGS_STORAGE_KEYS.mouseGestureHintVisible
+        : APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailVisible;
+  setWhitelistedLocalStorageItem(storageKey, String(value));
+}
+
+function setNumber(key: string, value: number, fallback: number, min: number, max: number) {
+  setWhitelistedLocalStorageItem(key, String(normalizeNumber(String(value), fallback, min, max)));
 }
 
 export function setEditorMouseGestureTrailColor(value: string) {
   setWhitelistedLocalStorageItem(
     APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailColor,
-    normalizeColor(value, DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor)
+    normalizeColor(value, DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR)
   );
 }
-
 export function setEditorMouseGestureTrailLineWidth(value: number) {
-  setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailLineWidth,
-    String(normalizeNumber(String(value), DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailLineWidth, 1, 12))
-  );
+  setNumber(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailLineWidth, value, 3, 1, 12);
 }
-
 export function setEditorMouseGestureTrailOpacity(value: number) {
-  setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailOpacity,
-    String(normalizeNumber(String(value), DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailOpacity, 0.05, 1))
-  );
+  setNumber(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailOpacity, value, 0.25, 0.05, 1);
 }
-
 export function setEditorMouseGestureSegmentThreshold(value: number) {
-  setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.mouseGestureSegmentThreshold,
-    String(normalizeNumber(String(value), DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.segmentThresholdPx, 8, 48))
-  );
+  setNumber(APP_SETTINGS_STORAGE_KEYS.mouseGestureSegmentThreshold, value, 18, 8, 48);
 }
-
 export function setEditorMouseGestureTrailPointThreshold(value: number) {
-  setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailPointThreshold,
-    String(normalizeNumber(String(value), DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailPointThresholdPx, 2, 24))
-  );
-}
-
-export function getEditorMouseGestureBindings(
-  settings: EditorMouseGestureSettings
-): EditorMouseGestureBinding[] {
-  return EDITOR_MOUSE_GESTURE_IDS.flatMap((gestureId) => {
-    const action = settings.gestureActions[gestureId];
-    return action === 'disabled' ? [] : [{ action: action as EditorMouseGestureActionId, gesture: gestureId }];
-  });
+  setNumber(APP_SETTINGS_STORAGE_KEYS.mouseGestureTrailPointThreshold, value, 6, 2, 24);
 }

@@ -43,6 +43,8 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.customizeDocumentMenu]: 'desktop.command.customizeDocumentMenu',
   [APP_COMMAND_IDS.goToNode]: 'desktop.command.goToNode',
   [APP_COMMAND_IDS.moveToNode]: 'desktop.command.moveToNode',
+  [APP_COMMAND_IDS.scrollDocumentTop]: 'desktop.command.scrollDocumentTop',
+  [APP_COMMAND_IDS.scrollDocumentBottom]: 'desktop.command.scrollDocumentBottom',
   [APP_COMMAND_IDS.findInTopic]: 'desktop.command.findInTopic',
   [APP_COMMAND_IDS.toggleComparisonView]: 'desktop.command.compareWithDraft',
   [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]:

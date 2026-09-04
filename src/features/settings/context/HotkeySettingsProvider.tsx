@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
+import { PublicCommandProvider } from '../../../shared/commands/publicCommandContext';
+import type { CommandPaletteItem } from '../../../shared/commands/types';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
 import {
@@ -13,10 +15,16 @@ import {
 interface HotkeySettingsProviderProps {
   children: ReactNode;
   hotkeyItems: HotkeySettingItem[];
+  publicCommandItems?: CommandPaletteItem[];
+  onRunPublicCommand?: (commandId: string) => void;
   shortcutMap?: CommandShortcutMap;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (
+    commandId: string,
+    slot: 'primary' | 'secondary',
+    nextLabel: string
+  ) => HotkeyUpdateResult;
 }
 
 export function HotkeySettingsProvider(props: HotkeySettingsProviderProps) {
@@ -35,13 +43,28 @@ export function HotkeySettingsProvider(props: HotkeySettingsProviderProps) {
       onRequestedCommandConsumed,
       requestedCommandId
     }),
-    [onConfigureShortcut, onRequestedCommandConsumed, props.hotkeyItems, props.onHotkeyReset, props.onHotkeyResetAll, props.onHotkeyUpdate, requestedCommandId]
+    [
+      onConfigureShortcut,
+      onRequestedCommandConsumed,
+      props.hotkeyItems,
+      props.onHotkeyReset,
+      props.onHotkeyResetAll,
+      props.onHotkeyUpdate,
+      requestedCommandId
+    ]
   );
 
   return (
-    <CommandShortcutMapContext.Provider value={props.shortcutMap ?? {}}>
-      <HotkeySettingsContext.Provider value={value}>{props.children}</HotkeySettingsContext.Provider>
-    </CommandShortcutMapContext.Provider>
+    <PublicCommandProvider
+      items={props.publicCommandItems ?? []}
+      runCommand={props.onRunPublicCommand ?? (() => undefined)}
+    >
+      <CommandShortcutMapContext.Provider value={props.shortcutMap ?? {}}>
+        <HotkeySettingsContext.Provider value={value}>
+          {props.children}
+        </HotkeySettingsContext.Provider>
+      </CommandShortcutMapContext.Provider>
+    </PublicCommandProvider>
   );
 }
 

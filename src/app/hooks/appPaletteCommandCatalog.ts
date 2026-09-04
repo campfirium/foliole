@@ -1,4 +1,7 @@
-import { isContentRegionScaleCommandEnabled, isContentRegionScaleCommandId } from '../../shared/commands/contentRegionScaleCommands';
+import {
+  isContentRegionScaleCommandEnabled,
+  isContentRegionScaleCommandId
+} from '../../shared/commands/contentRegionScaleCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 
@@ -13,7 +16,10 @@ import {
   resolveDeveloperPaletteTitle
 } from './appPaletteDeveloperCommands';
 import { isHelpPaletteCommand } from './appPaletteHelpCommands';
-import { isReviewCommandEnabled, type ReviewPaletteCommandOptions } from './appPaletteReviewCommands';
+import {
+  isReviewCommandEnabled,
+  type ReviewPaletteCommandOptions
+} from './appPaletteReviewCommands';
 
 export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
   canRedoWorkspaceAction: boolean;
@@ -43,6 +49,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canOpenComparisonView?: boolean;
   canToggleImmersiveMode: boolean;
   canSetNodePriority: boolean;
+  canScrollCurrentDocument?: boolean;
   isImmersiveMode: boolean;
   isDevReviewStatusBarPersistenceEnabled: boolean;
   isReviewMode: boolean;
@@ -156,6 +163,9 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   if (id === APP_COMMAND_IDS.repairTable) {
     return options.canRepairTable;
   }
+  if (id === APP_COMMAND_IDS.scrollDocumentTop || id === APP_COMMAND_IDS.scrollDocumentBottom) {
+    return Boolean(options.canScrollCurrentDocument);
+  }
   return null;
 }
 
@@ -197,13 +207,13 @@ function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOption
 }
 
 export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
-  return APP_PALETTE_COMMANDS
-    .filter((command) => command.id !== APP_COMMAND_IDS.toggleDevTools || options.canToggleDevTools)
-    .map((command) => ({
-      ...command,
-      enabled: isPaletteCommandEnabled(command.id, options),
-      section: localizePaletteCommandSection(command.section, options.t),
-      sectionId: command.section,
-      title: resolvePaletteTitle(command.id, options, command.title)
-    }));
+  return APP_PALETTE_COMMANDS.filter(
+    (command) => command.id !== APP_COMMAND_IDS.toggleDevTools || options.canToggleDevTools
+  ).map((command) => ({
+    ...command,
+    enabled: isPaletteCommandEnabled(command.id, options),
+    section: localizePaletteCommandSection(command.section, options.t),
+    sectionId: command.section,
+    title: resolvePaletteTitle(command.id, options, command.title)
+  }));
 }

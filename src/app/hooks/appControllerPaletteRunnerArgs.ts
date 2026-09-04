@@ -7,7 +7,10 @@ import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelec
 import { selectLocalFileToOpen } from '../../shared/platform/localFileRuntimeRepository';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { openFolioleReleaseLink } from '../../shared/platform/releaseLinks';
-import { checkForFolioleUpdates, openFolioleLatestRelease } from '../../shared/platform/updateCheck';
+import {
+  checkForFolioleUpdates,
+  openFolioleLatestRelease
+} from '../../shared/platform/updateCheck';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
@@ -22,6 +25,7 @@ import { createPublishingPaletteActions } from './appControllerPublishingActions
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteCreationActions } from './appPaletteCreationActions';
 import { createPaletteDocumentActions } from './appPaletteDocumentActions';
+import { createPaletteDocumentScrollActions } from './appPaletteDocumentScrollActions';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
@@ -117,13 +121,15 @@ function createPaletteNavigationActions(args: {
     goParent: args.nav.handleGoParent,
     goToNode: () => undefined,
     moveToNode: () => undefined,
-    renameNode: () => requestNodeRename(args.ws.activeNodeId, () => args.runtime.editorRef.current?.focus())
+    renameNode: () =>
+      requestNodeRename(args.ws.activeNodeId, () => args.runtime.editorRef.current?.focus())
   };
 }
 
 function createPaletteReleaseActions() {
   return {
-    checkForUpdates: () => checkForFolioleUpdates({ force: true, notify: true }).then(() => undefined),
+    checkForUpdates: () =>
+      checkForFolioleUpdates({ force: true, notify: true }).then(() => undefined),
     openGitHubDiscussions: () => openFolioleReleaseLink('discussions'),
     openGitHubIssues: () => openFolioleReleaseLink('issues'),
     openGitHubRepository: () => openFolioleReleaseLink('repository'),
@@ -197,6 +203,7 @@ export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     ...createPublishingPaletteActions(args),
     ...createPaletteDocumentActions(),
+    ...createPaletteDocumentScrollActions(args.runtime.editorRef),
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     openSplitTopicDialog: createSplitTopicCommand(args),
     ...createPaletteNavigationActions(args),
@@ -215,11 +222,12 @@ export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     onToggleRightSidebarVisibility: args.layoutProps.layoutChrome.onToggleRightSidebarVisibility,
     paletteItems: args.paletteItems,
-    repairTable: () => repairEditorTable({
-      activeNodeId: args.ws.activeNodeId,
-      editorRef: args.runtime.editorRef,
-      updateNodeContent: args.ws.updateNodeContent
-    }),
+    repairTable: () =>
+      repairEditorTable({
+        activeNodeId: args.ws.activeNodeId,
+        editorRef: args.runtime.editorRef,
+        updateNodeContent: args.ws.updateNodeContent
+      }),
     reimportSelectedTopic: createReimportSelectedTopicCommand(args)
   };
 }

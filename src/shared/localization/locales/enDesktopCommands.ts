@@ -53,6 +53,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.customizeDocumentMenu': 'Customize menu...',
   'desktop.command.goBack': 'Go Back',
   'desktop.command.goForward': 'Go Forward',
+  'desktop.command.scrollDocumentTop': 'Scroll to Document Top',
+  'desktop.command.scrollDocumentBottom': 'Scroll to Document Bottom',
   'desktop.command.goToNode': 'Go to...',
   'desktop.command.moveToNode': 'Move to...',
   'desktop.command.goParent': 'Go Up',

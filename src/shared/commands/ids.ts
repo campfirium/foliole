@@ -13,6 +13,8 @@ export const APP_COMMAND_IDS = {
   redo: 'app.redo',
   goBack: FOUR_WAY_NAVIGATION_COMMAND_IDS.goBack,
   goForward: FOUR_WAY_NAVIGATION_COMMAND_IDS.goForward,
+  scrollDocumentTop: 'document.scrollTop',
+  scrollDocumentBottom: 'document.scrollBottom',
   goToNode: 'navigation.goToNode',
   moveToNode: 'navigation.moveToNode',
   renameNode: 'workspace.renameNode',

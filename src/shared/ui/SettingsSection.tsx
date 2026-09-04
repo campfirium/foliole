@@ -13,6 +13,7 @@ export interface SettingsSectionProps {
   onExpandedChange?: (expanded: boolean) => void;
   searchRowId?: string;
   title?: string;
+  titleActions?: ReactNode;
 }
 
 function SettingsSectionHeader(props: {
@@ -24,29 +25,68 @@ function SettingsSectionHeader(props: {
   isDisclosure: boolean;
   onExpandedChange: ((expanded: boolean) => void) | undefined;
   title: string | undefined;
+  titleActions: ReactNode;
 }) {
   if (!props.isDisclosure) {
-    return (
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          {props.title ? <h3 className="text-ui-lg font-semibold text-foreground">{props.title}</h3> : null}
-          {props.description ? <p className="mt-1 max-w-[760px] text-ui-md leading-6 text-muted-foreground">{props.description}</p> : null}
-        </div>
-        {props.actions ? <div className="shrink-0">{props.actions}</div> : null}
-      </div>
-    );
+    return <StaticSettingsSectionHeader {...props} />;
   }
   return (
     <div className="flex items-start justify-between gap-4">
       <h3 aria-label={props.title} className="min-w-0 flex-1">
-        <button aria-controls={props.contentId} aria-describedby={props.description ? props.descriptionId : undefined} aria-expanded={props.expanded} aria-label={props.title} className="group flex w-full items-start gap-2 rounded-sm px-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => props.onExpandedChange?.(!props.expanded)} type="button">
-          <ChevronRight aria-hidden="true" className={cn('mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground', props.expanded && 'rotate-90')} strokeWidth={1.8} />
+        <button
+          aria-controls={props.contentId}
+          aria-describedby={props.description ? props.descriptionId : undefined}
+          aria-expanded={props.expanded}
+          aria-label={props.title}
+          className="group flex w-full items-start gap-2 rounded-sm px-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onClick={() => props.onExpandedChange?.(!props.expanded)}
+          type="button"
+        >
+          <ChevronRight
+            aria-hidden="true"
+            className={cn(
+              'mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground',
+              props.expanded && 'rotate-90'
+            )}
+            strokeWidth={1.8}
+          />
           <span className="min-w-0">
             <span className="block text-ui-lg font-semibold text-foreground">{props.title}</span>
-            {props.description ? <span className="mt-1 block max-w-[760px] text-ui-md font-normal leading-6 text-muted-foreground" id={props.descriptionId}>{props.description}</span> : null}
+            {props.description ? (
+              <span
+                className="mt-1 block max-w-[760px] text-ui-md font-normal leading-6 text-muted-foreground"
+                id={props.descriptionId}
+              >
+                {props.description}
+              </span>
+            ) : null}
           </span>
         </button>
       </h3>
+      {props.actions ? <div className="shrink-0">{props.actions}</div> : null}
+    </div>
+  );
+}
+
+function StaticSettingsSectionHeader(props: {
+  actions: ReactNode;
+  description: string | undefined;
+  title: string | undefined;
+  titleActions: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        {props.title ? (
+          <div className="flex items-center gap-2">
+            <h3 className="text-ui-lg font-semibold text-foreground">{props.title}</h3>
+            {props.titleActions}
+          </div>
+        ) : null}
+        {props.description ? (
+          <p className="mt-1 max-w-[760px] text-ui-md leading-6 text-muted-foreground">{props.description}</p>
+        ) : null}
+      </div>
       {props.actions ? <div className="shrink-0">{props.actions}</div> : null}
     </div>
   );
@@ -61,7 +101,8 @@ export function SettingsSection({
   expanded,
   onExpandedChange,
   searchRowId,
-  title
+  title,
+  titleActions
 }: SettingsSectionProps) {
   const hasHeader = Boolean(title || description || actions);
   const contentId = useId();
@@ -79,7 +120,17 @@ export function SettingsSection({
     >
       {hasHeader ? (
         <div className="px-settings-panel-x pb-3">
-          <SettingsSectionHeader actions={actions} contentId={contentId} description={description} descriptionId={descriptionId} expanded={expanded} isDisclosure={isDisclosure} onExpandedChange={onExpandedChange} title={title} />
+          <SettingsSectionHeader
+            actions={actions}
+            contentId={contentId}
+            description={description}
+            descriptionId={descriptionId}
+            expanded={expanded}
+            isDisclosure={isDisclosure}
+            onExpandedChange={onExpandedChange}
+            title={title}
+            titleActions={titleActions}
+          />
         </div>
       ) : null}
       <div

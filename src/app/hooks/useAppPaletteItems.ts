@@ -149,6 +149,7 @@ function buildPaletteOptions(
 
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
+  canScrollCurrentDocument?: boolean;
   formalImportAvailable: boolean;
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
