@@ -9,6 +9,18 @@ import {
   runRetention
 } from './local-artifact-cache-retention.mjs';
 import { runCleanup } from './cleanup-local-artifacts.mjs';
+import { sweepTransientWorktrees } from './transient-worktree-lifecycle.mjs';
+
+function maintainTransientWorktrees(options) {
+  if (options.rootDir && !existsSync(path.join(options.rootDir, '.git'))) {
+    return { failures: [], ok: true, removed: [] };
+  }
+  return sweepTransientWorktrees({
+    days: 7,
+    nowMs: options.nowMs ?? Date.now(),
+    ...(options.rootDir ? { repoRoot: options.rootDir } : {})
+  });
+}
 
 function requireSuccessfulMaintenance(result) {
   if (result.ok) return result;
@@ -24,7 +36,8 @@ export function maintainBeforeProduction(options = {}) {
   const retention = requireSuccessfulMaintenance(
     runRetention({ ...options, apply: true, scope: 'all' })
   );
-  return { cleanup, retention };
+  const transientWorktrees = maintainTransientWorktrees(options);
+  return { cleanup, retention, transientWorktrees };
 }
 
 export function prepareCacheEntry({ entryName, nowMs = Date.now(), rootDir, ...options }) {

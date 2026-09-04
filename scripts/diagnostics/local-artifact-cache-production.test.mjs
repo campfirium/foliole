@@ -1,10 +1,12 @@
 // @vitest-environment node
+/* global process */
 
 import {
-  mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync
+  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -30,6 +32,10 @@ function makeOldArtifact(rootDir, name, nowMs) {
   const oldTime = new Date(nowMs - 2 * DAY_MS);
   utimesSync(entry, oldTime, oldTime);
   return entry;
+}
+
+function git(cwd, ...args) {
+  return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
 }
 
 afterEach(() => {
@@ -98,6 +104,35 @@ it('keeps one shared cache while two production runs expire older storage', asyn
   expect(() => statSync(oldRun)).toThrow();
   expect(statSync(cacheEntry).isDirectory()).toBe(true);
   expect(path.dirname(cacheEntry)).toBe(path.join(rootDir, CACHE_ROOT));
+});
+
+it('sweeps eligible transient worktrees on repeated production maintenance', () => {
+  const rootDir = makeFixture();
+  execFileSync('git', ['init', '--initial-branch=dev', rootDir]);
+  git(rootDir, 'config', 'user.email', 'test@example.com');
+  git(rootDir, 'config', 'user.name', 'Test');
+  writeFileSync(path.join(rootDir, 'README.md'), 'base\n');
+  git(rootDir, 'add', 'README.md');
+  git(rootDir, 'commit', '-m', 'base');
+  const transient = path.join(path.dirname(rootDir), `${path.basename(rootDir)}-acceptance`);
+  fixtureRoots.push(transient);
+  const createdAt = '2026-08-01T00:00:00.000Z';
+  execFileSync(process.execPath, [
+    path.resolve('scripts/diagnostics/transient-worktree-lifecycle.mjs'), 'create',
+    '--repo', rootDir, '--path', transient, '--kind', 'acceptance', '--target', 'dev'
+  ], { env: { ...process.env, TZ: 'UTC' } });
+  const marker = path.join(git(transient, 'rev-parse', '--absolute-git-dir'),
+    'foliole-transient-worktree.json');
+  const value = JSON.parse(readFileSync(marker, 'utf8'));
+  writeFileSync(marker, `${JSON.stringify({ ...value, createdAt }, null, 2)}\n`);
+
+  const nowMs = Date.parse('2026-08-10T00:00:00.000Z');
+  const first = prepareCacheEntry({ entryName: 'shared-runtime', nowMs, rootDir });
+  const second = prepareCacheEntry({ entryName: 'shared-runtime', nowMs, rootDir });
+
+  expect(first).toBe(second);
+  expect(existsSync(transient)).toBe(false);
+  expect(git(rootDir, 'worktree', 'list', '--porcelain')).not.toContain(transient);
 });
 
 it('keeps the generic resource gate free of retention side effects', () => {

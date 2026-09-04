@@ -1,17 +1,21 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  createTransientWorktree,
   finishTransientWorktree,
   registerTransientWorktree,
   sweepTransientWorktrees
 } from './transient-worktree-lifecycle.mjs';
 
 const roots = [];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function git(cwd, ...args) {
   return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
@@ -49,6 +53,27 @@ afterEach(() => {
 });
 
 describe('transient worktree lifecycle', () => {
+  it('creates and registers acceptance and development worktrees in one action', () => {
+    const { repo, root } = fixture();
+    const acceptance = join(root, 'acceptance');
+    const development = join(root, 'development');
+
+    createTransientWorktree({
+      kind: 'acceptance', repoRoot: repo, targetRef: 'dev', worktreePath: acceptance
+    });
+    createTransientWorktree({
+      branch: 'codex/test-work', kind: 'development', repoRoot: repo,
+      targetRef: 'dev', worktreePath: development
+    });
+
+    expect(git(acceptance, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('HEAD');
+    expect(git(development, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('codex/test-work');
+    expect(readFileSync(join(git(acceptance, 'rev-parse', '--absolute-git-dir'),
+      'foliole-transient-worktree.json'), 'utf8')).toContain('"kind": "acceptance"');
+    expect(readFileSync(join(git(development, 'rev-parse', '--absolute-git-dir'),
+      'foliole-transient-worktree.json'), 'utf8')).toContain('"kind": "development"');
+  });
+
   it('removes a completed detached acceptance worktree', () => {
     const { repo, root } = fixture();
     const path = addAcceptance(repo, root);
@@ -94,6 +119,9 @@ describe('transient worktree lifecycle', () => {
     const expired = addAcceptance(repo, root, 'expired', '2026-08-01T00:00:00.000Z');
     const recent = addAcceptance(repo, root, 'recent', '2026-08-09T00:00:00.000Z');
     git(repo, 'worktree', 'lock', '--reason', 'test', expired);
+    const lock = join(git(expired, 'rev-parse', '--absolute-git-dir'), 'locked');
+    const oldLockTime = new Date('2026-08-01T00:00:00.000Z');
+    utimesSync(lock, oldLockTime, oldLockTime);
 
     const result = sweepTransientWorktrees({
       days: 7,
@@ -104,6 +132,22 @@ describe('transient worktree lifecycle', () => {
     expect(result).toMatchObject({ failures: [], ok: true, removed: [join(realpathSync(root), 'expired')] });
     expect(existsSync(expired)).toBe(false);
     expect(existsSync(recent)).toBe(true);
+  });
+
+  it('preserves a freshly locked active worktree and removes it after the lock expires', () => {
+    const { repo, root } = fixture();
+    const path = addAcceptance(repo, root, 'active', '2026-08-01T00:00:00.000Z');
+    git(repo, 'worktree', 'lock', '--reason', 'active owner', path);
+    const lockedPath = join(git(path, 'rev-parse', '--absolute-git-dir'), 'locked');
+    const nowMs = Date.parse('2026-08-10T00:00:00.000Z');
+    const activeTime = new Date(nowMs - DAY_MS);
+    utimesSync(lockedPath, activeTime, activeTime);
+
+    expect(sweepTransientWorktrees({ days: 7, nowMs, repoRoot: repo }).removed).toEqual([]);
+    const expiredTime = new Date(nowMs - 8 * DAY_MS);
+    utimesSync(lockedPath, expiredTime, expiredTime);
+    expect(sweepTransientWorktrees({ days: 7, nowMs, repoRoot: repo }).removed)
+      .toEqual([join(realpathSync(root), 'active')]);
   });
 
   it('ignores worktrees that were never registered as transient', () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -48,6 +48,10 @@ function findWorktree(repoRoot, worktreePath) {
 
 function markerPath(worktreePath) {
   return join(git(worktreePath, ['rev-parse', '--absolute-git-dir']), MARKER_NAME);
+}
+
+function lockPath(worktreePath) {
+  return join(git(worktreePath, ['rev-parse', '--absolute-git-dir']), 'locked');
 }
 
 function readMarker(worktreePath) {
@@ -103,6 +107,39 @@ export function registerTransientWorktree({
   return marker;
 }
 
+export function createTransientWorktree({
+  branch,
+  kind,
+  repoRoot = defaultRepoRoot,
+  sourceRef,
+  targetRef,
+  worktreePath
+}) {
+  if (!['acceptance', 'development'].includes(kind)) {
+    throw new Error('kind must be acceptance or development');
+  }
+  if (kind === 'development' && !branch) {
+    throw new Error('development branch is required');
+  }
+  if (kind === 'acceptance' && branch) {
+    throw new Error('acceptance worktree cannot have a branch');
+  }
+  const source = sourceRef ?? targetRef;
+  git(repoRoot, ['rev-parse', '--verify', `${targetRef}^{commit}`]);
+  git(repoRoot, ['rev-parse', '--verify', `${source}^{commit}`]);
+  const addArguments = kind === 'acceptance'
+    ? ['worktree', 'add', '--detach', worktreePath, source]
+    : ['worktree', 'add', '-b', branch, worktreePath, source];
+  git(repoRoot, addArguments);
+  try {
+    return registerTransientWorktree({ kind, repoRoot, targetRef, worktreePath });
+  } catch (error) {
+    git(repoRoot, ['worktree', 'remove', '--force', worktreePath]);
+    if (kind === 'development') git(repoRoot, ['branch', '-D', branch]);
+    throw error;
+  }
+}
+
 function assertReadyToRemove(repoRoot, worktreePath, marker) {
   const status = git(worktreePath, ['status', '--porcelain', '--untracked-files=all']);
   if (status) throw new Error(`transient worktree is dirty: ${worktreePath}`);
@@ -144,7 +181,10 @@ export function sweepTransientWorktrees({
       const path = markerPath(entry.worktree);
       if (!existsSync(path)) continue;
       const marker = readMarker(entry.worktree);
-      if (Date.parse(marker.createdAt) > nowMs - days * DAY_MS) continue;
+      const expiryMs = nowMs - days * DAY_MS;
+      if (Date.parse(marker.createdAt) > expiryMs) continue;
+      const activeLock = entry.locked && statSync(lockPath(entry.worktree)).mtimeMs > expiryMs;
+      if (activeLock) continue;
       finishTransientWorktree({ repoRoot, worktreePath: entry.worktree });
       removed.push(entry.worktree);
     } catch (error) {
@@ -163,10 +203,12 @@ function argumentValue(args, name) {
 function main(args = process.argv.slice(2)) {
   const command = args[0];
   const repoRoot = resolve(args.includes('--repo') ? argumentValue(args, '--repo') : defaultRepoRoot);
-  if (command === 'register') {
-    return registerTransientWorktree({
+  if (command === 'create') {
+    return createTransientWorktree({
+      ...(args.includes('--branch') ? { branch: argumentValue(args, '--branch') } : {}),
       kind: argumentValue(args, '--kind'),
       repoRoot,
+      ...(args.includes('--source') ? { sourceRef: argumentValue(args, '--source') } : {}),
       targetRef: argumentValue(args, '--target'),
       worktreePath: argumentValue(args, '--path')
     });
@@ -178,7 +220,7 @@ function main(args = process.argv.slice(2)) {
     const days = args.includes('--days') ? Number(argumentValue(args, '--days')) : 7;
     return sweepTransientWorktrees({ days, repoRoot });
   }
-  throw new Error('command must be register, finish, or sweep');
+  throw new Error('command must be create, finish, or sweep');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
