@@ -82,4 +82,17 @@ describe('createPaletteCommandRunner', () => {
     expect(undoWorkspaceAction).toHaveBeenCalledTimes(1);
     expect(args.recordRecentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.undo);
   });
+
+  it('rechecks document scrolling at execution time when the palette snapshot is stale', () => {
+    const scrollDocumentBottom = vi.fn(() => true);
+    const { args, run } = createRunner({
+      paletteItems: [{ enabled: false, id: APP_COMMAND_IDS.scrollDocumentBottom, title: 'Scroll down' }],
+      scrollDocumentBottom
+    });
+
+    run(APP_COMMAND_IDS.scrollDocumentBottom);
+
+    expect(scrollDocumentBottom).toHaveBeenCalledTimes(1);
+    expect(args.recordRecentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.scrollDocumentBottom);
+  });
 });

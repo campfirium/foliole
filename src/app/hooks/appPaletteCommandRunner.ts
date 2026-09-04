@@ -19,7 +19,9 @@ import { runReviewModeToggle } from './reviewModeToggle';
 
 const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([
   APP_COMMAND_IDS.undo,
-  APP_COMMAND_IDS.redo
+  APP_COMMAND_IDS.redo,
+  APP_COMMAND_IDS.scrollDocumentBottom,
+  APP_COMMAND_IDS.scrollDocumentTop
 ]);
 const CONTEXTUAL_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.reviewSourceUpdate]);
 
