@@ -26,7 +26,8 @@ export function readStateWritebackSnapshot(options) {
     (SELECT value FROM workspace_meta WHERE key = 'active_node_id') AS active_node_id,
     (SELECT reading_position FROM node_reading_host_state WHERE node_id = 'ios-state-node') AS local_reading_position,
     (SELECT scroll_top FROM node_view_state WHERE node_id = 'ios-state-node') AS local_scroll_top,
-    (SELECT count(*) FROM sync_delivery_receipts WHERE status <> 'confirmed') AS pending_ack_count,
+    (SELECT count(*) FROM sync_delivery_receipts
+      WHERE object_type <> 'view_state' AND status <> 'confirmed') AS pending_ack_count,
     (SELECT count(*) FROM review_log WHERE node_id = 'ios-state-node') AS review_log_count,
     (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1) AS review_op_id,
     (SELECT count(*) FROM sync_delivery_receipts

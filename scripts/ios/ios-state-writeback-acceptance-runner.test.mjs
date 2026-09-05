@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 
 import {
   parseStateWritebackSnapshot,
+  readStateWritebackSnapshot,
   verifyStateWritebackAcceptance
 } from './ios-state-writeback-acceptance-runner.mjs';
 import { hostedProviderRegistrationEvidence } from './ios-hosted-provider-test-evidence.mjs';
@@ -77,4 +78,8 @@ it('matches the peer delivery receipt by the review operation object identity', 
   const source = fs.readFileSync('scripts/ios/ios-state-writeback-acceptance-runner.mjs', 'utf8');
   expect(source).toContain("AND object_id = (SELECT op_id FROM review_log");
   expect(source).not.toContain("AND operation_id = (SELECT op_id FROM review_log");
+});
+
+it('excludes device-private view state receipts from the pending shared acknowledgement count', () => {
+  expect(readStateWritebackSnapshot.toString()).toContain("object_type <> 'view_state'");
 });

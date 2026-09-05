@@ -37,6 +37,7 @@ it('retains one pending fact-change hint for every endpoint during an active syn
     isSyncGroupReadyRef: { current: true },
     lastCheckedAtRef: { current: 0 },
     lastForegroundAtRef: { current: 0 },
+    pendingForegroundRef: { current: false },
     pendingServiceHintRef: { current: new Set<string>() },
     readAppActiveState: vi.fn(async () => true),
     resourceContinuationModeRef: { current: 'full' },

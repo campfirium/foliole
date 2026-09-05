@@ -27,6 +27,7 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
   const isSyncGroupReadyRef = useRef(isSyncGroupReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
+  const pendingForegroundRef = useRef(false);
   const pendingServiceHintRef = useRef(new Set<string>());
   const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
@@ -38,6 +39,7 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
     isSyncGroupReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
+    pendingForegroundRef,
     pendingServiceHintRef,
     readAppActiveState: readNativeAppActiveState,
     resourceContinuationModeRef,
