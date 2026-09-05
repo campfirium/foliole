@@ -60,6 +60,24 @@ it('reports an old bridge as incompatible without a timed fallback', async () =>
   expect(runtime.load).not.toHaveBeenCalled();
 });
 
+it('keeps searching when a mobile-only advertisement arrives before a desktop', async () => {
+  const subscription: { listener?: (event: CompanionNativeDiscoveryEvent) => void } = {};
+  runtime.addListener.mockImplementation(async (_name, next) => {
+    subscription.listener = next;
+    return { remove: runtime.remove };
+  });
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  await startCompanionSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot));
+
+  subscription.listener?.({ candidates: [{
+    endpoint_url: 'http://iphone:38641', source: 'nsd',
+    protocol_txt: { provider_platform: 'ios-capacitor' }
+  }], change: 'found', error_code: null, status: 'results' });
+
+  expect(snapshots.at(-1)).toEqual(expect.objectContaining({ candidates: [], status: 'searching' }));
+  expect(runtime.load).not.toHaveBeenCalled();
+});
+
 it('publishes one join result when several members advertise the same Sync Group', async () => {
   runtime.start.mockResolvedValue({ candidates: [
     { endpoint_url: 'http://android:38643', source: 'bonjour' },

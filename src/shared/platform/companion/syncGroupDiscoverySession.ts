@@ -7,6 +7,15 @@ function isDesktopProvider(platform: string) {
   return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
 }
 
+function isMobileAdvertisement(candidate: CompanionNativeDiscoveryEvent['candidates'][number]) {
+  const platform = candidate.protocol_txt?.provider_platform ?? '';
+  return ['android-capacitor', 'ios-capacitor'].includes(platform);
+}
+
+function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDiscoverySnapshot {
+  return { candidates: [], change: event.change, error_code: null, status: 'searching' };
+}
+
 function uniqueSyncGroups<T extends {
   discovery: { group_id: string; group_tag: string; provider_platform: string };
 }>(candidates: T[]) {
@@ -34,7 +43,9 @@ export async function startCompanionSyncGroupDiscoverySession(
       onSnapshot({ candidates: [], change: event.change, error_code: event.error_code, status: event.status });
       return;
     }
-    const candidates = await loadCompanionDiscoveryCandidates(event.candidates.map((candidate) => ({
+    const desktopAdvertisements = event.candidates.filter((candidate) => !isMobileAdvertisement(candidate));
+    if (desktopAdvertisements.length === 0) return void onSnapshot(searchingSnapshot(event));
+    const candidates = await loadCompanionDiscoveryCandidates(desktopAdvertisements.map((candidate) => ({
       endpointUrl: candidate.endpoint_url,
       protocolTxt: candidate.protocol_txt ?? null,
       source: candidate.source
