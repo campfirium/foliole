@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.12",
+  "version": "0.7.13",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.12 adds custom OpenAI-compatible models and the completed Aide workflow to the supported macOS desktop app, so the macOS package is required.",
-    "windows": "Foliole 0.7.12 adds custom OpenAI-compatible models and the completed Aide workflow to the supported Windows desktop app, so the Windows package and direct installer are required.",
-    "linux": "Foliole 0.7.12 adds the same Electron Aide capabilities to Linux Experimental, so the Linux Experimental package is required."
+    "macos": "Foliole 0.7.13 adds shared desktop editor gestures, immersive reading improvements, image resizing, formatting shortcuts, and Readwise repair behavior, so the macOS package is required.",
+    "windows": "Foliole 0.7.13 adds the same shared Electron editor and Readwise improvements to the supported Windows desktop app, so the Windows package and direct installer are required.",
+    "linux": "Foliole 0.7.13 adds the same shared Electron editor and Readwise improvements to Linux Experimental, so the Linux Experimental package is required."
   }
 }
