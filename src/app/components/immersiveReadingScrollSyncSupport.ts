@@ -1,12 +1,17 @@
 import type { MutableRefObject } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
-import { getCurrentApplyingSelection } from './immersiveReadingApplying';
-import { getReadingPositionSelection, getViewportReadingSelection } from './immersiveReadingMarker';
+import { getCurrentApplyingSelection, isApplyingReadingPosition } from './immersiveReadingApplying';
+import {
+  getReadingPositionSelection,
+  getViewportReadingSelection,
+  syncParagraphMarkerToReadingPosition
+} from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
 
 interface StoredReadingSelectionSource {
@@ -24,6 +29,11 @@ interface ReadingSelectionCommitSource {
 interface ReadingSelectionCaptureSource extends ReadingSelectionCommitSource {
   activeNodeId: string | null;
   editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+}
+
+interface ImmersiveScrollEventSource extends ReadingSelectionCaptureSource {
+  getReadingPositionSelection: () => EditorSelection | null;
+  isImmersiveMode: boolean;
 }
 
 export function resolveStoredReadingSelection(props: StoredReadingSelectionSource) {
@@ -100,4 +110,74 @@ export function captureReadingSelection(args: {
     source: 'capture-viewport'
   });
   args.pendingSelectionRef.current = selection;
+}
+
+export function handleImmersiveScrollSyncEvent(args: {
+  editor: EditorAdapter;
+  event: EditorScrollEvent;
+  getReadingSelection: () => EditorSelection | null;
+  props: ImmersiveScrollEventSource;
+  setReadingSelection: (selection: EditorSelection, source?: string) => void;
+  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>;
+}) {
+  if (!args.event.userInitiated) {
+    args.shouldSkipNextScrollSyncRef.current = false;
+    return;
+  }
+  if (isApplyingReadingPosition(args.props)) {
+    pushDebugTrace('immersive.scroll-sync.ignored-applying', {
+      isImmersiveMode: args.props.isImmersiveMode,
+      selection: getCurrentApplyingSelection(args.props)
+    });
+    return;
+  }
+  if (args.shouldSkipNextScrollSyncRef.current) {
+    args.shouldSkipNextScrollSyncRef.current = false;
+    return;
+  }
+  syncViewportReadingSelection(args);
+}
+
+function syncViewportReadingSelection(args: {
+  editor: EditorAdapter;
+  getReadingSelection: () => EditorSelection | null;
+  props: ImmersiveScrollEventSource;
+  setReadingSelection: (selection: EditorSelection, source?: string) => void;
+}) {
+  const selection = getViewportReadingSelection(args.props);
+  if (!selection) {
+    pushDebugTrace('immersive.scroll-sync.skip-missing-selection', {
+      isImmersiveMode: args.props.isImmersiveMode
+    });
+    return;
+  }
+  const previousSelection = args.getReadingSelection();
+  if (!previousSelection) {
+    args.setReadingSelection(selection, 'scroll-sync');
+    pushDebugTrace('immersive.scroll-sync.selection-initialized', {
+      isImmersiveMode: args.props.isImmersiveMode,
+      selection
+    });
+    args.editor.setSelection(selection);
+    syncParagraphMarkerToReadingPosition(args.props);
+    return;
+  }
+  if (!args.props.isImmersiveMode || (previousSelection.from === selection.from && previousSelection.to === selection.to)) {
+    return;
+  }
+  if (shouldIgnoreWhitespaceViewportSample(args.editor, selection)) {
+    pushDebugTrace('immersive.scroll-sync.ignored-whitespace-sample', {
+      isImmersiveMode: args.props.isImmersiveMode,
+      selection
+    });
+    return;
+  }
+  args.setReadingSelection(selection, 'scroll-sync');
+  pushDebugTrace('immersive.scroll-sync.selection-updated', {
+    isImmersiveMode: args.props.isImmersiveMode,
+    previousSelection,
+    selection
+  });
+  args.editor.setSelection(selection);
+  syncParagraphMarkerToReadingPosition(args.props);
 }

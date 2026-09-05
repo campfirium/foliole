@@ -82,6 +82,24 @@ function registerFallbackAlignmentGeometryTests() {
 
     expect(scrollDOM.scrollTop).toBe(1080);
   });
+
+  it('cancels stale alignment retries when a newer target takes ownership', () => {
+    const scrollDOM = {
+      clientHeight: 400,
+      getBoundingClientRect: () => ({ height: 400, top: 100 }),
+      scrollHeight: 4000,
+      scrollTop: 0
+    };
+    const coordsAtPos = vi.fn((position: number) => ({ top: position - scrollDOM.scrollTop + 100 }));
+    const view = createMeasuredView({ coordsAtPos, scrollDOM }) as never;
+
+    alignSelectionInViewport(view, 1000, 0.5);
+    alignSelectionInViewport(view, 1500, 0.5);
+    vi.runAllTimers();
+
+    expect(coordsAtPos.mock.calls.filter(([position]) => position === 1000)).toHaveLength(1);
+    expect(scrollDOM.scrollTop).toBe(1300);
+  });
 }
 
 function registerFallbackAlignmentResolutionTests() {
@@ -179,6 +197,22 @@ describe('codeMirrorEditorAdapterView scroll subscription', () => {
     vi.runAllTimers();
 
     expect(listener).toHaveBeenCalledExactlyOnceWith({ userInitiated: true });
+
+    unsubscribe();
+  });
+
+  it('does not treat a consumed keyboard shortcut as user scroll intent', () => {
+    const listener = vi.fn();
+    const { dom, domListeners, scrollDOM, scrollListeners } = createScrollDomHarness();
+    const unsubscribe = subscribeToEditorScroll({ dom, scrollDOM } as never, listener);
+    const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' });
+    event.preventDefault();
+
+    domListeners.get('keydown')?.(event);
+    scrollListeners.get('scroll')?.(new Event('scroll'));
+    vi.runAllTimers();
+
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ userInitiated: false });
 
     unsubscribe();
   });

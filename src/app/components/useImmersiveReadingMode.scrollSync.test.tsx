@@ -140,6 +140,24 @@ it('ignores the immediate scroll event caused by paragraph navigation', () => {
   expect(adapter.setSelection).not.toHaveBeenCalled();
 });
 
+it('ignores every programmatic scroll frame during smooth paragraph following', () => {
+  const { adapter, props, triggerScroll } = buildProps();
+  mountViewportHost();
+  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(14);
+  props.setReadingPositionSelection({ from: 7, to: 7 });
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setSelection).mockClear();
+
+  act(() => {
+    triggerScroll({ userInitiated: false });
+    triggerScroll({ userInitiated: false });
+    triggerScroll({ userInitiated: false });
+  });
+
+  expect(props.getReadingPositionSelection()).toEqual({ from: 7, to: 7 });
+  expect(adapter.setSelection).not.toHaveBeenCalled();
+});
+
 it('ignores whitespace viewport samples while an image block is selected', () => {
   const { adapter, props, triggerScroll } = buildImageScrollProps();
   mountViewportHost();

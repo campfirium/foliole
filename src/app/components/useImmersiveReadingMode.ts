@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'rea
 
 import { useCommandShortcutMap } from '../../features/settings/context/hotkeySettingsContext';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowKeydownCapture } from '../../shared/platform/keyboard';
 
 import { handleImmersiveKeydown } from './immersiveReadingKeydown';
 import {
@@ -72,7 +72,7 @@ function useImmersiveKeyboardHandler(args: {
 }) {
   useEffect(
     () =>
-      onWindowKeydown((event) =>
+      onWindowKeydownCapture((event) =>
         handleImmersiveKeydown({
           canToggleImmersiveMode: args.canToggleImmersiveMode,
           captureReadingSelectionFromViewport: args.captureReadingSelectionFromViewport,

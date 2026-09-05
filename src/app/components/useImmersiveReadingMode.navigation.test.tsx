@@ -33,6 +33,8 @@ function buildAdapter(content: string) {
     focus: vi.fn(),
     getContent: vi.fn(() => content),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
+    getPositionClientRect: vi.fn<() => DOMRect | null>(() => null),
+    getPositionViewportTop: vi.fn<() => number | null>(() => null),
     getPrimaryVisiblePosition: vi.fn(() => 0),
     getViewportRect: vi.fn(() => ({ bottom: 260, height: 200, left: 0, right: 400, top: 60, width: 400, x: 0, y: 60, toJSON: () => ({}) })),
     getLineBlockHeight: vi.fn(() => 24),
@@ -102,7 +104,7 @@ function buildProps() {
   };
 }
 
-it('reveals the next paragraph only after it leaves the immersive safe band', () => {
+it('moves downward reading back near the top after it leaves the lower safe band', () => {
   const { adapter, props } = buildProps();
   vi.mocked(adapter.getDocumentPositionAtViewportY)
     .mockReturnValueOnce(0)
@@ -116,8 +118,45 @@ it('reveals the next paragraph only after it leaves the immersive safe band', ()
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledTimes(1);
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
     { from: 7, to: 7 },
-    IMMERSIVE_READING_FORWARD_REVEAL_RATIO
+    IMMERSIVE_READING_FORWARD_REVEAL_RATIO,
+    { preserveFocus: true }
   );
+  expect(IMMERSIVE_READING_FORWARD_REVEAL_RATIO).toBe(0.15);
+  expect(adapter.getDocumentPositionAtViewportY).toHaveBeenNthCalledWith(2, 200);
+});
+
+it('uses the complete paragraph bounds to cross the lower trigger', () => {
+  const { adapter, props } = buildProps();
+  vi.mocked(adapter.getPositionClientRect)
+    .mockReturnValueOnce(new DOMRect(20, 150, 1, 20))
+    .mockReturnValueOnce(new DOMRect(20, 190, 1, 20));
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  });
+
+  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
+    { from: 7, to: 7 },
+    IMMERSIVE_READING_FORWARD_REVEAL_RATIO,
+    { preserveFocus: true }
+  );
+  expect(adapter.getDocumentPositionAtViewportY).not.toHaveBeenCalled();
+});
+
+it('starts a controlled movement back to the top of the reading band', () => {
+  const { adapter, props } = buildProps();
+  vi.mocked(adapter.getDocumentPositionAtViewportY).mockReturnValueOnce(0).mockReturnValueOnce(5);
+  vi.mocked(adapter.getPositionViewportTop).mockReturnValue(210);
+  vi.mocked(adapter.getScrollMetrics).mockReturnValue({ clientHeight: 200, scrollHeight: 1000, scrollTop: 100 });
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  });
+
+  expect(adapter.setScrollTop).not.toHaveBeenCalled();
+  expect(adapter.revealSelectionAtViewportRatio).not.toHaveBeenCalled();
 });
 
 it('repositions upward navigation near the bottom of the safe band when needed', () => {
@@ -135,7 +174,8 @@ it('repositions upward navigation near the bottom of the safe band when needed',
 
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
     { from: 0, to: 0 },
-    IMMERSIVE_READING_BACKWARD_REVEAL_RATIO
+    IMMERSIVE_READING_BACKWARD_REVEAL_RATIO,
+    { preserveFocus: true }
   );
 });
 

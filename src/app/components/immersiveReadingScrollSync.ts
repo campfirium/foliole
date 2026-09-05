@@ -1,25 +1,16 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
-import {
-  applyImmersiveEntrySelection,
-  getCurrentApplyingSelection,
-  isApplyingReadingPosition
-} from './immersiveReadingApplying';
-import {
-  clearParagraphMarker,
-  getViewportReadingSelection,
-  syncParagraphMarkerToReadingPosition
-} from './immersiveReadingMarker';
+import { applyImmersiveEntrySelection } from './immersiveReadingApplying';
+import { clearParagraphMarker, syncParagraphMarkerToReadingPosition } from './immersiveReadingMarker';
 import {
   captureReadingSelection,
   commitReadingSelectionUpdate,
-  resolveStoredReadingSelection,
-  shouldIgnoreWhitespaceViewportSample
+  handleImmersiveScrollSyncEvent,
+  resolveStoredReadingSelection
 } from './immersiveReadingScrollSyncSupport';
 
 interface ImmersiveScrollSyncSource {
@@ -76,14 +67,15 @@ export function useImmersiveScrollSync(
     if (!editor) {
       return;
     }
-    const unsubscribe = editor.onScroll(() =>
-      handleScrollSyncEvent(
+    const unsubscribe = editor.onScroll((event) =>
+      handleImmersiveScrollSyncEvent({
         editor,
-        latestArgsRef.current.getReadingSelection,
-        latestArgsRef.current.props,
-        latestArgsRef.current.setReadingSelection,
+        event,
+        getReadingSelection: latestArgsRef.current.getReadingSelection,
+        props: latestArgsRef.current.props,
+        setReadingSelection: latestArgsRef.current.setReadingSelection,
         shouldSkipNextScrollSyncRef
-      )
+      })
     );
     return () => {
       unsubscribe();
@@ -144,71 +136,6 @@ export function useImmersiveEntrySelectionSync(
     setReadingSelection,
     wasImmersiveModeRef
   ]);
-}
-
-function handleScrollSyncEvent(
-  editor: EditorAdapter,
-  getReadingSelection: () => { from: number; to: number } | null,
-  props: ImmersiveScrollSyncSource,
-  setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
-  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
-) {
-  if (isApplyingReadingPosition(props)) {
-    pushDebugTrace('immersive.scroll-sync.ignored-applying', {
-      isImmersiveMode: props.isImmersiveMode,
-      selection: getCurrentApplyingSelection(props)
-    });
-    return;
-  }
-  if (shouldSkipNextScrollSyncRef.current) {
-    shouldSkipNextScrollSyncRef.current = false;
-    return;
-  }
-  syncViewportReadingSelection(editor, getReadingSelection, props, setReadingSelection);
-}
-
-function syncViewportReadingSelection(
-  editor: EditorAdapter,
-  getReadingSelection: () => { from: number; to: number } | null,
-  props: ImmersiveScrollSyncSource,
-  setReadingSelection: (selection: { from: number; to: number }, source?: string) => void
-) {
-  const selection = getViewportReadingSelection(props);
-  if (!selection) {
-    pushDebugTrace('immersive.scroll-sync.skip-missing-selection', {
-      isImmersiveMode: props.isImmersiveMode
-    });
-    return;
-  }
-  const previousSelection = getReadingSelection();
-  if (!previousSelection) {
-    setReadingSelection(selection, 'scroll-sync');
-    pushDebugTrace('immersive.scroll-sync.selection-initialized', {
-      isImmersiveMode: props.isImmersiveMode,
-      selection
-    });
-    editor.setSelection(selection);
-    syncParagraphMarkerToReadingPosition(props);
-    return;
-  }
-  if (!props.isImmersiveMode || (previousSelection.from === selection.from && previousSelection.to === selection.to)) {
-    return;
-  }
-  if (shouldIgnoreWhitespaceViewportSample(editor, selection)) {
-    pushDebugTrace('immersive.scroll-sync.ignored-whitespace-sample', {
-      isImmersiveMode: props.isImmersiveMode,
-      selection
-    });
-    return;
-  }
-  setReadingSelection(selection, 'scroll-sync');
-  pushDebugTrace('immersive.scroll-sync.selection-updated', {
-    isImmersiveMode: props.isImmersiveMode,
-    previousSelection,
-    selection
-  });
-  editor.setSelection(selection);
-  syncParagraphMarkerToReadingPosition(props);
 }
 
 export function useReadingSelectionState(

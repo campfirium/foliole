@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorScrollEvent, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
@@ -23,7 +23,7 @@ function createNode(id: string) {
 
 function buildAdapter() {
   let selection: EditorSelection = { from: 0, to: 0 };
-  let scrollListener: (() => void) | null = null;
+  let scrollListener: ((event: EditorScrollEvent) => void) | null = null;
   const adapter = {
     destroy: vi.fn(),
     focus: vi.fn(),
@@ -37,7 +37,7 @@ function buildAdapter() {
     getSelection: vi.fn(() => selection),
     getSelectionRanges: vi.fn(() => [selection]),
     onContentChange: vi.fn(),
-    onScroll: vi.fn((listener: () => void) => {
+    onScroll: vi.fn((listener: (event: EditorScrollEvent) => void) => {
       scrollListener = listener;
       return () => {
         if (scrollListener === listener) {
@@ -67,7 +67,7 @@ function buildAdapter() {
   };
   return {
     adapter,
-    triggerScroll: () => scrollListener?.()
+    triggerScroll: (event: EditorScrollEvent = { userInitiated: true }) => scrollListener?.(event)
   };
 }
 

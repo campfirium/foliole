@@ -11,8 +11,12 @@ import {
   traceSelectionAlignmentRetry
 } from './codeMirrorEditorSelectionAlignmentSupport';
 
+const activeAlignmentRequestIds = new WeakMap<EditorView, number>();
+
 export function alignSelectionInViewport(view: EditorView, position: number, targetRatio?: number) {
-  scheduleSelectionAlignment(view, position, targetRatio, 8);
+  const requestId = (activeAlignmentRequestIds.get(view) ?? 0) + 1;
+  activeAlignmentRequestIds.set(view, requestId);
+  scheduleSelectionAlignment(view, position, targetRatio, 8, requestId);
 }
 
 export function resolvePositionViewportTop(view: EditorView, position: number) {
@@ -54,10 +58,11 @@ function scheduleSelectionAlignmentRetry(
   view: EditorView,
   position: number,
   targetRatio: number | undefined,
-  attemptsRemaining: number
+  attemptsRemaining: number,
+  requestId: number
 ) {
   requestAnimationFrame(() => {
-    scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1);
+    scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1, requestId);
   });
 }
 
@@ -69,7 +74,8 @@ function handleMissingSelectionRect(
   view: EditorView,
   position: number,
   targetRatio: number | undefined,
-  attemptsRemaining: number
+  attemptsRemaining: number,
+  requestId: number
 ) {
   if (attemptsRemaining <= 0) {
     pushDebugTrace('editor.viewport.align-selection-missing-rect', {
@@ -79,7 +85,7 @@ function handleMissingSelectionRect(
     });
     return;
   }
-  scheduleSelectionAlignmentRetry(view, position, targetRatio, attemptsRemaining);
+  scheduleSelectionAlignmentRetry(view, position, targetRatio, attemptsRemaining, requestId);
 }
 
 function readSelectionAlignmentMeasure(args: {
@@ -143,6 +149,7 @@ function writeReadyAlignmentMeasure(args: {
   attemptsRemaining: number;
   measure: Extract<AlignmentMeasure, { kind: 'ready' }>;
   position: number;
+  requestId: number;
   targetRatio: number | undefined;
   view: EditorView;
 }) {
@@ -187,7 +194,7 @@ function writeReadyAlignmentMeasure(args: {
       targetRatio: args.targetRatio
     })
   ) {
-    scheduleSelectionAlignmentRetry(args.view, args.position, args.targetRatio, args.attemptsRemaining);
+    scheduleSelectionAlignmentRetry(args.view, args.position, args.targetRatio, args.attemptsRemaining, args.requestId);
   }
 }
 
@@ -195,11 +202,12 @@ function writeSelectionAlignmentMeasure(args: {
   attemptsRemaining: number;
   measure: AlignmentMeasure;
   position: number;
+  requestId: number;
   targetRatio: number | undefined;
   view: EditorView;
 }) {
   if (args.measure.kind === 'missing-rect') {
-    handleMissingSelectionRect(args.view, args.position, args.targetRatio, args.attemptsRemaining);
+    handleMissingSelectionRect(args.view, args.position, args.targetRatio, args.attemptsRemaining, args.requestId);
     return;
   }
   if (args.measure.kind === 'wait-layout') {
@@ -211,19 +219,27 @@ function writeSelectionAlignmentMeasure(args: {
       source: args.measure.source,
       viewportHeight: args.measure.viewportHeight
     });
-    scheduleSelectionAlignmentRetry(args.view, args.position, args.targetRatio, args.attemptsRemaining);
+    scheduleSelectionAlignmentRetry(args.view, args.position, args.targetRatio, args.attemptsRemaining, args.requestId);
     return;
   }
   writeReadyAlignmentMeasure({
     attemptsRemaining: args.attemptsRemaining,
     measure: args.measure,
     position: args.position,
+    requestId: args.requestId,
     targetRatio: args.targetRatio,
     view: args.view
   });
 }
 
-function scheduleSelectionAlignment(view: EditorView, position: number, targetRatio: number | undefined, attemptsRemaining: number) {
+function scheduleSelectionAlignment(
+  view: EditorView,
+  position: number,
+  targetRatio: number | undefined,
+  attemptsRemaining: number,
+  requestId: number
+) {
+  if (activeAlignmentRequestIds.get(view) !== requestId) return;
   view.requestMeasure({
     read: (measuredView) =>
       readSelectionAlignmentMeasure({
@@ -233,10 +249,12 @@ function scheduleSelectionAlignment(view: EditorView, position: number, targetRa
         view: measuredView
       }),
     write: (measure, measuredView) => {
+      if (activeAlignmentRequestIds.get(view) !== requestId) return;
       writeSelectionAlignmentMeasure({
         attemptsRemaining,
         measure: measure as AlignmentMeasure,
         position,
+        requestId,
         targetRatio,
         view: measuredView
       });

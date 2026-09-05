@@ -41,7 +41,7 @@ export function subscribeToEditorScroll(view: EditorView, listener: (event: Edit
   };
   const isUserScrollIntentActive = () => Date.now() <= userScrollIntentExpiresAt;
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (SCROLL_KEYS.has(event.key)) {
+    if (!event.defaultPrevented && SCROLL_KEYS.has(event.key)) {
       markUserScrollIntent();
     }
   };
