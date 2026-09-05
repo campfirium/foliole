@@ -105,6 +105,7 @@ describe('FeedbackDialog text submission', () => {
 
   it('submits JSON feedback when configured', async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('zh-CN');
     vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Electron');
     vi.stubGlobal('fetch', fetchMock);
@@ -121,7 +122,7 @@ describe('FeedbackDialog text submission', () => {
     }
     expect(JSON.parse(requestInit.body as string)).toMatchObject({
       message: 'The app needs an easier feedback path.',
-      metadata: { appVersion: expect.any(String), platform: 'windows' }
+      metadata: { appVersion: expect.any(String), language: 'en', platform: 'windows' }
     });
     expect(await screen.findByText('Feedback sent')).toBeInTheDocument();
     expect(screen.queryByLabelText('Feedback')).not.toBeInTheDocument();

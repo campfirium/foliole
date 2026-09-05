@@ -65,7 +65,7 @@ describe('FeedbackDialog demo metadata', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const requestInit = (fetchMock.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1];
     expect(JSON.parse(requestInit?.body as string)).toMatchObject({
-      metadata: { platform: 'demo' }
+      metadata: { language: 'en', platform: 'demo' }
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   type FeedbackAttachmentPayload,
   type FeedbackSubmissionPayload
 } from '../../shared/feedback/feedbackContract';
+import type { AppLocale } from '../../shared/localization/appLanguage';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { resolveRuntimeUpdateTarget } from '../../shared/platform/updateTarget';
 import {
@@ -24,6 +25,7 @@ import { useFeedbackUpdateNotice } from './FeedbackDialogUpdateNotice';
 type SubmitState = 'idle' | 'sending' | 'sent' | 'failed';
 
 export interface FeedbackDraft {
+  appLanguage: AppLocale;
   appVersion: string;
   attachments: FeedbackAttachmentPayload[];
   contact: string;
@@ -95,7 +97,7 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
     message: draft.message,
     metadata: {
       appVersion: draft.appVersion,
-      language: navigator.language,
+      language: draft.appLanguage,
       platform: draft.isDemo ? 'demo' : resolveRuntimeUpdateTarget().platform
     },
     turnstileToken
