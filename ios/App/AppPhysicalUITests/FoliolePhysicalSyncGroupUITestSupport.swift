@@ -107,6 +107,7 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Done", in: app, timeout: 30)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
             .firstMatch.waitForExistence(timeout: 30), "Fri did not visibly save the requested edit.")
+        revealReadingChrome(in: app)
         tapButton(named: "Exit", in: app, timeout: 30)
     }
 
@@ -157,6 +158,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "Fri conflict fork")
         ).firstMatch.waitForExistence(timeout: 30), "Fri conflict fork was not visibly saved.")
+        revealReadingChrome(in: app)
         tapButton(named: "Exit", in: app, timeout: 30)
     }
 
@@ -194,7 +196,7 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func tapButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
-        let button = app.buttons[name]
+        let button = app.buttons[name].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
         button.tap()
     }

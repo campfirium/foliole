@@ -178,7 +178,9 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return 'skipped';
-  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
+    allowWhileNotParticipating: args.triggerReason === 'manual'
+  });
   const outcomes: ForegroundAutoSyncOutcome[] = [];
   for (const target of targets) {
     if (args.cancelled()) break;
