@@ -72,11 +72,13 @@ async function loadNativeDiscoveryCandidates(
     : runtime.kind === 'ios-native' ? [directCandidate(preferredEndpointUrl)] : [];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const native = (payload.candidates ?? []).map((candidate) => ({
-      endpointUrl: candidate.endpoint_url,
-      protocolTxt: candidate.protocol_txt ?? null,
-      source: candidate.source
-    }));
+    const native = (payload.candidates ?? [])
+      .filter((candidate) => !isMobileProvider(candidate.protocol_txt))
+      .map((candidate) => ({
+        endpointUrl: candidate.endpoint_url,
+        protocolTxt: candidate.protocol_txt ?? null,
+        source: candidate.source
+      }));
     return uniqueCandidates([...direct, ...native]);
   } catch {
     return uniqueCandidates(direct);
@@ -135,6 +137,10 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });
   return new Response(payload.body, { status: payload.status });
+}
+
+function isMobileProvider(protocolTxt: Record<string, string> | null | undefined) {
+  return ['android-capacitor', 'ios-capacitor'].includes(protocolTxt?.provider_platform ?? '');
 }
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
