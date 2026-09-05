@@ -6,15 +6,9 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import {
-  setForegroundSyncDecisionObserver,
-  type ForegroundSyncDecisionTrace
-} from './companionForegroundSyncRunner';
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
-
-let latestSyncDecision: ForegroundSyncDecisionTrace | null = null;
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
   const readyPosted = useRef(false);
@@ -56,29 +50,24 @@ async function installLifecycleEvidence() {
     App.addListener('appStateChange', ({ isActive }) => {
       if (!isActive) return;
       activeCount += 1;
-      postLifecycleResult({ active_count: activeCount, pause_count: pauseCount, phase: 'foreground', resume_count: resumeCount });
+      postResult({ active_count: activeCount, error: null, pause_count: pauseCount, phase: 'foreground',
+        resume_count: resumeCount, scenario: 'foreground-sync-lifecycle', status: 'passed' });
     }),
     App.addListener('pause', () => {
       pauseCount += 1;
-      postLifecycleResult({ active_count: activeCount, pause_count: pauseCount, phase: 'background', resume_count: resumeCount });
+      postResult({ active_count: activeCount, error: null, pause_count: pauseCount, phase: 'background',
+        resume_count: resumeCount, scenario: 'foreground-sync-lifecycle', status: 'passed' });
     }),
     App.addListener('resume', () => {
       resumeCount += 1;
-      postLifecycleResult({ active_count: activeCount, pause_count: pauseCount, phase: 'foreground', resume_count: resumeCount });
+      postResult({ active_count: activeCount, error: null, pause_count: pauseCount, phase: 'foreground',
+        resume_count: resumeCount, scenario: 'foreground-sync-lifecycle', status: 'passed' });
     })
   ]);
 }
 
-function postLifecycleResult(counts: {
-  active_count: number; pause_count: number; phase: 'background' | 'foreground'; resume_count: number;
-}) {
-  setTimeout(() => postResult({ ...counts, error: null, scenario: 'foreground-sync-lifecycle',
-    status: 'passed', sync_decision: latestSyncDecision }), 100);
-}
-
 export async function runIosForegroundSyncLifecycleAcceptance(rootElement: HTMLElement) {
   try {
-    setForegroundSyncDecisionObserver((trace) => { latestSyncDecision = trace; });
     const bootstrap = await loadCompanionBootstrapState();
     await prepareAcceptanceGroup(bootstrap);
     await installLifecycleEvidence();

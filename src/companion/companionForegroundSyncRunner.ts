@@ -17,24 +17,6 @@ const FOREGROUND_DUPLICATE_EVENT_WINDOW_MS = 1_000;
 const AUTO_SYNC_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000] as const;
 const AUTO_SYNC_BACKLOG_CONTINUE_DELAY_MS = 1_000;
 type RunForegroundSyncCheck = (reason: ForegroundSyncReason, endpointUrl?: string) => void;
-type ForegroundSyncDecision = 'deferred' | 'skipped' | 'started';
-
-export type ForegroundSyncDecisionTrace = {
-  decision: ForegroundSyncDecision;
-  hasEndpoint: boolean;
-  inFlight: boolean;
-  isAppActive: boolean;
-  isSyncGroupReady: boolean;
-  reason: ForegroundSyncReason;
-};
-
-let decisionObserver: ((trace: ForegroundSyncDecisionTrace) => void) | null = null;
-
-export function setForegroundSyncDecisionObserver(
-  observer: ((trace: ForegroundSyncDecisionTrace) => void) | null
-) {
-  decisionObserver = observer;
-}
 
 export type TryForegroundAutoSync = (args: {
   cancelled: () => boolean;
@@ -201,30 +183,14 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
       if (reason === 'service-hint' && endpointUrl) args.pendingServiceHintRef.current.add(endpointUrl);
       if (reason === 'foreground') args.pendingForegroundRef.current = true;
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'backlog');
-      emitDecision(args, reason, 'deferred');
       return;
     }
     const now = Date.now();
-    if (!shouldStartForegroundSync(args, reason, now)) {
-      emitDecision(args, reason, 'skipped');
-      return;
-    }
-    emitDecision(args, reason, 'started');
+    if (!shouldStartForegroundSync(args, reason, now)) return;
     if (reason !== 'retry') clearRetryTimer(args.retryTimerRef);
     args.lastCheckedAtRef.current = now;
     startForegroundSync(args, runForegroundSyncCheck, reason, endpointUrl, args.stateRef.current);
   };
 
   return runForegroundSyncCheck;
-}
-
-function emitDecision(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, decision: ForegroundSyncDecision) {
-  decisionObserver?.({
-    decision,
-    hasEndpoint: Boolean(resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)),
-    inFlight: args.inFlightRef.current,
-    isAppActive: args.isAppActiveRef.current,
-    isSyncGroupReady: args.isSyncGroupReadyRef.current,
-    reason
-  });
 }
