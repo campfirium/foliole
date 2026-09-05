@@ -52,6 +52,29 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         ))
     }
 
+    func testAuthenticatedProviderRequestAcceptsDesktopFractionalTimestamp() throws {
+        let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = formatter.string(from: Date())
+        let nonce = UUID().uuidString.lowercased()
+        let body = Data()
+        let path = "/companion/sync-pack?after_state_seq=0"
+        let canonical = ["GET", path, timestamp, nonce,
+            SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()].joined(separator: "\n")
+        let signature = HMAC<SHA256>.authenticationCode(
+            for: Data(canonical.utf8), using: SymmetricKey(data: Data(key.utf8))
+        ).map { String(format: "%02x", $0) }.joined()
+        let request = FolioleCompanionHttpMessage(body: [:], bodyData: body, headers: [
+            "x-device-id": "device-b", "x-nonce": nonce, "x-signature": signature,
+            "x-sync-group-id": "group-a", "x-timestamp": timestamp
+        ], method: "GET", path: path)
+
+        XCTAssertEqual(try FolioleCompanionSyncGroupWorkgroup.authenticate(
+            request, groupId: "group-a", workgroupKey: key, dataBridge: ActiveDeviceBridge()
+        ), "device-b")
+    }
+
     func testProviderArchiveUsesConsumerCompatibleZlibAndZip() throws {
         let plain = Data("provider database bytes".utf8)
         let compressed = try FolioleCompanionSyncPackArchive.deflate(plain)

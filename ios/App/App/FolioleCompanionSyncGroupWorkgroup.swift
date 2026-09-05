@@ -19,7 +19,7 @@ enum FolioleCompanionSyncGroupWorkgroup {
         let signature = try header(request, "x-signature")
         let timestamp = try header(request, "x-timestamp")
         guard try header(request, "x-sync-group-id") == groupId,
-              let date = ISO8601DateFormatter().date(from: timestamp),
+              let date = requestDate(timestamp),
               abs(date.timeIntervalSinceNow) <= clockWindow else { throw invalid("expired_or_missing_headers") }
         let digest = SHA256.hash(data: request.bodyData).hex
         let canonical = [request.method, request.path, timestamp, nonce, digest].joined(separator: "\n")
@@ -130,6 +130,12 @@ enum FolioleCompanionSyncGroupWorkgroup {
     private static func header(_ request: FolioleCompanionHttpMessage, _ name: String) throws -> String {
         guard let value = request.header(name), !value.isEmpty else { throw invalid("missing_headers") }
         return value
+    }
+
+    private static func requestDate(_ timestamp: String) -> Date? {
+        let browserFormatter = ISO8601DateFormatter()
+        browserFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return browserFormatter.date(from: timestamp) ?? ISO8601DateFormatter().date(from: timestamp)
     }
 
     private static func consumeNonce(_ identity: String) throws {
