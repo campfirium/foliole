@@ -58,6 +58,16 @@ async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSync
     return;
   }
   const payload = asObject(record);
+  const nodeId = text(payload.node_id) ?? '';
+  const sourceHostName = text(payload.source_host_name) ?? '';
+  const status = text(payload.status) ?? 'available';
+  if (status === 'available') {
+    await port.run(
+      `UPDATE node_text_alternatives SET status = 'superseded', updated_at = ?
+       WHERE node_id = ? AND source_host_name = ? AND status = 'available' AND alternative_id <> ?`,
+      [record.updated_at, nodeId, sourceHostName, record.object_id]
+    );
+  }
   await port.run(
     `INSERT INTO node_text_alternatives (
        alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at
@@ -66,9 +76,9 @@ async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSync
        status = excluded.status, updated_at = excluded.updated_at
      WHERE node_text_alternatives.status = 'available'
        OR node_text_alternatives.status = excluded.status`,
-    [record.object_id, text(payload.node_id) ?? '', text(payload.source_version_id) ?? '',
-      text(payload.body_text) ?? '', text(payload.source_host_name) ?? '',
-      text(payload.created_at) ?? record.updated_at, text(payload.status) ?? 'available', record.updated_at]
+    [record.object_id, nodeId, text(payload.source_version_id) ?? '',
+      text(payload.body_text) ?? '', sourceHostName,
+      text(payload.created_at) ?? record.updated_at, status, record.updated_at]
   );
 }
 
