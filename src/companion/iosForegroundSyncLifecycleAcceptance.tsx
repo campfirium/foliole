@@ -16,7 +16,7 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
 
   useEffect(() => {
     if (readyPosted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
-      !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null) return;
+      !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null || workspaceSync.status !== 'idle') return;
     readyPosted.current = true;
     postReady(workspaceSync);
   }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.syncGroupJoined,

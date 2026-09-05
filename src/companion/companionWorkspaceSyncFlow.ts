@@ -70,13 +70,11 @@ export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSync
 async function showCompletedStructure(args: {
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
-  setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   args.setState({ ...args.state, workspace_snapshot: args.workspaceSnapshot });
   args.setReadableArticle(await syncReadableArticle(args.workspaceSnapshot));
-  args.setStatus('idle');
 }
 
 function applyRemainingProgress(args: {
@@ -147,7 +145,6 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
   await showCompletedStructure({
     setReadableArticle: args.setReadableArticle,
     setState: args.setState,
-    setStatus: args.setStatus,
     state: completedState,
     workspaceSnapshot: latestWorkspaceSnapshot
   });
@@ -180,12 +177,16 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
   if (!storedEndpointUrl) return 'skipped';
   const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl);
   const outcomes: ForegroundAutoSyncOutcome[] = [];
-  for (const target of targets) {
-    if (args.cancelled()) break;
-    const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
-    outcomes.push(await tryForegroundAutoSyncTarget(
-      targetArgs, target, runCompanionStreamSync
-    ));
+  try {
+    for (const target of targets) {
+      if (args.cancelled()) break;
+      const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
+      outcomes.push(await tryForegroundAutoSyncTarget(
+        targetArgs, target, runCompanionStreamSync
+      ));
+    }
+    return combineForegroundSyncOutcomes(outcomes);
+  } finally {
+    if (!args.cancelled()) args.setStatus('idle');
   }
-  return combineForegroundSyncOutcomes(outcomes);
 }
