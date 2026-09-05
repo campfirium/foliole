@@ -107,6 +107,45 @@ it('polls for approval without requiring another discovery event', async () => {
   expect(runtime.complete).toHaveBeenCalledTimes(2);
 });
 
+it('keeps approval polling active while discovery updates rerender the join screen', async () => {
+  vi.useFakeTimers();
+  runtime.request.mockResolvedValueOnce({
+    endpoint_url: candidate.endpoint_url,
+    expires_at: new Date(Date.now() + 120_000).toISOString(),
+    group_id: candidate.group_id,
+    request_id: 'request-rerenders'
+  });
+  runtime.complete.mockRejectedValueOnce(new Error('sync_group_join_acceptance_http_409'));
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError: vi.fn(),
+    onSaveEndpoint: vi.fn(async () => undefined)
+  }));
+
+  try {
+    await act(() => result.current.discover());
+    act(() => runtime.callback?.({
+      candidates: [candidate], change: 'found', error_code: null, status: 'results'
+    }));
+    await act(async () => undefined);
+    await act(() => result.current.request(candidate.endpoint_url));
+
+    for (let elapsed = 0; elapsed < 1_500; elapsed += 100) {
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+        runtime.callback?.({
+          candidates: [candidate], change: 'changed', error_code: null, status: 'results'
+        });
+      });
+    }
+
+    expect(result.current.joined).toBe(true);
+    expect(runtime.complete).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it('restores the join action and reports a Device request failure', async () => {
   const onError = vi.fn();
   runtime.request.mockRejectedValueOnce(new Error('device_identity_unavailable'));

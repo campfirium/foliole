@@ -55,23 +55,27 @@ function useJoinCompletion(args: {
   setStatus(value: CompanionSyncGroupJoinStatus): void;
 }) {
   const completionRef = useRef<Promise<unknown> | null>(null);
-  return useCallback(async (request = args.pendingRequest) => {
-    if (!request || !args.config.bootstrapState.database_path) return null;
+  const onErrorRef = useRef(args.config.onError);
+  onErrorRef.current = args.config.onError;
+  const databasePath = args.config.bootstrapState.database_path;
+  const { pendingRequest, setJoined, setPendingRequest, setStatus } = args;
+  return useCallback(async (request = pendingRequest) => {
+    if (!request || !databasePath) return null;
     completionRef.current ??= completeCompanionSyncGroupJoin({
-      databasePath: args.config.bootstrapState.database_path,
+      databasePath,
       endpointUrl: request.endpointUrl,
       providerDeviceId: request.providerDeviceId,
       providerDeviceName: request.providerDeviceName,
       providerPlatform: request.providerPlatform,
       requestId: request.requestId
     }).then((group) => {
-      args.setPendingRequest(null); args.setStatus('idle'); args.config.onError(null);
-      args.setJoined(true);
+      setPendingRequest(null); setStatus('idle'); onErrorRef.current(null);
+      setJoined(true);
       publishCompanionSyncMutationRevision();
       return group;
     }).finally(() => { completionRef.current = null; });
     return completionRef.current;
-  }, [args]);
+  }, [databasePath, pendingRequest, setJoined, setPendingRequest, setStatus]);
 }
 
 function useJoinCancellation(args: {

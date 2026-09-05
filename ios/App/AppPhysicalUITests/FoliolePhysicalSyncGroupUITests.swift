@@ -59,7 +59,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.launch()
         openSyncSettings(in: app)
         XCTAssertTrue(
-            app.buttons["Sync Now"].waitForExistence(timeout: 45),
+            app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
             "The physical iPhone did not restore its Sync Group after relaunch."
         )
         XCTAssertFalse(app.buttons["Connect to Sync Group"].exists)
@@ -74,7 +74,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
-        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not retain the accepted attempt Sync Group.")
         tapButton(named: "Details", in: app, timeout: 30)
         tapButton(named: "Pause Sync", in: app, timeout: 30)
@@ -91,7 +91,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.terminate()
         app.launch()
         openSyncSettings(in: app)
-        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its attempt Sync Group after relaunch.")
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         openBrowse(in: app)
@@ -205,7 +205,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
-        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its accepted Sync Group.")
         openBrowse(in: app)
         waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
@@ -216,7 +216,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
-        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 45),
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its accepted Sync Group before stopping.")
         app.terminate()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30),
