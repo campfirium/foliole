@@ -26,7 +26,7 @@
 | --- | --- |
 | `electron/**`、`scripts/desktop/**`、`scripts/macos/**`、`scripts/windows/**`、`playwright.desktop.config.ts`、桌面数据库或运行链路 | `electron/AGENTS.md` |
 | `android/**`、`scripts/android/**`、`capacitor.config.ts` | `android/AGENTS.md` |
-| `ios/**` | `ios/AGENTS.md` |
+| `ios/**`、`scripts/ios/**` | `ios/AGENTS.md` |
 | `src/companion/**` | `src/companion/AGENTS.md` |
 | `src/features/editor/**` | `src/features/editor/AGENTS.md` |
 | `src/app/components/**` | `src/app/components/AGENTS.md` |

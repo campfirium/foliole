@@ -2,7 +2,7 @@
 
 ## Scope
 
-- 本文件适用于 `ios/**` 宿主目录及 iPhone / iPad 原生宿主集成任务。
+- 本文件适用于 `ios/**`、`scripts/ios/**` 及 iPhone / iPad 原生宿主集成任务。
 - iOS 宿主基于 Capacitor 8、Swift Package Manager 与 Xcode 26；除根 `AGENTS.md` 外，必须同时遵守本文件。
 
 ## iOS Host Rules
