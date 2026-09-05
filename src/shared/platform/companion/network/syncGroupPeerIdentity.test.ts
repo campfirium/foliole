@@ -20,6 +20,9 @@ describe('syncGroupPeerIdentity', () => {
     });
 
     await expect(resolveCompanionSyncPeerId('http://device-c/')).resolves.toBe('device-c');
+    expect(mocks.loadDiscovery).toHaveBeenCalledWith(
+      'http://device-c/', { allowWhileNotParticipating: true }
+    );
   });
 
   it('accepts another Device endpoint inside the same Sync Group', async () => {
