@@ -16,7 +16,7 @@ it('requires the fixed wired physical Fri destination', async () => {
       'name: Fri', 'deviceType: iPhone', 'pairingState: paired',
       'developerModeStatus: enabled', 'transportType: wired'
     ].join('\n');
-    if (args.includes('lockState')) return 'unlockedSinceBoot: true\n';
+    if (args.includes('lockState')) return 'passcodeRequired: false\nunlockedSinceBoot: true\n';
     return `Fri (${FRI_UDID})`;
   };
   await expect(createFriPhysicalReadinessAdapter({ execute })()).resolves.toMatchObject({
@@ -24,6 +24,20 @@ it('requires the fixed wired physical Fri destination', async () => {
   });
   expect(calls.every(([, args]) => !args.some((arg) => /Simulator/u.test(arg)))).toBe(true);
   expect(calls[0][1]).toContain(FRI_COREDEVICE_ID);
+});
+
+it('rejects Fri when it was unlocked since boot but is currently locked', async () => {
+  const execute = async (_command, args) => {
+    if (args.includes('details')) return [
+      'name: Fri', 'deviceType: iPhone', 'pairingState: paired',
+      'developerModeStatus: enabled', 'transportType: wired'
+    ].join('\n');
+    if (args.includes('lockState')) return 'passcodeRequired: true\nunlockedSinceBoot: true\n';
+    return `Fri (${FRI_UDID})`;
+  };
+  await expect(createFriPhysicalReadinessAdapter({ execute })()).rejects.toMatchObject({
+    missingFact: 'fri_current_unlock_required'
+  });
 });
 
 it('rejects a wireless Fri before XCUITest', async () => {

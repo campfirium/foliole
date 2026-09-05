@@ -47,15 +47,10 @@ export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot }) {
         '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
         '--scheme', 'AppPhysicalUITests',
         '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
+        '--keep-app-foreground', FRI_DEV_APP_ID,
         '--only-testing', FRI_DEV_TEST],
       env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
       stage: 'fri-dev-xcuitest'
-    },
-    {
-      command: 'xcrun',
-      args: ['devicectl', 'device', 'process', 'launch', '--terminate-existing',
-        '--device', FRI_COREDEVICE_ID, FRI_DEV_APP_ID],
-      stage: 'fri-dev-foreground-launch'
     }
   ];
 }
@@ -70,8 +65,12 @@ export async function runFriDevWorkflow({
     throw new Error(`Fixed Fri XCUITest runner is missing: ${FRI_XCUITEST_RUNNER}`);
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot });
+  for (const entry of commands.slice(0, 2)) {
+    run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
+  }
   await readiness();
-  for (const entry of buildFriDevWorkflowCommands({ evidenceRoot, repoRoot })) {
+  for (const entry of commands.slice(2)) {
     run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
   return { evidenceRoot, testIdentifier: FRI_DEV_TEST };

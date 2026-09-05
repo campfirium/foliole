@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +12,8 @@ import {
   FRI_DEV_APP_ID,
   FRI_DEV_BUNDLE_SUFFIX,
   FRI_DEV_TEST,
-  FRI_XCUITEST_RUNNER
+  FRI_XCUITEST_RUNNER,
+  runFriDevWorkflow
 } from './fri-dev-workflow.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -26,8 +28,7 @@ describe('Fri development workflow', () => {
     expect(commands.map(({ command, stage }) => [command, stage])).toEqual([
       ['npm', 'companion-build'],
       ['npx', 'capacitor-ios-sync'],
-      ['bash', 'fri-dev-xcuitest'],
-      ['xcrun', 'fri-dev-foreground-launch']
+      ['bash', 'fri-dev-xcuitest']
     ]);
     expect(commands[0].args).toEqual(['run', 'android:web:build']);
     expect(commands[1].args).toEqual(['cap', 'sync', 'ios']);
@@ -36,13 +37,23 @@ describe('Fri development workflow', () => {
       '--project', '/repo/ios/App/App.xcodeproj',
       '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', '/evidence/xcuitest',
+      '--keep-app-foreground', FRI_DEV_APP_ID,
       '--only-testing', FRI_DEV_TEST
     ]);
     expect(commands[2].args).not.toContain('--allow-wireless');
     expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
-    expect(commands[3].args).toEqual([
-      'devicectl', 'device', 'process', 'launch', '--terminate-existing',
-      '--device', 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7', FRI_DEV_APP_ID
+  });
+
+  it('finishes offline preparation before requiring the current unlock', async () => {
+    const stages = [];
+    await runFriDevWorkflow({
+      evidenceRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'fri-dev-workflow-')),
+      readiness: async () => { stages.push('readiness'); },
+      repoRoot: '/repo',
+      run: (_command, _args, options) => { stages.push(options.stage); }
+    });
+    expect(stages).toEqual([
+      'companion-build', 'capacitor-ios-sync', 'readiness', 'fri-dev-xcuitest'
     ]);
   });
 

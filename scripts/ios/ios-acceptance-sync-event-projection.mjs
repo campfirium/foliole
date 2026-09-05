@@ -48,6 +48,7 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
   const result = await execute('bash', [FRI_RUNNER,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', evidenceRoot,
+    '--keep-app-foreground', bundle.applicationId,
     '--only-testing', 'AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests/testProjectsSyncEvents'
   ], { action: 'fri-sync-event-projection', cwd: repoRoot, env: { ...process.env,
     FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
@@ -62,6 +63,7 @@ export async function runFriGroupIdentityPreflight({ evidenceRoot, execute, grou
   const result = await execute('bash', [FRI_RUNNER,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', evidenceRoot,
+    '--keep-app-foreground', bundle.applicationId,
     '--only-testing', 'AppAcceptanceProjectionTests/FolioleAcceptanceGroupDiscoveryTests/testFindsExpectedSyncGroup'
   ], { action: 'fri-group-identity', cwd: repoRoot, env: { ...process.env,
     FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,

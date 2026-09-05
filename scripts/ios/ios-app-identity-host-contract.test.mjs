@@ -52,6 +52,7 @@ describe('iOS app identity host contract', () => {
       const source = read(script);
       expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
       expect(source).toContain('FOLIOLE_T152_MATRIX_ATTEMPT');
+      expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
     }
   });
 });
