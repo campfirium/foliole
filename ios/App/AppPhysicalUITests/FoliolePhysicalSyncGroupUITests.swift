@@ -53,6 +53,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         tapButton(named: "Sync Now", in: app, timeout: 30)
         waitForDisappearance(app.staticTexts["Never"], timeout: 45,
                              message: "The public Sync Now action did not update the last sync result.")
+        XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 180),
+                      "The public Sync Now action did not finish before relaunch.")
         attachScreenshot(named: "Fri-sync-group-joined")
 
         app.terminate()
@@ -63,7 +65,6 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The physical iPhone did not restore its Sync Group after relaunch."
         )
         XCTAssertFalse(app.buttons["Connect to Sync Group"].exists)
-        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         openBrowse(in: app)
         waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"], in: app)
         attachScreenshot(named: "Fri-sync-group-restored")
