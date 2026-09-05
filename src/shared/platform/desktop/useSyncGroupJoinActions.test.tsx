@@ -1,11 +1,18 @@
 import { act, renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   events: [] as string[],
+  complete: vi.fn(async () => {
+    runtime.events.push('complete');
+    return { current_device: { device_name: 'V', platform: 'win32' } };
+  }),
   request: vi.fn(async () => {
     runtime.events.push('request');
-    return { current_device: null };
+    return {
+      current_device: null,
+      join_request: { expires_at: new Date(Date.now() + 60_000).toISOString() }
+    };
   }),
   stop: vi.fn(async () => {
     runtime.events.push('stop');
@@ -13,7 +20,7 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('../desktopSyncGroupRuntimeRepository', () => ({
-  completeDesktopSyncGroupJoin: vi.fn(),
+  completeDesktopSyncGroupJoin: runtime.complete,
   discoverDesktopSyncGroups: vi.fn(),
   onDesktopSyncGroupDiscoveryChanged: vi.fn(),
   requestDesktopSyncGroupJoin: runtime.request,
@@ -22,17 +29,43 @@ vi.mock('../desktopSyncGroupRuntimeRepository', () => ({
 
 import { useDesktopSyncGroupJoinActions } from './useSyncGroupJoinActions';
 
-it('requests admission before stopping discovery so the selected candidate remains available', async () => {
-  const setOverview = vi.fn();
-  const { result } = renderHook(() => useDesktopSyncGroupJoinActions({
-    setError: vi.fn(),
-    setIsLoading: vi.fn(),
-    setOverview,
-    setPendingActionId: vi.fn()
+beforeEach(() => {
+  vi.clearAllMocks();
+  runtime.events.length = 0;
+});
+
+afterEach(() => vi.useRealTimers());
+
+function renderActions(setOverview = vi.fn()) {
+  const hook = renderHook(() => useDesktopSyncGroupJoinActions({
+    setError: vi.fn(), setIsLoading: vi.fn(), setOverview, setPendingActionId: vi.fn()
   }));
+  return { ...hook, setOverview };
+}
+
+it('requests admission before stopping discovery, then completes after approval', async () => {
+  const { result, setOverview } = renderActions();
 
   await act(() => result.current.requestJoin('http://maci.local:38641'));
 
-  expect(runtime.events).toEqual(['request', 'stop']);
-  expect(setOverview).toHaveBeenCalledWith({ current_device: null });
+  expect(runtime.events).toEqual(['request', 'stop', 'complete']);
+  expect(setOverview).toHaveBeenLastCalledWith({
+    current_device: { device_name: 'V', platform: 'win32' }
+  });
+});
+
+it('retries completion while approval remains pending', async () => {
+  vi.useFakeTimers();
+  runtime.complete.mockImplementationOnce(async () => {
+    runtime.events.push('complete-pending');
+    throw new Error('sync_group_join_not_accepted');
+  });
+  const { result } = renderActions();
+
+  const completion = result.current.requestJoin('http://maci.local:38641');
+  await vi.waitFor(() => expect(runtime.complete).toHaveBeenCalledTimes(1));
+  await vi.advanceTimersByTimeAsync(1_000);
+  await act(() => completion);
+
+  expect(runtime.events).toEqual(['request', 'stop', 'complete-pending', 'complete']);
 });

@@ -9,6 +9,19 @@ import {
   stopDiscoveringDesktopSyncGroups
 } from '../desktopSyncGroupRuntimeRepository';
 
+const JOIN_ACCEPTANCE_POLL_MS = 1_000;
+
+async function waitForJoinAcceptance(expiresAt: string) {
+  const deadline = new Date(expiresAt).getTime();
+  let lastError: unknown = new Error('sync_group_join_request_expired');
+  while (Date.now() < deadline) {
+    try { return await completeDesktopSyncGroupJoin(); }
+    catch (error) { lastError = error; }
+    await new Promise((resolve) => window.setTimeout(resolve, JOIN_ACCEPTANCE_POLL_MS));
+  }
+  throw lastError;
+}
+
 export function useDesktopSyncGroupJoinActions(args: {
   setError(value: string | null): void;
   setIsLoading(value: boolean): void;
@@ -48,7 +61,10 @@ export function useDesktopSyncGroupJoinActions(args: {
     requestJoin: (endpointUrl: string) => run('request-sync-group-join', async () => {
       const overview = await requestDesktopSyncGroupJoin(endpointUrl);
       await stopDiscoveringDesktopSyncGroups();
-      return overview;
+      setOverview(overview);
+      const expiresAt = overview.join_request?.expires_at;
+      if (!expiresAt) throw new Error('sync_group_join_not_pending');
+      return waitForJoinAcceptance(expiresAt);
     })
   };
 }
