@@ -46,8 +46,9 @@ export function useDesktopSyncGroupJoinActions(args: {
     },
     onDiscoveryChanged: onDesktopSyncGroupDiscoveryChanged,
     requestJoin: (endpointUrl: string) => run('request-sync-group-join', async () => {
+      const overview = await requestDesktopSyncGroupJoin(endpointUrl);
       await stopDiscoveringDesktopSyncGroups();
-      return requestDesktopSyncGroupJoin(endpointUrl);
+      return overview;
     })
   };
 }
