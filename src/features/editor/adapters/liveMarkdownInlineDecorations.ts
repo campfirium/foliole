@@ -4,6 +4,7 @@ import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import { attachMarkdownImageResize } from './liveMarkdownImageResize';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 import { canReuseMarkdownImageWidgetDom, updateMarkdownImageWidgetDomRange } from './liveMarkdownImageWidgetDom';
 
@@ -54,6 +55,7 @@ class MarkdownImageWidget extends WidgetType {
       this.presentationVersion === other.presentationVersion &&
       this.imageMatch.alt === other.imageMatch.alt &&
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
+      this.imageMatch.displayWidth === other.imageMatch.displayWidth &&
       this.imageMatch.from === other.imageMatch.from &&
       this.imageMatch.linkHref === other.imageMatch.linkHref &&
       this.localDocumentPath === other.localDocumentPath &&
@@ -77,6 +79,7 @@ class MarkdownImageWidget extends WidgetType {
       this.presentationVersion,
       this.localDocumentPath
     );
+    attachMarkdownImageResize(widgetDom, view, this.imageMatch);
     return widgetDom;
   }
 

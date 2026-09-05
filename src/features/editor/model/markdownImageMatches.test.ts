@@ -4,6 +4,14 @@ import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { collectImageMatches, collectImageMatchesFromTree } from './markdownImageMatches';
 
 describe('markdownImageMatches', () => {
+  it('reads an Obsidian width suffix from standard markdown images', () => {
+    expect(collectImageMatches(0, '![Cover|268](asset://hash-1.png)')[0]).toMatchObject({
+      alt: 'Cover',
+      displayWidth: 268,
+      source: 'asset://hash-1.png'
+    });
+  });
+
   it('collects supported markdown image sources', () => {
     expect(collectImageMatches(10, 'text ![Web](https://example.com/a.png)')).toEqual([
       {

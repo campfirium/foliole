@@ -1,7 +1,9 @@
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { parseMarkdownImageLabelSize } from './markdownImageSize';
 import { isBrowserImageSource, isInternalImageSource, isRelativeImageSource } from './markdownImageSourceKinds';
+import type { MarkdownImageMatch } from './markdownImageTypes';
 import { resolveMarkdownImageWrappingLink } from './markdownImageWrappingLink';
 import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import {
@@ -11,18 +13,10 @@ import {
 } from './markdownLinkReferences';
 import { isSafeMarkdownLinkHref, normalizeMarkdownLinkDestination } from './markdownLinkSafety';
 
+export type { MarkdownImageMatch } from './markdownImageTypes';
+
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 const BRACKETED_ALT_IMAGE_PREFIX = '![[';
-
-export interface MarkdownImageMatch {
-  attachmentId: string | null;
-  alt: string;
-  display: 'block' | 'inline';
-  from: number;
-  linkHref?: string;
-  source: string;
-  to: number;
-}
 
 interface ParserImageMatch {
   altText: string;
@@ -218,6 +212,7 @@ export function collectImageMatchesFromTree(
 
   for (const match of collectParserImageMatchesFromTree(tree, text, references)) {
     const source = match.rawTarget;
+    const label = parseMarkdownImageLabelSize(match.altText);
     if (
       source &&
       (isBrowserImageSource(source) || isInternalImageSource(source) || (options.allowRelativeImages && isRelativeImageSource(source)))
@@ -225,8 +220,9 @@ export function collectImageMatchesFromTree(
       const start = from + match.start;
       matches.push({
         attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
-        alt: match.altText,
+        alt: label.alt,
         display: resolveImageDisplay(text, match.start, match.fullMatch),
+        ...(label.displayWidth ? { displayWidth: label.displayWidth } : {}),
         from: start,
         ...(match.linkHref ? { linkHref: match.linkHref } : {}),
         source,

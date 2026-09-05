@@ -28,6 +28,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.imageMenu.cut': 'Cut image',
   'desktop.editor.imageMenu.export': 'Export image',
   'desktop.editor.imageMenu.delete': 'Delete image',
+  'desktop.editor.image.resize': 'Resize image',
   'desktop.editor.image.altFallback': 'Markdown image',
   'desktop.editor.imageFailure.retry': 'Retry',
   'desktop.editor.imageFailure.addSource': 'Add source',

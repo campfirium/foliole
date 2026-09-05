@@ -99,10 +99,26 @@ function createImageRegionOverlay() {
   return { draftRectElement, overlay };
 }
 
+function createImageSurfaceWrapper(args: {
+  attachmentId: string | null;
+  display: 'block' | 'inline';
+  displayWidth?: number;
+  presentation?: ImageClozeEditorPresentation | null;
+}) {
+  const wrapper = document.createElement('span');
+  wrapper.className = args.display === 'inline'
+    ? 'cm-md-image-surface cm-md-image-surface-inline'
+    : 'cm-md-image-surface cm-md-image-surface-block group';
+  wrapper.dataset.mdImageHighlighted = hasWholeImageHighlight(args.presentation, args.attachmentId) ? 'true' : 'false';
+  if (args.display === 'block' && args.displayWidth) wrapper.style.width = `${args.displayWidth}px`;
+  return wrapper;
+}
+
 export function createImageClozeImageSurface(args: {
   attachmentId: string | null;
   presentation?: ImageClozeEditorPresentation | null;
   display: 'block' | 'inline';
+  displayWidth?: number;
   editorNodeId?: string | null;
   from: number;
   previewAlt: string;
@@ -111,10 +127,7 @@ export function createImageClozeImageSurface(args: {
   renderImage: () => HTMLImageElement;
   to: number;
 }) {
-  const wrapper = document.createElement('span');
-  wrapper.className =
-    args.display === 'inline' ? 'cm-md-image-surface cm-md-image-surface-inline' : 'cm-md-image-surface cm-md-image-surface-block';
-  wrapper.dataset.mdImageHighlighted = hasWholeImageHighlight(args.presentation, args.attachmentId) ? 'true' : 'false';
+  const wrapper = createImageSurfaceWrapper(args);
   const image = args.renderImage();
   wrapper.append(image);
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);

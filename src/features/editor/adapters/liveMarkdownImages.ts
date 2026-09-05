@@ -38,6 +38,7 @@ function createImageSurface(
   return createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
     display: imageMatch.display,
+    ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),
     editorNodeId,
     from: imageMatch.from,
     presentation: imagePresentation,
