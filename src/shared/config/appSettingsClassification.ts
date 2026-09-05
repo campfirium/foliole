@@ -167,7 +167,9 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'devReviewStatusBarOpen'
 ] as const satisfies readonly AppSettingsStorageName[];
 
-const RENDERER_PREFERENCE_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
+const RENDERER_PREFERENCE_APP_SETTING_NAMES = [
+  'feedbackRememberedContact'
+] as const satisfies readonly AppSettingsStorageName[];
 const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
   'manualComparisonDrafts'
 ] as const satisfies readonly AppSettingsStorageName[];
@@ -213,14 +215,10 @@ addClassifications(classifications, UI_SESSION_ONLY_APP_SETTING_NAMES, APP_SETTI
 
 export const APP_SETTINGS_CLASSIFICATIONS = classifications as Record<AppSettingsStorageName, AppSettingsClassification>;
 
-function getAppSettingsKey(name: AppSettingsStorageName) {
-  return APP_SETTINGS_STORAGE_KEYS[name];
-}
-
 function getClassifiedAppSettingsKeys(predicate: (classification: AppSettingsClassification) => boolean) {
   return Object.entries(APP_SETTINGS_CLASSIFICATIONS)
     .filter(([, classification]) => predicate(classification))
-    .map(([name]) => getAppSettingsKey(name as AppSettingsStorageName));
+    .map(([name]) => APP_SETTINGS_STORAGE_KEYS[name as AppSettingsStorageName]);
 }
 
 export function getLocalStorageAppSettingsKeys() {

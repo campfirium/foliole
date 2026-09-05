@@ -16,6 +16,10 @@ import {
 } from '../../shared/ui';
 
 import {
+  readRememberedFeedbackContact,
+  updateRememberedFeedbackContact
+} from './feedbackContactPreference';
+import {
   buildFeedbackContentProps,
   createFeedbackPayload,
   FeedbackDialogContent
@@ -106,6 +110,7 @@ function useFeedbackDialogController({
     setError,
     setAttachmentWarning,
     setState,
+    updateRememberedContact: updateRememberedFeedbackContact,
     turnstileToken: turnstile.token
   });
 
@@ -113,7 +118,7 @@ function useFeedbackDialogController({
     if (!open) return;
     attachmentState.clearAttachments();
     setAttachmentWarning(false);
-    setContact('');
+    setContact(readRememberedFeedbackContact());
     setError('');
     setMessage('');
     setState('idle');
@@ -179,6 +184,7 @@ function useFeedbackSubmitAction(args: {
   setAttachmentWarning: (value: boolean) => void;
   setError: (value: string) => void;
   setState: (value: SubmitState) => void;
+  updateRememberedContact: (contact: string) => void;
   turnstileToken: string;
 }) {
   const t = useTranslation();
@@ -199,6 +205,7 @@ function useFeedbackSubmitAction(args: {
         throw new Error(`Feedback failed: ${response.status}`);
       }
       const body = await readFeedbackSubmitResponse(response);
+      args.updateRememberedContact(args.draft.contact);
       args.setAttachmentWarning(body?.attachmentsAccepted === false && body.warning === 'attachments_budget_exceeded');
       args.setState('sent');
       args.setError('');
