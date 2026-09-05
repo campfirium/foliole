@@ -56,3 +56,35 @@ it('does not probe a mobile provider while finding desktop sync targets', async 
     expect.objectContaining({ url: expect.stringContaining('iphone.local') })
   );
 });
+
+it('does not let a stalled native probe block a reachable iOS desktop', async () => {
+  vi.useFakeTimers();
+  runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
+    candidates: [{
+      endpoint_url: 'http://reachable-mac.local:38641',
+      protocol_txt: serializeSyncProtocolTxt(protocol),
+      source: 'nsd'
+    }]
+  });
+  runtime.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
+    if (url.startsWith('http://reachable-mac.local:38641')) {
+      return {
+        body: JSON.stringify({
+          app_version: '0.1.0', group_display_name: 'Foliole', group_id: 'group-1',
+          group_tag: 'group-tag-1', protocol, provider_device_id: 'desktop-mac',
+          provider_device_name: 'Mac', provider_platform: 'macOS', runtime_instance_id: 'runtime-mac'
+        }),
+        status: 200
+      };
+    }
+    return await new Promise(() => undefined);
+  });
+
+  const resultPromise = discoverCompanionDesktops('http://stale-mac.local:38641');
+  await vi.advanceTimersByTimeAsync(1_200);
+
+  await expect(resultPromise).resolves.toEqual([
+    expect.objectContaining({ endpointUrl: 'http://reachable-mac.local:38641' })
+  ]);
+  vi.useRealTimers();
+});

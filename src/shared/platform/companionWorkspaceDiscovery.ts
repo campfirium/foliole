@@ -135,8 +135,19 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
   if (!isNativeCompanionNetworkRuntime()) {
     return await fetch(url, { signal });
   }
-  const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });
+  const payload = await abortableNativeDiscoveryRequest(url, signal);
   return new Response(payload.body, { status: payload.status });
+}
+
+function abortableNativeDiscoveryRequest(url: string, signal: AbortSignal) {
+  return new Promise<Awaited<ReturnType<typeof FolioleCompanionSync.desktopHttpRequest>>>((resolve, reject) => {
+    const abort = () => reject(new DOMException('Discovery request timed out.', 'AbortError'));
+    if (signal.aborted) return abort();
+    signal.addEventListener('abort', abort, { once: true });
+    void FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url })
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', abort));
+  });
 }
 
 function isMobileProvider(protocolTxt: Record<string, string> | null | undefined) {
