@@ -2,8 +2,12 @@ import { afterEach, expect, it } from 'vitest';
 
 import {
   getUndoRouterOwner,
+  getUndoRouterContentContext,
+  getUndoRouterContentDocumentId,
+  registerUndoRouterContentContext,
   resolveUndoRouterOwner,
-  setUndoRouterOwner
+  setUndoRouterOwner,
+  setUndoRouterTarget
 } from './undoRouter';
 
 afterEach(() => {
@@ -31,4 +35,25 @@ it('preserves the previous owner when an overlay receives focus', () => {
 
   expect(resolveUndoRouterOwner(document.querySelector('#palette'))).toBeNull();
   expect(getUndoRouterOwner()).toBe('content');
+});
+
+it('tracks the focused content document independently from the owner', () => {
+  setUndoRouterTarget('content', 'node-1::answer');
+
+  expect(getUndoRouterOwner()).toBe('content');
+  expect(getUndoRouterContentDocumentId()).toBe('node-1::answer');
+
+  setUndoRouterTarget('content', null);
+  expect(getUndoRouterContentDocumentId()).toBeNull();
+});
+
+it('resolves registered answer contexts without falling back to the body context', () => {
+  const bodyContext = { applyText: () => true, currentContent: 'Body', nodeId: 'node-1' };
+  const answerContext = { applyText: () => true, currentContent: 'Answer', nodeId: 'node-1::answer' };
+  const unregister = registerUndoRouterContentContext('node-1::answer', answerContext);
+  setUndoRouterTarget('content', 'node-1::answer');
+
+  expect(getUndoRouterContentContext(bodyContext)).toBe(answerContext);
+  unregister();
+  expect(getUndoRouterContentContext(bodyContext)).toBeUndefined();
 });

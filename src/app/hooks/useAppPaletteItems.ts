@@ -24,7 +24,7 @@ import { resolveDevPaletteOptions } from './appPaletteDevOptions';
 import { buildEditorPaletteOptions } from './appPaletteEditorOptions';
 import { canDelayReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
-import { useUndoRouterOwner, type UndoRouterOwner } from './undoRouter';
+import { useUndoRouterContentDocumentId, useUndoRouterOwner, type UndoRouterOwner } from './undoRouter';
 
 function canNodeBeMoveTarget(args: {
   activeNodeId: string;
@@ -61,14 +61,16 @@ function canReimportSelectedTopic(args: {
 
 export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
+  contentDocumentId?: string | null;
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
   editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
   owner: UndoRouterOwner;
   t: Translate;
 }) {
-  const undoEntry = getEditorOperationTopEntry(args.editorOperationHistory, args.activeNodeId, 'undo');
-  const redoEntry = getEditorOperationTopEntry(args.editorOperationHistory, args.activeNodeId, 'redo');
   const contentOwner = args.owner === 'content';
+  const historyNodeId = contentOwner ? args.contentDocumentId ?? args.activeNodeId : args.activeNodeId;
+  const undoEntry = getEditorOperationTopEntry(args.editorOperationHistory, historyNodeId, 'undo');
+  const redoEntry = getEditorOperationTopEntry(args.editorOperationHistory, historyNodeId, 'redo');
   const canUndoEditorOperation = Boolean(undoEntry && (undoEntry.type === 'text.edit' || !undoEntry.applyingMode));
   const canRedoEditorOperation = Boolean(redoEntry && (redoEntry.type === 'text.edit' || !redoEntry.applyingMode));
   return {
@@ -81,10 +83,10 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
           args.appActionHistory.pendingCreate || args.appActionHistory.undoStack.length > 0
         ),
     redoWorkspaceActionTitle: contentOwner
-      ? getEditorOperationRedoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
+      ? getEditorOperationRedoTitle(args.editorOperationHistory, historyNodeId, args.t)
       : getWorkspaceRedoTitle(args.appActionHistory, args.t),
     undoWorkspaceActionTitle: contentOwner
-      ? getEditorOperationUndoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
+      ? getEditorOperationUndoTitle(args.editorOperationHistory, historyNodeId, args.t)
       : getWorkspaceUndoTitle(args.appActionHistory, args.t)
   };
 }
@@ -94,6 +96,7 @@ function buildPaletteOptions(
   canMoveToNode: boolean,
   hasNavigableNodes: boolean,
   owner: UndoRouterOwner,
+  contentDocumentId: string | null,
   t: Translate
 ) {
   const activeNodeId = args.activeNodeId;
@@ -104,6 +107,7 @@ function buildPaletteOptions(
   };
   const historyOptions = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: args.activeNodeId,
+    contentDocumentId,
     appActionHistory: args.ws.appActionHistory,
     editorOperationHistory: args.ws.editorOperationHistory,
     owner,
@@ -168,6 +172,7 @@ export function useAppPaletteItems(args: {
 }) {
   const contentScaleRevision = useContentRegionScaleCommandRevision();
   const undoRouterOwner = useUndoRouterOwner();
+  const undoRouterContentDocumentId = useUndoRouterContentDocumentId();
   const t = useTranslation();
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),
@@ -187,10 +192,10 @@ export function useAppPaletteItems(args: {
 
   return useMemo(
     () =>
-      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, undoRouterOwner, t)).map((item) => ({
+      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, undoRouterOwner, undoRouterContentDocumentId, t)).map((item) => ({
         ...item,
         ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
-    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterOwner]
+    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterContentDocumentId, undoRouterOwner]
   );
 }

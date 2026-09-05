@@ -13,6 +13,7 @@ import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 import { hasLocalizedImageOnlyRemoteWrappingLink } from './markdownImageWrappingLinks';
 
 export interface CodeMirrorEditorAdapterOptions {
+  applicationCutEnabled?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;

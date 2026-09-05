@@ -1,7 +1,16 @@
 import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
 
 import type { useWorkspaceSelectors } from './appControllerState';
-import { getUndoRouterOwner } from './undoRouter';
+import {
+  getUndoRouterContentContext,
+  getUndoRouterContentDocumentId,
+  getUndoRouterOwner
+} from './undoRouter';
+
+function resolveContentContext(fallback: EditorOperationApplyContext | undefined) {
+  const context = getUndoRouterContentContext(fallback);
+  return getUndoRouterContentDocumentId() && !context ? null : context;
+}
 
 export function createPaletteHistoryActions(args: {
   flushPendingEditorDraft?: () => boolean;
@@ -17,14 +26,16 @@ export function createPaletteHistoryActions(args: {
   return {
     redoWorkspaceAction: () => {
       if (getUndoRouterOwner() === 'content') {
-        return args.ws.redoEditorOperation(args.getEditorOperationContext());
+        const context = resolveContentContext(args.getEditorOperationContext());
+        return context === null ? false : args.ws.redoEditorOperation(context);
       }
       flushEditorDraft();
       return args.ws.redoWorkspaceAction();
     },
     undoWorkspaceAction: () => {
       if (getUndoRouterOwner() === 'content') {
-        return args.ws.undoEditorOperation(args.getEditorOperationContext());
+        const context = resolveContentContext(args.getEditorOperationContext());
+        return context === null ? false : args.ws.undoEditorOperation(context);
       }
       flushEditorDraft();
       return args.ws.undoWorkspaceAction();

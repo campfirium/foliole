@@ -19,6 +19,7 @@ function syncEditorAdapterInputRefs(
   args: Parameters<typeof useEditorAdapterInputs>[0],
   resolvedTextAnchorDecorations: readonly EditorTextAnchorDecoration[]
 ) {
+  refs.applicationCutEnabledRef.current = args.applicationCutEnabled;
   refs.onChangeRef.current = args.onChange;
   refs.onDocumentInputRef.current = args.onDocumentInput;
   refs.onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
@@ -44,6 +45,7 @@ function useEditorAdapterInputRefs(
   resolvedTextAnchorDecorations: readonly EditorTextAnchorDecoration[]
 ) {
   return {
+    applicationCutEnabledRef: useRef(args.applicationCutEnabled),
     hideTitleHeadingRef: useRef(args.hideTitleHeading),
     initialValueRef: useRef(args.initialValue),
     liveMarkdownEnabledRef: useRef(args.liveMarkdownEnabled),
@@ -67,6 +69,7 @@ function useEditorAdapterInputRefs(
 }
 
 function useEditorAdapterInputs(args: {
+  applicationCutEnabled: boolean | undefined;
   hideTitleHeading: boolean;
   initialValue: string;
   liveMarkdownEnabled: boolean | undefined;
@@ -106,6 +109,7 @@ function useEditorAdapterLifecycle(args: {
     }
 
     const adapter = createMarkdownEditorAdapter({
+      applicationCutEnabled: inputs.applicationCutEnabledRef.current,
       debugId,
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
@@ -154,6 +158,7 @@ export function useEditorAdapter(
   liveMarkdownEnabled: boolean | undefined,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
   hideTitleHeading: boolean,
+  applicationCutEnabled: boolean | undefined,
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'],
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined,
   onOpenNodeLink: ((title: string) => void) | undefined,
@@ -167,6 +172,7 @@ export function useEditorAdapter(
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const inputs = useEditorAdapterInputs({
+    applicationCutEnabled,
     hideTitleHeading,
     initialValue,
     liveMarkdownEnabled,

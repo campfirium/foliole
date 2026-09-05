@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
-import { setUndoRouterOwner } from './undoRouter';
+import { registerUndoRouterContentContext, setUndoRouterOwner, setUndoRouterTarget } from './undoRouter';
 
 const context = { applyText: vi.fn(() => true), currentContent: 'Body', nodeId: 'node-1' };
 
@@ -46,4 +46,24 @@ it('routes workspace redo only to structural history after flushing the current 
   expect(flushPendingEditorDraft).toHaveBeenCalledOnce();
   expect(ws.redoWorkspaceAction).toHaveBeenCalledOnce();
   expect(ws.redoEditorOperation).not.toHaveBeenCalled();
+});
+
+it('routes answer undo to its registered document context', () => {
+  const answerContext = { applyText: vi.fn(() => true), currentContent: 'Answer', nodeId: 'node-1::answer' };
+  const unregister = registerUndoRouterContentContext(answerContext.nodeId, answerContext);
+  setUndoRouterTarget('content', answerContext.nodeId);
+  const { actions, ws } = createActions();
+
+  actions.undoWorkspaceAction();
+
+  expect(ws.undoEditorOperation).toHaveBeenCalledWith(answerContext);
+  unregister();
+});
+
+it('does not fall back to body history when the selected answer context is unavailable', () => {
+  setUndoRouterTarget('content', 'node-1::answer');
+  const { actions, ws } = createActions();
+
+  expect(actions.undoWorkspaceAction()).toBe(false);
+  expect(ws.undoEditorOperation).not.toHaveBeenCalled();
 });

@@ -151,6 +151,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.liveMarkdownEnabled,
     props.textAnchorDecorations,
     props.hideTitleHeading ?? false,
+    props.applicationCutEnabled,
     props.onMissingAttachmentResource,
     props.onOpenExternalLink,
     props.onOpenNodeLink,

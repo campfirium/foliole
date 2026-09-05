@@ -10,6 +10,33 @@ import { activeNodeIdFacet, openExternalLinkFacet, openNodeLinkFacet, previewNod
 const previewKeyByView = new WeakMap<EditorView, string>();
 const BROWSER_OPEN_MOUSE_BUTTON = 1;
 
+export function handleApplicationCut(event: ClipboardEvent, view: EditorView) {
+  if (view.state.readOnly || !view.state.selection.ranges.some((range) => !range.empty)) return false;
+  event.preventDefault();
+  const clipboard = event.clipboardData;
+  const exportPayload = createClipboardExportFromView(view);
+  if (!clipboard || !exportPayload) return true;
+  try {
+    clipboard.setData('text/plain', exportPayload.externalText);
+    clipboard.setData('text/html', exportPayload.externalHtml);
+    clipboard.setData(
+      FOLIOLE_CLIPBOARD_MIME,
+      serializeStructuredClipboardPayload({
+        anchors: exportPayload.internalAnchors,
+        internalText: exportPayload.internalText
+      })
+    );
+  } catch {
+    return true;
+  }
+  view.dispatch(view.state.replaceSelection(''), { userEvent: 'delete.cut' });
+  return true;
+}
+
+export function createApplicationCutExtensions(enabled: boolean) {
+  return enabled ? [EditorView.domEventHandlers({ cut: handleApplicationCut })] : [];
+}
+
 function resolveEditorView(currentTarget: EventTarget | null) {
   const editorHost = currentTarget instanceof HTMLElement ? currentTarget : null;
   return editorHost ? EditorView.findFromDOM(editorHost) : null;

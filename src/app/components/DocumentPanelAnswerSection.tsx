@@ -5,6 +5,8 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
+import { useAnswerEditorHistory } from './useAnswerEditorHistory';
+
 interface DocumentPanelAnswerSectionProps {
   answerEditorDebugId?: string;
   answerSectionMode?: 'balanced' | 'fixed';
@@ -25,6 +27,7 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
   const t = useTranslation();
   const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
   const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
+  const answerHistory = useAnswerEditorHistory(answerNodeId);
 
   return (
     <section
@@ -33,14 +36,18 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
         'relative flex min-h-0 overflow-hidden',
         props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
       )}
+      data-undo-history-document-id={answerNodeId ?? undefined}
     >
       <MarkdownEditor
+        applicationCutEnabled
         ariaLabel={t('desktop.document.answerEditor')}
         className="answer-editor-host min-h-0"
         hideTitleHeading={false}
         key={answerEditorKey}
         nodeId={answerNodeId}
         onChange={props.onAnswerChange}
+        onDocumentInput={answerHistory.handleDocumentInput}
+        onReady={answerHistory.handleReady}
         value={props.reveal}
         {...definedProps({
           blockImageMaxHeightOverride: props.sharedBlockImageMaxHeight,

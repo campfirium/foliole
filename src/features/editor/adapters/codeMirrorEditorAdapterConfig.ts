@@ -16,6 +16,7 @@ import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMar
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
+import { createApplicationCutExtensions } from './liveMarkdownInteractions';
 import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveMarkdownState';
 import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
 import { markdownInputAssist } from './markdownInputAssist';
@@ -64,6 +65,13 @@ const escapeBlurKeymap = [{
     return true;
   }
 }];
+
+function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
+  return [
+    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
+    ...createApplicationCutExtensions(options.applicationCutEnabled === true)
+  ];
+}
 
 function createReadOnlyInteractionExtensions(options: CodeMirrorEditorAdapterOptions) {
   if (options.readOnlyInteractionMode !== 'document') {
@@ -119,7 +127,7 @@ export function createCodeMirrorEditorExtensions(args: {
   return [
     markdown({ base: markdownLanguage, extensions: folioleMarkdownLanguageExtensions }),
     EditorState.allowMultipleSelections.of(true),
-    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
+    ...createEditorInputExtensions(args.options),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     ...createReadOnlyInteractionExtensions(args.options),
     EditorView.lineWrapping,

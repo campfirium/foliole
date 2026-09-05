@@ -26,6 +26,7 @@ export interface EditorViewState {
 export type MarkdownReadOnlyInteractionMode = 'editor' | 'document';
 
 export interface MarkdownEditorProps {
+  applicationCutEnabled?: boolean;
   ariaLabel?: string;
   blockImageMaxHeightOverride?: number;
   blockImageWidthOverride?: string;

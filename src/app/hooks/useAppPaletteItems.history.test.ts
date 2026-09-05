@@ -92,3 +92,35 @@ it('keeps workspace ownership independent from content history and localizes con
   expect(localizedWorkspace.undoWorkspaceActionTitle).toBe('撤销');
   expect(localizedWorkspace.redoWorkspaceActionTitle).toBe('重做');
 });
+
+it('uses the last focused answer document for command state and titles', () => {
+  const history = pushEditorOperationEntry(
+    createEmptyEditorOperationHistory(),
+    {
+      afterContent: 'Answer after',
+      afterSelection: { mainIndex: 0, ranges: [{ anchor: 6, head: 6 }] },
+      beforeContent: 'Answer before',
+      beforeSelection: { mainIndex: 0, ranges: [{ anchor: 0, head: 6 }] },
+      forwardChanges: {} as never,
+      inverseChanges: {} as never,
+      nodeId: 'node-1::answer',
+      timestamp: 1,
+      title: 'Edit Text',
+      type: 'text.edit',
+      userEvent: 'delete.cut'
+    }
+  );
+  const options = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-1',
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    contentDocumentId: 'node-1::answer',
+    editorOperationHistory: history,
+    owner: 'content',
+    t
+  });
+
+  expect(options).toMatchObject({
+    canUndoWorkspaceAction: true,
+    undoWorkspaceActionTitle: 'Undo Edit Text'
+  });
+});

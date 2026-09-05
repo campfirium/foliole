@@ -6,6 +6,7 @@ import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 
 export function createMarkdownEditorAdapter(args: {
+  applicationCutEnabled: boolean | undefined;
   debugId: string | undefined;
   hideTitleHeading: boolean;
   host: HTMLDivElement;
@@ -27,6 +28,7 @@ export function createMarkdownEditorAdapter(args: {
   trailingDivider: boolean | undefined;
 }) {
   return new CodeMirrorEditorAdapter(args.host, {
+    ...(args.applicationCutEnabled !== undefined ? { applicationCutEnabled: args.applicationCutEnabled } : {}),
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
     ...(args.liveMarkdownEnabled !== undefined ? { liveMarkdownEnabled: args.liveMarkdownEnabled } : {}),
