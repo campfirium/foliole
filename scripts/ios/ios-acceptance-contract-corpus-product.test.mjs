@@ -11,6 +11,8 @@ import {
   IOS_SYNC_PACK_MUTATION_AUTHOR,
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
+import { IOS_HOSTED_PROVIDER_DEVICE_ID } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import { IOS_ACCEPTANCE_DESKTOP_PEER_ID } from './ios-acceptance-contract-corpus.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 const PEER_ID = 'ios-acceptance-contract-peer';
@@ -25,6 +27,7 @@ function read(relativePath) {
 }
 
 it('binds fixed iOS formal inputs to independently readable product pack semantics', () => {
+  expect(IOS_ACCEPTANCE_DESKTOP_PEER_ID).toBe(IOS_HOSTED_PROVIDER_DEVICE_ID);
   expect(IOS_SYNC_PACK_MUTATION_AUTHOR).toBe(PEER_ID);
   fs.mkdirSync('.tmp/ios-contract-corpus-read', { recursive: true });
   const content = read('content-resource-read/content-resource.syncpack');
@@ -50,11 +53,14 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   }
 
   expect(content.manifest).toMatchObject({
-    from_peer_id: 'acceptance-desktop', to_peer_id: PEER_ID, to_state_seq: 10
+    from_peer_id: IOS_HOSTED_PROVIDER_DEVICE_ID, to_peer_id: PEER_ID, to_state_seq: 10
   });
   expect(content.nodes).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'ios-content-topic' })]));
   expect(stateInitial.manifest).toMatchObject({
-    from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID, to_state_seq: 1
+    from_peer_id: IOS_HOSTED_PROVIDER_DEVICE_ID,
+    from_state_seq: 0,
+    to_peer_id: PEER_ID,
+    to_state_seq: 1
   });
   expect(stateInitial.nodes).toEqual([expect.objectContaining({ id: 'ios-state-node' })]);
   expect(stateSteady.manifest).toMatchObject({ from_state_seq: 1, to_peer_id: PEER_ID, to_state_seq: 6 });
@@ -70,7 +76,7 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
     }
   ]);
   expect(legal.manifest).toMatchObject({
-    from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID
+    from_peer_id: IOS_HOSTED_PROVIDER_DEVICE_ID, from_state_seq: 0, to_peer_id: PEER_ID
   });
   expect(legal.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-restore' })]);
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);

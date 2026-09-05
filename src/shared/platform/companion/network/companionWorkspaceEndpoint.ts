@@ -1,6 +1,10 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import { resolveRemoteSyncGroupDevices } from '../../../../../lib/platform/syncGroupContract';
-import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
+import {
+  discoverCompanionDesktops,
+  loadCompanionDiscoveryCandidates,
+  type CompanionDiscoveryOptions
+} from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
   isNativeCompanionNetworkRuntime,
@@ -18,6 +22,26 @@ export interface CompanionWorkspaceSyncTarget {
   groupId?: string;
 }
 
+async function resolvePreferredGroupTarget(
+  endpointUrl: string,
+  groupId: string,
+  device: ReturnType<typeof resolveRemoteSyncGroupDevices>[number]
+) {
+  const [preferred] = await loadCompanionDiscoveryCandidates([{
+    endpointUrl,
+    protocolTxt: null,
+    source: 'direct'
+  }]).catch(() => []);
+  if (preferred?.compatibility.status !== 'compatible' || preferred.discovery.group_id !== groupId ||
+    preferred.discovery.provider_device_id !== device.device_identity_key) return null;
+  return {
+    deviceId: device.device_identity_key,
+    deviceName: device.device_name,
+    endpointUrl: preferred.endpointUrl,
+    groupId
+  } satisfies CompanionWorkspaceSyncTarget;
+}
+
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
   const group = await loadCompanionSyncGroup();
   if (target.groupId && group?.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
@@ -33,6 +57,10 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const remoteDevices = resolveRemoteSyncGroupDevices(group);
   if (remoteDevices.length === 0) {
     return [{ endpointUrl: normalized, groupId: group.group_id }];
+  }
+  if (remoteDevices.length === 1) {
+    const preferred = await resolvePreferredGroupTarget(normalized, group.group_id, remoteDevices[0]!);
+    if (preferred) return [preferred];
   }
   const discovered = await discoverCompanionDesktops(normalized, options).catch(() => []);
   return remoteDevices.flatMap((device) => {

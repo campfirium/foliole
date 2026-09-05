@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "Открытая панель производительности DEV",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Включить просмотр строки состояния памяти",
   "desktop.command.dev.disableReviewStatusMemory": "DEV Отключить просмотр строки состояния памяти",
-  "desktop.command.openCustomCopy": "Открыть пользовательский текст"
+  "desktop.command.openCustomCopy": "Открыть пользовательский текст",
+  "desktop.command.scrollDocumentTop": "Прокрутить к началу документа",
+  "desktop.command.scrollDocumentBottom": "Прокрутить к концу документа"
 }

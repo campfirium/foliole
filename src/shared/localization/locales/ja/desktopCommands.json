@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV パフォーマンス パネルを開く",
   "desktop.command.dev.enableReviewStatusMemory": "DEV レビュー ステータス バーのメモリを有効にする",
   "desktop.command.dev.disableReviewStatusMemory": "DEV レビュー ステータス バーのメモリを無効にする",
-  "desktop.command.openCustomCopy": "カスタム文言を開く"
+  "desktop.command.openCustomCopy": "カスタム文言を開く",
+  "desktop.command.scrollDocumentTop": "ドキュメントの先頭までスクロール",
+  "desktop.command.scrollDocumentBottom": "ドキュメントの末尾までスクロール"
 }

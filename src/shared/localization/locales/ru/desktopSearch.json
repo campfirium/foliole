@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "предмет",
   "desktop.reviewComplete.item.many": "предметы",
   "desktop.reviewComplete.topic.one": "тема",
-  "desktop.reviewComplete.topic.many": "темы"
+  "desktop.reviewComplete.topic.many": "темы",
+  "desktop.editor.image.resize": "Изменить размер изображения"
 }

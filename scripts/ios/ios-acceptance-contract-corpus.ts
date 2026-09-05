@@ -3,7 +3,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IOS_ACCEPTANCE_DESKTOP_PEER_ID = 'acceptance-desktop';
+export const IOS_ACCEPTANCE_DESKTOP_PEER_ID = JSON.stringify([
+  1,
+  'group-t152-ios-runtime',
+  'a1111111-1111-4111-8111-111111111111',
+  '/acceptance/provider/foliole.db'
+]);
 export const IOS_ACCEPTANCE_CONTRACT_PEER_ID = 'ios-acceptance-contract-peer';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'acceptance-contract-corpus');
 

@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV Panneau de performances ouvert",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Activer l'examen de la mémoire de la barre d'état",
   "desktop.command.dev.disableReviewStatusMemory": "DEV Désactiver l'examen de la mémoire de la barre d'état",
-  "desktop.command.openCustomCopy": "Ouvrir les textes personnalisés"
+  "desktop.command.openCustomCopy": "Ouvrir les textes personnalisés",
+  "desktop.command.scrollDocumentTop": "Faire défiler jusqu’en haut du document",
+  "desktop.command.scrollDocumentBottom": "Faire défiler jusqu’en bas du document"
 }

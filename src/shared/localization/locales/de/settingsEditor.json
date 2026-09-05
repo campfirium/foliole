@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "Doppelklick auf Text zum Bearbeiten",
+  "settings.search.editorImmersiveDoubleClick.description": "Beim immersiven Lesen doppelklicken Sie auf den Dokumenttext, um ihn zu bearbeiten. Deaktivieren Sie dies, damit ein Doppelklick weiterhin Text auswählt; mit der Eingabetaste kann weiterhin bearbeitet werden.",
+  "settings.editor.readingMode.section": "Lesemodus",
+  "settings.editor.readingMode.aria": "Einstellungsbereich für den Lesemodus"
+}

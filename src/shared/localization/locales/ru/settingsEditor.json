@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "Дважды щёлкните текст, чтобы редактировать",
+  "settings.search.editorImmersiveDoubleClick.description": "В режиме иммерсивного чтения дважды щёлкните по тексту документа, чтобы перейти к редактированию. Отключите эту настройку, чтобы двойной щелчок по-прежнему выделял текст; клавиша Enter всё равно включает редактирование.",
+  "settings.editor.readingMode.section": "Режим чтения",
+  "settings.editor.readingMode.aria": "Раздел настроек режима чтения"
+}

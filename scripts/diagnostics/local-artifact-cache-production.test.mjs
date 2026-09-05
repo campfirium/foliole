@@ -2,8 +2,9 @@
 /* global process */
 
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync
+  existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync
 } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -38,9 +39,9 @@ function git(cwd, ...args) {
   return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
 }
 
-afterEach(() => {
+afterEach(async () => {
   for (const root of fixtureRoots.splice(0)) {
-    rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+    await rm(root, { force: true, maxRetries: 20, recursive: true, retryDelay: 250 });
   }
 });
 

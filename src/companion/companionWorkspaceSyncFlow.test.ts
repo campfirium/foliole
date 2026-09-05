@@ -12,6 +12,9 @@ async function testUsesStreamSyncDirectly() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setState = vi.fn();
   const setStatus = vi.fn();
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
+    { endpointUrl: 'http://10.0.2.2:38641' }, { endpointUrl: 'http://192.168.1.44:38641' }
+  ]);
 
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
@@ -35,6 +38,7 @@ async function testUsesStreamSyncDirectly() {
     status: 'completed'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
+  expect(setStatus.mock.calls.map(([status]) => status)).toEqual(['syncing', 'syncing', 'idle']);
   expect(setStatus).toHaveBeenLastCalledWith('idle');
 }
 

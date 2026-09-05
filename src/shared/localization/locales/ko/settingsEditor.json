@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "본문을 두 번 클릭하여 편집",
+  "settings.search.editorImmersiveDoubleClick.description": "몰입형 읽기에서 문서 본문을 두 번 클릭하면 편집을 시작합니다. 이 옵션을 끄면 두 번 클릭으로 텍스트를 선택할 수 있으며 Enter 키로는 계속 편집할 수 있습니다.",
+  "settings.editor.readingMode.section": "읽기 모드",
+  "settings.editor.readingMode.aria": "읽기 모드 설정 섹션"
+}

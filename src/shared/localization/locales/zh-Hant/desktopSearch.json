@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "專案",
   "desktop.reviewComplete.item.many": "專案",
   "desktop.reviewComplete.topic.one": "主題",
-  "desktop.reviewComplete.topic.many": "主題"
+  "desktop.reviewComplete.topic.many": "主題",
+  "desktop.editor.image.resize": "調整圖片大小"
 }

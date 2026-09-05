@@ -1,4 +1,22 @@
 {
+  "0.7.13": {
+    "notes": [
+      "New",
+      "Mouse gestures now support custom recordings and command bindings in documents and folder lists.",
+      "Markdown images can now be resized by dragging a corner, with widths stored in Obsidian-compatible syntax.",
+      "Immersive Reading now offers an option to keep double-click available for text selection while Enter still starts editing.",
+      "Improved",
+      "⌘B (Ctrl+B) and ⌘I (Ctrl+I) now toggle bold and italic formatting in the Markdown editor.",
+      "Keyboard navigation in Immersive Reading now keeps the current paragraph in view with a smooth scroll.",
+      "The Aide setup action now opens the Models section directly.",
+      "Fixed",
+      "Readwise refreshes now preserve complete article bodies and local edits, while imported highlights stay matched to article text.",
+      "Topics in Shelved remain visible when Topic Focus is enabled.",
+      "Quick Clipping remains responsive and preserves clipboard changes across repeated captures.",
+      "Cutting text in an answer can now be undone independently from prompt edits.",
+      "Text can now be selected normally while renaming a Topic or Folder."
+    ]
+  },
   "0.7.12": {
     "notes": [
       "New",

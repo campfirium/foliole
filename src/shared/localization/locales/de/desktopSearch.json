@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "Element",
   "desktop.reviewComplete.item.many": "Elemente",
   "desktop.reviewComplete.topic.one": "Thema",
-  "desktop.reviewComplete.topic.many": "Themen"
+  "desktop.reviewComplete.topic.many": "Themen",
+  "desktop.editor.image.resize": "Bildgröße ändern"
 }

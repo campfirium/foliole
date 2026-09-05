@@ -129,6 +129,7 @@ export const allowedRegexInventory = [
     line: "return sliceWithoutRanges(source, from, to, hiddenRanges).trim().replace(/\\s+/g, ' ');",
     owner: 'heading text whitespace normalization'
   },
+  { path: 'src/features/editor/model/markdownImageSize.ts', line: 'const match = OBSIDIAN_IMAGE_SIZE_SUFFIX.exec(label);', owner: 'image size suffix parsing', reason: 'Parses the Obsidian-compatible image width suffix without owning general Markdown rendering.' },
   { path: 'src/features/editor/model/markdownFrontmatterProjection.ts', line: 'return /^https?:\\/\\/\\S+$/i.test(value);', owner: 'frontmatter URL projection', reason: 'Classifies complete HTTP(S) frontmatter values for link projection.' },
   {
     path: 'src/features/editor/model/markdownInlineProjection.ts',

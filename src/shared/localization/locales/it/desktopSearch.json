@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "articolo",
   "desktop.reviewComplete.item.many": "elementi",
   "desktop.reviewComplete.topic.one": "argomento",
-  "desktop.reviewComplete.topic.many": "argomenti"
+  "desktop.reviewComplete.topic.many": "argomenti",
+  "desktop.editor.image.resize": "Ridimensiona immagine"
 }

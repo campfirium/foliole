@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "아이템",
   "desktop.reviewComplete.item.many": "아이템",
   "desktop.reviewComplete.topic.one": "주제",
-  "desktop.reviewComplete.topic.many": "주제"
+  "desktop.reviewComplete.topic.many": "주제",
+  "desktop.editor.image.resize": "이미지 크기 조절"
 }

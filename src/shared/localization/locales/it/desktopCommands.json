@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV Apri il pannello Prestazioni",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Abilita la revisione della memoria della barra di stato",
   "desktop.command.dev.disableReviewStatusMemory": "DEV Disabilita la revisione della memoria della barra di stato",
-  "desktop.command.openCustomCopy": "Apri testi personalizzati"
+  "desktop.command.openCustomCopy": "Apri testi personalizzati",
+  "desktop.command.scrollDocumentTop": "Scorri all'inizio del documento",
+  "desktop.command.scrollDocumentBottom": "Scorri alla fine del documento"
 }

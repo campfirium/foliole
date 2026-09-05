@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV Otwarty panel wydajności",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Włącz przeglądanie pamięci paska stanu",
   "desktop.command.dev.disableReviewStatusMemory": "DEV Wyłącz pamięć paska stanu przeglądu",
-  "desktop.command.openCustomCopy": "Otwórz tekst niestandardowy"
+  "desktop.command.openCustomCopy": "Otwórz tekst niestandardowy",
+  "desktop.command.scrollDocumentTop": "Przewiń do początku dokumentu",
+  "desktop.command.scrollDocumentBottom": "Przewiń do końca dokumentu"
 }

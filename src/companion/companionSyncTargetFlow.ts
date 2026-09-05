@@ -38,7 +38,6 @@ async function recordTargetFailure(args: {
   const message = formatCompanionSyncFailureMessage(args.syncError);
   const refreshedState = await loadCompanionStateAfterStructureSync(args.syncArgs.state.workspace_snapshot);
   const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.syncArgs.state.workspace_snapshot;
-  args.syncArgs.setStatus('idle');
   args.syncArgs.setSyncProgress(null);
   args.syncArgs.setError(message);
   const failedState = await recordCompanionWorkspaceSyncEvent({

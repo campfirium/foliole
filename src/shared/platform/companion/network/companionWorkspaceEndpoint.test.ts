@@ -2,12 +2,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   discover: vi.fn(),
+  loadCandidates: vi.fn(),
   loadGroup: vi.fn(),
   native: true
 }));
 
 vi.mock('../../companionWorkspaceDiscovery', () => ({
-  discoverCompanionDesktops: runtime.discover
+  discoverCompanionDesktops: runtime.discover,
+  loadCompanionDiscoveryCandidates: runtime.loadCandidates
 }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionNetworkRuntime: () => runtime.native,
@@ -42,6 +44,7 @@ function device(id: string, name: string, platform: string) {
 beforeEach(() => {
   runtime.native = true;
   runtime.loadGroup.mockReset().mockResolvedValue(group);
+  runtime.loadCandidates.mockReset().mockResolvedValue([]);
   runtime.discover.mockReset().mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
@@ -52,6 +55,30 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
   }]);
+});
+
+it('uses the verified preferred endpoint before scanning for one remote Device', async () => {
+  runtime.loadCandidates.mockResolvedValueOnce([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://accepted:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://accepted:38641', groupId: 'group-1'
+  }]);
+  expect(runtime.discover).not.toHaveBeenCalled();
+});
+
+it('falls back to discovery when the preferred endpoint no longer identifies the remote Device', async () => {
+  runtime.loadCandidates.mockResolvedValueOnce([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://accepted:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-other' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
+  }]);
+  expect(runtime.discover).toHaveBeenCalledOnce();
 });
 
 it('uses the accepted group-bound endpoint to bootstrap the first Sync Pack', async () => {

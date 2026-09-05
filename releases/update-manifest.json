@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channel": "alpha",
-  "latest": "0.7.12",
+  "latest": "0.7.13",
   "checkPolicy": {
     "intervalMinutes": 1440,
     "failureRetryMinutes": 15
@@ -13,6 +13,13 @@
     "compatibilityBridgeVersion": "0.7.5"
   },
   "releases": [
+    {
+      "version": "0.7.13",
+      "date": "2026-09-06",
+      "platforms": ["macos", "windows", "linux"],
+      "severity": "normal",
+      "url": "https://github.com/campfirium/foliole/releases/tag/v0.7.13"
+    },
     {
       "version": "0.7.12",
       "date": "2026-09-02",

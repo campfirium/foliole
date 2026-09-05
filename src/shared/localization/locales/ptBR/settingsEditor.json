@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "Clique duas vezes no texto para editar",
+  "settings.search.editorImmersiveDoubleClick.description": "Na leitura imersiva, clique duas vezes no corpo do documento para começar a editar. Desative esta opção para manter o clique duplo para selecionar texto; a tecla Enter ainda inicia a edição.",
+  "settings.editor.readingMode.section": "Modo de leitura",
+  "settings.editor.readingMode.aria": "Seção de configurações do modo de leitura"
+}

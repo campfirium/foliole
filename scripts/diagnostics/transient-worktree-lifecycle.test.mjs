@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync
+  existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync
 } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -66,10 +67,10 @@ function removeRegisteredFixtureWorktrees(root) {
   git(repo, 'worktree', 'prune');
 }
 
-afterEach(() => {
+afterEach(async () => {
   for (const root of roots.splice(0)) {
     removeRegisteredFixtureWorktrees(root);
-    rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+    await rm(root, { force: true, maxRetries: 20, recursive: true, retryDelay: 250 });
   }
 });
 

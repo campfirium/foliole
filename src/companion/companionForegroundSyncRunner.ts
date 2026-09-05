@@ -38,6 +38,7 @@ type ForegroundSyncRunnerArgs = {
   isSyncGroupReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
+  pendingForegroundRef: MutableRefObject<boolean>;
   pendingServiceHintRef: MutableRefObject<Set<string>>;
   readAppActiveState: () => Promise<boolean>;
   resourceContinuationModeRef: MutableRefObject<CompanionSyncContinuationMode>;
@@ -59,6 +60,7 @@ export type ForegroundSyncRefs = Pick<
   | 'isSyncGroupReadyRef'
   | 'lastCheckedAtRef'
   | 'lastForegroundAtRef'
+  | 'pendingForegroundRef'
   | 'pendingServiceHintRef'
   | 'readAppActiveState'
   | 'resourceContinuationModeRef'
@@ -168,6 +170,9 @@ function startForegroundSync(
       if (pendingServiceHint) {
         args.pendingServiceHintRef.current.delete(pendingServiceHint);
         runForegroundSyncCheck('service-hint', pendingServiceHint);
+      } else if (args.pendingForegroundRef.current) {
+        args.pendingForegroundRef.current = false;
+        runForegroundSyncCheck('foreground');
       } else if (retryOutcome) scheduleRetry(args, runForegroundSyncCheck, retryOutcome);
     });
 }
@@ -176,6 +181,7 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   const runForegroundSyncCheck = (reason: ForegroundSyncReason, endpointUrl?: string) => {
     if (args.inFlightRef.current) {
       if (reason === 'service-hint' && endpointUrl) args.pendingServiceHintRef.current.add(endpointUrl);
+      if (reason === 'foreground') args.pendingForegroundRef.current = true;
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'backlog');
       return;
     }

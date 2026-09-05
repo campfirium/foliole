@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "Double-cliquer sur le corps du texte pour modifier",
+  "settings.search.editorImmersiveDoubleClick.description": "En lecture immersive, double-cliquez sur le corps du document pour passer en mode modification. Désactivez cette option pour réserver le double-clic à la sélection de texte ; la touche Entrée permet toujours de modifier.",
+  "settings.editor.readingMode.section": "Mode lecture",
+  "settings.editor.readingMode.aria": "Section des réglages du mode lecture"
+}

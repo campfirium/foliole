@@ -1,5 +1,14 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+
+export function prepareLifecycleArtifactDirectory(artifactDir) {
+  mkdirSync(artifactDir, { recursive: true });
+  for (const name of [
+    'evidence.json', 'failure.json', 'lifecycle-actions.json', 'lifecycle-control.json', 'result.json', 'simulator.log'
+  ]) {
+    rmSync(path.join(artifactDir, name), { force: true });
+  }
+}
 
 export function setPhase(options, phase, action) {
   writeFileSync(

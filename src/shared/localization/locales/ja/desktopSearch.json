@@ -53,5 +53,6 @@
   "desktop.reviewComplete.item.one": "アイテム",
   "desktop.reviewComplete.item.many": "アイテム",
   "desktop.reviewComplete.topic.one": "トピック",
-  "desktop.reviewComplete.topic.many": "トピック"
+  "desktop.reviewComplete.topic.many": "トピック",
+  "desktop.editor.image.resize": "画像のサイズを変更"
 }

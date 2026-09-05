@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV Öffnen Sie den Leistungsbereich",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Speicher für Überprüfungsstatusleiste aktivieren",
   "desktop.command.dev.disableReviewStatusMemory": "DEV Speicher für Überprüfungsstatusleiste deaktivieren",
-  "desktop.command.openCustomCopy": "Benutzerdefinierte Texte öffnen"
+  "desktop.command.openCustomCopy": "Benutzerdefinierte Texte öffnen",
+  "desktop.command.scrollDocumentTop": "Zum Anfang des Dokuments scrollen",
+  "desktop.command.scrollDocumentBottom": "Zum Ende des Dokuments scrollen"
 }

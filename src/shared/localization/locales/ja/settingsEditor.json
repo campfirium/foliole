@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "本文をダブルクリックして編集",
+  "settings.search.editorImmersiveDoubleClick.description": "没入型読書では、文書の本文をダブルクリックすると編集を開始できます。この設定をオフにすると、ダブルクリックはテキスト選択に使われます。Enter キーでは引き続き編集できます。",
+  "settings.editor.readingMode.section": "閲覧モード",
+  "settings.editor.readingMode.aria": "閲覧モード設定セクション"
+}
