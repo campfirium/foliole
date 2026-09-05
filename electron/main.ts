@@ -10,9 +10,7 @@ import {
   type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
 
-import { registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
-import { registerExtDocImageProtocolScheme } from './attachments/extDocImageProtocol.js';
-import { registerRemoteImageProtocolScheme } from './attachments/remoteImageProtocol.js';
+import { registerImageProtocolSchemes } from './attachments/imageProtocolSchemes.js';
 import { isAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
 import {
@@ -91,9 +89,7 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
-registerAttachmentProtocolScheme();
-registerExtDocImageProtocolScheme();
-registerRemoteImageProtocolScheme();
+registerImageProtocolSchemes();
 startLocalCrashReporter(crashReporter, configuredIdentity.appName);
 void appendBootEvent('main_process_start', {
   appName: configuredIdentity.appName,

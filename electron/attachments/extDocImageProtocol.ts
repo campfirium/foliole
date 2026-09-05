@@ -33,19 +33,6 @@ function buildMissingResponse(status: number) {
   });
 }
 
-export function registerExtDocImageProtocolScheme() {
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: EXT_DOC_IMAGE_PROTOCOL_SCHEME,
-      privileges: {
-        secure: true,
-        standard: true,
-        supportFetchAPI: true
-      }
-    }
-  ]);
-}
-
 export function registerExtDocImageProtocol() {
   protocol.handle(EXT_DOC_IMAGE_PROTOCOL_SCHEME, async (request) => {
     const parts = parseExtDocImageRenderUrl(request.url);

@@ -2,9 +2,8 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
-  handle: vi.fn(),
-  registerSchemesAsPrivileged: vi.fn()
+const { handle } = vi.hoisted(() => ({
+  handle: vi.fn()
 }));
 
 const { fetchRemoteImageResource, importRemoteImageAttachment } = vi.hoisted(() => ({
@@ -17,8 +16,7 @@ const { resolveRemoteImageSourceContext } = vi.hoisted(() => ({
 
 vi.mock('electron', () => ({
   protocol: {
-    handle,
-    registerSchemesAsPrivileged
+    handle
   }
 }));
 
@@ -34,8 +32,7 @@ vi.mock('./remoteImageSourceContext.js', () => ({
 import { buildRemoteImageRenderUrl, REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../lib/platform/remoteImageProtocolUrl.js';
 
 import {
-  registerRemoteImageProtocol,
-  registerRemoteImageProtocolScheme
+  registerRemoteImageProtocol
 } from './remoteImageProtocol.js';
 
 beforeEach(() => {
@@ -46,21 +43,6 @@ beforeEach(() => {
     source: 'none',
     sourceOrigin: null
   });
-});
-
-it('registers the remote image scheme with secure standard privileges', () => {
-  registerRemoteImageProtocolScheme();
-
-  expect(registerSchemesAsPrivileged).toHaveBeenCalledWith([
-    {
-      scheme: REMOTE_IMAGE_PROTOCOL_SCHEME,
-      privileges: {
-        secure: true,
-        standard: true,
-        supportFetchAPI: true
-      }
-    }
-  ]);
 });
 
 it('serves preview-only remote image resources with mime and cache headers but no page CSP', async () => {

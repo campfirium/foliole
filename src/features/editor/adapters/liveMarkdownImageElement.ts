@@ -4,6 +4,14 @@ import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 export type RequestEditorMeasure = (() => void) | null;
 
+const LOCAL_ATTACHMENT_RETRY_DELAY_MS = 250;
+
+function buildLocalAttachmentRetrySource(source: string) {
+  const url = new URL(source);
+  url.searchParams.set('retry', '1');
+  return url.toString();
+}
+
 export function createMarkdownImageElement(args: {
   alt: string;
   display: MarkdownImageMatch['display'];
@@ -28,10 +36,21 @@ export function createMarkdownImageElement(args: {
       ? 'cm-md-image-element cm-md-image-element-inline'
       : 'cm-md-image-element cm-md-image-element-block';
   if (args.onError || args.requestMeasure) {
+    let didReportError = false;
+    let didRetryLocalAttachment = false;
     image.addEventListener('error', () => {
+      if (args.source.startsWith('foliole-asset://') && !didRetryLocalAttachment) {
+        didRetryLocalAttachment = true;
+        setTimeout(() => {
+          image.src = buildLocalAttachmentRetrySource(args.source);
+        }, LOCAL_ATTACHMENT_RETRY_DELAY_MS);
+        return;
+      }
+      if (didReportError) return;
+      didReportError = true;
       args.onError?.();
       args.requestMeasure?.();
-    }, { once: true });
+    });
   }
   if (args.onLoad || args.requestMeasure) {
     image.addEventListener('load', () => {

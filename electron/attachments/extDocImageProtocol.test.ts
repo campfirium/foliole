@@ -6,10 +6,9 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const { fetch, handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
+const { fetch, handle } = vi.hoisted(() => ({
   fetch: vi.fn(),
-  handle: vi.fn(),
-  registerSchemesAsPrivileged: vi.fn()
+  handle: vi.fn()
 }));
 
 const { loadExternalSearchFolders } = vi.hoisted(() => ({
@@ -19,8 +18,7 @@ const { loadExternalSearchFolders } = vi.hoisted(() => ({
 vi.mock('electron', () => ({
   net: { fetch },
   protocol: {
-    handle,
-    registerSchemesAsPrivileged
+    handle
   }
 }));
 
@@ -29,11 +27,10 @@ vi.mock('../database/externalSearchFolders.js', () => ({
 }));
 
 import {
-  buildExtDocImageRenderUrl,
-  EXT_DOC_IMAGE_PROTOCOL_SCHEME
+  buildExtDocImageRenderUrl
 } from '../../lib/platform/extDocImageProtocolUrl.js';
 
-import { registerExtDocImageProtocol, registerExtDocImageProtocolScheme } from './extDocImageProtocol.js';
+import { registerExtDocImageProtocol } from './extDocImageProtocol.js';
 
 const tempRoots: string[] = [];
 
@@ -71,21 +68,6 @@ beforeEach(() => {
 
 afterEach(async () => {
   await Promise.all(tempRoots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
-});
-
-it('registers the external document image scheme with secure standard privileges', () => {
-  registerExtDocImageProtocolScheme();
-
-  expect(registerSchemesAsPrivileged).toHaveBeenCalledWith([
-    {
-      scheme: EXT_DOC_IMAGE_PROTOCOL_SCHEME,
-      privileges: {
-        secure: true,
-        standard: true,
-        supportFetchAPI: true
-      }
-    }
-  ]);
 });
 
 it('serves document-relative image resources without exposing image bytes in markdown content', async () => {

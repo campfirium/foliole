@@ -31,19 +31,6 @@ function createRemoteImageErrorResponse(status: number, errorCode = 'download_fa
   });
 }
 
-export function registerRemoteImageProtocolScheme() {
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: REMOTE_IMAGE_PROTOCOL_SCHEME,
-      privileges: {
-        secure: true,
-        standard: true,
-        supportFetchAPI: true
-      }
-    }
-  ]);
-}
-
 export function registerRemoteImageProtocol() {
   protocol.handle(REMOTE_IMAGE_PROTOCOL_SCHEME, async (request) => {
     const parts = parseRemoteImageRenderUrl(request.url);

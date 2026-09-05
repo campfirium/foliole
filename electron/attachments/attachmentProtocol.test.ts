@@ -4,9 +4,8 @@ import { pathToFileURL } from 'node:url';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
-  handle: vi.fn(),
-  registerSchemesAsPrivileged: vi.fn()
+const { handle } = vi.hoisted(() => ({
+  handle: vi.fn()
 }));
 
 const { fetch } = vi.hoisted(() => ({
@@ -22,8 +21,7 @@ vi.mock('electron', () => ({
     fetch
   },
   protocol: {
-    handle,
-    registerSchemesAsPrivileged
+    handle
   }
 }));
 
@@ -33,29 +31,11 @@ vi.mock('./resourceResolver.js', () => ({
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 import {
-  ATTACHMENT_PROTOCOL_SCHEME,
-  registerAttachmentProtocol,
-  registerAttachmentProtocolScheme
+  registerAttachmentProtocol
 } from './attachmentProtocol.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-it('registers the attachment scheme with secure standard privileges', () => {
-  registerAttachmentProtocolScheme();
-
-  expect(registerSchemesAsPrivileged).toHaveBeenCalledWith([
-    {
-      scheme: ATTACHMENT_PROTOCOL_SCHEME,
-      privileges: {
-        corsEnabled: true,
-        secure: true,
-        standard: true,
-        supportFetchAPI: true
-      }
-    }
-  ]);
 });
 
 it('serves attachment resources with mime and cache headers but no page CSP', async () => {
@@ -76,6 +56,7 @@ it('serves attachment resources with mime and cache headers but no page CSP', as
   expect(resolveAttachmentFile).toHaveBeenCalledWith('hash-1');
   expect(fetch).toHaveBeenCalledWith(pathToFileURL(filePath).toString());
   expect(response.status).toBe(200);
+  expect(response.headers.get('access-control-allow-origin')).toBe('*');
   expect(response.headers.get('content-type')).toBe('image/png');
   expect(response.headers.get('content-security-policy')).toBeNull();
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
