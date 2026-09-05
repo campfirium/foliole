@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  useEffect,
   useMemo,
   useRef,
   type MutableRefObject
@@ -9,6 +10,7 @@ import { collectMarkdownImageReferences } from '../../../../lib/core/import/mark
 import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
+import { syncMarkdownEditorAriaLabel } from './markdownEditorAccessibility';
 import { useEditorAdapter } from './markdownEditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
@@ -180,6 +182,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
 export function MarkdownEditor(props: MarkdownEditorProps) {
   useMarkdownEditorPropsDiagnostic(props);
   const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
+  useEffect(() => syncMarkdownEditorAriaLabel(hostRef.current, props.ariaLabel), [hostRef, props.ariaLabel]);
 
   return (
     <>
