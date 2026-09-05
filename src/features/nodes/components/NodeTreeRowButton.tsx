@@ -13,7 +13,7 @@ import {
   renderNodeTreeRowButtonSurface
 } from './NodeTreeRowButtonParts';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
-import { useRenameState } from './NodeTreeRowRename';
+import type { useRenameState } from './NodeTreeRowRename';
 import { resolveNodeRowButtonClassName } from './NodeTreeRowStyle';
 
 export interface NodeTreeRowButtonProps {
@@ -44,14 +44,13 @@ export interface NodeTreeRowButtonProps {
   trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
-  onRename?: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
+  rename: ReturnType<typeof useRenameState>;
   style: CSSProperties;
 }
 
 export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
-  const rename = useRenameState(props.label, props.nodeId, props.onRename);
   const buttonClassName = resolveNodeRowButtonClassName({
     depth: props.depth,
     hasRowAction: props.hasRowAction,
@@ -65,7 +64,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     props.onContextMenu,
     props.onKeyDown,
     props.onSelect,
-    rename
+    props.rename
   );
   return renderNodeTreeRowButtonSurface({
     buttonClassName,
@@ -94,7 +93,7 @@ export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     showIcon: props.showIcon,
     showLeafChevronPlaceholder: props.showLeafChevronPlaceholder,
     onToggleCollapse: props.onToggleCollapse,
-    rename,
+    rename: props.rename,
     rowSpacing: props.rowSpacing,
     ...definedProps({ tabIndex: props.tabIndex }),
     style: props.style,

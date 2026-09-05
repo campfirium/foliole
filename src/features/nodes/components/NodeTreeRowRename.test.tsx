@@ -42,6 +42,18 @@ it('selects the complete existing title when requested', async () => {
   });
 });
 
+it('disables row dragging while the title is being edited', () => {
+  const row = renderRow();
+  const frame = row.parentElement;
+  expect(frame).toHaveAttribute('draggable', 'true');
+
+  const { input } = beginRequestedRename();
+
+  expect(frame).toHaveAttribute('draggable', 'false');
+  fireEvent.keyDown(input, { key: 'Escape' });
+  expect(frame).toHaveAttribute('draggable', 'true');
+});
+
 it('submits once with Tab and focuses the body only after success', async () => {
   let finishRename: (succeeded: boolean) => void = () => undefined;
   const onRename = vi.fn(() => new Promise<boolean>((resolve) => {

@@ -13,6 +13,7 @@ import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRowButton } from './NodeTreeRowButton';
 import { NodeTreeRowFrame } from './NodeTreeRowFrame';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { useRenameState } from './NodeTreeRowRename';
 
 interface NodeTreeRowProps {
   descendantCount?: number;
@@ -93,9 +94,9 @@ function renderNodeTreeRowButton(props: {
   trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
-  onRename?: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
+  rename: ReturnType<typeof useRenameState>;
   style: CSSProperties;
 }) {
   return <NodeTreeRowButton {...props} />;
@@ -103,11 +104,12 @@ function renderNodeTreeRowButton(props: {
 
 function NodeTreeRowImpl(props: NodeTreeRowProps) {
   recordNodeListRowRender(props.nodeId);
+  const rename = useRenameState(props.label, props.nodeId, props.onRename);
   const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
-      isDragDisabled={props.isDragDisabled ?? false}
+      isDragDisabled={(props.isDragDisabled ?? false) || rename.isRenaming}
       isDropTarget={props.isDropTarget ?? false}
       nodeId={props.nodeId}
       {...(props.rowAction !== undefined ? { rowAction: props.rowAction } : {})}
@@ -146,9 +148,9 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         ...(props.trailingLabelContent !== undefined ? { trailingLabelContent: props.trailingLabelContent } : {}),
         ...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {}),
         ...(props.onKeyDown ? { onKeyDown: props.onKeyDown } : {}),
-        ...(props.onRename ? { onRename: props.onRename } : {}),
         onSelect: props.onSelect,
         onToggleCollapse: props.onToggleCollapse,
+        rename,
         style
       })}
     </NodeTreeRowFrame>
