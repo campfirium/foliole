@@ -15,6 +15,7 @@ function createSelectionToolbarSettingsValue(state: AppearanceStateValues) {
 
 function createReadingSettingsValue(state: AppearanceStateValues) {
   return {
+    immersiveDoubleClickEditEnabled: state.immersiveDoubleClickEditEnabledState,
     readingContentWidth: state.readingContentWidthState,
     readingLineHeight: state.readingLineHeightState,
     readingParagraphSpacing: state.readingParagraphSpacingState
@@ -88,6 +89,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.selectionToolbarOpacityPercentState, state.resolvedBaseColorModeState,
       state.interfaceFontPresetState,
       state.interfaceFontSizeState,
+      state.immersiveDoubleClickEditEnabledState,
       state.isBaseColorModeSelectionActiveState,
       state.markdownSyntaxVisibilityState,
       state.monospaceFontPresetState,

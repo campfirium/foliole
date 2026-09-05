@@ -43,6 +43,7 @@ export interface AppearanceSettingsContextValue {
   highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
+  immersiveDoubleClickEditEnabled: boolean;
   isBaseColorModeSelectionActive: boolean;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
@@ -73,6 +74,7 @@ export interface AppearanceSettingsContextValue {
   setCustomMonospaceFont: (value: string) => void;
   setInterfaceFontPreset: (value: InterfaceFontPreset) => void;
   setInterfaceFontSize: (value: number) => void;
+  setImmersiveDoubleClickEditEnabled: (value: boolean) => void;
   setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => void;
   setSelectionToolbarEnabled: (value: boolean) => void;
   setSelectionToolbarOpacityPercent: (value: number) => void;

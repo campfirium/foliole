@@ -136,6 +136,31 @@ function EditorLiveMarkdownSection() {
   );
 }
 
+function ImmersiveReadingSection() {
+  const row = useEditorSettingsRow('editor-immersive-double-click-edit');
+  const { immersiveDoubleClickEditEnabled, setImmersiveDoubleClickEditEnabled } = useAppearanceSettings();
+  const t = useTranslation();
+
+  return (
+    <SettingsSection ariaLabel={t('settings.editor.readingMode.aria')} title={t('settings.editor.readingMode.section')}>
+      <SettingsRow {...settingsSearchRowProps(row)} description={row.description} title={row.title}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button
+            aria-checked={immersiveDoubleClickEditEnabled}
+            aria-label={row.title}
+            className={settingsSwitchClassName(immersiveDoubleClickEditEnabled)}
+            onClick={() => setImmersiveDoubleClickEditEnabled(!immersiveDoubleClickEditEnabled)}
+            role="switch"
+            type="button"
+          >
+            <span aria-hidden="true" className={settingsSwitchKnobClassName(immersiveDoubleClickEditEnabled)} />
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
 export function SettingsEditorSection() {
   const t = useTranslation();
   return (
@@ -149,6 +174,7 @@ export function SettingsEditorSection() {
       <SettingsSection ariaLabel={t('settings.editor.annotation.aria')} title={t('settings.editor.annotation.section')}>
         <HighlightAnnotationPrefixRow />
       </SettingsSection>
+      <ImmersiveReadingSection />
     </>
   );
 }

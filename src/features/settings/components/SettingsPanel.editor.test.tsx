@@ -60,6 +60,18 @@ it('edits the floating toolbar opacity and visibility from editor settings', () 
   expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
+it('lets readers disable double-click editing while keeping it enabled by default', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
+
+  const toggle = screen.getByRole('switch', { name: 'Double-click body to edit' });
+  expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.click(toggle);
+
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.immersiveDoubleClickEditEnabled)).toBe('false');
+});
+
 it('does not expose the retired markdown syntax marker setting', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'visible');
 

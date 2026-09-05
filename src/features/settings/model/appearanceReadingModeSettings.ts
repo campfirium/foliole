@@ -13,8 +13,11 @@ import { type BaseColorMode, isBaseColorMode, type ResolvedBaseColorMode } from 
 const STORAGE_KEYS = {
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
   dimImagesInDarkMode: APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode,
+  immersiveDoubleClickEditEnabled: APP_SETTINGS_STORAGE_KEYS.immersiveDoubleClickEditEnabled,
   pdfReadingMode: APP_SETTINGS_STORAGE_KEYS.pdfReadingMode
 } as const;
+
+export const DEFAULT_IMMERSIVE_DOUBLE_CLICK_EDIT_ENABLED = true;
 
 function isPdfReadingMode(value: string): value is PdfReadingMode {
   return parseLiteralUnion(value, PDF_READING_MODE_OPTIONS) !== null;
@@ -36,6 +39,15 @@ export function getPdfReadingMode(): PdfReadingMode {
 
 export function setPdfReadingMode(value: PdfReadingMode) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.pdfReadingMode, value);
+}
+
+export function getImmersiveDoubleClickEditEnabled() {
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.immersiveDoubleClickEditEnabled);
+  return raw === null ? DEFAULT_IMMERSIVE_DOUBLE_CLICK_EDIT_ENABLED : raw === 'true';
+}
+
+export function setImmersiveDoubleClickEditEnabled(value: boolean) {
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.immersiveDoubleClickEditEnabled, String(value));
 }
 
 export function resolvePdfReadingModeForColorMode(

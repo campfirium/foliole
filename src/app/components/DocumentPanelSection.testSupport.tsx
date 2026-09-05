@@ -15,6 +15,7 @@ import { DocumentPanelSection } from './DocumentPanelSection';
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
+    immersiveDoubleClickEditEnabled: true,
     toggleEditorDisplayMode: vi.fn()
   })
 }));

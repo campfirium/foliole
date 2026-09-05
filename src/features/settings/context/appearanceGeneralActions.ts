@@ -17,6 +17,7 @@ import {
   setDimImagesInDarkMode,
   setInterfaceFontPreset,
   setInterfaceFontSize,
+  setImmersiveDoubleClickEditEnabled,
   setMonospaceFontPreset,
   setPdfReadingMode,
   setReadingContentWidth,
@@ -42,6 +43,7 @@ export type GeneralAppearanceActions = Pick<
   | 'setFrontmatterMetaFields'
   | 'setInterfaceFontPreset'
   | 'setInterfaceFontSize'
+  | 'setImmersiveDoubleClickEditEnabled'
   | 'setMarkdownSyntaxVisibility'
   | 'setSelectionToolbarEnabled'
   | 'setSelectionToolbarOpacityPercent'
@@ -73,6 +75,10 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setFrontmatterMetaFields: (value: string) => state.setFrontmatterMetaFieldsState(setFrontmatterMetaFields(value)),
     setInterfaceFontPreset: (value: InterfaceFontPreset) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
     setInterfaceFontSize: (value: number) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
+    setImmersiveDoubleClickEditEnabled: (value: boolean) => (
+      setImmersiveDoubleClickEditEnabled(value),
+      state.setImmersiveDoubleClickEditEnabledState(value)
+    ),
     setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
     setSelectionToolbarEnabled: (value: boolean) => (setSelectionToolbarEnabled(value), state.setSelectionToolbarEnabledState(value)),
     setSelectionToolbarOpacityPercent: (value: number) => state.setSelectionToolbarOpacityPercentState(setSelectionToolbarOpacityPercent(value)),

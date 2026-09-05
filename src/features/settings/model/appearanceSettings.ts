@@ -103,9 +103,11 @@ export {
 export {
   getBaseColorMode,
   getDimImagesInDarkMode,
+  getImmersiveDoubleClickEditEnabled,
   getPdfReadingMode,
   setBaseColorMode,
   setDimImagesInDarkMode,
+  setImmersiveDoubleClickEditEnabled,
   setPdfReadingMode
 } from './appearanceReadingModeSettings';
 export {

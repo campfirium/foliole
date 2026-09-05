@@ -21,6 +21,7 @@ import {
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
+import { resolveImmersiveDoubleClickEditHandler } from './immersiveReadingDoubleClick';
 import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import { useDocumentPanelDocumentRetry } from './useDocumentPanelDocumentRetry';
 import { useDocumentPanelDraftProps } from './useDocumentPanelDraftProps';
@@ -90,7 +91,7 @@ function buildDocumentComparisonModel(
 
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const t = useTranslation();
-  const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
+  const { editorDisplayMode, immersiveDoubleClickEditEnabled, readingContentWidth } = useAppearanceSettings();
   const { isRetryingDocument, retryDocumentLoad } = useDocumentPanelDocumentRetry(props.editorNodeId);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { bodyProps, documentLayoutStyle, documentStatus, isFolderListView, loadingLabel, panelKind } = getDocumentPanelView(
@@ -99,6 +100,13 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     readingContentWidth,
     t
   );
+  const readingBodyProps = {
+    ...bodyProps,
+    onEditorDoubleClick: resolveImmersiveDoubleClickEditHandler(
+      bodyProps.onEditorDoubleClick,
+      immersiveDoubleClickEditEnabled
+    )
+  };
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
   const textAnchorState = useDocumentPanelTextAnchorState(props);
@@ -120,7 +128,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   useDocumentPanelClozePresentations(activeNode, props);
 
   return {
-    bodyProps,
+    bodyProps: readingBodyProps,
     documentAreaLabel: t('desktop.document.area'),
     documentLayoutStyle,
     emptyContent,

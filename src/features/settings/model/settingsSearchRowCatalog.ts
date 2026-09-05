@@ -34,6 +34,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('typography', 'typography-paragraph-spacing', 'settings.appearance.paragraphSpacing.title', 'settings.appearance.paragraphSpacing.description'),
   row('typography', 'typography-reading-width', 'settings.appearance.readingWidth.title', 'settings.appearance.readingWidth.description'),
   row('typography', 'typography-navigation-row-spacing', 'settings.appearance.topicList.rowSpacing.title', 'settings.appearance.topicList.rowSpacing.description'),
+  row('editor', 'editor-immersive-double-click-edit', 'settings.search.editorImmersiveDoubleClick.title', 'settings.search.editorImmersiveDoubleClick.description'),
   row('editor', 'editor-save-remote-images-locally', 'settings.search.editorRemoteImages.title', 'settings.search.editorRemoteImages.description', 'settings.search.editorRemoteImages.terms'),
   row('editor', 'editor-highlight-annotation-prefix', 'settings.search.editorHighlightPrefix.title', 'settings.search.editorHighlightPrefix.description'),
   row('editor', 'editor-frontmatter-meta', 'settings.search.editorFrontmatter.title', 'settings.search.editorFrontmatter.description'),

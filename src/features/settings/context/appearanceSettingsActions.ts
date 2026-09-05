@@ -59,6 +59,7 @@ export type AppearanceState = {
   highlightColorPresetState: HighlightColorPreset;
   interfaceFontPresetState: InterfaceFontPreset;
   interfaceFontSizeState: number;
+  immersiveDoubleClickEditEnabledState: boolean;
   isBaseColorModeSelectionActiveState: boolean;
   markdownSyntaxVisibilityState: MarkdownSyntaxVisibility;
   monospaceFontPresetState: MonospaceFontPreset;
@@ -86,6 +87,7 @@ export type AppearanceState = {
   setHighlightColorPresetState: Setter<HighlightColorPreset>;
   setInterfaceFontPresetState: Setter<InterfaceFontPreset>;
   setInterfaceFontSizeState: Setter<number>;
+  setImmersiveDoubleClickEditEnabledState: Setter<boolean>;
   setMarkdownSyntaxVisibilityState: Setter<MarkdownSyntaxVisibility>;
   setMonospaceFontPresetState: Setter<MonospaceFontPreset>;
   setPdfReadingModeState: Setter<PdfReadingMode>;
