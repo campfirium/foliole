@@ -29,3 +29,7 @@ export function recordAction(options, phase, action) {
   actions.push({ action, at: new Date().toISOString(), phase });
   writeFileSync(file, `${JSON.stringify(actions, null, 2)}\n`);
 }
+
+export function recordLifecycleAttempt(options, lifecycle) {
+  writeFileSync(path.join(options.artifactDir, 'attempt-evidence.json'), `${JSON.stringify({ lifecycle }, null, 2)}\n`);
+}

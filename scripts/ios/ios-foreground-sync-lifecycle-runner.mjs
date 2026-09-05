@@ -11,7 +11,7 @@ import {
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
-import { prepareLifecycleArtifactDirectory, recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
+import { prepareLifecycleArtifactDirectory, recordAction, recordLifecycleAttempt, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { createLifecycleBuildEnv, sanitizeIosAcceptanceEnv } from './ios-foreground-sync-lifecycle-build.mjs';
 import {
@@ -82,6 +82,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     setPhase(options, 'resume-single-flight', 'foreground');
     launch(options, udid, false);
     lifecycle = await waitForForeground(options, resultPath, lifecycle);
+    recordLifecycleAttempt(options, lifecycle);
     await waitForForegroundSyncRequestPhase(options, 'resume-single-flight', 1);
     previousRun = await waitForForegroundSyncLifecycleSnapshot({
       databasePath, previousRunId: previousRun.latestFinished.runId, repoRoot: options.repoRoot
