@@ -12,6 +12,7 @@ import {
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 import { IOS_HOSTED_PROVIDER_DEVICE_ID } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import { IOS_ACCEPTANCE_DESKTOP_PEER_ID } from './ios-acceptance-contract-corpus.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 const PEER_ID = 'ios-acceptance-contract-peer';
@@ -26,6 +27,7 @@ function read(relativePath) {
 }
 
 it('binds fixed iOS formal inputs to independently readable product pack semantics', () => {
+  expect(IOS_ACCEPTANCE_DESKTOP_PEER_ID).toBe(IOS_HOSTED_PROVIDER_DEVICE_ID);
   expect(IOS_SYNC_PACK_MUTATION_AUTHOR).toBe(PEER_ID);
   fs.mkdirSync('.tmp/ios-contract-corpus-read', { recursive: true });
   const content = read('content-resource-read/content-resource.syncpack');
