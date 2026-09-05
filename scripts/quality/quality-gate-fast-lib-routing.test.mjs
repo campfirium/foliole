@@ -80,6 +80,12 @@ async function writeFixtureFile(rootDir, relativePath, content) {
   await writeFile(fullPath, content, 'utf8');
 }
 
+async function createQualityGateTempRoot() {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+  await writeFixtureFile(root, 'scripts/quality/quality-critical-test-routes.mjs', 'process.exit(0);\n');
+  return root;
+}
+
 describe('quality-gate-fast lib routing', () => {
   it('matches skip lint only for test or skip-governance changes', async () => {
     await expect(
@@ -112,7 +118,7 @@ describe('quality-gate-fast lib routing', () => {
   });
 
   it('caps lib changes locally and defers hosted quality to scheduled T7', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+    const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
         'lint:shared:full': 'node -e "console.log(\'shared lint ok\')"',
@@ -146,7 +152,7 @@ describe('quality-gate-fast lib routing', () => {
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
   it('explains lib changes as a shared gate route without running checks', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+    const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
         lint: 'node -e "console.log(\'full lint should stay unused\')"',

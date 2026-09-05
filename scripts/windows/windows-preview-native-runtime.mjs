@@ -111,11 +111,12 @@ export async function resolveCurrentHead(repoRoot) {
   }
 }
 
-export async function resolveChangedFiles(repoRoot, targetPaths = ['.']) {
+export async function resolveChangedFiles(repoRoot, targetPaths = ['.'], options = {}) {
   const pathArgs = ['--', ...targetPaths];
+  const diffFilter = options.includeDeletes ? 'ACMRD' : 'ACMR';
   const commands = [
-    ['diff', '--name-only', '--diff-filter=ACMR', ...pathArgs],
-    ['diff', '--name-only', '--diff-filter=ACMR', '--cached', ...pathArgs],
+    ['diff', '--name-only', `--diff-filter=${diffFilter}`, ...pathArgs],
+    ['diff', '--name-only', `--diff-filter=${diffFilter}`, '--cached', ...pathArgs],
     ['ls-files', '--others', '--exclude-standard', ...pathArgs]
   ];
   const files = new Set();

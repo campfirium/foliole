@@ -13,9 +13,9 @@ function printUsage() {
   console.error('Usage: npm run test:files -- <file.test.ts|file.test.tsx|file.test.mjs> [...]');
 }
 
-function isDirectory(filePath) {
+function isRegularFile(filePath) {
   try {
-    return statSync(filePath).isDirectory();
+    return statSync(filePath).isFile();
   } catch {
     return false;
   }
@@ -28,7 +28,7 @@ function validateFiles(files) {
   }
 
   for (const filePath of files) {
-    if (isDirectory(filePath) || !TEST_FILE_PATTERN.test(filePath)) {
+    if (!TEST_FILE_PATTERN.test(filePath) || !isRegularFile(filePath)) {
       console.error(`[test:files] expected test file, got: ${filePath}`);
       printUsage();
       return false;
@@ -78,7 +78,7 @@ function resolveVitestPool(env) {
 }
 
 async function runTestFiles(env) {
-  const files = process.argv.slice(2);
+  const files = process.argv.slice(2).map(normalizePath);
   if (!validateFiles(files) || !validateElectronSqliteTests(files)) {
     return 1;
   }
@@ -91,9 +91,15 @@ async function runTestFiles(env) {
     `--pool=${resolveVitestPool(env)}`,
     '--maxWorkers=2',
     '--no-file-parallelism',
-    ...files.map(normalizePath)
+    ...files
   ];
-  const child = spawn(process.execPath, args, { env, stdio: 'inherit' });
+  const child = spawn(process.execPath, args, {
+    env: {
+      ...env,
+      FOLIOLE_EXPECTED_TEST_FILES: JSON.stringify(files)
+    },
+    stdio: 'inherit'
+  });
   const exitCode = await new Promise((resolve) => {
     child.on('close', (code) => {
       resolve(code ?? 1);

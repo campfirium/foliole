@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { resolveCriticalTestFiles, RUN_VITEST_WITH_SUMMARY_SCRIPT } from './quality-critical-test-routes.mjs';
@@ -161,18 +161,10 @@ describe('quality critical test routes', () => {
     ], existing)).toEqual(['src/features/nodes/model/virtualNodeResultIndex.test.ts']);
   });
 
-  it('filters routed contracts that are absent from the checkout', () => {
+  it('fails when a registered critical contract is absent from the checkout', () => {
     const onlyPinnedNpmExists = (file) => file === 'scripts/quality/pinned-npm.test.mjs';
-    expect(resolveCriticalTestFiles(['package-lock.json'], onlyPinnedNpmExists)).toEqual([
-      'scripts/quality/pinned-npm.test.mjs'
-    ]);
-  });
-
-  it('keeps capped quality:fast routes wired to the critical test runner', () => {
-    const fastGate = readFileSync('scripts/quality/quality-gate-fast.sh', 'utf8');
-    const cappedRoute = fastGate.split('if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]')[1]
-      .split('run_quality_gate_fast_light_mid_static_guards')[0];
-    expect(cappedRoute).toContain('run_critical_tests_if_needed "${all_changed}"');
+    expect(() => resolveCriticalTestFiles(['package-lock.json'], onlyPinnedNpmExists))
+      .toThrow('Missing critical test file(s)');
   });
 
   it('ignores unrelated local source changes', () => {

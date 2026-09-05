@@ -187,16 +187,17 @@ function normalizeFiles(files) {
 export function resolveCriticalTestFiles(files, exists = existsSync) {
   const changedFiles = normalizeFiles(files);
   const tests = new Set();
+  const missing = new Set();
   for (const route of CRITICAL_TEST_ROUTES) {
     if (!changedFiles.some((file) => route.triggers.some((trigger) => trigger.test(file)))) {
       continue;
     }
     for (const testFile of route.tests) {
-      if (exists(testFile)) {
-        tests.add(testFile);
-      }
+      if (exists(testFile)) tests.add(testFile);
+      else missing.add(testFile);
     }
   }
+  if (missing.size > 0) throw new Error(`Missing critical test file(s): ${[...missing].sort().join(', ')}`);
   return [...tests].sort();
 }
 

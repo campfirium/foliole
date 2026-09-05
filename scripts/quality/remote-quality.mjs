@@ -69,8 +69,19 @@ async function dispatchWorkflow(runner, args, options) {
 
 function parseJobs(value) {
   const parsed = JSON.parse(value);
-  if (!Array.isArray(parsed.jobs)) throw new Error('GitHub jobs response did not contain a jobs array');
-  return parsed.jobs;
+  const pages = Array.isArray(parsed) ? parsed : [parsed];
+  if (pages.some((page) => !Array.isArray(page.jobs))) {
+    throw new Error('GitHub jobs response did not contain a jobs array');
+  }
+  return pages.flatMap((page) => page.jobs);
+}
+
+function parseWorkflowRun(value) {
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('GitHub workflow run response was not an object');
+  }
+  return parsed;
 }
 
 function parseWorkflowRuns(value) {
@@ -129,18 +140,25 @@ export async function monitorRemoteQualityJobs(options) {
   const wait = options.wait ?? ((duration) => new Promise((resolve) => setTimeout(resolve, duration)));
   const emittedFailures = new Set();
   while (true) {
-    const stdout = await requireSuccess(runner, 'gh', [
-      'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-      `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
-    ], { cwd });
-    const jobs = parseJobs(stdout);
+    const [runStdout, jobsStdout] = await Promise.all([
+      requireSuccess(runner, 'gh', [
+        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+        `repos/${repo}/actions/runs/${runId}`
+      ], { cwd }),
+      requireSuccess(runner, 'gh', [
+        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+        '--paginate', '--slurp', `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
+      ], { cwd })
+    ]);
+    const run = parseWorkflowRun(runStdout);
+    const jobs = parseJobs(jobsStdout);
     for (const job of jobs.filter(isFailedJob)) {
       if (emittedFailures.has(job.id)) continue;
       const log = await emitFailedJobLog(runner, repo, job, cwd);
       if (log.code === 0) emittedFailures.add(job.id);
     }
-    if (jobs.length > 0 && jobs.every((job) => job.status === 'completed')) {
-      return { failed: jobs.some(isFailedJob), jobs };
+    if (run.status === 'completed') {
+      return { failed: run.conclusion !== 'success', jobs, run };
     }
     await wait(pollIntervalMs);
   }

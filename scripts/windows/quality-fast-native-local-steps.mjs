@@ -83,6 +83,6 @@ export async function runNativeLightMidPlan(plan, options) {
       runner,
       runStep
     );
-    await runRelatedTests(plan, env, runner, runStep, splitRelatedTests);
   }
+  await runRelatedTests(plan, env, runner, runStep, splitRelatedTests);
 }

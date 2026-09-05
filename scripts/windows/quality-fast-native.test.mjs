@@ -80,6 +80,17 @@ describe('quality-fast-native Git Bash resolution', () => {
 });
 
 describe('quality-fast-native T0 routing', () => {
+  it('requests deleted paths from the shared collector for quality routing', async () => {
+    const resolveChangedFiles = vi.fn(async () => ['src/app/deleted.ts']);
+    const plan = await runQualityT0Native({
+      bashExe: GIT_BASH, env: NPM_ENV,
+      plan: { changedFiles: ['src/app/deleted.ts'], level: 'light', lintTargets: [], relatedTests: [] },
+      planOnly: true, resolveChangedFiles
+    });
+    expect(resolveChangedFiles).toHaveBeenCalledWith(expect.any(String), ['.'], { includeDeletes: true });
+    expect(plan.changedFiles).toContain('src/app/deleted.ts');
+  });
+
   it('returns the route plan without running checks for route-json mode', async () => {
     const plan = { changedFiles: ['electron/main.ts'], level: 'desktop', lintTargets: [], relatedTests: [], target: 'quality:desktop' };
     const runner = vi.fn(async () => 0);

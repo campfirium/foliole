@@ -24,11 +24,13 @@ function createRunner({
   dispatchError = '',
   activeRuns = [],
   jobSnapshots = [[job()]],
-  logCodes = [0]
+  logCodes = [0],
+  runSnapshots = [{ conclusion: 'success', status: 'completed' }]
 } = {}) {
   const calls = [];
   let jobsIndex = 0;
   let logsIndex = 0;
+  let runsIndex = 0;
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ args, command, options });
     if (command === 'git') return { code: 0, stderr: '', stdout: 'dev\n' };
@@ -49,7 +51,13 @@ function createRunner({
     if (args[0] === 'api' && args.some((arg) => arg.includes('/actions/runs/42/jobs'))) {
       const snapshot = jobSnapshots[Math.min(jobsIndex, jobSnapshots.length - 1)];
       jobsIndex += 1;
-      return { code: 0, stderr: '', stdout: JSON.stringify({ jobs: snapshot }) };
+      const pages = Array.isArray(snapshot[0]) ? snapshot : [snapshot];
+      return { code: 0, stderr: '', stdout: JSON.stringify(pages.map((jobs) => ({ jobs }))) };
+    }
+    if (args[0] === 'api' && args.some((arg) => arg.endsWith('/actions/runs/42'))) {
+      const snapshot = runSnapshots[Math.min(runsIndex, runSnapshots.length - 1)];
+      runsIndex += 1;
+      return { code: 0, stderr: '', stdout: JSON.stringify(snapshot) };
     }
     if (args[0] === 'api' && args.some((arg) => arg.includes('/actions/jobs/'))) {
       const code = logCodes[Math.min(logsIndex, logCodes.length - 1)];
@@ -119,7 +127,8 @@ describe('remote quality dispatcher', () => {
 
   it('prints a completed failed job log and preserves a failing exit', async () => {
     const { calls, runner } = createRunner({
-      jobSnapshots: [[job({ conclusion: 'failure', name: 'Windows core' })]]
+      jobSnapshots: [[job({ conclusion: 'failure', name: 'Windows core' })]],
+      runSnapshots: [{ conclusion: 'failure', status: 'completed' }]
     });
     await expect(runRemoteQuality({ args: ['--scope', 'shared'], runner }))
       .rejects.toThrow('Remote shared quality failed');
@@ -132,7 +141,15 @@ describe('remote quality dispatcher', () => {
       [job({ conclusion: 'failure' }), job({ conclusion: null, id: 8, status: 'in_progress' })],
       [job({ conclusion: 'failure' }), job({ id: 8 })]
     ];
-    const { calls, runner } = createRunner({ jobSnapshots: snapshots, logCodes: [1, 0] });
+    const { calls, runner } = createRunner({
+      jobSnapshots: snapshots,
+      logCodes: [1, 0],
+      runSnapshots: [
+        { conclusion: null, status: 'queued' },
+        { conclusion: null, status: 'in_progress' },
+        { conclusion: 'failure', status: 'completed' }
+      ]
+    });
     const result = await monitorRemoteQualityJobs({
       cwd: '.', pollIntervalMs: 0, repo: 'campfirium/foliole', runId: 42, runner, wait: vi.fn()
     });
@@ -141,6 +158,54 @@ describe('remote quality dispatcher', () => {
     expect(logCalls).toHaveLength(2);
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/jobs/8/logs')))).toBe(false);
   });
+
+  it('waits for the workflow run after every currently visible job succeeds', async () => {
+    const wait = vi.fn();
+    const { runner } = createRunner({
+      runSnapshots: [
+        { conclusion: null, status: 'in_progress' },
+        { conclusion: 'success', status: 'completed' }
+      ]
+    });
+    const result = await monitorRemoteQualityJobs({
+      cwd: '.', pollIntervalMs: 0, repo: 'campfirium/foliole', runId: 42, runner, wait
+    });
+    expect(result.failed).toBe(false);
+    expect(wait).toHaveBeenCalledOnce();
+  });
+
+  it('uses the workflow conclusion and includes failed jobs from later pages', async () => {
+    const { calls, runner } = createRunner({
+      jobSnapshots: [[[job()], [job({ conclusion: 'failure', id: 108, name: 'Late page' })]]],
+      runSnapshots: [{ conclusion: 'failure', status: 'completed' }]
+    });
+    const result = await monitorRemoteQualityJobs({
+      cwd: '.', repo: 'campfirium/foliole', runId: 42, runner
+    });
+    expect(result.failed).toBe(true);
+    expect(result.jobs).toHaveLength(2);
+    expect(calls.some((call) => call.args.includes('--paginate') && call.args.includes('--slurp'))).toBe(true);
+    expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/jobs/108/logs')))).toBe(true);
+  });
+
+  it('keeps a successful workflow conclusion when failed-job log retrieval fails', async () => {
+    const { runner } = createRunner({
+      jobSnapshots: [[job({ conclusion: 'failure' })]], logCodes: [1]
+    });
+    await expect(monitorRemoteQualityJobs({
+      cwd: '.', repo: 'campfirium/foliole', runId: 42, runner
+    })).resolves.toMatchObject({ failed: false });
+  });
+
+  it.each(['cancelled', 'timed_out', 'neutral', 'skipped'])(
+    'does not pass a completed workflow with conclusion %s',
+    async (conclusion) => {
+      const { runner } = createRunner({ runSnapshots: [{ conclusion, status: 'completed' }] });
+      await expect(monitorRemoteQualityJobs({
+        cwd: '.', repo: 'campfirium/foliole', runId: 42, runner
+      })).resolves.toMatchObject({ failed: true });
+    }
+  );
 
   it('hard-fails before dispatch when the local branch is not dev', async () => {
     const { runner } = createRunner();

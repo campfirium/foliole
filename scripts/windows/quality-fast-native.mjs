@@ -159,8 +159,11 @@ async function resolveRoutePlan(bashExe, changedFiles, env = process.env) {
 export async function runQualityT0Native(options = {}) {
   const env = options.env ?? process.env;
   const bashExe = options.bashExe ?? resolveGitBash(env);
+  const changedFileResolver = options.resolveChangedFiles ?? resolveChangedFiles;
   const changedFiles = options.changedFiles ?? parseEnvFileList(env.QUALITY_GATE_CHANGED_FILES);
-  const resolvedChangedFiles = changedFiles.length > 0 ? changedFiles : await resolveChangedFiles(WINDOWS_NATIVE_REPO_ROOT);
+  const resolvedChangedFiles = changedFiles.length > 0
+    ? changedFiles
+    : await changedFileResolver(WINDOWS_NATIVE_REPO_ROOT, ['.'], { includeDeletes: true });
   const plan = options.plan ?? (await resolveRoutePlan(bashExe, resolvedChangedFiles, env));
   const runner = options.runner ?? runInherited;
   const routeEnv = { ...env, QUALITY_GATE_CHANGED_FILES: toEnvFileList(resolvedChangedFiles) };

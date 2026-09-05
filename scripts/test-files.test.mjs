@@ -57,7 +57,9 @@ async function createFakeVitest(tempRoot) {
       "const reportPath = outputArg?.slice('--outputFile.json='.length);",
       "if (reportPath) {",
       "  mkdirSync(path.dirname(reportPath), { recursive: true });",
-      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 1, numTotalTestSuites: 1, numPassedTests: 1, numTotalTests: 1, testResults: [] }));",
+      "  const requested = process.argv.slice(2).filter((arg) => /\\.test\\.(mjs|ts|tsx)$/.test(arg));",
+      "  const collected = process.env.FAKE_COLLECT_NO_FILES === '1' ? [] : requested;",
+      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 2, numTotalTestSuites: 2, numPassedTests: 1, numTotalTests: 1, testResults: collected.map((name) => ({ name, status: 'passed', assertionResults: [{ status: 'passed' }] })) }));",
       "}"
     ].join('\n')
   );
@@ -83,6 +85,38 @@ describe('test-files', () => {
     expect(result.stderr).toContain('expected test file');
   });
 
+  it('rejects a missing file before starting Vitest even when another file is valid', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-missing-'));
+    try {
+      const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
+      const result = await runTestFiles(['src/app/pdfReaderLazyBoundary.test.ts', 'src/app/missing.test.ts'], {
+        VITEST_BIN: fakeVitestPath
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('src/app/missing.test.ts');
+      await expect(readFile(argsPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('fails when Vitest does not collect an explicitly requested existing file', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-uncollected-'));
+    try {
+      const { fakeVitestPath } = await createFakeVitest(tempRoot);
+      const result = await runTestFiles(['src/app/pdfReaderLazyBoundary.test.ts'], {
+        FAKE_COLLECT_NO_FILES: '1',
+        VITEST_BIN: fakeVitestPath
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('requested file not collected');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('runs only explicit test file arguments through the vitest summary runner', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-'));
     try {
@@ -104,7 +138,7 @@ describe('test-files', () => {
         expect(vitestArgs).toContain('--no-file-parallelism');
       }
       expect(vitestArgs).not.toContain('src/app');
-      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, suites 2/2 passed, tests 1/1 passed');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -114,7 +148,7 @@ describe('test-files', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-forks-'));
     try {
       const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
-      const result = await runTestFiles(['src/app/startup.test.ts'], {
+      const result = await runTestFiles(['src/app/pdfReaderLazyBoundary.test.ts'], {
         VITEST_BIN: fakeVitestPath,
         VITEST_POOL: 'forks'
       });

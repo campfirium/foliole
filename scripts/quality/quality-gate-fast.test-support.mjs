@@ -12,8 +12,10 @@ export const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality
 export const QUALITY_GATE_LIB_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-lib.sh');
 const DEFAULT_QUALITY_GATE_TEST_TIMEOUT_MS = 80_000;
 
-export function createQualityGateTempRoot() {
-  return mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+export async function createQualityGateTempRoot() {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+  await writeFixtureFile(root, 'scripts/quality/quality-critical-test-routes.mjs', 'process.exit(0);\n');
+  return root;
 }
 
 function terminateProcessTree(pid) {

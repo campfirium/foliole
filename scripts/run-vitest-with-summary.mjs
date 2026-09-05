@@ -2,8 +2,14 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
+
+import {
+  collectFileTotals,
+  readVitestReport,
+  validateExpectedTestFiles
+} from './vitest-report-contract.mjs';
 
 const DEFAULT_SLOW_LIMIT = 10;
 
@@ -108,14 +114,6 @@ function resolveVitestArgs(vitestArgs, env) {
   return args;
 }
 
-function readReport(reportPath) {
-  try {
-    return JSON.parse(readFileSync(reportPath, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
 function collectFailures(report) {
   const failures = [];
   for (const result of report?.testResults ?? []) {
@@ -167,7 +165,7 @@ function printList(prefix, items, formatItem) {
 }
 
 function printSummary(reportPath) {
-  const report = readReport(reportPath);
+  const report = readVitestReport(reportPath);
   if (!report) {
     console.log(`[vitest-summary] report unavailable: ${reportPath}`);
     return;
@@ -177,9 +175,10 @@ function printSummary(reportPath) {
   const slowLimit = Number.parseInt(process.env.VITEST_SUMMARY_SLOW_LIMIT || '', 10) || DEFAULT_SLOW_LIMIT;
   const slowFiles = collectSlowFiles(report).slice(0, slowLimit);
   const slowTests = collectSlowTests(report).slice(0, slowLimit);
+  const files = collectFileTotals(report);
 
   console.log(
-    `[vitest-summary] totals: files ${report.numPassedTestSuites}/${report.numTotalTestSuites} passed, tests ${report.numPassedTests}/${report.numTotalTests} passed`
+    `[vitest-summary] totals: files ${files.passed}/${files.total} passed, suites ${report.numPassedTestSuites}/${report.numTotalTestSuites} passed, tests ${report.numPassedTests}/${report.numTotalTests} passed`
   );
   if (failures.length > 0) {
     console.log(`[vitest-summary] failed tests: ${failures.length}`);
@@ -207,9 +206,15 @@ async function main() {
     ...resolveVitestArgs(vitestArgs, process.env)
   ];
   const vitestCommand = resolveVitestCommand();
-  const exitCode = await runVitest(vitestCommand, args, process.env);
+  const vitestEnv = { ...process.env };
+  delete vitestEnv.FOLIOLE_EXPECTED_TEST_FILES;
+  const exitCode = await runVitest(vitestCommand, args, vitestEnv);
   printSummary(reportPath);
-  process.exit(exitCode);
+  const report = readVitestReport(reportPath);
+  const expectedFilesSatisfied = !process.env.FOLIOLE_EXPECTED_TEST_FILES || Boolean(
+    report && validateExpectedTestFiles(report, process.env.FOLIOLE_EXPECTED_TEST_FILES)
+  );
+  process.exit(exitCode === 0 && expectedFilesSatisfied ? 0 : 1);
 }
 
 function runVitest(vitestCommand, args, env) {

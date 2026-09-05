@@ -38,6 +38,7 @@ async function writeSkipLintScript(rootDir, body) {
   const scriptsDir = path.join(rootDir, 'scripts', 'quality');
   await mkdir(scriptsDir, { recursive: true });
   await writeFile(path.join(scriptsDir, 'quality-skip-lint.mjs'), body, 'utf8');
+  await writeFile(path.join(scriptsDir, 'quality-critical-test-routes.mjs'), 'process.exit(0);\n', 'utf8');
 }
 
 async function writeEslintShim(rootDir) {

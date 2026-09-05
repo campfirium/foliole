@@ -3,6 +3,25 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
+function workflowJob(source, start, end) {
+  return source.slice(source.indexOf(start), source.indexOf(end));
+}
+
+it('activates and verifies pinned npm before each hosted iOS install', () => {
+  const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
+  const jobs = [
+    workflowJob(workflow, '  contract:', '\n  simulator:'),
+    workflow.slice(workflow.indexOf('  simulator:'))
+  ];
+
+  for (const job of jobs) {
+    const activate = job.indexOf('node scripts/quality/pinned-npm.mjs activate');
+    const install = job.indexOf('node scripts/quality/hosted-npm-ci.mjs');
+    expect(activate).toBeGreaterThan(-1);
+    expect(activate).toBeLessThan(install);
+  }
+});
+
 it('publishes the same dynamic HTTP provider through Electron main and native OS DNS-SD', () => {
   const fixture = fs.readFileSync('scripts/ios/ios-sync-group-provider-fixture.ts', 'utf8');
   const registration = fs.readFileSync('scripts/ios/ios-sync-group-provider-registration.ts', 'utf8');

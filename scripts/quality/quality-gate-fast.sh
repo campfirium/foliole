@@ -155,14 +155,6 @@ run_related_tests_if_needed() {
     node "${SCRIPT_DIR}/quality-fast-related-tests.mjs" "${test_array[@]}"
 }
 
-run_critical_tests_if_needed() {
-  local changed="$1"
-  if [[ -z "${changed}" || ! -f "scripts/quality/quality-critical-test-routes.mjs" ]]; then
-    return 0
-  fi
-  printf '%s\n' "${changed}" | node scripts/quality/quality-critical-test-routes.mjs --run
-}
-
 if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@" && ! has_quality_gate_arg "--route-json" "$@"; then
   echo "[quality-gate-fast] detected package manager: ${pm}"
 fi
@@ -188,7 +180,6 @@ run_quality_gate_fast_t0_static_guards
 run_quality_gate_fast_global_static_guards
 
 if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]; then
-  run_critical_tests_if_needed "${all_changed}"
   print_quality_gate_route_plan "${all_changed}" "${level}" \
     | node "${SCRIPT_DIR}/quality-gate-route-json.mjs" \
     | node "${SCRIPT_DIR}/quality-fast-capped.mjs"

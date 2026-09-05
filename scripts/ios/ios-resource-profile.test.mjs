@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -14,6 +15,19 @@ import {
 } from './ios-resource-profile.mjs';
 
 describe('iOS resource profile', () => {
+  it('lists every iOS script test exactly once in the runtime contract runner', () => {
+    const source = fs.readFileSync('scripts/ios/ios-runtime-contract-tests.mjs', 'utf8');
+    const listed = [...source.matchAll(/'((?:scripts\/ios\/)[^']+\.test\.mjs)'/gu)]
+      .map((match) => match[1]);
+    const existing = fs.readdirSync('scripts/ios', { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.test.mjs'))
+      .map((entry) => path.posix.join('scripts/ios', entry.name))
+      .sort();
+
+    expect([...new Set(listed)].sort()).toEqual(existing);
+    expect(listed).toHaveLength(new Set(listed).size);
+  });
+
   it('defaults command-line iOS work to the background profile', () => {
     expect(resolveIosResourceMode({})).toBe('background');
     expect(iosXcodebuildResourceArgs('background')).toEqual(['-jobs', '1']);

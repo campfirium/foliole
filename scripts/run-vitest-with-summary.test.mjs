@@ -60,7 +60,7 @@ async function createFakeVitestPackage(tempRoot) {
       "const reportPath = outputArg?.slice('--outputFile.json='.length);",
       "if (reportPath) {",
       "  mkdirSync(path.dirname(reportPath), { recursive: true });",
-      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 1, numTotalTestSuites: 1, numPassedTests: 1, numTotalTests: 1, testResults: [] }));",
+      "  writeFileSync(reportPath, JSON.stringify({ numPassedTestSuites: 3, numTotalTestSuites: 3, numPassedTests: 1, numTotalTests: 1, testResults: [{ name: 'src/Foo.test.ts', status: 'passed', assertionResults: [{ status: 'passed' }] }] }));",
       "}"
     ].join('\n')
   );
@@ -125,7 +125,7 @@ describe('run-vitest-with-summary', () => {
       const args = JSON.parse(await readFile(argsPath, 'utf8'));
       expect(args[0]).toBe('run');
       expect(args).toContain('src/Foo.test.ts');
-      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+      expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, suites 3/3 passed, tests 1/1 passed');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

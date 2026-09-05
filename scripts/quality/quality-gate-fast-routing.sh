@@ -20,8 +20,8 @@ collect_changed_files() {
   fi
 
   local staged unstaged untracked
-  staged="$(git diff --cached --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
-  unstaged="$(git diff --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
+  staged="$(git diff --cached --name-only --diff-filter=ACMRD -- . 2>/dev/null || true)"
+  unstaged="$(git diff --name-only --diff-filter=ACMRD -- . 2>/dev/null || true)"
   untracked="$(git ls-files --others --exclude-standard -- . 2>/dev/null || true)"
 
   printf '%s\n%s\n%s\n' "${staged}" "${unstaged}" "${untracked}" | grep -v '^\s*$' | sort -u || true
@@ -42,7 +42,7 @@ diff_has_mid_scope_signature() {
 
 resolve_quality_gate_route() {
   local changed="$1"
-  local static_route
+  local critical_tests static_route
 
   if ! static_route="$(printf '%s\n' "${changed}" | node "${QUALITY_PATH_DOMAINS_SCRIPT}" quality-route)"; then
     echo "[quality-gate-route] path domain resolution failed" >&2
@@ -66,7 +66,10 @@ resolve_quality_gate_route() {
     fi
   done <<< "${changed}"
 
-  if [[ -n "$(collect_critical_test_files "${changed}")" ]]; then
+  if ! critical_tests="$(collect_critical_test_files "${changed}")"; then
+    return 1
+  fi
+  if [[ -n "${critical_tests}" ]]; then
     printf 'mid\tcritical test route changed'
     return 0
   fi
@@ -76,12 +79,16 @@ resolve_quality_gate_route() {
 
 resolve_quality_gate_level() {
   local changed="$1"
-  resolve_quality_gate_route "${changed}" | cut -f1
+  local route
+  if ! route="$(resolve_quality_gate_route "${changed}")"; then return 1; fi
+  printf '%s\n' "${route}" | cut -f1
 }
 
 resolve_quality_gate_level_reason() {
   local changed="$1"
-  resolve_quality_gate_route "${changed}" | cut -f2-
+  local route
+  if ! route="$(resolve_quality_gate_route "${changed}")"; then return 1; fi
+  printf '%s\n' "${route}" | cut -f2-
 }
 
 resolve_quality_gate_target() {
@@ -130,10 +137,14 @@ filter_existing_files() {
 
 collect_critical_test_files() {
   local changed="$1"
-  if [[ -z "${changed}" || ! -f "scripts/quality/quality-critical-test-routes.mjs" ]]; then
+  if [[ -z "${changed}" ]]; then
     return 0
   fi
-  printf '%s\n' "${changed}" | node scripts/quality/quality-critical-test-routes.mjs 2>/dev/null || true
+  if [[ ! -f "scripts/quality/quality-critical-test-routes.mjs" ]]; then
+    echo "[quality-gate-route] critical test resolver is missing" >&2
+    return 1
+  fi
+  printf '%s\n' "${changed}" | node scripts/quality/quality-critical-test-routes.mjs
 }
 
 quality_skip_lint_changed_files_match() {
@@ -157,8 +168,10 @@ collect_related_test_files() {
   local changed="$1"
   local source_changed direct_tests source_files inferred_tests critical_tests
 
+  if ! critical_tests="$(collect_critical_test_files "${changed}")"; then return 1; fi
   source_changed="$(printf '%s\n' "${changed}" | grep -E '^(src/|electron/|scripts/|lib/).*\.(ts|tsx|js|jsx|mjs|cjs|sh)$' || true)"
   if [[ -z "${source_changed}" ]]; then
+    printf '%s\n' "${critical_tests}" | grep -v '^\s*$' | sort -u || true
     return 0
   fi
 
@@ -182,7 +195,6 @@ collect_related_test_files() {
     done <<< "${source_files}"
   fi
 
-  critical_tests="$(collect_critical_test_files "${changed}")"
   printf '%s\n%s\n%s' "${direct_tests}" "${inferred_tests}" "${critical_tests}" | grep -v '^\s*$' | sort -u || true
 }
 
@@ -191,9 +203,9 @@ print_quality_gate_route_plan() {
   local level="$2"
   local reason lint_targets related_tests
 
-  reason="$(resolve_quality_gate_level_reason "${changed}")"
+  if ! reason="$(resolve_quality_gate_level_reason "${changed}")"; then return 1; fi
   lint_targets="$(collect_lint_targets "${changed}")"
-  related_tests="$(collect_related_test_files "${changed}")"
+  if ! related_tests="$(collect_related_test_files "${changed}")"; then return 1; fi
 
   echo "[quality-gate-route] selected level: ${level}"
   echo "[quality-gate-route] reason: ${reason}"

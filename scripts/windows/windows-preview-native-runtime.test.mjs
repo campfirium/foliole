@@ -73,6 +73,28 @@ it('limits changed files to selected target paths', async () => {
   }
 });
 
+it('includes staged and unstaged deletions only when requested by quality routing', async () => {
+  const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-preview-runtime-'));
+  try {
+    await runCapture('git', ['init'], { cwd: repoRoot });
+    await runCapture('git', ['config', 'user.email', 'test@example.invalid'], { cwd: repoRoot });
+    await runCapture('git', ['config', 'user.name', 'Test'], { cwd: repoRoot });
+    await writeFile(path.join(repoRoot, 'staged.ts'), 'export {}\n', 'utf8');
+    await writeFile(path.join(repoRoot, 'unstaged.ts'), 'export {}\n', 'utf8');
+    await runCapture('git', ['add', '.'], { cwd: repoRoot });
+    await runCapture('git', ['commit', '-m', 'initial'], { cwd: repoRoot });
+    await rm(path.join(repoRoot, 'staged.ts'));
+    await runCapture('git', ['add', 'staged.ts'], { cwd: repoRoot });
+    await rm(path.join(repoRoot, 'unstaged.ts'));
+
+    await expect(resolveChangedFiles(repoRoot)).resolves.toEqual([]);
+    await expect(resolveChangedFiles(repoRoot, ['.'], { includeDeletes: true }))
+      .resolves.toEqual(['staged.ts', 'unstaged.ts']);
+  } finally {
+    await rm(repoRoot, { force: true, recursive: true });
+  }
+});
+
 it('times out captured commands so preview control cannot hang forever', async () => {
   const result = await runCapture(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {
     timeoutMs: 50
