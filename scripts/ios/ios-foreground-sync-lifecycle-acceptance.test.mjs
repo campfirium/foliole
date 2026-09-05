@@ -71,7 +71,9 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(shell).toContain('readyPosted.current = true');
     expect(shell).toContain('postReady(workspaceSync)');
     expect(shell).not.toContain('workspaceSync.pullFromDesktop(');
-    expect(runner).toContain("waitForRequestPhase(options, 'endpoint-ready', 1)");
+    expect(runner).toContain("waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 1)");
+    expect(runner).toContain('waitForForegroundSyncLifecycleRunCompletion');
+    expect(state).toContain('RUN_SETTLEMENT_TIMEOUT_MS = 120_000');
     expect(shell).toContain("App.addListener('pause'");
     expect(shell).not.toContain('createForegroundSyncRunner');
     expect(shell).not.toContain('tryForegroundAutoSync');

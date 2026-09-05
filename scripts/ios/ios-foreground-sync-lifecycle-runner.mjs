@@ -1,6 +1,6 @@
 /* global console, process, setTimeout */
 
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -11,7 +11,7 @@ import {
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
-import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
+import { prepareLifecycleArtifactDirectory, recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { createLifecycleBuildEnv, sanitizeIosAcceptanceEnv } from './ios-foreground-sync-lifecycle-build.mjs';
 import {
@@ -22,7 +22,6 @@ import {
 import {
   createSimulatorAcceptanceBuildArgs,
   verifyAcceptanceAppSignature,
-  waitForAcceptanceObservation,
   writeAcceptanceFailure
 } from './ios-simulator-acceptance-runner.mjs';
 import {
@@ -30,7 +29,12 @@ import {
   verifyForegroundSyncLifecycleAcceptance,
   waitForRecoveredResumeRequest
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
-import { waitForForegroundSyncLifecycleSnapshot } from './ios-foreground-sync-lifecycle-state.mjs';
+import {
+  readServiceObservations,
+  waitForForegroundSyncLifecycleRunCompletion,
+  waitForForegroundSyncLifecycleSnapshot,
+  waitForForegroundSyncRequestPhase
+} from './ios-foreground-sync-lifecycle-state.mjs';
 
 const SCENARIO = 'foreground-sync-lifecycle';
 const BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
@@ -47,7 +51,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     artifactDir, derivedData: prepareIosAcceptanceCache(repoRoot).derivedData, repoRoot, resourceMode,
     resourceArgs: iosXcodebuildResourceArgs(resourceMode)
   };
-  prepareArtifactDirectory(artifactDir);
+  prepareLifecycleArtifactDirectory(artifactDir);
   let service = null;
   let owned = null;
   try {
@@ -70,32 +74,39 @@ export async function runIosForegroundSyncLifecycleAcceptance(
 
     launch(options, udid, true);
     await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
-    await waitForRequestPhase(options, 'endpoint-ready', 1);
+    await waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 1);
+    let previousRun = await waitForForegroundSyncLifecycleSnapshot({ databasePath, repoRoot: options.repoRoot });
 
     const backgroundDeltas = [];
     let lifecycle = await enterBackground(options, udid, resultPath, backgroundDeltas);
     setPhase(options, 'resume-single-flight', 'foreground');
     launch(options, udid, false);
     lifecycle = await waitForForeground(options, resultPath, lifecycle);
-    await waitForRequestPhase(options, 'resume-single-flight', 1);
+    await waitForForegroundSyncRequestPhase(options, 'resume-single-flight', 1);
+    previousRun = await waitForForegroundSyncLifecycleSnapshot({
+      databasePath, previousRunId: previousRun.latestFinished.runId, repoRoot: options.repoRoot
+    });
 
     lifecycle = await enterBackground(options, udid, resultPath, backgroundDeltas, lifecycle);
     setPhase(options, 'failed-resume', 'foreground');
     launch(options, udid, false);
     lifecycle = await waitForForeground(options, resultPath, lifecycle);
-    await waitForRequestPhase(options, 'failed-resume', 1);
+    await waitForForegroundSyncRequestPhase(options, 'failed-resume', 1);
+    previousRun = await waitForForegroundSyncLifecycleRunCompletion({
+      databasePath, expectedResult: 'failed', previousRunId: previousRun.latestFinished.runId, repoRoot: options.repoRoot
+    });
     lifecycle = await enterBackground(options, udid, resultPath, backgroundDeltas, lifecycle);
 
     setPhase(options, 'recovered-resume', 'foreground');
     launch(options, udid, false);
     lifecycle = await waitForForeground(options, resultPath, lifecycle);
-    await waitForRecoveredResumeRequest({ read: () => readObservations(options) });
+    await waitForRecoveredResumeRequest({ read: () => readServiceObservations(options) });
     const beforeRestart = await waitForForegroundSyncLifecycleSnapshot({
-      databasePath, repoRoot: options.repoRoot
+      databasePath, previousRunId: previousRun.latestFinished.runId, repoRoot: options.repoRoot
     });
     await delay(5_500);
     assertForegroundSyncLifecycleRequestPhase(
-      readObservations(options).foreground_sync_lifecycle, 'recovered-resume', 1
+      readServiceObservations(options).foreground_sync_lifecycle, 'recovered-resume', 1
     );
 
     run(options, 'xcrun', ['simctl', 'terminate', udid, BUNDLE_ID]);
@@ -103,13 +114,13 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     setPhase(options, 'restart', 'launch');
     launch(options, udid, true);
     await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'restart shell readiness', 60_000);
-    await waitForRequestPhase(options, 'restart', 1);
+    await waitForForegroundSyncRequestPhase(options, 'restart', 1);
     const afterRestart = await waitForForegroundSyncLifecycleSnapshot({
       databasePath, previousRunId: beforeRestart.latestFinished.runId, repoRoot: options.repoRoot
     });
     await stopSyncGroupProvider(service);
     service = null;
-    const observations = readObservations(options);
+    const observations = readServiceObservations(options);
     const evidence = { afterRestart, backgroundDeltas, beforeRestart, lifecycle, observations };
     writeFileSync(path.join(artifactDir, 'evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`);
     const result = verifyForegroundSyncLifecycleAcceptance({
@@ -128,13 +139,6 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     } finally {
       if (service) await stopSyncGroupProvider(service);
     }
-  }
-}
-
-function prepareArtifactDirectory(artifactDir) {
-  mkdirSync(artifactDir, { recursive: true });
-  for (const name of ['evidence.json', 'failure.json', 'lifecycle-actions.json', 'lifecycle-control.json', 'result.json', 'simulator.log']) {
-    rmSync(path.join(artifactDir, name), { force: true });
   }
 }
 
@@ -165,14 +169,14 @@ function bootAndInstall(options, udid) {
 }
 
 async function enterBackground(options, udid, resultPath, deltas, previous = { pause_count: 0 }) {
-  const before = readObservations(options).foreground_sync_lifecycle.request_count;
+  const before = readServiceObservations(options).foreground_sync_lifecycle.request_count;
   recordAction(options, 'background', 'launch-settings');
   runAllowFailure(options, 'xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences']);
   run(options, 'xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
   const lifecycle = await waitForBridge(options, resultPath,
     (value) => value.phase === 'background' && value.pause_count > (previous.pause_count ?? 0), 'Capacitor pause');
   await delay(3_000);
-  const after = readObservations(options).foreground_sync_lifecycle.request_count;
+  const after = readServiceObservations(options).foreground_sync_lifecycle.request_count;
   deltas.push(after - before);
   return lifecycle;
 }
@@ -183,16 +187,6 @@ async function waitForForeground(options, resultPath, previous) {
   'paired Capacitor foreground events');
 }
 
-async function waitForRequestPhase(options, phase, count) {
-  return waitForAcceptanceObservation({
-    accept: (value) => value.foreground_sync_lifecycle.phase_requests[phase] === count &&
-      value.foreground_sync_lifecycle.active_requests === 0,
-    describe: (value) => `${phase} requests=${value.foreground_sync_lifecycle?.phase_requests?.[phase] ?? 0}`,
-    initialObservation: `${phase} request was not observed`, label: `${phase} canonical sync pass`,
-    read: () => readObservations(options), timeoutMs: 30_000
-  });
-}
-
 function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
   return waitForIosBridgeResult({ accept: (value) => value?.status === 'failed' || accept(value),
     describe: (value) => `phase=${value?.phase ?? 'missing'}`,
@@ -201,10 +195,6 @@ function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
     if (value?.status === 'failed') throw new Error(value.error || `${label} failed`);
     return value;
   });
-}
-
-function readObservations(options) {
-  return JSON.parse(readFileSync(path.join(options.artifactDir, 'service-observations.json'), 'utf8'));
 }
 
 function launch(options, udid, terminate) {
