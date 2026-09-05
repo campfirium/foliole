@@ -129,6 +129,8 @@ describe('CodeMirror editor keymap', () => {
 
     expect(mockKeymapOf).toHaveBeenCalledWith([
       { key: 'Escape', run: expect.any(Function) },
+      { key: 'Mod-b', run: expect.any(Function) },
+      { key: 'Mod-i', run: expect.any(Function) },
       { key: 'Mod-a', run: expect.any(Function) }
     ]);
     expect(extensions).not.toContain('history-extension');
@@ -147,6 +149,14 @@ describe('CodeMirror editor keymap', () => {
 
     const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
     expect(installedKeymap).not.toContainEqual({ key: 'Mod-/', run: mockToggleComment });
+  });
+
+  it('binds conventional inline formatting shortcuts for every desktop platform', () => {
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs());
+    const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
+
+    expect(installedKeymap.some((binding: { key?: string }) => binding.key === 'Mod-b')).toBe(true);
+    expect(installedKeymap.some((binding: { key?: string }) => binding.key === 'Mod-i')).toBe(true);
   });
 
   it('can skip live markdown decorations for lightweight local-file editing', () => {

@@ -12,6 +12,7 @@ import {
   createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
+import { markdownFormattingKeymap } from './codeMirrorMarkdownFormatting';
 import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMarkerState';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
@@ -68,7 +69,7 @@ const escapeBlurKeymap = [{
 
 function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
   return [
-    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
+    keymap.of([...escapeBlurKeymap, ...markdownFormattingKeymap, ...folioleDefaultKeymap]),
     ...createApplicationCutExtensions(options.applicationCutEnabled === true)
   ];
 }
