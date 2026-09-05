@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV 開放性能面板",
   "desktop.command.dev.enableReviewStatusMemory": "DEV 啟用查看狀態列內存",
   "desktop.command.dev.disableReviewStatusMemory": "DEV 禁用查看狀態列內存",
-  "desktop.command.openCustomCopy": "開啟自訂文案"
+  "desktop.command.openCustomCopy": "開啟自訂文案",
+  "desktop.command.scrollDocumentTop": "捲動到文件頂端",
+  "desktop.command.scrollDocumentBottom": "捲動到文件底端"
 }

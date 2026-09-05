@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "Kliknij dwukrotnie treść, aby edytować",
+  "settings.search.editorImmersiveDoubleClick.description": "W trybie immersyjnego czytania kliknij dwukrotnie treść dokumentu, aby rozpocząć edycję. Wyłącz tę opcję, aby dwukrotne kliknięcie nadal służyło do zaznaczania tekstu; klawisz Enter wciąż uruchamia edycję.",
+  "settings.editor.readingMode.section": "Tryb czytania",
+  "settings.editor.readingMode.aria": "Sekcja ustawień trybu czytania"
+}

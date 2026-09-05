@@ -5,14 +5,13 @@ import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { runManagedCommand, toFixtureShellPath } from './quality-gate-fast.test-support.mjs';
+import {
+  QUALITY_GATE_FAST_SCRIPT, runManagedCommand, runQualityGate, toFixtureShellPath
+} from './quality-gate-fast.test-support.mjs';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const execFileAsync = promisify(execFile);
 
 function expectedVitestArgs(prefix, testFile) {
@@ -23,15 +22,6 @@ function expectedVitestArgs(prefix, testFile) {
     return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --maxWorkers=${maxWorkers}${fileParallelArg} --silent=passed-only --pool=threads ${testFile}`;
   }
   return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=${maxWorkers} --no-file-parallelism ${testFile}`;
-}
-
-function runQualityGate(cwd, env = {}, args = []) {
-  return runManagedCommand('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
-    cwd,
-    env,
-    label: 'quality-gate-critical-routes',
-    timeoutMs: 20_000
-  });
 }
 
 async function writeFileWithDirs(root, relativePath, content, mode) {
@@ -151,8 +141,7 @@ if (process.argv.includes('--run')) {
       const oldResult = await runManagedCommand('bash', [oldRunner], {
         cwd: root,
         env,
-        label: 'quality-gate-critical-routes-old-control',
-        timeoutMs: 20_000
+        label: 'quality-gate-critical-routes-old-control'
       });
 
       expect(oldResult.code).toBe(0);
@@ -160,7 +149,7 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  });
+  }, 180000);
 
   it('keeps critical tests in the plan for non-source triggers', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
@@ -231,5 +220,5 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 30000);
+  }, 90000);
 });

@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "雙擊正文進入編輯",
+  "settings.search.editorImmersiveDoubleClick.description": "在沉浸閱讀中，雙擊正文可進入編輯。關閉後，雙擊不再進入編輯，仍可用於選取文字；按 Enter 仍可進入編輯。",
+  "settings.editor.readingMode.section": "閱讀模式",
+  "settings.editor.readingMode.aria": "閱讀模式設定區"
+}

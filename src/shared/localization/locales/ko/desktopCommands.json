@@ -106,5 +106,7 @@
   "desktop.command.dev.openPerformancePanel": "DEV 개방형 성능 패널",
   "desktop.command.dev.enableReviewStatusMemory": "DEV 활성화 검토 상태 표시줄 메모리",
   "desktop.command.dev.disableReviewStatusMemory": "DEV 비활성화 검토 상태 표시줄 메모리",
-  "desktop.command.openCustomCopy": "사용자 지정 문구 열기"
+  "desktop.command.openCustomCopy": "사용자 지정 문구 열기",
+  "desktop.command.scrollDocumentTop": "문서 맨 위로 스크롤",
+  "desktop.command.scrollDocumentBottom": "문서 맨 아래로 스크롤"
 }
