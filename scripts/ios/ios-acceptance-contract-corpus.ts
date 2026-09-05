@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IOS_ACCEPTANCE_DESKTOP_PEER_ID = 'acceptance-desktop';
+import { IOS_HOSTED_PROVIDER_DEVICE_ID } from '../../lib/platform/iosHostedSyncGroupContract.js';
+
+export const IOS_ACCEPTANCE_DESKTOP_PEER_ID = IOS_HOSTED_PROVIDER_DEVICE_ID;
 export const IOS_ACCEPTANCE_CONTRACT_PEER_ID = 'ios-acceptance-contract-peer';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'acceptance-contract-corpus');
 
