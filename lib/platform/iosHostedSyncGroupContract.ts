@@ -1,4 +1,4 @@
-import { createSyncGroupDeviceIdentity } from './syncGroupUnifiedContract.ts';
+import { createSyncGroupDeviceIdentity } from './syncGroupUnifiedContract.js';
 
 export const IOS_HOSTED_SYNC_GROUP_ID = 'group-t152-ios-runtime';
 export const IOS_HOSTED_PROVIDER_DEVICE_ID = createSyncGroupDeviceIdentity({
