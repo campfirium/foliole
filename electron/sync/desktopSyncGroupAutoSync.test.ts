@@ -54,6 +54,16 @@ function service(extra: Record<string, string> = {}, addresses = ['192.168.1.12'
   };
 }
 
+function mobileService(extra: Record<string, string> = {}) {
+  const next = service(extra);
+  return {
+    ...next,
+    txt: {
+      ...serializeSyncProtocolTxt(), group_id: 'group-1', provider_device_id: 'android-b', ...extra
+    }
+  };
+}
+
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
@@ -109,6 +119,16 @@ it('automatically syncs a saved Device at its resolved OS DNS-SD route', async (
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
   })]);
+});
+
+it('automatically syncs a native mobile provider using its advertised Device field', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.onService?.({ kind: 'found', service: mobileService() });
+
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(runtime.continueSync).toHaveBeenCalledWith('automatic', expect.objectContaining({
+    endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
+  }));
 });
 
 it('rejects an incompatible discovered Device before transport', async () => {

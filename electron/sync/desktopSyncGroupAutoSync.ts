@@ -7,7 +7,10 @@ import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPrefe
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
 import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
-import { isCurrentGroupPeerService } from './desktopSyncGroupPeerService.js';
+import {
+  isCurrentGroupPeerService,
+  readSyncGroupServiceDeviceId
+} from './desktopSyncGroupPeerService.js';
 import {
   clearDesktopSyncGroupRoutes,
   loadDesktopSyncGroupRoutes,
@@ -31,7 +34,7 @@ function readAvailablePeer(service: DesktopDnsSdService): AvailablePeer | null {
   const txt = service.txt as Record<string, unknown>;
   if (evaluateDiscoveredSyncProtocol(txt).status === 'incompatible') return null;
   const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
-  const peerDeviceId = typeof txt.device_id === 'string' ? txt.device_id : null;
+  const peerDeviceId = readSyncGroupServiceDeviceId(service);
   return endpoints.length > 0 && groupId && peerDeviceId ? { endpoints, groupId, peerDeviceId } : null;
 }
 
@@ -56,7 +59,7 @@ export function startDesktopSyncGroupAutoSync() {
     onService: ({ kind, service }) => {
       if (!isCurrentGroupPeerService(service, localGroup)) {
         logDesktopDnsSdDiagnostic('route_rejected', {
-          deviceDiffers: service.txt.device_id !== localGroup?.local_device_identity_key,
+          deviceDiffers: readSyncGroupServiceDeviceId(service) !== localGroup?.local_device_identity_key,
           eventKind: kind, reason: 'not_current_group_peer',
           groupMatches: service.txt.group_id === localGroup?.group_id,
           ...desktopDnsSdServiceFacts(service)
@@ -64,7 +67,7 @@ export function startDesktopSyncGroupAutoSync() {
         return;
       }
       if (kind === 'lost') {
-        const deviceId = typeof service.txt.device_id === 'string' ? service.txt.device_id : null;
+        const deviceId = readSyncGroupServiceDeviceId(service);
         if (deviceId) removeDesktopSyncGroupRoute(deviceId);
         return;
       }
