@@ -111,7 +111,6 @@ export function runDesktopManualSyncWithDiscovery() {
         void continueManualRun([...peers.values()]).then(resolve, reject);
       }, MANUAL_DISCOVERY_SETTLE_MS);
     };
-    if (runtime) return;
     manualRuntime = startDesktopDnsSdSession({
       onError: reject,
       onService: ({ kind, service }) => {

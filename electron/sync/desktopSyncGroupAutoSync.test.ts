@@ -14,6 +14,7 @@ const runtime = vi.hoisted(() => ({
   onError: null as null | ((error: Error) => void),
   onService: null as null | ((event: Record<string, unknown>) => void),
   participating: true,
+  start: vi.fn(),
   stop: vi.fn()
 }));
 
@@ -25,6 +26,7 @@ function deferred<T>() {
 
 vi.mock('./desktopDnsSd.js', () => ({
   startDesktopDnsSdSession: (callbacks: typeof runtime) => {
+    runtime.start(callbacks);
     runtime.onError = callbacks.onError;
     runtime.onService = callbacks.onService;
     return { stop: runtime.stop };
@@ -89,7 +91,7 @@ it('discovers a transient route for manual sync while automatic sync is disabled
   vi.useRealTimers();
 });
 
-it('lets manual sync consume the active automatic discovery session', async () => {
+it('starts on-demand discovery when automatic discovery has no cached route', async () => {
   vi.useFakeTimers();
   startDesktopSyncGroupAutoSync();
   const manual = runDesktopManualSyncWithDiscovery();
@@ -97,10 +99,11 @@ it('lets manual sync consume the active automatic discovery session', async () =
   await vi.runAllTimersAsync();
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
+  expect(runtime.start).toHaveBeenCalledTimes(2);
   expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
     peer_device_id: 'android-b'
   }));
-  expect(loadDesktopSyncGroupRoutes('group-1')).toHaveLength(1);
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
   vi.useRealTimers();
 });
 
