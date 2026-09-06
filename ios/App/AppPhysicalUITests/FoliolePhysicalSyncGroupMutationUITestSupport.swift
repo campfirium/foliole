@@ -58,7 +58,7 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Save", in: app, timeout: 30)
         waitForDisappearance(editor, timeout: 30,
                              message: "Fri did not persist the existing highlight comment.")
-        revealReadingChrome(in: app, matching: text)
+        revealReadingChrome(in: app, matching: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"))
         tapButton(named: "More reading actions", in: app, timeout: 30)
         tapButton(named: "Highlight", in: app, timeout: 30)
         let savedHighlight = app.buttons.matching(
