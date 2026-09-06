@@ -43,11 +43,14 @@ function resolveToolbarPosition(fallback: CompanionSelectionClientPoint) {
     : { left: fallback.clientX, top: fallback.clientY, bottom: fallback.clientY };
   const toolbarWidth = 168;
   const notePanelWidth = 256;
-  const top = anchor.top > 56 ? anchor.top - 48 : anchor.bottom + 10;
+  const prefersBelowSelection = navigator.maxTouchPoints > 0;
+  const top = prefersBelowSelection
+    ? anchor.bottom + 10
+    : anchor.top > 56 ? anchor.top - 48 : anchor.bottom + 10;
   return {
     left: Math.max(8, Math.min(anchor.left - toolbarWidth / 2, window.innerWidth - toolbarWidth - 8)),
     noteLeft: Math.max(8, Math.min(anchor.left - notePanelWidth / 2, window.innerWidth - notePanelWidth - 8)),
-    noteTop: Math.max(8, anchor.bottom + 8),
+    noteTop: Math.max(8, prefersBelowSelection ? top + 48 : anchor.bottom + 8),
     top: Math.max(8, top)
   };
 }
