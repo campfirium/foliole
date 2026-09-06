@@ -89,7 +89,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SELECTION_TEXT');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_ANNOTATION_NOTE');
   expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TRASH_TITLE');
-  expect(physicalTest).toContain('tapButton(named: "Join", in: app, timeout: 90)');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SYNC_GROUP_ID');
+  expect(physicalTest).toContain('companion-sync-group-join-\\(groupId)');
   expect(physicalTest).toContain('app.wait(for: .notRunning');
   expect(physicalTest).not.toMatch(/coordinate\s*:/u);
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');

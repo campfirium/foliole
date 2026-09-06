@@ -56,6 +56,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch'
     ], { action: 'fri-two-device', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
+      FOLIOLE_PHYSICAL_SYNC_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_TAG: ready.groupTag, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: 'macos-fri-two-device' });

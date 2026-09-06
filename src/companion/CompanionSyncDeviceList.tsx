@@ -23,6 +23,7 @@ function JoinAction(props: {
       data-sync-group-id={props.groupId}
       data-sync-group-tag={props.groupTag}
       data-testid="companion-sync-group-join"
+      id={`companion-sync-group-join-${props.groupId}`}
       onClick={props.onClick}
       type="button"
     >
