@@ -23,7 +23,9 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func createHighlight(for text: String, in app: XCUIApplication) {
-        let passage = app.staticTexts[text]
+        let passage = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", text)
+        ).firstMatch
         XCTAssertTrue(passage.waitForExistence(timeout: 60), "Fri did not show the requested selection text.")
         passage.press(forDuration: 1.0)
         if !app.buttons["Highlight"].waitForExistence(timeout: 3) {
@@ -40,7 +42,9 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func addCommentToHighlight(text: String, comment: String, in app: XCUIApplication) {
-        let passage = app.staticTexts[text]
+        let passage = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", text)
+        ).firstMatch
         XCTAssertTrue(passage.waitForExistence(timeout: 30), "Fri did not render the new highlight target.")
         passage.tap()
         tapButton(named: "Add Comment", in: app, timeout: 30)
@@ -50,7 +54,9 @@ extension FoliolePhysicalSyncGroupUITests {
         editor.typeText(comment)
         tapButton(named: "Save", in: app, timeout: 30)
 
-        let savedPassage = app.staticTexts[text]
+        let savedPassage = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", text)
+        ).firstMatch
         XCTAssertTrue(savedPassage.waitForExistence(timeout: 30), "Fri lost the saved highlight target.")
         savedPassage.tap()
         tapButton(named: "Add Comment", in: app, timeout: 30)
