@@ -18,7 +18,7 @@ export async function loadCompanionDesktopSyncSummary(
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
   const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
-  const androidCursor = diagnostics?.sync_state?.pack_cursor;
+  const localCursor = confirmedStructureStateSeq ?? diagnostics?.sync_state?.pack_cursor;
   const structureTarget = confirmedStructureStateSeq ?? desktopStateSeq;
   return {
     localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
@@ -50,8 +50,8 @@ export async function loadCompanionDesktopSyncSummary(
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,
     remainingFailedContentBlobCount: diagnostics?.content?.failed_content_blob_count ?? null,
-    remainingStructureChangeCount: typeof structureTarget === 'number' && typeof androidCursor === 'number'
-      ? Math.max(0, structureTarget - androidCursor)
+    remainingStructureChangeCount: typeof structureTarget === 'number' && typeof localCursor === 'number'
+      ? Math.max(0, structureTarget - localCursor)
       : null
   };
 }
