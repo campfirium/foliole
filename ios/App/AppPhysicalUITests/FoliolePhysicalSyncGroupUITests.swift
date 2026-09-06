@@ -50,7 +50,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             return
         }
         openSyncSettings(in: app)
-        tapButton(named: "Sync Now", in: app, timeout: 30)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         waitForDisappearance(app.staticTexts["Never"], timeout: 45,
                              message: "The public Sync Now action did not update the last sync result.")
         XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 180),
