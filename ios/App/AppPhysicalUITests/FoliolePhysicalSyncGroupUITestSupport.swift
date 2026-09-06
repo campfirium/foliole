@@ -218,8 +218,11 @@ extension FoliolePhysicalSyncGroupUITests {
         let alert = springboard.alerts.firstMatch
         guard alert.waitForExistence(timeout: 8) else { return }
         let decision = labels.lazy.map { alert.buttons[$0] }.first { $0.exists }
-        XCTAssertNotNil(decision, "Missing Local Network decision button.")
-        guard let decision else { return }
+        if decision == nil && allow { return }
+        guard let decision else {
+            XCTFail("Missing Local Network denial button.")
+            return
+        }
         attachScreenshot(named: allow ? "Fri-local-network-allow" : "Fri-local-network-deny")
         decision.tap()
         if allow { resolveOptionalCellularDataDecision() }

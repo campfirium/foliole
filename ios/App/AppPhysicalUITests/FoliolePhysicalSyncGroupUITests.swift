@@ -223,9 +223,16 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30),
                       "Fri remained runnable instead of entering the catch-up interval.")
         attachScreenshot(named: "Fri-stopped-for-foreground-catch-up")
+        print("[foliole-fri] foreground-catch-up-window-ready")
+        let catchUpWindow = expectation(description: "Desktop writes while Fri is stopped")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { catchUpWindow.fulfill() }
+        wait(for: [catchUpWindow], timeout: 21)
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
                       "Fri did not return to the foreground after the catch-up interval.")
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        attachScreenshot(named: "Fri-foreground-catch-up-complete")
     }
 
 }

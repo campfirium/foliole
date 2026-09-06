@@ -77,6 +77,15 @@ describe('Sync Group request authentication', () => {
       .toEqual({ error: 'sync_group_workgroup_key_missing', ok: false, status_code: 401 });
   });
 
+  it('rejects an expired request before consuming its nonce', () => {
+    const expired = request('device-a', 'nonce-expired');
+    expired.headers['x-timestamp'] = '2020-01-01T00:00:00.000Z';
+
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: expired }))
+      .toEqual({ error: 'expired_timestamp', ok: false, status_code: 401 });
+    expect(workgroup.consumeDesktopWorkgroupNonce).not.toHaveBeenCalled();
+  });
+
   it('does not consume a nonce before the Group-key signature is valid', () => {
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS, request: request('device-a', 'nonce-a', 'wrong-key')

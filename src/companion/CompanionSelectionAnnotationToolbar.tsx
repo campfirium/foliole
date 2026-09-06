@@ -50,6 +50,7 @@ function ToolbarButton(props: {
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (event.button !== 2) runPressAction();
       }}
       onPointerUp={(event) => {
         event.preventDefault();
