@@ -74,9 +74,11 @@ beforeEach(() => {
 });
 
 it('discovers a transient route for manual sync while automatic sync is disabled', async () => {
+  vi.useFakeTimers();
   runtime.participating = false;
   const manual = runDesktopManualSyncWithDiscovery();
   runtime.onService?.({ kind: 'found', service: service() });
+  await vi.runAllTimersAsync();
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
   expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
@@ -84,18 +86,40 @@ it('discovers a transient route for manual sync while automatic sync is disabled
   }));
   expect(runtime.stop).toHaveBeenCalledOnce();
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
+  vi.useRealTimers();
 });
 
 it('lets manual sync consume the active automatic discovery session', async () => {
+  vi.useFakeTimers();
   startDesktopSyncGroupAutoSync();
   const manual = runDesktopManualSyncWithDiscovery();
   runtime.onService?.({ kind: 'found', service: service() });
+  await vi.runAllTimersAsync();
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
   expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
     peer_device_id: 'android-b'
   }));
   expect(loadDesktopSyncGroupRoutes('group-1')).toHaveLength(1);
+  vi.useRealTimers();
+});
+
+it('syncs every same-group Device discovered during one manual action', async () => {
+  vi.useFakeTimers();
+  runtime.participating = false;
+  runtime.group.devices.push({
+    device_identity_key: 'ios-c', device_name: 'Fri', platform: 'ios-capacitor', state: 'active'
+  });
+  const manual = runDesktopManualSyncWithDiscovery();
+  runtime.onService?.({ kind: 'found', service: service() });
+  runtime.onService?.({ kind: 'found', service: mobileService({ provider_device_id: 'ios-c' }) });
+  await vi.runAllTimersAsync();
+
+  await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
+  expect(runtime.continueSync).toHaveBeenCalledTimes(2);
+  expect(runtime.continueSync.mock.calls.map((call) => call[1].peer_device_id))
+    .toEqual(['android-b', 'ios-c']);
+  vi.useRealTimers();
 });
 
 it('cancels pending on-demand discovery with the desktop discovery lifecycle', async () => {

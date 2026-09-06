@@ -20,10 +20,12 @@ import {
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
 type AvailablePeer = { endpoints: string[]; groupId: string; peerDeviceId: string };
+const MANUAL_DISCOVERY_SETTLE_MS = 1_000;
 
 let runtime: DesktopDnsSdSession | null = null;
 let manualRuntime: DesktopDnsSdSession | null = null;
 let manualRun: Promise<unknown> | null = null;
+let manualSettleTimer: ReturnType<typeof setTimeout> | null = null;
 let rejectManualRun: ((error: Error) => void) | null = null;
 let resolveManualPeer: ((peer: AvailablePeer) => void) | null = null;
 const inFlight = new Map<string, Promise<unknown>>();
@@ -85,6 +87,8 @@ export function stopDesktopSyncGroupAutoSync() {
   runtime = null;
   manualRuntime?.stop();
   manualRuntime = null;
+  if (manualSettleTimer) clearTimeout(manualSettleTimer);
+  manualSettleTimer = null;
   retryAfterFlight.clear();
   clearDesktopSyncGroupRoutes();
 }
@@ -96,10 +100,16 @@ export function runDesktopManualSyncWithDiscovery() {
     return runDesktopSyncCoordinator('manual');
   }
   manualRun = new Promise((resolve, reject) => {
+    const peers = new Map<string, AvailablePeer>();
     rejectManualRun = reject;
     resolveManualPeer = (peer) => {
-      resolveManualPeer = null;
-      void continueManualRun(peer).then(resolve, reject);
+      peers.set(peer.peerDeviceId, peer);
+      if (manualSettleTimer) clearTimeout(manualSettleTimer);
+      manualSettleTimer = setTimeout(() => {
+        manualSettleTimer = null;
+        resolveManualPeer = null;
+        void continueManualRun([...peers.values()]).then(resolve, reject);
+      }, MANUAL_DISCOVERY_SETTLE_MS);
     };
     if (runtime) return;
     manualRuntime = startDesktopDnsSdSession({
@@ -111,6 +121,8 @@ export function runDesktopManualSyncWithDiscovery() {
       }
     });
   }).finally(() => {
+    if (manualSettleTimer) clearTimeout(manualSettleTimer);
+    manualSettleTimer = null;
     manualRuntime?.stop();
     manualRuntime = null;
     manualRun = null;
@@ -120,15 +132,19 @@ export function runDesktopManualSyncWithDiscovery() {
   return manualRun;
 }
 
-async function continueManualRun(peer: AvailablePeer) {
+async function continueManualRun(peers: AvailablePeer[]) {
   if (!manualRun) return;
   const ownsRoute = Boolean(manualRuntime);
   manualRuntime?.stop();
   manualRuntime = null;
   try {
-    return await syncAcrossAvailableEndpoints(loadDesktopSyncGroup(), peer, 'manual');
+    let result: unknown;
+    for (const peer of peers) {
+      result = await syncAcrossAvailableEndpoints(loadDesktopSyncGroup(), peer, 'manual');
+    }
+    return result;
   } finally {
-    if (ownsRoute) removeDesktopSyncGroupRoute(peer.peerDeviceId);
+    if (ownsRoute) peers.forEach((peer) => removeDesktopSyncGroupRoute(peer.peerDeviceId));
   }
 }
 
