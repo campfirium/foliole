@@ -150,6 +150,27 @@ it('returns an abnormal instrumentation exit as raw controller failure', async (
   });
 });
 
+it('rejects a failed Android test even when am instrument exits zero', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const stdout = [
+    'INSTRUMENTATION_STATUS_CODE: -2', 'FAILURES!!!', 'Tests run: 1, Failures: 1',
+    'INSTRUMENTATION_CODE: -1'
+  ].join('\n');
+  const execute = vi.fn(async (_command, args) => args.includes('instrument')
+    ? { code: 0, output: stdout, stdout }
+    : successfulAdbResult(args));
+
+  await expect(runMacosA5SyncGroupMaintenance({
+    action: 'leave-sync-group', buildIdentity: 'build-test-failed', env: {}, evidenceRoot: root,
+    execute, paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
+    serial: '87a33a4b'
+  })).rejects.toMatchObject({
+    executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
+    missingFact: 'android_instrumentation_test_success'
+  });
+});
+
 it('preserves a lost Android window focus as an environment failure', async () => {
   const root = createTestRoot();
   roots.push(root);

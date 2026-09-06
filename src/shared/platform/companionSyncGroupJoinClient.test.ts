@@ -18,6 +18,19 @@ describe('companion Sync Group provider identity', () => {
     }, 'group-1')).toEqual({ device, deviceName: 'Mac Studio', platform: 'darwin' });
   });
 
+  it('reconstructs the advertised Windows provider with Windows path semantics', () => {
+    const device = createSyncGroupDeviceIdentity({
+      device_anchor: '22222222-2222-4222-8222-222222222222',
+      group_id: 'group-1', library_path: 'D:\\Foliole\\foliole.db', path_flavor: 'windows'
+    });
+
+    expect(providerFromDiscovery({
+      providerDeviceId: device.identity_key,
+      providerDeviceName: 'V',
+      providerPlatform: 'Windows'
+    }, 'group-1')).toEqual({ device, deviceName: 'V', platform: 'Windows' });
+  });
+
   it('rejects a provider identity from a different group', () => {
     const device = createSyncGroupDeviceIdentity({
       device_anchor: '11111111-1111-4111-8111-111111111111',

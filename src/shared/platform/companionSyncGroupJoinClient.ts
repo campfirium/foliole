@@ -93,13 +93,17 @@ export function providerFromDiscovery(args: {
   }
   const device = createSyncGroupDeviceIdentity({
     device_anchor: parts[2], group_id: groupId, library_path: parts[3],
-    path_flavor: args.providerPlatform === 'win32' ? 'windows' : 'posix'
+    path_flavor: isWindowsProvider(args.providerPlatform) ? 'windows' : 'posix'
   });
   if (device.identity_key !== args.providerDeviceId) throw new Error('sync_group_provider_identity_invalid');
   const deviceName = args.providerDeviceName.trim();
   const platform = args.providerPlatform.trim();
   if (!deviceName || !platform) throw new Error('sync_group_provider_identity_invalid');
   return { device, deviceName, platform };
+}
+
+function isWindowsProvider(platform: string) {
+  return ['win32', 'windows'].includes(platform.trim().toLowerCase());
 }
 
 export function cancelCompanionSyncGroupJoin(requestId: string) {
