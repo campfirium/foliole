@@ -151,6 +151,12 @@ function startForegroundSync(
         args.resourceContinuationModeRef.current = 'full';
         clearRetryTimer(args.retryTimerRef);
       } else if (outcome === 'backlog' || outcome === 'failed') {
+        if (!args.isSyncGroupReadyRef.current) {
+          args.retryAttemptRef.current = 0;
+          args.resourceContinuationModeRef.current = 'full';
+          clearRetryTimer(args.retryTimerRef);
+          return;
+        }
         retryOutcome = outcome;
         if (outcome === 'backlog') args.setStatus('syncing');
       } else {
