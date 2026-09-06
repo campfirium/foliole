@@ -240,7 +240,7 @@ extension FoliolePhysicalSyncGroupUITests {
         let localNetworkAllow = springboard.buttons.matching(NSPredicate(
             format: "label IN %@", ["Allow", "允许"]
         )).firstMatch
-        if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap(); return }
+        if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap() }
         let wlanOnly = springboard.buttons.matching(NSPredicate(
             format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
         )).firstMatch
