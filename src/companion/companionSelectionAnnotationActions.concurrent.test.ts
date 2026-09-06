@@ -43,7 +43,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => ({
-  applyCompanionSyncNodeVersions: vi.fn(),
+  applyCompanionLocalNodeVersions: vi.fn(),
   applyCompanionSyncNodeVersionsWithinWriterTask: nativeWrites.apply,
   saveCompanionSyncNodeReviewRecord: vi.fn(),
   saveCompanionSyncNodeReviewRecordWithinWriterTask: nativeWrites.saveReview

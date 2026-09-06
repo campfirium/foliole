@@ -83,6 +83,7 @@ it('builds the canonical remote node upsert params', () => {
     4,
     'phone#1',
     'phone',
+    0,
     '2026-04-21T10:00:00.000Z',
     '2026-04-21T11:00:00.000Z',
     null
@@ -107,7 +108,8 @@ it('builds an explicit update for an existing remote node', () => {
   expect(statement.sql).toMatch(/^UPDATE nodes SET/);
   expect(statement.sql).not.toContain('ON CONFLICT');
   expect(statement.sql).toContain('current_version_id = ?');
-  expect(statement.sql).toContain('sync_dirty = 0');
+  expect(statement.sql).toContain('sync_dirty = ?');
+  expect(statement.params.at(-5)).toBe(0);
   expect(statement.sql).toContain('WHERE id = ?');
   expect(statement.params).toEqual([
     ...buildRemoteNodeUpsert(createNodeRecord(), 'body-hash').params.slice(1),

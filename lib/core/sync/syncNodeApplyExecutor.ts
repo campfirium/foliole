@@ -133,7 +133,10 @@ export async function applySyncNodesWithDbPort(
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
       const decision = decideIncomingNodeApply(localNode, record, options.operation);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-        await applyAcceptedRemoteNode({ invalidatedAt, localNode, options, preparedTextBodyHashes, record, remoteNodeIdsInBatch, result, tx });
+        await applyAcceptedRemoteNode({
+          invalidatedAt, localNode, operation: options.operation ?? 'remote_sync', options, preparedTextBodyHashes,
+          record, remoteNodeIdsInBatch, result, tx
+        });
         continue;
       }
       await upsertRemoteVersion(tx, record);

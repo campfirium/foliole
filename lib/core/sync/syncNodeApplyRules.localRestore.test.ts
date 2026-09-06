@@ -52,3 +52,14 @@ it('accepts only an explicit local restore that directly follows the deleted ver
   expect(decideIncomingNodeApply(local, restoredVersion('desktop#stale'), 'local_restore'))
     .toBe('block_incoming');
 });
+
+it('advances a dirty active node only for an explicit local mutation', () => {
+  const active = { ...local, deleted_at: null };
+  const mutation = {
+    ...restoredVersion('desktop#deleted'),
+    snapshot: { ...restoredVersion('desktop#deleted').snapshot, deleted_at: null }
+  };
+
+  expect(decideIncomingNodeApply(active, mutation, 'local_mutation')).toBe('apply_fast_forward');
+  expect(decideIncomingNodeApply(active, mutation, 'remote_sync')).toBe('block_incoming');
+});

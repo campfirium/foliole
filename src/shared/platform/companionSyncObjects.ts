@@ -126,6 +126,7 @@ export {
   saveCompanionSyncStatePushCursor
 } from './companionSyncCursors';
 export {
+  applyCompanionLocalNodeVersions,
   applyCompanionSyncNodeVersions,
   applyCompanionSyncNodeVersionsWithinWriterTask,
   applyCompanionTrashRestoreNodeVersions

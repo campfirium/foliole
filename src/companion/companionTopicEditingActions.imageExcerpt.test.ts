@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['topic-1'])
+  applyCompanionLocalNodeVersions: vi.fn(async () => ['topic-1'])
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
@@ -72,7 +72,7 @@ it('preserves image excerpt regions while relocating the markdown image occurren
     nodeId: parent.id,
     snapshot
   });
-  const calls = syncObjectsMock.applyCompanionSyncNodeVersions.mock.calls as unknown as Array<[NativeSyncNodeRecord[]]>;
+  const calls = syncObjectsMock.applyCompanionLocalNodeVersions.mock.calls as unknown as Array<[NativeSyncNodeRecord[]]>;
   const appliedVersions = calls[0]?.[0];
 
   expect(result?.snapshot.nodesById['child-1']).toMatchObject({

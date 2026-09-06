@@ -13,7 +13,7 @@ export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions,
   import_source_fingerprint, import_content_fingerprint, position,
   current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -40,7 +40,7 @@ ON CONFLICT(id) DO UPDATE SET
   position = excluded.position,
   current_version_id = excluded.current_version_id,
   last_modified_by_host_name = excluded.last_modified_by_host_name,
-  sync_dirty = 0,
+  sync_dirty = excluded.sync_dirty,
   created_at = excluded.created_at,
   updated_at = excluded.updated_at,
   deleted_at = excluded.deleted_at`;
@@ -52,7 +52,7 @@ export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
   anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?,
   import_source_fingerprint = ?, import_content_fingerprint = ?, position = ?,
-  current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = 0,
+  current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = ?,
   created_at = ?, updated_at = ?, deleted_at = ?
 WHERE id = ?`;
 
@@ -75,22 +75,30 @@ export const INSERT_NODE_ATTACHMENT_LINK_SQL = `INSERT INTO node_attachments (no
 VALUES (?, ?, ?)
 ON CONFLICT(node_id, attachment_id, role) DO NOTHING`;
 
-export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash: string): SyncNodeStatement {
+export function buildRemoteNodeUpsert(
+  record: NativeSyncNodeRecord,
+  bodyBlobHash: string,
+  syncDirty = 0
+): SyncNodeStatement {
   return {
-    params: buildRemoteNodeParams(record, bodyBlobHash),
+    params: buildRemoteNodeParams(record, bodyBlobHash, syncDirty),
     sql: UPSERT_REMOTE_NODE_SQL
   };
 }
 
-export function buildRemoteNodeUpdate(record: NativeSyncNodeRecord, bodyBlobHash: string): SyncNodeStatement {
-  const params = buildRemoteNodeParams(record, bodyBlobHash);
+export function buildRemoteNodeUpdate(
+  record: NativeSyncNodeRecord,
+  bodyBlobHash: string,
+  syncDirty = 0
+): SyncNodeStatement {
+  const params = buildRemoteNodeParams(record, bodyBlobHash, syncDirty);
   return {
     params: [...params.slice(1), params[0]!],
     sql: UPDATE_REMOTE_NODE_SQL
   };
 }
 
-function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string): DbParams {
+function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty: number): DbParams {
   const { snapshot } = record;
   const provenance = normalizeNodeImportProvenance({
     importContentFingerprint: snapshot.import_content_fingerprint,
@@ -123,6 +131,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.position ?? null,
       record.version_id,
       record.host_name,
+      syncDirty,
       snapshot.created_at,
       snapshot.updated_at,
       snapshot.deleted_at

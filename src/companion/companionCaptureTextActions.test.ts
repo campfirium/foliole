@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['node-created'])
+  applyCompanionLocalNodeVersions: vi.fn(async () => ['node-created'])
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
@@ -61,7 +61,7 @@ describe('companion capture text actions', () => {
       title: 'Quick note'
     });
     expect(result.snapshot.nodeOrder).toEqual([INBOX_NODE_ID, result.nodeId]);
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         host_name: 'android-device',
         object_id: result.nodeId,
@@ -78,7 +78,7 @@ describe('companion capture text actions', () => {
       snapshot: createSnapshot(),
       text: '   '
     })).rejects.toMatchObject({ code: 'empty' });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 
   it('rejects capture when Inbox is unavailable', async () => {
@@ -91,7 +91,7 @@ describe('companion capture text actions', () => {
       snapshot,
       text: 'Quick note'
     })).rejects.toMatchObject({ code: 'inbox-unavailable' });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 
   it('rejects capture when Inbox is trashed', async () => {
@@ -102,6 +102,6 @@ describe('companion capture text actions', () => {
       snapshot: { ...createSnapshot(), trashedNodeIds: [INBOX_NODE_ID] },
       text: 'Quick note'
     })).rejects.toMatchObject({ code: 'inbox-unavailable' });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 });

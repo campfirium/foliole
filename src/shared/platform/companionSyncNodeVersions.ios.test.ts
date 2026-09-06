@@ -4,7 +4,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
-import { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
+import {
+  applyCompanionLocalNodeVersions,
+  applyCompanionSyncNodeVersions
+} from './companionSyncNodeVersions';
 import {
   createFakeCapacitorConnection,
   installCompanionNodeSchema
@@ -54,6 +57,47 @@ it('persists an iOS node version through the shared core with mutation UI availa
   expect(database.prepare('SELECT title, current_version_id FROM nodes WHERE id = ?').get('ios-node-1')).toEqual({
     current_version_id: 'ios-device#1',
     title: 'iOS prepared node'
+  });
+});
+
+it('marks a local iOS node version dirty while retaining its remote base hash', async () => {
+  database = new Database(':memory:');
+  installCompanionNodeSchema(database);
+  const connection = createConnection(database);
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+  const remote = iosNodeVersion();
+  await applyCompanionSyncNodeVersions([remote], manager as never);
+  const local = {
+    ...remote,
+    content_hash: 'ios-local-hash',
+    parent_version_id: remote.version_id,
+    snapshot: {
+      ...remote.snapshot,
+      content: 'Locally edited body',
+      updated_at: '2026-07-21T00:01:00.000Z'
+    },
+    updated_at: '2026-07-21T00:01:00.000Z',
+    version_created_at: '2026-07-21T00:01:00.000Z',
+    version_id: 'ios-device#2'
+  } satisfies NativeSyncNodeRecord;
+
+  await expect(applyCompanionLocalNodeVersions([local], manager as never))
+    .resolves.toEqual(['ios-node-1']);
+
+  expect(database.prepare(
+    'SELECT current_version_id, sync_dirty FROM nodes WHERE id = ?'
+  ).get('ios-node-1')).toEqual({ current_version_id: 'ios-device#2', sync_dirty: 1 });
+  expect(database.prepare(
+    `SELECT base_content_hash, content_hash, sync_dirty FROM sync_object_state
+     WHERE object_type = 'node' AND object_id = ?`
+  ).get('ios-node-1')).toEqual({
+    base_content_hash: 'ios-node-hash',
+    content_hash: 'ios-local-hash',
+    sync_dirty: 1
   });
 });
 

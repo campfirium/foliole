@@ -15,7 +15,7 @@ export type IncomingNodeApplyDecision =
   | 'block_incoming'
   | 'record_conflict';
 
-export type SyncNodeApplyOperation = 'local_restore' | 'remote_sync';
+export type SyncNodeApplyOperation = 'local_mutation' | 'local_restore' | 'remote_sync';
 
 function branchRecordKey(record: NativeSyncNodeRecord) {
   return `${record.object_id}\n${record.host_name?.trim() || 'remote'}`;
@@ -98,6 +98,18 @@ function isExplicitLocalRestore(
     && record.parent_version_id === local.current_version_id;
 }
 
+function isExplicitLocalMutation(
+  local: LocalSyncNodeState,
+  record: NativeSyncNodeRecord,
+  operation: SyncNodeApplyOperation
+) {
+  return operation === 'local_mutation'
+    && !local.deleted_at
+    && !record.snapshot.deleted_at
+    && record.version_id !== local.current_version_id
+    && record.parent_version_id === local.current_version_id;
+}
+
 export function decideIncomingNodeApply(
   local: LocalSyncNodeState | null,
   record: NativeSyncNodeRecord,
@@ -107,6 +119,9 @@ export function decideIncomingNodeApply(
     return 'apply_missing_local';
   }
   if (isExplicitLocalRestore(local, record, operation)) {
+    return 'apply_fast_forward';
+  }
+  if (isExplicitLocalMutation(local, record, operation)) {
     return 'apply_fast_forward';
   }
   if (local.deleted_at && !record.snapshot.deleted_at) {

@@ -8,7 +8,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import { runCompanionSyncOptionalMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
-  applyCompanionSyncNodeVersions,
+  applyCompanionLocalNodeVersions,
   applyCompanionSyncNodeVersionsWithinWriterTask,
   saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
@@ -123,7 +123,7 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
   if (!draft) {
     return null;
   }
-  await applyCompanionSyncNodeVersions([draft.nodeVersion]);
+  await applyCompanionLocalNodeVersions([draft.nodeVersion]);
   if (draft.review) {
     await saveCompanionSyncNodeReviewRecord({ nodeId: draft.node.id, review: draft.review });
   }
@@ -138,7 +138,7 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
     if (!draft) return null;
-    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion]);
+    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion], undefined, 'local_mutation');
     if (draft.review) {
       await saveCompanionSyncNodeReviewRecordWithinWriterTask({ nodeId: draft.node.id, review: draft.review });
     }
@@ -159,7 +159,7 @@ async function persistExistingHighlightNode(args: {
   const node = args.update(args.node, new Date().toISOString());
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
-  await applyCompanionSyncNodeVersions([nodeVersion]);
+  await applyCompanionLocalNodeVersions([nodeVersion]);
   return {
     nodeId: versionedNode.id,
     snapshot: {

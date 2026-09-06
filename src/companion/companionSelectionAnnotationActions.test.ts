@@ -9,7 +9,7 @@ import {
 } from './companionSelectionAnnotationActions.test-support';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['node-created']),
+  applyCompanionLocalNodeVersions: vi.fn(async () => ['node-created']),
   saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'review-hash', object_id: 'node-created' }))
 }));
 
@@ -114,7 +114,7 @@ describe('companion new selection annotation actions', () => {
       parentNodeId: 'parent',
       title: 'Beta'
     });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         host_name: 'android-device',
         object_id: 'node-00000000-0000-4000-8000-000000000001',
@@ -175,7 +175,7 @@ describe('companion existing highlight annotation actions', () => {
       content: 'Beta\n※ Remember this',
       currentVersionId: 'ver_00000000-0000-4000-8000-000000000003'
     });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',
@@ -195,7 +195,7 @@ describe('companion existing highlight annotation actions', () => {
 
     expect(result?.snapshot.trashedNodeIds).toContain('highlight-1');
     expect(result?.snapshot.nodesById['highlight-1']!.deletedAt).toEqual(expect.any(String));
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',

@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { SelectionAnnotationPayload } from '../shared/selectionAnnotationActions';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['node-created']),
+  applyCompanionLocalNodeVersions: vi.fn(async () => ['node-created']),
   saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'review-hash', object_id: 'node-created' }))
 }));
 
@@ -73,7 +73,7 @@ describe('companion selection annotation write boundaries', () => {
       parentNodeId: 'parent'
     });
     expect(result?.snapshot.nodesById.parent?.content).toBe('Alpha Beta Gamma');
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         host_name: 'android-device',
         object_id: result?.nodeId
@@ -100,7 +100,7 @@ describe('companion selection annotation write boundaries', () => {
       payload: createPayload(),
       snapshot: { ...createSnapshot(), trashedNodeIds: ['parent'] }
     })).resolves.toBeNull();
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
     expect(syncObjectsMock.saveCompanionSyncNodeReviewRecord).not.toHaveBeenCalled();
   });
 });
