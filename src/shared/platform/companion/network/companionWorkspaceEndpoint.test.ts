@@ -26,6 +26,7 @@ const group = {
   local_device_identity_key: 'device-local', devices: [
     device('device-local', 'Local', 'android-capacitor'),
     device('device-mac', 'Mac', 'darwin'),
+    device('device-mobile', 'Phone', 'android-capacitor'),
     { ...device('device-left', 'Left', 'win32'), state: 'left' as const }
   ]
 };
@@ -52,6 +53,15 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
   }]);
+});
+
+it('does not route companion sync through a discovered mobile Device', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mobile' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://phone:38641')).resolves.toEqual([]);
 });
 
 it('uses the accepted group-bound endpoint to bootstrap the first Sync Pack', async () => {

@@ -18,6 +18,10 @@ export interface CompanionWorkspaceSyncTarget {
   groupId?: string;
 }
 
+function isDesktopDevice(platform: string) {
+  return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
+}
+
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
   const group = await loadCompanionSyncGroup();
   if (target.groupId && group?.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
@@ -34,8 +38,10 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   if (remoteDevices.length === 0) {
     return [{ endpointUrl: normalized, groupId: group.group_id }];
   }
+  const remoteDesktopDevices = remoteDevices.filter((device) => isDesktopDevice(device.platform));
+  if (remoteDesktopDevices.length === 0) return [];
   const discovered = await discoverCompanionDesktops(normalized, options).catch(() => []);
-  return remoteDevices.flatMap((device) => {
+  return remoteDesktopDevices.flatMap((device) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
       && candidate.discovery.provider_device_id === device.device_identity_key);
