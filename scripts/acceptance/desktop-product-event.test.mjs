@@ -79,6 +79,20 @@ it('matches an exact node through the persisted workspace list fields', async ()
     .resolves.toMatchObject({ nodesById: { 'node-1': { id: 'node-1' } } });
 });
 
+it('allows stable topic identity matching without an internal persistence timestamp', async () => {
+  const page = { evaluate: vi.fn(async (callback, args) => {
+    const previous = globalThis.electronAPI;
+    globalThis.electronAPI = { invoke: async () => ({ nodesById: { 'node-1': {
+      bodyBlobHash: 'body-hash', id: 'node-1', title: 'Topic', updatedAt: 'persisted-time'
+    } } }), onWorkspaceSyncApplied: () => () => undefined };
+    try { return await callback(args); }
+    finally { globalThis.electronAPI = previous; }
+  }) };
+  await expect(waitForDesktopProductState(page, { command: 'load_workspace_list_snapshot',
+    condition: { bodyBlobHash: 'body-hash', kind: 'exact-node', nodeId: 'node-1', title: 'Topic' },
+    eventName: 'onWorkspaceSyncApplied', timeoutMs: 100 })).resolves.toBeTruthy();
+});
+
 it('subscribes before starting product discovery and matches the bound group', async () => {
   const order = [];
   const page = { evaluate: vi.fn(async (callback, args) => {

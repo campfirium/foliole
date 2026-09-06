@@ -99,7 +99,7 @@ export async function waitForDesktopProductState(page, {
         return (node?.id ?? node?.nodeId) === condition.nodeId
           && node?.title === condition.title
           && node?.bodyBlobHash === condition.bodyBlobHash
-          && node?.updatedAt === condition.updatedAt;
+          && (condition.updatedAt === undefined || node?.updatedAt === condition.updatedAt);
       }
       if (condition.kind === 'sync-conflict-count') {
         return Array.isArray(value) && value.length >= condition.count;
