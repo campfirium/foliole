@@ -40,10 +40,11 @@ export function subscribeCompanionSyncParticipation(listener: () => void) {
 export async function reconcileCompanionSyncGroupProvider(
   bootstrap: NativeCompanionBootstrapState,
   group: SyncGroupPayload | null,
-  factsRevision = '0'
+  factsRevision = '0',
+  participating = true
 ) {
   if (!isNativeCompanionSyncGroupRuntime()) return null;
-  if (!group || !bootstrap.database_path) {
+  if (!group || !bootstrap.database_path || !participating) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
   const localDevice = group.devices.find((device) =>

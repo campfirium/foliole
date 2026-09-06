@@ -91,6 +91,12 @@ it('stops the native provider when there is no local group membership', async ()
   expect(runtime.start).not.toHaveBeenCalled();
 });
 
+it('stops the native provider while automatic sync participation is paused', async () => {
+  await reconcileCompanionSyncGroupProvider(bootstrap, group, '5:paused', false);
+  expect(runtime.stop).toHaveBeenCalledOnce();
+  expect(runtime.start).not.toHaveBeenCalled();
+});
+
 it('publishes the native participation payload after a permanent choice changes', async () => {
   const {
     getCompanionSyncParticipationSnapshot,

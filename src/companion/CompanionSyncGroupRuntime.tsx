@@ -47,12 +47,12 @@ export function CompanionSyncGroupRuntime(props: {
     if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
     void reconcileCompanionSyncGroupProvider(
-      bootstrapState, group, factsRevision
+      bootstrapState, group, factsRevision, workspaceSync.syncParticipation.participating
     ).catch((error) => {
       console.error('[companion-sync-group] provider reconciliation failed', error);
     });
   }, [bootstrapState, group, loaded, mutationRevision,
-    workspaceSync.state.last_synced_at]);
+    workspaceSync.state.last_synced_at, workspaceSync.syncParticipation.participating]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>
