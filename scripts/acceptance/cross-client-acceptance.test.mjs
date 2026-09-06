@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { isDesktopWorkspaceUrl, parseJourneyConfig } from './cross-client-sync-journey.mjs';
+import {
+  exactSnapshotNode, isDesktopWorkspaceUrl, parseJourneyConfig
+} from './cross-client-sync-journey.mjs';
 import { parseLaunchConfig } from './launch-isolated-desktop.mjs';
 
 const roots = [];
@@ -67,6 +69,15 @@ it('recognizes packaged Electron workspaces on both desktop hosts', () => {
   expect(isDesktopWorkspaceUrl('file:///D:/C/foliole-sync/dist/desktop/index.html')).toBe(true);
   expect(isDesktopWorkspaceUrl('http://127.0.0.1:4173/')).toBe(true);
   expect(isDesktopWorkspaceUrl('https://example.com/')).toBe(false);
+});
+
+it('projects the exact client-pair entity from the persisted workspace list shape', () => {
+  const expected = { content: 'Body', nodeId: 'node-1', title: 'Topic',
+    updatedAt: '2026-09-06T03:09:17.491Z' };
+  expect(exactSnapshotNode({ nodesById: { 'node-1': {
+    content: '', id: 'node-1', openingText: 'Body', title: 'Topic',
+    updatedAt: '2026-09-06T03:09:17.491Z'
+  } } }, expected)).toEqual(expected);
 });
 
 it('keeps one Mac journey separate from source and client lifecycle control', () => {

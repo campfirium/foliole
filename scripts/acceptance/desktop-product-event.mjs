@@ -96,9 +96,9 @@ export async function waitForDesktopProductState(page, {
       }
       if (condition.kind === 'exact-node') {
         const node = value?.nodesById?.[condition.nodeId];
-        return node?.nodeId === condition.nodeId
+        return (node?.id ?? node?.nodeId) === condition.nodeId
           && node?.title === condition.title
-          && node?.content === condition.content
+          && (node?.openingText ?? node?.content) === condition.content
           && node?.updatedAt === condition.updatedAt;
       }
       if (condition.kind === 'sync-conflict-count') {

@@ -112,9 +112,9 @@ async function formGroup(owner, joiner) {
   return ownerGroup;
 }
 
-function exactNode(snapshot, expected) {
+export function exactSnapshotNode(snapshot, expected) {
   const node = snapshot.nodesById[expected.nodeId];
-  return { content: node?.content, nodeId: node?.nodeId,
+  return { content: node?.openingText ?? node?.content, nodeId: node?.id ?? node?.nodeId,
     title: node?.title, updatedAt: node?.updatedAt };
 }
 
@@ -124,7 +124,7 @@ async function observeNode(page, expected) {
     condition: { kind: 'exact-node', ...expected }, eventName: 'onWorkspaceSyncApplied',
     timeoutMs: 90_000
   });
-  if (JSON.stringify(exactNode(snapshot, expected)) !== JSON.stringify(expected)) {
+  if (JSON.stringify(exactSnapshotNode(snapshot, expected)) !== JSON.stringify(expected)) {
     throw new Error(`Exact topic did not converge: ${expected.nodeId}`);
   }
 }
