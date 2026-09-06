@@ -75,6 +75,7 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     state,
     syncConflictCount: 0,
     syncParticipation: {
+      hydrated: true,
       lifecycle_active: true, participating: true, sync_enabled: true, sync_paused: false
     },
     syncProgress: null,

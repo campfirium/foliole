@@ -15,6 +15,7 @@ vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
 
 vi.mock('./useCompanionSyncParticipation', () => ({
   useCompanionSyncParticipation: () => ({
+    hydrated: true,
     lifecycle_active: true, participating: false, sync_enabled: true, sync_paused: true
   })
 }));
