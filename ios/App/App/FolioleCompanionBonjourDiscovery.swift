@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import UIKit
 
 final class FolioleCompanionBonjourDiscoveryPool {
     private var active: [UUID: FolioleCompanionBonjourDiscovery] = [:]
@@ -42,6 +43,7 @@ final class FolioleCompanionBonjourDiscoveryPool {
 
 final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegate {
     private var browser: NWBrowser?
+    private var foregroundObserver: NSObjectProtocol?
     private var results: [String: [String: Any]] = [:]
     private var services: [String: NetService] = [:]
     private let contract: FolioleCompanionNetworkContract
@@ -53,6 +55,14 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
     }
 
     func start() -> [String: Any] {
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.restartAfterForeground() }
+        startBrowser()
+        return event(change: "started", status: "searching")
+    }
+
+    private func startBrowser() {
         let browser = NWBrowser(for: .bonjour(type: "_foliole-sync._tcp", domain: "local."), using: .tcp)
         self.browser = browser
         browser.browseResultsChangedHandler = { [weak self] results, changes in
@@ -62,16 +72,32 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
             DispatchQueue.main.async { self?.update(state: state) }
         }
         browser.start(queue: .main)
-        return event(change: "started", status: "searching")
+    }
+
+    private func restartAfterForeground() {
+        guard browser != nil else { return }
+        stopBrowser()
+        onEvent(event(change: "started", status: "searching"))
+        startBrowser()
     }
 
     func stop() {
+        if let foregroundObserver {
+            NotificationCenter.default.removeObserver(foregroundObserver)
+            self.foregroundObserver = nil
+        }
+        stopBrowser()
+        onEvent(event(change: "stopped", status: "stopped"))
+    }
+
+    private func stopBrowser() {
+        browser?.browseResultsChangedHandler = nil
+        browser?.stateUpdateHandler = nil
         browser?.cancel()
         browser = nil
         services.values.forEach { $0.stop() }
         services.removeAll()
         results.removeAll()
-        onEvent(event(change: "stopped", status: "stopped"))
     }
 
     private func update(state: NWBrowser.State) {
