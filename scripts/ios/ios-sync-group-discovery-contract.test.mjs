@@ -66,6 +66,7 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');
+  expect(physicalTest).toContain('localNetworkAllow.waitForExistence(timeout: 1)');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');
   expect(physicalTest).toContain('testShowsRequestedSyncGroupDevices()');
   expect(physicalTest).toContain('testCapturesRequestedFact()');

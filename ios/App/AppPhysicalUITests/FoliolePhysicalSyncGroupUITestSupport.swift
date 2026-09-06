@@ -237,6 +237,10 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func resolveOptionalCellularDataDecision() {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let localNetworkAllow = springboard.buttons.matching(NSPredicate(
+            format: "label IN %@", ["Allow", "允许"]
+        )).firstMatch
+        if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap(); return }
         let wlanOnly = springboard.buttons.matching(NSPredicate(
             format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
         )).firstMatch
