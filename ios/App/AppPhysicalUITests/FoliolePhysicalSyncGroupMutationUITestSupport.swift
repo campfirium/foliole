@@ -28,7 +28,7 @@ extension FoliolePhysicalSyncGroupUITests {
         ).firstMatch
         XCTAssertTrue(passage.waitForExistence(timeout: 60), "Fri did not show the requested selection text.")
         passage.press(forDuration: 1.0)
-        if app.buttons["Add Comment"].waitForExistence(timeout: 3) { return }
+        if app.buttons["Close Highlight"].waitForExistence(timeout: 3) { return }
         if !app.buttons["Highlight"].waitForExistence(timeout: 3) {
             let overflow = app.buttons.matching(NSPredicate(
                 format: "label == %@ OR label == %@ OR label == %@", "More", "Next", "Show More"
