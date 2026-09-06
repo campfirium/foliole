@@ -28,6 +28,7 @@ extension FoliolePhysicalSyncGroupUITests {
         ).firstMatch
         XCTAssertTrue(passage.waitForExistence(timeout: 60), "Fri did not show the requested selection text.")
         passage.press(forDuration: 1.0)
+        if app.buttons["Add Comment"].waitForExistence(timeout: 3) { return }
         if !app.buttons["Highlight"].waitForExistence(timeout: 3) {
             let overflow = app.buttons.matching(NSPredicate(
                 format: "label == %@ OR label == %@ OR label == %@", "More", "Next", "Show More"
@@ -42,11 +43,13 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func addCommentToHighlight(text: String, comment: String, in app: XCUIApplication) {
-        let passage = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@", text)
-        ).firstMatch
-        XCTAssertTrue(passage.waitForExistence(timeout: 30), "Fri did not render the new highlight target.")
-        passage.tap()
+        if !app.buttons["Add Comment"].exists {
+            let passage = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", text)
+            ).firstMatch
+            XCTAssertTrue(passage.waitForExistence(timeout: 30), "Fri did not render the new highlight target.")
+            passage.tap()
+        }
         tapButton(named: "Add Comment", in: app, timeout: 30)
         let editor = app.textViews.firstMatch
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The existing highlight comment editor is unavailable.")
