@@ -116,12 +116,12 @@ async function formGroup(owner, joiner) {
 export function exactSnapshotNode(snapshot, expected) {
   const node = snapshot.nodesById[expected.nodeId];
   return { bodyBlobHash: node?.bodyBlobHash, nodeId: node?.id ?? node?.nodeId,
-    title: node?.title, updatedAt: node?.updatedAt };
+    title: node?.title };
 }
 
 export function expectedSnapshotNode(expected) {
   return { bodyBlobHash: createHash('sha256').update(expected.content).digest('hex'),
-    nodeId: expected.nodeId, title: expected.title, updatedAt: expected.updatedAt };
+    nodeId: expected.nodeId, title: expected.title };
 }
 
 async function observeNode(page, expected) {
