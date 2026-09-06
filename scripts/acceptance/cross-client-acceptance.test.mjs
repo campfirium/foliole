@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 
 import {
-  exactSnapshotNode, isDesktopWorkspaceUrl, parseJourneyConfig
+  exactSnapshotNode, expectedSnapshotNode, isDesktopWorkspaceUrl, parseJourneyConfig
 } from './cross-client-sync-journey.mjs';
 import { parseLaunchConfig } from './launch-isolated-desktop.mjs';
 
@@ -75,9 +75,10 @@ it('projects the exact client-pair entity from the persisted workspace list shap
   const expected = { content: 'Body', nodeId: 'node-1', title: 'Topic',
     updatedAt: '2026-09-06T03:09:17.491Z' };
   expect(exactSnapshotNode({ nodesById: { 'node-1': {
-    content: '', id: 'node-1', openingText: 'Body', title: 'Topic',
+    bodyBlobHash: '6ccaa6415b5ee449e3c5c716f57b4608ebe3b780f5aa6b077bc5d8eee5d961f9',
+    content: '', id: 'node-1', openingText: 'Body preview', title: 'Topic',
     updatedAt: '2026-09-06T03:09:17.491Z'
-  } } }, expected)).toEqual(expected);
+  } } }, expected)).toEqual(expectedSnapshotNode(expected));
 });
 
 it('keeps one Mac journey separate from source and client lifecycle control', () => {

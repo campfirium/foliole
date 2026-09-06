@@ -67,14 +67,15 @@ it('matches an exact node through the persisted workspace list fields', async ()
   const page = { evaluate: vi.fn(async (callback, args) => {
     const previous = globalThis.electronAPI;
     globalThis.electronAPI = { invoke: async () => ({ nodesById: { 'node-1': {
-      content: '', id: 'node-1', openingText: 'Body', title: 'Topic', updatedAt: 'now'
+      bodyBlobHash: 'body-hash', content: '', id: 'node-1', openingText: 'Body preview',
+      title: 'Topic', updatedAt: 'now'
     } } }), onWorkspaceSyncApplied: () => () => undefined };
     try { return await callback(args); }
     finally { globalThis.electronAPI = previous; }
   }) };
   await expect(waitForDesktopProductState(page, { command: 'load_workspace_list_snapshot',
-    condition: { content: 'Body', kind: 'exact-node', nodeId: 'node-1', title: 'Topic',
-      updatedAt: 'now' }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 100 }))
+    condition: { bodyBlobHash: 'body-hash', kind: 'exact-node', nodeId: 'node-1',
+      title: 'Topic', updatedAt: 'now' }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 100 }))
     .resolves.toMatchObject({ nodesById: { 'node-1': { id: 'node-1' } } });
 });
 

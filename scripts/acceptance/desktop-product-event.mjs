@@ -98,7 +98,7 @@ export async function waitForDesktopProductState(page, {
         const node = value?.nodesById?.[condition.nodeId];
         return (node?.id ?? node?.nodeId) === condition.nodeId
           && node?.title === condition.title
-          && (node?.openingText ?? node?.content) === condition.content
+          && node?.bodyBlobHash === condition.bodyBlobHash
           && node?.updatedAt === condition.updatedAt;
       }
       if (condition.kind === 'sync-conflict-count') {
