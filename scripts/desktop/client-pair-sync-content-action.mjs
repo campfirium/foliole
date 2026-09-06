@@ -52,7 +52,13 @@ export async function updateClientPairTopic({ expected, now = () => new Date(), 
   if (!result?.updatedNodeIds?.includes(expected.nodeId)) {
     throw new Error('Client pair topic update was not persisted.');
   }
-  return exactNode({ ...current, content, nodeId: expected.nodeId, updatedAt });
+  const persistedSnapshot = await session.invoke('load_workspace_list_snapshot', {
+    includePdfOpenings: false
+  });
+  const persisted = persistedSnapshot?.nodesById?.[expected.nodeId];
+  if (!persisted) throw new Error(`Updated client pair topic is missing: ${expected.nodeId}`);
+  return exactNode({ ...current, content, nodeId: expected.nodeId,
+    updatedAt: persisted.updatedAt ?? updatedAt });
 }
 
 export function exactNode(node) {

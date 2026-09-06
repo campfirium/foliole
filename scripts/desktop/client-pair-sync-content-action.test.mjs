@@ -27,7 +27,8 @@ it('creates and updates the same exact client-pair entity', async () => {
       nodesById[args.nodeId] = args;
       return { createdNodeIds: [args.nodeId] };
     }
-    nodesById[args.nodeId] = args;
+    nodesById[args.nodeId] = { ...args,
+      updatedAt: new Date(Date.parse(args.updatedAt) + 1).toISOString() };
     return { updatedNodeIds: [args.nodeId] };
   });
   const session = { invoke };
@@ -37,6 +38,6 @@ it('creates and updates the same exact client-pair entity', async () => {
     now: () => new Date('2026-08-31T02:01:00.000Z'), session });
 
   expect(updated).toMatchObject({ nodeId: created.nodeId, title: created.title,
-    updatedAt: '2026-08-31T02:01:00.000Z' });
+    updatedAt: '2026-08-31T02:01:00.001Z' });
   expect(updated.content).toContain(created.content);
 });
