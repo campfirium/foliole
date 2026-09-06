@@ -87,23 +87,26 @@ describe('useCompanionWorkspaceSync ready gate', () => {
   it('enables automatic sync when the group and persistent controls are ready', async () => {
     const { shouldEnableCompanionAutoSync } = await import('./useCompanionWorkspaceSync');
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, syncEnabled: true, syncPaused: false
+      groupReady: true, participationHydrated: true, syncEnabled: true, syncPaused: false
     })).toBe(true);
     expect(shouldEnableCompanionAutoSync({
-      groupReady: false, syncEnabled: true, syncPaused: false
+      groupReady: false, participationHydrated: true, syncEnabled: true, syncPaused: false
+    })).toBe(false);
+    expect(shouldEnableCompanionAutoSync({
+      groupReady: true, participationHydrated: false, syncEnabled: true, syncPaused: false
     })).toBe(false);
   });
 
   it('keeps transient lifecycle inactivity out of the persisted automatic sync controls', async () => {
     const { shouldEnableCompanionAutoSync } = await import('./useCompanionWorkspaceSync');
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, syncEnabled: true, syncPaused: false
+      groupReady: true, participationHydrated: true, syncEnabled: true, syncPaused: false
     })).toBe(true);
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, syncEnabled: true, syncPaused: true
+      groupReady: true, participationHydrated: true, syncEnabled: true, syncPaused: true
     })).toBe(false);
     expect(shouldEnableCompanionAutoSync({
-      groupReady: true, syncEnabled: false, syncPaused: false
+      groupReady: true, participationHydrated: true, syncEnabled: false, syncPaused: false
     })).toBe(false);
   });
 });

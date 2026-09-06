@@ -44,7 +44,7 @@ import { useCompanionSyncParticipation } from './useCompanionSyncParticipation';
 it('refreshes participation after foreground subscription and every foreground event', async () => {
   const { result } = renderHook(() => useCompanionSyncParticipation());
 
-  await waitFor(() => expect(result.current).toEqual(mocks.active));
+  await waitFor(() => expect(result.current).toEqual({ ...mocks.active, hydrated: true }));
   await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
 
   await act(async () => mocks.getForeground()?.());

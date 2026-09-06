@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../shared/platform/companion/sync/syncGroupProvider';
 
 export function useCompanionSyncParticipation() {
+  const [hydrated, setHydrated] = useState(false);
   const state = useSyncExternalStore(
     subscribeCompanionSyncParticipation,
     getCompanionSyncParticipationSnapshot,
@@ -17,7 +18,9 @@ export function useCompanionSyncParticipation() {
     let cancelled = false;
     let unsubscribe: () => void = () => undefined;
     const refresh = () => {
-      void loadCompanionSyncParticipationState().catch(() => undefined);
+      void loadCompanionSyncParticipationState()
+        .then(() => { if (!cancelled) setHydrated(true); })
+        .catch(() => undefined);
     };
     refresh();
     void subscribeNativeAppForeground(refresh).then((nextUnsubscribe) => {
@@ -33,7 +36,7 @@ export function useCompanionSyncParticipation() {
       unsubscribe();
     };
   }, []);
-  return state;
+  return { ...state, hydrated };
 }
 
 export function assertCompanionSyncParticipating(participating: boolean) {

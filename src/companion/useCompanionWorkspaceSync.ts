@@ -118,10 +118,13 @@ function useCompanionAutoSync(
   viewState: ReturnType<typeof useCompanionSyncViewState>,
   setSyncProgress: ReturnType<typeof useMergedCompanionSyncProgress>[1],
   groupReady: boolean,
+  participationHydrated: boolean,
   syncEnabled: boolean,
   syncPaused: boolean
 ) {
-  const enabled = shouldEnableCompanionAutoSync({ groupReady, syncEnabled, syncPaused });
+  const enabled = shouldEnableCompanionAutoSync({
+    groupReady, participationHydrated, syncEnabled, syncPaused
+  });
   useForegroundAutoSync(
     viewState.setError,
     viewState.setReadableArticle,
@@ -152,10 +155,11 @@ function createCompanionSnapshotActions(
 
 export function shouldEnableCompanionAutoSync(args: {
   groupReady: boolean;
+  participationHydrated: boolean;
   syncEnabled: boolean;
   syncPaused: boolean;
 }) {
-  return args.groupReady && args.syncEnabled && !args.syncPaused;
+  return args.groupReady && args.participationHydrated && args.syncEnabled && !args.syncPaused;
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
@@ -179,6 +183,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     viewState,
     setMergedSyncProgress,
     join.joined,
+    participationActions.participation.hydrated,
     participationActions.participation.sync_enabled,
     participationActions.participation.sync_paused
   );
