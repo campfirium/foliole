@@ -44,11 +44,15 @@ function restoredVersion(parentVersionId: string | null): NativeSyncNodeRecord {
   };
 }
 
-it('accepts only an explicit local restore that directly follows the deleted version', () => {
+it('accepts local and remote restores that descend from the deleted version', () => {
   expect(decideIncomingNodeApply(local, restoredVersion('desktop#deleted'), 'local_restore'))
     .toBe('apply_fast_forward');
   expect(decideIncomingNodeApply(local, restoredVersion('desktop#deleted')))
-    .toBe('block_incoming');
+    .toBe('apply_fast_forward');
+  expect(decideIncomingNodeApply(local, {
+    ...restoredVersion('ios-device#intermediate'),
+    ancestor_version_ids: ['ios-device#intermediate', 'desktop#deleted']
+  })).toBe('apply_fast_forward');
   expect(decideIncomingNodeApply(local, restoredVersion('desktop#stale'), 'local_restore'))
     .toBe('block_incoming');
 });

@@ -149,3 +149,47 @@ it('does not let an old active remote version revive a permanent-delete tombston
   expect(connection.sqlite.prepare('SELECT version_id FROM node_sync_tombstones WHERE node_id = ?').get('node-1'))
     .toEqual({ version_id: 'desktop#delete' });
 });
+
+it('applies a remote restore that descends from a soft-deleted node version', async () => {
+  const connection = openDatabaseConnection();
+  const deleted = tombstoneRecord();
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty,
+       created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-1', 'item', 'Deleted Remote Node', 'deleted remote body', 'desktop#delete',
+      'desktop', 0, deleted.snapshot.created_at, deleted.updated_at, deleted.snapshot.deleted_at
+    ]
+  );
+  connection.driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, host_name, created_at,
+       content_hash, body_text, snapshot_json
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'desktop#delete', 'node-1', 'desktop#2', 'desktop',
+      deleted.version_created_at ?? deleted.updated_at,
+      deleted.content_hash, deleted.snapshot.content ?? '', JSON.stringify(deleted.snapshot)
+    ]
+  );
+  const restored = tombstoneRecord();
+  restored.is_tombstone = false;
+  restored.version_id = 'phone#restore';
+  restored.parent_version_id = 'desktop#delete';
+  restored.ancestor_version_ids = ['desktop#delete', 'desktop#2', 'desktop#1'];
+  restored.snapshot.deleted_at = null;
+  restored.snapshot.updated_at = '2026-04-21T13:00:00.000Z';
+  restored.updated_at = restored.snapshot.updated_at;
+  restored.version_created_at = restored.snapshot.updated_at;
+  restored.content_hash = 'hash-restored';
+
+  await expect(applySyncNodesAsync([restored])).resolves.toEqual(['node-1']);
+
+  expect(connection.sqlite.prepare(
+    'SELECT current_version_id, deleted_at, sync_dirty FROM nodes WHERE id = ?'
+  ).get('node-1')).toEqual({
+    current_version_id: 'phone#restore', deleted_at: null, sync_dirty: 0
+  });
+});

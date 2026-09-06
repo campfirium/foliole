@@ -121,6 +121,10 @@ export function decideIncomingNodeApply(
   if (isExplicitLocalRestore(local, record, operation)) {
     return 'apply_fast_forward';
   }
+  if (local.deleted_at && !record.snapshot.deleted_at
+      && isRemoteFastForward(record, local.current_version_id)) {
+    return 'apply_fast_forward';
+  }
   if (isExplicitLocalMutation(local, record, operation)) {
     return 'apply_fast_forward';
   }
