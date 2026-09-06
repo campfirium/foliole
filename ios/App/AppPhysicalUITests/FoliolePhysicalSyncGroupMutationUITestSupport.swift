@@ -56,16 +56,16 @@ extension FoliolePhysicalSyncGroupUITests {
         editor.tap()
         editor.typeText(comment)
         tapButton(named: "Save", in: app, timeout: 30)
-
-        let savedPassage = app.staticTexts.matching(
+        waitForDisappearance(editor, timeout: 30,
+                             message: "Fri did not persist the existing highlight comment.")
+        revealReadingChrome(in: app, matching: text)
+        tapButton(named: "More reading actions", in: app, timeout: 30)
+        tapButton(named: "Highlight", in: app, timeout: 30)
+        let savedHighlight = app.buttons.matching(
             NSPredicate(format: "label CONTAINS %@", text)
         ).firstMatch
-        XCTAssertTrue(savedPassage.waitForExistence(timeout: 30), "Fri lost the saved highlight target.")
-        savedPassage.tap()
-        tapButton(named: "Add Comment", in: app, timeout: 30)
-        XCTAssertEqual(app.textViews.firstMatch.value as? String, comment,
-                       "Fri did not persist the existing highlight comment.")
-        tapButton(named: "Cancel", in: app, timeout: 30)
+        XCTAssertTrue(savedHighlight.waitForExistence(timeout: 30),
+                      "Fri did not retain the edited highlight in the topic highlight list.")
     }
 
     func restoreTopicFromTrash(title: String, text: String, in app: XCUIApplication) {
