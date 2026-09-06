@@ -91,14 +91,14 @@ extension FoliolePhysicalSyncGroupUITests {
             .firstMatch.waitForExistence(timeout: 120), "Fri did not show the requested synced topic edit.")
     }
 
-    func appendToVisibleTopic(prefix: String, text: String, in app: XCUIApplication) {
+    func appendToVisibleTopic(prefix: String, existingText: String, text: String, in app: XCUIApplication) {
         openBrowse(in: app)
         let topics = visibleTopics(prefix: prefix, in: app)
         XCTAssertTrue(topics.firstMatch.waitForExistence(timeout: 120),
                       "Fri did not show the topic selected for editing.")
         XCTAssertEqual(topics.count, 1, "Fri must edit exactly one matching topic.")
         topics.firstMatch.tap()
-        revealReadingChrome(in: app)
+        revealReadingChrome(in: app, matching: existingText)
         tapButton(named: "Edit topic", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
@@ -107,7 +107,7 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Done", in: app, timeout: 30)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
             .firstMatch.waitForExistence(timeout: 30), "Fri did not visibly save the requested edit.")
-        revealReadingChrome(in: app)
+        revealReadingChrome(in: app, matching: text)
         tapButton(named: "Exit", in: app, timeout: 30)
     }
 

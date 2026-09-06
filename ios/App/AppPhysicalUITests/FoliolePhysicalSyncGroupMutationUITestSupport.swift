@@ -1,9 +1,11 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
-    func revealReadingChrome(in app: XCUIApplication) {
+    func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {
         if app.buttons["Edit topic"].exists { return }
-        let articleText = app.staticTexts.firstMatch
+        let articleText = text.map {
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", $0)).firstMatch
+        } ?? app.staticTexts.firstMatch
         XCTAssertTrue(articleText.waitForExistence(timeout: 30), "The readable topic body is unavailable.")
         articleText.tap()
         XCTAssertTrue(app.buttons["Edit topic"].waitForExistence(timeout: 30),
@@ -57,7 +59,7 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Cancel", in: app, timeout: 30)
     }
 
-    func restoreTopicFromTrash(title: String, in app: XCUIApplication) {
+    func restoreTopicFromTrash(title: String, text: String, in app: XCUIApplication) {
         if app.buttons["Exit"].waitForExistence(timeout: 3) { app.buttons["Exit"].tap() }
         tapButton(named: "Directory", in: app, timeout: 30)
         tapButton(named: "Open folder Trash", in: app, timeout: 30)
@@ -71,7 +73,7 @@ extension FoliolePhysicalSyncGroupUITests {
         }
         waitForDisappearance(topic, timeout: 30,
                              message: "Fri did not open the requested trashed topic.")
-        revealReadingChrome(in: app)
+        revealReadingChrome(in: app, matching: text)
         tapButton(named: "More reading actions", in: app, timeout: 30)
         tapButton(named: "Restore from Trash", in: app, timeout: 30)
         XCTAssertFalse(app.buttons["Restore from Trash"].waitForExistence(timeout: 3),

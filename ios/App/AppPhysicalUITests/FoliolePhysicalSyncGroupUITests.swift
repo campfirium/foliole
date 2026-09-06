@@ -153,6 +153,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         appendToVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
+                             existingText: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"),
                              text: requiredEnvironment("FOLIOLE_PHYSICAL_APPEND_TEXT"), in: app)
         attachScreenshot(named: "Fri-edited-topic")
     }
@@ -173,7 +174,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         restoreTopicFromTrash(
-            title: requiredEnvironment("FOLIOLE_PHYSICAL_TRASH_TITLE"), in: app
+            title: requiredEnvironment("FOLIOLE_PHYSICAL_TRASH_TITLE"),
+            text: requiredEnvironment("FOLIOLE_PHYSICAL_TRASH_TEXT"), in: app
         )
         attachScreenshot(named: "Fri-trash-restored")
     }
