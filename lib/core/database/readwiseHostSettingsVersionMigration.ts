@@ -20,7 +20,7 @@ interface SettingRecordRow {
 
 const GUARD_ERROR = 'readwise_host_settings_version_unsupported';
 
-export const READWISE_HOST_SETTINGS_VERSION_GUARDS = [
+const READWISE_HOST_SETTINGS_PROJECTION_GUARDS = [
   `CREATE TRIGGER IF NOT EXISTS readwise_host_settings_insert_guard
    BEFORE INSERT ON settings WHEN NEW.key = '${READWISE_HOST_SETTINGS_KEY}'
      AND (json_valid(NEW.value) = 0 OR COALESCE(json_extract(NEW.value, '$.version'), 0) < ${READWISE_HOST_SETTINGS_VERSION})
@@ -28,7 +28,10 @@ export const READWISE_HOST_SETTINGS_VERSION_GUARDS = [
   `CREATE TRIGGER IF NOT EXISTS readwise_host_settings_update_guard
    BEFORE UPDATE OF value ON settings WHEN NEW.key = '${READWISE_HOST_SETTINGS_KEY}'
      AND (json_valid(NEW.value) = 0 OR COALESCE(json_extract(NEW.value, '$.version'), 0) < ${READWISE_HOST_SETTINGS_VERSION})
-   BEGIN SELECT RAISE(ABORT, '${GUARD_ERROR}'); END`,
+   BEGIN SELECT RAISE(ABORT, '${GUARD_ERROR}'); END`
+] as const;
+
+const READWISE_HOST_SETTINGS_CANONICAL_GUARDS = [
   `CREATE TRIGGER IF NOT EXISTS readwise_host_setting_record_insert_guard
    BEFORE INSERT ON setting_records WHEN NEW.key = '${READWISE_HOST_SETTINGS_KEY}'
      AND (json_valid(NEW.value_json) = 0 OR COALESCE(json_extract(NEW.value_json, '$.version'), 0) < ${READWISE_HOST_SETTINGS_VERSION})
@@ -37,6 +40,11 @@ export const READWISE_HOST_SETTINGS_VERSION_GUARDS = [
    BEFORE UPDATE OF value_json ON setting_records WHEN NEW.key = '${READWISE_HOST_SETTINGS_KEY}'
      AND (json_valid(NEW.value_json) = 0 OR COALESCE(json_extract(NEW.value_json, '$.version'), 0) < ${READWISE_HOST_SETTINGS_VERSION})
    BEGIN SELECT RAISE(ABORT, '${GUARD_ERROR}'); END`
+] as const;
+
+export const READWISE_HOST_SETTINGS_VERSION_GUARDS = [
+  ...READWISE_HOST_SETTINGS_PROJECTION_GUARDS,
+  ...READWISE_HOST_SETTINGS_CANONICAL_GUARDS
 ] as const;
 
 function migrateJson(value: string) {
@@ -93,7 +101,12 @@ function migrateCanonicalRecords(sqlite: DatabaseMigrationTarget) {
 }
 
 export function migrateReadwiseHostSettingsVersion(sqlite: DatabaseMigrationTarget) {
-  migrateProjection(sqlite);
-  migrateCanonicalRecords(sqlite);
-  for (const statement of READWISE_HOST_SETTINGS_VERSION_GUARDS) sqlite.exec(statement);
+  if (tableExists(sqlite, 'settings')) {
+    migrateProjection(sqlite);
+    for (const statement of READWISE_HOST_SETTINGS_PROJECTION_GUARDS) sqlite.exec(statement);
+  }
+  if (tableExists(sqlite, 'setting_records')) {
+    migrateCanonicalRecords(sqlite);
+    for (const statement of READWISE_HOST_SETTINGS_CANONICAL_GUARDS) sqlite.exec(statement);
+  }
 }
