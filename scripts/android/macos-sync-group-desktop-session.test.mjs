@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   ensureMacosDeviceSyncGroup,
+  readMacosSyncTriggerResult,
   sanitizeMacosSyncGroupOverview,
   waitForMacosAutomaticRun,
   waitForMacosDeviceRequest
@@ -24,6 +25,16 @@ it('waits past an earlier product event until the new automatic run is durable',
   await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult }, 'old'))
     .resolves.toMatchObject({ run_id: 'new' });
   expect(loadSyncTriggerResult).toHaveBeenCalledTimes(3);
+});
+
+it('retries a direct trigger-result read during the active sync transaction', async () => {
+  const action = vi.fn()
+    .mockRejectedValueOnce(new Error('sqlite connection is owned by another asynchronous transaction'))
+    .mockResolvedValue({ reason: 'automatic', run_id: 'ready', status: 'completed' });
+  await expect(readMacosSyncTriggerResult(action, {
+    wait: async () => undefined
+  })).resolves.toMatchObject({ run_id: 'ready' });
+  expect(action).toHaveBeenCalledTimes(2);
 });
 
 it('sanitizes only Device/request facts from the active Sync Group overview', () => {

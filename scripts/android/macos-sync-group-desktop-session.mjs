@@ -19,7 +19,9 @@ import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
-import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
+import {
+  readSyncGroupControllerState, waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -39,6 +41,10 @@ function loadSyncTriggerResult(app) {
     return loadModule(pathApi.join(pathApi.dirname(mainPath),
       'sync', 'desktopSyncCoordinator.js')).loadDesktopSyncTriggerResult();
   });
+}
+
+export function readMacosSyncTriggerResult(action, options) {
+  return readSyncGroupControllerState(action, options);
 }
 
 export function sanitizeMacosSyncGroupOverview(overview) {
@@ -125,7 +131,7 @@ export async function openMacosSyncGroupDesktopSession({
       load: actions.load,
       loadDnsSdIdentityPreflight: (groupId) => loadDesktopDnsSdIdentityPreflight(app, groupId),
       loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
-      loadSyncTriggerResult: () => loadSyncTriggerResult(app),
+      loadSyncTriggerResult: () => readMacosSyncTriggerResult(() => loadSyncTriggerResult(app)),
       processId: app.process().pid,
       invoke: (command, args) => invoke(page, command, args),
       waitForEvent: (eventName, options) => waitForDesktopProductEvent(page, eventName, options),
