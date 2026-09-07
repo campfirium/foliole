@@ -16,14 +16,14 @@ const overview = (overrides = {}) => ({
     group_id: 'group-1' }, sync_paused: false, ...overrides
 });
 
-it('uses a product apply event when a new automatic run is not yet durable', async () => {
-  const waitForEvent = vi.fn(async () => undefined);
+it('waits past an earlier product event until the new automatic run is durable', async () => {
   const loadSyncTriggerResult = vi.fn()
     .mockResolvedValueOnce({ reason: 'automatic', run_id: 'old', status: 'completed' })
+    .mockResolvedValueOnce({ reason: 'automatic', run_id: 'old', status: 'completed' })
     .mockResolvedValue({ reason: 'automatic', run_id: 'new', status: 'completed' });
-  await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult, waitForEvent }, 'old'))
+  await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult }, 'old'))
     .resolves.toMatchObject({ run_id: 'new' });
-  expect(waitForEvent).toHaveBeenCalledWith('onWorkspaceSyncApplied', { timeoutMs: 90_000 });
+  expect(loadSyncTriggerResult).toHaveBeenCalledTimes(3);
 });
 
 it('sanitizes only Device/request facts from the active Sync Group overview', () => {

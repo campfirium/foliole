@@ -19,6 +19,7 @@ import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
+import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -139,22 +140,10 @@ export async function openMacosSyncGroupDesktopSession({
   }
 }
 
-function completedAutomaticRun(result, previousRunId) {
-  return result?.run_id !== previousRunId && result?.reason === 'automatic'
-    && result?.status === 'completed';
-}
-
 export async function waitForMacosAutomaticRun(session, previousRunId, {
   timeoutMs = 90_000
 } = {}) {
-  const current = await session.loadSyncTriggerResult();
-  if (completedAutomaticRun(current, previousRunId)) return current;
-  await session.waitForEvent('onWorkspaceSyncApplied', { timeoutMs });
-  const result = await session.loadSyncTriggerResult();
-  if (!completedAutomaticRun(result, previousRunId)) {
-    throw new Error(`Mac automatic sync did not complete: ${JSON.stringify(result)}`);
-  }
-  return result;
+  return waitForSyncGroupAutomaticRun(session.loadSyncTriggerResult, previousRunId, { timeoutMs });
 }
 
 export async function waitForMacosDeviceRequest(session, expectedDeviceName, {
