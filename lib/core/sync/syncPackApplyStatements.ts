@@ -192,10 +192,14 @@ export function buildSyncPackExternalDocumentUpsertSql(options: SyncPackApplyabl
     `document_id, folder_id, relative_path, file_name, extension, source_size_bytes, ` +
     `source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, ` +
     `content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at) ` +
-    `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes, ` +
-    `source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, ` +
-    `content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at ` +
-    `FROM ${alias}.external_documents ` +
-    `WHERE document_id IN (` +
+    `SELECT incoming_document.document_id, incoming_document.folder_id, incoming_document.relative_path, ` +
+    `incoming_document.file_name, incoming_document.extension, incoming_document.source_size_bytes, ` +
+    `incoming_document.source_modified_at, incoming_document.source_modified_ms, incoming_document.content_hash, ` +
+    `incoming_document.title, incoming_document.opening_text, incoming_document.body_blob_hash, ` +
+    `incoming_document.content, incoming_document.reference_kind, incoming_document.reference_json, ` +
+    `incoming_document.indexed_at, incoming_document.is_present, incoming_document.missing_at, ` +
+    `incoming_document.created_at, incoming_document.updated_at ` +
+    `FROM ${alias}.external_documents incoming_document ` +
+    `WHERE incoming_document.document_id IN (` +
     `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'external_document' })})`;
 }

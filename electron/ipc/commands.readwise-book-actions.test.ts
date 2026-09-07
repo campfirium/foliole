@@ -78,7 +78,10 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn().mockReturnValue({}),
   saveReviewSchedulerSettings: vi.fn().mockReturnValue({})
 }));
-vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({
+  appendBootEvent: vi.fn(),
+  bootReport: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn().mockReturnValue({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} }),
   reviewPreview: vi.fn().mockReturnValue(null)
@@ -215,9 +218,7 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
     settings: { readwiseRootPath: '/Readwise' },
     window: mockWindow
   });
-  expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
-    scope: 'workspace'
-  });
+  expect(mockWindow.webContents.send).not.toHaveBeenCalled();
 });
 
 it('routes Readwise Reader cancel through native invoke', async () => {

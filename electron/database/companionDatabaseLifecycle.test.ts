@@ -65,7 +65,7 @@ describe('shared companion database migration executor', () => {
       .pluck().all()).toEqual([
       'idx_import_sources_readwise_remote_document', 'idx_import_sources_readwise_remote_topic'
     ]);
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(35);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(36);
     sqlite.close();
   });
 

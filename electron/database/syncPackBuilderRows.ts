@@ -141,11 +141,13 @@ function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: Load
     table: 'external_documents',
     columns: ['document_id', 'folder_id', 'relative_path', 'file_name', 'extension', 'source_size_bytes',
       'source_modified_at', 'source_modified_ms', 'content_hash', 'title', 'opening_text', 'body_blob_hash',
-      'content', 'indexed_at', 'is_present', 'missing_at', 'created_at', 'updated_at'],
+      'content', 'reference_kind', 'reference_json', 'indexed_at', 'is_present', 'missing_at', 'created_at',
+      'updated_at'],
     rows: rows.externalDocuments,
     values: (row) => [row.document_id, row.folder_id, row.relative_path, row.file_name, row.extension,
       row.source_size_bytes, row.source_modified_at, row.source_modified_ms, row.content_hash, row.title,
-      row.opening_text, row.body_blob_hash, '', row.indexed_at, row.is_present, row.missing_at,
+      row.opening_text, row.body_blob_hash, '', row.reference_kind, row.reference_json, row.indexed_at,
+      row.is_present, row.missing_at,
       row.created_at, row.updated_at]
   });
   copyRows({

@@ -22,6 +22,7 @@ export async function seedHostedSourceFromOracle(args: {
   writeFileSync(oraclePath, pack.database, { flag: 'wx' });
   args.source.prepare('ATTACH DATABASE ? AS oracle_seed').run(oraclePath);
   try {
+    ensureOracleExternalReferenceColumns(args.source);
     await applySyncPackNodeSurfaceWithDbPort(
       createBetterSqliteDbPort(args.source, { name: 'ios-hosted-oracle-seed' }),
       {
@@ -43,6 +44,18 @@ export async function seedHostedSourceFromOracle(args: {
     };
   } finally {
     args.source.exec('DETACH DATABASE oracle_seed');
+  }
+}
+
+function ensureOracleExternalReferenceColumns(database: SqliteDatabase) {
+  const schema = String(database.prepare(
+    "SELECT sql FROM oracle_seed.sqlite_master WHERE type = 'table' AND name = 'external_documents'"
+  ).pluck().get() ?? '');
+  if (!schema.includes('reference_kind')) {
+    database.exec("ALTER TABLE oracle_seed.external_documents ADD COLUMN reference_kind TEXT NOT NULL DEFAULT 'local_path'");
+  }
+  if (!schema.includes('reference_json')) {
+    database.exec('ALTER TABLE oracle_seed.external_documents ADD COLUMN reference_json TEXT');
   }
 }
 

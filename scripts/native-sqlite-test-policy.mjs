@@ -36,6 +36,7 @@ const controlledElectronSqliteTests = [
   'electron/database/publicDesktopDatabaseFixtures.test.ts',
   'electron/database/publicDesktopDatabaseUpgrades.test.ts',
   'electron/database/readwiseApiCompanionMigration.test.ts',
+  'electron/database/readwiseExternalReferenceCompanionMigration.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
   'electron/database/syncDeliveryMigration.test.ts',

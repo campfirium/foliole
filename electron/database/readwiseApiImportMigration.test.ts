@@ -44,7 +44,7 @@ function prepareV80() {
 it('adds restart-safe API staging and synced materialization state', () => {
   const connection = prepareV80();
   initializeDatabaseSchema(connection.sqlite);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(81);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(82);
   expect(connection.sqlite.prepare(
     "SELECT name FROM pragma_table_info('import_sources') WHERE name='remote_import_state_json'"
   ).get()).toEqual({ name: 'remote_import_state_json' });

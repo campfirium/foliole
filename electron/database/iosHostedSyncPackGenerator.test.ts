@@ -80,6 +80,8 @@ async function applyGeneratedPack(packPath: string, name: string) {
   const port = createBetterSqliteDbPort(target, { name: `ios-hosted-${name}-reader` });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
+    expect(target.prepare("SELECT sql FROM inc.sqlite_master WHERE name = 'external_documents'").pluck().get())
+      .toContain('reference_json');
     return await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0, hostName: 'accepted-device', sourceHostName: 'Acceptance Provider',
       sourcePeerId: 'provider-device'
