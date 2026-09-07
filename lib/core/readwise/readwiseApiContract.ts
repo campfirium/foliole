@@ -5,12 +5,18 @@ import { convertHtmlToMarkdownCompatible } from '../import/htmlToMarkdownCompati
 export type ReaderCategory = 'article' | 'email' | 'epub' | 'highlight' | 'note' | 'pdf' | 'rss' | 'tweet' | 'video';
 
 export interface ReaderDocumentContract {
+  author: string | null;
   category: ReaderCategory | null;
   htmlContent: string | null;
   id: string;
+  notes: string | null;
   parentId: string | null;
   rawSourceUrl: string | null;
+  sourceUrl: string | null;
+  summary: string | null;
+  title: string | null;
   updatedAt: string | null;
+  url: string | null;
 }
 
 export interface ExportBookContract {
@@ -26,12 +32,18 @@ export function normalizeReaderDocument(value: unknown): ReaderDocumentContract 
   if (!id) return null;
   const category = text(row.category);
   return {
+    author: text(row.author),
     category: isReaderCategory(category) ? category : null,
     htmlContent: text(row.html_content),
     id,
+    notes: text(row.notes),
     parentId: text(row.parent_id),
     rawSourceUrl: safeRawSourceUrl(row.raw_source_url),
-    updatedAt: text(row.updated_at)
+    sourceUrl: safeHttpUrl(row.source_url),
+    summary: text(row.summary),
+    title: text(row.title),
+    updatedAt: text(row.updated_at),
+    url: safeHttpUrl(row.url)
   };
 }
 
@@ -94,6 +106,17 @@ function safeRawSourceUrl(value: unknown) {
   try {
     const url = new URL(candidate);
     return url.protocol === 'https:' ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeHttpUrl(value: unknown) {
+  const candidate = text(value);
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? candidate : null;
   } catch {
     return null;
   }

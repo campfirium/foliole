@@ -10,6 +10,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
+import { ReadwiseApiImportSection } from './ReadwiseApiImportSection';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
 import { ReadwiseBehaviorSection, ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
@@ -78,7 +79,16 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
           syncDisabled={setup.syncDisabled}
           syncIsRunning={setup.syncIsRunning}
         />
-      ) : <ReadwiseBehaviorSection draft={setup.draft} />}
+      ) : (
+        <div className="space-y-6">
+          <ReadwiseApiImportSection
+            disabled={!props.onPreviewSync || setup.isStartingSync || setup.isSyncPreviewing}
+            isRunning={setup.isStartingSync || setup.isSyncPreviewing}
+            onPreview={() => void setup.handleApiSync()}
+          />
+          <ReadwiseBehaviorSection draft={setup.draft} />
+        </div>
+      )}
       <ReadwiseSyncPreviewDialog
         error={setup.syncError}
         isCancelling={setup.isCancellingSync}

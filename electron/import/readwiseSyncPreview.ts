@@ -16,6 +16,7 @@ import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipelin
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
+import { previewReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
   resolveReadwiseSourceImportDecision,
   resolveReadwiseSourceSignature
@@ -161,6 +162,7 @@ export async function previewReadwiseReaderImport(
   const settings = settingsInput
     ? normalizeImportManagerSettings(settingsInput)
     : loadImportManagerSettings();
+  if (settings.readwiseSourceMode === 'api') return previewReadwiseApiImport(settings);
   if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('folder')) {
     return {
       active_count: 0,

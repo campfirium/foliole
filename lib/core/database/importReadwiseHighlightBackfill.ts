@@ -52,7 +52,7 @@ export function persistReadwiseHighlightUpdates(input: {
   let repairedCount = 0;
 
   input.highlights.forEach((highlight) => {
-    const repairTarget = isAnchoredHighlight(highlight)
+    const repairTarget = !highlight.nodeId && isAnchoredHighlight(highlight)
       ? findUnanchoredChildByContent(existingChildren, usedChildIds, highlight.content)
       : null;
     if (!repairTarget) {

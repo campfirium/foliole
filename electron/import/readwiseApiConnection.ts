@@ -59,7 +59,7 @@ function saveConnection(
   }), remoteSource, updatedAt);
 }
 
-function saveReconnectRequired(settings: ReadwiseHostSettings) {
+export function saveReconnectRequired(settings: ReadwiseHostSettings) {
   saveConnection(settings, {
     ...settings.apiConnection,
     state: 'reconnect_required'

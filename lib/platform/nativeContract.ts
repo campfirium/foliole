@@ -40,6 +40,7 @@ export type * from './nativeStorageContract.js'; export type * from './nativeDis
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeReadwiseApiConnectionContract.js';
+export type * from './nativeReadwiseApiImportContract.js';
 export type * from './nativeSourceDispositionContract.js';
 export type * from './nativeInitialLibrarySetupContract.js';
 export type * from './nativeNodeOpenStateContract.js';

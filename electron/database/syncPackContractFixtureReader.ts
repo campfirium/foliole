@@ -22,7 +22,8 @@ export function readSyncPackContractRows(packPath: string, tempRoot: string) {
         json_extract(payload_json, '$.remote_provider') remote_provider,
         json_extract(payload_json, '$.remote_connection_ref') remote_connection_ref,
         json_extract(payload_json, '$.remote_document_id') remote_document_id,
-        json_extract(payload_json, '$.remote_annotations_json') remote_annotations_json
+        json_extract(payload_json, '$.remote_annotations_json') remote_annotations_json,
+        json_extract(payload_json, '$.remote_import_state_json') remote_import_state_json
         FROM sync_objects WHERE object_type = 'import_source'`).all(),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),

@@ -34,9 +34,10 @@ afterEach(async () => {
 
 function prepareV79() {
   const connection = openDatabaseConnection();
+  connection.sqlite.exec('DROP TABLE readwise_api_import_stage; DROP TABLE readwise_api_import_runs;');
   connection.sqlite.exec('DROP INDEX idx_import_sources_readwise_remote_document');
   connection.sqlite.exec('DROP INDEX idx_import_sources_readwise_remote_topic');
-  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
+  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider', 'remote_import_state_json']) {
     connection.sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
   }
   connection.sqlite.pragma('user_version = 79');
@@ -53,7 +54,7 @@ it('adds remote identity columns and uniqueness without rewriting historical pat
 
   initializeDatabaseSchema(connection.sqlite);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(80);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(81);
   expect(connection.sqlite.prepare(`SELECT source_locator, source_location, remote_annotations_json
     FROM import_sources WHERE source_fingerprint = 'one'`).get()).toEqual({
     remote_annotations_json: '[]', source_location: 'One.md', source_locator: '/old/one'

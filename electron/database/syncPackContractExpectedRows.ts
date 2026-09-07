@@ -1,5 +1,6 @@
 export const SYNC_PACK_CONTRACT_IMPORT_SOURCES = [{
   remote_annotations_json: '[{"kind":"highlight","nodeId":"highlight-1","remoteId":"reader-highlight"}]',
+  remote_import_state_json: '{"version":1,"bodyState":"materialized"}',
   remote_connection_ref: 'readwise-connection',
   remote_document_id: 'reader-document',
   remote_provider: 'readwise',

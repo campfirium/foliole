@@ -45,6 +45,12 @@ export function toReadwiseImportProgressView(
       progress: overallProgress(progress)
     };
   }
+  if (progress.phase === 'fetching') {
+    return {
+      message: 'Fetching Reader library',
+      progress: overallProgress(progress)
+    };
+  }
   if (progress.phase === 'writing') {
     return {
       message: `Importing${sourceSuffix(progress)}`,

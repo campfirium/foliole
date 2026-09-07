@@ -64,7 +64,8 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     remote_provider TEXT,
     remote_connection_ref TEXT,
     remote_document_id TEXT,
-    remote_annotations_json TEXT NOT NULL DEFAULT '[]'
+    remote_annotations_json TEXT NOT NULL DEFAULT '[]',
+    remote_import_state_json TEXT NOT NULL DEFAULT '{}'
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_import_sources_readwise_remote_document
     ON import_sources (remote_connection_ref, remote_document_id)

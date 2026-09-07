@@ -18,6 +18,7 @@ interface ImportSourceRow {
   last_imported_at?: string;
   provider?: string;
   remote_annotations_json?: string;
+  remote_import_state_json?: string;
   remote_connection_ref?: string | null;
   remote_document_id?: string | null;
   remote_provider?: string | null;
@@ -118,6 +119,7 @@ function toImportSourcePayload(row: ImportSourceRow) {
     latest_node_id: row.latest_node_id,
     provider: row.provider ?? '',
     remote_annotations_json: row.remote_annotations_json ?? '[]',
+    remote_import_state_json: row.remote_import_state_json ?? '{}',
     remote_connection_ref: row.remote_connection_ref ?? null,
     remote_document_id: row.remote_document_id ?? null,
     remote_provider: row.remote_provider ?? null,
@@ -151,7 +153,8 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
        remote_provider,
        remote_connection_ref,
        remote_document_id,
-       remote_annotations_json
+       remote_annotations_json,
+       remote_import_state_json
      FROM import_sources
      WHERE source_fingerprint = ?`,
     [sourceFingerprint]

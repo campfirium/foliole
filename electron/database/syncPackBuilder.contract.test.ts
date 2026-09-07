@@ -132,11 +132,12 @@ function insertReadwiseIdentitySyncState() {
   driver.execute(`INSERT INTO import_sources (
     source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at,
     last_imported_at, last_content_fingerprint, latest_node_id, source_ref, source_location,
-    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json
+    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json
   ) VALUES ('source-contract','desktop_text_file','markdown','Source.md','/history/Source.md',
     '2026-04-27T00:00:00.000Z','2026-04-27T00:03:00.000Z','content-contract','node-1',
     'readwise:articles','Source.md','readwise','readwise-connection','reader-document',
-    '[{"kind":"highlight","nodeId":"highlight-1","remoteId":"reader-highlight"}]')`);
+    '[{"kind":"highlight","nodeId":"highlight-1","remoteId":"reader-highlight"}]',
+    '{"version":1,"bodyState":"materialized"}')`);
   driver.execute(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
   ) VALUES ('import_source','source-contract',4,'import-source-hash','desktop',

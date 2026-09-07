@@ -93,7 +93,8 @@ it('applies import source and Source Host payload records', async () => {
         object_type: 'import_source',
         payload_json: JSON.stringify({ provider: 'readwise', source_name: 'Library',
           remote_annotations_json: '[{"remoteId":"highlight-1"}]', remote_connection_ref: 'connection-1',
-          remote_document_id: 'document-1', remote_provider: 'readwise' }),
+          remote_document_id: 'document-1', remote_import_state_json: '{"bodyState":"materialized"}',
+          remote_provider: 'readwise' }),
         updated_at: '2026-05-04T02:00:00.000Z'
       },
       {
@@ -123,19 +124,18 @@ it('applies import source and Source Host payload records', async () => {
     })
   } as unknown as DbPort;
 
-  await expect(applySyncPackMetadataObjectsWithDbPort(port, {
-    incomingAlias: 'incoming'
-  })).resolves.toBe(3);
+  await expect(applySyncPackMetadataObjectsWithDbPort(port, { incomingAlias: 'incoming' }))
+    .resolves.toBe(3);
   expect(runs[0]?.sql).toContain('INSERT INTO import_sources');
   expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise', 'unknown', 'Library']);
-  expect(runs[0]?.params.slice(-4)).toEqual([
-    'readwise', 'connection-1', 'document-1', '[{"remoteId":"highlight-1"}]'
+  expect(runs[0]?.params.slice(-5)).toEqual([
+    'readwise', 'connection-1', 'document-1', '[{"remoteId":"highlight-1"}]',
+    '{"bodyState":"materialized"}'
   ]);
   expect(runs[1]?.sql).toContain('INSERT INTO desktop_sources');
   expect(runs[1]?.sql).toContain('type_settings_json = excluded.type_settings_json');
-  expect(runs[1]?.params.slice(0, 5)).toEqual([
-    'external:folder-1', 'external', 'folder-1', 'Desktop Host', 'darwin'
-  ]);
+  expect(runs[1]?.params.slice(0, 5))
+    .toEqual(['external:folder-1', 'external', 'folder-1', 'Desktop Host', 'darwin']);
   expect(runs[2]?.sql).toContain('INSERT INTO external_search_folders');
   expect(runs[2]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
   expect(runs[3]?.sql).toContain('INSERT INTO desktop_sources');

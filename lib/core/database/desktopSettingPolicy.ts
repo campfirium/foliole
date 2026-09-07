@@ -9,6 +9,7 @@ const USER_SPACE_KEYS = new Set([
   'import_manager_settings',
   'library_path_settings',
   'readwise_active_host',
+  'readwise_api_import_state',
   'readwise_remote_source',
   'review_scheduler_settings',
   'system_entry_display_names'

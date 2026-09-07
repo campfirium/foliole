@@ -15,7 +15,8 @@ export const importSources = sqliteTable('import_sources', {
   remoteProvider: text('remote_provider'),
   remoteConnectionRef: text('remote_connection_ref'),
   remoteDocumentId: text('remote_document_id'),
-  remoteAnnotationsJson: text('remote_annotations_json').notNull().default('[]')
+  remoteAnnotationsJson: text('remote_annotations_json').notNull().default('[]'),
+  remoteImportStateJson: text('remote_import_state_json').notNull().default('{}')
 });
 
 export const desktopSources = sqliteTable('desktop_sources', {

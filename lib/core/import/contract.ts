@@ -18,6 +18,7 @@ export interface PreparedImportHighlightRecord {
   content: string;
   label: string | null;
   locatorText?: string | null;
+  nodeId?: string;
 }
 
 export interface PreparedImportEmbeddedImage {

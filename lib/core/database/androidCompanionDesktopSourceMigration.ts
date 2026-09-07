@@ -7,6 +7,8 @@ export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_STATEMENTS = {
   importSourcesRemoteDocumentIdColumn: 'ALTER TABLE import_sources ADD COLUMN remote_document_id TEXT',
   importSourcesRemoteAnnotationsJsonColumn:
     "ALTER TABLE import_sources ADD COLUMN remote_annotations_json TEXT NOT NULL DEFAULT '[]'",
+  importSourcesRemoteImportStateJsonColumn:
+    "ALTER TABLE import_sources ADD COLUMN remote_import_state_json TEXT NOT NULL DEFAULT '{}'",
   importSourcesWatchedBindingIdColumn: 'ALTER TABLE import_sources ADD COLUMN watched_binding_id TEXT',
   importSourcesWatchedRelativePathColumn: 'ALTER TABLE import_sources ADD COLUMN watched_relative_path TEXT'
 };
@@ -39,6 +41,10 @@ export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_REPAIR_RULES = {
   importSourcesRemoteAnnotationsJson: {
     columnName: 'remote_annotations_json', errorMessage: 'Failed to add import source remote annotations.',
     statementName: 'importSourcesRemoteAnnotationsJsonColumn', tableName: 'import_sources'
+  },
+  importSourcesRemoteImportStateJson: {
+    columnName: 'remote_import_state_json', errorMessage: 'Failed to add import source remote import state.',
+    statementName: 'importSourcesRemoteImportStateJsonColumn', tableName: 'import_sources'
   },
   importSourcesWatchedBindingId: {
     columnName: 'watched_binding_id', errorMessage: 'Failed to add watched binding reference.',

@@ -95,6 +95,7 @@ function isOptionalNonNegative(value: number | undefined) {
 
 function isValidReadwiseProgressPhase(phase: ReadwiseReaderImportProgressPayload['phase']) {
   return phase === undefined ||
+    phase === 'fetching' ||
     phase === 'indexing' ||
     phase === 'scanning' ||
     phase === 'writing' ||

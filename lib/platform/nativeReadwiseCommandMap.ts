@@ -4,7 +4,6 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeReadwiseCleanupPreviewResult,
   NativeReadwiseCleanupRunResult,
-  NativeReadwiseImportCancelResult,
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from './nativeImportContract.js';
@@ -12,6 +11,7 @@ import type {
   NativeReadwiseApiConnection,
   NativeReadwiseApiConnectionResult
 } from './nativeReadwiseApiConnectionContract.js';
+import type { NativeReadwiseImportCancelResult } from './nativeReadwiseApiImportContract.js';
 import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookImportResetResult,

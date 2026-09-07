@@ -132,6 +132,12 @@ async function startSync(
       setters.setSyncProgress(null);
       return;
     }
+    if (typeof result === 'object' && result && 'status' in result && result.status === 'paused') {
+      const nextPreview = await actions.onPreviewSync?.(payload);
+      setters.setSyncPreview(nextPreview ?? syncPreview);
+      setters.setSyncProgress(null);
+      return;
+    }
     setters.setSyncIntent(null);
     setters.setSyncPreview(null);
     setters.setSyncProgress(null);

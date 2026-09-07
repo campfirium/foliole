@@ -179,6 +179,7 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
       }
       void manualSync.runManualSync();
     },
+    handleApiSync: () => void sync.openSyncPreview('sync'),
     isCancellingSync: sync.isCancellingSync,
     isStartingSync: sync.isStartingSync,
     isSyncPreviewing: sync.isSyncPreviewing,

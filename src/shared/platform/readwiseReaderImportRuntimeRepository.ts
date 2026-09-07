@@ -1,10 +1,7 @@
 import type { ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type {
-  NativeReadwiseImportCancelResult,
-  NativeReadwiseImportRunResult,
-  NativeReadwiseSyncPreviewResult
-} from '../../../lib/platform/nativeContract';
+import type { NativeReadwiseImportRunResult, NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeContract';
+import type { NativeReadwiseImportCancelResult } from '../../../lib/platform/nativeReadwiseApiImportContract';
 
 import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from './runtimeInvoke';

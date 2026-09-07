@@ -1,11 +1,8 @@
 import type { NativeImportHighlightPolicy } from './nativeKeepImportContract.js';
-
+import type { NativeReadwiseApiPreviewFields, NativeReadwiseApiRunFields, NativeReadwiseSyncPreviewDestination } from './nativeReadwiseApiImportContract.js';
 export type NativeImportNodeTitleStrategy = 'file_name' | 'heading';
-
 export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
-
 export type NativeManagedInboxConsumePolicy = 'archive' | 'clear';
-
 export type NativeDirectoryImportConsumePolicy = 'archive' | 'clear' | 'keep';
 
 export interface NativeTextImportArgs {
@@ -15,17 +12,15 @@ export interface NativeTextImportArgs {
   target_parent_node_id?: string;
   title_strategy?: NativeImportNodeTitleStrategy;
 }
-
 export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
   directory_path?: string;
   consume_policy?: NativeManagedInboxConsumePolicy;
   source_adapter?: NativeDirectoryImportSourceAdapter;
 }
 
-export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
 export type NativeReadwiseSyncPreviewHighlightType = 'with_highlights' | 'without_highlights';
 export type NativeReadwiseSyncPreviewHighlightStatus = 'highlight_only' | 'unparsed' | NativeReadwiseSyncPreviewHighlightType;
-export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcasts' | 'tweets';
+export type NativeReadwiseSyncPreviewSourceKind = 'article' | 'articles' | 'books' | 'email' | 'epub' | 'pdf' | 'podcasts' | 'rss' | 'tweet' | 'tweets' | 'video';
 export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'unparsed' | 'updated';
 
 export interface NativeReadwiseImportRunProgressEvent {
@@ -38,7 +33,7 @@ export interface NativeReadwiseImportRunProgressEvent {
   indexPendingCount?: number;
   indexProcessedCount?: number;
   indexTotalCount?: number;
-  phase?: 'indexing' | 'scanning' | 'writing' | 'source_completed';
+  phase?: 'fetching' | 'indexing' | 'scanning' | 'writing' | 'source_completed';
   processedCount: number;
   sourceProcessedCount?: number;
   sourceTotalCount?: number;
@@ -60,12 +55,13 @@ export interface NativeReadwiseSyncPreviewEntry {
   highlight_status?: NativeReadwiseSyncPreviewHighlightStatus;
   highlight_type: NativeReadwiseSyncPreviewHighlightType;
   open_path?: string | null;
+  remote_document_id?: string;
   source_kind: NativeReadwiseSyncPreviewSourceKind;
   source_path: string;
   status: NativeReadwiseSyncPreviewStatus;
 }
 
-export interface NativeReadwiseSyncPreviewResult {
+export interface NativeReadwiseSyncPreviewResult extends NativeReadwiseApiPreviewFields {
   active_count: number;
   blocked_count: number;
   entries: NativeReadwiseSyncPreviewEntry[];
@@ -83,7 +79,7 @@ export interface NativeReadwiseSyncPreviewResult {
   write_count: number;
 }
 
-export interface NativeReadwiseImportRunResult {
+export interface NativeReadwiseImportRunResult extends NativeReadwiseApiRunFields {
   completed_at: string;
   entry_count?: number;
   failed_count: number;
@@ -91,13 +87,10 @@ export interface NativeReadwiseImportRunResult {
   imported_count?: number;
   source_count: number;
   skipped_count?: number;
-  status: 'cancelled' | 'completed' | 'failed';
+  status: 'cancelled' | 'completed' | 'failed' | 'paused';
 }
 
-export type NativeReadwiseImportCancelResult = { status: 'cancelled' | 'idle' };
-
 export type NativeReadwiseCleanupAction = 'delete' | 'keep';
-
 export interface NativeReadwiseCleanupEntry {
   action: NativeReadwiseCleanupAction;
   node_id: string;

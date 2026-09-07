@@ -1,8 +1,5 @@
-import type {
-  NativeReadwiseSyncPreviewDestination,
-  NativeReadwiseSyncPreviewEntry,
-  NativeReadwiseSyncPreviewResult
-} from '../../../lib/platform/nativeImportContract';
+import type { NativeReadwiseSyncPreviewEntry, NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeImportContract';
+import type { NativeReadwiseSyncPreviewDestination } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { openLocalPath } from '../../shared/platform/runtimeExternalNavigation';
 
@@ -30,6 +27,18 @@ export function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyn
     return (
       <p className="text-sm text-foreground/65">{t('desktop.readwise.preview.empty')}</p>
     );
+  }
+  if (preview.mode === 'api') {
+    const parts = [
+      t('desktop.readwise.api.preview.total', { count: preview.total_count }),
+      t('desktop.readwise.api.preview.batch', { count: preview.batch_count ?? 0 }),
+      t('desktop.readwise.api.preview.estimate', { count: preview.estimated_seconds ?? 0 }),
+      preview.remaining_count ? t('desktop.readwise.api.preview.remaining', { count: preview.remaining_count }) : null,
+      preview.degraded_count ? t('desktop.readwise.api.preview.degraded', { count: preview.degraded_count }) : null,
+      preview.unmatched_annotation_count
+        ? t('desktop.readwise.api.preview.unmatched', { count: preview.unmatched_annotation_count }) : null
+    ].filter((part): part is string => Boolean(part));
+    return <p className="text-sm font-medium text-foreground">{parts.join(' · ')}</p>;
   }
   const writableEntries = preview.entries.filter(isWritablePreviewEntry);
   const inboxEntries = writableEntries.filter((entry) => entry.destination === 'inbox');
@@ -70,7 +79,12 @@ function resolveHighlightStatusLabel(entry: NativeReadwiseSyncPreviewEntry, t: T
 
 function ReadwisePreviewSourceName({ entry }: { entry: NativeReadwiseSyncPreviewEntry }) {
   if (!entry.open_path) {
-    return <div className="min-w-0 truncate text-foreground">{entry.source_path}</div>;
+    return (
+      <div className="min-w-0">
+        <div className="truncate text-foreground">{entry.source_path}</div>
+        {entry.detail ? <div className="truncate text-xs text-foreground/55" title={entry.detail}>{entry.detail}</div> : null}
+      </div>
+    );
   }
   return (
     <button

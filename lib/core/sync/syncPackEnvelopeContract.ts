@@ -8,7 +8,7 @@ import {
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
 export const SYNC_PACK_FORMAT_VERSION = 12;
-export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 79;
+export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 80;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = SYNC_PACK_PAYLOAD_SCHEMA_VERSION;

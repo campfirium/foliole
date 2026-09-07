@@ -23,6 +23,7 @@
     "addImportSourcesRemoteConnectionRefIfMissing": "addImportSourcesRemoteConnectionRefIfMissing",
     "addImportSourcesRemoteDocumentIdIfMissing": "addImportSourcesRemoteDocumentIdIfMissing",
     "addImportSourcesRemoteProviderIfMissing": "addImportSourcesRemoteProviderIfMissing",
+    "addImportSourcesRemoteImportStateJsonIfMissing": "addImportSourcesRemoteImportStateJsonIfMissing",
     "addSyncBaseContentHashIfMissing": "addSyncBaseContentHashIfMissing",
     "backfillNodeAttachmentsFromVersions": "backfillNodeAttachmentsFromVersions",
     "installSchema": "installSchema",
@@ -368,6 +369,14 @@
         }
       ],
       "beforeVersion": 34
+    },
+    {
+      "actions": [
+        {
+          "type": "addImportSourcesRemoteImportStateJsonIfMissing"
+        }
+      ],
+      "beforeVersion": 35
     }
   ],
   "planKeys": {
@@ -519,6 +528,12 @@
       "statementName": "importSourcesRemoteAnnotationsJsonColumn",
       "tableName": "import_sources"
     },
+    "importSourcesRemoteImportStateJson": {
+      "columnName": "remote_import_state_json",
+      "errorMessage": "Failed to add import source remote import state.",
+      "statementName": "importSourcesRemoteImportStateJsonColumn",
+      "tableName": "import_sources"
+    },
     "importSourcesWatchedBindingId": {
       "columnName": "watched_binding_id",
       "errorMessage": "Failed to add watched binding reference.",
@@ -569,6 +584,7 @@
     "importSourcesRemoteConnectionRefColumn": "ALTER TABLE import_sources ADD COLUMN remote_connection_ref TEXT",
     "importSourcesRemoteDocumentIdColumn": "ALTER TABLE import_sources ADD COLUMN remote_document_id TEXT",
     "importSourcesRemoteAnnotationsJsonColumn": "ALTER TABLE import_sources ADD COLUMN remote_annotations_json TEXT NOT NULL DEFAULT '[]'",
+    "importSourcesRemoteImportStateJsonColumn": "ALTER TABLE import_sources ADD COLUMN remote_import_state_json TEXT NOT NULL DEFAULT '{}'",
     "importSourcesWatchedBindingIdColumn": "ALTER TABLE import_sources ADD COLUMN watched_binding_id TEXT",
     "importSourcesWatchedRelativePathColumn": "ALTER TABLE import_sources ADD COLUMN watched_relative_path TEXT",
     "nodeViewStateSourceColumn": "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",

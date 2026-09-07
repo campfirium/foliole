@@ -41,7 +41,8 @@ const COLUMN_ACTIONS: Partial<Record<string, RepairName>> = {
   [ACTIONS.addImportSourcesRemoteProviderIfMissing]: 'importSourcesRemoteProvider',
   [ACTIONS.addImportSourcesRemoteConnectionRefIfMissing]: 'importSourcesRemoteConnectionRef',
   [ACTIONS.addImportSourcesRemoteDocumentIdIfMissing]: 'importSourcesRemoteDocumentId',
-  [ACTIONS.addImportSourcesRemoteAnnotationsJsonIfMissing]: 'importSourcesRemoteAnnotationsJson'
+  [ACTIONS.addImportSourcesRemoteAnnotationsJsonIfMissing]: 'importSourcesRemoteAnnotationsJson',
+  [ACTIONS.addImportSourcesRemoteImportStateJsonIfMissing]: 'importSourcesRemoteImportStateJson'
 };
 
 export async function migrateCompanionDatabase(

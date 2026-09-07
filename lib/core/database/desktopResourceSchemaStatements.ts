@@ -51,7 +51,24 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     remote_provider TEXT,
     remote_connection_ref TEXT,
     remote_document_id TEXT,
-    remote_annotations_json TEXT NOT NULL DEFAULT '[]'
+    remote_annotations_json TEXT NOT NULL DEFAULT '[]',
+    remote_import_state_json TEXT NOT NULL DEFAULT '{}'
+  )`,
+  `CREATE TABLE IF NOT EXISTS readwise_api_import_runs (
+    connection_ref TEXT PRIMARY KEY,
+    query_updated_after TEXT,
+    round_started_at TEXT NOT NULL,
+    reader_cursor TEXT,
+    export_cursor TEXT,
+    phase TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS readwise_api_import_stage (
+    connection_ref TEXT NOT NULL,
+    record_kind TEXT NOT NULL,
+    remote_id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    PRIMARY KEY (connection_ref, record_kind, remote_id)
   )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,

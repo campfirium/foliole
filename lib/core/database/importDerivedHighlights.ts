@@ -92,7 +92,7 @@ export function insertImportedHighlightNodes(input: {
   const insertedNodeIds: string[] = [];
 
   input.highlights.forEach((highlight) => {
-    const nodeId = `node-${randomUUID()}`;
+    const nodeId = highlight.nodeId ?? `node-${randomUUID()}`;
     const imageRegions = toImportedImageRegions(input.parentContent, highlight);
     insertedNodeIds.push(nodeId);
     if ('kind' in highlight && highlight.kind === 'cloze') {

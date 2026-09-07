@@ -38,7 +38,7 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
 function prepareV33RemoteIdentitySchema(sqlite: ReturnType<typeof fixture>['sqlite']) {
   sqlite.exec(`DROP INDEX idx_import_sources_readwise_remote_document;
     DROP INDEX idx_import_sources_readwise_remote_topic;`);
-  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
+  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider', 'remote_import_state_json']) {
     sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
   }
 }
@@ -59,13 +59,13 @@ describe('shared companion database migration executor', () => {
     await bootstrap(port);
     expect(sqlite.prepare("SELECT name FROM pragma_table_info('import_sources') WHERE name LIKE 'remote_%' ORDER BY name")
       .pluck().all()).toEqual([
-      'remote_annotations_json', 'remote_connection_ref', 'remote_document_id', 'remote_provider'
+      'remote_annotations_json', 'remote_connection_ref', 'remote_document_id', 'remote_import_state_json', 'remote_provider'
     ]);
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_import_sources_readwise_remote_%' ORDER BY name")
       .pluck().all()).toEqual([
       'idx_import_sources_readwise_remote_document', 'idx_import_sources_readwise_remote_topic'
     ]);
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(34);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(35);
     sqlite.close();
   });
 
@@ -80,6 +80,7 @@ describe('shared companion database migration executor', () => {
       .toBeUndefined();
     sqlite.close();
   });
+
 });
 
 describe('shared companion database migration history', () => {

@@ -23,7 +23,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'watched_relative_path', watched_relative_path, 'source_ref', source_ref,
     'source_location', source_location, 'remote_provider', remote_provider,
     'remote_connection_ref', remote_connection_ref, 'remote_document_id', remote_document_id,
-    'remote_annotations_json', remote_annotations_json
+    'remote_annotations_json', remote_annotations_json, 'remote_import_state_json', remote_import_state_json
   ) AS payload_json FROM import_sources WHERE source_fingerprint = ?`,
   node_open_state: `SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json
     FROM node_open_state WHERE node_id = ?`,

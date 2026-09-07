@@ -15,6 +15,7 @@ import { isKeepImportMonitorSnapshotFresh } from './keepImportMonitorRuntime.js'
 import type { KeepImportProgressEvent } from './keepImportProgress.js';
 import { isKeepImportAbortError, throwIfKeepImportAborted } from './keepImportProgress.js';
 import { requestKeepImportRuleRun } from './keepImportService.js';
+import { cancelReadwiseApiImport, runReadwiseApiImport } from './readwiseApiImportRun.js';
 import { runReadwiseBooksSource } from './readwiseReaderBooksRun.js';
 import {
   createRunAccumulator,
@@ -160,6 +161,10 @@ export async function runReadwiseReaderImport(input?: {
   settings?: unknown;
   window?: ReadwiseImportProgressWindow | null;
 }): Promise<NativeReadwiseImportRunResult> {
+  const settings = input?.settings
+    ? normalizeImportManagerSettings(input.settings)
+    : loadImportManagerSettings();
+  if (settings.readwiseSourceMode === 'api') return runReadwiseApiImport({ ...input, settings });
   if (activeReadwiseReaderImport) {
     return activeReadwiseReaderImport.promise;
   }
@@ -175,7 +180,7 @@ export async function runReadwiseReaderImport(input?: {
 
 export function cancelReadwiseReaderImport() {
   if (!activeReadwiseReaderImport) {
-    return { status: 'idle' as const };
+    return cancelReadwiseApiImport();
   }
   activeReadwiseReaderImport.controller.abort();
   return { status: 'cancelled' as const };
