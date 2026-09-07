@@ -25,6 +25,16 @@ const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
+export async function removeA5AcceptanceApplication(args) {
+  const uninstall = await args.execute(args.paths.adb,
+    ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID]);
+  if (uninstall.code === 0) return;
+  const installed = await args.execute(args.paths.adb,
+    ['-s', args.serial, 'shell', 'pm', 'path', ACCEPTANCE_APP_ID]);
+  if (installed.code === 0 && !String(installed.output).includes('package:')) return;
+  throw new Error(`A5 acceptance application cleanup failed: ${String(uninstall.output)}`);
+}
+
 async function waitForMacFact(session) {
   return session.waitForState({ command: 'load_workspace_list_snapshot',
     commandArgs: { includePdfOpenings: false }, condition: {
@@ -199,7 +209,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     process.stdout.write(result.output);
   } finally {
     await session.close().catch(() => undefined);
-    args.checked(args.paths.adb, ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID]);
+    await removeA5AcceptanceApplication(args);
   }
   if (process.env.FOLIOLE_T152_CELL_ID) {
     writeMacosA5CellReceipt({ buildIdentity, evidenceRoot, input: cellProofInput,

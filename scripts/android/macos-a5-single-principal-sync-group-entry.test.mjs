@@ -3,6 +3,25 @@ import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
+import {
+  removeA5AcceptanceApplication
+} from './macos-a5-single-principal-sync-group-entry.mjs';
+
+it('accepts a nonzero MIUI uninstall result only after the package is absent', async () => {
+  const execute = async (_command, args) => args.includes('uninstall')
+    ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
+    : { code: 0, output: '' };
+  await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
+    .resolves.toBeUndefined();
+});
+
+it('rejects a failed uninstall while the acceptance package remains installed', async () => {
+  const execute = async (_command, args) => args.includes('uninstall')
+    ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
+    : { code: 0, output: 'package:/data/app/base.apk' };
+  await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
+    .rejects.toThrow('cleanup failed');
+});
 
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
   const source = fs.readFileSync(
