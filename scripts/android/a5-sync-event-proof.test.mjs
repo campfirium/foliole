@@ -7,5 +7,7 @@ it('reads runs only through the acceptance projection action', () => {
   expect(source).toContain("action: 'read-sync-events'");
   expect(source).toContain('projectedEvents(receipt, ACCEPTANCE_APP_ID)');
   expect(source).toContain('selectProjectedRun');
+  expect(source).toContain('const deadline = Date.now() + 2 * 60_000');
+  expect(source).toContain('await delay(500)');
   expect(source).not.toMatch(/SQLite|database|adb.*pull|run_id.*=/u);
 });

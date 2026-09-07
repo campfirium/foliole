@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import {
   projectedEvents, selectProjectedRun
@@ -17,7 +18,19 @@ export async function readA5SyncEvents({ args, buildIdentity, env, evidenceRoot 
 }
 
 export async function captureA5SyncRun(options, triggerReason, exclude = []) {
-  const projection = await readA5SyncEvents(options);
-  return { projection: projection.manifestPath,
-    run: selectProjectedRun(projection.events, triggerReason, { exclude }) };
+  const deadline = Date.now() + 2 * 60_000;
+  while (Date.now() < deadline) {
+    const projection = await readA5SyncEvents(options);
+    try {
+      return { projection: projection.manifestPath,
+        run: selectProjectedRun(projection.events, triggerReason, { exclude }) };
+    } catch (error) {
+      if (!(error instanceof Error)
+          || error.message !== `No new completed ${triggerReason} mobile Sync run was projected.`) {
+        throw error;
+      }
+    }
+    await delay(500);
+  }
+  throw new Error(`No new completed ${triggerReason} mobile Sync run was projected.`);
 }
