@@ -100,13 +100,15 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('long stageDeadline()');
   expect(source).not.toContain('long requestDeadline');
   expect(source).not.toContain('"companion-sync-now", deadline');
-  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(8);
+  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(9);
   expect(source).toContain('stage=settings-open');
   expect(source).toContain('"companion-sync-discover"');
   expect(source).toContain('expectedGroupId');
   expect(source).toContain('expectedGroupTag');
   expect(source).toContain('acceptance_group_identity_not_unique');
   expect(source).toContain('acceptance_group_identity_not_found');
+  expect(source).toContain('while (System.nanoTime() < deadline)');
+  expect(source).toContain('Thread.sleep(500)');
   expect(source).toContain('stage=provider-unreachable');
   expect(source).not.toContain('matches.size() != 1');
   expect(source).toContain('clickUniqueVisibleMatchingAttribute');

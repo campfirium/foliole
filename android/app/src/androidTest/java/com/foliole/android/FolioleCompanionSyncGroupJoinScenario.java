@@ -111,33 +111,33 @@ final class FolioleCompanionSyncGroupJoinScenario {
             assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag);
             return groupId;
         }
-        boolean matchFound = false;
-        int mismatches = 0;
-        for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
-            String endpointKey = FolioleCompanionHostBridgeContractDefinitions
-                .networkEndpointUrlCandidateKey(context);
-            String endpoint = candidate.optString(endpointKey);
-            try {
-                JSObject response = FolioleCompanionDesktopHttpClient.request(context,
-                    endpoint + "/companion/discovery", "GET", new JSONObject(), null);
-                String bodyKey = FolioleCompanionHostBridgeContractDefinitions
-                    .networkBodyResponseKey(context);
-                JSONObject discovery = new JSONObject(response.getString(bodyKey));
-                boolean idMatches = groupId.equals(discovery.optString("group_id"));
-                boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
-                if (idMatches && tagMatches) matchFound = true;
-                else if (idMatches || tagMatches) mismatches += 1;
-            } catch (Exception unreachableProvider) {
-                Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
+        long deadline = stageDeadline();
+        while (System.nanoTime() < deadline) {
+            for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
+                String endpointKey = FolioleCompanionHostBridgeContractDefinitions
+                    .networkEndpointUrlCandidateKey(context);
+                String endpoint = candidate.optString(endpointKey);
+                try {
+                    JSObject response = FolioleCompanionDesktopHttpClient.request(context,
+                        endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+                    String bodyKey = FolioleCompanionHostBridgeContractDefinitions
+                        .networkBodyResponseKey(context);
+                    JSONObject discovery = new JSONObject(response.getString(bodyKey));
+                    boolean idMatches = groupId.equals(discovery.optString("group_id"));
+                    boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
+                    if (idMatches && tagMatches) return groupId;
+                    if (idMatches || tagMatches) {
+                        throw new IllegalStateException("acceptance_group_identity_not_unique");
+                    }
+                } catch (IllegalStateException identityMismatch) {
+                    throw identityMismatch;
+                } catch (Exception unreachableProvider) {
+                    Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
+                }
             }
+            Thread.sleep(500);
         }
-        if (mismatches > 0) {
-            throw new IllegalStateException("acceptance_group_identity_not_unique");
-        }
-        if (!matchFound) {
-            throw new IllegalStateException("acceptance_group_identity_not_found");
-        }
-        return groupId;
+        throw new IllegalStateException("acceptance_group_identity_not_found");
     }
 
     private static void assertEndpointIdentity(
