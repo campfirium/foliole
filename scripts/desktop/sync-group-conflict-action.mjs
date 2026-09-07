@@ -76,9 +76,13 @@ export async function loadVisibleDesktopSyncConflictCopy({ nodeId, session }) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', {
     includePdfOpenings: false
   });
-  const copies = Object.entries(snapshot?.nodesById ?? {}).filter(([id, node]) => (
-    id.startsWith(`${nodeId}~`) && String(node.content).includes('A5 note')
+  const copyIds = Object.keys(snapshot?.nodesById ?? {}).filter((id) => (
+    id.startsWith(`${nodeId}~`)
   ));
+  const documents = await Promise.all(copyIds.map((copyId) => (
+    session.invoke('load_node_document', { nodeId: copyId })
+  )));
+  const copies = documents.filter((document) => String(document?.content).includes('A5 note'));
   if (copies.length === 0) {
     throw new Error('The product did not expose the concurrent A5 conflict copy.');
   }

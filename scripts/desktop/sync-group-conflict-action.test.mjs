@@ -46,10 +46,12 @@ it('accepts only a product conflict record for the exact object', async () => {
   } })).rejects.toThrow('did not expose');
 });
 
-it('accepts an A5 conflict copy exposed by the product snapshot', async () => {
-  const session = { invoke: async () => ({ nodesById: {
-    'node~a5': { content: 'Note target beta\n※ A5 note token' }
-  } }) };
+it('loads and accepts an A5 conflict copy exposed by the product snapshot', async () => {
+  const invoke = vi.fn(async (command) => command === 'load_workspace_list_snapshot'
+    ? { nodesById: { 'node~a5': { content: '' } } }
+    : { content: 'Note target beta\n※ A5 note token' });
+  const session = { invoke };
   await expect(loadVisibleDesktopSyncConflictCopy({ nodeId: 'node', session }))
     .resolves.toMatchObject({ conflictCount: 1, silentOverwrite: false, visible: true });
+  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node~a5' });
 });
