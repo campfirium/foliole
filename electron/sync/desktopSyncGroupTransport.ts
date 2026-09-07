@@ -5,6 +5,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
+import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
 import {
   assertDesktopSyncGroupResourcesComplete,
@@ -29,6 +30,7 @@ export async function continueDesktopSyncGroupSync(peer?: DesktopSyncGroupPeer) 
 }
 
 async function continuePeerSync(target: DesktopSyncGroupPeer) {
+  await assertDesktopSyncGroupPeerCompatible(target);
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));

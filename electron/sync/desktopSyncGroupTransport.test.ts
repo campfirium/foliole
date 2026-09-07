@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
+  assertCompatible: vi.fn(),
   assertResourcesComplete: vi.fn(),
   downloadPack: vi.fn(),
   downloadResources: vi.fn(),
@@ -31,6 +32,9 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({
 vi.mock('./desktopSyncGroupPackApply.js', () => ({
   downloadAndApplyDesktopSyncGroupPack: runtime.downloadPack
 }));
+vi.mock('./desktopSyncGroupPeerCompatibility.js', () => ({
+  assertDesktopSyncGroupPeerCompatible: runtime.assertCompatible
+}));
 vi.mock('./desktopSyncGroupPeerSingleFlight.js', () => ({
   runDesktopSyncGroupPeerSingleFlight: (_id: string, execute: () => unknown) => execute()
 }));
@@ -57,6 +61,16 @@ beforeEach(() => {
   runtime.downloadPack.mockResolvedValue(4);
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
+  runtime.assertCompatible.mockResolvedValue(undefined);
+});
+
+it('does not fetch or advance a cursor for an incompatible peer', async () => {
+  runtime.assertCompatible.mockRejectedValueOnce(new Error('sync_group_peer_incompatible'));
+
+  await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('sync_group_peer_incompatible');
+  expect(runtime.downloadPack).not.toHaveBeenCalled();
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
+  expect(runtime.reportCursor).not.toHaveBeenCalled();
 });
 
 it('does not re-advertise after consuming a peer change', async () => {

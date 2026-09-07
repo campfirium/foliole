@@ -158,6 +158,7 @@
   "protocol": {
     "capabilities": [
       "author-host-snapshots-v1",
+      "complete-member-data-plane",
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
       "group-key-routing-v1",

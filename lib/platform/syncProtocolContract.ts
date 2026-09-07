@@ -6,6 +6,8 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
   version: 'protocol_version'
 } as const;
 
+export const COMPLETE_MEMBER_DATA_PLANE_CAPABILITY = 'complete-member-data-plane';
+
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
@@ -17,8 +19,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'source-host-ownership-v1',
     'sync-group-device-facts-v1',
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
+    COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
-  ]),
+  ].sort()),
   max_supported_version: 4,
   min_supported_version: 4,
   version: 4
@@ -26,15 +29,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;
 
-export const COMPLETE_MEMBER_DATA_PLANE_CAPABILITY = 'complete-member-data-plane';
-
-export const PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR = Object.freeze({
-  ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-  capabilities: Object.freeze([
-    ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities,
-    COMPLETE_MEMBER_DATA_PLANE_CAPABILITY
-  ].sort())
-});
+export const PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
 
 export type SyncProtocolDescriptor = {
   capabilities: string[] | readonly string[];

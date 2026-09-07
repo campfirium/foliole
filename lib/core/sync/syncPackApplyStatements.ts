@@ -8,7 +8,7 @@ export interface SyncPackApplyableRowsOptions {
   excludedNodeIds?: readonly string[] | undefined;
   incomingAlias?: string;
   objectType?: string;
-  sourcePeerId?: string;
+  sourcePeerId?: string | undefined;
 }
 
 export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
@@ -23,8 +23,7 @@ const SYNC_PACK_CONTENT_BLOB_UPDATE_COLUMNS = [
   'cached_at', 'last_verified_at'
 ] as const;
 const NODE_PROVENANCE_COLUMNS = [
-  'import_source_fingerprint',
-  'import_content_fingerprint'
+  'import_source_fingerprint', 'import_content_fingerprint'
 ] as const satisfies readonly SyncPackNodeColumn[];
 
 function incomingAlias(options: { incomingAlias?: string }) {
@@ -80,7 +79,8 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
   const applyableRowsSql = buildSyncPackApplyableRowsSql({
     excludedNodeIds: options.excludedNodeIds,
     incomingAlias: alias,
-    objectType: 'node'
+    objectType: 'node',
+    sourcePeerId: options.sourcePeerId
   });
   return `WITH RECURSIVE applyable_node_ids(id) AS (` +
     `SELECT object_id FROM ${applyableRowsSql}` +
@@ -125,7 +125,8 @@ export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOp
     `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,
       excludedNodeIds: options.excludedNodeIds,
-      objectType: 'node'
+      objectType: 'node',
+      sourcePeerId: options.sourcePeerId
     })})`;
 }
 
@@ -135,7 +136,8 @@ export function buildSyncPackNodeOrderDeleteSql(options: SyncPackApplyableRowsOp
     `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       excludedNodeIds: options.excludedNodeIds,
       incomingAlias: alias,
-      objectType: 'node'
+      objectType: 'node',
+      sourcePeerId: options.sourcePeerId
     })}) ` +
     `AND node_id NOT IN (SELECT node_id FROM ${alias}.node_order)`;
 }
@@ -153,7 +155,8 @@ export function buildSyncPackNodeAttachmentInsertSql(options: SyncPackApplyableR
     `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       excludedNodeIds: options.excludedNodeIds,
       incomingAlias: alias,
-      objectType: 'node'
+      objectType: 'node',
+      sourcePeerId: options.sourcePeerId
     })})`;
 }
 
@@ -175,12 +178,14 @@ export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRows
     `AND id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       excludedNodeIds: options.excludedNodeIds,
       incomingAlias: alias,
-      objectType: 'node'
+      objectType: 'node',
+      sourcePeerId: options.sourcePeerId
     })}) ` +
     `UNION SELECT body_blob_hash FROM ${alias}.external_documents WHERE body_blob_hash IS NOT NULL ` +
     `AND document_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,
-      objectType: 'external_document'
+      objectType: 'external_document',
+      sourcePeerId: options.sourcePeerId
     })})) ` +
     `ON CONFLICT(hash) DO UPDATE SET ${SYNC_PACK_CONTENT_BLOB_UPDATE_COLUMNS
       .map((column) => `${column} = excluded.${column}`).join(', ')}`;
@@ -196,5 +201,7 @@ export function buildSyncPackExternalDocumentUpsertSql(options: SyncPackApplyabl
     `source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, ` +
     `content, indexed_at, is_present, missing_at, created_at, updated_at FROM ${alias}.external_documents ` +
     `WHERE document_id IN (` +
-    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'external_document' })})`;
+    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      incomingAlias: alias, objectType: 'external_document', sourcePeerId: options.sourcePeerId
+    })})`;
 }

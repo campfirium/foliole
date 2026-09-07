@@ -46,9 +46,9 @@ describe('prepared complete member data plane contract', () => {
     expect(COMPLETE_MEMBER_DATA_PLANE_CONTRACT.lifecycle).toEqual(['delete', 'restore']);
   });
 
-  it('prepares a required v4 capability without changing the production v4 descriptor', () => {
+  it('uses the required complete member capability in the production v4 descriptor', () => {
     expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(4);
-    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).not.toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
+    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR).toMatchObject({
       version: 4,
       min_supported_version: 4,
@@ -57,6 +57,8 @@ describe('prepared complete member data plane contract', () => {
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR.capabilities)
       .toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
     expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.protocol).toBe(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
+    expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.preparedMemberDataPlane.protocol)
+      .toBe(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
     expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.preparedMemberDataPlane)
       .toBe(COMPLETE_MEMBER_DATA_PLANE_CONTRACT);
   });

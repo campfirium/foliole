@@ -2,7 +2,10 @@ import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 
-import { collectSyncPackAppliedEvent } from './desktopSyncGroupPackApply.js';
+import {
+  collectSyncPackAppliedEvent,
+  fetchDesktopSyncGroupPackBody
+} from './desktopSyncGroupPackApply.js';
 
 it('reports applied pack identities so the renderer reloads committed sync facts', async () => {
   const query = vi.fn()
@@ -32,4 +35,26 @@ it('does not report a replayed pack as a new workspace change', async () => {
     fromStateSeq: 4, handledConflictCount: 0, toStateSeq: 4
   })).resolves.toEqual({ appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] });
   expect(query).not.toHaveBeenCalled();
+});
+
+it.each(['headers', 'body'])('cancels a structure pack stalled at %s', async (stage) => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
+    const stalled = new Promise<never>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    });
+    if (stage === 'headers') return stalled;
+    return Promise.resolve({
+      ok: true,
+      headers: { get: () => 'application/vnd.foliole.workgroup-aead+json' },
+      arrayBuffer: () => stalled
+    } as unknown as Response);
+  });
+  try {
+    await expect(fetchDesktopSyncGroupPackBody({
+      groupId: 'group-1', headers: {}, pathWithQuery: '/companion/sync-pack?after_state_seq=0',
+      timeoutMs: 5, url: 'http://peer/companion/sync-pack?after_state_seq=0'
+    })).rejects.toThrow('sync_group_structure_pack_timeout');
+  } finally {
+    fetchMock.mockRestore();
+  }
 });

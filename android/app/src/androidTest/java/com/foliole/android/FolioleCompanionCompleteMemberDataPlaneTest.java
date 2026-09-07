@@ -17,7 +17,7 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionCompleteMemberDataPlaneTest {
     @Test
-    public void projectsPreparedCapabilityWithoutChangingProductionV4() throws Exception {
+    public void projectsCompleteMemberCapabilityIntoProductionV4() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         FolioleCompanionSyncPackProviderDefinitions definitions =
             FolioleCompanionSyncPackProviderDefinitions.load(context);
@@ -26,7 +26,7 @@ public class FolioleCompanionCompleteMemberDataPlaneTest {
         JSONObject preparedProtocol = prepared.getJSONObject("protocol");
 
         assertEquals(4, production.getInt("version"));
-        assertFalse(contains(production.getJSONArray("capabilities"), "complete-member-data-plane"));
+        assertTrue(contains(production.getJSONArray("capabilities"), "complete-member-data-plane"));
         assertEquals(4, preparedProtocol.getInt("version"));
         assertTrue(contains(preparedProtocol.getJSONArray("capabilities"), "complete-member-data-plane"));
         assertTrue(contains(prepared.getJSONArray("resourceKinds"), "attachment"));

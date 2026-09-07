@@ -186,15 +186,22 @@ describe('companion desktop sync accepted push acknowledgements', () => {
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 
-  it('does not push review_log when its node_review is not ready to push', async () => {
+  it('pushes review_log after its node_review state is no longer dirty', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushedReviewOpIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(result.pushedReviewOpIds).toEqual(['op-1']);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://10.0.2.2:38641/companion/sync-push',
+      expect.objectContaining({ body: expect.stringContaining('review_log:op-1'), method: 'POST' })
+    );
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith(
+      'authorization-desktop-test',
+      [expect.objectContaining({ clientOpId: 'review_log:op-1', status: 'accepted' })]
+    );
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 });

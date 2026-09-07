@@ -18,9 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { applySyncObjectPayloadWithDbPort } from '../../lib/core/sync/syncObjectPayloadExecutor.js';
 
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
 
@@ -136,17 +134,13 @@ it('supersedes an older same-host text alternative before applying its replaceme
     updated_at: updatedAt
   });
 
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, {
-    name: 'same-host-text-alternative-test'
-  });
-  await expect(port.transaction(async (tx) => {
-    await applySyncObjectPayloadWithDbPort(
-      tx, alternative('alternative-old', 'version-old', '2026-04-22T08:10:00.000Z')
-    );
-    await applySyncObjectPayloadWithDbPort(
-      tx, alternative('alternative-new', 'version-new', '2026-04-22T08:11:00.000Z')
-    );
-  })).resolves.toBeUndefined();
+  await expect(applySyncObjectsAsync([
+    alternative('alternative-old', 'version-old', '2026-04-22T08:10:00.000Z'),
+    alternative('alternative-new', 'version-new', '2026-04-22T08:11:00.000Z')
+  ])).resolves.toEqual([
+    'node_text_alternative:alternative-old',
+    'node_text_alternative:alternative-new'
+  ]);
 
   expect(openDatabaseConnection().driver.queryAll<{ alternative_id: string; status: string }>(
     `SELECT alternative_id, status FROM node_text_alternatives
