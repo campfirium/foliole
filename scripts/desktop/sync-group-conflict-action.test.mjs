@@ -46,6 +46,15 @@ it('accepts only a product conflict record for the exact object', async () => {
   } })).rejects.toThrow('did not expose');
 });
 
+it('waits for the applied sync event before accepting a product conflict', async () => {
+  const waitForState = vi.fn(async () => [{ conflict_version_id: 'peer#2', object_id: 'node' }]);
+  await expect(loadVisibleDesktopSyncConflict({ nodeId: 'node', session: { waitForState } }))
+    .resolves.toMatchObject({ conflictCount: 1, visible: true });
+  expect(waitForState).toHaveBeenCalledWith({ command: 'load_sync_node_conflicts',
+    commandArgs: { objectIds: ['node'] }, condition: { count: 1, kind: 'sync-conflict-count' },
+    eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
+});
+
 it('loads and accepts an A5 conflict copy exposed by the product snapshot', async () => {
   const invoke = vi.fn(async (command) => command === 'load_workspace_list_snapshot'
     ? { nodesById: { 'node~a5': { content: '' } } }

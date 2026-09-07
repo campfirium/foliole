@@ -65,7 +65,12 @@ export async function forkDesktopSyncConflict({ label, nodeId, session }) {
 }
 
 export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
-  const conflicts = await session.invoke('load_sync_node_conflicts', { objectIds: [nodeId] });
+  const conflicts = typeof session.waitForState === 'function'
+    ? await session.waitForState({ command: 'load_sync_node_conflicts',
+      commandArgs: { objectIds: [nodeId] },
+      condition: { count: 1, kind: 'sync-conflict-count' },
+      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 })
+    : await session.invoke('load_sync_node_conflicts', { objectIds: [nodeId] });
   if (!Array.isArray(conflicts) || conflicts.length === 0) {
     throw new Error('The product did not expose the concurrent business conflict.');
   }
