@@ -32,6 +32,7 @@ let package = Package(
                 "FolioleCompanionDeviceAnchorStore.swift",
                 "FolioleCompanionHttpMessage.swift",
                 "FolioleCompanionSyncGroupJoinCrypto.swift",
+                "FolioleCompanionSyncGroupAdvertisement.swift",
                 "FolioleCompanionSyncGroupJoinProvider.swift",
                 "FolioleCompanionSyncGroupJoinRequest.swift",
                 "FolioleCompanionSyncGroupJoinServer.swift",

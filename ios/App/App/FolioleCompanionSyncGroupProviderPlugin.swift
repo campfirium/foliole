@@ -35,13 +35,13 @@ extension FolioleCompanionSyncPlugin {
                 "provider_platform": try self.requiredString(call, ["platform": "platform"], "platform"),
                 "runtime_instance_id": runtimeId
             ]
-            try FolioleCompanionSyncGroupJoinService.shared.install(
+            let effectiveRuntimeId = try FolioleCompanionSyncGroupJoinService.shared.install(
                 groupInfo: info, discovery: discovery, dataBridge: self.groupData,
                 stateChanged: { [weak self] in self?.publishProviderState() }
             )
             let hint = try self.serviceHintContract()
             self.serviceMonitor.start(
-                groupId: try self.required(group, "group_id"), localRuntimeId: runtimeId,
+                groupId: try self.required(group, "group_id"), localRuntimeId: effectiveRuntimeId,
                 endpointKey: hint.endpointKey
             ) { [weak self] event in
                 self?.notifyListeners(hint.eventName, data: event)

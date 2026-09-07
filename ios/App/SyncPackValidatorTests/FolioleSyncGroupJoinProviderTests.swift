@@ -21,7 +21,7 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
 
     func testRejectTimeoutAndRestartRemoveTemporaryRequests() throws {
         let service = FolioleCompanionSyncGroupJoinService()
-        try service.install(groupInfo: groupInfo(), discovery: discovery(), stateChanged: {})
+        _ = try service.install(groupInfo: groupInfo(), discovery: discovery(), stateChanged: {})
         let requester = P256.KeyAgreement.PrivateKey()
         let request = try service.withProvider { try $0.receive(
             self.request(publicKey: requester.publicKey.x963Representation), now: self.now
@@ -36,6 +36,29 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
         }, 0)
         service.clearForRestart()
         XCTAssertThrowsError(try service.withProvider { $0.pending(now: self.now) })
+    }
+
+    func testRefreshKeepsListenerRuntimePortAndPendingRequests() throws {
+        let service = FolioleCompanionSyncGroupJoinService()
+        let firstRuntime = try service.install(
+            groupInfo: groupInfo(), discovery: discovery(runtime: "runtime-a", revision: "1"), stateChanged: {}
+        )
+        let firstPort = try XCTUnwrap(service.state()["port"] as? Int)
+        let requester = P256.KeyAgreement.PrivateKey()
+        let requestNow = Date()
+        _ = try service.withProvider { try $0.receive(
+            self.request(publicKey: requester.publicKey.x963Representation), now: requestNow
+        ) }
+
+        let refreshedRuntime = try service.install(
+            groupInfo: groupInfo(), discovery: discovery(runtime: "runtime-b", revision: "2"), stateChanged: {}
+        )
+
+        XCTAssertEqual(firstRuntime, "runtime-a")
+        XCTAssertEqual(refreshedRuntime, firstRuntime)
+        XCTAssertEqual(try service.state()["port"] as? Int, firstPort)
+        XCTAssertEqual(try service.withProvider { $0.pending(now: requestNow).count }, 1)
+        service.clearForRestart()
     }
 
     func testMalformedPayloadsFailClosed() throws {
@@ -57,8 +80,10 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
          "workgroup_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]
     }
 
-    private func discovery() -> [String: Any] {
-        ["group_display_name": "My Sync Group", "runtime_instance_id": UUID().uuidString.lowercased()]
+    private func discovery(
+        runtime: String = UUID().uuidString.lowercased(), revision: String = "1"
+    ) -> [String: Any] {
+        ["facts_revision": revision, "group_display_name": "My Sync Group", "runtime_instance_id": runtime]
     }
 
     private func request(publicKey: Data) -> [String: Any] {
