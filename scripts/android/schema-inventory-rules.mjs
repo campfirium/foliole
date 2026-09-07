@@ -34,6 +34,8 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'keep_import_item_cache',
   'keep_import_items',
   'mirror_articles',
+  'readwise_api_import_runs',
+  'readwise_api_import_stage',
   'settings',
   'sync_peers'
 ]);

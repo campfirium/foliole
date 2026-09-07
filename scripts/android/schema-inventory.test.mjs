@@ -106,6 +106,8 @@ describe('schema inventory drift gate', () => {
       { classification: 'known-platform-only', table: 'keep_import_item_cache' },
       { classification: 'known-platform-only', table: 'keep_import_items' },
       { classification: 'known-platform-only', table: 'mirror_articles' },
+      { classification: 'known-platform-only', table: 'readwise_api_import_runs' },
+      { classification: 'known-platform-only', table: 'readwise_api_import_stage' },
       { classification: 'known-platform-only', table: 'settings' },
       { classification: 'known-platform-only', table: 'sync_peers' }
     ]);
