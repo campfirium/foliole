@@ -14,6 +14,7 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("creator === 'windows'");
   expect(source).toContain("action: 'single-principal-sync-group'");
+  expect(source).toContain('sourceRef');
   expect(source).toContain("windowsProvider.waitForProgress('restarted')");
   expect(source).toContain("windowsProvider.release('consumer_complete')");
   expect(source).toContain("device: 'A'");
@@ -29,6 +30,7 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
 it('keeps the reverse desktop role on the same fixed Windows provider control plane', () => {
   const source = fs.readFileSync('scripts/windows/macos-joins-windows-sync-group.mjs', 'utf8');
   expect(source).toContain("action: 'two-device-sync-provider'");
+  expect(source).toContain('sourceRef');
   expect(source.indexOf("session.invoke('enable_companion_sync')"))
     .toBeLessThan(source.indexOf("session.invoke('request_sync_group_join'"));
   expect(source).toContain("session.invoke('request_sync_group_join'");

@@ -30,6 +30,15 @@ async function acceptedRevision(repoRoot) {
   return stdout.trim();
 }
 
+async function acceptedSourceRef(repoRoot) {
+  const { stdout } = await execute('git', ['symbolic-ref', '--quiet', 'HEAD'], { cwd: repoRoot });
+  const sourceRef = stdout.trim();
+  if (!sourceRef.startsWith('refs/heads/')) {
+    throw new Error('Desktop acceptance requires a local branch source ref.');
+  }
+  return sourceRef;
+}
+
 async function waitForOriginCount(session, origin, count, timeoutMs = 2 * 60_000) {
   return session.waitForState({ command: 'load_workspace_list_snapshot',
     commandArgs: { includePdfOpenings: false },
@@ -41,11 +50,14 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
   creator = 'macos', repoRoot = process.cwd()
 } = {}) {
   const acceptedTip = await acceptedRevision(repoRoot);
+  const sourceRef = await acceptedSourceRef(repoRoot);
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/t152-7-windows', acceptedTip,
     creator === 'windows' ? 'windows-creates' : 'macos-creates');
   const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
   if (creator === 'windows') {
-    return runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot, repoRoot, sharedRoot });
+    return runMacosJoinsWindowsSyncGroup({
+      acceptedTip, evidenceRoot, repoRoot, sharedRoot, sourceRef
+    });
   }
   if (creator !== 'macos') throw new Error('Desktop creator must be macos or windows.');
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -73,7 +85,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     windowsProvider = startWindowsSyncGroupProvider({
       action: 'single-principal-sync-group', execute: runWindowsAction,
       expectedGroupId: initial.sync_group.group_id,
-      expectedGroupTag: initial.sync_group.group_tag, repoRoot
+      expectedGroupTag: initial.sync_group.group_tag, repoRoot, sourceRef
     });
     await windowsProvider.waitForProgress('requested');
     const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 15 * 60_000 });

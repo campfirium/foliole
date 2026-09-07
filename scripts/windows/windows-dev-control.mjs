@@ -12,7 +12,9 @@ import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
   parseWindowsDevLiveEvidence
 } from './windows-dev-control-evidence.mjs';
-import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
+import {
+  isWindowsSyncGroupControlAction, runWindowsSyncGroupControl
+} from './windows-sync-group-control-router.mjs';
 import {
   collectWindowsCandidateControl, extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
@@ -93,8 +95,9 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
       'Windows DEV control only accepts a registered fixed action'
     );
   }
-  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate') {
-    throw new Error('Windows DEV source ref is only accepted for candidate preparation');
+  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate'
+      && !isWindowsSyncGroupControlAction(args[0])) {
+    throw new Error('Windows DEV source ref is only accepted for bounded sync actions');
   }
   return { action: args[0], host,
     ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}) };

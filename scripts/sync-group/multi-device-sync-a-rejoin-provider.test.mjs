@@ -68,10 +68,15 @@ it('holds the joined Windows C provider until Android consumes its fact', async 
     return new Promise(() => {});
   });
   const provider = startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-c', execute, reportProgress, repoRoot: process.cwd()
+    action: 'multi-device-sync-c', execute, reportProgress, repoRoot: process.cwd(),
+    sourceRef: 'refs/heads/sync'
   });
   await expect(provider.waitForProgress()).resolves.toBe('multi-device-sync-c-20260813080000000');
   expect(reportProgress).toHaveBeenCalledWith('c-provider-ready');
+  expect(execute.mock.calls[0][1]).toEqual([
+    'scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c',
+    '--source-ref', 'refs/heads/sync'
+  ]);
 });
 
 it('publishes the exact Windows-created group before product discovery', async () => {
