@@ -43,7 +43,23 @@ function resolvePosition(maxTouchPoints: number) {
 }
 
 it('places the annotation toolbar below a touch selection to avoid the native edit menu', () => {
-  expect(resolvePosition(5)).toMatchObject({ noteTop: 178, top: 130 });
+  expect(resolvePosition(5)).toMatchObject({ noteTop: 232, top: 184 });
+});
+
+it('places the touch toolbar above a low selection without clipping the controls', () => {
+  Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 });
+  vi.spyOn(window, 'getSelection').mockReturnValue({
+    getRangeAt: () => ({
+      getBoundingClientRect: () => ({
+        bottom: 750, height: 20, left: 100, right: 180, top: 730, width: 80
+      })
+    }),
+    rangeCount: 1
+  } as unknown as Selection);
+
+  expect(resolveSelectionToolbarState({
+    fallback: { clientX: 140, clientY: 740 }, payload, snapshot: null
+  })).toMatchObject({ noteTop: 670, top: 622 });
 });
 
 it('retains the compact above-selection placement for pointer devices', () => {
