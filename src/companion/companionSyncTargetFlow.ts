@@ -92,10 +92,11 @@ export async function tryForegroundAutoSyncTarget(
   target: CompanionWorkspaceSyncTarget,
   runStreamSync: RunCompanionStreamSync
 ) {
-  const runId = createCompanionSyncRunId();
+  const runId = syncArgs.runId ?? createCompanionSyncRunId();
   const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
     runId, target, runStreamSync, syncArgs
   }));
+  syncArgs.onRunIdResolved?.(run.runId);
   if (run.mode === 'joined') {
     return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
   }

@@ -52,7 +52,8 @@ async function refreshConflictAwareState(args: {
 
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
-    let action = startCompanionManualSyncAction(createCompanionSyncRunId());
+    const runId = createCompanionSyncRunId();
+    let action = startCompanionManualSyncAction(runId);
     let syncFailure: string | null = null;
     args.setManualSyncAction?.(action);
     try {
@@ -68,6 +69,12 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         setState: args.setState,
         setSyncProgress: args.setSyncProgress,
         setStatus: args.setStatus,
+        onRunIdResolved: (resolvedRunId) => {
+          if (action.runId === resolvedRunId) return;
+          action = markCompanionManualSyncActionRunning({ ...action, runId: resolvedRunId });
+          args.setManualSyncAction?.(action);
+        },
+        runId,
         state: { ...args.state, endpoint_url: endpointUrl },
         triggerReason: 'manual'
       });
