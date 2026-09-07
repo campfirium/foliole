@@ -19,6 +19,7 @@ export const WORKSPACE_SNAPSHOT_FIELD_MANIFEST: readonly WorkspaceSnapshotFieldM
   { field: 'nodesById.*.currentVersionId', kind: 'entity' },
   { field: 'nodesById.*.importSourceFingerprint', kind: 'entity' },
   { field: 'nodesById.*.importContentFingerprint', kind: 'entity' },
+  { field: 'nodesById.*.readwiseRemoteLifecycle', kind: 'entity' },
   { field: 'nodesById.*.deletedAt', kind: 'entity' },
   { field: 'nodeOrder', kind: 'derived' },
   { field: 'nodeOpenStateById', kind: 'entity' },

@@ -7,6 +7,7 @@ import {
   useCompanionPdfReadingEntry
 } from './CompanionPdfReadingEntry';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import { CompanionReadwiseRemoteStatus } from './CompanionReadwiseRemoteStatus';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
@@ -189,6 +190,7 @@ export function ReadableArticleDocument(props: {
 
   return (
     <>
+      <CompanionReadwiseRemoteStatus lifecycle={props.readableArticle.readwiseRemoteLifecycle} />
       {pdfAttachmentId ? (
         <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
       ) : null}

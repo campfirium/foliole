@@ -34,6 +34,8 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.previewReadwiseReaderImport, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.runReadwiseReaderImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.cancelReadwiseReaderImport, route: 'import', capability: 'read' },
+  { command: NATIVE_COMMANDS.runReadwiseApiReconcile, route: 'import', capability: 'importMutation' },
+  { command: NATIVE_COMMANDS.cancelReadwiseApiReconcile, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.previewReadwiseImportCleanup, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.runReadwiseImportCleanup, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.loadReadwiseBooksInventory, route: 'storage', capability: 'read' },

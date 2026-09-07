@@ -1,4 +1,9 @@
-export const READWISE_API_IMPORT_STATE_VERSION = 2;
+import {
+  normalizeReadwiseRemoteLifecycle,
+  type ReadwiseRemoteLifecycleState
+} from './readwiseRemoteLifecycle.js';
+
+export const READWISE_API_IMPORT_STATE_VERSION = 3;
 
 export type ReadwiseApiOriginalFileState =
   | { attachmentId: string; contentHash: string; mimeType: string; reason: null; sizeBytes: number; status: 'localized' }
@@ -11,6 +16,7 @@ export interface ReadwiseApiAnnotationState {
   nodeId: string;
   parentRemoteId: string | null;
   remoteId: string;
+  remoteStatus: 'deleted' | 'present' | 'unconfirmed';
   sourceUpdatedAt: string | null;
 }
 
@@ -19,6 +25,7 @@ export interface ReadwiseApiDocumentImportState {
   bodyState: 'materialized' | 'unavailable';
   documentBlockedAt: string | null;
   metadata: Record<string, unknown>;
+  remoteLifecycle: ReadwiseRemoteLifecycleState | null;
   originalFile: ReadwiseApiOriginalFileState | null;
   sourceUpdatedAt: string | null;
   version: number;
@@ -34,6 +41,7 @@ export function normalizeReadwiseApiDocumentImportState(value: unknown): Readwis
     documentBlockedAt: text(row.documentBlockedAt),
     metadata: record(row.metadata),
     originalFile: normalizeOriginalFileState(row.originalFile),
+    remoteLifecycle: normalizeReadwiseRemoteLifecycle(row.remoteLifecycle),
     sourceUpdatedAt: text(row.sourceUpdatedAt),
     version: READWISE_API_IMPORT_STATE_VERSION
   };
@@ -74,6 +82,8 @@ function normalizeAnnotation(value: unknown): ReadwiseApiAnnotationState[] {
     nodeId,
     parentRemoteId: text(row.parentRemoteId),
     remoteId,
+    remoteStatus: row.remoteStatus === 'deleted' || row.remoteStatus === 'present'
+      ? row.remoteStatus : 'unconfirmed',
     sourceUpdatedAt: text(row.sourceUpdatedAt)
   }];
 }

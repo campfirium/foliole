@@ -101,7 +101,7 @@
     "min_supported_version": 4,
     "version": 4
   },
-  "schemaVersion": 81,
+  "schemaVersion": 83,
   "stateCopyIndex": 2,
   "tableNames": [
     "sync_groups",

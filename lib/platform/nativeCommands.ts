@@ -24,6 +24,8 @@ export const NATIVE_COMMANDS = {
   previewReadwiseReaderImport: 'preview_readwise_reader_import',
   runReadwiseReaderImport: 'run_readwise_reader_import',
   cancelReadwiseReaderImport: 'cancel_readwise_reader_import',
+  runReadwiseApiReconcile: 'run_readwise_api_reconcile',
+  cancelReadwiseApiReconcile: 'cancel_readwise_api_reconcile',
   previewReadwiseImportCleanup: 'preview_readwise_import_cleanup',
   runReadwiseImportCleanup: 'run_readwise_import_cleanup',
   loadReadwiseBooksInventory: 'load_readwise_books_inventory',

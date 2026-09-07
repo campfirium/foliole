@@ -15,8 +15,8 @@ import { saveReconnectRequired } from './readwiseApiConnection.js';
 import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js';
 import { readReadwiseApiSecret } from './readwiseApiSecret.js';
 
-const READER_LIST_URL = 'https://readwise.io/api/v3/list/';
-const EXPORT_URL = 'https://readwise.io/api/v2/export/';
+export const READWISE_READER_LIST_URL = 'https://readwise.io/api/v3/list/';
+export const READWISE_EXPORT_URL = 'https://readwise.io/api/v2/export/';
 
 export interface ReadwiseApiFetchDependencies {
   fetchImpl?: typeof fetch;
@@ -35,7 +35,7 @@ export async function fetchReadwiseRawSourceDocument(
   }
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
   const request = createRequest(readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies);
-  const url = new URL(READER_LIST_URL);
+  const url = new URL(READWISE_READER_LIST_URL);
   url.searchParams.set('id', documentId);
   url.searchParams.set('withRawSourceUrl', 'true');
   const payload = await request(url);
@@ -111,7 +111,7 @@ async function hydrateMissingReaderAncestors(
     if (!missing) return;
     attempted.add(missing);
     assertEligible(dependencies.signal);
-    const url = new URL(READER_LIST_URL);
+    const url = new URL(READWISE_READER_LIST_URL);
     url.searchParams.set('id', missing);
     url.searchParams.set('withHtmlContent', 'true');
     const payload = await request(url);
@@ -123,7 +123,7 @@ async function hydrateMissingReaderAncestors(
 }
 
 function buildPageUrl(run: ReadwiseApiImportRunState, kind: 'export' | 'reader') {
-  const url = new URL(kind === 'reader' ? READER_LIST_URL : EXPORT_URL);
+  const url = new URL(kind === 'reader' ? READWISE_READER_LIST_URL : READWISE_EXPORT_URL);
   if (run.queryUpdatedAfter) url.searchParams.set('updatedAfter', run.queryUpdatedAfter);
   if (kind === 'reader') {
     url.searchParams.set('limit', '100');
@@ -164,6 +164,15 @@ function createRequest(token: string, dependencies: ReadwiseApiFetchDependencies
     if (!response.ok) throw new Error(`readwise_api_http_${response.status}`);
     return response.json() as Promise<Record<string, unknown>>;
   };
+}
+
+export function createReadwiseApiRequest(dependencies: ReadwiseApiFetchDependencies = {}) {
+  const settings = loadStoredReadwiseHostSettings();
+  if (!canCurrentHostRunReadwise('api') || settings.apiConnection.state !== 'connected') {
+    throw new Error('readwise_api_import_not_ready');
+  }
+  if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
+  return createRequest(readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies);
 }
 
 function assertEligible(signal?: AbortSignal) {

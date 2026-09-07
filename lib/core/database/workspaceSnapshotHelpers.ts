@@ -1,6 +1,7 @@
 import { parseManualChildOrder } from '../nodes/manualChildOrder.js';
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
+import { normalizeReadwiseRemoteLifecycle, type ReadwiseRemoteLifecycleState } from '../readwise/readwiseRemoteLifecycle.js';
 import { isReadingState, type ReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
@@ -57,6 +58,7 @@ export interface WorkspaceNodeSnapshot {
   importContentFingerprint?: string | null;
   importSourceFingerprint?: string | null;
   reading: WorkspaceReadingProfile | null;
+  readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
   deletedAt?: string | null;
@@ -101,6 +103,7 @@ export interface WorkspaceNodeRowShape {
   reading_priority: number | null;
   reading_repetition_count: number | null;
   reading_state: string | null;
+  readwise_remote_lifecycle?: unknown;
   reveal: string | null;
   review_difficulty: number | null;
   review_due: string | null;
@@ -175,6 +178,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     reveal: row.reveal,
     anchorLink: parseStoredAnchorLink(row.anchor_link),
     reading: toReadingProfile(row),
+    readwiseRemoteLifecycle: normalizeLifecycle(row.readwise_remote_lifecycle),
     review: toReviewProfile(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -210,6 +214,11 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     node.bodyStatus = row.body_status;
   }
   return node;
+}
+
+function normalizeLifecycle(value: unknown) {
+  if (typeof value !== 'string') return normalizeReadwiseRemoteLifecycle(value);
+  try { return normalizeReadwiseRemoteLifecycle(JSON.parse(value)); } catch { return null; }
 }
 
 export function buildOrderedNodeIds<T extends { id: string }>(

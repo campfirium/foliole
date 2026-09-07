@@ -70,6 +70,22 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     payload_json TEXT NOT NULL,
     PRIMARY KEY (connection_ref, record_kind, remote_id)
   )`,
+  `CREATE TABLE IF NOT EXISTS readwise_api_reconcile_runs (
+    connection_ref TEXT PRIMARY KEY,
+    scope_json TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    reader_cursor TEXT,
+    export_cursor TEXT,
+    phase TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS readwise_api_reconcile_stage (
+    connection_ref TEXT NOT NULL,
+    record_kind TEXT NOT NULL,
+    remote_id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    PRIMARY KEY (connection_ref, record_kind, remote_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,
     source_fingerprint TEXT NOT NULL,

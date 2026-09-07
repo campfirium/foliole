@@ -61,6 +61,7 @@ export function materializeReadwiseApiDocument(input: {
       documentBlockedAt: null,
       metadata: input.document.metadata,
       originalFile: existing?.state.originalFile ?? null,
+      remoteLifecycle: existing?.state.remoteLifecycle ?? null,
       sourceUpdatedAt: input.document.updatedAt,
       version: READWISE_API_IMPORT_STATE_VERSION
     }, importedAt);
@@ -103,6 +104,7 @@ function materializeAvailableDocument(
       nodeId: stableReadwiseAnnotationNodeId(input.connectionRef, annotation.remoteId),
       parentRemoteId: annotation.parentRemoteId,
       remoteId: annotation.remoteId,
+      remoteStatus: 'present',
       sourceUpdatedAt: annotation.updatedAt
     }))
   ];
@@ -113,6 +115,7 @@ function materializeAvailableDocument(
     documentBlockedAt: null,
     metadata: input.document.metadata,
     originalFile: existing?.state.originalFile ?? null,
+    remoteLifecycle: existing?.state.remoteLifecycle ?? null,
     sourceUpdatedAt: input.document.updatedAt,
     version: READWISE_API_IMPORT_STATE_VERSION
   }, importedAt);
@@ -153,15 +156,17 @@ function resolveAnnotationStates(
   return existing.annotations.map((binding) => {
     const current = stateById.get(binding.remoteId);
     const active = isNodeActive(binding.nodeId);
-    return current ?? {
+    const fallback: ReadwiseApiAnnotationState = {
       blockedAt: active ? null : now,
       contentHash: 'legacy-binding',
       kind: binding.kind,
       nodeId: binding.nodeId,
       parentRemoteId: null,
       remoteId: binding.remoteId,
+      remoteStatus: 'unconfirmed',
       sourceUpdatedAt: null
     };
+    return current ?? fallback;
   }).map((state) => isNodeActive(state.nodeId) || state.blockedAt
     ? state : { ...state, blockedAt: now });
 }

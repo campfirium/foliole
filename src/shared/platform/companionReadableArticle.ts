@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
+import type { ReadwiseRemoteLifecycleState } from '../../../lib/core/readwise/readwiseRemoteLifecycle';
 import type { PersistedNodeViewState } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
@@ -26,6 +27,7 @@ export interface CompanionReadableArticle {
   nodeId: string;
   persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
+  readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   title: string;
 }
@@ -51,6 +53,7 @@ function buildReadableArticle(node: CompanionReadableNode, persistedNodeViewStat
     nodeId: node.id,
     persistedNodeViewState,
     pdfAttachmentId: resolveReferencePdfAttachmentId(node),
+    readwiseRemoteLifecycle: node.readwiseRemoteLifecycle ?? null,
     textAnchorDecorations: [],
     title: resolveCompanionArticleTitle(node)
   };

@@ -64,6 +64,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   reading_position: number | null;
   reading_repetition_count: number | null;
   reading_state: string | null;
+  readwise_remote_lifecycle: string | null;
   review_due: string | null;
   review_last_review_at: string | null;
   review_state: number | null;
@@ -81,6 +82,9 @@ interface NodeOrderRow extends DatabaseRow {
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
+const READWISE_REMOTE_LIFECYCLE_SQL = `(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle')
+  FROM import_sources i WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise'
+  ORDER BY i.last_imported_at DESC LIMIT 1)`;
 
 function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
   if (options.includeBody) {
@@ -137,6 +141,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.image_regions,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
+       ${READWISE_REMOTE_LIFECYCLE_SQL} AS readwise_remote_lifecycle,
        n.created_at,
        n.updated_at,
        n.deleted_at,

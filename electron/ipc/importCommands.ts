@@ -7,6 +7,7 @@ import { loadReadwiseApiExternalReference } from '../database/readwiseApiExterna
 import { assertKeepImportSourceCanRun } from '../import/keepImportExecutionGuard.js';
 import { previewKeepImportRule, type KeepImportRuleConfig } from '../import/keepImportService.js';
 import { promoteReadwiseApiExternalDocument } from '../import/readwiseApiExternalPromotion.js';
+import { cancelReadwiseApiReconcile, runReadwiseApiReconcile } from '../import/readwiseApiReconcile.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import {
   loadReadwiseBookEpub,
@@ -136,6 +137,12 @@ async function handleReadwiseImportCommand(
   }
   if (request.command === NATIVE_COMMANDS.cancelReadwiseReaderImport) {
     return cancelReadwiseReaderImport();
+  }
+  if (request.command === NATIVE_COMMANDS.runReadwiseApiReconcile) {
+    return runReadwiseApiReconcile();
+  }
+  if (request.command === NATIVE_COMMANDS.cancelReadwiseApiReconcile) {
+    return cancelReadwiseApiReconcile();
   }
   if (request.command === NATIVE_COMMANDS.previewReadwiseImportCleanup) {
     return previewReadwiseImportCleanup();

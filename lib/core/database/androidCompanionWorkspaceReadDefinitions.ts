@@ -91,6 +91,7 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'imageRegions', rowKey: 'image_regions', type: 'json' },
         { outputKey: 'importSourceFingerprint', rowKey: 'import_source_fingerprint', type: 'nullableString' },
         { outputKey: 'importContentFingerprint', rowKey: 'import_content_fingerprint', type: 'nullableString' },
+        { outputKey: 'readwiseRemoteLifecycle', rowKey: 'readwise_remote_lifecycle', type: 'json', omitWhenNull: true },
         { outputKey: 'createdAt', rowKey: 'created_at', type: 'string' },
         { outputKey: 'updatedAt', rowKey: 'updated_at', type: 'string' },
         { outputKey: 'currentVersionId', rowKey: 'current_version_id', type: 'nullableString' },

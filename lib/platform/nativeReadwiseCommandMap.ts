@@ -13,6 +13,10 @@ import type {
 } from './nativeReadwiseApiConnectionContract.js';
 import type { NativeReadwiseImportCancelResult } from './nativeReadwiseApiImportContract.js';
 import type {
+  NativeReadwiseReconcileCancelResult,
+  NativeReadwiseReconcileResult
+} from './nativeReadwiseApiImportContract.js';
+import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubLoadResult,
@@ -79,6 +83,14 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.cancelReadwiseReaderImport]: {
     args: undefined;
     result: NativeReadwiseImportCancelResult;
+  };
+  [NATIVE_COMMANDS.runReadwiseApiReconcile]: {
+    args: undefined;
+    result: NativeReadwiseReconcileResult;
+  };
+  [NATIVE_COMMANDS.cancelReadwiseApiReconcile]: {
+    args: undefined;
+    result: NativeReadwiseReconcileCancelResult;
   };
   [NATIVE_COMMANDS.previewReadwiseImportCleanup]: {
     args: undefined;

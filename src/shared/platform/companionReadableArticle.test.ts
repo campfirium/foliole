@@ -84,6 +84,7 @@ describe('companionReadableArticle title and reading helpers', () => {
       nodeId: 'node-1',
       persistedNodeViewState: null,
       pdfAttachmentId: null,
+      readwiseRemoteLifecycle: null,
       textAnchorDecorations: [],
       title: 'First'
     });

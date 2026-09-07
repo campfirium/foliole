@@ -1,7 +1,11 @@
 import type { ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeReadwiseImportRunResult, NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeContract';
-import type { NativeReadwiseImportCancelResult } from '../../../lib/platform/nativeReadwiseApiImportContract';
+import type {
+  NativeReadwiseImportCancelResult,
+  NativeReadwiseReconcileCancelResult,
+  NativeReadwiseReconcileResult
+} from '../../../lib/platform/nativeReadwiseApiImportContract';
 
 import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -36,4 +40,14 @@ export async function cancelReadwiseReaderImportInRuntime(): Promise<NativeReadw
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.cancelReadwiseReaderImport);
+}
+
+export async function runReadwiseApiReconcileInRuntime(): Promise<NativeReadwiseReconcileResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.runReadwiseApiReconcile) : null;
+}
+
+export async function cancelReadwiseApiReconcileInRuntime(): Promise<NativeReadwiseReconcileCancelResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.cancelReadwiseApiReconcile) : null;
 }

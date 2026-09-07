@@ -1,4 +1,14 @@
 export type NativeReadwiseImportCancelResult = { status: 'cancelled' | 'idle' };
+export type NativeReadwiseReconcileCancelResult = NativeReadwiseImportCancelResult;
+
+export interface NativeReadwiseReconcileResult {
+  export_deleted_count: number;
+  present_count: number;
+  reader_missing_count: number;
+  reconciled_at: string | null;
+  status: 'cancelled' | 'completed' | 'failed';
+  unconfirmed_count: number;
+}
 export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
 
 export interface NativeReadwiseOriginalFileResult {

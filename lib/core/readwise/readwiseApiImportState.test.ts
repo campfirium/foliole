@@ -16,11 +16,14 @@ it('normalizes synced materialization and intake-blocking state deterministicall
     sourceUpdatedAt: '2026-09-06T00:00:00.000Z',
     version: 1
   })).toMatchObject({
-    annotations: [{ blockedAt: '2026-09-07T00:00:00.000Z', remoteId: 'highlight-1' }],
+    annotations: [{
+      blockedAt: '2026-09-07T00:00:00.000Z', remoteId: 'highlight-1', remoteStatus: 'unconfirmed'
+    }],
     bodyState: 'materialized',
     metadata: { title: 'Title' },
     originalFile: null,
-    version: 2
+    remoteLifecycle: null,
+    version: 3
   });
 });
 
