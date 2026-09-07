@@ -131,7 +131,7 @@ export async function applyAcceptedRemoteNode(input: {
     input.record,
     input.preparedTextBodyHashes,
     input.localNode !== null,
-    localMutation ? 1 : 0
+    0
   );
   if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({

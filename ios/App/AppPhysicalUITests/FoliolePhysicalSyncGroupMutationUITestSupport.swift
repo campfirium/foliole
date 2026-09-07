@@ -1,6 +1,25 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func waitForSyncNowCompletion(in app: XCUIApplication) {
+        let completed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"), object: app.buttons["Sync Now"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [completed], timeout: 180), .completed,
+                       "The public Sync Now action did not finish.")
+    }
+
+    func waitForRequestedSyncFact(in app: XCUIApplication) {
+        openBrowse(in: app)
+        let title = requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE")
+        let expectedText = ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_FACT_TEXT"]
+        if let expectedText, !expectedText.isEmpty {
+            waitForVisibleTopicText(prefix: title, text: expectedText, in: app)
+        } else {
+            waitForVisibleTopic(prefix: title, in: app)
+        }
+    }
+
     func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {
         if app.buttons["Edit topic"].exists { return }
         let articleText = text.map {

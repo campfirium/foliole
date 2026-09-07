@@ -193,8 +193,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         app.launch()
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        openBrowse(in: app)
-        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        waitForSyncNowCompletion(in: app)
+        waitForRequestedSyncFact(in: app)
         attachScreenshot(named: "Fri-manual-sync-received")
     }
 
