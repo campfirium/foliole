@@ -135,6 +135,7 @@ function ExternalPreviewHeader(args: {
             localFileEditing={args.localFileEditing}
             onHandleImport={args.onHandleImport}
             onOpenImportedNodeId={args.onOpenImportedNodeId}
+            reference={args.preview.reference}
           />
         )}
         showDocumentControls={false}

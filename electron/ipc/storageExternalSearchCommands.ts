@@ -22,6 +22,7 @@ import { loadExternalSearchMirrorPreview } from '../database/externalSearchMirro
 import { getLocalFileMetadata, readLocalFile } from '../database/localFiles.js';
 import { loadOpenedFilesFolder } from '../database/openedFiles.js';
 import { loadReadwiseExternalSearchFolders } from '../database/readwiseManagedExternalDocuments.js';
+import { loadReadwiseExternalSearchPreview } from '../database/readwiseManagedExternalDocuments.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundRefreshRuntime.js';
 
@@ -120,7 +121,7 @@ export function handleExternalSearchStorageCommand(command: string, args: Record
   }
   if (command === NATIVE_COMMANDS.loadExternalSearchPreview) {
     const documentId = asNullableString(args.document_id, 'document_id');
-    if (documentId) return loadExternalSearchMirrorPreview(documentId);
+    if (documentId) return loadReadwiseExternalSearchPreview(documentId) ?? loadExternalSearchMirrorPreview(documentId);
     const sourceKind = asNullableString(args.source_kind, 'source_kind');
     return loadOpenedFilePreview(
       asString(args.absolute_path, 'absolute_path'),

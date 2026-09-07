@@ -24,6 +24,8 @@
     "addImportSourcesRemoteDocumentIdIfMissing": "addImportSourcesRemoteDocumentIdIfMissing",
     "addImportSourcesRemoteProviderIfMissing": "addImportSourcesRemoteProviderIfMissing",
     "addImportSourcesRemoteImportStateJsonIfMissing": "addImportSourcesRemoteImportStateJsonIfMissing",
+    "addExternalDocumentsReferenceJsonIfMissing": "addExternalDocumentsReferenceJsonIfMissing",
+    "addExternalDocumentsReferenceKindIfMissing": "addExternalDocumentsReferenceKindIfMissing",
     "addSyncBaseContentHashIfMissing": "addSyncBaseContentHashIfMissing",
     "backfillNodeAttachmentsFromVersions": "backfillNodeAttachmentsFromVersions",
     "installSchema": "installSchema",
@@ -377,6 +379,17 @@
         }
       ],
       "beforeVersion": 35
+    },
+    {
+      "actions": [
+        {
+          "type": "addExternalDocumentsReferenceKindIfMissing"
+        },
+        {
+          "type": "addExternalDocumentsReferenceJsonIfMissing"
+        }
+      ],
+      "beforeVersion": 36
     }
   ],
   "planKeys": {
@@ -486,6 +499,18 @@
       "statementName": "syncGroupsWorkgroupKeyColumn",
       "tableName": "sync_groups"
     },
+    "externalDocumentsReferenceJson": {
+      "columnName": "reference_json",
+      "errorMessage": "Failed to add external document reference payload.",
+      "statementName": "externalDocumentsReferenceJsonColumn",
+      "tableName": "external_documents"
+    },
+    "externalDocumentsReferenceKind": {
+      "columnName": "reference_kind",
+      "errorMessage": "Failed to add external document reference kind.",
+      "statementName": "externalDocumentsReferenceKindColumn",
+      "tableName": "external_documents"
+    },
     "externalFoldersSourceRef": {
       "columnName": "source_ref",
       "errorMessage": "Failed to add external folder source reference.",
@@ -577,6 +602,8 @@
     "nodesSequentialReadingEnabledColumn": "ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER",
     "nodesShelvedAtColumn": "ALTER TABLE nodes ADD COLUMN shelved_at TEXT",
     "syncGroupsWorkgroupKeyColumn": "ALTER TABLE sync_groups ADD COLUMN workgroup_key TEXT",
+    "externalDocumentsReferenceJsonColumn": "ALTER TABLE external_documents ADD COLUMN reference_json TEXT",
+    "externalDocumentsReferenceKindColumn": "ALTER TABLE external_documents ADD COLUMN reference_kind TEXT NOT NULL DEFAULT 'local_path'",
     "externalFoldersSourceRefColumn": "ALTER TABLE external_search_folders ADD COLUMN source_ref TEXT",
     "importSourcesSourceLocationColumn": "ALTER TABLE import_sources ADD COLUMN source_location TEXT",
     "importSourcesSourceRefColumn": "ALTER TABLE import_sources ADD COLUMN source_ref TEXT",

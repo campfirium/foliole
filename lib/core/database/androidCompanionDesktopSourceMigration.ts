@@ -1,4 +1,7 @@
 export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_STATEMENTS = {
+  externalDocumentsReferenceJsonColumn: 'ALTER TABLE external_documents ADD COLUMN reference_json TEXT',
+  externalDocumentsReferenceKindColumn:
+    "ALTER TABLE external_documents ADD COLUMN reference_kind TEXT NOT NULL DEFAULT 'local_path'",
   externalFoldersSourceRefColumn: 'ALTER TABLE external_search_folders ADD COLUMN source_ref TEXT',
   importSourcesSourceLocationColumn: 'ALTER TABLE import_sources ADD COLUMN source_location TEXT',
   importSourcesSourceRefColumn: 'ALTER TABLE import_sources ADD COLUMN source_ref TEXT',
@@ -14,6 +17,14 @@ export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_STATEMENTS = {
 };
 
 export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_REPAIR_RULES = {
+  externalDocumentsReferenceJson: {
+    columnName: 'reference_json', errorMessage: 'Failed to add external document reference payload.',
+    statementName: 'externalDocumentsReferenceJsonColumn', tableName: 'external_documents'
+  },
+  externalDocumentsReferenceKind: {
+    columnName: 'reference_kind', errorMessage: 'Failed to add external document reference kind.',
+    statementName: 'externalDocumentsReferenceKindColumn', tableName: 'external_documents'
+  },
   externalFoldersSourceRef: {
     columnName: 'source_ref', errorMessage: 'Failed to add external folder source reference.',
     statementName: 'externalFoldersSourceRefColumn', tableName: 'external_search_folders'

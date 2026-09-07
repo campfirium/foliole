@@ -34,7 +34,13 @@ export interface NativeExternalSearchReconnectPreview {
 
 export type NativeExternalDocumentReference =
   | { absolute_path: string; kind: 'local_path' }
-  | { document_id: string; kind: 'mirror_document' };
+  | { document_id: string; kind: 'mirror_document' }
+  | {
+      document_id: string;
+      kind: 'readwise_remote';
+      reader_url: string | null;
+      source_url: string | null;
+    };
 
 interface NativeExternalSearchPreviewBase {
   content: string;
@@ -54,7 +60,11 @@ interface NativeExternalSearchPreviewBase {
 
 export type NativeExternalSearchPreview = NativeExternalSearchPreviewBase & (
   | { absolute_path: string; document_id?: never; reference: { absolute_path: string; kind: 'local_path' } }
-  | { absolute_path?: never; document_id: string; reference: { document_id: string; kind: 'mirror_document' } }
+  | {
+      absolute_path?: never;
+      document_id: string;
+      reference: Exclude<NativeExternalDocumentReference, { kind: 'local_path' }>;
+    }
 );
 
 interface NativeExternalSearchBrowseEntryBase {
@@ -76,5 +86,9 @@ interface NativeExternalSearchBrowseEntryBase {
 
 export type NativeExternalSearchBrowseEntry = NativeExternalSearchBrowseEntryBase & (
   | { absolute_path: string; document_id?: never; reference: { absolute_path: string; kind: 'local_path' } }
-  | { absolute_path?: never; document_id: string; reference: { document_id: string; kind: 'mirror_document' } }
+  | {
+      absolute_path?: never;
+      document_id: string;
+      reference: Exclude<NativeExternalDocumentReference, { kind: 'local_path' }>;
+    }
 );

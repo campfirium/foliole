@@ -117,10 +117,7 @@ export function resetReadwiseApiImportRun(connectionRef: string, now = new Date(
 
 export function completeReadwiseApiImportRun(run: ReadwiseApiImportRunState, now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
-  driver.transaction((tx) => {
-    tx.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ?', [run.connectionRef]);
-    tx.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [run.connectionRef]);
-  });
+  driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [run.connectionRef]);
   saveJsonSetting(CURSOR_STATE_KEY, {
     completedThrough: overlapBoundary(run.roundStartedAt),
     connectionRef: run.connectionRef,

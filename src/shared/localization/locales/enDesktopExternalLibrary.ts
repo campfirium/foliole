@@ -40,6 +40,8 @@ export const EN_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS = {
   'desktop.externalLibrary.preview.import': 'Import',
   'desktop.externalLibrary.preview.openImported': 'Open imported Topic',
   'desktop.externalLibrary.preview.importToFoliole': 'Import to Foliole',
+  'desktop.externalLibrary.preview.openReader': 'Open in Reader',
+  'desktop.externalLibrary.preview.openSource': 'Open source',
   'desktop.externalLibrary.preview.panel': 'External document preview panel',
   'desktop.externalLibrary.preview.documentFallback': 'External document',
   'desktop.externalLibrary.preview.openInLibrary': 'Open in External library',

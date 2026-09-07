@@ -8,7 +8,7 @@ import {
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
 export const SYNC_PACK_FORMAT_VERSION = 12;
-export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 80;
+export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 81;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = SYNC_PACK_PAYLOAD_SCHEMA_VERSION;
@@ -45,7 +45,8 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
   external_documents: [
     'document_id', 'folder_id', 'relative_path', 'file_name', 'extension', 'source_size_bytes',
     'source_modified_at', 'source_modified_ms', 'content_hash', 'title', 'opening_text',
-    'body_blob_hash', 'content', 'indexed_at', 'is_present', 'missing_at', 'created_at', 'updated_at'
+    'body_blob_hash', 'content', 'reference_kind', 'reference_json', 'indexed_at', 'is_present',
+    'missing_at', 'created_at', 'updated_at'
   ],
   content_blobs: [
     'hash', 'storage_key', 'kind', 'mime_type', 'compression', 'original_size_bytes',

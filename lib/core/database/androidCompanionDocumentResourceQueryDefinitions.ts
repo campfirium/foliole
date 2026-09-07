@@ -23,7 +23,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   externalDocumentById: {
     resultKey: 'documents',
     sql:
-      'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, ' +
+      'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ' +
       `${EXTERNAL_DOCUMENT_CONTENT} AS content, ed.body_blob_hash, ${EXTERNAL_DOCUMENT_STATUS} AS content_status, updated_at ` +
       'FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash ' +
       'LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1',
@@ -32,7 +32,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   externalDocumentSearch: {
     resultKey: 'documents',
     sql:
-      'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, ' +
+      'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ' +
       `${EXTERNAL_DOCUMENT_CONTENT} AS content, ed.body_blob_hash, ${EXTERNAL_DOCUMENT_STATUS} AS content_status, updated_at, ` +
       'max(0, instr(lower(' + EXTERNAL_DOCUMENT_CONTENT + '), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression(EXTERNAL_DOCUMENT_CONTENT, '?', EXTERNAL_DOCUMENT_EXCERPT_RADIUS)} AS excerpt ` +
@@ -50,7 +50,10 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   externalSearchFolders: {
     resultKey: 'folders',
-    sql: 'SELECT id, folder_path, document_count FROM external_search_folders ORDER BY folder_path COLLATE NOCASE ASC',
+    sql: 'SELECT id, folder_path, document_count FROM external_search_folders UNION ALL ' +
+      "SELECT folder_id AS id, 'Readwise' AS folder_path, COUNT(*) AS document_count FROM external_documents " +
+      "WHERE is_present = 1 AND reference_kind = 'readwise_remote' " +
+      'AND folder_id NOT IN (SELECT id FROM external_search_folders) GROUP BY folder_id ORDER BY folder_path COLLATE NOCASE ASC',
     columns: [
       { key: 'id', source: 'id', type: 'string' },
       { key: 'folder_path', source: 'folder_path', type: 'string' },
@@ -60,7 +63,9 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   externalDocumentDirectoryEntries: {
     resultKey: 'entries',
     sql:
-      'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at ' +
+      "SELECT CASE WHEN reference_kind = 'readwise_remote' THEN 'readwise-document:' || document_id " +
+      "ELSE 'external-document:' || document_id END AS absolute_path, " +
+      'document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at ' +
       'FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC',
     columns: [
       { key: 'document_id', source: 'document_id', type: 'string' },
@@ -84,6 +89,8 @@ function externalDocumentColumns() {
     { key: 'extension', source: 'extension', type: 'nullableString' },
     { key: 'title', source: 'title', type: 'nullableString' },
     { key: 'opening_text', source: 'opening_text', type: 'nullableString' },
+    { key: 'reference_kind', source: 'reference_kind', type: 'string' },
+    { key: 'reference_json', source: 'reference_json', type: 'nullableString' },
     { key: 'content', source: 'content', type: 'nullableString' },
     { key: 'body_blob_hash', source: 'body_blob_hash', type: 'nullableString' },
     { key: 'content_status', source: 'content_status', type: 'string' },

@@ -48,8 +48,8 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'INSERT OR REPLACE INTO external_documents (' +
     'document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, ' +
     'source_modified_ms, content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, ' +
-    'missing_at, created_at, updated_at' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'reference_kind, reference_json, missing_at, created_at, updated_at' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   textBodyBlobManifestInsert:
     'INSERT OR IGNORE INTO content_blobs (' +
     'hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, original_sha256, ' +

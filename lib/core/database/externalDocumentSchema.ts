@@ -13,6 +13,8 @@ export const externalDocuments = sqliteTable('external_documents', {
   title: text('title').notNull(),
   openingText: text('opening_text'),
   content: text('content').notNull(),
+  referenceKind: text('reference_kind').notNull().default('local_path'),
+  referenceJson: text('reference_json'),
   indexedAt: text('indexed_at').notNull(),
   isPresent: integer('is_present', { mode: 'boolean' }).notNull().default(true),
   missingAt: text('missing_at'),

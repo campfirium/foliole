@@ -98,7 +98,8 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
      WHERE a.node_id IN (SELECT id FROM nodes)`,
     `INSERT INTO external_documents SELECT d.document_id, d.folder_id, d.relative_path, d.file_name, d.extension,
        d.source_size_bytes, d.source_modified_at, d.source_modified_ms, d.content_hash, d.title, d.opening_text,
-       d.body_blob_hash, '', d.indexed_at, d.is_present, d.missing_at, d.created_at, d.updated_at
+       d.body_blob_hash, '', d.reference_kind, d.reference_json, d.indexed_at, d.is_present, d.missing_at,
+       d.created_at, d.updated_at
      FROM source.external_documents d WHERE d.document_id IN
        (SELECT object_id FROM sync_object_state WHERE object_type = 'external_document')`,
     `INSERT INTO content_blobs SELECT b.hash, b.storage_key, b.kind, b.mime_type, b.compression,

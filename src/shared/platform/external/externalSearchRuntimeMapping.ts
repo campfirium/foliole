@@ -52,7 +52,8 @@ export interface RuntimeExternalSearchBrowseEntry extends Omit<RuntimeExternalSe
 
 export type RuntimeExternalDocumentReference =
   | { absolutePath: string; kind: 'local_path' }
-  | { documentId: string; kind: 'mirror_document' };
+  | { documentId: string; kind: 'mirror_document' }
+  | { documentId: string; kind: 'readwise_remote'; readerUrl: string | null; sourceUrl: string | null };
 
 function referenceOf(value: NativeExternalSearchPreview | NativeExternalSearchBrowseEntry) {
   return value.reference ?? ('absolute_path' in value
@@ -63,7 +64,9 @@ function referenceOf(value: NativeExternalSearchPreview | NativeExternalSearchBr
 function commonDocumentFields(value: NativeExternalSearchPreview | NativeExternalSearchBrowseEntry) {
   const reference = referenceOf(value);
   return {
-    absolutePath: 'absolute_path' in value ? value.absolute_path : `mirror-document:${value.document_id}`,
+    absolutePath: 'absolute_path' in value
+      ? value.absolute_path
+      : `${reference.kind === 'readwise_remote' ? 'readwise-document' : 'mirror-document'}:${value.document_id}`,
     editable: value.editable,
     extension: value.extension,
     fileName: value.file_name,
@@ -76,7 +79,12 @@ function commonDocumentFields(value: NativeExternalSearchPreview | NativeExterna
     ...('document_id' in value ? { documentId: value.document_id } : {}),
     reference: reference.kind === 'local_path'
       ? { absolutePath: reference.absolute_path, kind: 'local_path' as const }
-      : { documentId: reference.document_id, kind: 'mirror_document' as const },
+      : reference.kind === 'readwise_remote'
+        ? {
+            documentId: reference.document_id, kind: 'readwise_remote' as const,
+            readerUrl: reference.reader_url, sourceUrl: reference.source_url
+          }
+        : { documentId: reference.document_id, kind: 'mirror_document' as const },
     relativePath: value.relative_path,
     sourceKind: value.source_kind
   };

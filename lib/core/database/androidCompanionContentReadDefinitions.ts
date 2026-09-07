@@ -54,6 +54,8 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       { outputKey: 'extension', rowKey: 'extension', type: 'nullableString' },
       { outputKey: 'title', rowKey: 'title', type: 'nullableString' },
       { outputKey: 'opening_text', rowKey: 'opening_text', type: 'nullableString' },
+      { outputKey: 'reference_kind', rowKey: 'reference_kind', type: 'string' },
+      { outputKey: 'reference_json', rowKey: 'reference_json', type: 'nullableString' },
       { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
       { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
       { outputKey: 'updated_at', rowKey: 'updated_at', type: 'nullableString' }
@@ -66,6 +68,8 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       { outputKey: 'extension', rowKey: 'extension', type: 'nullableString' },
       { outputKey: 'title', rowKey: 'title', type: 'nullableString' },
       { outputKey: 'opening_text', rowKey: 'opening_text', type: 'nullableString' },
+      { outputKey: 'reference_kind', rowKey: 'reference_kind', type: 'string' },
+      { outputKey: 'reference_json', rowKey: 'reference_json', type: 'nullableString' },
       { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
       { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
       { outputKey: 'updated_at', rowKey: 'updated_at', type: 'nullableString' },

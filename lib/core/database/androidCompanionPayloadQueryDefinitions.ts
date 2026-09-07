@@ -44,6 +44,8 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       missingAtPayloadKey: 'missing_at',
       objectType: 'external_document',
       openingTextPayloadKey: 'opening_text',
+      referenceJsonPayloadKey: 'reference_json',
+      referenceKindPayloadKey: 'reference_kind',
       recordContentHashKey: 'content_hash',
       recordDeletedAtKey: 'deleted_at',
       recordUpdatedAtKey: 'updated_at',
@@ -58,6 +60,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'file_name', file_name, 'extension', extension, 'source_size_bytes', source_size_bytes, " +
       "'source_modified_at', source_modified_at, 'source_modified_ms', source_modified_ms, 'content_hash', content_hash, " +
       "'title', title, 'opening_text', opening_text, 'body_blob_hash', body_blob_hash, 'content', content, " +
+      "'reference_kind', reference_kind, 'reference_json', reference_json, " +
       "'indexed_at', indexed_at, 'is_present', is_present, 'missing_at', missing_at, 'created_at', created_at, " +
       "'updated_at', updated_at) AS payload_json FROM external_documents WHERE document_id = ? LIMIT 1"
   },

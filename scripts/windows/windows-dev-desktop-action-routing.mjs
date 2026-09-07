@@ -4,6 +4,7 @@ import {
   runWindowsDefaultSyncJourney
 } from './windows-default-sync-journey-action.mjs';
 import { runWindowsReadwiseApiConnectionAcceptance } from './windows-readwise-api-connection-action.mjs';
+import { runWindowsReadwiseApiExternalAcceptance } from './windows-readwise-api-external-action.mjs';
 import { runWindowsReadwiseApiImportAcceptance } from './windows-readwise-api-import-action.mjs';
 
 export function runWindowsDevDesktopAction(options) {
@@ -19,6 +20,9 @@ export function runWindowsDevDesktopAction(options) {
   }
   if (options.action === 'readwise-api-import') {
     return runWindowsReadwiseApiImportAcceptance(options.action, options.execute, options.paths);
+  }
+  if (options.action === 'readwise-api-external') {
+    return runWindowsReadwiseApiExternalAcceptance(options.action, options.execute, options.paths);
   }
   return runWindowsDesktopDnsSdRouteControl(options);
 }

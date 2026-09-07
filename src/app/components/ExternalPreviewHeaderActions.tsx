@@ -1,4 +1,6 @@
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import type { RuntimeExternalDocumentReference } from '../../shared/platform/external/externalSearchRuntimeMapping';
+import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppButton, AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 import type { OpenedLocalFileSaveStatus } from './useOpenedLocalFileEditing';
@@ -14,10 +16,12 @@ export function ExternalPreviewHeaderActions(args: {
   };
   onHandleImport: () => void;
   onOpenImportedNodeId: (nodeId: string) => void;
+  reference?: RuntimeExternalDocumentReference | undefined;
 }) {
   return (
     <div className="flex items-center gap-2">
       <LocalFileSaveActions editing={args.localFileEditing} />
+      <ReadwiseOriginalActions reference={args.reference} />
       <ExternalImportAction
         importedNodeId={args.importedNodeId}
         isImporting={args.isImporting}
@@ -25,6 +29,27 @@ export function ExternalPreviewHeaderActions(args: {
         onOpenImportedNodeId={args.onOpenImportedNodeId}
       />
     </div>
+  );
+}
+
+function ReadwiseOriginalActions(args: { reference?: RuntimeExternalDocumentReference | undefined }) {
+  const t = useTranslation();
+  if (args.reference?.kind !== 'readwise_remote') return null;
+  const reference = args.reference;
+  const { readerUrl, sourceUrl } = reference;
+  return (
+    <>
+      {sourceUrl ? (
+        <AppButton onClick={() => void openExternalUrl(sourceUrl)} size="sm" variant="ghost">
+          {t('desktop.externalLibrary.preview.openSource')}
+        </AppButton>
+      ) : null}
+      {readerUrl ? (
+        <AppButton onClick={() => void openExternalUrl(readerUrl)} size="sm" variant="ghost">
+          {t('desktop.externalLibrary.preview.openReader')}
+        </AppButton>
+      ) : null}
+    </>
   );
 }
 

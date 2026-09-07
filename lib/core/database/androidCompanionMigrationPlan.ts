@@ -37,6 +37,8 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addImportSourcesRemoteDocumentIdIfMissing: 'addImportSourcesRemoteDocumentIdIfMissing',
   addImportSourcesRemoteProviderIfMissing: 'addImportSourcesRemoteProviderIfMissing',
   addImportSourcesRemoteImportStateJsonIfMissing: 'addImportSourcesRemoteImportStateJsonIfMissing',
+  addExternalDocumentsReferenceJsonIfMissing: 'addExternalDocumentsReferenceJsonIfMissing',
+  addExternalDocumentsReferenceKindIfMissing: 'addExternalDocumentsReferenceKindIfMissing',
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
@@ -140,6 +142,13 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
       { type: 'addImportSourcesRemoteImportStateJsonIfMissing' }
     ],
     beforeVersion: 35
+  },
+  {
+    actions: [
+      { type: 'addExternalDocumentsReferenceKindIfMissing' },
+      { type: 'addExternalDocumentsReferenceJsonIfMissing' }
+    ],
+    beforeVersion: 36
   }
 ] as const;
 

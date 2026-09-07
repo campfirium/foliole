@@ -8,6 +8,11 @@ import type {
   NativeReadwiseSyncPreviewResult
 } from '../../lib/platform/nativeImportContract.js';
 import {
+  hasActiveReadwiseApiExternalDocument,
+  hasReadwiseApiExternalDocumentChanged,
+  loadReadwiseApiExternalDocumentState
+} from '../database/readwiseApiExternalDocuments.js';
+import {
   completeReadwiseApiImportRun,
   loadOrCreateReadwiseApiImportRun,
   loadReadwiseApiImportSource,
@@ -78,10 +83,16 @@ async function runNow(
     const preview = buildApiPreview(settings, connectionRef);
     const staged = prepareStagedDocuments(connectionRef);
     const writableIds = new Set(preview.entries
-      .filter((entry) => entry.destination === 'inbox' && (entry.status === 'new' || entry.status === 'updated'))
+      .filter((entry) => entry.status === 'new' || entry.status === 'updated')
       .slice(0, MAX_PARENT_BATCH)
       .map((entry) => entry.remote_document_id));
-    const documents = staged.filter((document) => writableIds.has(document.id));
+    const offExternalIds = new Set(preview.entries.flatMap((entry) => {
+      const remoteId = entry.remote_document_id;
+      return typeof remoteId === 'string'
+        && entry.destination === 'off'
+        && hasActiveReadwiseApiExternalDocument(connectionRef, remoteId) ? [remoteId] : [];
+    }));
+    const documents = staged.filter((document) => writableIds.has(document.id) || offExternalIds.has(document.id));
     let annotationCount = 0;
     for (const [index, document] of documents.entries()) {
       assertEligible(signal);
@@ -90,7 +101,7 @@ async function runNow(
       publishProgress(input?.window, index + 1, documents.length, 'writing');
     }
     const remainingPreview = buildApiPreview(settings, connectionRef);
-    const remainingCount = remainingPreview.write_count + remainingPreview.external_count;
+    const remainingCount = remainingPreview.write_count;
     if (remainingCount === 0) completeReadwiseApiImportRun(loadOrCreateReadwiseApiImportRun(connectionRef));
     publishProgress(input?.window, documents.length, documents.length, 'source_completed');
     return {
@@ -132,7 +143,7 @@ function buildApiPreview(settings: ImportManagerSettings, connectionRef: string)
     off_count: allEntries.filter((entry) => entry.destination === 'off').length,
     previewed_at: new Date().toISOString(),
     readwise_root_path: '',
-    remaining_count: writeCount + allEntries.filter((entry) => entry.destination === 'external').length,
+    remaining_count: writeCount,
     removed_count: 0,
     total_count: allEntries.length,
     trash_count: 0,
@@ -149,20 +160,26 @@ function buildEntry(
   document: PreparedReadwiseApiDocument
 ): NativeReadwiseSyncPreviewEntry {
   const existing = loadReadwiseApiImportSource(connectionRef, document.id);
-  const destination = resolveReadwiseImportDestination(settings.readwiseReaderConfig, document.annotations.length > 0);
+  const configuredDestination = resolveReadwiseImportDestination(
+    settings.readwiseReaderConfig, document.annotations.length > 0
+  );
+  const destination = existing ? 'inbox' : configuredDestination;
+  const external = loadReadwiseApiExternalDocumentState(connectionRef, document.id);
+  const externalChanged = hasReadwiseApiExternalDocumentChanged(connectionRef, document);
   const knownIds = new Set(existing?.annotations.map((annotation) => annotation.remoteId) ?? []);
   const hasNewAnnotations = document.annotations.some((annotation) => !knownIds.has(annotation.remoteId));
   const status = destination === 'off' ? 'off'
     : existing?.nodeDeleted ? 'blocked_deleted'
+    : !document.body.trim() ? 'failed'
+    : destination === 'external' && (!external || external.is_present === 0) ? 'new'
+    : destination === 'external' && externalChanged ? 'updated'
+    : destination === 'external' ? 'unchanged'
     : !existing ? 'new'
     : hasNewAnnotations || existing.state.sourceUpdatedAt !== document.updatedAt ? 'updated'
-    : !document.body.trim() ? 'failed'
     : 'unchanged';
   return {
     destination,
-    detail: destination === 'external'
-      ? 'External API sources are not available yet; this source remains pending.'
-      : !document.body.trim() ? document.degradedReason : null,
+    detail: !document.body.trim() ? document.degradedReason : null,
     detected_highlight_count: document.annotations.length,
     highlight_type: document.annotations.length ? 'with_highlights' : 'without_highlights',
     remote_document_id: document.id,
@@ -182,7 +199,7 @@ function prepareStagedDocuments(connectionRef: string) {
 }
 
 function isWritable(entry: NativeReadwiseSyncPreviewEntry) {
-  return entry.destination === 'inbox' && (entry.status === 'new' || entry.status === 'updated');
+  return entry.destination !== 'off' && (entry.status === 'new' || entry.status === 'updated');
 }
 
 function requireConnectionRef() {

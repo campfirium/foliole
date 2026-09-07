@@ -102,6 +102,8 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     opening_text TEXT,
     body_blob_hash TEXT,
     content TEXT NOT NULL,
+    reference_kind TEXT NOT NULL DEFAULT 'local_path',
+    reference_json TEXT,
     indexed_at TEXT NOT NULL,
     is_present INTEGER NOT NULL DEFAULT 1,
     missing_at TEXT,

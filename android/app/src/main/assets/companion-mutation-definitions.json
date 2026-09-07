@@ -225,7 +225,7 @@
     "syncViewNodeStateDelete": "DELETE FROM node_view_state WHERE node_id = ? AND host_name = ?",
     "syncViewNodeStateUpsert": "INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     "syncExternalDocumentMarkMissing": "UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ? WHERE document_id = ?",
-    "syncExternalDocumentUpsert": "INSERT OR REPLACE INTO external_documents (document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "syncExternalDocumentUpsert": "INSERT OR REPLACE INTO external_documents (document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, reference_kind, reference_json, missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     "textBodyBlobManifestInsert": "INSERT OR IGNORE INTO content_blobs (hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256, availability, created_at, cached_at, last_verified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     "textBodyBlobDataInsert": "INSERT OR IGNORE INTO content_blob_data (hash, data) VALUES (?, ?)",
     "nodeAttachmentDeleteByNode": "DELETE FROM node_attachments WHERE node_id = ?",

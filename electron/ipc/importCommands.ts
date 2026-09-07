@@ -3,8 +3,10 @@ import { BrowserWindow, dialog, type OpenDialogOptions } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { recordDesktopImportLocation } from '../database/desktopSources.js';
 import { resolveExternalSourceLocationByAddress } from '../database/externalSearchCacheRead.js';
+import { loadReadwiseApiExternalReference } from '../database/readwiseApiExternalDocuments.js';
 import { assertKeepImportSourceCanRun } from '../import/keepImportExecutionGuard.js';
 import { previewKeepImportRule, type KeepImportRuleConfig } from '../import/keepImportService.js';
+import { promoteReadwiseApiExternalDocument } from '../import/readwiseApiExternalPromotion.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import {
   loadReadwiseBookEpub,
@@ -51,12 +53,6 @@ function resolveTargetWindow(context?: InvokeContext) {
     }
   }
   return BrowserWindow.getFocusedWindow();
-}
-
-function notifyIfReadwiseReaderImportChanged(result: Awaited<ReturnType<typeof runReadwiseReaderImport>>) {
-  if (result.status === 'completed' && (result.imported_count ?? 0) > 0) {
-    notifyWorkspaceContentChanged();
-  }
 }
 
 function notifyIfTextImportChanged(
@@ -136,9 +132,7 @@ async function handleReadwiseImportCommand(
     return previewReadwiseReaderImport(args.settings);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
-    const result = await runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
-    notifyIfReadwiseReaderImportChanged(result);
-    return result;
+    return runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
   }
   if (request.command === NATIVE_COMMANDS.cancelReadwiseReaderImport) {
     return cancelReadwiseReaderImport();
@@ -205,7 +199,9 @@ async function handleTextImportCommand(
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
     const documentId = typeof args.document_id === 'string' ? args.document_id.trim() : '';
     if (documentId) {
-      const result = runImportForMirrorDocument(documentId, args);
+      const result = loadReadwiseApiExternalReference(documentId)
+        ? promoteReadwiseApiExternalDocument(documentId)
+        : runImportForMirrorDocument(documentId, args);
       notifyIfTextImportChanged(result, resolveTargetWindow(context));
       return result;
     }

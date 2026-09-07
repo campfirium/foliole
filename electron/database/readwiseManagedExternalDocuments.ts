@@ -19,39 +19,21 @@ import {
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
-
-const READWISE_EXTERNAL_FOLDER_PREFIX = 'readwise-reader-import';
-
-interface ReadwiseExternalDocumentRow {
-  content: string;
-  document_id: string;
-  extension: 'md' | 'txt';
-  file_name: string;
-  folder_id: string;
-  opening_text: string | null;
-  relative_path: string;
-  source_modified_at: string;
-  title: string;
-  updated_at: string;
-}
-
-interface ReadwiseExternalFolderRow {
-  document_count: number;
-  folder_id: string;
-  indexed_at: string | null;
-}
-
-export function buildReadwiseExternalFolderId(kind: ReadwiseSourceKind) {
-  return `${READWISE_EXTERNAL_FOLDER_PREFIX}-${kind}`;
-}
+import {
+  buildReadwiseExternalFolderId,
+  hasRemoteImportBinding,
+  isReadwiseExternalFolderId,
+  readReadwiseExternalDocumentRows,
+  readRemoteReference,
+  type ReadwiseExternalDocumentRow,
+  type ReadwiseExternalFolderRow
+} from './readwiseExternalDocumentRows.js';
 
 export function buildReadwiseExternalDocumentId(kind: ReadwiseSourceKind, sourceName: string) {
   return `${buildReadwiseExternalFolderId(kind)}:${sourceName.replace(/\\/g, '/')}`;
 }
 
-export function isReadwiseExternalFolderId(folderId: string) {
-  return folderId.startsWith(`${READWISE_EXTERNAL_FOLDER_PREFIX}-`);
-}
+export { buildReadwiseExternalFolderId, isReadwiseExternalFolderId };
 
 export function hasReadwiseExternalDocument(kind: ReadwiseSourceKind, sourceName: string) {
   const documentId = buildReadwiseExternalDocumentId(kind, sourceName);
@@ -74,19 +56,10 @@ function resolveDocumentAbsolutePath(row: ReadwiseExternalDocumentRow) {
   return folderPath ? path.join(folderPath, row.relative_path) : row.relative_path;
 }
 
-function readReadwiseExternalDocumentRows(folderId?: string) {
-  const filter = folderId ? 'AND folder_id = ?' : '';
-  return openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT document_id, folder_id, relative_path, file_name, extension, source_modified_at,
-              content, title, opening_text, updated_at
-       FROM external_documents
-       WHERE is_present = 1
-         AND folder_id LIKE '${READWISE_EXTERNAL_FOLDER_PREFIX}-%'
-         ${filter}
-       ORDER BY relative_path COLLATE NOCASE ASC`
-    )
-    .all(...(folderId ? [folderId] : [])) as ReadwiseExternalDocumentRow[];
+function resolveDocumentKey(row: ReadwiseExternalDocumentRow) {
+  return row.reference_kind === 'readwise_remote'
+    ? `readwise-document:${row.document_id}`
+    : resolveDocumentAbsolutePath(row);
 }
 
 function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string | null = null): NativeExternalSearchBrowseEntry {
@@ -97,6 +70,28 @@ function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string 
       sourceName: row.relative_path,
       titleStrategy: 'heading'
     });
+  const remote = readRemoteReference(row);
+  if (remote) {
+    return {
+      document_id: row.document_id,
+      extension: row.extension,
+      file_name: row.file_name,
+      folder_id: row.folder_id,
+      folder_path: 'Readwise',
+      imported_node_id: importedNodeId,
+      modified_at: row.source_modified_at,
+      opening_text: row.opening_text ?? resolveNodeOpeningText(row.content, title),
+      reference: {
+        document_id: row.document_id,
+        kind: 'readwise_remote',
+        reader_url: remote.reader_url,
+        source_url: remote.source_url
+      },
+      relative_path: row.relative_path,
+      source_kind: 'external_document',
+      title
+    };
+  }
   const absolutePath = resolveDocumentAbsolutePath(row);
   return {
     absolute_path: absolutePath,
@@ -114,16 +109,16 @@ function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string 
 }
 
 export function loadReadwiseExternalSearchFolders(): NativeExternalSearchFolder[] {
-  const rows = openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT folder_id, COUNT(*) AS document_count, MAX(updated_at) AS indexed_at
-       FROM external_documents
-       WHERE is_present = 1
-         AND folder_id LIKE '${READWISE_EXTERNAL_FOLDER_PREFIX}-%'
-       GROUP BY folder_id
-       ORDER BY folder_id ASC`
-    )
-    .all() as ReadwiseExternalFolderRow[];
+  const grouped = new Map<string, ReadwiseExternalFolderRow>();
+  readReadwiseExternalDocumentRows().filter((row) => !hasRemoteImportBinding(row)).forEach((row) => {
+    const current = grouped.get(row.folder_id);
+    grouped.set(row.folder_id, {
+      document_count: (current?.document_count ?? 0) + 1,
+      folder_id: row.folder_id,
+      indexed_at: !current?.indexed_at || current.indexed_at < row.updated_at ? row.updated_at : current.indexed_at
+    });
+  });
+  const rows = [...grouped.values()].sort((left, right) => left.folder_id.localeCompare(right.folder_id));
   return rows.map((row) => {
     const indexedAt = row.indexed_at ?? new Date(0).toISOString();
     return {
@@ -148,21 +143,44 @@ export function loadReadwiseExternalSearchFolders(): NativeExternalSearchFolder[
 export function loadReadwiseExternalSearchBrowseEntries(folderId: string) {
   const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return readReadwiseExternalDocumentRows(folderId)
+    .filter((row) => !hasRemoteImportBinding(row))
     .map((row) => {
+      if (readRemoteReference(row)) return toBrowseEntry(row);
       const absolutePath = resolveDocumentAbsolutePath(row);
       return toBrowseEntry(row, resolveImportedNodeIdForExternalDocument(absolutePath, importedNodeIdsByLocator));
     });
 }
 
 export function loadReadwiseExternalSearchPreview(
-  absolutePath: string
+  documentKey: string
 ): NativeExternalSearchPreview | null {
   const row = readReadwiseExternalDocumentRows().find(
-    (entry) => resolveDocumentAbsolutePath(entry) === absolutePath
+    (entry) => resolveDocumentKey(entry) === documentKey || entry.document_id === documentKey
   );
-  if (!row) {
+  if (!row || hasRemoteImportBinding(row)) {
     return null;
   }
+  const remote = readRemoteReference(row);
+  if (remote) {
+    return {
+      content: row.content,
+      document_id: row.document_id,
+      extension: row.extension,
+      file_name: row.file_name,
+      folder_id: row.folder_id,
+      folder_path: 'Readwise',
+      imported_node_id: null,
+      reference: {
+        document_id: row.document_id,
+        kind: 'readwise_remote',
+        reader_url: remote.reader_url,
+        source_url: remote.source_url
+      },
+      relative_path: row.relative_path,
+      source_kind: 'external_document'
+    };
+  }
+  const absolutePath = resolveDocumentAbsolutePath(row);
   return {
     absolute_path: absolutePath,
     content: row.content,
@@ -184,21 +202,24 @@ export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
   const activeImportedLocators = loadActiveImportedSourceLocators();
   const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return readReadwiseExternalDocumentRows()
-    .filter((row) => isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
+    .filter((row) => readRemoteReference(row)
+      ? !hasRemoteImportBinding(row)
+      : isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
     .filter((row) => matchesFtsSearchText([row.file_name, row.relative_path, row.content].join(' '), queryPlan))
     .slice(0, 20)
     .map((row) => ({
       excerpt: row.opening_text ?? resolveNodeOpeningText(row.content, row.title) ?? '',
       externalMatch: {
-        absolutePath: resolveDocumentAbsolutePath(row),
+        absolutePath: resolveDocumentKey(row),
         folderId: row.folder_id,
         folderPath: resolveReadwiseFolderPath(row.folder_id),
-        importedNodeId: resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
+        importedNodeId: readRemoteReference(row) ? null
+          : resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
         query: queryPlan.highlightQuery,
         relativePath: row.relative_path,
         sourceKind: 'external' as const
       },
-      id: resolveDocumentAbsolutePath(row),
+      id: resolveDocumentKey(row),
       kind: 'external',
       nodeMatch: null,
       pdfMatch: null,

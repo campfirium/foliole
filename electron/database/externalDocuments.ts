@@ -36,6 +36,8 @@ function toExternalDocumentPayload(folder: NativeExternalSearchFolder, document:
     folder_id: folder.id,
     indexed_at: indexedAt,
     opening_text: resolveNodeOpeningText(document.content, title),
+    reference_json: null,
+    reference_kind: 'local_path',
     relative_path: document.relativePath,
     source_modified_at: document.modifiedAt,
     source_modified_ms: document.modifiedMs,
@@ -82,19 +84,29 @@ function tombstoneExternalDocument(documentId: string, hostName: string, deleted
 }
 
 export function upsertExternalDocuments(folder: NativeExternalSearchFolder, documents: ScannedDocument[], indexedAt: string) {
-  const connection = openDatabaseConnection();
   const hostName = loadOrCreateDesktopHostName(indexedAt);
   for (const document of documents) {
-    const payload = toExternalDocumentPayload(folder, document, indexedAt);
-    const documentId = toDocumentId(folder.id, document.relativePath);
-    const syncContentHash = computeSyncContentHash('external_document', payload);
-    const bodyBlobHash = upsertTextBodyBlob(connection.driver, payload.content, indexedAt);
-    connection.driver.execute(
-      `INSERT INTO external_documents (
+    upsertExternalDocument(folder, document, indexedAt, hostName);
+  }
+}
+
+function upsertExternalDocument(
+  folder: NativeExternalSearchFolder,
+  document: ScannedDocument,
+  indexedAt: string,
+  hostName: string
+) {
+  const connection = openDatabaseConnection();
+  const payload = toExternalDocumentPayload(folder, document, indexedAt);
+  const documentId = toDocumentId(folder.id, document.relativePath);
+  const syncContentHash = computeSyncContentHash('external_document', payload);
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, payload.content, indexedAt);
+  connection.driver.execute(
+    `INSERT INTO external_documents (
          document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
          source_modified_at, source_modified_ms, content_hash, title, opening_text,
-         body_blob_hash, content, indexed_at, is_present, missing_at, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)
+         body_blob_hash, content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)
        ON CONFLICT(document_id) DO UPDATE SET
          relative_path = excluded.relative_path,
          file_name = excluded.file_name,
@@ -107,36 +119,18 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
          opening_text = excluded.opening_text,
          body_blob_hash = excluded.body_blob_hash,
          content = excluded.content,
+         reference_kind = excluded.reference_kind,
+         reference_json = excluded.reference_json,
          indexed_at = excluded.indexed_at,
          is_present = 1,
          missing_at = NULL,
          updated_at = excluded.updated_at`,
-      [
-        documentId,
-        payload.folder_id,
-        payload.relative_path,
-        payload.file_name,
-        payload.extension,
-        payload.source_size_bytes,
-        payload.source_modified_at,
-        payload.source_modified_ms,
-        payload.content_hash,
-        payload.title,
-        payload.opening_text,
-        bodyBlobHash,
-        payload.content,
-        payload.indexed_at,
-        indexedAt,
-        indexedAt
-      ]
-    );
-    recordExternalDocumentSync({
-      contentHash: syncContentHash,
-      hostName,
-      documentId,
-      updatedAt: indexedAt
-    });
-  }
+    [documentId, payload.folder_id, payload.relative_path, payload.file_name, payload.extension,
+      payload.source_size_bytes, payload.source_modified_at, payload.source_modified_ms, payload.content_hash,
+      payload.title, payload.opening_text, bodyBlobHash, payload.content, payload.reference_kind,
+      payload.reference_json, payload.indexed_at, indexedAt, indexedAt]
+  );
+  recordExternalDocumentSync({ contentHash: syncContentHash, hostName, documentId, updatedAt: indexedAt });
 }
 
 export function replaceExternalDocumentsForFolder(

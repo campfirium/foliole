@@ -42,6 +42,8 @@ export const ZH_HANS_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS: Partial<Record<Trans
   'desktop.externalLibrary.preview.import': '导入',
   'desktop.externalLibrary.preview.openImported': '打开已导入主题',
   'desktop.externalLibrary.preview.importToFoliole': '导入到 Foliole',
+  'desktop.externalLibrary.preview.openReader': '在 Reader 中打开',
+  'desktop.externalLibrary.preview.openSource': '打开原文',
   'desktop.externalLibrary.preview.panel': '外部文档预览面板',
   'desktop.externalLibrary.preview.documentFallback': '外部文档',
   'desktop.externalLibrary.preview.openInLibrary': '在外部文档库中打开',

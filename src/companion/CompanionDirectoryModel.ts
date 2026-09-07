@@ -96,13 +96,20 @@ function toExternalDirectoryItem(node: ExternalLibraryDirectoryNode): DirectoryL
   };
 }
 
-function toExternalDocumentItem(entry: { absolutePath: string; folderId: string; openingText: string | null; title: string }): DirectoryListItem {
+function toExternalDocumentItem(entry: {
+  absolutePath: string;
+  documentId?: string;
+  folderId: string;
+  openingText: string | null;
+  title: string;
+}): DirectoryListItem {
+  const documentId = entry.documentId ?? entry.absolutePath;
   return {
-    documentId: entry.absolutePath,
+    documentId,
     folderId: entry.folderId,
-    id: `external-document:${entry.absolutePath}`,
+    id: `external-document:${documentId}`,
     kind: 'topic',
-    nodeId: entry.absolutePath,
+    nodeId: documentId,
     preview: entry.openingText,
     source: 'externalDocument',
     title: entry.title

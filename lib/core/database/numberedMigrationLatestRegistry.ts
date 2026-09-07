@@ -9,6 +9,7 @@ import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrinci
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
+import { migrateReadwiseExternalReferences } from './readwiseExternalReferenceMigration.js';
 import { migrateReadwiseHostSettingsVersion } from './readwiseHostSettingsVersionMigration.js';
 import { migrateReadwiseRemoteIdentity } from './readwiseRemoteIdentityMigration.js';
 
@@ -24,5 +25,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 78, migrate: migrateSinglePrincipalSyncGroup },
   { version: 79, migrate: migrateReadwiseHostSettingsVersion },
   { version: 80, migrate: migrateReadwiseRemoteIdentity },
-  { version: 81, migrate: migrateReadwiseApiImport }
+  { version: 81, migrate: migrateReadwiseApiImport },
+  { version: 82, migrate: migrateReadwiseExternalReferences }
 ];

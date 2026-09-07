@@ -1372,7 +1372,7 @@
     },
     "externalDocumentById": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1",
       "columns": [
         {
           "key": "document_id",
@@ -1407,6 +1407,16 @@
         {
           "key": "opening_text",
           "source": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "key": "reference_kind",
+          "source": "reference_kind",
+          "type": "string"
+        },
+        {
+          "key": "reference_json",
+          "source": "reference_json",
           "type": "nullableString"
         },
         {
@@ -1433,7 +1443,7 @@
     },
     "externalDocumentSearch": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at, max(0, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 1) AS match_start, trim(substr(COALESCE(CAST(cbd.data AS TEXT), ed.content), max(1, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 80), 160)) AS excerpt FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE is_present = 1 AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at, max(0, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 1) AS match_start, trim(substr(COALESCE(CAST(cbd.data AS TEXT), ed.content), max(1, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 80), 160)) AS excerpt FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE is_present = 1 AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
       "columns": [
         {
           "key": "document_id",
@@ -1468,6 +1478,16 @@
         {
           "key": "opening_text",
           "source": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "key": "reference_kind",
+          "source": "reference_kind",
+          "type": "string"
+        },
+        {
+          "key": "reference_json",
+          "source": "reference_json",
           "type": "nullableString"
         },
         {
@@ -1504,7 +1524,7 @@
     },
     "externalSearchFolders": {
       "resultKey": "folders",
-      "sql": "SELECT id, folder_path, document_count FROM external_search_folders ORDER BY folder_path COLLATE NOCASE ASC",
+      "sql": "SELECT id, folder_path, document_count FROM external_search_folders UNION ALL SELECT folder_id AS id, 'Readwise' AS folder_path, COUNT(*) AS document_count FROM external_documents WHERE is_present = 1 AND reference_kind = 'readwise_remote' AND folder_id NOT IN (SELECT id FROM external_search_folders) GROUP BY folder_id ORDER BY folder_path COLLATE NOCASE ASC",
       "columns": [
         {
           "key": "id",
@@ -1525,7 +1545,7 @@
     },
     "externalDocumentDirectoryEntries": {
       "resultKey": "entries",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
+      "sql": "SELECT CASE WHEN reference_kind = 'readwise_remote' THEN 'readwise-document:' || document_id ELSE 'external-document:' || document_id END AS absolute_path, document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
       "columns": [
         {
           "key": "document_id",
@@ -1596,6 +1616,8 @@
         "missingAtPayloadKey": "missing_at",
         "objectType": "external_document",
         "openingTextPayloadKey": "opening_text",
+        "referenceJsonPayloadKey": "reference_json",
+        "referenceKindPayloadKey": "reference_kind",
         "recordContentHashKey": "content_hash",
         "recordDeletedAtKey": "deleted_at",
         "recordUpdatedAtKey": "updated_at",
@@ -1605,7 +1627,7 @@
         "sourceSizeBytesPayloadKey": "source_size_bytes",
         "titlePayloadKey": "title"
       },
-      "sql": "SELECT json_object('document_id', document_id, 'folder_id', folder_id, 'relative_path', relative_path, 'file_name', file_name, 'extension', extension, 'source_size_bytes', source_size_bytes, 'source_modified_at', source_modified_at, 'source_modified_ms', source_modified_ms, 'content_hash', content_hash, 'title', title, 'opening_text', opening_text, 'body_blob_hash', body_blob_hash, 'content', content, 'indexed_at', indexed_at, 'is_present', is_present, 'missing_at', missing_at, 'created_at', created_at, 'updated_at', updated_at) AS payload_json FROM external_documents WHERE document_id = ? LIMIT 1"
+      "sql": "SELECT json_object('document_id', document_id, 'folder_id', folder_id, 'relative_path', relative_path, 'file_name', file_name, 'extension', extension, 'source_size_bytes', source_size_bytes, 'source_modified_at', source_modified_at, 'source_modified_ms', source_modified_ms, 'content_hash', content_hash, 'title', title, 'opening_text', opening_text, 'body_blob_hash', body_blob_hash, 'content', content, 'reference_kind', reference_kind, 'reference_json', reference_json, 'indexed_at', indexed_at, 'is_present', is_present, 'missing_at', missing_at, 'created_at', created_at, 'updated_at', updated_at) AS payload_json FROM external_documents WHERE document_id = ? LIMIT 1"
     },
     "syncPayloadExternalFolder": {
       "syncPayload": {
@@ -2336,6 +2358,16 @@
           "type": "nullableString"
         },
         {
+          "outputKey": "reference_kind",
+          "rowKey": "reference_kind",
+          "type": "string"
+        },
+        {
+          "outputKey": "reference_json",
+          "rowKey": "reference_json",
+          "type": "nullableString"
+        },
+        {
           "outputKey": "content",
           "rowKey": "content",
           "type": "nullableString"
@@ -2385,6 +2417,16 @@
         {
           "outputKey": "opening_text",
           "rowKey": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "reference_kind",
+          "rowKey": "reference_kind",
+          "type": "string"
+        },
+        {
+          "outputKey": "reference_json",
+          "rowKey": "reference_json",
           "type": "nullableString"
         },
         {

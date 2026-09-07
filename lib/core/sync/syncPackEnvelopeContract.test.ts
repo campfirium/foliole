@@ -34,7 +34,7 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
 });
 
 it('only accepts the exact independent sync pack payload schema', () => {
-  expect(SYNC_PACK_PAYLOAD_SCHEMA_VERSION).toBe(80);
+  expect(SYNC_PACK_PAYLOAD_SCHEMA_VERSION).toBe(81);
   expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION)).not.toThrow();
   expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION - 1))
     .toThrow('unsupported_sync_pack_schema_version');

@@ -83,19 +83,21 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
   await port.run(
     `INSERT INTO external_documents (` +
     `document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, source_modified_ms, ` +
-    `content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, missing_at, created_at, updated_at` +
-    `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, reference_kind, reference_json, ` +
+    `missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(document_id) DO UPDATE SET folder_id = excluded.folder_id, relative_path = excluded.relative_path, ` +
     `file_name = excluded.file_name, extension = excluded.extension, source_size_bytes = excluded.source_size_bytes, ` +
     `source_modified_at = excluded.source_modified_at, source_modified_ms = excluded.source_modified_ms, ` +
     `content_hash = excluded.content_hash, title = excluded.title, opening_text = excluded.opening_text, ` +
     `body_blob_hash = excluded.body_blob_hash, content = excluded.content, indexed_at = excluded.indexed_at, ` +
-    `is_present = excluded.is_present, missing_at = excluded.missing_at, updated_at = excluded.updated_at`,
+    `is_present = excluded.is_present, reference_kind = excluded.reference_kind, ` +
+    `reference_json = excluded.reference_json, missing_at = excluded.missing_at, updated_at = excluded.updated_at`,
     [record.object_id, text(payload.folder_id) ?? '', text(payload.relative_path) ?? '', text(payload.file_name) ?? '',
       text(payload.extension) ?? '', integer(payload.source_size_bytes), text(payload.source_modified_at) ?? record.updated_at,
       integer(payload.source_modified_ms), text(payload.content_hash) ?? record.content_hash, text(payload.title) ?? '',
       text(payload.opening_text), text(payload.body_blob_hash), text(payload.content) ?? '',
-      text(payload.indexed_at) ?? record.updated_at, integer(payload.is_present) === 0 ? 0 : 1, text(payload.missing_at),
+      text(payload.indexed_at) ?? record.updated_at, integer(payload.is_present) === 0 ? 0 : 1,
+      text(payload.reference_kind) ?? 'local_path', text(payload.reference_json), text(payload.missing_at),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
   );
 }

@@ -150,10 +150,9 @@ export async function loadRuntimeExternalSearchPreview(
   if (!runtimeInvoke) {
     return null;
   }
-  const mirrorId = typeof reference === 'string' && reference.startsWith('mirror-document:')
-    ? reference.slice('mirror-document:'.length) : null;
+  const documentId = documentIdFromReference(reference);
   const result = await runtimeInvoke(NATIVE_COMMANDS.loadExternalSearchPreview, {
-    ...(mirrorId ? { document_id: mirrorId }
+    ...(documentId ? { document_id: documentId }
       : typeof reference === 'string' || reference.kind === 'local_path'
         ? { absolute_path: typeof reference === 'string' ? reference : reference.absolutePath }
         : { document_id: reference.documentId }),
@@ -168,13 +167,19 @@ export async function importRuntimeExternalSearchDocument(reference: string | Ru
   if (!runtimeInvoke) {
     return null;
   }
-  const mirrorId = typeof reference === 'string' && reference.startsWith('mirror-document:')
-    ? reference.slice('mirror-document:'.length) : null;
-  const args = mirrorId ? { document_id: mirrorId }
+  const documentId = documentIdFromReference(reference);
+  const args = documentId ? { document_id: documentId }
     : typeof reference === 'string' || reference.kind === 'local_path'
       ? { absolute_path: typeof reference === 'string' ? reference : reference.absolutePath }
       : { document_id: reference.documentId };
   return runtimeInvoke(NATIVE_COMMANDS.importExternalSearchDocument, args) as Promise<NativeTextImportResult | null>;
+}
+
+function documentIdFromReference(reference: string | RuntimeExternalDocumentReference) {
+  if (typeof reference !== 'string') return reference.kind === 'local_path' ? null : reference.documentId;
+  const prefix = reference.startsWith('mirror-document:') ? 'mirror-document:'
+    : reference.startsWith('readwise-document:') ? 'readwise-document:' : null;
+  return prefix ? reference.slice(prefix.length) : null;
 }
 
 export async function openRuntimeExternalDocumentFile(path: string) {

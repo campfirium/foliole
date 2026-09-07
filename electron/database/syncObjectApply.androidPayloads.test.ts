@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -119,10 +120,19 @@ it('accepts Android-exported numeric strings when applying external documents', 
       extension: '.md',
       file_name: 'doc.md',
       folder_id: 'folder-1',
-      is_present: '0',
+      is_present: '1',
+      opening_text: 'Remote opening',
+      reference_json: JSON.stringify({
+        connection_ref: 'connection',
+        reader_url: 'https://readwise.io/reader/read/remote-1',
+        remote_document_id: 'remote-1',
+        source_url: 'https://example.com/remote-1'
+      }),
+      reference_kind: 'readwise_remote',
       relative_path: 'doc.md',
       source_modified_ms: '1777',
-      source_size_bytes: '88'
+      source_size_bytes: '88',
+      title: 'Remote title'
     }),
     updated_at: '2026-04-25T08:05:00.000Z'
   }]);
@@ -130,8 +140,31 @@ it('accepts Android-exported numeric strings when applying external documents', 
   expect(openDatabaseConnection().driver.queryOne<{
     body_blob_hash: string;
     is_present: number;
+    reference_json: string | null;
+    reference_kind: string;
     source_modified_ms: number;
     source_size_bytes: number;
-  }>('SELECT body_blob_hash, is_present, source_modified_ms, source_size_bytes FROM external_documents WHERE document_id = ?', ['document-1']))
-    .toEqual({ body_blob_hash: 'blob-document-1', is_present: 0, source_modified_ms: 1777, source_size_bytes: 88 });
+  }>(`SELECT body_blob_hash, is_present, reference_json, reference_kind, source_modified_ms, source_size_bytes
+       FROM external_documents WHERE document_id = ?`, ['document-1']))
+    .toEqual({
+      body_blob_hash: 'blob-document-1',
+      is_present: 1,
+      reference_json: JSON.stringify({
+        connection_ref: 'connection',
+        reader_url: 'https://readwise.io/reader/read/remote-1',
+        remote_document_id: 'remote-1',
+        source_url: 'https://example.com/remote-1'
+      }),
+      reference_kind: 'readwise_remote',
+      source_modified_ms: 1777,
+      source_size_bytes: 88
+    });
+
+  const queries = ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS;
+  expect(openDatabaseConnection().sqlite.prepare(queries.externalDocumentById.sql).get('document-1'))
+    .toMatchObject({ content: 'body', document_id: 'document-1', reference_kind: 'readwise_remote' });
+  expect(openDatabaseConnection().sqlite.prepare(queries.externalSearchFolders.sql).all())
+    .toContainEqual({ document_count: 1, folder_path: 'Readwise', id: 'folder-1' });
+  expect(openDatabaseConnection().sqlite.prepare(queries.externalDocumentDirectoryEntries.sql).all())
+    .toContainEqual(expect.objectContaining({ document_id: 'document-1', title: 'Remote title' }));
 });

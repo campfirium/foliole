@@ -14,6 +14,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildFtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
@@ -23,6 +24,12 @@ import {
 } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import {
+  loadReadwiseExternalSearchBrowseEntries,
+  loadReadwiseExternalSearchFolders,
+  loadReadwiseExternalSearchPreview,
+  searchReadwiseExternalDocuments
+} from '../database/readwiseManagedExternalDocuments.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 
@@ -143,6 +150,46 @@ it('records unavailable bodies without creating an empty Topic', () => {
   );
   expect(source?.latest_node_id).toBeNull();
   expect(JSON.parse(source?.remote_import_state_json ?? '{}').bodyState).toBe('unavailable');
+});
+
+it('stores API External documents as remote references and suppresses them after Inbox adoption', () => {
+  const externalConfig = {
+    ...createDefaultReadwiseReaderConfig(),
+    withoutHighlightsDestination: 'external' as const
+  };
+  const document = documentFixture([], 'Searchable remote body');
+  document.metadata.readerUrl = 'https://readwise.io/reader/read/01';
+  document.metadata.sourceUrl = 'https://example.com/source';
+
+  expect(materializeReadwiseApiDocument({ config: externalConfig, connectionRef: 'connection', document }))
+    .toMatchObject({ status: 'external_pending' });
+  const folder = loadReadwiseExternalSearchFolders()[0]!;
+  const entry = loadReadwiseExternalSearchBrowseEntries(folder.id)[0]!;
+  if (!entry.document_id) throw new Error('Expected Readwise External document id');
+  expect(entry).toMatchObject({
+    document_id: expect.stringMatching(/^readwise-remote:/),
+    folder_path: 'Readwise',
+    reference: {
+      kind: 'readwise_remote',
+      reader_url: 'https://readwise.io/reader/read/01',
+      source_url: 'https://example.com/source'
+    }
+  });
+  expect('absolute_path' in entry).toBe(false);
+  expect(loadReadwiseExternalSearchPreview(entry.document_id)).toMatchObject({
+    content: 'Searchable remote body', reference: { kind: 'readwise_remote' }
+  });
+  expect(searchReadwiseExternalDocuments(buildFtsSearchQueryPlan('searchable'))[0])
+    .toMatchObject({ id: `readwise-document:${entry.document_id}` });
+
+  const inboxConfig = { ...externalConfig, withoutHighlightsDestination: 'inbox' as const };
+  expect(materializeReadwiseApiDocument({ config: inboxConfig, connectionRef: 'connection', document }))
+    .toMatchObject({ status: 'imported' });
+  expect(loadReadwiseExternalSearchBrowseEntries(folder.id)).toEqual([]);
+  expect(searchReadwiseExternalDocuments(buildFtsSearchQueryPlan('searchable'))).toEqual([]);
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM import_sources WHERE remote_provider = 'readwise' AND remote_document_id = 'document-1'"
+  )).toEqual({ count: 1 });
 });
 
 function documentFixture(

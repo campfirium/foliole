@@ -5,7 +5,7 @@ import {
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile',
   'internal-install', 'internal-open', 'live', 'secondary', 'default-sync-journey',
-  'frozen-revision-preflight', 'readwise-api-connection', 'readwise-api-import',
+  'frozen-revision-preflight', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
   'desktop-dnssd-host-facts', 'desktop-dnssd-advertise-acceptance',
   'desktop-dnssd-find-acceptance', 'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',

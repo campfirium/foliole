@@ -30,6 +30,8 @@ export interface CompanionExternalDocument {
   file_name: string;
   folder_id: string;
   opening_text: string | null;
+  reference_json?: string | null;
+  reference_kind?: string;
   relative_path: string;
   title: string;
   updated_at: string;
@@ -143,7 +145,9 @@ function normalizeExternalDocument<T extends NativeExternalDocument>(document: T
   const { content_status, ...rest } = document;
   return {
     ...rest,
-    bodyStatus: normalizeBodyStatus(content_status)
+    bodyStatus: normalizeBodyStatus(content_status),
+    reference_json: document.reference_json ?? null,
+    reference_kind: document.reference_kind ?? 'local_path'
   };
 }
 

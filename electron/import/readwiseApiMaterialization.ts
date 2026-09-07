@@ -5,6 +5,10 @@ import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwis
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import {
+  hideReadwiseApiExternalDocument,
+  upsertReadwiseApiExternalDocument
+} from '../database/readwiseApiExternalDocuments.js';
+import {
   loadReadwiseApiImportSource,
   saveReadwiseApiImportSource
 } from '../database/readwiseApiImportState.js';
@@ -20,11 +24,14 @@ export function materializeReadwiseApiDocument(input: {
   config: ReadwiseReaderConfig;
   connectionRef: string;
   document: PreparedReadwiseApiDocument;
+  forceInbox?: boolean;
   importedAt?: string;
 }): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  const destination = resolveReadwiseImportDestination(input.config, input.document.annotations.length > 0);
+  const destination = input.forceInbox || existing
+    ? 'inbox'
+    : resolveReadwiseImportDestination(input.config, input.document.annotations.length > 0);
   if (existing?.nodeDeleted) {
     saveState(input, existing.sourceFingerprint, existing.annotations, {
       ...existing.state,
@@ -32,8 +39,17 @@ export function materializeReadwiseApiDocument(input: {
     }, importedAt);
     return result(input.document.id, 'blocked');
   }
-  if (destination === 'external') return result(input.document.id, 'external_pending');
-  if (destination === 'off') return result(input.document.id, 'skipped');
+  if (destination === 'external') {
+    if (!input.document.body.trim()) return result(input.document.id, 'degraded');
+    upsertReadwiseApiExternalDocument({
+      connectionRef: input.connectionRef, document: input.document, indexedAt: importedAt
+    });
+    return result(input.document.id, 'external_pending');
+  }
+  if (destination === 'off') {
+    hideReadwiseApiExternalDocument(input.connectionRef, input.document.id, importedAt);
+    return result(input.document.id, 'skipped');
+  }
   if (!input.document.body.trim()) {
     const record = runPreparedImport(prepareRecord(input, existing, importedAt));
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
@@ -46,7 +62,11 @@ export function materializeReadwiseApiDocument(input: {
     }, importedAt);
     return result(input.document.id, 'degraded');
   }
-  return materializeAvailableDocument(input, existing, importedAt);
+  const materialized = materializeAvailableDocument(input, existing, importedAt);
+  if (materialized.status === 'imported') {
+    hideReadwiseApiExternalDocument(input.connectionRef, input.document.id, importedAt);
+  }
+  return materialized;
 }
 
 function materializeAvailableDocument(

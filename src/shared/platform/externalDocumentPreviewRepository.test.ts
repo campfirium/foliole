@@ -80,3 +80,26 @@ it('loads remote mirrors by document id instead of a source path', async () => {
   expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.loadExternalSearchPreview, { document_id: 'remote-doc' });
   expect(result).toMatchObject({ documentId: 'remote-doc', reference: { documentId: 'remote-doc', kind: 'mirror_document' } });
 });
+
+it('loads Readwise references by document id without synthesizing a local path', async () => {
+  const invoke = vi.fn(async () => ({
+    content: '# Remote', document_id: 'readwise-doc', extension: 'md', file_name: 'remote.md',
+    folder_id: 'readwise-reader-import-articles', folder_path: 'Readwise', relative_path: 'remote.md',
+    reference: {
+      document_id: 'readwise-doc', kind: 'readwise_remote',
+      reader_url: 'https://readwise.io/reader/read/01', source_url: 'https://example.com/source'
+    }
+  }));
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const result = await loadExternalDocumentPreview('readwise-document:readwise-doc');
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.loadExternalSearchPreview, { document_id: 'readwise-doc' });
+  expect(result).toMatchObject({
+    absolutePath: 'readwise-document:readwise-doc',
+    documentId: 'readwise-doc',
+    reference: {
+      documentId: 'readwise-doc', kind: 'readwise_remote',
+      readerUrl: 'https://readwise.io/reader/read/01', sourceUrl: 'https://example.com/source'
+    }
+  });
+});
