@@ -71,3 +71,16 @@ export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
   }
   return { conflictCount: conflicts.length, nodeId, silentOverwrite: false, visible: true };
 }
+
+export async function loadVisibleDesktopSyncConflictCopy({ nodeId, session }) {
+  const snapshot = await session.invoke('load_workspace_list_snapshot', {
+    includePdfOpenings: false
+  });
+  const copies = Object.values(snapshot?.nodesById ?? {}).filter((node) => (
+    String(node.id).startsWith(`${nodeId}~`) && String(node.content).includes('A5 note')
+  ));
+  if (copies.length === 0) {
+    throw new Error('The product did not expose the concurrent A5 conflict copy.');
+  }
+  return { conflictCount: copies.length, nodeId, silentOverwrite: false, visible: true };
+}

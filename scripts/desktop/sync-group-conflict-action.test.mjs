@@ -1,7 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflict,
+  loadVisibleDesktopSyncConflictCopy
 } from './sync-group-conflict-action.mjs';
 
 it('creates and forks one business object only through product commands', async () => {
@@ -43,4 +44,12 @@ it('accepts only a product conflict record for the exact object', async () => {
   await expect(loadVisibleDesktopSyncConflict({ nodeId: 'node', session: {
     invoke: async () => []
   } })).rejects.toThrow('did not expose');
+});
+
+it('accepts an A5 conflict copy exposed by the product snapshot', async () => {
+  const session = { invoke: async () => ({ nodesById: {
+    'node~a5': { content: 'Note target beta\n※ A5 note token', id: 'node~a5' }
+  } }) };
+  await expect(loadVisibleDesktopSyncConflictCopy({ nodeId: 'node', session }))
+    .resolves.toMatchObject({ conflictCount: 1, silentOverwrite: false, visible: true });
 });

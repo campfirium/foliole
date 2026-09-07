@@ -15,7 +15,7 @@ import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-mainte
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflictCopy
 } from '../desktop/sync-group-conflict-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
@@ -143,12 +143,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     const a5ManualBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') }, 'manual');
     const macosManualBeforeRestart = await session.invoke('sync_companion_now');
-    const conflicts = await session.waitForState({ command: 'load_sync_node_conflicts',
-      commandArgs: { objectIds: [conflictSeed.nodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
-    const conflict = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
-      silentOverwrite: false, visible: true };
+    const conflict = await loadVisibleDesktopSyncConflictCopy({
+      nodeId: conflictSeed.nodeId, session
+    });
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
     ]);
