@@ -9,6 +9,10 @@ import type {
   NativeReadwiseSyncPreviewResult
 } from './nativeImportContract.js';
 import type {
+  NativeReadwiseApiConnection,
+  NativeReadwiseApiConnectionResult
+} from './nativeReadwiseApiConnectionContract.js';
+import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubLoadResult,
@@ -19,6 +23,18 @@ import type {
 import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
 
 export type NativeReadwiseCommandMap = {
+  [NATIVE_COMMANDS.loadReadwiseApiConnection]: {
+    args: undefined;
+    result: NativeReadwiseApiConnection;
+  };
+  [NATIVE_COMMANDS.connectReadwiseApiFromClipboard]: {
+    args: undefined;
+    result: NativeReadwiseApiConnectionResult;
+  };
+  [NATIVE_COMMANDS.disconnectReadwiseApi]: {
+    args: undefined;
+    result: NativeReadwiseApiConnectionResult;
+  };
   [NATIVE_COMMANDS.loadReadwiseHostAssignment]: {
     args: undefined;
     result: NativeReadwiseHostAssignment;

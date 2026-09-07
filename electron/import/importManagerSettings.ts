@@ -65,6 +65,7 @@ export function loadImportManagerSettings(): ImportManagerSettings {
     ...globalSettings,
     readwiseReaderConfig: hostSettings.readwiseReaderConfig,
     readwiseRootPath: hostSettings.readwiseRootPath,
+    readwiseSourceMode: hostSettings.readwiseSourceMode,
     readwiseSources: hydrateCurrentHostReadwiseSources(globalSettings.readwiseSources)
   };
 }
@@ -100,7 +101,14 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       withoutReadwiseImportManagerFields(normalized),
       normalized.updatedAt
     );
-    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, normalizeReadwiseHostSettings(normalized), normalized.updatedAt);
+    const currentHostSettings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
+    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, normalizeReadwiseHostSettings({
+      ...currentHostSettings,
+      readwiseReaderConfig: normalized.readwiseReaderConfig,
+      readwiseRootPath: normalized.readwiseRootPath,
+      readwiseSourceMode: normalized.readwiseSourceMode,
+      updatedAt: normalized.updatedAt
+    }), normalized.updatedAt);
   });
   return normalized;
 }

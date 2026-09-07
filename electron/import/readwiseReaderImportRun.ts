@@ -186,7 +186,7 @@ async function runReadwiseReaderImportNow(input?: {
   window?: ReadwiseImportProgressWindow | null;
 }, signal?: AbortSignal): Promise<NativeReadwiseImportRunResult> {
   const settings = resolveRunSettings(input);
-  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise()) {
+  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('folder')) {
     return {
       completed_at: new Date().toISOString(),
       entry_count: 0,
@@ -209,6 +209,7 @@ async function runReadwiseReaderImportNow(input?: {
   try {
     for (const source of sources) {
       throwIfKeepImportAborted(signal);
+      if (!canCurrentHostRunReadwise('folder')) throw new Error('readwise_execution_eligibility_lost');
       if (source.kind === 'books') {
         await applyReadwiseBooksRun(source, accumulator);
       } else if (isKeepImportMonitorSnapshotFresh(source.id)) {

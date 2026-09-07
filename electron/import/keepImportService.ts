@@ -5,6 +5,7 @@ import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } 
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { reconcileKeepImportCatalog } from './keepImportCatalogReconcile.js';
+import { assertKeepImportSourceCanRun } from './keepImportExecutionGuard.js';
 import { shouldKeepImportReadwiseSource } from './keepImportPreparedRecord.js';
 import { buildKeepImportPreviewResult } from './keepImportPreviewResult.js';
 import type { KeepImportProgressSink } from './keepImportProgress.js';
@@ -48,6 +49,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
 }
 
 async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
+  assertReadwiseCanRun(config);
   throwIfKeepImportAborted(config.signal);
   const discoveredSources = await discoverKeepImportSources(config);
   throwIfKeepImportAborted(config.signal);
@@ -58,6 +60,7 @@ async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
     }))
   );
   throwIfKeepImportAborted(config.signal);
+  assertReadwiseCanRun(config);
   await reconcileKeepImportCatalog(config, discoveredSources);
   const runEntries: KeepImportRunEntry[] = [];
   for (const [index, planned] of sourcePlan.entries()) {
@@ -86,6 +89,7 @@ async function runPlannedKeepImportSource(
   index: number,
   sourceTotalCount: number
 ) {
+  assertReadwiseCanRun(config);
   const { source } = planned;
   await yieldKeepImportRunner(config.signal);
   config.onProgress?.({
@@ -117,4 +121,14 @@ async function runPlannedKeepImportSource(
   });
   await yieldKeepImportRunner(config.signal);
   return entry;
+}
+
+function assertReadwiseCanRun(config: KeepImportRuleConfig) {
+  if (config.sourceType === 'readwise') {
+    assertKeepImportSourceCanRun({
+      directoryPath: config.directoryPath,
+      ruleId: config.ruleId,
+      sourceType: 'readwise'
+    });
+  }
 }

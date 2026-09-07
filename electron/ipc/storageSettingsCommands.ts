@@ -24,6 +24,11 @@ import {
 } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
+import {
+  connectReadwiseApiFromClipboard,
+  disconnectReadwiseApi,
+  loadReadwiseApiConnection
+} from '../import/readwiseApiConnection.js';
 import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
 import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
@@ -112,6 +117,15 @@ function handleSourceSettingsCommand(command: string, args: Record<string, unkno
   return managementResult === undefined ? handleExternalSearchStorageCommand(command, args) : managementResult;
 }
 
+function handleReadwiseHostCommand(command: string) {
+  if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
+  if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) return activateReadwiseOnThisHost();
+  if (command === NATIVE_COMMANDS.loadReadwiseApiConnection) return loadReadwiseApiConnection();
+  if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) return connectReadwiseApiFromClipboard();
+  if (command === NATIVE_COMMANDS.disconnectReadwiseApi) return disconnectReadwiseApi();
+  return undefined;
+}
+
 export async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -141,8 +155,8 @@ export async function handleSettingsStorageCommand(
     );
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
-  if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
-  if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) return activateReadwiseOnThisHost();
+  const readwiseHostResult = handleReadwiseHostCommand(command);
+  if (readwiseHostResult !== undefined) return readwiseHostResult;
   const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
   if (watchedFolderResult !== undefined) return watchedFolderResult;
   if (command === NATIVE_COMMANDS.openImportRoot) return openImportRoot();

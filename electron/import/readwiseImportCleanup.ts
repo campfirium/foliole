@@ -178,12 +178,12 @@ function clearReadwiseExternalDocuments(rows: ReadwiseExternalCleanupRow[]) {
 }
 
 export function previewReadwiseImportCleanup(): NativeReadwiseCleanupPreviewResult {
-  if (!canCurrentHostRunReadwise()) throw new Error('readwise_not_active_host');
+  if (!canCurrentHostRunReadwise('folder')) throw new Error('readwise_not_active_host');
   return buildCleanupPreview(new Date().toISOString());
 }
 
 export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
-  if (!canCurrentHostRunReadwise()) throw new Error('readwise_not_active_host');
+  if (!canCurrentHostRunReadwise('folder')) throw new Error('readwise_not_active_host');
   const cleanedAt = new Date().toISOString();
   const preview = buildCleanupPreview(cleanedAt);
   const externalRows = readReadwiseExternalRows();

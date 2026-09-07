@@ -8,6 +8,7 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
+import { assertKeepImportSourceCanRun } from './keepImportExecutionGuard.js';
 import { throwIfKeepImportAborted } from './keepImportProgress.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
@@ -132,6 +133,11 @@ function syncReadwiseBookPlaceholders(source: EnabledReadwiseBooksSource, invent
   const updatedAt = new Date().toISOString();
   let createdCount = 0;
   const books = inventory.books.map((book) => {
+    assertKeepImportSourceCanRun({
+      directoryPath: source.primaryPath,
+      ruleId: source.id,
+      sourceType: 'readwise'
+    });
     const sourcePath = resolveBookSourcePath(book, inventory);
     const blockedState = isBlockedReadwiseBookSource(source.id, sourcePath);
     if (blockedState.blocked) {

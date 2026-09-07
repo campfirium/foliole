@@ -9,9 +9,10 @@ import {
   normalizeReadwiseReaderConfig,
   type ReadwiseReaderConfig
 } from './readwiseReaderSettings.js';
+import { READWISE_FOLDER_NAMES, type ReadwiseSourceKind } from './readwiseSourceKinds.js';
 
 export type ImportHighlightMode = 'merged' | 'split';
-export type ReadwiseSourceKind = 'books' | 'articles' | 'tweets' | 'podcasts';
+export type ReadwiseSourceMode = 'api' | 'folder';
 export type KeepImportRuleState = 'draft' | 'enabled' | 'previewed';
 
 export interface ImportManagerSourceDraft {
@@ -30,6 +31,7 @@ export interface ImportManagerSettings {
   detailsOpen: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
+  readwiseSourceMode: ReadwiseSourceMode;
   readwiseSources: ImportManagerSourceDraft[];
   sources: ImportManagerSourceDraft[];
   titleStrategy: ImportNodeTitleStrategy;
@@ -40,12 +42,6 @@ export interface ImportManagerSettings {
 const IMPORT_MANAGER_SETTINGS_VERSION = 4;
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
-const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
-  articles: 'Articles',
-  books: 'Books',
-  podcasts: 'Podcasts',
-  tweets: 'Tweets'
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -179,6 +175,7 @@ export function createDefaultImportManagerSettings(): ImportManagerSettings {
     detailsOpen: true,
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
+    readwiseSourceMode: 'folder',
     readwiseSources: createReadwiseImportSources(),
     sources: createDefaultGenericImportSources(),
     titleStrategy: 'file_name',
@@ -218,6 +215,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
+    readwiseSourceMode: value.readwiseSourceMode === 'api' ? 'api' : 'folder',
     readwiseSources: defaultReadwiseSources.map((source) =>
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)
     ),
@@ -237,9 +235,6 @@ export function createNextImportSourceIndex(sources: ImportManagerSourceDraft[],
     return Math.max(maxIndex, Number(match[1]));
   }, fallback - 1) + 1;
 }
-export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
-  return READWISE_FOLDER_NAMES[kind];
-}
-
 export type { KeepImportPreviewSummary } from './keepImportPreviewSettings.js';
 export type { ImportNodeTitleStrategy } from './importedNodeTitle.js';
+export { formatReadwiseSourceLabel, type ReadwiseSourceKind } from './readwiseSourceKinds.js';

@@ -10,7 +10,7 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
   return {
     canRunConfig(config) {
       return config.sourceType === 'readwise'
-        ? canCurrentHostRunReadwise()
+        ? canCurrentHostRunReadwise('folder')
         : resolveExecutableWatchedBinding(config.sourceId, config.directoryPath).executable;
     },
     debounceMs: 250,

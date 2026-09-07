@@ -4,6 +4,7 @@ import {
   createDefaultImportManagerSettings,
   type ImportManagerSettings,
   type ImportNodeTitleStrategy,
+  type ReadwiseSourceMode,
 } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
@@ -126,6 +127,9 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
         titleStrategy
       }));
     },
+    handleChangeReadwiseSourceMode(readwiseSourceMode: ReadwiseSourceMode) {
+      setSettings((current) => ({ ...current, readwiseSourceMode }));
+    },
     setDetailsOpen(updater: (current: boolean) => boolean) {
       setSettings((current) => ({
         ...current,
@@ -146,6 +150,7 @@ export function useImportSourceWorkspaceState() {
     ...createWorkspaceMetaActions(setSettings),
     readwiseReaderConfig: settings.readwiseReaderConfig,
     readwiseRootPath: settings.readwiseRootPath,
+    readwiseSourceMode: settings.readwiseSourceMode,
     readwiseSources: settings.readwiseSources,
     sources: settings.sources,
     titleStrategy: settings.titleStrategy

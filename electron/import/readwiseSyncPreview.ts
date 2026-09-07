@@ -161,7 +161,7 @@ export async function previewReadwiseReaderImport(
   const settings = settingsInput
     ? normalizeImportManagerSettings(settingsInput)
     : loadImportManagerSettings();
-  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise()) {
+  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('folder')) {
     return {
       active_count: 0,
       blocked_count: 0,

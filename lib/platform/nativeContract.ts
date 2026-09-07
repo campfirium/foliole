@@ -39,6 +39,7 @@ import type { NativeWordPressPublishCommandMap } from './nativeWordPressPublishC
 export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js'; export type * from './nativeSplitTopicPreferencesContract.js';
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
+export type * from './nativeReadwiseApiConnectionContract.js';
 export type * from './nativeSourceDispositionContract.js';
 export type * from './nativeInitialLibrarySetupContract.js';
 export type * from './nativeNodeOpenStateContract.js';

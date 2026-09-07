@@ -28,6 +28,7 @@ import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js'
 import { migrateSyncGroupDepartures } from './numberedMigrationSyncGroupDepartures.js';
 import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
+import { migrateReadwiseHostSettingsVersion } from './readwiseHostSettingsVersionMigration.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
@@ -211,5 +212,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 78,
     migrate: migrateSinglePrincipalSyncGroup
+  },
+  {
+    version: 79,
+    migrate: migrateReadwiseHostSettingsVersion
   }
 ];

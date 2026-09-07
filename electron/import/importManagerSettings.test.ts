@@ -48,6 +48,7 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
     validatedAt: '2026-03-25T00:02:00.000Z'
   },
   readwiseRootPath: '/tmp/readwise-root',
+  readwiseSourceMode: 'api',
   readwiseSources: [
     {
       id: 'draft-import-source-1',
@@ -107,6 +108,7 @@ function expectNormalizedSavedSettings() {
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-root',
+    readwiseSourceMode: 'api',
     titleStrategy: 'heading',
     readwiseSources: [
       {
@@ -161,6 +163,7 @@ function expectReloadedSettingsAfterRestart() {
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-root',
+    readwiseSourceMode: 'api',
     titleStrategy: 'heading',
     readwiseSources: [
       {

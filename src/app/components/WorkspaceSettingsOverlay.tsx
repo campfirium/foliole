@@ -106,8 +106,10 @@ function DemoReadwiseReaderSettingsPreview() {
   return (
     <SettingsReadwiseReaderContent
       config={demoImportSettings.readwiseReaderConfig}
+      onChangeSourceMode={() => undefined}
       onSave={() => undefined}
       readwiseRootPath={demoImportSettings.readwiseRootPath}
+      readwiseSourceMode={demoImportSettings.readwiseSourceMode}
       readwiseSources={demoImportSettings.readwiseSources}
     />
   );

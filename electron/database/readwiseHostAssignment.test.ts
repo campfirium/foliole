@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-host-tests';
+const apiState = vi.hoisted(() => ({ mode: 'folder' as 'api' | 'folder', ready: false }));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -15,6 +16,10 @@ vi.mock('../ipc/paths.js', () => ({
     app_config_dir: path.join(mockedAppDataDir, 'config'),
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
+}));
+vi.mock('../import/readwiseApiConnectionState.js', () => ({
+  isStoredReadwiseApiConnectionReady: () => apiState.ready,
+  loadStoredReadwiseHostSettings: () => ({ readwiseSourceMode: apiState.mode })
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -30,6 +35,8 @@ import { saveJsonSetting } from './settingsStore.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  apiState.mode = 'folder';
+  apiState.ready = false;
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-host-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
@@ -117,4 +124,20 @@ it('runs Readwise for the current Host when another enabled category directory i
     "UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_type = 'readwise'"
   );
   expect(canCurrentHostRunReadwise()).toBe(false);
+});
+
+it('uses API readiness instead of folder readiness in explicit API mode', async () => {
+  const rootPath = path.join(tempRoot, 'Readwise');
+  await fs.mkdir(rootPath, { recursive: true });
+  upsertDesktopSource({
+    configRef: 'readwise-a', rootPath, sourceType: 'readwise', typeSettings: { keepState: 'enabled' }, updatedAt: 'now'
+  });
+  apiState.mode = 'api';
+
+  expect(canCurrentHostRunReadwise()).toBe(false);
+  apiState.ready = true;
+  expect(canCurrentHostRunReadwise()).toBe(true);
+  apiState.mode = 'folder';
+  apiState.ready = false;
+  expect(canCurrentHostRunReadwise()).toBe(true);
 });

@@ -3,9 +3,10 @@ import type {
   NativeReadwiseHostAssignment,
   NativeReadwiseWorkgroupHost
 } from '../../lib/platform/nativeReadwiseHostContract.js';
+import { loadStoredReadwiseHostSettings, isStoredReadwiseApiConnectionReady } from '../import/readwiseApiConnectionState.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadCurrentHostDesktopSources } from './desktopSources.js';
+import { isDesktopSourceExecutable, loadCurrentHostDesktopSources } from './desktopSources.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
@@ -72,11 +73,15 @@ export function activateReadwiseOnThisHost() {
   return loadReadwiseHostAssignment();
 }
 
-export function canCurrentHostRunReadwise() {
+export function canCurrentHostRunReadwise(
+  mode: 'api' | 'folder' = loadStoredReadwiseHostSettings().readwiseSourceMode
+) {
   if (!loadReadwiseHostAssignment().is_active) return false;
+  if (loadStoredReadwiseHostSettings().readwiseSourceMode !== mode) return false;
+  if (mode === 'api') return isStoredReadwiseApiConnectionReady();
   const sources = loadCurrentHostDesktopSources('readwise').filter((source) => {
       try { return (JSON.parse(source.type_settings_json) as Record<string, unknown>).keepState === 'enabled'; }
       catch { return false; }
     });
-  return sources.length > 0;
+  return sources.some(isDesktopSourceExecutable);
 }
