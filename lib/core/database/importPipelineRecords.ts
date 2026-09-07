@@ -17,6 +17,10 @@ interface ImportSourceRow {
   last_content_fingerprint: string;
   last_imported_at?: string;
   provider?: string;
+  remote_annotations_json?: string;
+  remote_connection_ref?: string | null;
+  remote_document_id?: string | null;
+  remote_provider?: string | null;
   source_fingerprint?: string;
   source_kind?: string;
   source_location?: string | null;
@@ -113,6 +117,10 @@ function toImportSourcePayload(row: ImportSourceRow) {
     last_content_fingerprint: row.last_content_fingerprint,
     latest_node_id: row.latest_node_id,
     provider: row.provider ?? '',
+    remote_annotations_json: row.remote_annotations_json ?? '[]',
+    remote_connection_ref: row.remote_connection_ref ?? null,
+    remote_document_id: row.remote_document_id ?? null,
+    remote_provider: row.remote_provider ?? null,
     source_fingerprint: row.source_fingerprint ?? '',
     source_kind: row.source_kind ?? '',
     source_location: row.source_location ?? null,
@@ -139,7 +147,11 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
        watched_binding_id,
        watched_relative_path,
        source_ref,
-       source_location
+       source_location,
+       remote_provider,
+       remote_connection_ref,
+       remote_document_id,
+       remote_annotations_json
      FROM import_sources
      WHERE source_fingerprint = ?`,
     [sourceFingerprint]

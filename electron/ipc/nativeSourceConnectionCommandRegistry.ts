@@ -12,6 +12,8 @@ export const NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadReadwiseApiConnection, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.connectReadwiseApiFromClipboard, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectReadwiseApi, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.previewReadwiseIdentityBindings, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.confirmReadwiseIdentityBindings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadWatchedFolderBindings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.previewWatchedFolderReconnect, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.confirmWatchedFolderReconnect, route: 'storage', capability: 'settingsMutation' },

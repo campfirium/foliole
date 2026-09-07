@@ -23,7 +23,8 @@ const payloadPlans = [
     FROM source.external_search_folders f JOIN source.desktop_sources s ON s.source_ref = f.source_ref` },
   { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,
     first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,
-    watched_binding_id, watched_relative_path, source_ref, source_location
+    watched_binding_id, watched_relative_path, source_ref, source_location,
+    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json
     FROM source.import_sources` },
   { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
   { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,

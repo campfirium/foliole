@@ -37,7 +37,11 @@ const COLUMN_ACTIONS: Partial<Record<string, RepairName>> = {
   [ACTIONS.addNodesSequentialReadingEnabledIfMissing]: 'nodesSequentialReadingEnabled',
   [ACTIONS.addNodesShelvedAtIfMissing]: 'nodesShelvedAt',
   [ACTIONS.addSyncBaseContentHashIfMissing]: 'syncBaseContentHash',
-  [ACTIONS.addSyncGroupsWorkgroupKeyIfMissing]: 'syncGroupsWorkgroupKey'
+  [ACTIONS.addSyncGroupsWorkgroupKeyIfMissing]: 'syncGroupsWorkgroupKey',
+  [ACTIONS.addImportSourcesRemoteProviderIfMissing]: 'importSourcesRemoteProvider',
+  [ACTIONS.addImportSourcesRemoteConnectionRefIfMissing]: 'importSourcesRemoteConnectionRef',
+  [ACTIONS.addImportSourcesRemoteDocumentIdIfMissing]: 'importSourcesRemoteDocumentId',
+  [ACTIONS.addImportSourcesRemoteAnnotationsJsonIfMissing]: 'importSourcesRemoteAnnotationsJson'
 };
 
 export async function migrateCompanionDatabase(

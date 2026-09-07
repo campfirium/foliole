@@ -75,7 +75,7 @@ it('migrates legacy Host settings to explicit folder mode and blocks v1 writes',
   expect(connection.driver.queryOne<{ state_seq: number; sync_dirty: number }>(
     "SELECT state_seq, sync_dirty FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE '%readwise_import_settings'"
   )).toMatchObject({ state_seq: 8, sync_dirty: 1 });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(79);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(80);
   expect(() => connection.driver.execute(
     "UPDATE settings SET value = '{\"version\":1}' WHERE key = 'readwise_import_settings'"
   )).toThrow('readwise_host_settings_version_unsupported');

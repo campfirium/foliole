@@ -3,32 +3,23 @@ import {
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
 import { LEGACY_DEVICE_SYNC_GROUP_SCHEMA_STATEMENTS } from './legacyDeviceSyncGroupSchemaStatements.js';
-import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
-import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
 import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
 import { migrateDesktopSourceOwnership } from './numberedMigrationDesktopSourceOwnership.js';
 import { migrateDesktopSources } from './numberedMigrationDesktopSources.js';
 import { migrateExternalFolderOwnership } from './numberedMigrationExternalFolderOwnership.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
-import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
+import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from './numberedMigrationLatestRegistry.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
 import { migrateLegacyVirtualFoldersToManualNodes } from './numberedMigrationManualVirtualFolders.js';
 import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
-import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
-import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
-import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
-import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
-import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js';
 import { migrateSyncGroupDepartures } from './numberedMigrationSyncGroupDepartures.js';
-import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
-import { migrateReadwiseHostSettingsVersion } from './readwiseHostSettingsVersionMigration.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
@@ -177,44 +168,5 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     version: 69,
     migrate: migrateDesktopSourceOwnership
   },
-  {
-    version: 70,
-    migrate: migrateHostPermanentState
-  },
-  {
-    version: 71,
-    migrate: migrateOpaqueSyncRefs
-  },
-  {
-    version: 72,
-    migrate: migrateAuthorHostSnapshots
-  },
-  {
-    version: 73,
-    migrate: migrateSyncGroupHosts
-  },
-  {
-    version: 74,
-    migrate: migrateDeliveryAuthorizations
-  },
-  {
-    version: 75,
-    migrate: retirePrimaryDeviceState
-  },
-  {
-    version: 76,
-    migrate: migrateSourceHostOwnership
-  },
-  {
-    version: 77,
-    migrate: migrateReadwiseHostSettings
-  },
-  {
-    version: 78,
-    migrate: migrateSinglePrincipalSyncGroup
-  },
-  {
-    version: 79,
-    migrate: migrateReadwiseHostSettingsVersion
-  }
+  ...LATEST_NUMBERED_SCHEMA_MIGRATIONS
 ];

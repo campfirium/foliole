@@ -29,6 +29,10 @@ import {
   disconnectReadwiseApi,
   loadReadwiseApiConnection
 } from '../import/readwiseApiConnection.js';
+import {
+  confirmReadwiseIdentityBindingPreview,
+  previewReadwiseIdentityBindings
+} from '../import/readwiseIdentityBindingPreview.js';
 import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
 import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
@@ -117,12 +121,18 @@ function handleSourceSettingsCommand(command: string, args: Record<string, unkno
   return managementResult === undefined ? handleExternalSearchStorageCommand(command, args) : managementResult;
 }
 
-function handleReadwiseHostCommand(command: string) {
+async function handleReadwiseHostCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
   if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) return activateReadwiseOnThisHost();
   if (command === NATIVE_COMMANDS.loadReadwiseApiConnection) return loadReadwiseApiConnection();
-  if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) return connectReadwiseApiFromClipboard();
+  if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) {
+    return connectReadwiseApiFromClipboard({}, args.source_intent === 'replace' ? 'replace' : 'continue');
+  }
   if (command === NATIVE_COMMANDS.disconnectReadwiseApi) return disconnectReadwiseApi();
+  if (command === NATIVE_COMMANDS.previewReadwiseIdentityBindings) return previewReadwiseIdentityBindings();
+  if (command === NATIVE_COMMANDS.confirmReadwiseIdentityBindings) {
+    return confirmReadwiseIdentityBindingPreview(asString(args.preview_id, 'preview_id'));
+  }
   return undefined;
 }
 
@@ -155,7 +165,7 @@ export async function handleSettingsStorageCommand(
     );
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
-  const readwiseHostResult = handleReadwiseHostCommand(command);
+  const readwiseHostResult = await handleReadwiseHostCommand(command, args);
   if (readwiseHostResult !== undefined) return readwiseHostResult;
   const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
   if (watchedFolderResult !== undefined) return watchedFolderResult;

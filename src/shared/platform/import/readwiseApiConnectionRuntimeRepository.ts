@@ -7,6 +7,7 @@ import { getRuntimeInvoke } from '../runtimeInvoke';
 
 const DISCONNECTED: NativeReadwiseApiConnection = {
   has_credential: false,
+  has_source: false,
   state: 'disconnected',
   verified_at: null
 };
@@ -16,9 +17,11 @@ export async function loadReadwiseApiConnectionFromRuntime() {
   return invoke ? invoke(NATIVE_COMMANDS.loadReadwiseApiConnection) : DISCONNECTED;
 }
 
-export async function connectReadwiseApiFromClipboardInRuntime(): Promise<NativeReadwiseApiConnectionResult> {
+export async function connectReadwiseApiFromClipboardInRuntime(
+  sourceIntent: 'continue' | 'replace' = 'continue'
+): Promise<NativeReadwiseApiConnectionResult> {
   const invoke = getRuntimeInvoke();
-  return invoke ? invoke(NATIVE_COMMANDS.connectReadwiseApiFromClipboard) : {
+  return invoke ? invoke(NATIVE_COMMANDS.connectReadwiseApiFromClipboard, { source_intent: sourceIntent }) : {
     connection: DISCONNECTED,
     status: 'connection_failed'
   };

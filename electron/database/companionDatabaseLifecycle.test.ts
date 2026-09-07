@@ -45,6 +45,40 @@ async function bootstrap(port: ReturnType<typeof createBetterSqliteDbPort>, extr
 }
 
 describe('shared companion database migration executor', () => {
+  it('adds Readwise remote identity fields atomically from v33', async () => {
+    const { port, sqlite } = fixture(33);
+    for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
+      sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
+    }
+    await bootstrap(port);
+    expect(sqlite.prepare("SELECT name FROM pragma_table_info('import_sources') WHERE name LIKE 'remote_%' ORDER BY name")
+      .pluck().all()).toEqual([
+      'remote_annotations_json', 'remote_connection_ref', 'remote_document_id', 'remote_provider'
+    ]);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_import_sources_readwise_remote_%' ORDER BY name")
+      .pluck().all()).toEqual([
+      'idx_import_sources_readwise_remote_document', 'idx_import_sources_readwise_remote_topic'
+    ]);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(34);
+    sqlite.close();
+  });
+
+  it('rolls back the v34 Readwise identity projection on failure', async () => {
+    const { port, sqlite } = fixture(33);
+    for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
+      sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
+    }
+    await expect(bootstrap(port, {
+      beforeVersionCommit: () => { throw new Error('injected Readwise projection failure'); }
+    })).rejects.toThrow('injected Readwise projection failure');
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(33);
+    expect(sqlite.prepare("SELECT name FROM pragma_table_info('import_sources') WHERE name='remote_provider'").get())
+      .toBeUndefined();
+    sqlite.close();
+  });
+});
+
+describe('shared companion database migration history', () => {
   it('upgrades every supported historical version through one DbPort contract', async () => {
     for (let version = 2; version < COMPANION_DATABASE_VERSION; version += 1) {
       const { port, sqlite } = fixture(version);

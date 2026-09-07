@@ -11,19 +11,23 @@ export async function applyImportSourceObject(port: DbPort, record: SyncPackSync
   await port.run(
     `INSERT INTO import_sources (source_fingerprint, provider, source_kind, source_name, source_locator, ` +
     `first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id, watched_binding_id, ` +
-    `watched_relative_path, source_ref, source_location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `watched_relative_path, source_ref, source_location, remote_provider, remote_connection_ref, ` +
+    `remote_document_id, remote_annotations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(source_fingerprint) DO UPDATE SET provider = excluded.provider, source_kind = excluded.source_kind, ` +
     `source_name = excluded.source_name, source_locator = excluded.source_locator, last_imported_at = excluded.last_imported_at, ` +
     `last_content_fingerprint = excluded.last_content_fingerprint, latest_node_id = excluded.latest_node_id, ` +
     `watched_binding_id = COALESCE(excluded.watched_binding_id, import_sources.watched_binding_id), ` +
     `watched_relative_path = COALESCE(excluded.watched_relative_path, import_sources.watched_relative_path), ` +
     `source_ref = COALESCE(excluded.source_ref, import_sources.source_ref), ` +
-    `source_location = COALESCE(excluded.source_location, import_sources.source_location)`,
+    `source_location = COALESCE(excluded.source_location, import_sources.source_location), ` +
+    `remote_provider = excluded.remote_provider, remote_connection_ref = excluded.remote_connection_ref, ` +
+    `remote_document_id = excluded.remote_document_id, remote_annotations_json = excluded.remote_annotations_json`,
     [record.object_id, text(payload.provider) ?? 'unknown', text(payload.source_kind) ?? 'unknown',
       text(payload.source_name) ?? record.object_id, text(payload.source_locator) ?? record.object_id,
       text(payload.first_imported_at) ?? record.updated_at, text(payload.last_imported_at) ?? record.updated_at,
       text(payload.last_content_fingerprint) ?? record.content_hash, text(payload.latest_node_id),
       text(payload.watched_binding_id), text(payload.watched_relative_path), text(payload.source_ref),
-      text(payload.source_location)]
+      text(payload.source_location), text(payload.remote_provider), text(payload.remote_connection_ref),
+      text(payload.remote_document_id), text(payload.remote_annotations_json) ?? '[]']
   );
 }

@@ -6,6 +6,8 @@ import { createDefaultReadwiseHostSettings } from '../../lib/core/import/readwis
 
 const state = vi.hoisted(() => ({
   active: true,
+  documentIds: [] as string[],
+  remoteSource: null as null | { connectionRef: string },
   secret: '',
   secure: true,
   settings: null as unknown
@@ -15,6 +17,17 @@ const clipboardRead = vi.hoisted(() => vi.fn());
 vi.mock('electron', () => ({ clipboard: { readText: clipboardRead } }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   loadReadwiseHostAssignment: () => ({ is_active: state.active })
+}));
+vi.mock('../database/readwiseRemoteIdentity.js', () => ({
+  createReadwiseRemoteSource: () => ({
+    connectionRef: 'readwise-new', createdAt: 'created', updatedAt: 'updated', version: 1
+  }),
+  loadReadwiseRemoteDocumentIds: () => state.documentIds,
+  loadReadwiseRemoteSource: () => state.remoteSource,
+  saveReadwiseConnectionState: (settings: unknown, source: typeof state.remoteSource) => {
+    state.settings = settings;
+    if (source) state.remoteSource = source;
+  }
 }));
 vi.mock('../database/settingsStore.js', () => ({
   loadJsonSetting: () => state.settings,
@@ -40,6 +53,8 @@ import {
 
 beforeEach(() => {
   state.active = true;
+  state.documentIds = [];
+  state.remoteSource = null;
   state.secret = '';
   state.secure = true;
   state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'api' };
@@ -118,4 +133,41 @@ it('restores redacted state after restart and clears the Host credential on disc
     connection: { has_credential: false, state: 'disconnected' }, status: 'disconnected'
   });
   expect(state.secret).toBe('');
+});
+
+it('verifies a known remote document before continuing the existing source', async () => {
+  state.remoteSource = { connectionRef: 'readwise-existing' };
+  state.documentIds = ['document-1'];
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    return url.includes('/api/v2/auth/')
+      ? new Response(null, { status: 204 })
+      : new Response(JSON.stringify({ results: [{ category: 'article', id: 'document-1' }] }), { status: 200 });
+  }) as typeof fetch;
+
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({ status: 'connected' });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
+});
+
+it('does not replace an existing source when the new account cannot prove its identity', async () => {
+  state.remoteSource = { connectionRef: 'readwise-existing' };
+  state.documentIds = ['document-1'];
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => String(input).includes('/api/v2/auth/')
+    ? new Response(null, { status: 204 })
+    : new Response(JSON.stringify({ results: [] }), { status: 200 })) as typeof fetch;
+
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({ status: 'account_unverified' });
+  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
+  expect(state.secret).toBe('');
+});
+
+it('creates a new namespace only after an explicit source replacement', async () => {
+  state.remoteSource = { connectionRef: 'readwise-existing' };
+  state.documentIds = ['document-1'];
+  const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'replace')).resolves.toMatchObject({ status: 'connected' });
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(state.remoteSource).toMatchObject({ connectionRef: 'readwise-new' });
 });

@@ -21,6 +21,10 @@ import type {
   NativeReadwiseDetectionResult
 } from './nativeReadwiseContract.js';
 import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
+import type {
+  NativeReadwiseIdentityBindingPreview,
+  NativeReadwiseIdentityBindingResult
+} from './nativeReadwiseIdentityContract.js';
 
 export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.loadReadwiseApiConnection]: {
@@ -28,12 +32,20 @@ export type NativeReadwiseCommandMap = {
     result: NativeReadwiseApiConnection;
   };
   [NATIVE_COMMANDS.connectReadwiseApiFromClipboard]: {
-    args: undefined;
+    args: { source_intent?: 'continue' | 'replace' } | undefined;
     result: NativeReadwiseApiConnectionResult;
   };
   [NATIVE_COMMANDS.disconnectReadwiseApi]: {
     args: undefined;
     result: NativeReadwiseApiConnectionResult;
+  };
+  [NATIVE_COMMANDS.previewReadwiseIdentityBindings]: {
+    args: undefined;
+    result: NativeReadwiseIdentityBindingPreview;
+  };
+  [NATIVE_COMMANDS.confirmReadwiseIdentityBindings]: {
+    args: { preview_id: string };
+    result: NativeReadwiseIdentityBindingResult;
   };
   [NATIVE_COMMANDS.loadReadwiseHostAssignment]: {
     args: undefined;

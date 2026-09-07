@@ -79,7 +79,10 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint, " +
       "'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id, " +
       "'watched_relative_path', watched_relative_path, 'source_ref', source_ref, " +
-      "'source_location', source_location) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
+      "'source_location', source_location, 'remote_provider', remote_provider, " +
+      "'remote_connection_ref', remote_connection_ref, 'remote_document_id', remote_document_id, " +
+      "'remote_annotations_json', remote_annotations_json) AS payload_json " +
+      "FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
   },
   ...ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS,
   syncPayloadNodeOpenState: {

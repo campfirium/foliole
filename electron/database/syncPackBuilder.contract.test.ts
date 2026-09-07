@@ -1,11 +1,8 @@
 // @vitest-environment node
 
 import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import { inflateSync } from 'node:zlib';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -28,9 +25,12 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { upsertExternalDocuments } from './externalDocuments.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import {
+  SYNC_PACK_CONTRACT_IMPORT_SOURCES,
+  SYNC_PACK_CONTRACT_TABLES
+} from './syncPackContractExpectedRows.js';
+import { readSyncPackContractRows } from './syncPackContractFixtureReader.js';
 
-const require = createRequire(import.meta.url);
-const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 const CONTRACT_FIXTURE_PATH = path.resolve(process.cwd(), 'android/app/src/androidTest/assets/sync-pack-contract.syncpack');
 let tempRoot = '';
 
@@ -127,10 +127,27 @@ function insertNodeAttachmentRows() {
   );
 }
 
+function insertReadwiseIdentitySyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO import_sources (
+    source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at,
+    last_imported_at, last_content_fingerprint, latest_node_id, source_ref, source_location,
+    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json
+  ) VALUES ('source-contract','desktop_text_file','markdown','Source.md','/history/Source.md',
+    '2026-04-27T00:00:00.000Z','2026-04-27T00:03:00.000Z','content-contract','node-1',
+    'readwise:articles','Source.md','readwise','readwise-connection','reader-document',
+    '[{"kind":"highlight","nodeId":"highlight-1","remoteId":"reader-highlight"}]')`);
+  driver.execute(`INSERT INTO sync_object_state (
+    object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
+  ) VALUES ('import_source','source-contract',4,'import-source-hash','desktop',
+    '2026-04-27T00:03:00.000Z',1)`);
+}
+
 async function buildContractFixturePack(outputPath: string) {
   insertNodeSyncState();
   insertNodeAttachmentRows();
   insertExternalDocumentSyncState();
+  insertReadwiseIdentitySyncState();
   return buildDesktopSyncPack({
     createdAt: '2026-04-27T02:00:00.000Z',
     fromPeerId: 'authorization-desktop-fixture',
@@ -141,50 +158,6 @@ async function buildContractFixturePack(outputPath: string) {
   });
 }
 
-function readPackRows(packPath: string) {
-  const entries = readStoredZipEntries(packPath);
-  const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
-  const incomingPath = path.join(tempRoot, 'read-incoming.db');
-  fsSync.writeFileSync(incomingPath, inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0)));
-  const db = new BetterSqlite3(incomingPath, { readonly: true });
-  try {
-    return {
-      externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash FROM external_documents').all(),
-      manifest,
-      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
-      nodeVersions: db.prepare(
-        'SELECT version_id, object_id, parent_version_id, host_name, content_hash, snapshot_json FROM node_sync_versions'
-      ).all(),
-      nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
-      nodes: db.prepare(
-        `SELECT id, priority, desired_retention, enable_short_term, sequential_reading_enabled,
-                manual_child_order, virtual_filter, anchor_link, image_regions,
-                import_source_fingerprint, import_content_fingerprint,
-                content, body_blob_hash, opening_text, reveal FROM nodes`
-      ).all()
-    };
-  } finally {
-    db.close();
-  }
-}
-
-function readStoredZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  let offset = 0;
-  while (buffer.readUInt32LE(offset) === 0x04034b50) {
-    const compressedSize = buffer.readUInt32LE(offset + 18);
-    const fileNameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + fileNameLength + extraLength;
-    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
-    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
-    offset = contentStart + compressedSize;
-  }
-  return entries;
-}
-
 it('keeps the Android sync pack contract fixture deterministic', async () => {
   const generatedPath = path.join(tempRoot, 'sync-pack-contract.syncpack');
   await buildContractFixturePack(generatedPath);
@@ -193,22 +166,10 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     externalDocuments: [expect.objectContaining({ content: '', document_id: 'folder-1:doc.md' })],
     manifest: expect.objectContaining({
       pack_id: 'sync-pack-contract-v1',
-      tables: [
-        { name: 'sync_groups', row_count: 0 },
-        { name: 'sync_group_devices', row_count: 0 },
-        { name: 'sync_object_state', row_count: 3 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 1 },
-        { name: 'node_sync_versions', row_count: 1 },
-        { name: 'node_sync_version_parents', row_count: 0 },
-        { name: 'node_order', row_count: 1 },
-        { name: 'node_attachments', row_count: 1 },
-        { name: 'external_documents', row_count: 1 },
-        { name: 'content_blobs', row_count: 2 },
-        { name: 'review_log', row_count: 0 }
-      ]
+      tables: SYNC_PACK_CONTRACT_TABLES
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    importSources: SYNC_PACK_CONTRACT_IMPORT_SOURCES,
     nodeVersions: [expect.objectContaining({
       object_id: 'node-1',
       parent_version_id: null,
@@ -232,7 +193,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       virtual_filter: '{"kind":"manual"}'
     })]
   };
-  expect(readPackRows(generatedPath)).toMatchObject(expectedRows);
+  expect(readSyncPackContractRows(generatedPath, tempRoot)).toMatchObject(expectedRows);
 
   if (process.env.UPDATE_SYNC_PACK_CONTRACT_FIXTURE === '1') {
     await fs.mkdir(path.dirname(CONTRACT_FIXTURE_PATH), { recursive: true });
@@ -241,5 +202,5 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
 
   const fixtureBytes = await fs.readFile(CONTRACT_FIXTURE_PATH);
   expect(generatedBytes.equals(fixtureBytes)).toBe(true);
-  expect(readPackRows(CONTRACT_FIXTURE_PATH)).toMatchObject(expectedRows);
+  expect(readSyncPackContractRows(CONTRACT_FIXTURE_PATH, tempRoot)).toMatchObject(expectedRows);
 });

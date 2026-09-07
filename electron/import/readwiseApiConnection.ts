@@ -4,13 +4,21 @@ import { clipboard } from 'electron';
 
 import {
   normalizeReadwiseHostSettings,
-  READWISE_HOST_SETTINGS_KEY,
   type ReadwiseHostApiConnection,
   type ReadwiseHostSettings
 } from '../../lib/core/import/readwiseHostSettings.js';
-import type { NativeReadwiseApiConnectionResult } from '../../lib/platform/nativeReadwiseApiConnectionContract.js';
+import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import type {
+  NativeReadwiseApiConnectionResult,
+  NativeReadwiseSourceIntent
+} from '../../lib/platform/nativeReadwiseApiConnectionContract.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
-import { saveJsonSetting } from '../database/settingsStore.js';
+import {
+  createReadwiseRemoteSource,
+  loadReadwiseRemoteDocumentIds,
+  loadReadwiseRemoteSource,
+  saveReadwiseConnectionState
+} from '../database/readwiseRemoteIdentity.js';
 import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
 import {
@@ -38,13 +46,17 @@ function result(status: NativeReadwiseApiConnectionResult['status'], retryAfterS
   } satisfies NativeReadwiseApiConnectionResult;
 }
 
-function saveConnection(settings: ReadwiseHostSettings, apiConnection: ReadwiseHostApiConnection) {
+function saveConnection(
+  settings: ReadwiseHostSettings,
+  apiConnection: ReadwiseHostApiConnection,
+  remoteSource?: ReturnType<typeof createReadwiseRemoteSource>
+) {
   const updatedAt = new Date().toISOString();
-  saveJsonSetting(READWISE_HOST_SETTINGS_KEY, normalizeReadwiseHostSettings({
+  saveReadwiseConnectionState(normalizeReadwiseHostSettings({
     ...settings,
     apiConnection,
     updatedAt
-  }), updatedAt);
+  }), remoteSource, updatedAt);
 }
 
 function saveReconnectRequired(settings: ReadwiseHostSettings) {
@@ -68,12 +80,37 @@ async function authenticate(token: string, fetchImpl: typeof fetch) {
   });
 }
 
+async function verifyExistingSource(token: string, documentId: string, fetchImpl: typeof fetch) {
+  const url = new URL('https://readwise.io/api/v3/list/');
+  url.searchParams.set('id', documentId);
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { Authorization: `Token ${token}` }, method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15_000)
+    });
+  } catch {
+    return { status: 'connection_failed' as const };
+  }
+  if (response.status === 429) return { retryAfter: retryAfterSeconds(response), status: 'rate_limited' as const };
+  if (response.status === 401 || response.status === 403) return { status: 'reconnect_required' as const };
+  if (!response.ok) return { status: 'connection_failed' as const };
+  let payload: { results?: unknown[] };
+  try {
+    payload = await response.json() as { results?: unknown[] };
+  } catch {
+    return { status: 'connection_failed' as const };
+  }
+  const document = normalizeReaderDocument(payload.results?.[0]);
+  return { status: document?.id === documentId ? 'connected' as const : 'account_unverified' as const };
+}
+
 export function loadReadwiseApiConnection() {
   return toPublicReadwiseApiConnection();
 }
 
 export async function connectReadwiseApiFromClipboard(
-  dependencies: ConnectionDependencies = {}
+  dependencies: ConnectionDependencies = {},
+  sourceIntent: NativeReadwiseSourceIntent = 'continue'
 ): Promise<NativeReadwiseApiConnectionResult> {
   if (!loadReadwiseHostAssignment().is_active) return result('not_active_host');
   const settings = loadStoredReadwiseHostSettings();
@@ -100,6 +137,15 @@ export async function connectReadwiseApiFromClipboard(
   }
   if (response.status === 429) return result('rate_limited', retryAfterSeconds(response));
   if (response.status !== 204) return result('connection_failed');
+  const currentSource = loadReadwiseRemoteSource();
+  if (currentSource && sourceIntent === 'continue') {
+    const knownDocumentId = loadReadwiseRemoteDocumentIds(currentSource.connectionRef, 1)[0];
+    if (knownDocumentId) {
+      const verification = await verifyExistingSource(token, knownDocumentId, dependencies.fetchImpl ?? fetch);
+      if (verification.status !== 'connected') return result(verification.status, verification.retryAfter);
+    }
+  }
+  const remoteSource = sourceIntent === 'replace' || !currentSource ? createReadwiseRemoteSource() : undefined;
   const secretRef = settings.apiConnection.secretRef ?? `readwise-api-${randomUUID()}.bin`;
   let previousToken = '';
   try {
@@ -111,7 +157,7 @@ export async function connectReadwiseApiFromClipboard(
   writeReadwiseApiSecret(secretRef, token);
   try {
     const verifiedAt = new Date().toISOString();
-    saveConnection(settings, { secretRef, state: 'connected', verifiedAt });
+    saveConnection(settings, { secretRef, state: 'connected', verifiedAt }, remoteSource);
   } catch (error) {
     if (previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     else deleteReadwiseApiSecret(secretRef);

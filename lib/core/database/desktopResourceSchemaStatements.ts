@@ -47,7 +47,11 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     watched_binding_id TEXT,
     watched_relative_path TEXT,
     source_ref TEXT,
-    source_location TEXT
+    source_location TEXT,
+    remote_provider TEXT,
+    remote_connection_ref TEXT,
+    remote_document_id TEXT,
+    remote_annotations_json TEXT NOT NULL DEFAULT '[]'
   )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,
@@ -125,5 +129,11 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
     ON import_sources (watched_binding_id, watched_relative_path)`,
   `CREATE INDEX IF NOT EXISTS idx_import_sources_location
-    ON import_sources (source_ref, source_location)`
+    ON import_sources (source_ref, source_location)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_import_sources_readwise_remote_document
+    ON import_sources (remote_connection_ref, remote_document_id)
+    WHERE remote_provider = 'readwise' AND remote_connection_ref IS NOT NULL AND remote_document_id IS NOT NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_import_sources_readwise_remote_topic
+    ON import_sources (remote_connection_ref, latest_node_id)
+    WHERE remote_provider = 'readwise' AND remote_connection_ref IS NOT NULL AND latest_node_id IS NOT NULL`
 ];

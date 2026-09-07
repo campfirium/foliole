@@ -1619,7 +1619,7 @@
         "argMode": "object_id",
         "objectType": "import_source"
       },
-      "sql": "SELECT json_object('source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind, 'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at, 'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint, 'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id, 'watched_relative_path', watched_relative_path, 'source_ref', source_ref, 'source_location', source_location) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
+      "sql": "SELECT json_object('source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind, 'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at, 'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint, 'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id, 'watched_relative_path', watched_relative_path, 'source_ref', source_ref, 'source_location', source_location, 'remote_provider', remote_provider, 'remote_connection_ref', remote_connection_ref, 'remote_document_id', remote_document_id, 'remote_annotations_json', remote_annotations_json) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
     },
     "syncPayloadNodeReading": {
       "columns": [

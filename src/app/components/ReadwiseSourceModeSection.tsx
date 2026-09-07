@@ -20,6 +20,7 @@ import {
 } from '../../shared/ui';
 
 import { importSourceSelectClassName } from './importSourceWorkspaceModel';
+import { ReadwiseIdentityBindingRow } from './ReadwiseIdentityBindingRow';
 
 function statusKey(state: NativeReadwiseApiConnection['state']) {
   const keys = {
@@ -37,6 +38,7 @@ function resultMessage(result: NativeReadwiseApiConnectionResult, t: Translate) 
   }
   const keys = {
     connection_failed: 'desktop.readwise.api.result.connectionFailed',
+    account_unverified: 'desktop.readwise.api.result.accountUnverified',
     not_active_host: 'desktop.readwise.api.result.notActiveHost',
     rate_limited: 'desktop.readwise.api.result.rateLimited',
     reconnect_required: 'desktop.readwise.api.result.reconnectRequired',
@@ -76,6 +78,7 @@ function ReadwiseApiConnectionRow() {
   const t = useTranslation();
   const state = useReadwiseApiConnection(t);
   const connected = state.connection?.state === 'connected';
+  const hasSource = state.connection?.has_source ?? false;
   return (
     <>
       <SettingsRow
@@ -100,6 +103,15 @@ function ReadwiseApiConnectionRow() {
                 ? t('desktop.readwise.api.connection.disconnect')
                 : t('desktop.readwise.api.connection.connect')}
           </AppButton>
+          {!connected && hasSource ? (
+            <AppButton
+              disabled={state.pending}
+              onClick={() => void state.run(() => connectReadwiseApiFromClipboardInRuntime('replace'))}
+              size="sm"
+            >
+              {t('desktop.readwise.api.connection.replace')}
+            </AppButton>
+          ) : null}
         </SettingsControlSlot>
       </SettingsRow>
       {state.message ? <p className="px-5 text-sm text-foreground/60" role="status">{state.message}</p> : null}
@@ -131,7 +143,7 @@ export function ReadwiseSourceModeSection(props: {
           </select>
         </SettingsControlSlot>
       </SettingsRow>
-      {props.mode === 'api' ? <ReadwiseApiConnectionRow /> : null}
+      {props.mode === 'api' ? <><ReadwiseApiConnectionRow /><ReadwiseIdentityBindingRow /></> : null}
     </SettingsSection>
   );
 }

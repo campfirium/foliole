@@ -32,6 +32,10 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
   addNodesManualChildOrderIfMissing: 'addNodesManualChildOrderIfMissing',
   addNodeViewStateSourceIfMissing: 'addNodeViewStateSourceIfMissing',
+  addImportSourcesRemoteAnnotationsJsonIfMissing: 'addImportSourcesRemoteAnnotationsJsonIfMissing',
+  addImportSourcesRemoteConnectionRefIfMissing: 'addImportSourcesRemoteConnectionRefIfMissing',
+  addImportSourcesRemoteDocumentIdIfMissing: 'addImportSourcesRemoteDocumentIdIfMissing',
+  addImportSourcesRemoteProviderIfMissing: 'addImportSourcesRemoteProviderIfMissing',
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
@@ -120,7 +124,16 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(30, 'migrateSyncGroupHosts', 'Failed to cut over companion Sync Group Hosts.'),
   ANDROID_COMPANION_DELIVERY_AUTHORIZATION_PLAN_STEP,
   COMPANION_SOURCE_HOST_OWNERSHIP_PLAN_STEP,
-  step(33, 'retireLegacySyncGroupState', 'Failed to retire legacy Sync Group state.')
+  step(33, 'retireLegacySyncGroupState', 'Failed to retire legacy Sync Group state.'),
+  {
+    actions: [
+      { type: 'addImportSourcesRemoteProviderIfMissing' },
+      { type: 'addImportSourcesRemoteConnectionRefIfMissing' },
+      { type: 'addImportSourcesRemoteDocumentIdIfMissing' },
+      { type: 'addImportSourcesRemoteAnnotationsJsonIfMissing' }
+    ],
+    beforeVersion: 34
+  }
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {
