@@ -24,13 +24,11 @@ final class FolioleCompanionSyncNowAction {
         JSONObject started = waitUntilStarted(
             instrumentation, webView, before.optString("runId"), 30_000
         );
-        JSONObject terminal = waitUntilTerminal(
-            instrumentation, webView, started.getString("runId"), TERMINAL_TIMEOUT_MS
-        );
+        JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
         waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
-            .put("actionRunId", started.getString("runId"))
+            .put("actionRunId", terminal.getString("runId"))
             .put("terminalRunId", terminal.getString("terminalRunId"))
             .put("terminalResult", terminal.getString("terminalResult"))
             .put("errorText", terminal.optString("errorText"));
@@ -85,14 +83,14 @@ final class FolioleCompanionSyncNowAction {
     }
 
     private static JSONObject waitUntilTerminal(
-        Instrumentation instrumentation, WebView webView, String runId, long timeoutMs
+        Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
             latest = readState(instrumentation, webView);
-            if (runId.equals(latest.optString("runId"))
-                && "terminal".equals(latest.optString("status"))
+            String runId = latest.optString("runId");
+            if (!runId.isEmpty() && "terminal".equals(latest.optString("status"))
                 && runId.equals(latest.optString("terminalRunId"))) return latest;
             Thread.sleep(100);
         }
