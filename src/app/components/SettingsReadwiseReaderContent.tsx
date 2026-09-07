@@ -1,5 +1,8 @@
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
-import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type {
+  ReadwiseReaderConfig,
+  ReadwiseSyncFrequency
+} from '../../../lib/core/import/readwiseReaderSettings';
 import type {
   NativeReadwiseCleanupPreviewResult,
   NativeReadwiseCleanupRunResult,
@@ -63,11 +66,19 @@ function ReadwiseApiSettingsContent(props: {
   setup: ReturnType<typeof useReadwiseSetupController>;
   settings: SettingsReadwiseReaderContentProps;
 }) {
+  function saveFrequency(syncFrequency: ReadwiseSyncFrequency) {
+    const draft = props.setup.draft;
+    const config = { ...draft.draftConfig, syncFrequency };
+    draft.updateConfig('syncFrequency', syncFrequency);
+    props.settings.onSave(createReadwiseSetupPayload(draft, config, draft.draftSources));
+  }
   return (
     <div className="space-y-6">
       <ReadwiseApiImportSection
         disabled={!props.settings.onPreviewSync || props.setup.isStartingSync || props.setup.isSyncPreviewing}
+        frequency={props.setup.draft.draftConfig.syncFrequency}
         isRunning={props.setup.isStartingSync || props.setup.isSyncPreviewing}
+        onChangeFrequency={saveFrequency}
         onPreview={() => void props.setup.handleApiSync()}
         onCancelReconcile={() => void props.reconcile.cancel()}
         onReconcile={() => void props.reconcile.run()}

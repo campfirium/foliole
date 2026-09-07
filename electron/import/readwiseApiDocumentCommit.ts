@@ -15,6 +15,7 @@ import {
 } from './readwiseApiOriginalFile.js';
 
 export async function commitReadwiseApiDocument(input: {
+  assertEligible?: () => void;
   config: ReadwiseReaderConfig;
   connectionRef: string;
   dependencies?: ReadwiseApiFetchDependencies;
@@ -34,6 +35,7 @@ export async function commitReadwiseApiDocument(input: {
   const document = isOriginalFile && destination === 'inbox'
     ? withOriginalFileStatus(input.document, prepared?.state ?? existingBefore?.state.originalFile ?? null)
     : input.document;
+  input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
     config: input.config, connectionRef: input.connectionRef, document
   });
@@ -41,6 +43,7 @@ export async function commitReadwiseApiDocument(input: {
 
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   if (!prepared || existingBefore?.state.originalFile?.status === 'localized') return result;
+  input.assertEligible?.();
   let finalState = prepared.state;
   if (prepared.bytes && prepared.state.status === 'localized' && existing?.nodeId) {
     try {

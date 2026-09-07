@@ -1,4 +1,7 @@
-import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type {
+  ReadwiseReaderConfig,
+  ReadwiseSyncFrequency
+} from '../../../lib/core/import/readwiseReaderSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
@@ -48,12 +51,6 @@ export function ReadwiseReaderSyncRow(props: {
   status?: ReadwiseManualSyncStatus;
 }) {
   const t = useTranslation();
-  const syncFrequencyOptions = [
-    { label: t('desktop.readwise.sync.frequency.hourly'), value: 'hourly' },
-    { label: t('desktop.readwise.sync.frequency.every12Hours'), value: 'every_12_hours' },
-    { label: t('desktop.readwise.sync.frequency.daily'), value: 'daily' },
-    { label: t('desktop.readwise.sync.frequency.weekly'), value: 'weekly' }
-  ];
   const description = (
     <>
       {t('desktop.readwise.sync.description')}
@@ -64,22 +61,38 @@ export function ReadwiseReaderSyncRow(props: {
   return (
     <SettingsRow description={description} title={t('desktop.readwise.sync.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <select
-          aria-label={t('desktop.readwise.sync.frequency.aria')}
-          className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
-          onChange={(event) => props.onChange('syncFrequency', event.target.value)}
+        <ReadwiseSyncFrequencySelect
+          onChange={(value) => props.onChange('syncFrequency', value)}
           value={props.config.syncFrequency}
-        >
-          {syncFrequencyOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
         <AppButton disabled={props.disabled} loading={Boolean(props.isSyncing)} loadingLabel={t('desktop.readwise.sync.running')} onClick={props.onSync} size="sm" variant="default">
           {t('desktop.readwise.sync.action')}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>
+  );
+}
+
+export function ReadwiseSyncFrequencySelect(props: {
+  onChange: (value: ReadwiseSyncFrequency) => void;
+  value: ReadwiseSyncFrequency;
+}) {
+  const t = useTranslation();
+  const options = [
+    { label: t('desktop.readwise.sync.frequency.hourly'), value: 'hourly' },
+    { label: t('desktop.readwise.sync.frequency.every12Hours'), value: 'every_12_hours' },
+    { label: t('desktop.readwise.sync.frequency.daily'), value: 'daily' },
+    { label: t('desktop.readwise.sync.frequency.weekly'), value: 'weekly' }
+  ] as const;
+
+  return (
+    <select
+      aria-label={t('desktop.readwise.sync.frequency.aria')}
+      className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
+      onChange={(event) => props.onChange(event.target.value as ReadwiseSyncFrequency)}
+      value={props.value}
+    >
+      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
   );
 }

@@ -40,3 +40,25 @@ it('previews and continues API imports in explicit 50-parent batches', async () 
   await waitFor(() => expect(onPreviewSync).toHaveBeenCalledTimes(2));
   expect(screen.getByRole('dialog', { name: 'Readwise import preview' })).toBeInTheDocument();
 });
+
+it('saves the API automatic import frequency on the active desktop host', async () => {
+  const onSave = vi.fn();
+  render(
+    <LocalizationProvider>
+      <SettingsReadwiseReaderContent
+        config={createDefaultReadwiseReaderConfig()}
+        onSave={onSave}
+        readwiseRootPath=""
+        readwiseSourceMode="api"
+        readwiseSources={[]}
+      />
+    </LocalizationProvider>
+  );
+
+  fireEvent.change(await screen.findByRole('combobox', { name: 'Sync frequency' }), {
+    target: { value: 'daily' }
+  });
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+    config: expect.objectContaining({ syncFrequency: 'daily' })
+  }));
+});

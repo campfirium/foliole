@@ -104,3 +104,16 @@ it('keeps scheduling Readwise auto sync after a failed run', async () => {
   expect(runReadwiseReaderImportInRuntime).toHaveBeenCalledTimes(2);
   expect(rehydrate).not.toHaveBeenCalled();
 });
+
+it('leaves API mode to the Electron scheduler', async () => {
+  loadImportSourceWorkspaceSettings.mockResolvedValue({
+    ...createEnabledReadwiseSettings(), readwiseSourceMode: 'api'
+  });
+  renderHook(() => useReadwiseAutoSync());
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+  });
+
+  expect(runReadwiseReaderImportInRuntime).not.toHaveBeenCalled();
+});

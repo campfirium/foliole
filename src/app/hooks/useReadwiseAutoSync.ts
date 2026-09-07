@@ -22,6 +22,7 @@ const SYNC_INTERVAL_MS: Record<ReadwiseSyncFrequency, number> = {
 
 function canRunReadwiseAutoSync(settings: ImportManagerSettings) {
   return (
+    settings.readwiseSourceMode === 'folder' &&
     settings.readwiseReaderConfig.enabled &&
     settings.readwiseRootPath.trim().length > 0 &&
     isReadwiseReaderConfigReady(settings.readwiseReaderConfig)

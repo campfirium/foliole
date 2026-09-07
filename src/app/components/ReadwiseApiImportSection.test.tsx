@@ -1,13 +1,23 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+const { loadScheduleStatus } = vi.hoisted(() => ({ loadScheduleStatus: vi.fn() }));
+vi.mock('../../shared/platform/readwiseReaderImportRuntimeRepository', () => ({
+  loadReadwiseApiScheduleStatusInRuntime: loadScheduleStatus
+}));
+
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
 import { ReadwiseApiImportSection } from './ReadwiseApiImportSection';
 
+loadScheduleStatus.mockResolvedValue({
+  eligibility: 'first_import_required', last_result: null, next_run_at: null, running: false
+});
+
 function renderSection(overrides: Partial<Parameters<typeof ReadwiseApiImportSection>[0]> = {}) {
   const props = {
-    disabled: false, isRunning: false, onCancelReconcile: vi.fn(), onPreview: vi.fn(),
+    disabled: false, frequency: 'hourly' as const, isRunning: false,
+    onCancelReconcile: vi.fn(), onChangeFrequency: vi.fn(), onPreview: vi.fn(),
     onReconcile: vi.fn(), reconcileIsRunning: false, reconcileResult: null, ...overrides
   };
   render(<LocalizationProvider initialLanguagePreference="en">
@@ -37,4 +47,22 @@ it('shows the full-set result and exposes cancellation only while running', () =
   );
   fireEvent.click(screen.getByRole('button', { name: 'Cancel reconciliation' }));
   expect(onCancelReconcile).toHaveBeenCalledOnce();
+});
+
+it('shows the failed stage and retries through the existing preview flow', async () => {
+  loadScheduleStatus.mockResolvedValueOnce({
+    eligibility: 'ready',
+    last_result: {
+      completed_at: '2026-09-08T12:00:00.000Z', error_stage: 'fetching',
+      imported_count: 0, status: 'failed', trigger: 'scheduled'
+    },
+    next_run_at: null,
+    running: false
+  });
+  const props = renderSection();
+
+  const retry = await screen.findByRole('button', { name: 'Retry import' });
+  expect(screen.getByText('The last import stopped while reading remote changes.')).toBeVisible();
+  fireEvent.click(retry);
+  expect(props.onPreview).toHaveBeenCalledOnce();
 });

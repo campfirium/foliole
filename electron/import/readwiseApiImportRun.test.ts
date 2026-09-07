@@ -7,6 +7,8 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '';
+let mockedConnectionRef = 'connection';
+let mockedEligible = true;
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: path.join(mockedAppDataDir, 'cache'), app_config_dir: path.join(mockedAppDataDir, 'config'),
@@ -14,12 +16,12 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
-  canCurrentHostRunReadwise: () => true
+  canCurrentHostRunReadwise: () => mockedEligible
 }));
 vi.mock('../database/readwiseRemoteIdentity.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../database/readwiseRemoteIdentity.js')>()),
   loadReadwiseRemoteSource: () => ({
-    connectionRef: 'connection', createdAt: 'created', updatedAt: 'updated', version: 1
+    connectionRef: mockedConnectionRef, createdAt: 'created', updatedAt: 'updated', version: 1
   })
 }));
 vi.mock('./readwiseApiConnectionState.js', () => ({
@@ -44,6 +46,8 @@ import {
 let tempRoot = '';
 
 beforeEach(async () => {
+  mockedConnectionRef = 'connection';
+  mockedEligible = true;
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-api-run-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
@@ -164,6 +168,43 @@ it('keeps bodyless PDF and EPUB documents writable for original-file resolution'
     expect.objectContaining({ remote_document_id: 'pdf-1', status: 'new' }),
     expect.objectContaining({ remote_document_id: 'epub-1', status: 'new' })
   ]));
+});
+
+it('does not stage, commit, or advance the watermark after the connection changes', async () => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (!url.pathname.includes('/v2/export/')) mockedConnectionRef = 'replacement-connection';
+    return response(url.pathname.includes('/v2/export/') ? [] : documents(0, 1));
+  }) as typeof fetch;
+
+  await expect(runReadwiseApiImport({
+    dependencies: { fetchImpl: fetchMock, minIntervalMs: 0 }, settings: apiSettings()
+  })).rejects.toThrow('readwise_execution_connection_changed');
+
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    'SELECT COUNT(*) count FROM readwise_api_import_stage'
+  )).toEqual({ count: 0 });
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM import_sources WHERE remote_provider = 'readwise'"
+  )).toEqual({ count: 0 });
+});
+
+it('does not enable scheduled intake or advance the watermark after a failed first round', async () => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    return response(url.pathname.includes('/v2/export/') ? [] : [
+      { category: 'article', html_content: '', id: 'bodyless-article', title: 'Unavailable' }
+    ]);
+  });
+  const fetchImpl = fetchMock as typeof fetch;
+
+  const result = await runReadwiseApiImport({
+    dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings()
+  });
+  expect(result.status).toBe('failed');
+
+  await previewReadwiseApiImport(apiSettings(), { fetchImpl, minIntervalMs: 0 });
+  expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/api/v3/list/'))).toHaveLength(2);
 });
 
 function response(results: unknown[], nextPageCursor: string | null = null) {

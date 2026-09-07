@@ -21,12 +21,9 @@ import {
   createGlobalCapturePanelLaunchIntent,
   createGlobalCapturePanelSingleInstanceData
 } from './globalCapturePanelLaunchIntent.js';
-import {
-  refreshGlobalClipShortcutFromSettings
-} from './globalClipShortcut.js';
+import { refreshGlobalClipShortcutFromSettings } from './globalClipShortcut.js';
 import { prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
-import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
-import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
+import { stopReadwiseBackgroundServices } from './import/readwiseBackgroundServices.js';
 import {
   initializeRuntimeServicesAfterLibrarySetup,
   prepareInitialLibrarySetup,
@@ -93,8 +90,7 @@ function installBeforeQuitLifecycle() {
     stopExternalSearchBackgroundRefresh();
     flushCoalescedWorkspaceSearchInvalidations();
     stopSearchIndexInvalidationScheduler();
-    stopManagedInboxMonitor();
-    stopKeepImportMonitor();
+    stopReadwiseBackgroundServices();
     stopDesktopSecurityScopedAccess();
     disposeAssistantCommandAdapter();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));

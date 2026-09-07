@@ -5,6 +5,7 @@ import { startDesktopTaskWatchdog } from './desktopTaskWatchdog.js';
 import { startExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor } from './import/managedInboxMonitor.js';
+import { startReadwiseApiScheduler } from './import/readwiseApiScheduler.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
@@ -54,6 +55,11 @@ export function startFollowupTasks() {
     progress: 'none'
   });
   runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor, {
+    cancellable: false,
+    cost: 'light',
+    progress: 'none'
+  });
+  runStartupTask('[readwise-api] startup scheduler failed', startReadwiseApiScheduler, {
     cancellable: false,
     cost: 'light',
     progress: 'none'

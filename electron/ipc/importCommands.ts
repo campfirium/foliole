@@ -17,7 +17,7 @@ import {
   previewReadwiseImportCleanup,
   runReadwiseImportCleanup
 } from '../import/readwiseImportCleanup.js';
-import { cancelReadwiseReaderImport, runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
+import { cancelReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from '../import/readwiseSyncPreview.js';
 import {
   persistSecurityScopedBookmark,
@@ -31,6 +31,7 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
+import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
@@ -133,7 +134,7 @@ async function handleReadwiseImportCommand(
     return previewReadwiseReaderImport(args.settings);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
-    return runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
+    return runReadwiseImportCommand({ ...args, window: resolveTargetWindow(context) });
   }
   if (request.command === NATIVE_COMMANDS.cancelReadwiseReaderImport) {
     return cancelReadwiseReaderImport();

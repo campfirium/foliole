@@ -7,6 +7,7 @@ import { runWindowsReadwiseApiConnectionAcceptance } from './windows-readwise-ap
 import { runWindowsReadwiseApiExternalAcceptance } from './windows-readwise-api-external-action.mjs';
 import { runWindowsReadwiseApiImportAcceptance } from './windows-readwise-api-import-action.mjs';
 import { runWindowsReadwiseApiReconcileAcceptance } from './windows-readwise-api-reconcile-action.mjs';
+import { runWindowsReadwiseApiSchedulerAcceptance } from './windows-readwise-api-scheduler-action.mjs';
 
 export function runWindowsDevDesktopAction(options) {
   if (options.action === WINDOWS_DEFAULT_SYNC_JOURNEY_ACTION) {
@@ -27,6 +28,9 @@ export function runWindowsDevDesktopAction(options) {
   }
   if (options.action === 'readwise-api-reconcile') {
     return runWindowsReadwiseApiReconcileAcceptance(options.action, options.execute, options.paths);
+  }
+  if (options.action === 'readwise-api-scheduler') {
+    return runWindowsReadwiseApiSchedulerAcceptance(options.action, options.execute, options.paths);
   }
   return runWindowsDesktopDnsSdRouteControl(options);
 }

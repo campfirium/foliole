@@ -32,7 +32,7 @@ interface RemoteImportSourceRow extends NodeBodyRow {
   source_fingerprint: string;
 }
 
-function completedThrough(connectionRef: string) {
+export function loadReadwiseApiCompletedThrough(connectionRef: string) {
   const row = loadJsonSetting(CURSOR_STATE_KEY);
   if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
   const value = row as Record<string, unknown>;
@@ -53,7 +53,7 @@ export function loadOrCreateReadwiseApiImportRun(
     `INSERT INTO readwise_api_import_runs (
       connection_ref, query_updated_after, round_started_at, reader_cursor, export_cursor, phase, updated_at
     ) VALUES (?, ?, ?, NULL, NULL, 'reader', ?)`,
-    [connectionRef, completedThrough(connectionRef), now, now]
+    [connectionRef, loadReadwiseApiCompletedThrough(connectionRef), now, now]
   );
   return loadOrCreateReadwiseApiImportRun(connectionRef, now);
 }

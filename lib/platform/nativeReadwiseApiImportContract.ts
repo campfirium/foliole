@@ -1,6 +1,24 @@
 export type NativeReadwiseImportCancelResult = { status: 'cancelled' | 'idle' };
 export type NativeReadwiseReconcileCancelResult = NativeReadwiseImportCancelResult;
 
+export type NativeReadwiseApiRunTrigger = 'manual' | 'scheduled' | 'startup';
+export type NativeReadwiseApiRunStage = 'eligibility' | 'fetching' | 'writing' | 'completion';
+
+export interface NativeReadwiseApiScheduleResult {
+  completed_at: string;
+  error_stage: NativeReadwiseApiRunStage | null;
+  imported_count: number;
+  status: 'cancelled' | 'completed' | 'failed' | 'paused';
+  trigger: NativeReadwiseApiRunTrigger;
+}
+
+export interface NativeReadwiseApiScheduleStatus {
+  eligibility: 'connection_required' | 'first_import_required' | 'inactive_host' | 'ready' | 'source_mode_mismatch';
+  last_result: NativeReadwiseApiScheduleResult | null;
+  next_run_at: string | null;
+  running: boolean;
+}
+
 export interface NativeReadwiseReconcileResult {
   export_deleted_count: number;
   present_count: number;

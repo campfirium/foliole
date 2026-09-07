@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeReadwiseImportRunResult, NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeContract';
 import type {
   NativeReadwiseImportCancelResult,
+  NativeReadwiseApiScheduleStatus,
   NativeReadwiseReconcileCancelResult,
   NativeReadwiseReconcileResult
 } from '../../../lib/platform/nativeReadwiseApiImportContract';
@@ -40,6 +41,11 @@ export async function cancelReadwiseReaderImportInRuntime(): Promise<NativeReadw
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.cancelReadwiseReaderImport);
+}
+
+export async function loadReadwiseApiScheduleStatusInRuntime(): Promise<NativeReadwiseApiScheduleStatus | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadReadwiseApiScheduleStatus) : null;
 }
 
 export async function runReadwiseApiReconcileInRuntime(): Promise<NativeReadwiseReconcileResult | null> {

@@ -13,6 +13,7 @@ import type {
 } from './nativeReadwiseApiConnectionContract.js';
 import type { NativeReadwiseImportCancelResult } from './nativeReadwiseApiImportContract.js';
 import type {
+  NativeReadwiseApiScheduleStatus,
   NativeReadwiseReconcileCancelResult,
   NativeReadwiseReconcileResult
 } from './nativeReadwiseApiImportContract.js';
@@ -34,6 +35,10 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.loadReadwiseApiConnection]: {
     args: undefined;
     result: NativeReadwiseApiConnection;
+  };
+  [NATIVE_COMMANDS.loadReadwiseApiScheduleStatus]: {
+    args: undefined;
+    result: NativeReadwiseApiScheduleStatus;
   };
   [NATIVE_COMMANDS.connectReadwiseApiFromClipboard]: {
     args: { source_intent?: 'continue' | 'replace' } | undefined;

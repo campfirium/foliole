@@ -30,6 +30,10 @@ import {
   loadReadwiseApiConnection
 } from '../import/readwiseApiConnection.js';
 import {
+  loadReadwiseApiScheduleStatus,
+  refreshReadwiseApiScheduler
+} from '../import/readwiseApiScheduler.js';
+import {
   confirmReadwiseIdentityBindingPreview,
   previewReadwiseIdentityBindings
 } from '../import/readwiseIdentityBindingPreview.js';
@@ -123,12 +127,23 @@ function handleSourceSettingsCommand(command: string, args: Record<string, unkno
 
 async function handleReadwiseHostCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
-  if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) return activateReadwiseOnThisHost();
-  if (command === NATIVE_COMMANDS.loadReadwiseApiConnection) return loadReadwiseApiConnection();
-  if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) {
-    return connectReadwiseApiFromClipboard({}, args.source_intent === 'replace' ? 'replace' : 'continue');
+  if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) {
+    const result = activateReadwiseOnThisHost();
+    refreshReadwiseApiScheduler();
+    return result;
   }
-  if (command === NATIVE_COMMANDS.disconnectReadwiseApi) return disconnectReadwiseApi();
+  if (command === NATIVE_COMMANDS.loadReadwiseApiConnection) return loadReadwiseApiConnection();
+  if (command === NATIVE_COMMANDS.loadReadwiseApiScheduleStatus) return loadReadwiseApiScheduleStatus();
+  if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) {
+    const result = await connectReadwiseApiFromClipboard({}, args.source_intent === 'replace' ? 'replace' : 'continue');
+    refreshReadwiseApiScheduler();
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.disconnectReadwiseApi) {
+    const result = disconnectReadwiseApi();
+    refreshReadwiseApiScheduler();
+    return result;
+  }
   if (command === NATIVE_COMMANDS.previewReadwiseIdentityBindings) return previewReadwiseIdentityBindings();
   if (command === NATIVE_COMMANDS.confirmReadwiseIdentityBindings) {
     return confirmReadwiseIdentityBindingPreview(asString(args.preview_id, 'preview_id'));
@@ -188,6 +203,7 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
     const result = saveImportManagerSettings(readSettingsObject(args.settings));
     await refreshKeepImportMonitorFromSettings();
+    refreshReadwiseApiScheduler();
     return result;
   }
   if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
