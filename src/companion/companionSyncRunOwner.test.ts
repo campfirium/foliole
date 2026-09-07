@@ -164,7 +164,7 @@ function resetSyncRunOwnerMocks() {
 describe('companion sync run owner', () => {
   beforeEach(resetSyncRunOwnerMocks);
 
-  it('joins a clicked manual action to the active automatic run', async () => {
+  it('runs a clicked manual action after the active automatic run', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
     const { releaseSync, syncStarted } = await startBlockedSync();
@@ -198,10 +198,10 @@ describe('companion sync run owner', () => {
 
     await autoSync;
     await expect(manualSync).resolves.toMatchObject({ sync_events: expect.any(Array) });
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
-    expect(countRunEvents()).toBe(2);
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+    expect(countRunEvents()).toBe(4);
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
-    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'running', 'terminal']);
+    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
     expect(lifecycle.at(-1)?.runId).toBe(persistedEvents[0]?.run_id);
     expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });

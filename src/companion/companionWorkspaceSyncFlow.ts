@@ -59,7 +59,6 @@ export interface TryForegroundAutoSyncArgs {
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
-  onRunIdResolved?(runId: string): void;
   runId?: string;
   state: NativeCompanionWorkspaceSyncState;
   triggerReason?: SyncTriggerReason;
