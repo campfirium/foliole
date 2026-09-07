@@ -1,7 +1,10 @@
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { resolveReadwiseImportDestination } from '../../lib/core/import/readwiseReaderSettings.js';
 import { stableReadwiseAnnotationNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
-import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import {
+  READWISE_API_IMPORT_STATE_VERSION,
+  type ReadwiseApiAnnotationState
+} from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import {
@@ -57,8 +60,9 @@ export function materializeReadwiseApiDocument(input: {
       bodyState: 'unavailable',
       documentBlockedAt: null,
       metadata: input.document.metadata,
+      originalFile: existing?.state.originalFile ?? null,
       sourceUpdatedAt: input.document.updatedAt,
-      version: 1
+      version: READWISE_API_IMPORT_STATE_VERSION
     }, importedAt);
     return result(input.document.id, 'degraded');
   }
@@ -108,8 +112,9 @@ function materializeAvailableDocument(
     bodyState: 'materialized',
     documentBlockedAt: null,
     metadata: input.document.metadata,
+    originalFile: existing?.state.originalFile ?? null,
     sourceUpdatedAt: input.document.updatedAt,
-    version: 1
+    version: READWISE_API_IMPORT_STATE_VERSION
   }, importedAt);
   return { annotationCount: newAnnotations.length, documentId: input.document.id, status: 'imported' };
 }
@@ -120,7 +125,9 @@ function prepareRecord(
   importedAt: string
 ) {
   const prepared = buildPreparedImportRecord({
-    filePath: remoteLocator(input.document.id), kind: 'html', sourceName: `${input.document.title}.html`
+    filePath: remoteLocator(input.document.id),
+    kind: input.document.category === 'pdf' ? 'pdf' : 'html',
+    sourceName: `${input.document.title}.${input.document.category === 'pdf' ? 'pdf' : 'html'}`
   }, {
     content: existing?.body ?? input.document.body,
     degradedReason: input.document.degradedReason,

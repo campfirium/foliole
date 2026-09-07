@@ -1,3 +1,7 @@
+import {
+  toRuntimeReadwiseOriginalFile,
+  type RuntimeReadwiseOriginalFileResult
+} from './import/readwiseOriginalFileRuntimePayload';
 import { toRuntimeTextImportResult, type RuntimeTextImportResult } from './importRuntimePayloads';
 
 interface RuntimeNodeImportSource {
@@ -8,6 +12,7 @@ interface RuntimeNodeImportSource {
   pdfIndexStatus?: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   pdfIndexedAt?: string | null;
   provider: string;
+  readwiseOriginalFile?: RuntimeReadwiseOriginalFileResult | null;
   sourceFingerprint: string;
   sourceKind: string;
   sourceLocator: string;
@@ -84,12 +89,15 @@ function toRuntimeNodeImportSource(value: unknown): RuntimeNodeImportSource | nu
   ) {
     return null;
   }
+  const originalFile = toRuntimeReadwiseOriginalFile(payload.readwise_original_file);
+  if (payload.readwise_original_file !== undefined && payload.readwise_original_file !== null && !originalFile) return null;
   return {
     firstImportedAt: payload.first_imported_at,
     lastContentFingerprint: payload.last_content_fingerprint,
     lastImportedAt: payload.last_imported_at,
     latestNodeId: payload.latest_node_id,
     provider: payload.provider,
+    ...(payload.readwise_original_file !== undefined ? { readwiseOriginalFile: originalFile } : {}),
     sourceFingerprint: payload.source_fingerprint,
     sourceKind: payload.source_kind,
     sourceLocator: payload.source_locator,

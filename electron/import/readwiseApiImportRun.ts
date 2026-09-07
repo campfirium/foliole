@@ -24,8 +24,9 @@ import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js'
 import { IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 import { fetchReadwiseApiImportRound, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { createCancelledReadwiseApiImportResult } from './readwiseApiImportResults.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 
 
@@ -96,7 +97,9 @@ async function runNow(
     let annotationCount = 0;
     for (const [index, document] of documents.entries()) {
       assertEligible(signal);
-      const result = materializeReadwiseApiDocument({ config: settings.readwiseReaderConfig, connectionRef, document });
+      const result = await commitReadwiseApiDocument({
+        config: settings.readwiseReaderConfig, connectionRef, dependencies: { ...input?.dependencies, signal }, document
+      });
       annotationCount += result.annotationCount;
       publishProgress(input?.window, index + 1, documents.length, 'writing');
     }
@@ -118,7 +121,7 @@ async function runNow(
     };
   } catch (error) {
     if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      return cancelledResult();
+      return createCancelledReadwiseApiImportResult();
     }
     throw error;
   }
@@ -168,9 +171,12 @@ function buildEntry(
   const externalChanged = hasReadwiseApiExternalDocumentChanged(connectionRef, document);
   const knownIds = new Set(existing?.annotations.map((annotation) => annotation.remoteId) ?? []);
   const hasNewAnnotations = document.annotations.some((annotation) => !knownIds.has(annotation.remoteId));
+  const canResolveOriginalFile = destination === 'inbox'
+    && (document.category === 'pdf' || document.category === 'epub');
+  const hasImportableContent = Boolean(document.body.trim()) || canResolveOriginalFile;
   const status = destination === 'off' ? 'off'
     : existing?.nodeDeleted ? 'blocked_deleted'
-    : !document.body.trim() ? 'failed'
+    : !hasImportableContent ? 'failed'
     : destination === 'external' && (!external || external.is_present === 0) ? 'new'
     : destination === 'external' && externalChanged ? 'updated'
     : destination === 'external' ? 'unchanged'
@@ -179,7 +185,7 @@ function buildEntry(
     : 'unchanged';
   return {
     destination,
-    detail: !document.body.trim() ? document.degradedReason : null,
+    detail: !hasImportableContent ? document.degradedReason : null,
     detected_highlight_count: document.annotations.length,
     highlight_type: document.annotations.length ? 'with_highlights' : 'without_highlights',
     remote_document_id: document.id,
@@ -226,11 +232,4 @@ function publishProgress(
     phase, processedCount, ...(sourceProcessedCount === undefined ? {} : { sourceProcessedCount }),
     status: phase === 'source_completed' ? 'completed' : 'running', totalCount
   });
-}
-
-function cancelledResult(): NativeReadwiseImportRunResult {
-  return {
-    completed_at: new Date().toISOString(), failed_count: 0, imported_count: 0,
-    remaining_count: 0, source_count: 0, status: 'cancelled'
-  };
 }

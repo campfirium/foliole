@@ -2,60 +2,18 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
 
 import type { ElectronApplication, Locator, TestInfo } from '@playwright/test';
 
-import {
-  acquireMacosHiddenCredentialSessionLock,
-  resolveMacosHiddenCredentialSession
-} from '../../scripts/desktop/macos-hidden-electron-credential-session.mjs';
-import { prepareMacosHiddenElectronRuntime } from '../../scripts/desktop/macos-hidden-electron-runtime.mjs';
-import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
-
-import { expect, test, type DesktopSession } from './harness/fixtures';
+import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import {
+  createT178ApiAcceptanceSession,
+  type T178AcceptanceSession
+} from './harness/t178ApiAcceptanceSession';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 const TEST_TOKEN = 't178-4-acceptance-token';
-type AcceptanceSession = Pick<DesktopSession, 'close' | 'electronApp' | 'firstWindow'>;
-
-async function launchMacosSession(executablePath: string, stateRoot: string): Promise<AcceptanceSession> {
-  const runtime = prepareMacosHiddenElectronRuntime({ appRoot: process.cwd(), env: process.env });
-  const credential = resolveMacosHiddenCredentialSession(process.cwd(), runtime.runtimeFingerprint, stateRoot);
-  const release = acquireMacosHiddenCredentialSessionLock(credential);
-  const { _electron } = await import('playwright');
-  const rendererUrl = pathToFileURL(path.resolve('dist/desktop/index.html')).toString();
-  const electronApp = await _electron.launch({
-    args: [credential.bootstrapPath], cwd: process.cwd(), executablePath,
-    env: {
-      ...process.env, ELECTRON_RENDERER_URL: rendererUrl, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
-      FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1', FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1',
-      FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1', FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
-      FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: credential.appName,
-      FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.resolve('dist/electron/main.js'),
-      FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library'),
-      FOLIOLE_SESSION_DATA_PATH: credential.userDataPath, FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1',
-      FOLIOLE_USER_DATA_PATH: credential.userDataPath, FOLIOLE_WORKDIR: stateRoot
-    },
-    timeout: 90_000
-  });
-  const firstWindow = await electronApp.firstWindow({ timeout: 30_000 });
-  await firstWindow.waitForURL(rendererUrl, { timeout: 30_000 });
-  await firstWindow.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true);
-  return { close: async () => { await electronApp.close(); release(); runtime.cleanup(); }, electronApp, firstWindow };
-}
-
-async function createSession(stateRoot: string) {
-  if (process.platform !== 'darwin') {
-    return launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } }) as
-      Promise<AcceptanceSession>;
-  }
-  const runtime = prepareMacosHiddenElectronRuntime({ appRoot: process.cwd(), env: process.env });
-  const executablePath = runtime.executablePath;
-  runtime.cleanup();
-  return launchMacosSession(executablePath, stateRoot);
-}
 
 async function installApiFixture(electronApp: ElectronApplication) {
   await electronApp.evaluate(({ clipboard }, token) => {
@@ -128,9 +86,9 @@ async function resetRound(electronApp: ElectronApplication, mode: 'interrupt' | 
 test('imports, repeats safely, cancels, and resumes a Reader API round', async ({ browserName }, testInfo) => {
   void browserName;
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-4-'));
-  let session: AcceptanceSession | null = null;
+  let session: T178AcceptanceSession | null = null;
   try {
-    session = await createSession(stateRoot);
+    session = await createT178ApiAcceptanceSession(stateRoot);
     await installApiFixture(session.electronApp);
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await expectWorkspaceShell(session.firstWindow);

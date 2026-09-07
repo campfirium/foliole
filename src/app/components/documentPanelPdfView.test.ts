@@ -74,3 +74,30 @@ describe('resolvePdfDocumentSurface', () => {
     );
   });
 });
+
+describe('Readwise API PDF source routing', () => {
+  it('keeps a Readwise PDF on its readable HTML surface when the original file is unavailable', () => {
+    expect(resolvePdfDocumentSurface('node-pdf-root', false, {
+      ...pdfSourceDetails,
+      importSource: {
+        ...pdfSourceDetails.importSource,
+        readwiseOriginalFile: {
+          attachmentId: null, reason: 'original_file_not_distributed', status: 'html_only' as const
+        },
+        sourceLocator: ''
+      }
+    })).toBeNull();
+  });
+
+  it('opens a localized Readwise PDF through the managed PDF reader', () => {
+    const details = {
+      ...pdfSourceDetails,
+      importSource: {
+        ...pdfSourceDetails.importSource,
+        readwiseOriginalFile: { attachmentId: 'pdf-hash', reason: null, status: 'localized' as const },
+        sourceLocator: 'foliole-asset://attachment/pdf-hash'
+      }
+    };
+    expect(resolvePdfDocumentSurface('node-pdf-root', false, details)).toMatchObject({ state: 'ready' });
+  });
+});

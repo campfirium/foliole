@@ -17,6 +17,7 @@ it('registers and runs the fixed Windows Reader API import acceptance', async ()
     .resolves.toMatchObject({ readwiseApiImport: { resultStatus: 'passed' } });
   expect(execute).toHaveBeenCalledWith(paths.systemNode, [
     paths.systemNpmCli, 'run', 'test:e2e:desktop:native:hidden', '--',
-    'tests/desktop/t178-4-readwise-api-import.spec.ts'
+    'tests/desktop/t178-4-readwise-api-import.spec.ts',
+    'tests/desktop/t178-6-readwise-api-original-file.spec.ts'
   ], expect.objectContaining({ cwd: paths.repoRoot }));
 });

@@ -147,6 +147,25 @@ it('hydrates a note-only incremental update through its highlight to the body do
   expect(preview.entries[0]).toMatchObject({ detected_highlight_count: 2, remote_document_id: 'document-1' });
 });
 
+it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes('/v2/export/')) return response([]);
+    return response([
+      { category: 'pdf', html_content: '', id: 'pdf-1', title: 'PDF' },
+      { category: 'epub', html_content: '', id: 'epub-1', title: 'EPUB' }
+    ]);
+  }) as typeof fetch;
+
+  const preview = await previewReadwiseApiImport(apiSettings(), { fetchImpl: fetchMock, minIntervalMs: 0 });
+
+  expect(preview).toMatchObject({ failed_count: 0, total_count: 2, write_count: 2 });
+  expect(preview.entries).toEqual(expect.arrayContaining([
+    expect.objectContaining({ remote_document_id: 'pdf-1', status: 'new' }),
+    expect.objectContaining({ remote_document_id: 'epub-1', status: 'new' })
+  ]));
+});
+
 function response(results: unknown[], nextPageCursor: string | null = null) {
   return new Response(JSON.stringify({ nextPageCursor, results }), { status: 200 });
 }

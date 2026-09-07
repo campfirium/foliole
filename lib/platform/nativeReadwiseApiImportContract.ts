@@ -1,6 +1,12 @@
 export type NativeReadwiseImportCancelResult = { status: 'cancelled' | 'idle' };
 export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
 
+export interface NativeReadwiseOriginalFileResult {
+  attachment_id: string | null;
+  reason: string | null;
+  status: 'html_only' | 'localized' | 'unavailable';
+}
+
 export interface NativeReadwiseApiPreviewFields {
   batch_count?: number;
   degraded_count?: number;

@@ -27,7 +27,10 @@ function isPdfSourceDetails(details: RuntimeNodeSourceDetails | null) {
   if (!details) {
     return false;
   }
-  return details.importSource?.sourceKind.toLowerCase() === 'pdf' || isPdfPath(details.keepImportItem?.sourcePath);
+  const source = details.importSource;
+  const readwisePdf = source?.sourceKind.toLowerCase() === 'pdf' && source.readwiseOriginalFile !== undefined;
+  return (readwisePdf ? source?.readwiseOriginalFile?.status === 'localized' : source?.sourceKind.toLowerCase() === 'pdf') ||
+    isPdfPath(details.keepImportItem?.sourcePath);
 }
 
 function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {

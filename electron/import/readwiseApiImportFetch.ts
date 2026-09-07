@@ -25,6 +25,25 @@ export interface ReadwiseApiFetchDependencies {
   signal?: AbortSignal;
 }
 
+export async function fetchReadwiseRawSourceDocument(
+  documentId: string,
+  dependencies: ReadwiseApiFetchDependencies = {}
+) {
+  const settings = loadStoredReadwiseHostSettings();
+  if (!canCurrentHostRunReadwise('api') || settings.apiConnection.state !== 'connected') {
+    throw new Error('readwise_api_import_not_ready');
+  }
+  if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
+  const request = createRequest(readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies);
+  const url = new URL(READER_LIST_URL);
+  url.searchParams.set('id', documentId);
+  url.searchParams.set('withRawSourceUrl', 'true');
+  const payload = await request(url);
+  const document = (Array.isArray(payload.results) ? payload.results : [])
+    .map(normalizeReaderDocument).find((item) => item?.id === documentId) ?? null;
+  return document;
+}
+
 export async function fetchReadwiseApiImportRound(
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {}

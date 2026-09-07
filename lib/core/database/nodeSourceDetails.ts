@@ -9,6 +9,7 @@ interface ImportSourceRow extends DatabaseRow {
   pdf_index_status: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   pdf_indexed_at: string | null;
   provider: string;
+  remote_import_state_json: string;
   source_fingerprint: string;
   source_kind: string;
   source_location: string | null;
@@ -104,6 +105,7 @@ function readImportSource(driver: DatabaseDriver, nodeId: string) {
       `SELECT
          source_fingerprint,
          provider,
+         remote_import_state_json,
          source_kind,
          source_name,
          source_locator,

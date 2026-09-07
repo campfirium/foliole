@@ -19,6 +19,25 @@ it('normalizes synced materialization and intake-blocking state deterministicall
     annotations: [{ blockedAt: '2026-09-07T00:00:00.000Z', remoteId: 'highlight-1' }],
     bodyState: 'materialized',
     metadata: { title: 'Title' },
-    version: 1
+    originalFile: null,
+    version: 2
   });
+});
+
+it('keeps only complete localized or explicit degraded original-file states', () => {
+  expect(normalizeReadwiseApiDocumentImportState({
+    originalFile: {
+      attachmentId: 'hash', contentHash: 'hash', mimeType: 'application/pdf',
+      sizeBytes: 42, status: 'localized'
+    }
+  }).originalFile).toEqual({
+    attachmentId: 'hash', contentHash: 'hash', mimeType: 'application/pdf', reason: null,
+    sizeBytes: 42, status: 'localized'
+  });
+  expect(normalizeReadwiseApiDocumentImportState({
+    originalFile: { reason: 'original_file_too_large', status: 'html_only' }
+  }).originalFile).toMatchObject({ reason: 'original_file_too_large', status: 'html_only' });
+  expect(normalizeReadwiseApiDocumentImportState({
+    originalFile: { attachmentId: 'hash', status: 'localized' }
+  }).originalFile).toBeNull();
 });

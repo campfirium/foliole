@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { formatReadwiseSourceLabel } from '../../lib/core/import/importManagerSettings.js';
+import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
@@ -58,12 +59,20 @@ function toNativeImportSource(
 
   const sourceLocator = record.source_kind.toLowerCase() === 'pdf' ? resolvePdfSourceLocator(sourceNodeId) : record.source_locator;
 
+  const readwiseState = normalizeReadwiseApiDocumentImportState(parseJson(record.remote_import_state_json));
   return {
     first_imported_at: record.first_imported_at,
     last_content_fingerprint: record.last_content_fingerprint,
     last_imported_at: record.last_imported_at,
     latest_node_id: record.latest_node_id,
     provider: record.provider,
+    ...(readwiseState.originalFile ? {
+      readwise_original_file: {
+        attachment_id: readwiseState.originalFile.attachmentId,
+        reason: readwiseState.originalFile.reason,
+        status: readwiseState.originalFile.status
+      }
+    } : {}),
     source_fingerprint: record.source_fingerprint,
     source_kind: record.source_kind,
     source_locator: sourceLocator,
@@ -71,6 +80,10 @@ function toNativeImportSource(
     ...(typeof record.pdf_index_status === 'string' ? { pdf_index_status: record.pdf_index_status } : {}),
     ...(typeof record.pdf_indexed_at === 'string' ? { pdf_indexed_at: record.pdf_indexed_at } : {})
   };
+}
+
+function parseJson(value: string) {
+  try { return JSON.parse(value); } catch { return null; }
 }
 
 function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['keepImportItem']) {
