@@ -19,9 +19,8 @@ import {
 import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from
   './windows-dev-remote-spec.mjs';
-import {
-  isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
-} from './windows-sync-group-provider-release-control.mjs';
+import { isWindowsSyncGroupProviderReleaseAction } from './windows-sync-group-provider-release-control.mjs';
+import { WINDOWS_DEV_ACTIONS } from './windows-dev-actions.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
 import {
   copyWindowsSyncGroupJoinPrepareEvidence
@@ -41,22 +40,7 @@ export {
 export { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec };
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
-export const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
-  'default-sync-journey',
-  'frozen-revision-preflight',
-  'desktop-dnssd-host-facts',
-  'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
-  'desktop-dnssd-find-diagnostic',
-  'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
-  'desktop-dnssd-route-selfcheck',
-  'sync-group-join-prepare',
-  'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
-  'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
-  'single-principal-sync-group', 'two-device-sync-provider',
-  ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
-  'verify'
-];
+export { WINDOWS_DEV_ACTIONS } from './windows-dev-actions.mjs';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
 const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
 
