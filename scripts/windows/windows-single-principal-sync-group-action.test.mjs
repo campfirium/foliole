@@ -26,7 +26,7 @@ it('uses only the new request, complete, overview, group and Device production c
     'sync_companion_now'
   ]) expect(source).toContain(command);
   expect(source).toContain("device: 'C'");
-  expect(source).toContain("result?.reason === 'automatic'");
+  expect(source).toContain('waitForSyncGroupAutomaticRun');
   expect(source).toContain("eventName: 'onSyncGroupDiscoveryChanged'");
   expect(source).toContain("triggerCommand: 'discover_sync_groups'");
   expect(source).not.toContain("includes('sqlite connection is owned')");

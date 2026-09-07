@@ -11,6 +11,7 @@ it('creates and accepts one equal Device through fixed Windows product commands'
   expect(source).toContain("'sync_companion_now'");
   expect(source).toContain("JSON.stringify(request).includes('workgroup_key')");
   expect(source).toContain('waitForAutomaticSync(session,');
+  expect(source).toContain('waitForSyncGroupAutomaticRun');
   expect(source).toContain("waitForWindowsSyncGroupProviderRelease({ action: ACTION");
   expect(source).not.toContain("'discover_sync_groups'");
   expect(source).toContain("'onSyncGroupJoinRequestsChanged' : 'onSyncGroupDiscoveryChanged'");

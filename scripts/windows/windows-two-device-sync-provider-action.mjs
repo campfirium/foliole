@@ -5,15 +5,14 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   createDesktopSyncConflictSeed, forkDesktopSyncConflict
 } from '../desktop/sync-group-conflict-action.mjs';
+import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
 import {
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
-import {
-  waitForDesktopProductEvent, waitForDesktopProductState
-} from '../acceptance/desktop-product-event.mjs';
+import { waitForDesktopProductState } from '../acceptance/desktop-product-event.mjs';
 
 /* global process */
 
@@ -57,14 +56,9 @@ async function loadSyncTriggerResult(app) {
 }
 
 async function waitForAutomaticSync(session, previousRunId, timeoutMs = 3 * 60_000) {
-  let result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  await waitForDesktopProductEvent(session.page, 'onWorkspaceSyncApplied', { timeoutMs });
-  result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
+  return waitForSyncGroupAutomaticRun(
+    () => loadSyncTriggerResult(session.app), previousRunId, { timeoutMs }
+  );
 }
 
 export async function runWindowsTwoDeviceSyncProvider(options) {
