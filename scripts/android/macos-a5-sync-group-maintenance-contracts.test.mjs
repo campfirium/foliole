@@ -95,6 +95,8 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('put("actionStarted", true)');
   expect(action).toContain('put("syncRequested", true)');
   expect(action).toContain('put("terminalRunId", terminal.getString("terminalRunId"))');
+  expect(action).toContain('waitUntilProjected(instrumentation, terminal.getString("terminalRunId"))');
+  expect(action).toContain('FolioleAcceptanceSyncEventProjection.read(');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
 

@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.app.Instrumentation;
 import android.webkit.WebView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ final class FolioleCompanionSyncNowAction {
         JSONObject terminal = waitUntilTerminal(
             instrumentation, webView, started.getString("runId"), TERMINAL_TIMEOUT_MS
         );
+        waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
             .put("actionRunId", started.getString("runId"))
@@ -91,5 +93,21 @@ final class FolioleCompanionSyncNowAction {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest);
+    }
+
+    private static void waitUntilProjected(
+        Instrumentation instrumentation, String runId
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
+        while (System.nanoTime() < deadline) {
+            JSONArray events = FolioleAcceptanceSyncEventProjection.read(
+                instrumentation.getTargetContext()
+            ).getJSONArray("events");
+            for (int index = 0; index < events.length(); index += 1) {
+                if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for projected Sync Now run: " + runId);
     }
 }
