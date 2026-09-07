@@ -81,7 +81,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
-      evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session
+      evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), existingHighlight: true, session
     });
     const providerOverview = assertMacosAcceptanceSyncGroupServer(await session.enable());
     args.checked(args.paths.adb, [

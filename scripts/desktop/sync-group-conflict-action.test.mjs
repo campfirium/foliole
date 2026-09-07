@@ -24,6 +24,18 @@ it('creates and forks one business object only through product commands', async 
   }));
 });
 
+it('creates an existing highlight as the shared conflict object', async () => {
+  const invoke = vi.fn(async (command, args) => command === 'create_topic'
+    ? { createdNodeIds: [args.nodeId] } : { nodeOrder: [], nodesById: {} });
+  const seed = await createDesktopSyncConflictSeed({ evidenceRoot: '/tmp/t152-highlight-conflict-test',
+    existingHighlight: true, now: () => new Date('2026-08-29T00:00:00.000Z'), session: { invoke } });
+  expect(seed.nodeId).toBe(`${seed.topicNodeId}-highlight`);
+  expect(invoke).toHaveBeenLastCalledWith('create_topic', expect.objectContaining({
+    anchorLink: expect.objectContaining({ kind: 'highlight' }), nodeId: seed.nodeId,
+    parentNodeId: seed.topicNodeId
+  }));
+});
+
 it('accepts only a product conflict record for the exact object', async () => {
   await expect(loadVisibleDesktopSyncConflict({ nodeId: 'node', session: {
     invoke: async () => [{ conflict_version_id: 'peer#2', object_id: 'node' }]
