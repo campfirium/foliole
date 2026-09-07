@@ -24,8 +24,7 @@ it('accepts only bounded native client actions with a request identity', () => {
   };
   expect(validateInteractiveRequest(request)).toBe(request);
   expect(validateInteractiveRequest({ ...request, action: 'status' }).action).toBe('status');
-  expect(validateInteractiveRequest({ ...request, action: 'stop' }).action).toBe('stop');
-  expect(() => validateInteractiveRequest({ ...request, action: 'delete' })).toThrow('invalid');
+  expect(() => validateInteractiveRequest({ ...request, action: 'stop' })).toThrow('invalid');
   expect(() => validateInteractiveRequest({ ...request, nonce: 'latest' })).toThrow('invalid');
 });
 

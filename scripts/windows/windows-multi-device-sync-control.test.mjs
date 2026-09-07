@@ -22,22 +22,6 @@ it('pushes dev and copies only the fixed C receipt', async () => {
   expect(executeScp).toHaveBeenCalledTimes(1);
 });
 
-it('passes the accepted source ref into the Windows mirror push', async () => {
-  const buildPushSpec = vi.fn(() => ({ args: ['push'], env: {} }));
-  const receipt = '[windows-dev-action] single-principal-sync-group '
-    + 'identity=run-sync manifest=D:\\C\\foliole\\.tmp\\artifacts\\windows-dev-action\\run-sync\\'
-    + 'single-principal-sync-group-receipt.json\n';
-  await runWindowsMultiDeviceSyncControl({ action: 'single-principal-sync-group',
-    buildPushSpec, buildScpSpec: (_host, remote, local) => [remote, local],
-    buildSshSpec: () => ['ssh'], env: {}, executeGit: vi.fn(async () => ''),
-    executeScp: vi.fn(async () => 'copied'), executeSsh: vi.fn(async () => receipt),
-    fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo',
-    sourceRef: 'refs/heads/sync', stdout: { write: vi.fn() } });
-  expect(buildPushSpec).toHaveBeenCalledWith(
-    'user@host', {}, undefined, 'refs/heads/sync'
-  );
-});
-
 it('copies only the fixed A-rejoin receipt', async () => {
   const executeScp = vi.fn(async () => 'copied');
   const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-a-rejoin '

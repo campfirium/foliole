@@ -21,14 +21,12 @@ it('requires the restarted Windows local Device in the accepted group', () => {
 
 it('uses only the new request, complete, overview, group and Device production contract', () => {
   const source = fs.readFileSync('scripts/windows/windows-single-principal-sync-group-action.mjs', 'utf8');
-  const runtime = fs.readFileSync('scripts/windows/windows-sync-group-recovery-action.mjs', 'utf8');
-  const readiness = fs.readFileSync('scripts/windows/windows-multi-device-sync-readiness.mjs', 'utf8');
   for (const command of [
     'request_sync_group_join', 'complete_sync_group_join', 'load_sync_group_overview',
     'sync_companion_now'
   ]) expect(source).toContain(command);
   expect(source).toContain("device: 'C'");
-  expect(source).toContain('waitForSyncGroupAutomaticRun');
+  expect(source).toContain("result?.reason === 'automatic'");
   expect(source).toContain("eventName: 'onSyncGroupDiscoveryChanged'");
   expect(source).toContain("triggerCommand: 'discover_sync_groups'");
   expect(source).not.toContain("includes('sqlite connection is owned')");
@@ -37,9 +35,6 @@ it('uses only the new request, complete, overview, group and Device production c
   expect(source).toContain("report(options.reportProgress, 'restarted')");
   expect(source).toContain("action: 'single-principal-sync-group'");
   expect(source).toContain('waitForWindowsSyncGroupProviderRelease');
-  expect(readiness).toContain("WINDOWS_ACCEPTANCE_SYNC_PORT = '38643'");
-  expect(readiness).toContain('FOLIOLE_COMPANION_SYNC_PORT: WINDOWS_ACCEPTANCE_SYNC_PORT');
-  expect(runtime).toContain('windowsAcceptanceEnv()');
   expect(source).toContain("waitForJourneyOriginCount(session.page, 'A', 2)");
   for (const retired of [
     'load_companion_pairing_overview', 'sync_group_members', 'paired_authorizations', 'manager'

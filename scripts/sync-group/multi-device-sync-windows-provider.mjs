@@ -119,8 +119,7 @@ function receiptFromResult(result, repoRoot, action, spec) {
 }
 
 export function startWindowsSyncGroupProvider({
-  action, execute, expectedGroupId, expectedGroupTag, reportProgress = () => {}, repoRoot,
-  sourceRef
+  action, execute, expectedGroupId, expectedGroupTag, reportProgress = () => {}, repoRoot
 }) {
   const spec = actionSpec(action);
   let resolveGroupIdentity;
@@ -132,9 +131,7 @@ export function startWindowsSyncGroupProvider({
     const promise = new Promise((accept) => { resolve = accept; });
     return [milestone, { factId: null, promise, resolve }];
   }));
-  const controllerArgs = ['scripts/windows/windows-dev-control.mjs', action,
-    ...(sourceRef ? ['--source-ref', sourceRef] : [])];
-  const work = execute(process.execPath, controllerArgs, {
+  const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
     action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
     ...(expectedGroupId ? { env: { ...process.env,
       FOLIOLE_T152_EXPECTED_GROUP_ID: expectedGroupId,

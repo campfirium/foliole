@@ -27,13 +27,8 @@ it('maps an explicit candidate source ref only to the Windows dev mirror', () =>
   ], {})).toMatchObject({ action: 'multi-device-sync-candidate', sourceRef });
   expect(windowsDevPushSpec('host', {}, '/Users/dev', sourceRef).args.at(-1))
     .toBe(`+${sourceRef}:refs/heads/dev`);
-  expect(parseWindowsDevControlArgs([
-    'single-principal-sync-group', '--source-ref', 'refs/heads/sync'
-  ], {})).toMatchObject({
-    action: 'single-principal-sync-group', sourceRef: 'refs/heads/sync'
-  });
   expect(() => parseWindowsDevControlArgs(['verify', '--source-ref', sourceRef], {}))
-    .toThrow('only accepted for bounded sync actions');
+    .toThrow('only accepted for candidate preparation');
 });
 
 function output(identity) {

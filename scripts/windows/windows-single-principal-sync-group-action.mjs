@@ -15,7 +15,6 @@ import {
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
-import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
@@ -48,9 +47,14 @@ async function loadSyncTriggerResult(app) {
 }
 
 async function waitForAutomaticSync(session, previousRunId, timeoutMs = 2 * 60_000) {
-  return waitForSyncGroupAutomaticRun(
-    () => loadSyncTriggerResult(session.app), previousRunId, { timeoutMs }
-  );
+  let result = await loadSyncTriggerResult(session.app);
+  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
+      && result?.status === 'completed') return result;
+  await waitForDesktopProductEvent(session.page, 'onWorkspaceSyncApplied', { timeoutMs });
+  result = await loadSyncTriggerResult(session.app);
+  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
+      && result?.status === 'completed') return result;
+  throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
 }
 
 async function discoverExpectedGroup(page, identity, timeoutMs = 2 * 60_000) {

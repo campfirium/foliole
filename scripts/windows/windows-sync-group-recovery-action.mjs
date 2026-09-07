@@ -8,7 +8,7 @@ import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
 } from './windows-sync-group-native-lifecycle.mjs';
 import {
-  provisionWindowsAcceptanceRoot, windowsAcceptanceEnv, windowsAcceptanceRoot
+  provisionWindowsAcceptanceRoot, windowsAcceptanceRoot
 } from './windows-multi-device-sync-readiness.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
@@ -36,7 +36,7 @@ function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
   const { libraryHome, userData } = windowsSyncGroupClientPaths(paths);
   return {
     args: [path.join(paths.repoRoot, 'dist/electron/main.js')], cwd: paths.repoRoot,
-    env: { ...windowsAcceptanceEnv(),
+    env: { ...process.env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
       FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1', FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
       FOLIOLE_LIBRARY_HOME: libraryHome, FOLIOLE_SESSION_DATA_PATH: userData,

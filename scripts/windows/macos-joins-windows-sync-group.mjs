@@ -59,12 +59,12 @@ async function conflictSeed(session) {
 }
 
 export async function runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot, repoRoot,
-  sharedRoot, sourceRef }) {
+  sharedRoot }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const execute = createActionExecutor({ logPath: path.join(evidenceRoot, 'windows-action.log'),
     progressPath: path.join(evidenceRoot, 'windows-progress.jsonl') });
   const provider = startWindowsSyncGroupProvider({ action: 'two-device-sync-provider',
-    execute, repoRoot, sourceRef });
+    execute, repoRoot });
   const macosLibrary = path.join(sharedRoot, 'macos-library');
   if (process.env.FOLIOLE_T152_CELL_ID && fs.existsSync(macosLibrary)) {
     throw new Error('The T152 Mac task library locator was already used.');

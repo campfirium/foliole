@@ -73,8 +73,8 @@ async function copyRouteFailure({ action, buildScpSpec, env, executeScp, fsApi, 
 
 export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScpSpec,
   buildSshSpec, env, executeGit, executeScp, executeSsh, fsApi = fs, host, repoRoot, stdout,
-  action = 'multi-device-sync-c', sourceRef }) {
-  const push = buildPushSpec(host, env, undefined, sourceRef);
+  action = 'multi-device-sync-c' }) {
+  const push = buildPushSpec(host, env);
   await executeGit(push.args, { env: push.env });
   let streamed = false;
   let output;
