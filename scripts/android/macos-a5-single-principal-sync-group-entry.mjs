@@ -26,11 +26,13 @@ const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
 export async function removeA5AcceptanceApplication(args) {
+  const options = { env: args.env, timeoutCode: 'a5_acceptance_cleanup_timeout',
+    timeoutMs: 60_000 };
   const uninstall = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID]);
+    ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID], options);
   if (uninstall.code === 0) return;
   const installed = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'shell', 'pm', 'path', ACCEPTANCE_APP_ID]);
+    ['-s', args.serial, 'shell', 'pm', 'path', ACCEPTANCE_APP_ID], options);
   if (installed.code === 0 && !String(installed.output).includes('package:')) return;
   throw new Error(`A5 acceptance application cleanup failed: ${String(uninstall.output)}`);
 }

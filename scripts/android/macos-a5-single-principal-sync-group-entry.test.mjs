@@ -8,11 +8,19 @@ import {
 } from './macos-a5-single-principal-sync-group-entry.mjs';
 
 it('accepts a nonzero MIUI uninstall result only after the package is absent', async () => {
-  const execute = async (_command, args) => args.includes('uninstall')
+  const options = [];
+  const execute = async (_command, args, executionOptions) => {
+    options.push(executionOptions);
+    return args.includes('uninstall')
     ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
     : { code: 0, output: '' };
+  };
   await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
     .resolves.toBeUndefined();
+  expect(options).toEqual([
+    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
+    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
+  ]);
 });
 
 it('rejects a failed uninstall while the acceptance package remains installed', async () => {
