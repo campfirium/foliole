@@ -116,6 +116,8 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
+  expect(source).toContain('stage=initial-sync-completed');
+  expect(source).toContain('FolioleCompanionSyncNowAction.waitUntilEnabled');
 });
 
 it('enters Browse through the visible bottom tab from Settings', () => {

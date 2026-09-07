@@ -52,7 +52,7 @@ final class FolioleCompanionSyncNowAction {
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 
-    private static void waitUntilEnabled(
+    static void waitUntilEnabled(
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
