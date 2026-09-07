@@ -67,6 +67,10 @@ it('requires loopback journey endpoints and a full revision', () => {
 it('recognizes packaged Electron workspaces on both desktop hosts', () => {
   expect(isDesktopWorkspaceUrl('file:///Users/roamer/P/Foliole-sync/dist/desktop/index.html')).toBe(true);
   expect(isDesktopWorkspaceUrl('file:///D:/C/foliole-sync/dist/desktop/index.html')).toBe(true);
+  expect(isDesktopWorkspaceUrl(
+    'file:///Users/roamer/P/Foliole-sync/.tmp/artifacts/client-control-runtime/'
+      + 'mac-123/state/user-data/runtime-renderer-index.html'
+  )).toBe(true);
   expect(isDesktopWorkspaceUrl('http://127.0.0.1:4173/')).toBe(true);
   expect(isDesktopWorkspaceUrl('https://example.com/')).toBe(false);
 });

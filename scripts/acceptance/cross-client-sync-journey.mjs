@@ -60,6 +60,7 @@ async function connect(endpoint) {
 
 export function isDesktopWorkspaceUrl(value) {
   return /^file:\/\/\/.*\/dist\/desktop\/index\.html(?:[?#].*)?$/u.test(value)
+    || /^file:\/\/\/.*\/\.tmp\/artifacts\/client-control-runtime\/[^/]+\/state\/user-data\/runtime-renderer-index\.html(?:[?#].*)?$/u.test(value)
     || /^http:\/\/127\.0\.0\.1:\d+\/(?:[?#].*)?$/u.test(value);
 }
 
