@@ -15,11 +15,11 @@ function projectionFiles(root) {
     .map((entry) => path.join(entry.parentPath, entry.name));
 }
 
-export function friAcceptanceBundle(attemptId) {
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/iu.test(attemptId ?? '')) {
-    throw new Error('Fri acceptance attempt identity is missing or invalid.');
+export function friAcceptanceBundle(taskId) {
+  if (!/^t[0-9]+$/u.test(taskId ?? '')) {
+    throw new Error('Fri acceptance task identity is missing or invalid.');
   }
-  const suffix = `.t152acceptance.a${attemptId.replaceAll('-', '').toLowerCase()}`;
+  const suffix = `.${taskId}`;
   return { applicationId: `com.foliole.ios${suffix}`, suffix };
 }
 

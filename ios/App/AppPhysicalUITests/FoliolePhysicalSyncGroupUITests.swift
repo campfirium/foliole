@@ -24,7 +24,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         openSyncSettings(in: app)
         if isTwoDeviceJourney {
             XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
-                          "The attempt-specific Fri acceptance container was not fresh.")
+                          "The task-scoped Fri acceptance container was not fresh.")
             captureFriFact(in: app)
             openSyncSettings(in: app)
         } else {

@@ -51,7 +51,7 @@ describe('iOS app identity host contract', () => {
       'scripts/ios/windows-fri-two-device-sync.mjs']) {
       const source = read(script);
       expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
-      expect(source).toContain('FOLIOLE_T152_MATRIX_ATTEMPT');
+      expect(source).toContain('FOLIOLE_ACCEPTANCE_TASK_ID');
       expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
     }
   });

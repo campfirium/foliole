@@ -27,7 +27,7 @@ function executor(root, name) {
 export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const bundle = friAcceptanceBundle(process.env.FOLIOLE_T152_MATRIX_ATTEMPT);
+  const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
   const provider = startWindowsSyncGroupProvider({ action: 'two-device-sync-provider',
     execute: executor(evidenceRoot, 'windows-provider'), repoRoot });
   let providerSettled = false;

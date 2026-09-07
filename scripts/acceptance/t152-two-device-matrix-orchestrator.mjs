@@ -128,6 +128,7 @@ async function defaultRunCell(cell, frozen, repoRoot) {
   }
   await execute(process.execPath, [script, ...args], { cwd: repoRoot, env: { ...process.env,
     FOLIOLE_T152_ACCEPTANCE_ROOT: path.join(cell.evidenceRoot, 'shared'),
+    FOLIOLE_ACCEPTANCE_TASK_ID: 't152',
     FOLIOLE_T152_CELL_ID: cell.id, FOLIOLE_T152_CELL_RECEIPT: cell.receiptPath,
     FOLIOLE_T152_MATRIX_ATTEMPT: cell.attemptId,
     FOLIOLE_T152_MATRIX_REVISION: frozen.revision, FOLIOLE_T152_MATRIX_TREE: frozen.tree

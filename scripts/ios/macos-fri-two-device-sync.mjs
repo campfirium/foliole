@@ -31,7 +31,7 @@ function stateSignals() {
 export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const bundle = friAcceptanceBundle(process.env.FOLIOLE_T152_MATRIX_ATTEMPT);
+  const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
   const providerRoot = path.join(evidenceRoot, 'macos-provider');
   const signals = stateSignals();
   let releaseProvider;
