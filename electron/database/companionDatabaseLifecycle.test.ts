@@ -35,6 +35,14 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   return { databasePath, port: createBetterSqliteDbPort(sqlite), sqlite };
 }
 
+function prepareV33RemoteIdentitySchema(sqlite: ReturnType<typeof fixture>['sqlite']) {
+  sqlite.exec(`DROP INDEX idx_import_sources_readwise_remote_document;
+    DROP INDEX idx_import_sources_readwise_remote_topic;`);
+  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
+    sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
+  }
+}
+
 async function bootstrap(port: ReturnType<typeof createBetterSqliteDbPort>, extra = {}) {
   return bootstrapCompanionDatabase(port, {
     allowCreate: false,
@@ -47,9 +55,7 @@ async function bootstrap(port: ReturnType<typeof createBetterSqliteDbPort>, extr
 describe('shared companion database migration executor', () => {
   it('adds Readwise remote identity fields atomically from v33', async () => {
     const { port, sqlite } = fixture(33);
-    for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
-      sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
-    }
+    prepareV33RemoteIdentitySchema(sqlite);
     await bootstrap(port);
     expect(sqlite.prepare("SELECT name FROM pragma_table_info('import_sources') WHERE name LIKE 'remote_%' ORDER BY name")
       .pluck().all()).toEqual([
@@ -65,9 +71,7 @@ describe('shared companion database migration executor', () => {
 
   it('rolls back the v34 Readwise identity projection on failure', async () => {
     const { port, sqlite } = fixture(33);
-    for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider']) {
-      sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
-    }
+    prepareV33RemoteIdentitySchema(sqlite);
     await expect(bootstrap(port, {
       beforeVersionCommit: () => { throw new Error('injected Readwise projection failure'); }
     })).rejects.toThrow('injected Readwise projection failure');
