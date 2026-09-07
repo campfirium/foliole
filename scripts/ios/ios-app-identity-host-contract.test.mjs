@@ -55,4 +55,9 @@ describe('iOS app identity host contract', () => {
       expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
     }
   });
+
+  it('reuses the prepared Fri build for every macOS two-device test batch', () => {
+    const source = read('scripts/ios/macos-fri-two-device-sync.mjs');
+    expect(source.match(/'--test-without-building'/gu)).toHaveLength(4);
+  });
 });

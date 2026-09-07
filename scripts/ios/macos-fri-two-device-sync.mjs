@@ -48,11 +48,13 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   let conflictRelease = Promise.resolve();
   try {
     await runFriGroupIdentityPreflight({ evidenceRoot: path.join(evidenceRoot, 'fri-identity'),
-      execute, groupId: ready.groupId, groupTag: ready.groupTag, repoRoot, bundle });
+      execute, groupId: ready.groupId, groupTag: ready.groupTag, repoRoot, bundle,
+      runnerArgs: ['--test-without-building'] });
     fri = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'join'),
       '--keep-app-foreground', bundle.applicationId,
+      '--test-without-building',
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch'
     ], { action: 'fri-two-device', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
@@ -66,6 +68,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'conflict'),
       '--keep-app-foreground', bundle.applicationId,
+      '--test-without-building',
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testCompletesTwoDeviceConflictAndRestart'
     ], { action: 'fri-two-device-conflict', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
@@ -78,7 +81,8 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     await conflictRelease;
     await signals.waitFor('automatic-converged');
     fri = { ...fri, syncEvents: await runFriSyncEventProjection({ buildIdentity: acceptedTip,
-      evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle }) };
+      evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,
+      runnerArgs: ['--test-without-building'] }) };
   } finally {
     releaseProvider?.('consumer_complete');
     fri = { ...fri, provider: await provider };
