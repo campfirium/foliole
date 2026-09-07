@@ -63,7 +63,7 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func captureFact(named title: String, in app: XCUIApplication) {
-        if app.buttons["Exit"].waitForExistence(timeout: 3) { app.buttons["Exit"].tap() }
+        openBrowse(in: app)
         tapButton(named: "Capture", in: app, timeout: 30)
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
