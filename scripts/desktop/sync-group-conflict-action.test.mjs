@@ -48,7 +48,7 @@ it('accepts only a product conflict record for the exact object', async () => {
 
 it('accepts an A5 conflict copy exposed by the product snapshot', async () => {
   const session = { invoke: async () => ({ nodesById: {
-    'node~a5': { content: 'Note target beta\n※ A5 note token', id: 'node~a5' }
+    'node~a5': { content: 'Note target beta\n※ A5 note token' }
   } }) };
   await expect(loadVisibleDesktopSyncConflictCopy({ nodeId: 'node', session }))
     .resolves.toMatchObject({ conflictCount: 1, silentOverwrite: false, visible: true });
