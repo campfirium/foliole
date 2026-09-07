@@ -134,9 +134,11 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
 
     func netServiceDidResolveAddress(_ sender: NetService) {
         guard let entry = services.first(where: { $0.value === sender }),
-              let host = sender.hostName?.trimmingCharacters(in: CharacterSet(charactersIn: ".")) else { return }
-        var candidate: [String: Any] = [candidateKey("endpointUrl"): "http://\(host):\(sender.port)", candidateKey("source"): "nsd"]
-        if let data = sender.txtRecordData() { candidate[candidateKey("protocolTxt")] = Self.decodeTXT(data) }
+              let data = sender.txtRecordData() else { return }
+        let txt = Self.decodeTXT(data)
+        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt) else { return }
+        var candidate: [String: Any] = [candidateKey("endpointUrl"): endpoint, candidateKey("source"): "nsd"]
+        candidate[candidateKey("protocolTxt")] = txt
         let change = results[entry.key] == nil ? "found" : "changed"
         results[entry.key] = candidate
         onEvent(event(change: change, status: "results"))
@@ -209,15 +211,11 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
     }
 
     func netServiceDidResolveAddress(_ sender: NetService) {
-        guard let host = sender.hostName?.trimmingCharacters(in: CharacterSet(charactersIn: ".")), !host.isEmpty else {
-            return
-        }
-        let endpoint = "http://\(host):\(sender.port)"
+        let txt = sender.txtRecordData().map(Self.decodeTXT) ?? [:]
+        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt) else { return }
         guard !results.contains(where: { $0[endpointKey] as? String == endpoint }) else { return }
         var candidate: [String: Any] = [endpointKey: endpoint, sourceKey: "nsd"]
-        if let data = sender.txtRecordData() {
-            candidate[protocolTxtKey] = Self.decodeTXT(data)
-        }
+        candidate[protocolTxtKey] = txt
         results.append(candidate)
     }
 

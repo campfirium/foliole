@@ -27,6 +27,7 @@ let package = Package(
             sources: [
                 "FolioleCompanionAttachmentFileStage.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",
+                "FolioleCompanionBonjourEndpoint.swift",
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleCompanionDeviceAnchorStore.swift",

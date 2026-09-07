@@ -180,12 +180,12 @@ final class FolioleCompanionBonjourServiceMonitor: NSObject, NetServiceDelegate 
 
     func netServiceDidResolveAddress(_ sender: NetService) {
         guard let entry = services.first(where: { $0.value === sender }),
-              let host = sender.hostName?.trimmingCharacters(in: CharacterSet(charactersIn: ".")),
               let data = sender.txtRecordData() else { return }
         let txt = Self.decodeTXT(data)
         guard txt["group_id"] == groupId,
-              txt["runtime_instance_id"] != localRuntimeId else { return }
-        let endpoint = "http://\(host):\(sender.port)"
+              txt["runtime_instance_id"] != localRuntimeId,
+              let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt)
+        else { return }
         let signature = "\(endpoint)|\(txt["facts_revision"] ?? "")"
         guard signatures[entry.key] != signature else { return }
         signatures[entry.key] = signature

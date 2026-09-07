@@ -11,6 +11,17 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertEqual(configuration.requestCachePolicy, .reloadIgnoringLocalCacheData)
         XCTAssertNil(configuration.urlCache)
         XCTAssertNil(configuration.urlCredentialStorage)
+        XCTAssertFalse(configuration.waitsForConnectivity)
+    }
+
+    func testBonjourEndpointPrefersAdvertisedLanAddress() {
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredHost(
+            advertised: "192.168.0.10,198.18.0.1,169.254.84.134",
+            fallback: "desktop.local"
+        ), "192.168.0.10")
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredHost(
+            advertised: "169.254.84.134", fallback: "desktop.local."
+        ), "desktop.local.")
     }
 
     func testRefusesSignedRequestRedirects() throws {
