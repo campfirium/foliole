@@ -90,6 +90,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         reveal: null,
         anchorLink: null,
         reading: null,
+        readwiseRemoteLifecycle: null,
         review: null,
         shelvedAt: null,
         createdAt: '2026-03-14T10:00:00.000Z',
@@ -127,7 +128,8 @@ it('restores review history, node lifecycle state, and backup truth after later 
     nodesById: Object.fromEntries(Object.entries(restored.nodesById).map(([nodeId, node]) => [nodeId, {
       ...node,
       importContentFingerprint: null,
-      importSourceFingerprint: null
+      importSourceFingerprint: null,
+      readwiseRemoteLifecycle: null
     }]))
   });
   expect(selectReviewLogCount('node-qa')).toBe(1);

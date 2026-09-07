@@ -205,6 +205,7 @@ function registerReadableArticleTest() {
       nodeId: 'node-1',
       persistedNodeViewState: null,
       pdfAttachmentId: null,
+      readwiseRemoteLifecycle: null,
       textAnchorDecorations: [],
       title: 'Synced article'
     });

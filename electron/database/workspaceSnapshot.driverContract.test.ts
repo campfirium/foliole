@@ -77,6 +77,7 @@ const expectedWorkspaceSnapshot = {
       anchorLink: null,
       position: null,
       reading: null,
+      readwiseRemoteLifecycle: null,
       review: null,
       shelvedAt: null,
       createdAt: '2026-03-14T00:00:00.000Z',
