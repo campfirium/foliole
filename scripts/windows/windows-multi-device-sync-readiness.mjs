@@ -11,6 +11,12 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const OWNER = { owner: 'windows-c-fixed', purpose: 'multi-device-sync-acceptance', schemaVersion: 1 };
+export const WINDOWS_ACCEPTANCE_SYNC_PORT = '38643';
+
+export function windowsAcceptanceEnv(env = process.env) {
+  return { ...env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+    FOLIOLE_COMPANION_SYNC_PORT: WINDOWS_ACCEPTANCE_SYNC_PORT };
+}
 
 function failure(message, missingFact, lastSuccessfulAction) {
   return Object.assign(new Error(message), { lastSuccessfulAction, missingFact });
