@@ -2,6 +2,7 @@
 
 import { expect, it, vi } from 'vitest';
 
+import { WINDOWS_DEV_BUILD_ACTIONS } from './windows-dev-build-actions.mjs';
 import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
 import {
   runWindowsReadwiseApiReconcileAcceptance
@@ -10,6 +11,7 @@ import {
 it('registers and runs the fixed Windows Reader API reconciliation acceptance', async () => {
   expect(parseWindowsDevControlArgs(['readwise-api-reconcile'], {}))
     .toMatchObject({ action: 'readwise-api-reconcile' });
+  expect(WINDOWS_DEV_BUILD_ACTIONS).toContain('readwise-api-reconcile');
   const paths = { repoRoot: 'D:\\C\\foliole', systemNode: 'node.exe', systemNpmCli: 'npm-cli.js' };
   const execute = vi.fn(async () => ({ code: 0, output: 'passed' }));
   await expect(runWindowsReadwiseApiReconcileAcceptance('readwise-api-reconcile', execute, paths))

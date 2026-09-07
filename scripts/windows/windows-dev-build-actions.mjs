@@ -4,7 +4,8 @@ export const WINDOWS_DEV_BUILD_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile',
   'default-sync-journey',
   'desktop-dnssd-host-facts',
-  'frozen-revision-preflight', 'live', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import', 'secondary',
+  'frozen-revision-preflight', 'live', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
+  'readwise-api-reconcile', 'secondary',
   'sync-group-join-prepare',
   ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];
