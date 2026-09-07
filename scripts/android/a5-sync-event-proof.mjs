@@ -30,7 +30,7 @@ export async function captureA5SyncRun(options, triggerReason, exclude = []) {
         throw error;
       }
     }
-    await delay(500);
+    await delay(30_000);
   }
   throw new Error(`No new completed ${triggerReason} mobile Sync run was projected.`);
 }

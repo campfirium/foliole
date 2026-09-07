@@ -15,4 +15,7 @@ it('keeps activation separate from the isolated initial-run projection', () => {
   );
   expect(projection).toContain('"trigger_reason"');
   expect(projection).toContain('"run_id"');
+  const action = fs.readFileSync('scripts/sync-group/a5-sync-group-action.mjs', 'utf8');
+  expect(action).toContain("'read-sync-events': ['projectsSyncEventsForAcceptance', "
+    + "'syncEventsProjected', false, true]");
 });

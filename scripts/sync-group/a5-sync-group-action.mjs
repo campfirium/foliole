@@ -17,7 +17,7 @@ const SPECS = Object.freeze({
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
   'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
-  'read-sync-events': ['projectsSyncEventsForAcceptance', 'syncEventsProjected', false, false],
+  'read-sync-events': ['projectsSyncEventsForAcceptance', 'syncEventsProjected', false, true],
   'sync-now': ['syncsNowThroughProduct', 'terminalRunId', true, false]
 });
 
