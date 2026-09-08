@@ -15,10 +15,9 @@ it('runs the isolated signed projection target and accepts only its fixed fields
   expect(source).not.toMatch(/CapacitorDatabase|device copy|container_path|workgroup_key|endpoint/u);
 });
 
-it('derives a unique signed acceptance container from the preallocated attempt', () => {
-  expect(friAcceptanceBundle('12345678-1234-4234-8234-123456789abc')).toEqual({
-    applicationId: 'com.foliole.ios.t152acceptance.a12345678123442348234123456789abc',
-    suffix: '.t152acceptance.a12345678123442348234123456789abc'
+it('uses one fixed signed acceptance container that Xcode can replace', () => {
+  expect(friAcceptanceBundle()).toEqual({
+    applicationId: 'com.foliole.ios.t152acceptance',
+    suffix: '.t152acceptance'
   });
-  expect(() => friAcceptanceBundle('shared')).toThrow('attempt identity');
 });

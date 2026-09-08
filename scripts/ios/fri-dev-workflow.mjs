@@ -7,7 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs';
-import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
+import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_DEV_APP_ID = 'com.foliole.ios.devworkflow';
@@ -38,26 +38,29 @@ function execute(command, args, options = {}) {
   }
 }
 
-export function buildFriDevWorkflowCommands({ derivedData, evidenceRoot, repoRoot }) {
+export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot }) {
+  const runnerArgs = [FRI_XCUITEST_RUNNER,
+    '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
+    '--scheme', 'AppPhysicalUITests',
+    '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
+    '--only-testing', FRI_DEV_TEST];
   return [
     { command: 'npm', args: ['run', 'android:web:build'], stage: 'companion-build' },
     { command: 'npx', args: ['cap', 'sync', 'ios'], stage: 'capacitor-ios-sync' },
     {
       command: 'bash',
-      args: [FRI_XCUITEST_RUNNER,
-        '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
-        '--scheme', 'AppPhysicalUITests',
-        '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
-        '--derived-data', derivedData,
-        '--only-testing', FRI_DEV_TEST],
+      args: [...runnerArgs, '--build-for-testing'],
       env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
-      stage: 'fri-dev-xcuitest'
+      stage: 'fri-dev-xcuitest-build'
     },
     {
-      command: 'xcrun',
-      args: ['devicectl', 'device', 'process', 'launch', '--terminate-existing',
-        '--device', FRI_COREDEVICE_ID, FRI_DEV_APP_ID],
-      stage: 'fri-dev-foreground-launch'
+      command: 'bash',
+      args: [...runnerArgs,
+        '--test-without-building',
+        '--keep-app-foreground', FRI_DEV_APP_ID,
+      ],
+      env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
+      stage: 'fri-dev-xcuitest-run'
     }
   ];
 }
@@ -73,9 +76,12 @@ export async function runFriDevWorkflow({
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await readiness();
-  const derivedData = prepareIosAcceptanceCache(repoRoot).derivedData;
-  for (const entry of buildFriDevWorkflowCommands({ derivedData, evidenceRoot, repoRoot })) {
-    run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
+  await retainFriDevelopmentApps({
+    evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
+    run
+  });
+  for (const entry of buildFriDevWorkflowCommands({ evidenceRoot, repoRoot })) {
+    await run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
   return { evidenceRoot, testIdentifier: FRI_DEV_TEST };
 }

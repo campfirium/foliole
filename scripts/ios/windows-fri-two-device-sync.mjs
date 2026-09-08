@@ -10,6 +10,7 @@ import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-w
 import {
   friAcceptanceBundle, runFriGroupIdentityPreflight, runFriSyncEventProjection
 } from './ios-acceptance-sync-event-projection.mjs';
+import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 import { writeFriTwoDeviceCellReceipt } from './fri-two-device-cell-receipt.mjs';
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
 
@@ -27,7 +28,12 @@ function executor(root, name) {
 export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const bundle = friAcceptanceBundle(process.env.FOLIOLE_T152_MATRIX_ATTEMPT);
+  const bundle = friAcceptanceBundle();
+  await retainFriDevelopmentApps({
+    evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
+    freshT152: true,
+    run: executor(evidenceRoot, 'fri-app-retention')
+  });
   const provider = startWindowsSyncGroupProvider({ action: 'two-device-sync-provider',
     execute: executor(evidenceRoot, 'windows-provider'), repoRoot });
   let providerSettled = false;
@@ -42,6 +48,7 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     const fri = await executor(evidenceRoot, 'fri-xcuitest')('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'join'),
+      '--keep-app-foreground', bundle.applicationId,
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch'
     ], { action: 'fri-two-device', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
@@ -54,6 +61,7 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     const conflictStage = await executor(evidenceRoot, 'fri-conflict')('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'conflict'),
+      '--keep-app-foreground', bundle.applicationId,
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testCompletesTwoDeviceConflictAndRestart'
     ], { action: 'fri-two-device-conflict', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },

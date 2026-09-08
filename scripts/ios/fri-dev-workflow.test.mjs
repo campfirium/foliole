@@ -20,14 +20,14 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 describe('Fri development workflow', () => {
   it('builds, syncs, operates, and reopens the current workspace on Fri', () => {
     const commands = buildFriDevWorkflowCommands({
-      derivedData: '/cache/DerivedData', evidenceRoot: '/evidence', repoRoot: '/repo'
+      evidenceRoot: '/evidence', repoRoot: '/repo'
     });
 
     expect(commands.map(({ command, stage }) => [command, stage])).toEqual([
       ['npm', 'companion-build'],
       ['npx', 'capacitor-ios-sync'],
-      ['bash', 'fri-dev-xcuitest'],
-      ['xcrun', 'fri-dev-foreground-launch']
+      ['bash', 'fri-dev-xcuitest-build'],
+      ['bash', 'fri-dev-xcuitest-run']
     ]);
     expect(commands[0].args).toEqual(['run', 'android:web:build']);
     expect(commands[1].args).toEqual(['cap', 'sync', 'ios']);
@@ -36,24 +36,31 @@ describe('Fri development workflow', () => {
       '--project', '/repo/ios/App/App.xcodeproj',
       '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', '/evidence/xcuitest',
-      '--derived-data', '/cache/DerivedData',
-      '--only-testing', FRI_DEV_TEST
+      '--only-testing', FRI_DEV_TEST,
+      '--build-for-testing'
+    ]);
+    expect(commands[3].args).toEqual([
+      FRI_XCUITEST_RUNNER,
+      '--project', '/repo/ios/App/App.xcodeproj',
+      '--scheme', 'AppPhysicalUITests',
+      '--artifacts-dir', '/evidence/xcuitest',
+      '--only-testing', FRI_DEV_TEST,
+      '--test-without-building',
+      '--keep-app-foreground', FRI_DEV_APP_ID,
     ]);
     expect(commands[2].args).not.toContain('--allow-wireless');
     expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
-    expect(commands[3].args).toEqual([
-      'devicectl', 'device', 'process', 'launch', '--terminate-existing',
-      '--device', 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7', FRI_DEV_APP_ID
-    ]);
+    expect(commands[3].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
   });
 
-  it('uses an isolated persistent app and never prepares or removes source or apps', () => {
+  it('uses an isolated persistent app and delegates bounded retention before testing', () => {
     const source = read('scripts/ios/fri-dev-workflow.mjs');
 
     expect(FRI_DEV_APP_ID).toBe('com.foliole.ios.devworkflow');
     expect(FRI_DEV_BUNDLE_SUFFIX).toBe('.devworkflow');
     expect(source).not.toMatch(/fetch|pull|reset|receipt|candidate/iu);
-    expect(source).not.toMatch(/uninstall|ordinaryjourney/iu);
+    expect(source).toContain('retainFriDevelopmentApps');
+    expect(source).not.toMatch(/ordinaryjourney/iu);
   });
 
   it('registers only the development operation test in the physical UI target', () => {
