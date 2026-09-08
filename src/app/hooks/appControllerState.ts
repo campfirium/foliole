@@ -211,7 +211,7 @@ export function useWorkspaceControllerState(
   const study = useWorkspaceStudyModeState({ isReviewSchedulerSettingsReady, nowIso, ws });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
-  const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState);
+  const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState, ws.nodesById);
   useActiveNodeReadingPositionRestore(runtime, ws.activeNodeId, ws.nodeViewById, isWorkspaceHydrated);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
   const { editorCtx, nav } = useWorkspaceEditorController(

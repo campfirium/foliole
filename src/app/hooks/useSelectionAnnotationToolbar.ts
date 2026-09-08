@@ -94,6 +94,7 @@ function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, even
     canRunCommands: true,
     existingHighlight: resolveExistingExcerptNode(node, {
       canAdjustRange: Boolean(highlightMatch.canAdjustRange),
+      locator: highlightMatch.locator,
       originalText: highlightMatch.originalText
     }),
     kind: 'selection',

@@ -243,6 +243,7 @@ it('opens an existing highlight toolbar from the clicked highlight position befo
   expect(result.current.contextMenu).toMatchObject({
     existingHighlight: expect.objectContaining({
       canAdjustRange: true,
+      locator: { from: 0, originalText: 'Welcome', to: 7 },
       nodeId: 'highlight-1',
       originalText: 'Welcome'
     }),

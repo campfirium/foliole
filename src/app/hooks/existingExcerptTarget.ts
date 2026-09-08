@@ -4,7 +4,11 @@ import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeT
 
 export function resolveExistingExcerptNode(
   node: Node,
-  options: { canAdjustRange: boolean; originalText?: string }
+  options: {
+    canAdjustRange: boolean;
+    locator?: { from: number; originalText: string; to: number };
+    originalText?: string;
+  }
 ) {
   const parsed = parseExcerptAnnotationContent({
     content: node.content,
@@ -14,6 +18,7 @@ export function resolveExistingExcerptNode(
     canAdjustRange: options.canAdjustRange,
     content: node.content,
     kind: node.anchorLink?.kind ?? 'highlight',
+    ...(options.locator ? { locator: options.locator } : {}),
     nodeId: node.id,
     note: parsed.note,
     originalText: options.originalText ?? parsed.body

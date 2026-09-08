@@ -35,13 +35,13 @@ function createProps(locator: { from: number; originalText: string; to: number }
   } as unknown as DocumentPanelSectionProps;
 }
 
-it('derives adjustable highlight locator from the current child node instead of the toolbar snapshot', () => {
+it('keeps the resolved toolbar locator when the stored child locator is stale', () => {
   const highlight = resolveAdjustableHighlight(createProps({ from: 0, originalText: 'Alpha', to: 5 }));
 
   expect(highlight).toEqual(expect.objectContaining({
-    locator: { from: 0, originalText: 'Alpha', to: 5 },
+    locator: { from: 6, originalText: 'old', to: 9 },
     nodeId: 'highlight-1',
-    originalText: 'Alpha'
+    originalText: 'old'
   }));
 });
 
@@ -50,8 +50,8 @@ it('derives adjustable cloze locator from the current child node', () => {
 
   expect(cloze).toEqual(expect.objectContaining({
     kind: 'cloze',
-    locator: { from: 6, originalText: 'Beta', to: 10 },
+    locator: { from: 6, originalText: 'old', to: 9 },
     nodeId: 'cloze-1',
-    originalText: 'Beta'
+    originalText: 'old'
   }));
 });

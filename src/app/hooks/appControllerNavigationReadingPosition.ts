@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { isPdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { resolveTextAnchorLinkInContent } from '../../features/nodes/model/textAnchorResolution';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -26,7 +27,8 @@ function toCollapsedSelection(viewState: NodeViewState) {
 export function useNavigationReadingPosition(
   runtime: ReturnType<typeof useAppRuntime>,
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'],
-  setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState']
+  setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'],
+  nodesById: Record<string, Node> = {}
 ) {
   const applyNavigationReadingPosition = useCallback(
     (result: NodeNavigationResult | null) => {
@@ -36,8 +38,12 @@ export function useNavigationReadingPosition(
       if (result.focusAnchor && isPdfAnchorLocator(result.focusAnchor.locator)) {
         return false;
       }
-      const nextViewState = result.focusAnchor
-        ? buildAnchorViewState(result.focusAnchor, nodeViewById[result.nodeId], 0, true)
+      const targetNode = nodesById[result.nodeId];
+      const focusAnchor = result.focusAnchor && targetNode
+        ? resolveTextAnchorLinkInContent(result.focusAnchor, targetNode.content)
+        : result.focusAnchor;
+      const nextViewState = focusAnchor
+        ? buildAnchorViewState(focusAnchor, nodeViewById[result.nodeId], 0, true)
         : nodeViewById[result.nodeId] ?? {
             scrollTop: 0,
             selection: null
@@ -47,7 +53,7 @@ export function useNavigationReadingPosition(
       }
       requestReadingPositionApply({
         nodeId: result.nodeId,
-        reason: result.focusAnchor ? 'anchor-navigation' : 'node-navigation',
+        reason: focusAnchor ? 'anchor-navigation' : 'node-navigation',
         runtime,
         scrollTop: nextViewState.scrollTop,
         selection: nextViewState.selection
@@ -56,11 +62,11 @@ export function useNavigationReadingPosition(
               to: nextViewState.selection.from
             }
           : null,
-        ...definedProps({ targetViewportMode: result.focusAnchor ? ('center' as const) : undefined })
+        ...definedProps({ targetViewportMode: focusAnchor ? ('center' as const) : undefined })
       });
       return true;
     },
-    [nodeViewById, runtime, setNodeViewState]
+    [nodeViewById, nodesById, runtime, setNodeViewState]
   );
 
   return {

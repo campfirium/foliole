@@ -41,3 +41,24 @@ it('keeps highlight toggle matching scoped to highlights', () => {
 
   expect(findExactLocatorHighlight('node-1', nodesById, { from: 6, originalText: 'Beta', to: 10 }, [])).toBeNull();
 });
+
+it('finds a visible highlight after its stored locator became stale', () => {
+  const nodesById = {
+    'node-1': { content: 'Inserted Alpha Beta', id: 'node-1', title: 'Topic' },
+    'highlight-1': {
+      anchorLink: { id: 'highlight-anchor', kind: 'highlight', locator: { from: 6, originalText: 'Beta', to: 10 } },
+      content: 'Beta',
+      id: 'highlight-1',
+      parentNodeId: 'node-1',
+      title: 'Beta'
+    }
+  } as unknown as Record<string, Node>;
+
+  expect(findTextAnchorAtPosition('node-1', nodesById, 15, [])).toEqual({
+    canAdjustRange: true,
+    kind: 'highlight',
+    locator: { from: 15, originalText: 'Beta', to: 19 },
+    nodeId: 'highlight-1',
+    originalText: 'Beta'
+  });
+});

@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getTextAnchorLocators, isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { resolveTextAnchorLocatorInContent } from '../../features/nodes/model/textAnchorResolution';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 export type NormalizedSelection = {
@@ -77,6 +78,7 @@ export function findTextAnchorAtPosition(
   trashedNodeIds: string[]
 ): LocatorHighlightMatch | null {
   const trashedNodeIdSet = new Set(trashedNodeIds);
+  const parentContent = nodesById[activeNodeId]?.content;
   const matches = Object.values(nodesById).flatMap((node) => {
     if (
       node.parentNodeId !== activeNodeId ||
@@ -88,6 +90,10 @@ export function findTextAnchorAtPosition(
     const kind: LocatorHighlightMatch['kind'] = node.anchorLink.kind;
     const canAdjustRange = isTextAnchorLocator(node.anchorLink.locator);
     return getTextAnchorLocators(node.anchorLink.locator)
+      .map((locator) => parentContent === undefined
+        ? locator
+        : resolveTextAnchorLocatorInContent(parentContent, locator))
+      .filter((locator): locator is NonNullable<typeof locator> => locator !== null)
       .filter((locator) => locator.from <= position && position < locator.to)
       .map((locator) => ({
         ...(canAdjustRange ? { canAdjustRange } : {}),

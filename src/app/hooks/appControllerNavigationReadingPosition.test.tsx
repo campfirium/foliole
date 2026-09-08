@@ -79,6 +79,33 @@ it('creates a one-shot centered restore command for text anchor navigation', () 
   });
 });
 
+it('centers a stale text anchor at its unique current location', () => {
+  const runtime = createRuntime();
+  const nodesById = {
+    'node-2': {
+      content: 'Inserted before needle after',
+      id: 'node-2'
+    }
+  } as never;
+  const view = renderHook(() => useNavigationReadingPosition(runtime as never, {}, vi.fn(), nodesById));
+
+  expect(
+    view.result.current.applyNavigationReadingPosition({
+      nodeId: 'node-2',
+      focusAnchor: {
+        id: 'hl-stale',
+        kind: 'highlight',
+        locator: { from: 88, originalText: 'needle', to: 94 }
+      }
+    })
+  ).toBe(true);
+  expect(runtime.readingPositionRestoreCommandRef.current.command).toMatchObject({
+    reason: 'anchor-navigation',
+    selection: { from: 16, to: 16 },
+    targetViewportMode: 'center'
+  });
+});
+
 it('creates one active-node restore command from persisted view state', () => {
   const runtime = createRuntime();
   const nodeViewById: Record<string, NodeViewState | undefined> = {

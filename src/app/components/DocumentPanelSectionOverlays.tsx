@@ -44,8 +44,8 @@ export function resolveAdjustableHighlight(props: DocumentPanelSectionProps) {
   return {
     ...existingHighlight,
     kind: existingHighlight.kind,
-    locator: node.anchorLink.locator,
-    originalText: node.anchorLink.locator.originalText
+    locator: existingHighlight.locator ?? node.anchorLink.locator,
+    originalText: existingHighlight.locator?.originalText ?? node.anchorLink.locator.originalText
   };
 }
 
