@@ -8,6 +8,9 @@ const EVENT_KEYS = new Set([
   'device_identity_key', 'occurred_at', 'result', 'run_id', 'started_at', 'status',
   'trigger_reason'
 ]);
+const VERSION_KEYS = new Set([
+  'content_hash', 'forks', 'is_current', 'object_id', 'parents', 'version_id'
+]);
 
 function projectionFiles(root) {
   return fs.readdirSync(root, { recursive: true, withFileTypes: true })
@@ -30,12 +33,22 @@ function loadProjection(root, buildIdentity, applicationId) {
     if (value?.build_identity !== buildIdentity
         || value.container_identity !== applicationId
         || !Array.isArray(value.events)) continue;
-    if (Object.keys(value).sort().join(',') !== 'build_identity,container_identity,events') {
+    if (Object.keys(value).sort().join(',') !==
+        'build_identity,conflict_versions,container_identity,events') {
       throw new Error('Fri acceptance projection exposed unsupported fields.');
+    }
+    if (!Array.isArray(value.conflict_versions)) {
+      throw new Error('Fri acceptance conflict version projection is missing.');
     }
     for (const event of value.events) {
       if (!Object.keys(event).every((key) => EVENT_KEYS.has(key))) {
         throw new Error('Fri sync event projection exposed unsupported fields.');
+      }
+    }
+    for (const version of value.conflict_versions) {
+      if (!Object.keys(version).every((key) => VERSION_KEYS.has(key))
+          || !Array.isArray(version.parents) || !Array.isArray(version.forks)) {
+        throw new Error('Fri conflict version projection exposed unsupported fields.');
       }
     }
     return { file, value };

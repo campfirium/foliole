@@ -12,11 +12,19 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func finishTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
+        pullTwoDeviceConflictAfterProviderConverges(in: app)
+        verifyTwoDeviceConflictAfterProviderConverges(in: app)
+    }
+
+    func pullTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
         openSyncSettings(in: app)
         tapButton(named: "Details", in: app, timeout: 30)
         tapButton(named: "Resume Sync", in: app, timeout: 30)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+    }
+
+    func verifyTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
         verifyConvergedConflictForks(in: app)
 
         app.terminate()

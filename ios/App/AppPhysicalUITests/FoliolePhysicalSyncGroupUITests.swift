@@ -86,11 +86,18 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-two-device-conflict-forked")
     }
 
-    func testFinishesTwoDeviceConflictAfterProviderConverges() throws {
+    func testPullsTwoDeviceConflictAfterProviderConverges() throws {
         XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
         let app = acceptanceApplication()
         app.launch()
-        finishTwoDeviceConflictAfterProviderConverges(in: app)
+        pullTwoDeviceConflictAfterProviderConverges(in: app)
+    }
+
+    func testVerifiesTwoDeviceConflictAfterProviderConverges() throws {
+        XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
+        let app = acceptanceApplication()
+        app.launch()
+        verifyTwoDeviceConflictAfterProviderConverges(in: app)
     }
 
     func testLocalNetworkDenialIsVisible() throws {
