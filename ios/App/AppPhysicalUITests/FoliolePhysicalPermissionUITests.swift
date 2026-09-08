@@ -1,5 +1,36 @@
 import XCTest
 
+extension XCTestCase {
+    func prepareRunnerLocalNetworkPermission() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let suffix = try XCTUnwrap(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"])
+        let endpoint = try XCTUnwrap(environment["FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL"])
+        let url = try XCTUnwrap(URL(string: endpoint + "/companion/discovery"))
+        XCUIApplication(bundleIdentifier:
+            "com.foliole.ios.physical-uitests\(suffix).xctrunner").activate()
+
+        let completed = expectation(description: "Runner local-network request")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForResource = 30
+        configuration.waitsForConnectivity = true
+        var requestError: Error?
+        URLSession(configuration: configuration).dataTask(with: url) { _, _, error in
+            requestError = error
+            completed.fulfill()
+        }.resume()
+
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.firstMatch
+        if alert.waitForExistence(timeout: 5) {
+            let allow = ["Allow", "允许"].lazy.map { alert.buttons[$0] }.first { $0.exists }
+            XCTAssertNotNil(allow, "Missing xctrunner Local Network allow button.")
+            allow?.tap()
+        }
+        wait(for: [completed], timeout: 30)
+        XCTAssertNil(requestError, "The xctrunner could not reach the Mac provider: \(String(describing: requestError))")
+    }
+}
+
 final class FoliolePhysicalPermissionUITests: XCTestCase {
     func testEnablesLocalNetworkPermissionInSettings() throws {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")

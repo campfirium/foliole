@@ -18,6 +18,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     }
 
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {
+        try prepareRunnerLocalNetworkPermission()
         let app = acceptanceApplication()
         app.launch()
 
