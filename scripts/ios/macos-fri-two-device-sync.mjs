@@ -64,7 +64,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   try {
     const prelaunch = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
       '--activate', '--terminate-existing', '--device', FRI_COREDEVICE_ID, '--timeout', '30',
-      bundle.applicationId, '--foliole-physical-acceptance',
+      bundle.applicationId, '--', '--foliole-physical-acceptance',
       '-AppleLanguages', '(en)', '-AppleLocale', 'en_US'], {
       action: 'fri-prelaunch', cwd: repoRoot, env: process.env,
       hardDeadlineMs: 60_000, host: 'ios-b', stage: 'fri-prelaunch' });
@@ -87,7 +87,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     await signals.waitFor('conflict-fork-ready');
     const conflictPrelaunch = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
       '--activate', '--terminate-existing', '--device', FRI_COREDEVICE_ID, '--timeout', '30',
-      bundle.applicationId, '--foliole-physical-acceptance',
+      bundle.applicationId, '--', '--foliole-physical-acceptance',
       '-AppleLanguages', '(en)', '-AppleLocale', 'en_US'], {
       action: 'fri-conflict-prelaunch', cwd: repoRoot, env: process.env,
       hardDeadlineMs: 60_000, host: 'ios-b', stage: 'fri-conflict-prelaunch' });
