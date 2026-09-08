@@ -1,6 +1,13 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func testPublishesTwoDeviceConflictFork() throws {
+        XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
+        let app = acceptanceApplication()
+        app.launch()
+        publishTwoDeviceConflictFork(in: app)
+    }
+
     func prepareTwoDeviceConflictFork(in app: XCUIApplication) {
         app.launch()
         openSyncSettings(in: app)
@@ -18,10 +25,17 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func pullTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
         openSyncSettings(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
+    }
+
+    func publishTwoDeviceConflictFork(in app: XCUIApplication) {
+        openSyncSettings(in: app)
         tapButton(named: "Details", in: app, timeout: 30)
         tapButton(named: "Resume Sync", in: app, timeout: 30)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
     }
 
     func verifyTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {

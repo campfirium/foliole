@@ -16,6 +16,7 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadConvergedDesktopSyncForks
 } from '../desktop/sync-group-conflict-action.mjs';
+import { createFriProviderStageRunner } from './fri-provider-stage.mjs';
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -31,16 +32,6 @@ function waitForStop() {
   return new Promise((resolve) => {
     process.once('SIGINT', () => resolve('SIGINT'));
     process.once('SIGTERM', () => resolve('SIGTERM'));
-  });
-}
-
-function abortable(promise, signal) {
-  if (!signal) return promise;
-  if (signal.aborted) return Promise.reject(signal.reason);
-  return new Promise((resolve, reject) => {
-    const aborted = () => reject(signal.reason);
-    signal.addEventListener('abort', aborted, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', aborted));
   });
 }
 
@@ -76,6 +67,9 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
   });
   let session = await openSession();
   const receiptPath = path.join(evidenceRoot, 'provider-receipt.json');
+  const runStage = createFriProviderStageRunner({
+    filePath: path.join(evidenceRoot, 'provider-stage-progress.jsonl'), signal: abortSignal
+  });
   try {
     const initialFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session }) : null;
@@ -95,20 +89,26 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       resultStatus: 'ready', serverStatus: initial.server_status };
     writeJson(receiptPath, ready); onState(ready);
     console.log(`[fri-sync-group-provider] ready receipt=${receiptPath}`);
-    const request = await abortable(
-      waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 }), abortSignal
-    );
-    await session.accept(request.request_id);
-    const accepted = await waitForDeviceCount(session, twoDevice ? 2 : 4);
-    const automaticFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',
-      evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session }) : null;
+    const request = await runStage('wait-for-device-request', () => (
+      waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 })
+    ), 10 * 60_000);
+    await runStage('accept-device-request', () => session.accept(request.request_id));
+    const accepted = await runStage('wait-for-device-count', () => (
+      waitForDeviceCount(session, twoDevice ? 2 : 4)
+    ));
+    const automaticFact = twoDevice ? await runStage('create-automatic-fact', () => (
+      createDesktopSyncGroupJourneyFact({ device: 'A',
+        evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session })
+    )) : null;
     const acceptedState = { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
       groupId: accepted.sync_group.group_id, groupTag: accepted.sync_group.group_tag,
       resultStatus: 'accepted' };
     writeJson(receiptPath, acceptedState); onState(acceptedState);
     console.log(`[fri-sync-group-provider] accepted request=${request.request_id}`);
-    const origins = await waitForJourneyOrigin(session, twoDevice ? 'B' : 'D', twoDevice ? 2 : 1);
+    const origins = await runStage('wait-for-fri-facts', () => (
+      waitForJourneyOrigin(session, twoDevice ? 'B' : 'D', twoDevice ? 2 : 1)
+    ), 5 * 60_000);
     let macosRestarted = false;
     let idempotent = false;
     let runs;
@@ -117,30 +117,44 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       const beforeRestart = await session.invoke('load_workspace_list_snapshot', {
         includePdfOpenings: false
       });
-      const automaticBeforeRestart = await waitForMacosAutomaticRun(session, beforeJoinRun?.run_id);
-      await session.invoke('pause_companion_sync');
-      await forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session });
+      const automaticBeforeRestart = await runStage('wait-for-automatic-before-restart', () => (
+        waitForMacosAutomaticRun(session, beforeJoinRun?.run_id)
+      ));
+      await runStage('pause-macos-sync', () => session.invoke('pause_companion_sync'));
+      await runStage('fork-macos-conflict', () => (
+        forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session })
+      ));
       const conflictReady = { groupId: accepted.sync_group.group_id,
         groupTag: accepted.sync_group.group_tag, resultStatus: 'conflict-fork-ready' };
       onState(conflictReady);
       console.log('[fri-sync-group-provider] conflict-fork-ready');
-      await waitForRelease();
-      await session.invoke('resume_companion_sync');
-      const manualBeforeRestart = await session.invoke('sync_companion_now');
-      conflict = await loadConvergedDesktopSyncForks({ nodeId: conflictSeed.nodeId, session });
-      await session.close();
-      session = await openSession();
-      const restarted = await session.load();
+      await runStage('wait-for-concurrent-release', waitForRelease, 15 * 60_000);
+      await runStage('resume-macos-sync', () => session.invoke('resume_companion_sync'));
+      const manualBeforeRestart = await runStage(
+        'publish-macos-fork', () => session.invoke('sync_companion_now')
+      );
+      conflict = await runStage('load-converged-conflict', () => (
+        loadConvergedDesktopSyncForks({ nodeId: conflictSeed.nodeId, session })
+      ));
+      const conflictConverged = { groupId: accepted.sync_group.group_id,
+        groupTag: accepted.sync_group.group_tag, resultStatus: 'automatic-converged' };
+      onState(conflictConverged);
+      console.log('[fri-sync-group-provider] automatic-converged origin=B');
+      await runStage('close-macos-before-restart', () => session.close());
+      session = await runStage('restart-macos-provider', openSession);
+      const restarted = await runStage('load-restarted-macos-provider', () => session.load());
       if (restarted.sync_group?.group_id !== accepted.sync_group.group_id) {
         throw new Error('Mac did not restore its Fri Sync Group.');
       }
-      const automaticAfterRestart = await waitForMacosAutomaticRun(
-        session, manualBeforeRestart?.run_id
+      const automaticAfterRestart = await runStage('wait-for-automatic-after-restart', () => (
+        waitForMacosAutomaticRun(session, manualBeforeRestart?.run_id)
+      ));
+      const manualAfterRestart = await runStage(
+        'sync-after-macos-restart', () => session.invoke('sync_companion_now')
       );
-      const manualAfterRestart = await session.invoke('sync_companion_now');
-      const afterRestart = await session.invoke('load_workspace_list_snapshot', {
-        includePdfOpenings: false
-      });
+      const afterRestart = await runStage('load-after-macos-restart', () => (
+        session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false })
+      ));
       if (Object.keys(afterRestart.nodesById).length !== Object.keys(beforeRestart.nodesById).length) {
         throw new Error('Repeated Mac and Fri sync was not idempotent.');
       }
@@ -156,8 +170,11 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       journeyFactIds: twoDevice ? [initialFact.factId, automaticFact.factId] : undefined,
       macosRestarted, conflict, runs,
       resultStatus: 'automatic-converged' };
-    writeJson(receiptPath, converged); onState(converged);
-    console.log(`[fri-sync-group-provider] automatic-converged origin=${twoDevice ? 'B' : 'D'}`);
+    writeJson(receiptPath, converged);
+    if (!twoDevice) {
+      onState(converged);
+      console.log('[fri-sync-group-provider] automatic-converged origin=D');
+    }
     const signal = await waitForRelease();
     const completed = { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
