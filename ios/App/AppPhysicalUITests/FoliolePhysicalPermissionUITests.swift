@@ -85,9 +85,23 @@ extension XCTestCase {
         appResult.tap()
         let labels = ["Local Network", "本地网络"]
         let toggle = labels.lazy.map { settings.switches[$0] }.first { $0.waitForExistence(timeout: 2) }
-        guard let toggle else { return XCTFail("The Local Network setting is unavailable on Fri.") }
-        if toggle.value as? String != "1" { toggle.tap() }
-        XCTAssertEqual(toggle.value as? String, "1", "Local Network access was not enabled.")
+        if let toggle {
+            if toggle.value as? String != "1" { toggle.tap() }
+            XCTAssertEqual(toggle.value as? String, "1", "Local Network access was not enabled.")
+        } else {
+            let wireless = settings.buttons.matching(
+                NSPredicate(format: "identifier ENDSWITH %@", ".wireless")
+            ).firstMatch
+            XCTAssertTrue(wireless.waitForExistence(timeout: 5),
+                          "The Wireless Data setting is unavailable on Fri.")
+            wireless.tap()
+            let fullAccessLabels = ["WLAN & Cellular Data", "Wi-Fi & Cellular Data",
+                                    "无线局域网与蜂窝网络"]
+            let fullAccess = fullAccessLabels.lazy.map { settings.buttons[$0] }
+                .first { $0.waitForExistence(timeout: 2) }
+            XCTAssertNotNil(fullAccess, "The full Wireless Data option is unavailable on Fri.")
+            fullAccess?.tap()
+        }
         let attachment = XCTAttachment(screenshot: settings.screenshot())
         attachment.name = "Fri-local-network-settings-enabled-\(displayName)"
         attachment.lifetime = .keepAlways
