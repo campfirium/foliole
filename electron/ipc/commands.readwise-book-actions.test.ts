@@ -11,6 +11,7 @@ const {
   openReadwiseBookDownload,
   previewReadwiseImportCleanup,
   previewReadwiseReaderImport,
+  refreshReadwiseApiScheduler,
   resetReadwiseBookImport,
   runReadwiseImportCleanup,
   runReadwiseReaderImport
@@ -29,6 +30,7 @@ const {
   openReadwiseBookDownload: vi.fn(),
   previewReadwiseImportCleanup: vi.fn(),
   previewReadwiseReaderImport: vi.fn(),
+  refreshReadwiseApiScheduler: vi.fn(),
   resetReadwiseBookImport: vi.fn(),
   runReadwiseImportCleanup: vi.fn(),
   runReadwiseReaderImport: vi.fn()
@@ -56,6 +58,7 @@ vi.mock('../import/readwiseReaderImportRun.js', () => ({
   cancelReadwiseReaderImport,
   runReadwiseReaderImport
 }));
+vi.mock('../import/readwiseApiScheduler.js', () => ({ refreshReadwiseApiScheduler }));
 vi.mock('../import/readwiseSyncPreview.js', () => ({ previewReadwiseReaderImport }));
 vi.mock('../import/readwiseImportCleanup.js', () => ({
   previewReadwiseImportCleanup,
@@ -218,6 +221,7 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
     settings: { readwiseRootPath: '/Readwise' },
     window: mockWindow
   });
+  expect(refreshReadwiseApiScheduler).toHaveBeenCalledTimes(1);
   expect(mockWindow.webContents.send).not.toHaveBeenCalled();
 });
 
