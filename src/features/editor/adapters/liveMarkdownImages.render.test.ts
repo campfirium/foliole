@@ -128,7 +128,12 @@ describe('live markdown image rendering basics', () => {
   it('shows an unavailable placeholder when an internal attachment image fails to load', async () => {
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
     const image = host.querySelector('.cm-md-image-element');
-    image?.dispatchEvent(new Event('error'));
+    expect(image).not.toBeNull();
+    image!.dispatchEvent(new Event('error'));
+    await waitFor(() => {
+      expect(new URL((image as HTMLImageElement).src).searchParams.get('retry')).toBe('1');
+    });
+    image!.dispatchEvent(new Event('error'));
 
     await expectUnavailableInternalImage(host);
 
