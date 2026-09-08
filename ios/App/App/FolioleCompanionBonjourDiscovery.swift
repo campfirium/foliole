@@ -136,7 +136,7 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
         guard let entry = services.first(where: { $0.value === sender }),
               let data = sender.txtRecordData() else { return }
         let txt = Self.decodeTXT(data)
-        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt) else { return }
+        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
         var candidate: [String: Any] = [candidateKey("endpointUrl"): endpoint, candidateKey("source"): "nsd"]
         candidate[candidateKey("protocolTxt")] = txt
         let change = results[entry.key] == nil ? "found" : "changed"
@@ -212,7 +212,7 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
 
     func netServiceDidResolveAddress(_ sender: NetService) {
         let txt = sender.txtRecordData().map(Self.decodeTXT) ?? [:]
-        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt) else { return }
+        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
         guard !results.contains(where: { $0[endpointKey] as? String == endpoint }) else { return }
         var candidate: [String: Any] = [endpointKey: endpoint, sourceKey: "nsd"]
         candidate[protocolTxtKey] = txt

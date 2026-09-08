@@ -14,14 +14,11 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertFalse(configuration.waitsForConnectivity)
     }
 
-    func testBonjourEndpointPrefersAdvertisedLanAddress() {
-        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredHost(
-            advertised: "192.168.0.10,198.18.0.1,169.254.84.134",
-            fallback: "desktop.local"
-        ), "192.168.0.10")
-        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredHost(
-            advertised: "169.254.84.134", fallback: "desktop.local."
-        ), "desktop.local.")
+    func testBonjourEndpointUsesResolvedServiceHost() {
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.resolvedHost(" desktop.local. "),
+                       "desktop.local")
+        XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(" . "))
+        XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(nil))
     }
 
     func testRefusesSignedRequestRedirects() throws {

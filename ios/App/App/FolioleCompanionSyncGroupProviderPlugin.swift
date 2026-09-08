@@ -184,7 +184,7 @@ final class FolioleCompanionBonjourServiceMonitor: NSObject, NetServiceDelegate 
         let txt = Self.decodeTXT(data)
         guard txt["group_id"] == groupId,
               txt["runtime_instance_id"] != localRuntimeId,
-              let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender, txt: txt)
+              let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender)
         else { return }
         let signature = "\(endpoint)|\(txt["facts_revision"] ?? "")"
         guard signatures[entry.key] != signature else { return }
