@@ -97,3 +97,10 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
   expect(appDelegate).toContain('application.isIdleTimerDisabled = true');
 });
+
+it('keeps the Mac provider available until the Fri consumer completes', () => {
+  const provider = read('scripts/ios/fri-sync-group-provider.mjs');
+
+  expect(provider).toContain('const signal = await waitForRelease();');
+  expect(provider).not.toContain("twoDevice ? 'consumer_complete' : await waitForRelease()");
+});

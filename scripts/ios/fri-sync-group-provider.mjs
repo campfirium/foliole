@@ -146,7 +146,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       resultStatus: 'automatic-converged' };
     writeJson(receiptPath, converged); onState(converged);
     console.log(`[fri-sync-group-provider] automatic-converged origin=${twoDevice ? 'B' : 'D'}`);
-    const signal = twoDevice ? 'consumer_complete' : await waitForRelease();
+    const signal = await waitForRelease();
     const completed = { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
       groupId: accepted.sync_group.group_id, groupTag: accepted.sync_group.group_tag,
