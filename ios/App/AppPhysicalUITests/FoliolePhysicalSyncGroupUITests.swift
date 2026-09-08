@@ -25,8 +25,6 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         if isTwoDeviceJourney {
             XCTAssertTrue(app.buttons["Connect to Sync Group"].waitForExistence(timeout: 30),
                           "The task-scoped Fri acceptance container was not fresh.")
-            captureFriFact(in: app)
-            openSyncSettings(in: app)
         } else {
             resetExistingSyncGroup(in: app)
         }
@@ -41,6 +39,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The accepted Sync Group was not activated on the physical iPhone."
         )
         enableAutomaticSync(in: app)
+        if isTwoDeviceJourney { captureFriFact(in: app) }
         openBrowse(in: app)
         waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C"], in: app)
         if isTwoDeviceJourney { waitForJourneyFactCount("A", count: 2, in: app) }
