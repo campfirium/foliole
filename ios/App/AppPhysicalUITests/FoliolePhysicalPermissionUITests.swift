@@ -34,6 +34,12 @@ extension XCTestCase {
 
     private func tryRunnerLanConnection(host: String, port: String,
                                         timeout: TimeInterval) -> Bool {
+        let triggerURL = URL(string: "http://\(host):\(port)/companion/discovery")!
+        let triggerConfiguration = URLSessionConfiguration.ephemeral
+        triggerConfiguration.waitsForConnectivity = true
+        let permissionTrigger = URLSession(configuration: triggerConfiguration)
+            .dataTask(with: triggerURL)
+        permissionTrigger.resume()
         let connected = expectation(description: "The Fri UI test runner reached the Mac LAN provider.")
         let connection = NWConnection(host: NWEndpoint.Host(host),
                                       port: NWEndpoint.Port(port)!, using: .tcp)
@@ -48,7 +54,7 @@ extension XCTestCase {
             let alert = springboard.alerts.firstMatch
             guard alert.waitForExistence(timeout: 5) else { break }
             let labels = ["Allow", "允许", "WLAN & Cellular Data", "Wi-Fi & Cellular Data",
-                          "无线局域网与蜂窝网络"]
+                          "无线局域网与蜂窝网络", "无线局域网与蜂窝数据"]
             let decision = labels.lazy.map { alert.buttons[$0] }.first { $0.exists }
             XCTAssertNotNil(decision, "Missing xctrunner network permission decision.")
             decision?.tap()
@@ -59,6 +65,7 @@ extension XCTestCase {
                            "The xctrunner network permission card did not close.")
         }
         let reached = XCTWaiter.wait(for: [connected], timeout: timeout) == .completed
+        permissionTrigger.cancel()
         connection.cancel()
         return reached
     }
