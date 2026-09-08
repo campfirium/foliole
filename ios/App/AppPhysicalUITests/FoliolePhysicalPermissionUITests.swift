@@ -96,8 +96,8 @@ extension XCTestCase {
                           "The Wireless Data setting is unavailable on Fri.")
             wireless.tap()
             let fullAccessLabels = ["WLAN & Cellular Data", "Wi-Fi & Cellular Data",
-                                    "无线局域网与蜂窝网络"]
-            let fullAccess = fullAccessLabels.lazy.map { settings.buttons[$0] }
+                                    "无线局域网与蜂窝网络", "无线局域网与蜂窝数据"]
+            let fullAccess = fullAccessLabels.lazy.map { settings.cells[$0] }
                 .first { $0.waitForExistence(timeout: 2) }
             XCTAssertNotNil(fullAccess, "The full Wireless Data option is unavailable on Fri.")
             fullAccess?.tap()
