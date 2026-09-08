@@ -44,8 +44,6 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   const execute = createActionExecutor({ logPath: path.join(evidenceRoot, 'fri-xcuitest.log'),
     progressPath: path.join(evidenceRoot, 'fri-xcuitest-progress.jsonl') });
   let fri;
-  let conflictReleaseStarted = false;
-  let conflictRelease = Promise.resolve();
   try {
     fri = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
@@ -61,22 +59,28 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: 'macos-fri-two-device' });
     if (fri.code !== 0) throw new Error('Fri physical two-Device XCUITest failed.');
     await signals.waitFor('conflict-fork-ready');
-    const conflictStage = await execute('bash', [FRI_RUNNER,
+    const conflictFork = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'conflict'),
       '--keep-app-foreground', bundle.applicationId,
       '--test-without-building',
-      '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testCompletesTwoDeviceConflictAndRestart'
+      '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testForksTwoDeviceConflict'
     ], { action: 'fri-two-device-conflict', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
-    onOutput: ({ stdout }) => {
-      if (conflictReleaseStarted || !stdout.includes('[foliole-fri] t152-conflict-fork-ready')) return;
-      conflictReleaseStarted = true;
-      conflictRelease = Promise.resolve(releaseProvider?.('consumer_complete'));
-    }, hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict' });
-    if (conflictStage.code !== 0) throw new Error('Fri conflict/restart XCUITest failed.');
-    await conflictRelease;
+    hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-fork' });
+    if (conflictFork.code !== 0) throw new Error('Fri conflict fork XCUITest failed.');
+    releaseProvider?.('consumer_complete');
     await signals.waitFor('automatic-converged');
+    const conflictFinish = await execute('bash', [FRI_RUNNER,
+      '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
+      '--artifacts-dir', path.join(friRoot, 'conflict-finish'),
+      '--keep-app-foreground', bundle.applicationId,
+      '--test-without-building',
+      '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testFinishesTwoDeviceConflictAfterProviderConverges'
+    ], { action: 'fri-two-device-conflict-finish', cwd: repoRoot, env: { ...process.env,
+      FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
+    hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-finish' });
+    if (conflictFinish.code !== 0) throw new Error('Fri conflict/restart XCUITest failed.');
     fri = { ...fri, syncEvents: await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,
       runnerArgs: ['--test-without-building'] }) };

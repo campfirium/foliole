@@ -59,6 +59,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_T152_TWO_DEVICE');
   expect(physicalTest).toContain('waitForJourneyFactCount("A", count: 2');
   expect(physicalTest).toContain('[foliole-fri] t152-conflict-fork-ready');
+  expect(physicalTest).toContain('testForksTwoDeviceConflict()');
+  expect(physicalTest).toContain('testFinishesTwoDeviceConflictAfterProviderConverges()');
   expect(physicalTest).toContain('"Pause Sync"');
   expect(physicalTest).toContain('"Resume Sync"');
   expect(physicalTest).toContain('verifyConvergedConflictForks(in: app)');

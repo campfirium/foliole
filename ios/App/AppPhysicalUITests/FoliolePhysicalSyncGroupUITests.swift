@@ -74,30 +74,23 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     func testCompletesTwoDeviceConflictAndRestart() throws {
         XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
         let app = acceptanceApplication()
-        app.launch()
-        openSyncSettings(in: app)
-        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
-                      "Fri did not retain the accepted attempt Sync Group.")
-        tapButton(named: "Details", in: app, timeout: 30)
-        tapButton(named: "Pause Sync", in: app, timeout: 30)
-        forkVisibleConflictSeed(in: app)
+        prepareTwoDeviceConflictFork(in: app)
         print("[foliole-fri] t152-conflict-fork-ready")
-        openSyncSettings(in: app)
-        tapButton(named: "Details", in: app, timeout: 30)
-        tapButton(named: "Resume Sync", in: app, timeout: 30)
-        openSyncSettings(in: app)
-        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        verifyConvergedConflictForks(in: app)
+        finishTwoDeviceConflictAfterProviderConverges(in: app)
+    }
 
-        app.terminate()
+    func testForksTwoDeviceConflict() throws {
+        XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
+        let app = acceptanceApplication()
+        prepareTwoDeviceConflictFork(in: app)
+        attachScreenshot(named: "Fri-two-device-conflict-forked")
+    }
+
+    func testFinishesTwoDeviceConflictAfterProviderConverges() throws {
+        XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
+        let app = acceptanceApplication()
         app.launch()
-        openSyncSettings(in: app)
-        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
-                      "Fri did not restore its attempt Sync Group after relaunch.")
-        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        openBrowse(in: app)
-        waitForJourneyFacts(["A", "B"], in: app)
-        attachScreenshot(named: "Fri-two-device-conflict-restored")
+        finishTwoDeviceConflictAfterProviderConverges(in: app)
     }
 
     func testLocalNetworkDenialIsVisible() throws {

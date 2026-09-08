@@ -1,6 +1,35 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func prepareTwoDeviceConflictFork(in app: XCUIApplication) {
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
+                      "Fri did not retain the accepted attempt Sync Group.")
+        tapButton(named: "Details", in: app, timeout: 30)
+        tapButton(named: "Pause Sync", in: app, timeout: 30)
+        forkVisibleConflictSeed(in: app)
+    }
+
+    func finishTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
+        openSyncSettings(in: app)
+        tapButton(named: "Details", in: app, timeout: 30)
+        tapButton(named: "Resume Sync", in: app, timeout: 30)
+        openSyncSettings(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        verifyConvergedConflictForks(in: app)
+
+        app.terminate()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
+                      "Fri did not restore its attempt Sync Group after relaunch.")
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        openBrowse(in: app)
+        waitForJourneyFacts(["A", "B"], in: app)
+        attachScreenshot(named: "Fri-two-device-conflict-restored")
+    }
+
     func triggerForegroundAutomaticSync(in app: XCUIApplication) {
         XCUIDevice.shared.press(.home)
         let backgroundInterval = expectation(description: "Fri foreground transition interval")
