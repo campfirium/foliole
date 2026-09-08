@@ -59,6 +59,7 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
     connectionRef: 'connection', document: documentFixture('')
   });
   expect(result.status).toBe('imported');
+  expect(prepareOriginal).toHaveBeenCalledWith(expect.objectContaining({ category: 'pdf' }));
   const row = openDatabaseConnection().driver.queryOne<{ content: string; remote_import_state_json: string; source_kind: string }>(
     `SELECT n.content, i.remote_import_state_json, i.source_kind FROM import_sources i
      JOIN nodes n ON n.id = i.latest_node_id WHERE i.remote_document_id = 'document-1'`
@@ -70,22 +71,18 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
   expect(persistOriginal).not.toHaveBeenCalled();
 });
 
-it('records a localized EPUB attachment result without persisting its signed URL', async () => {
-  const localized = {
-    attachmentId: 'hash', contentHash: 'hash', mimeType: 'application/epub+zip',
-    reason: null, sizeBytes: 32, status: 'localized' as const
-  };
-  prepareOriginal.mockResolvedValue({ bytes: new Uint8Array([1, 2, 3]), state: localized });
+it('never requests or persists an original file for API EPUB', async () => {
   await commitReadwiseApiDocument({
     config: { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' },
     connectionRef: 'connection', document: { ...documentFixture('Readable HTML'), category: 'epub' }
   });
-  expect(persistOriginal).toHaveBeenCalledWith(expect.objectContaining({ category: 'epub', state: localized }));
+  expect(prepareOriginal).not.toHaveBeenCalled();
+  expect(persistOriginal).not.toHaveBeenCalled();
   const row = openDatabaseConnection().driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'document-1'"
   );
   expect(row?.remote_import_state_json).not.toContain('amazonaws');
-  expect(JSON.parse(row?.remote_import_state_json ?? '{}').originalFile).toMatchObject({ attachmentId: 'hash', status: 'localized' });
+  expect(JSON.parse(row?.remote_import_state_json ?? '{}').originalFile).toBeNull();
 });
 
 function documentFixture(body: string): PreparedReadwiseApiDocument {

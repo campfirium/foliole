@@ -5,7 +5,6 @@ import {
   READWISE_API_IMPORT_STATE_VERSION,
   type ReadwiseApiAnnotationState
 } from '../../lib/core/readwise/readwiseApiImportState.js';
-import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import {
   hideReadwiseApiExternalDocument,
@@ -17,6 +16,12 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
+import { resolveReadwiseApiAnnotationStates } from './readwiseApiAnnotationState.js';
+import {
+  hasPersistedReadwiseApiEpubStructure,
+  materializeReadwiseApiEpub
+} from './readwiseApiEpubMaterialization.js';
+
 export interface ReadwiseApiMaterializationResult {
   annotationCount: number;
   documentId: string;
@@ -27,6 +32,7 @@ export function materializeReadwiseApiDocument(input: {
   config: ReadwiseReaderConfig;
   connectionRef: string;
   document: PreparedReadwiseApiDocument;
+  forceEpubStructure?: boolean;
   forceInbox?: boolean;
   importedAt?: string;
 }): ReadwiseApiMaterializationResult {
@@ -79,10 +85,12 @@ function materializeAvailableDocument(
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
   importedAt: string
 ): ReadwiseApiMaterializationResult {
-  const annotationStates = resolveAnnotationStates(input, existing, importedAt);
+  const annotationStates = input.forceEpubStructure ? [] : resolveReadwiseApiAnnotationStates(existing, importedAt);
   const newAnnotations = input.document.annotations.filter((annotation) =>
     !annotationStates.some((state) => state.remoteId === annotation.remoteId)
   );
+  const epubResult = materializeEpubIfStructured(input, existing, importedAt, annotationStates, newAnnotations);
+  if (epubResult) return epubResult;
   const prepared = prepareRecord(input, existing, importedAt);
   const materialized = newAnnotations.map((annotation) => ({
     content: annotation.content,
@@ -122,6 +130,30 @@ function materializeAvailableDocument(
   return { annotationCount: newAnnotations.length, documentId: input.document.id, status: 'imported' };
 }
 
+function materializeEpubIfStructured(
+  input: Parameters<typeof materializeReadwiseApiDocument>[0],
+  existing: ReturnType<typeof loadReadwiseApiImportSource>,
+  importedAt: string,
+  annotationStates: ReadwiseApiAnnotationState[],
+  newAnnotations: PreparedReadwiseApiDocument['annotations']
+) {
+  const canCreate = input.document.category === 'epub' && Boolean(input.document.epubStructure?.sections.length);
+  const alreadyStructured = Boolean(existing?.nodeId)
+    && hasPersistedReadwiseApiEpubStructure(existing?.nodeId ?? '');
+  if (!(canCreate && (!existing || input.forceEpubStructure)) && !alreadyStructured) return null;
+  return materializeReadwiseApiEpub({
+    annotationStates,
+    connectionRef: input.connectionRef,
+    document: input.document,
+    existingSourceFingerprint: existing?.sourceFingerprint ?? null,
+    importedAt,
+    newAnnotations,
+    previousState: existing?.state ?? null,
+    rebuildRoot: Boolean(existing && input.forceEpubStructure),
+    rootNodeId: existing?.nodeId ?? null
+  });
+}
+
 function prepareRecord(
   input: Parameters<typeof materializeReadwiseApiDocument>[0],
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
@@ -144,37 +176,6 @@ function prepareRecord(
   });
   if (existing) prepared.sourceFingerprint = existing.sourceFingerprint;
   return prepared;
-}
-
-function resolveAnnotationStates(
-  input: Parameters<typeof materializeReadwiseApiDocument>[0],
-  existing: ReturnType<typeof loadReadwiseApiImportSource>,
-  now: string
-) {
-  if (!existing) return [];
-  const stateById = new Map(existing.state.annotations.map((annotation) => [annotation.remoteId, annotation]));
-  return existing.annotations.map((binding) => {
-    const current = stateById.get(binding.remoteId);
-    const active = isNodeActive(binding.nodeId);
-    const fallback: ReadwiseApiAnnotationState = {
-      blockedAt: active ? null : now,
-      contentHash: 'legacy-binding',
-      kind: binding.kind,
-      nodeId: binding.nodeId,
-      parentRemoteId: null,
-      remoteId: binding.remoteId,
-      remoteStatus: 'unconfirmed',
-      sourceUpdatedAt: null
-    };
-    return current ?? fallback;
-  }).map((state) => isNodeActive(state.nodeId) || state.blockedAt
-    ? state : { ...state, blockedAt: now });
-}
-
-function isNodeActive(nodeId: string) {
-  return Boolean(openDatabaseConnection().driver.queryOne(
-    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]
-  ));
 }
 
 function saveState(

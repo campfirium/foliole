@@ -21,14 +21,14 @@ export async function commitReadwiseApiDocument(input: {
   dependencies?: ReadwiseApiFetchDependencies;
   document: PreparedReadwiseApiDocument;
 }) {
-  const isOriginalFile = input.document.category === 'pdf' || input.document.category === 'epub';
+  const isOriginalFile = input.document.category === 'pdf';
   const existingBefore = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const destination = existingBefore ? 'inbox' : resolveReadwiseImportDestination(
     input.config, input.document.annotations.length > 0
   );
   const prepared = isOriginalFile && destination === 'inbox' && existingBefore?.state.originalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
-      category: input.document.category as 'epub' | 'pdf',
+      category: 'pdf',
       ...(input.dependencies ? { dependencies: input.dependencies } : {}),
       documentId: input.document.id, hasHtmlBody: Boolean(input.document.body.trim())
     }) : null;
@@ -49,7 +49,7 @@ export async function commitReadwiseApiDocument(input: {
     try {
       await persistReadwiseApiOriginalFile({
         bytes: prepared.bytes,
-        category: input.document.category as 'epub' | 'pdf',
+        category: 'pdf',
         nodeId: existing.nodeId,
         state: prepared.state,
         title: input.document.title

@@ -87,12 +87,7 @@ it('refreshes an S3 URL without forwarding the token and persists one verified P
   )).toEqual({ availability: 'local', content_hash: prepared.state.contentHash });
 });
 
-it('keeps HTML with explicit reasons for unavailable, oversized, and invalid originals', async () => {
-  fetchRawSource.mockResolvedValueOnce({ category: 'epub', id: 'document-1', rawSourceUrl: null });
-  await expect(prepareReadwiseApiOriginalFile({
-    category: 'epub', documentId: 'document-1', hasHtmlBody: true
-  })).resolves.toMatchObject({ state: { reason: 'original_file_not_distributed', status: 'html_only' } });
-
+it('keeps HTML with explicit reasons for oversized and invalid PDF originals', async () => {
   fetchRawSource.mockResolvedValue({
     category: 'pdf', id: 'document-1', rawSourceUrl: 'https://bucket.s3.amazonaws.com/signed.pdf'
   });

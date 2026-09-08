@@ -12,7 +12,7 @@ import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from '../
 import { fetchReadwiseRawSourceDocument, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 
 const MAX_ORIGINAL_FILE_BYTES = 100 * 1024 * 1024;
-const MIME_BY_CATEGORY = { epub: 'application/epub+zip', pdf: 'application/pdf' } as const;
+const PDF_MIME = 'application/pdf';
 
 export interface PreparedReadwiseOriginalFile {
   bytes: Uint8Array | null;
@@ -20,7 +20,7 @@ export interface PreparedReadwiseOriginalFile {
 }
 
 export async function prepareReadwiseApiOriginalFile(input: {
-  category: 'epub' | 'pdf';
+  category: 'pdf';
   documentId: string;
   hasHtmlBody: boolean;
   dependencies?: ReadwiseApiFetchDependencies;
@@ -30,12 +30,12 @@ export async function prepareReadwiseApiOriginalFile(input: {
     if (!document?.rawSourceUrl || document.category !== input.category) {
       return degraded(input.hasHtmlBody, 'original_file_not_distributed');
     }
-    const bytes = await downloadOriginalFile(document.rawSourceUrl, input.category, input.dependencies);
+    const bytes = await downloadOriginalFile(document.rawSourceUrl, input.dependencies);
     const contentHash = createHash('sha256').update(bytes).digest('hex');
     return {
       bytes,
       state: {
-        attachmentId: contentHash, contentHash, mimeType: MIME_BY_CATEGORY[input.category], reason: null,
+        attachmentId: contentHash, contentHash, mimeType: PDF_MIME, reason: null,
         sizeBytes: bytes.byteLength, status: 'localized'
       }
     };
@@ -47,13 +47,12 @@ export async function prepareReadwiseApiOriginalFile(input: {
 
 export async function persistReadwiseApiOriginalFile(input: {
   bytes: Uint8Array;
-  category: 'epub' | 'pdf';
+  category: 'pdf';
   nodeId: string;
   state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>;
   title: string;
 }) {
-  const extension = input.category === 'pdf' ? '.pdf' : '.epub';
-  const originalName = `${safeFileStem(input.title)}${extension}`;
+  const originalName = `${safeFileStem(input.title)}.pdf`;
   const existing = findAttachmentRecordById(input.state.attachmentId);
   const storedName = existing?.originalName ?? originalName;
   const storagePath = resolveAttachmentStoragePath(input.state.attachmentId, undefined, storedName);
@@ -72,15 +71,12 @@ export async function persistReadwiseApiOriginalFile(input: {
     sourceHostName: null, storageKey: buildAttachmentStorageFileName(input.state.attachmentId, storedName)
   });
   createNodeAttachmentLink({ attachmentId: input.state.attachmentId, nodeId: input.nodeId, role: 'reference' });
-  if (input.category === 'pdf') {
-    markPdfAttachmentIndexPending(input.state.attachmentId);
-    enqueuePdfAttachmentIndexing(input.state.attachmentId);
-  }
+  markPdfAttachmentIndexPending(input.state.attachmentId);
+  enqueuePdfAttachmentIndexing(input.state.attachmentId);
 }
 
 async function downloadOriginalFile(
   initialUrl: string,
-  category: 'epub' | 'pdf',
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
   const fetchImpl = dependencies.fetchImpl ?? fetch;
@@ -96,13 +92,13 @@ async function downloadOriginalFile(
       continue;
     }
     if (!response.ok || !response.body) throw new Error(`original_file_http_${response.status}`);
-    validateDeclaredMime(response.headers.get('content-type'), category);
+    validateDeclaredMime(response.headers.get('content-type'));
     const declaredSize = Number(response.headers.get('content-length'));
     if (Number.isFinite(declaredSize) && declaredSize > MAX_ORIGINAL_FILE_BYTES) {
       throw new Error('original_file_too_large');
     }
     const bytes = await readBoundedBody(response.body, dependencies.signal);
-    validateFileBytes(bytes, category);
+    validateFileBytes(bytes);
     return bytes;
   }
   throw new Error('original_file_redirect_limit');
@@ -129,19 +125,15 @@ async function readBoundedBody(body: ReadableStream<Uint8Array>, signal?: AbortS
   return output;
 }
 
-function validateDeclaredMime(value: string | null, category: 'epub' | 'pdf') {
+function validateDeclaredMime(value: string | null) {
   const mime = value?.split(';')[0]?.trim().toLowerCase();
-  const allowed = category === 'pdf'
-    ? new Set(['application/pdf', 'application/octet-stream'])
-    : new Set(['application/epub+zip', 'application/zip', 'application/octet-stream']);
+  const allowed = new Set(['application/pdf', 'application/octet-stream']);
   if (mime && !allowed.has(mime)) throw new Error('original_file_mime_mismatch');
 }
 
-function validateFileBytes(bytes: Uint8Array, category: 'epub' | 'pdf') {
+function validateFileBytes(bytes: Uint8Array) {
   const prefix = Buffer.from(bytes.subarray(0, Math.min(bytes.length, 512)));
-  const valid = category === 'pdf'
-    ? prefix.subarray(0, 5).toString() === '%PDF-'
-    : prefix.subarray(0, 2).toString() === 'PK' && prefix.includes(Buffer.from('application/epub+zip'));
+  const valid = prefix.subarray(0, 5).toString() === '%PDF-';
   if (!valid) throw new Error('original_file_signature_mismatch');
 }
 

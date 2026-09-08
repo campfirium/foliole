@@ -83,8 +83,7 @@ function buildEntry(
   const externalChanged = hasReadwiseApiExternalDocumentChanged(connectionRef, document);
   const knownIds = new Set(existing?.annotations.map((annotation) => annotation.remoteId) ?? []);
   const hasNewAnnotations = document.annotations.some((annotation) => !knownIds.has(annotation.remoteId));
-  const canResolveOriginalFile = destination === 'inbox'
-    && (document.category === 'pdf' || document.category === 'epub');
+  const canResolveOriginalFile = destination === 'inbox' && document.category === 'pdf';
   const hasImportableContent = Boolean(document.body.trim()) || canResolveOriginalFile;
   const status = destination === 'off' ? 'off'
     : existing?.nodeDeleted ? 'blocked_deleted'

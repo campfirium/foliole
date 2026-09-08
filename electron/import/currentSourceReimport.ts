@@ -1,6 +1,9 @@
+import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { NativeDevReimportCurrentTopicSourceResult } from '../../lib/platform/nativeImportContract.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
+import { loadStagedReadwiseApiContracts } from '../database/readwiseApiImportState.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { processSearchIndexForKeepImportSource } from './keepImportIndexingProgress.js';
@@ -8,12 +11,60 @@ import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
 import { resolveKeepImportResultDetail, resolveKeepImportResultStatus } from './keepImportSourceUpdateState.js';
+import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import { resetReadwiseBookImportFromInventory } from './readwiseBookImportReset.js';
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
 import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
 import type { EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
 import { applyWatchedPreparedImportIdentity } from './watchedPreparedImportIdentity.js';
+
+async function reimportReadwiseApiEpubSource(
+  nodeId: string,
+  reimportedAt: string
+): Promise<NativeDevReimportCurrentTopicSourceResult | null> {
+  const source = openDatabaseConnection().driver.queryOne<{
+    remote_connection_ref: string;
+    remote_document_id: string;
+  }>(
+    `SELECT remote_connection_ref, remote_document_id FROM import_sources
+     WHERE latest_node_id = ? AND remote_provider = 'readwise' AND source_kind = 'html'
+       AND json_extract(remote_import_state_json, '$.metadata.category') = 'epub'`, [nodeId]
+  );
+  if (!source) return null;
+  const staged = loadStagedReadwiseApiContracts(source.remote_connection_ref);
+  const document = prepareReadwiseApiDocuments(staged.readerDocuments, staged.exportBooks)
+    .find((candidate) => candidate.id === source.remote_document_id);
+  if (document?.category !== 'epub' || !document.epubStructure?.sections.length) {
+    return {
+      detail: 'Refresh the Readwise preview before re-importing this EPUB.',
+      node_id: nodeId,
+      reimported_at: reimportedAt,
+      status: 'failed' as const
+    };
+  }
+  const result = materializeReadwiseApiDocument({
+    config: loadImportManagerSettings().readwiseReaderConfig,
+    connectionRef: source.remote_connection_ref,
+    document,
+    forceEpubStructure: true,
+    importedAt: reimportedAt
+  });
+  if (result.status === 'imported') {
+    return {
+      detail: 'Readwise API EPUB rebuilt from Reader HTML.',
+      node_id: nodeId,
+      reimported_at: reimportedAt,
+      status: 'reimported'
+    };
+  }
+  return {
+    detail: 'Readwise API EPUB re-import failed.',
+    node_id: null,
+    reimported_at: reimportedAt,
+    status: 'failed'
+  };
+}
 
 function isActiveReadwiseBooksSource(source: unknown): source is EnabledReadwiseBooksSource {
   const candidate = source as Partial<EnabledReadwiseBooksSource>;
@@ -141,6 +192,10 @@ async function reimportKeepImportTopicSource(nodeId: string, reimportedAt: strin
 
 export async function reimportCurrentTopicSource(nodeId: string): Promise<NativeDevReimportCurrentTopicSourceResult> {
   const reimportedAt = new Date().toISOString();
+  const readwiseApiResult = await reimportReadwiseApiEpubSource(nodeId, reimportedAt);
+  if (readwiseApiResult) {
+    return readwiseApiResult;
+  }
   const readwiseBookResult = await reimportReadwiseBookSource(nodeId, reimportedAt);
   if (readwiseBookResult) {
     return readwiseBookResult;

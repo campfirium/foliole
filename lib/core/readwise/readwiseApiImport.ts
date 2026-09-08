@@ -9,6 +9,10 @@ import {
   type ExportHighlightContract,
   type ReaderDocumentContract
 } from './readwiseApiContract.js';
+import {
+  prepareReadwiseApiEpubStructure,
+  type PreparedReadwiseApiEpubStructure
+} from './readwiseApiEpubStructure.js';
 
 const BODY_CATEGORIES = new Set(['article', 'email', 'epub', 'pdf', 'rss', 'tweet', 'video']);
 
@@ -27,6 +31,7 @@ export interface PreparedReadwiseApiDocument {
   body: string;
   category: Exclude<ReaderDocumentContract['category'], 'highlight' | 'note' | null>;
   degradedReason: string | null;
+  epubStructure?: PreparedReadwiseApiEpubStructure | null;
   id: string;
   metadata: ReadwiseApiSourceMetadata;
   title: string;
@@ -75,14 +80,18 @@ export function prepareReadwiseApiDocuments(
   return documents.flatMap((document): PreparedReadwiseApiDocument[] => {
     if (!document.category || !BODY_CATEGORIES.has(document.category)) return [];
     const converted = convertHtmlToMarkdownCompatible(document.htmlContent ?? '');
+    const epubStructure = document.category === 'epub'
+      ? prepareReadwiseApiEpubStructure(document.htmlContent ?? '')
+      : null;
     const title = document.title?.trim() || 'Untitled';
     return [{
       annotations: annotationsByDocument.get(document.id) ?? [],
       body: converted.content,
       category: document.category as PreparedReadwiseApiDocument['category'],
       degradedReason: converted.content.trim()
-        ? formatHtmlConversionDegradedReason(converted.warnings)
+        ? (epubStructure?.degradedReason ?? formatHtmlConversionDegradedReason(converted.warnings))
         : 'Readable body is unavailable; this source was not imported.',
+      epubStructure,
       id: document.id,
       metadata: {
         author: document.author,
@@ -135,6 +144,10 @@ function indexExportedHighlights(exportBooks: ExportBookContract[]) {
 
 export function stableReadwiseAnnotationNodeId(connectionRef: string, remoteId: string) {
   return `node-readwise-${sha256(`${connectionRef}\u001f${remoteId}`).slice(0, 32)}`;
+}
+
+export function stableReadwiseEpubNodeId(connectionRef: string, documentId: string, markerKey: string) {
+  return `node-epub-${sha256(`${connectionRef}\u001f${documentId}\u001f${markerKey}`).slice(0, 24)}`;
 }
 
 function sha256(value: string) {
