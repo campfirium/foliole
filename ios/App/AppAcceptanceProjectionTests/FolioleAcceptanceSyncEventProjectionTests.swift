@@ -4,7 +4,9 @@ import XCTest
 final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
     func testProjectsSyncEvents() throws {
         let bundle = try XCTUnwrap(Bundle.main.bundleIdentifier)
-        XCTAssertTrue(bundle.hasSuffix(".t152-acceptance"))
+        let suffix = try requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")
+        XCTAssertNotNil(suffix.range(of: #"^\.t[0-9]+$"#, options: .regularExpression))
+        XCTAssertEqual(bundle, "com.foliole.ios\(suffix)")
         let build = try XCTUnwrap(ProcessInfo.processInfo.environment["FOLIOLE_T152_BUILD_IDENTITY"])
         let databaseURL = try database()
         var connection: OpaquePointer?

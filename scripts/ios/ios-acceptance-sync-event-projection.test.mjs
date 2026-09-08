@@ -8,11 +8,16 @@ import { friAcceptanceBundle } from './ios-acceptance-sync-event-projection.mjs'
 
 it('runs the isolated signed projection target and accepts only its fixed fields', () => {
   const source = fs.readFileSync('scripts/ios/ios-acceptance-sync-event-projection.mjs', 'utf8');
+  const projectionTest = fs.readFileSync(
+    'ios/App/AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests.swift',
+    'utf8'
+  );
   expect(source).toContain('AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests');
   expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
   expect(source).toContain('value.container_identity !== applicationId');
-  expect(source).toContain('FolioleAcceptanceGroupDiscoveryTests/testFindsExpectedSyncGroup');
   expect(source).not.toMatch(/CapacitorDatabase|device copy|container_path|workgroup_key|endpoint/u);
+  expect(projectionTest).toContain('requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")');
+  expect(projectionTest).not.toContain('.t152-acceptance');
 });
 
 it('uses one fixed signed acceptance container for the task', () => {
