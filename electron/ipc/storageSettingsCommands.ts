@@ -62,6 +62,7 @@ import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
+import { handleReadwiseCutoverCommand } from './storageReadwiseCutoverCommands.js';
 import { handleSourceManagementCommand } from './storageSourceManagementCommands.js';
 import { handleWatchedFolderSettingsCommand } from './storageWatchedFolderCommands.js';
 import { handleSyncGroupCommand } from './syncGroupCommands.js';
@@ -126,6 +127,8 @@ function handleSourceSettingsCommand(command: string, args: Record<string, unkno
 }
 
 async function handleReadwiseHostCommand(command: string, args: Record<string, unknown>) {
+  const cutoverResult = await handleReadwiseCutoverCommand(command);
+  if (cutoverResult !== undefined) return cutoverResult;
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
   if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) {
     const result = activateReadwiseOnThisHost();
@@ -135,7 +138,11 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   if (command === NATIVE_COMMANDS.loadReadwiseApiConnection) return loadReadwiseApiConnection();
   if (command === NATIVE_COMMANDS.loadReadwiseApiScheduleStatus) return loadReadwiseApiScheduleStatus();
   if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) {
-    const result = await connectReadwiseApiFromClipboard({}, args.source_intent === 'replace' ? 'replace' : 'continue');
+    const result = await connectReadwiseApiFromClipboard(
+      {},
+      args.source_intent === 'replace' ? 'replace' : 'continue',
+      args.connection_intent === 'migration' ? 'migration' : 'normal'
+    );
     refreshReadwiseApiScheduler();
     return result;
   }

@@ -9,6 +9,8 @@ export const NATIVE_SOURCE_CONNECTION_COMMANDS = {
   loadReadwiseHostAssignment: 'load_readwise_host_assignment',
   loadReadwiseApiConnection: 'load_readwise_api_connection',
   loadReadwiseApiScheduleStatus: 'load_readwise_api_schedule_status',
+  previewReadwiseSourceCutover: 'preview_readwise_source_cutover',
+  runReadwiseSourceCutover: 'run_readwise_source_cutover',
   previewReadwiseIdentityBindings: 'preview_readwise_identity_bindings',
   confirmReadwiseIdentityBindings: 'confirm_readwise_identity_bindings',
   loadWatchedFolderBindings: 'load_watched_folder_bindings',

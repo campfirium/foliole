@@ -36,13 +36,19 @@ interface PreviewCache {
   createdAt: number;
 }
 
+export interface PreparedReadwiseIdentityBindings {
+  bindings: ConfirmedReadwiseIdentityBinding[];
+  conflictCount: number;
+  unmatchedCount: number;
+}
+
 const previews = new Map<string, PreviewCache>();
 
 export async function previewReadwiseIdentityBindings(options: {
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
 } = {}): Promise<NativeReadwiseIdentityBindingPreview> {
-  const blocked = readinessResult();
+  const blocked = readinessResult(false);
   if (blocked) return blocked;
   const settings = loadStoredReadwiseHostSettings();
   const remoteSource = loadReadwiseRemoteSource();
@@ -72,6 +78,31 @@ export async function previewReadwiseIdentityBindings(options: {
   }
 }
 
+export async function prepareReadwiseIdentityBindingsForCutover(options: {
+  fetchImpl?: typeof fetch;
+  minIntervalMs?: number;
+} = {}): Promise<PreparedReadwiseIdentityBindings> {
+  const blocked = readinessResult(true);
+  if (blocked) throw new Error(blocked.status);
+  const settings = loadStoredReadwiseHostSettings();
+  const remoteSource = loadReadwiseRemoteSource();
+  if (!remoteSource || !settings.apiConnection.secretRef) throw new Error('connection_missing');
+  const sources = await loadReadableSources(loadReadwiseHostAssignment().current_host_name);
+  const artifacts = await Promise.all(sources.map(readSourceArtifact));
+  const ids = [...new Set(artifacts.flatMap((item) => item.ids))];
+  const evidence = await fetchReadwiseIdentityEvidence({
+    ...options,
+    ids,
+    token: readReadwiseApiSecret(settings.apiConnection.secretRef)
+  });
+  const resolved = artifacts.map((artifact) => resolveBinding(artifact, evidence));
+  return {
+    bindings: resolved.flatMap((item) => item.binding ? [item.binding] : []),
+    conflictCount: resolved.filter((item) => item.reason === 'conflict').length,
+    unmatchedCount: resolved.filter((item) => !item.binding && item.reason !== 'conflict').length
+  };
+}
+
 export function confirmReadwiseIdentityBindingPreview(previewId: string): NativeReadwiseIdentityBindingResult {
   const preview = previews.get(previewId);
   previews.delete(previewId);
@@ -89,9 +120,11 @@ export function confirmReadwiseIdentityBindingPreview(previewId: string): Native
   }
 }
 
-function readinessResult(): NativeReadwiseIdentityBindingPreview | null {
+function readinessResult(allowFolderMode: boolean): NativeReadwiseIdentityBindingPreview | null {
   if (!loadReadwiseHostAssignment().is_active) return empty('not_active_host');
-  if (loadStoredReadwiseHostSettings().readwiseSourceMode !== 'api') return empty('source_mode_mismatch');
+  if (!allowFolderMode && loadStoredReadwiseHostSettings().readwiseSourceMode !== 'api') {
+    return empty('source_mode_mismatch');
+  }
   return isStoredReadwiseApiConnectionReady() ? null : empty('connection_missing');
 }
 

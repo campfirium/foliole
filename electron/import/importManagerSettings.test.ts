@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { createDefaultImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { saveJsonSetting } from '../database/settingsStore.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
 
@@ -232,4 +233,15 @@ it('normalizes legacy move handling payloads to keep when loading', () => {
       id: 'draft-import-source-101'
     })
   ]);
+});
+
+it('keeps API mode permanent after the workspace cutover', () => {
+  saveJsonSetting('readwise_source_cutover', {
+    completedAt: '2026-09-08T00:00:00.000Z', migratedCount: 12,
+    sourceHost: 'This Mac', unmatchedCount: 0, version: 1
+  });
+
+  const saved = saveImportManagerSettings({ ...IMPORT_MANAGER_SETTINGS_INPUT, readwiseSourceMode: 'folder' });
+  expect(saved.readwiseSourceMode).toBe('api');
+  expect(loadImportManagerSettings().readwiseSourceMode).toBe('api');
 });

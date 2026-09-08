@@ -15,7 +15,7 @@ import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-h
 
 import { expect, test } from './harness/fixtures';
 import type { DesktopSession } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { connectAndCutoverReadwiseApi, expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 const TEST_TOKEN = 't178-5-external-token';
@@ -87,9 +87,7 @@ async function installApiFixture(electronApp: ElectronApplication) {
 
 async function configureExternalImport(page: Page) {
   const settings = await openSettingsCategory(page, 'ReadwiseReader');
-  await settings.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
-  await settings.getByRole('button', { name: /^(Connect from clipboard|从剪贴板连接)$/ }).click();
-  await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
+  await connectAndCutoverReadwiseApi(page, settings);
   await settings.getByRole('radio', { name: /^(External|外部)$/ }).last().click();
   await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
   const preview = page.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });

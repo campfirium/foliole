@@ -9,7 +9,7 @@ import {
   saveReadwiseApiStagePage,
   type ReadwiseApiImportRunState
 } from '../database/readwiseApiImportState.js';
-import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
+import { canCurrentHostRunReadwise, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { saveReconnectRequired } from './readwiseApiConnection.js';
@@ -20,6 +20,7 @@ export const READWISE_READER_LIST_URL = 'https://readwise.io/api/v3/list/';
 export const READWISE_EXPORT_URL = 'https://readwise.io/api/v2/export/';
 
 export interface ReadwiseApiFetchDependencies {
+  allowFolderModeForCutover?: boolean;
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
   onPage?: (input: { phase: 'export' | 'reader'; recordCount: number }) => void;
@@ -31,7 +32,7 @@ export async function fetchReadwiseRawSourceDocument(
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
   const settings = loadStoredReadwiseHostSettings();
-  if (!canCurrentHostRunReadwise('api') || settings.apiConnection.state !== 'connected') {
+  if (!canRunApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
     throw new Error('readwise_api_import_not_ready');
   }
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
@@ -53,7 +54,7 @@ export async function fetchReadwiseApiImportRound(
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
   const settings = loadStoredReadwiseHostSettings();
-  if (!canCurrentHostRunReadwise('api') || settings.apiConnection.state !== 'connected') {
+  if (!canRunApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
     throw new Error('readwise_api_import_not_ready');
   }
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
@@ -78,11 +79,11 @@ async function fetchRemainingPages(
 ) {
   let run = initial;
   while (run.phase !== 'ready') {
-    assertEligible(dependencies.signal, run.connectionRef);
+    assertEligible(dependencies.signal, run.connectionRef, dependencies.allowFolderModeForCutover);
     const kind = run.phase;
     const url = buildPageUrl(run, kind);
     const payload = await request(url);
-    assertEligible(dependencies.signal, run.connectionRef);
+    assertEligible(dependencies.signal, run.connectionRef, dependencies.allowFolderModeForCutover);
     const values = Array.isArray(payload.results) ? payload.results : [];
     const items = kind === 'reader'
       ? values.map(normalizeReaderDocument).filter((item) => item !== null)
@@ -115,12 +116,12 @@ async function hydrateMissingReaderAncestors(
       .find((id): id is string => Boolean(id && !known.has(id) && !attempted.has(id)));
     if (!missing) return;
     attempted.add(missing);
-    assertEligible(dependencies.signal, connectionRef);
+    assertEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
     const url = new URL(READWISE_READER_LIST_URL);
     url.searchParams.set('id', missing);
     url.searchParams.set('withHtmlContent', 'true');
     const payload = await request(url);
-    assertEligible(dependencies.signal, connectionRef);
+    assertEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
     const items = (Array.isArray(payload.results) ? payload.results : [])
       .map(normalizeReaderDocument).filter((item) => item !== null);
     saveReadwiseApiStagePage({ connectionRef, cursor: null, items, kind: 'reader' });
@@ -149,7 +150,7 @@ function createRequest(token: string, dependencies: ReadwiseApiFetchDependencies
   return async (url: URL) => {
     const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
     if (delay) await abortableDelay(delay, dependencies.signal);
-    assertEligible(dependencies.signal, connectionRef);
+    assertEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
     lastRequestAt = Date.now();
     const requestSignal = dependencies.signal
       ? AbortSignal.any([AbortSignal.timeout(30_000), dependencies.signal])
@@ -174,7 +175,7 @@ function createRequest(token: string, dependencies: ReadwiseApiFetchDependencies
 
 export function createReadwiseApiRequest(dependencies: ReadwiseApiFetchDependencies = {}) {
   const settings = loadStoredReadwiseHostSettings();
-  if (!canCurrentHostRunReadwise('api') || settings.apiConnection.state !== 'connected') {
+  if (!canRunApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
     throw new Error('readwise_api_import_not_ready');
   }
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
@@ -184,12 +185,20 @@ export function createReadwiseApiRequest(dependencies: ReadwiseApiFetchDependenc
   );
 }
 
-function assertEligible(signal?: AbortSignal, connectionRef?: string) {
+function assertEligible(signal?: AbortSignal, connectionRef?: string, allowFolderMode = false) {
   if (signal?.aborted) throw new DOMException('Readwise import cancelled', 'AbortError');
-  if (!canCurrentHostRunReadwise('api')) throw new Error('readwise_execution_eligibility_lost');
+  if (!(canCurrentHostRunReadwise('api') || (allowFolderMode && loadReadwiseHostAssignment().is_active))) {
+    throw new Error('readwise_execution_eligibility_lost');
+  }
   if (connectionRef && loadReadwiseRemoteSource()?.connectionRef !== connectionRef) {
     throw new Error('readwise_execution_connection_changed');
   }
+}
+
+function canRunApiRequest(dependencies: ReadwiseApiFetchDependencies) {
+  return canCurrentHostRunReadwise('api') || (
+    dependencies.allowFolderModeForCutover === true && loadReadwiseHostAssignment().is_active
+  );
 }
 
 function abortableDelay(delay: number, signal?: AbortSignal) {

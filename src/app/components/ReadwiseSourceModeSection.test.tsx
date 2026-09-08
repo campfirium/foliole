@@ -5,102 +5,93 @@ import { LocalizationProvider } from '../../shared/localization/LocalizationProv
 
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 
-const runtime = vi.hoisted(() => ({
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  load: vi.fn()
-}));
-const identityRuntime = vi.hoisted(() => ({
-  confirm: vi.fn(),
-  preview: vi.fn()
-}));
+const runtime = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn(), load: vi.fn() }));
+const cutoverRuntime = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
+const confirmation = vi.hoisted(() => ({ request: vi.fn() }));
+const navigation = vi.hoisted(() => ({ open: vi.fn() }));
 
 vi.mock('../../shared/platform/import/readwiseApiConnectionRuntimeRepository', () => ({
   connectReadwiseApiFromClipboardInRuntime: runtime.connect,
   disconnectReadwiseApiInRuntime: runtime.disconnect,
   loadReadwiseApiConnectionFromRuntime: runtime.load
 }));
-vi.mock('../../shared/platform/import/readwiseIdentityRuntimeRepository', () => ({
-  confirmReadwiseIdentityBindingsInRuntime: identityRuntime.confirm,
-  previewReadwiseIdentityBindingsInRuntime: identityRuntime.preview
+vi.mock('../../shared/platform/import/readwiseSourceCutoverRuntimeRepository', () => ({
+  previewReadwiseSourceCutoverInRuntime: cutoverRuntime.preview,
+  runReadwiseSourceCutoverInRuntime: cutoverRuntime.run
+}));
+vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl: navigation.open }));
+vi.mock('../../shared/ui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/ui')>(),
+  requestAppConfirmation: confirmation.request
 }));
 
 beforeEach(() => {
-  runtime.connect.mockReset();
-  runtime.disconnect.mockReset();
-  runtime.load.mockReset();
+  vi.clearAllMocks();
   runtime.load.mockResolvedValue({ has_credential: false, state: 'disconnected', verified_at: null });
   runtime.connect.mockResolvedValue({
     connection: { has_credential: true, state: 'connected', verified_at: '2026-09-07T00:00:00.000Z' },
     status: 'connected'
   });
-  identityRuntime.preview.mockReset();
-  identityRuntime.confirm.mockReset();
-  identityRuntime.preview.mockResolvedValue({
-    annotation_count: 2,
-    candidate_count: 1,
-    conflict_count: 1,
-    preview_id: 'preview-1',
-    status: 'ready',
-    unmatched_count: 3
-  });
-  identityRuntime.confirm.mockResolvedValue({ annotation_count: 2, bound_count: 1, status: 'bound' });
+  cutoverRuntime.preview.mockResolvedValue({ status: 'ready', topic_count: 12 });
+  cutoverRuntime.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
+  confirmation.request.mockResolvedValue(true);
 });
 
-it('switches sources explicitly and connects without passing a token through the renderer', async () => {
-  const onChange = vi.fn();
-  render(
-    <LocalizationProvider>
-      <ReadwiseSourceModeSection mode="api" onChange={onChange} />
-    </LocalizationProvider>
-  );
+it('connects from the clipboard without exposing the token to the renderer', async () => {
+  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   expect(await screen.findByText('Not connected')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect from clipboard' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect Readwise' }));
   await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
-  expect(runtime.connect).toHaveBeenCalledWith();
+  expect(runtime.connect).toHaveBeenCalledWith('continue', 'normal');
 
-  fireEvent.change(screen.getByRole('combobox', { name: 'Readwise source mode' }), {
-    target: { value: 'folder' }
-  });
-  expect(onChange).toHaveBeenCalledWith('folder');
+  fireEvent.click(screen.getByRole('button', { name: 'Get Readwise token' }));
+  expect(navigation.open).toHaveBeenCalledWith('https://readwise.io/access_token');
 });
 
-it('shows retryable and secure-storage failures without exposing credential data', async () => {
+it('uses the same instruction for a missing or invalid token', async () => {
   runtime.connect.mockResolvedValue({
     connection: { has_credential: false, state: 'disconnected', verified_at: null },
-    retry_after_seconds: 9,
-    status: 'rate_limited'
+    status: 'token_missing'
   });
-  const { rerender } = render(
-    <LocalizationProvider>
-      <ReadwiseSourceModeSection mode="api" onChange={() => undefined} />
-    </LocalizationProvider>
-  );
-  fireEvent.click(await screen.findByRole('button', { name: 'Connect from clipboard' }));
-  expect(await screen.findByText('Readwise limited connection checks. Try again in 9 seconds.')).toBeInTheDocument();
+  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
-  runtime.load.mockResolvedValue({
-    has_credential: true, state: 'secure_storage_unavailable', verified_at: null
-  });
-  rerender(<LocalizationProvider><ReadwiseSourceModeSection mode="folder" onChange={() => undefined} /></LocalizationProvider>);
-  rerender(<LocalizationProvider><ReadwiseSourceModeSection mode="api" onChange={() => undefined} /></LocalizationProvider>);
-  expect(await screen.findByText('Secure storage unavailable')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
+  expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();
+  expect(runtime.connect).toHaveBeenCalledWith('continue', 'migration');
 });
 
-it('keeps remote identity binding read-only until the preview is confirmed', async () => {
-  render(
-    <LocalizationProvider>
-      <ReadwiseSourceModeSection mode="api" onChange={() => undefined} />
-    </LocalizationProvider>
+it('previews and performs the one-way cutover only after confirmation', async () => {
+  const onChange = vi.fn();
+  const onCutoverCompleted = vi.fn();
+  const { rerender } = render(
+    <LocalizationProvider><ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} /></LocalizationProvider>
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Check existing Topics' }));
-  expect(await screen.findByText('1 Topics can be reused; 3 could not be verified and 1 have conflicts.'))
-    .toBeInTheDocument();
-  expect(identityRuntime.confirm).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
+  expect(onChange).toHaveBeenCalledWith('api');
+  rerender(
+    <LocalizationProvider>
+      <ReadwiseSourceModeSection committedMode="folder" mode="api" onChange={onChange} onCutoverCompleted={onCutoverCompleted} />
+    </LocalizationProvider>
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Switch to API mode' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Reuse Topics' }));
-  expect(await screen.findByText('1 existing Topics will be reused for this Readwise source.')).toBeInTheDocument();
-  expect(identityRuntime.confirm).toHaveBeenCalledWith('preview-1');
+  await waitFor(() => expect(cutoverRuntime.run).toHaveBeenCalledTimes(1));
+  expect(confirmation.request).toHaveBeenCalledWith(expect.objectContaining({
+    confirmLabel: 'Switch and migrate',
+    description: expect.arrayContaining(['12 Topics were imported through the current Obsidian relay folders on this device.'])
+  }));
+  expect(onCutoverCompleted).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText('10 Topics were migrated; 2 unmatched Topics remain as local content.')).toBeInTheDocument();
+});
+
+it('locks the source selector after the API cutover', async () => {
+  const onChange = vi.fn();
+  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={onChange} /></LocalizationProvider>);
+
+  const folderMode = await screen.findByRole('radio', { name: 'Obsidian relay import' });
+  expect(folderMode).toBeDisabled();
+  fireEvent.click(folderMode);
+  expect(onChange).not.toHaveBeenCalled();
 });

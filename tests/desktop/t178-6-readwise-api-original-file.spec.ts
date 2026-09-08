@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { ElectronApplication, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { connectAndCutoverReadwiseApi, expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
   type T178AcceptanceSession
@@ -48,9 +48,7 @@ async function installFixture(desktopApp: ElectronApplication) {
 async function configureAndImport(session: T178AcceptanceSession) {
   await expectWorkspaceShell(session.firstWindow);
   const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-  await settings.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
-  await settings.getByRole('button', { name: /^(Connect from clipboard|从剪贴板连接)$/ }).click();
-  await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
+  await connectAndCutoverReadwiseApi(session.firstWindow, settings);
   await settings.getByRole('radio', { name: /^(Inbox|收件箱)$/ }).last().click();
   await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
   const preview = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });

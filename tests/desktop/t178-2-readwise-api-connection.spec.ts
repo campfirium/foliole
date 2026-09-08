@@ -14,7 +14,7 @@ import { prepareMacosHiddenElectronRuntime } from '../../scripts/desktop/macos-h
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { connectAndCutoverReadwiseApi, expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 const AUTH_URL = 'https://readwise.io/api/v2/auth/';
@@ -154,14 +154,12 @@ test('connects, restores, disconnects, and hides API controls on a non-active Ho
   try {
     first = await fixture.launch();
     const dialog = await openReadwiseSettings(first);
-    await dialog.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
+    await installAuthFixture(first.electronApp);
+    await connectAndCutoverReadwiseApi(first.firstWindow, dialog);
     await expect.poll(() => first!.firstWindow.evaluate(async () => (
       await globalThis.window?.electronAPI?.invoke('load_import_manager_settings')
     )?.readwiseSourceMode)).toBe('api');
 
-    await installAuthFixture(first.electronApp);
-    await dialog.getByRole('button', { name: /^(Connect from clipboard|从剪贴板连接)$/ }).click();
-    await expect(dialog.getByText(/^(Connected|已连接)$/)).toBeVisible();
     expect(await first.electronApp.evaluate(() => (
       globalThis as typeof globalThis & { __t178AuthCalls?: number }
     ).__t178AuthCalls)).toBe(1);
@@ -189,7 +187,7 @@ test('connects, restores, disconnects, and hides API controls on a non-active Ho
       name: /^(Switch to this host|切换到此主机)$/
     })).toBeVisible();
     await expect(remoteDialog.getByRole('button', {
-      name: /^(Connect from clipboard|从剪贴板连接)$/
+      name: /^(Connect Readwise|连接 Readwise)$/
     })).toHaveCount(0);
     await capture(remoteDialog, testInfo, 't178-2-readwise-api-non-active-host');
   } finally {

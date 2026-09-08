@@ -10,6 +10,7 @@ import {
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import type {
   NativeReadwiseApiConnectionResult,
+  NativeReadwiseConnectionIntent,
   NativeReadwiseSourceIntent
 } from '../../lib/platform/nativeReadwiseApiConnectionContract.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
@@ -110,11 +111,14 @@ export function loadReadwiseApiConnection() {
 
 export async function connectReadwiseApiFromClipboard(
   dependencies: ConnectionDependencies = {},
-  sourceIntent: NativeReadwiseSourceIntent = 'continue'
+  sourceIntent: NativeReadwiseSourceIntent = 'continue',
+  connectionIntent: NativeReadwiseConnectionIntent = 'normal'
 ): Promise<NativeReadwiseApiConnectionResult> {
   if (!loadReadwiseHostAssignment().is_active) return result('not_active_host');
   const settings = loadStoredReadwiseHostSettings();
-  if (settings.readwiseSourceMode !== 'api') return result('source_mode_mismatch');
+  if (settings.readwiseSourceMode !== 'api' && connectionIntent !== 'migration') {
+    return result('source_mode_mismatch');
+  }
   try {
     ensureSecureStorageBackend('Readwise API token');
   } catch {

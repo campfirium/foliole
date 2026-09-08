@@ -8,6 +8,7 @@ import { loadStoredReadwiseHostSettings, isStoredReadwiseApiConnectionReady } fr
 import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadCurrentHostDesktopSources } from './desktopSources.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
+import { loadReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const READWISE_ACTIVE_HOST_KEY = 'readwise_active_host';
@@ -74,10 +75,11 @@ export function activateReadwiseOnThisHost() {
 }
 
 export function canCurrentHostRunReadwise(
-  mode: 'api' | 'folder' = loadStoredReadwiseHostSettings().readwiseSourceMode
+  mode: 'api' | 'folder' = loadReadwiseSourceCutover() ? 'api' : loadStoredReadwiseHostSettings().readwiseSourceMode
 ) {
   if (!loadReadwiseHostAssignment().is_active) return false;
-  if (loadStoredReadwiseHostSettings().readwiseSourceMode !== mode) return false;
+  const effectiveMode = loadReadwiseSourceCutover() ? 'api' : loadStoredReadwiseHostSettings().readwiseSourceMode;
+  if (effectiveMode !== mode) return false;
   if (mode === 'api') return isStoredReadwiseApiConnectionReady();
   const sources = loadCurrentHostDesktopSources('readwise').filter((source) => {
       try { return (JSON.parse(source.type_settings_json) as Record<string, unknown>).keepState === 'enabled'; }

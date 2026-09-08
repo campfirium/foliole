@@ -141,3 +141,17 @@ it('uses API readiness instead of folder readiness in explicit API mode', async 
   apiState.ready = false;
   expect(canCurrentHostRunReadwise()).toBe(true);
 });
+
+it('lets the workspace cutover override a stale folder mode on this Host', () => {
+  saveJsonSetting('readwise_source_cutover', {
+    completedAt: '2026-09-08T00:00:00.000Z',
+    migratedCount: 12,
+    sourceHost: 'This Mac',
+    unmatchedCount: 0,
+    version: 1
+  });
+  apiState.mode = 'folder';
+  apiState.ready = true;
+
+  expect(canCurrentHostRunReadwise()).toBe(true);
+});

@@ -30,6 +30,10 @@ import type {
   NativeReadwiseIdentityBindingPreview,
   NativeReadwiseIdentityBindingResult
 } from './nativeReadwiseIdentityContract.js';
+import type {
+  NativeReadwiseSourceCutoverPreview,
+  NativeReadwiseSourceCutoverResult
+} from './nativeReadwiseSourceCutoverContract.js';
 
 export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.loadReadwiseApiConnection]: {
@@ -41,8 +45,16 @@ export type NativeReadwiseCommandMap = {
     result: NativeReadwiseApiScheduleStatus;
   };
   [NATIVE_COMMANDS.connectReadwiseApiFromClipboard]: {
-    args: { source_intent?: 'continue' | 'replace' } | undefined;
+    args: { connection_intent?: 'migration' | 'normal'; source_intent?: 'continue' | 'replace' } | undefined;
     result: NativeReadwiseApiConnectionResult;
+  };
+  [NATIVE_COMMANDS.previewReadwiseSourceCutover]: {
+    args: undefined;
+    result: NativeReadwiseSourceCutoverPreview;
+  };
+  [NATIVE_COMMANDS.runReadwiseSourceCutover]: {
+    args: undefined;
+    result: NativeReadwiseSourceCutoverResult;
   };
   [NATIVE_COMMANDS.disconnectReadwiseApi]: {
     args: undefined;

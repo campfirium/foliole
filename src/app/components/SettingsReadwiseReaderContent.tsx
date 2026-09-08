@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
 import type {
   ReadwiseReaderConfig,
@@ -90,9 +92,41 @@ function ReadwiseApiSettingsContent(props: {
   );
 }
 
+function ReadwiseSelectedModeContent(props: {
+  cleanup: ReturnType<typeof useReadwiseCleanup>;
+  committedMode: ReadwiseSourceMode;
+  reconcile: ReturnType<typeof useReadwiseRemoteReconcile>;
+  settings: SettingsReadwiseReaderContentProps;
+  setup: ReturnType<typeof useReadwiseSetupController>;
+  sourceMode: ReadwiseSourceMode;
+}) {
+  if (props.sourceMode === 'api') {
+    return props.committedMode === 'api'
+      ? <ReadwiseApiSettingsContent reconcile={props.reconcile} settings={props.settings} setup={props.setup} />
+      : <ReadwiseBehaviorSection draft={props.setup.draft} />;
+  }
+  return (
+    <ReadwiseFolderSettingsSections
+      canPreview={props.setup.canPreview}
+      draft={props.setup.draft}
+      integrationEnabled={props.setup.integrationEnabled}
+      cleanupDisabled={props.cleanup.cleanupDisabled}
+      onCleanup={() => void props.cleanup.openCleanupDialog()}
+      onChangeIntegration={props.setup.handleChangeIntegration}
+      onCheck={props.setup.handleCheck}
+      onSync={() => void props.setup.handleRunSync()}
+      syncStatus={props.setup.manualSyncStatus}
+      syncDisabled={props.setup.syncDisabled}
+      syncIsRunning={props.setup.syncIsRunning}
+    />
+  );
+}
+
 function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
-  const sourceMode = props.readwiseSourceMode ?? 'folder';
+  const committedMode = props.readwiseSourceMode ?? 'folder';
+  const [sourceMode, setSourceMode] = useState(committedMode);
+  useEffect(() => setSourceMode(committedMode), [committedMode]);
   const cleanup = useReadwiseCleanup({
     onCleanupComplete: () => saveDisabledReadwiseSetup(props, setup.draft),
     ...definedProps({
@@ -107,24 +141,23 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
 
   return (
     <>
-      <ReadwiseSourceModeSection mode={sourceMode} onChange={props.onChangeSourceMode ?? (() => undefined)} />
-      {sourceMode === 'folder' ? (
-        <ReadwiseFolderSettingsSections
-          canPreview={setup.canPreview}
-          draft={setup.draft}
-          integrationEnabled={setup.integrationEnabled}
-          cleanupDisabled={cleanup.cleanupDisabled}
-          onCleanup={() => void cleanup.openCleanupDialog()}
-          onChangeIntegration={setup.handleChangeIntegration}
-          onCheck={setup.handleCheck}
-          onSync={() => void setup.handleRunSync()}
-          syncStatus={setup.manualSyncStatus}
-          syncDisabled={setup.syncDisabled}
-          syncIsRunning={setup.syncIsRunning}
-        />
-      ) : (
-        <ReadwiseApiSettingsContent reconcile={reconcile} settings={props} setup={setup} />
-      )}
+      <ReadwiseSourceModeSection
+        committedMode={committedMode}
+        mode={sourceMode}
+        onChange={setSourceMode}
+        onCutoverCompleted={() => {
+          setSourceMode('api');
+          props.onChangeSourceMode?.('api');
+        }}
+      />
+      <ReadwiseSelectedModeContent
+        cleanup={cleanup}
+        committedMode={committedMode}
+        reconcile={reconcile}
+        settings={props}
+        setup={setup}
+        sourceMode={sourceMode}
+      />
       <ReadwiseSyncPreviewDialog
         error={setup.syncError}
         isCancelling={setup.isCancellingSync}

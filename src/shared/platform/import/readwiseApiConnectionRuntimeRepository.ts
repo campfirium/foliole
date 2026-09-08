@@ -18,10 +18,14 @@ export async function loadReadwiseApiConnectionFromRuntime() {
 }
 
 export async function connectReadwiseApiFromClipboardInRuntime(
-  sourceIntent: 'continue' | 'replace' = 'continue'
+  sourceIntent: 'continue' | 'replace' = 'continue',
+  connectionIntent: 'migration' | 'normal' = 'normal'
 ): Promise<NativeReadwiseApiConnectionResult> {
   const invoke = getRuntimeInvoke();
-  return invoke ? invoke(NATIVE_COMMANDS.connectReadwiseApiFromClipboard, { source_intent: sourceIntent }) : {
+  return invoke ? invoke(NATIVE_COMMANDS.connectReadwiseApiFromClipboard, {
+    connection_intent: connectionIntent,
+    source_intent: sourceIntent
+  }) : {
     connection: DISCONNECTED,
     status: 'connection_failed'
   };

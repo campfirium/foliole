@@ -99,6 +99,16 @@ it('blocks folder mode before reading the clipboard or sending a request', async
   expect(fetchImpl).not.toHaveBeenCalled();
 });
 
+it('allows an explicit migration connection without committing API mode first', async () => {
+  state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'folder' };
+  const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'continue', 'migration'))
+    .resolves.toMatchObject({ status: 'connected' });
+  expect(clipboardRead).toHaveBeenCalledTimes(1);
+  expect(state.settings).toMatchObject({ readwiseSourceMode: 'folder' });
+});
+
 it('reports auth rejection and rate limits without storing the attempted token', async () => {
   const rejected = await connectReadwiseApiFromClipboard({
     fetchImpl: vi.fn(async () => new Response(null, { status: 401 }))

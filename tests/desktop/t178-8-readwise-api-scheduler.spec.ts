@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { ElectronApplication, Locator, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { connectAndCutoverReadwiseApi, expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
   type T178AcceptanceSession
@@ -117,8 +117,7 @@ test('schedules only after first success and stops stale work on disconnect', as
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await expectWorkspaceShell(session.firstWindow);
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await settings.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
-    await settings.getByRole('button', { name: /^(Connect from clipboard|从剪贴板连接)$/ }).click();
+    await connectAndCutoverReadwiseApi(session.firstWindow, settings);
     await settings.getByLabel(/^(Sync frequency|同步频率)$/).selectOption('weekly');
     await settings.getByRole('radio', { name: /^(Inbox|收件箱)$/ }).last().click();
     await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();

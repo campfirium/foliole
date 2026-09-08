@@ -25,3 +25,4 @@ export interface NativeReadwiseApiConnectionResult {
 }
 
 export type NativeReadwiseSourceIntent = 'continue' | 'replace';
+export type NativeReadwiseConnectionIntent = 'migration' | 'normal';

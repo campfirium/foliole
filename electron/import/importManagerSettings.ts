@@ -13,6 +13,7 @@ import {
   hydrateWatchedImportManagerSources,
   upsertWatchedImportManagerSources
 } from '../database/desktopSources.js';
+import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 import {
   hydrateCurrentHostReadwiseSources,
   saveCurrentHostReadwiseSources
@@ -65,7 +66,7 @@ export function loadImportManagerSettings(): ImportManagerSettings {
     ...globalSettings,
     readwiseReaderConfig: hostSettings.readwiseReaderConfig,
     readwiseRootPath: hostSettings.readwiseRootPath,
-    readwiseSourceMode: hostSettings.readwiseSourceMode,
+    readwiseSourceMode: loadReadwiseSourceCutover() ? 'api' : hostSettings.readwiseSourceMode,
     readwiseSources: hydrateCurrentHostReadwiseSources(globalSettings.readwiseSources)
   };
 }
@@ -83,6 +84,8 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       : applyReadwiseRootPath(current.readwiseSources, readwiseRootPath),
     updatedAt: new Date().toISOString()
   });
+  const hasReadwiseSourceCutover = Boolean(loadReadwiseSourceCutover());
+  if (hasReadwiseSourceCutover) normalized = { ...normalized, readwiseSourceMode: 'api' };
   assertSafeImportManagerPaths(normalized);
   openDatabaseConnection().driver.transaction((driver) => {
     normalized = {
@@ -106,7 +109,7 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       ...currentHostSettings,
       readwiseReaderConfig: normalized.readwiseReaderConfig,
       readwiseRootPath: normalized.readwiseRootPath,
-      readwiseSourceMode: normalized.readwiseSourceMode,
+      readwiseSourceMode: hasReadwiseSourceCutover ? 'api' : normalized.readwiseSourceMode,
       updatedAt: normalized.updatedAt
     }), normalized.updatedAt);
   });

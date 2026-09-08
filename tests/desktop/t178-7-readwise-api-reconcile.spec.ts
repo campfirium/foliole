@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { ElectronApplication, Locator, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { connectAndCutoverReadwiseApi, expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
   type T178AcceptanceSession
@@ -87,14 +87,12 @@ test('reconciles complete remote sets, keeps incomplete sets unconfirmed, and pr
       await installFixture(session.electronApp);
       await expectWorkspaceShell(session.firstWindow);
       const importSettings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-      await importSettings.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
-      await importSettings.getByRole('button', { name: /^(Connect from clipboard|从剪贴板连接)$/ }).click();
+      await connectAndCutoverReadwiseApi(session.firstWindow, importSettings);
       await importSettings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
       const preview = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
       await preview.getByRole('button', { name: /^(Import|导入)$/ }).click();
       await expect(preview).toHaveCount(0);
       const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-      await settings.getByLabel(/^(Readwise source mode|Readwise 来源模式)$/).selectOption('api');
 
       await setMode(session.electronApp, 'deleted');
       await settings.getByRole('button', { name: /^(Reconcile status|对账远程状态)$/ }).click();
