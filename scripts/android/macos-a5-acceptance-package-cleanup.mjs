@@ -8,7 +8,7 @@ async function removeUserPackage(args, packageId, options) {
   if (uninstall.code === 0) return;
   const userUninstall = await args.execute(args.paths.adb,
     ['-s', args.serial, 'shell', 'pm', 'uninstall', '--user', '0', packageId], options);
-  if (userUninstall.code === 0 && /success/iu.test(String(userUninstall.output))) return;
+  if (/success|not installed for 0|unknown package/iu.test(String(userUninstall.output))) return;
   const installed = await args.execute(args.paths.adb,
     ['-s', args.serial, 'shell', 'pm', 'path', '--user', '0', packageId], options);
   if (installed.code === 0 && !String(installed.output).includes('package:')) return;

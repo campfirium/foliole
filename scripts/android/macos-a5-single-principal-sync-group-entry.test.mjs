@@ -48,6 +48,19 @@ it('uses the user package manager when MIUI rejects the ordinary uninstall', asy
     'com.foliole.android.acceptance']);
 });
 
+it('accepts the package manager proof that a package is absent for user zero', async () => {
+  const execute = async (_command, args) => {
+    if (args[2] === 'uninstall') return { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' };
+    if (args.includes('--user') && args.includes('uninstall')) {
+      return { code: 1, output: 'Failure [not installed for 0]' };
+    }
+    return { code: 0, output: '' };
+  };
+  await expect(removeA5AcceptanceApplication({
+    execute, paths: { adb: 'adb' }, serial: 'a5'
+  })).resolves.toBeUndefined();
+});
+
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
   const source = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-sync-group-entry.mjs', 'utf8'
