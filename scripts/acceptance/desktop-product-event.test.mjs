@@ -63,20 +63,22 @@ it('waits for a product-visible sync conflict after an applied workspace event',
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 100 })).resolves.toHaveLength(1);
 });
 
-it('matches a product-visible text alternative for one node', async () => {
+it('matches both concurrent content forks for one product node', async () => {
   const page = { evaluate: vi.fn(async (callback, args) => {
     const previous = globalThis.electronAPI;
     globalThis.electronAPI = { invoke: async () => ({
-      kind: 'sync_alternative', source_node_id: 'node-1'
+      content: 'Fri conflict fork\nDesktop fork macos', nodeId: 'node-1'
     }), onWorkspaceSyncApplied: () => () => undefined };
     try { return await callback(args); }
     finally { globalThis.electronAPI = previous; }
   }) };
-  await expect(waitForDesktopProductState(page, { command: 'load_node_text_alternative_preview',
-    commandArgs: { node_id: 'node-1' },
-    condition: { kind: 'node-text-alternative', nodeId: 'node-1' },
+  await expect(waitForDesktopProductState(page, { command: 'load_node_document',
+    commandArgs: { nodeId: 'node-1' }, condition: {
+      fragments: ['Fri conflict fork', 'Desktop fork macos'],
+      kind: 'node-content-includes', nodeId: 'node-1'
+    },
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 100 })).resolves.toMatchObject({
-    source_node_id: 'node-1'
+    nodeId: 'node-1'
   });
 });
 

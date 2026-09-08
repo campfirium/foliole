@@ -33,7 +33,7 @@ extension FoliolePhysicalSyncGroupUITests {
         }
     }
 
-    func verifyVisibleConflictAlternative(in app: XCUIApplication) {
+    func verifyConvergedConflictForks(in app: XCUIApplication) {
         openBrowse(in: app)
         let topic = app.buttons.matching(
             NSPredicate(format: "label BEGINSWITH %@", "Open topic T152 conflict t152-conflict-")
@@ -41,10 +41,13 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(topic.waitForExistence(timeout: 120),
                       "Fri did not retain the converged conflict topic.")
         topic.tap()
-        revealReadingChrome(in: app)
-        tapButton(named: "View another text version", in: app, timeout: 120)
-        XCTAssertTrue(app.staticTexts["Another text version"].waitForExistence(timeout: 30),
-                      "Fri did not expose the concurrent text alternative.")
+        for text in ["Fri conflict fork", "Desktop fork macos"] {
+            let fork = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", text)
+            ).firstMatch
+            XCTAssertTrue(fork.waitForExistence(timeout: 120),
+                          "Fri did not retain concurrent content: \(text)")
+        }
     }
 
     func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {

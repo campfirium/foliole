@@ -77,18 +77,19 @@ export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
   return { conflictCount: conflicts.length, nodeId, silentOverwrite: false, visible: true };
 }
 
-export async function loadVisibleDesktopSyncAlternative({ nodeId, session }) {
-  const alternative = await session.waitForState({
-    command: 'load_node_text_alternative_preview',
-    commandArgs: { node_id: nodeId },
-    condition: { kind: 'node-text-alternative', nodeId },
+export async function loadConvergedDesktopSyncForks({ nodeId, session }) {
+  const fragments = ['Fri conflict fork', 'Desktop fork macos'];
+  const document = await session.waitForState({
+    command: 'load_node_document',
+    commandArgs: { nodeId },
+    condition: { fragments, kind: 'node-content-includes', nodeId },
     eventName: 'onWorkspaceSyncApplied',
     timeoutMs: 2 * 60_000
   });
-  if (!alternative || alternative.source_node_id !== nodeId) {
-    throw new Error('The product did not expose the concurrent text alternative.');
+  if (!fragments.every((fragment) => String(document?.content).includes(fragment))) {
+    throw new Error('The product did not retain both concurrent content forks.');
   }
-  return { conflictCount: 1, nodeId, resolution: 'text-alternative',
+  return { conflictCount: 0, nodeId, resolution: 'merged-content',
     silentOverwrite: false, visible: true };
 }
 

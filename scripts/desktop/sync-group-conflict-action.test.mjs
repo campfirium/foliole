@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflict,
-  loadVisibleDesktopSyncAlternative, loadVisibleDesktopSyncConflictCopy
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadConvergedDesktopSyncForks,
+  loadVisibleDesktopSyncConflict, loadVisibleDesktopSyncConflictCopy
 } from './sync-group-conflict-action.mjs';
 
 it('creates and forks one business object only through product commands', async () => {
@@ -55,14 +55,16 @@ it('waits for the applied sync event before accepting a product conflict', async
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 
-it('accepts a product-visible text alternative for the exact object', async () => {
+it('accepts both concurrent content forks on the exact product object', async () => {
   const waitForState = vi.fn(async () => ({
-    kind: 'sync_alternative', source_node_id: 'node'
+    content: 'Fri conflict fork\nDesktop fork macos', nodeId: 'node'
   }));
-  await expect(loadVisibleDesktopSyncAlternative({ nodeId: 'node', session: { waitForState } }))
-    .resolves.toMatchObject({ resolution: 'text-alternative', silentOverwrite: false, visible: true });
-  expect(waitForState).toHaveBeenCalledWith({ command: 'load_node_text_alternative_preview',
-    commandArgs: { node_id: 'node' }, condition: { kind: 'node-text-alternative', nodeId: 'node' },
+  await expect(loadConvergedDesktopSyncForks({ nodeId: 'node', session: { waitForState } }))
+    .resolves.toMatchObject({ resolution: 'merged-content', silentOverwrite: false, visible: true });
+  expect(waitForState).toHaveBeenCalledWith({ command: 'load_node_document',
+    commandArgs: { nodeId: 'node' }, condition: { fragments: [
+      'Fri conflict fork', 'Desktop fork macos'
+    ], kind: 'node-content-includes', nodeId: 'node' },
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 

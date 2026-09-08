@@ -87,7 +87,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         tapButton(named: "Resume Sync", in: app, timeout: 30)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        verifyVisibleConflictAlternative(in: app)
+        verifyConvergedConflictForks(in: app)
 
         app.terminate()
         app.launch()

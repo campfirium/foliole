@@ -104,9 +104,9 @@ export async function waitForDesktopProductState(page, {
       if (condition.kind === 'sync-conflict-count') {
         return Array.isArray(value) && value.length >= condition.count;
       }
-      if (condition.kind === 'node-text-alternative') {
-        return value?.source_node_id === condition.nodeId
-          && value?.kind === 'sync_alternative';
+      if (condition.kind === 'node-content-includes') {
+        return value?.nodeId === condition.nodeId
+          && condition.fragments.every((fragment) => String(value?.content).includes(fragment));
       }
       throw new Error(`Unsupported desktop product condition: ${condition.kind}`);
     };
