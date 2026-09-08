@@ -32,6 +32,12 @@ interface ImageLocalizationOptions {
   layoutLargeImages?: boolean;
 }
 
+interface ImageLocalizationContextOptions {
+  bypassFailureCache?: boolean;
+  deadlineAt?: number;
+  fetchAttempts?: number;
+}
+
 function isRemoteImageUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -73,6 +79,8 @@ export function linkLocalizedImagesToNode(nodeId: string, attachmentIds: string[
 export class ImageLocalizationContext {
   private readonly resultByUrl = new Map<string, Promise<LocalizedImage | null>>();
   private readonly degradedByUrl = new Map<string, string>();
+
+  constructor(private readonly options: ImageLocalizationContextOptions = {}) {}
 
   async localizeMarkdown(markdown: string, options: ImageLocalizationOptions = {}): Promise<ImageLocalizationResult> {
     const matches = collectRemoteMarkdownImages(markdown);
@@ -122,7 +130,7 @@ export class ImageLocalizationContext {
   }
 
   private async importRemoteImage(sourceUrl: string): Promise<LocalizedImage | null> {
-    const fetched = await fetchRemoteImageResource(sourceUrl);
+    const fetched = await this.fetchRemoteImage(sourceUrl);
     if (fetched.status === 'error') {
       this.degradedByUrl.set(sourceUrl, fetched.error.status === 'error' ? fetched.error.message : 'The remote image could not be imported.');
       return null;
@@ -143,4 +151,33 @@ export class ImageLocalizationContext {
       size: readImageIntrinsicSize(fetched.resource.bytes)
     };
   }
+
+  private async fetchRemoteImage(sourceUrl: string) {
+    if (this.deadlineExpired()) return imageLocalizationBudgetError(sourceUrl);
+    const attempts = Math.max(1, Math.floor(this.options.fetchAttempts ?? 1));
+    let result = await fetchRemoteImageResource(sourceUrl, {
+      bypassFailureCache: Boolean(this.options.bypassFailureCache)
+    });
+    for (let attempt = 1; attempt < attempts && result.status === 'error'; attempt += 1) {
+      if (this.deadlineExpired()) break;
+      result = await fetchRemoteImageResource(sourceUrl, { bypassFailureCache: true });
+    }
+    return result;
+  }
+
+  private deadlineExpired() {
+    return this.options.deadlineAt !== undefined && Date.now() >= this.options.deadlineAt;
+  }
+}
+
+function imageLocalizationBudgetError(sourceUrl: string) {
+  return {
+    error: {
+      error_code: 'download_failed' as const,
+      message: 'The image localization budget was exhausted.',
+      source_path: sourceUrl,
+      status: 'error' as const
+    },
+    status: 'error' as const
+  };
 }

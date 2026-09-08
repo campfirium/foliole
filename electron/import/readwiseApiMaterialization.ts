@@ -17,6 +17,7 @@ import {
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
 import { resolveReadwiseApiAnnotationStates } from './readwiseApiAnnotationState.js';
+import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 import {
   hasPersistedReadwiseApiEpubStructure,
   materializeReadwiseApiEpub
@@ -35,6 +36,7 @@ export function materializeReadwiseApiDocument(input: {
   forceEpubStructure?: boolean;
   forceInbox?: boolean;
   importedAt?: string;
+  preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
 }): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
@@ -78,6 +80,21 @@ export function materializeReadwiseApiDocument(input: {
     hideReadwiseApiExternalDocument(input.connectionRef, input.document.id, importedAt);
   }
   return materialized;
+}
+
+export function shouldPrepareReadwiseApiEpubImages(input: {
+  config: ReadwiseReaderConfig;
+  connectionRef: string;
+  document: PreparedReadwiseApiDocument;
+  forceEpubStructure?: boolean;
+  forceInbox?: boolean;
+}) {
+  if (input.document.category !== 'epub' || !input.document.epubStructure?.sections.length) return false;
+  const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
+  const destination = input.forceInbox || existing
+    ? 'inbox'
+    : resolveReadwiseImportDestination(input.config, input.document.annotations.length > 0);
+  return destination === 'inbox' && (!existing || Boolean(input.forceEpubStructure));
 }
 
 function materializeAvailableDocument(
@@ -149,6 +166,7 @@ function materializeEpubIfStructured(
     importedAt,
     newAnnotations,
     previousState: existing?.state ?? null,
+    preparedImages: input.preparedEpubImages,
     rebuildRoot: Boolean(existing && input.forceEpubStructure),
     rootNodeId: existing?.nodeId ?? null
   });

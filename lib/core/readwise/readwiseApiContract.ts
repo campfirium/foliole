@@ -9,6 +9,7 @@ export interface ReaderDocumentContract {
   category: ReaderCategory | null;
   htmlContent: string | null;
   id: string;
+  imageUrl: string | null;
   notes: string | null;
   parentId: string | null;
   rawSourceUrl: string | null;
@@ -45,6 +46,7 @@ export function normalizeReaderDocument(value: unknown): ReaderDocumentContract 
     category: isReaderCategory(category) ? category : null,
     htmlContent: text(row.html_content),
     id,
+    imageUrl: safeHttpUrl(row.image_url),
     notes: text(row.notes),
     parentId: text(row.parent_id),
     rawSourceUrl: safeRawSourceUrl(row.raw_source_url),

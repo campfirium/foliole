@@ -30,6 +30,8 @@ const largePngBytes = new Uint8Array([
 ]);
 
 beforeEach(() => {
+  mocks.fetchRemoteImageResource.mockReset();
+  mocks.importImageAttachmentResource.mockReset();
   mocks.fetchRemoteImageResource.mockResolvedValue({
     resource: {
       bytes: largePngBytes,
@@ -54,4 +56,30 @@ it('turns localized large inline images into independent blocks', async () => {
     degradedMessages: [],
     text: 'Lead\n\n![](asset://attachment-large-image.png)\n\ntrailing'
   });
+});
+
+it('bypasses the failure cache and retries once for import-time localization', async () => {
+  mocks.fetchRemoteImageResource
+    .mockResolvedValueOnce({
+      error: { error_code: 'download_failed', message: 'Temporary failure', source_path: 'source', status: 'error' },
+      status: 'error'
+    })
+    .mockResolvedValueOnce({
+      resource: {
+        bytes: largePngBytes,
+        mimeType: 'image/png',
+        originalName: 'image.png',
+        sourceUrl: 'https://cdn.example.com/image.png'
+      },
+      status: 'ready'
+    });
+  const context = new ImageLocalizationContext({ bypassFailureCache: true, fetchAttempts: 2 });
+
+  const result = await context.localizeMarkdown('![](https://cdn.example.com/image.png)');
+
+  expect(result.text).toContain('asset://attachment-large-image.png');
+  expect(mocks.fetchRemoteImageResource).toHaveBeenNthCalledWith(1,
+    'https://cdn.example.com/image.png', { bypassFailureCache: true });
+  expect(mocks.fetchRemoteImageResource).toHaveBeenNthCalledWith(2,
+    'https://cdn.example.com/image.png', { bypassFailureCache: true });
 });

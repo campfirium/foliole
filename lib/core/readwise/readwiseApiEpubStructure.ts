@@ -28,19 +28,21 @@ export interface PreparedReadwiseApiEpubSection {
 
 export interface PreparedReadwiseApiEpubStructure {
   degradedReason: string | null;
+  imageCount: number;
   markerCount: number;
   rootBody: string;
   sections: PreparedReadwiseApiEpubSection[];
 }
 
 export function prepareReadwiseApiEpubStructure(html: string): PreparedReadwiseApiEpubStructure {
-  const markers = deduplicateMarkers(collectMarkers(html));
-  if (markers.length === 0) return missingMarkers();
+  const collected = collectDocumentFacts(html);
+  const markers = deduplicateMarkers(collected.markers);
+  if (markers.length === 0) return missingMarkers(collected.imageCount);
   const tokenPrefix = `FOLIOLERWEPUBTOC${sha256(html).slice(0, 12)}MARK`;
   const injected = injectMarkerTokens(html, markers, tokenPrefix);
   const converted = convertHtmlToMarkdownCompatible(injected);
   const parts = splitAtTokens(converted.content, markers.length, tokenPrefix);
-  if (!parts) return missingMarkers();
+  if (!parts) return missingMarkers(collected.imageCount);
   const sections = markers.flatMap((marker, index): PreparedReadwiseApiEpubSection[] => {
     const content = parts[index + 1]?.trim() ?? '';
     if (!content) return [];
@@ -51,18 +53,20 @@ export function prepareReadwiseApiEpubStructure(html: string): PreparedReadwiseA
       title: marker.title ?? readableMarkdownTitle(content) ?? `Untitled section ${index + 1}`
     }];
   });
-  if (sections.length === 0) return missingMarkers();
+  if (sections.length === 0) return missingMarkers(collected.imageCount);
   return {
     degradedReason: formatHtmlConversionDegradedReason(converted.warnings),
+    imageCount: collected.imageCount,
     markerCount: markers.length,
     rootBody: parts[0]?.trim() ?? '',
     sections
   };
 }
 
-function collectMarkers(html: string) {
+function collectDocumentFacts(html: string) {
   const document = parse(html, { sourceCodeLocationInfo: true });
   const markers: LocatedMarker[] = [];
+  let imageCount = 0;
   let textOffset = 0;
   const visit = (node: HtmlNode, path: string) => {
     if (node.nodeName === '#text') {
@@ -71,6 +75,7 @@ function collectMarkers(html: string) {
     }
     if (!('childNodes' in node)) return;
     if ('tagName' in node) {
+      if (node.tagName === 'img') imageCount += 1;
       const attribute = node.attrs.find((item) => item.name === 'data-rw-epub-toc');
       const location = node.sourceCodeLocation as { startTag?: { startOffset?: number } } | undefined;
       const startOffset = location?.startTag?.startOffset;
@@ -88,7 +93,7 @@ function collectMarkers(html: string) {
     node.childNodes.forEach((child, index) => visit(child, `${path}.${index}`));
   };
   visit(document, '0');
-  return markers;
+  return { imageCount, markers };
 }
 
 function deduplicateMarkers(markers: LocatedMarker[]) {
@@ -143,9 +148,10 @@ function readableMarkdownTitle(content: string) {
   return line?.replace(/^#{1,6}\s+/u, '').replace(/[*_`~]/gu, '').trim().slice(0, 120) || null;
 }
 
-function missingMarkers(): PreparedReadwiseApiEpubStructure {
+function missingMarkers(imageCount = 0): PreparedReadwiseApiEpubStructure {
   return {
     degradedReason: 'Reader EPUB table of contents markers were unavailable; imported as a single Topic.',
+    imageCount,
     markerCount: 0,
     rootBody: '',
     sections: []

@@ -11,6 +11,7 @@ import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
 import { resolveKeepImportResultDetail, resolveKeepImportResultStatus } from './keepImportSourceUpdateState.js';
+import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import { resetReadwiseBookImportFromInventory } from './readwiseBookImportReset.js';
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
@@ -43,12 +44,20 @@ async function reimportReadwiseApiEpubSource(
       status: 'failed' as const
     };
   }
+  const config = loadImportManagerSettings().readwiseReaderConfig;
+  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
+    config,
+    connectionRef: source.remote_connection_ref,
+    document,
+    forceEpubStructure: true
+  });
   const result = materializeReadwiseApiDocument({
-    config: loadImportManagerSettings().readwiseReaderConfig,
+    config,
     connectionRef: source.remote_connection_ref,
     document,
     forceEpubStructure: true,
-    importedAt: reimportedAt
+    importedAt: reimportedAt,
+    preparedEpubImages
   });
   if (result.status === 'imported') {
     return {

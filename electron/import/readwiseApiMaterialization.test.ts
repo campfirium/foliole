@@ -202,7 +202,7 @@ function documentFixture(
       locatorText: annotation.content, parentRemoteId: 'document-1', remoteId: annotation.remoteId,
       updatedAt: '2026-09-07T00:00:00.000Z'
     })),
-    body, category: 'article', degradedReason: null, id: 'document-1',
+    body, category: 'article', coverImageUrl: null, degradedReason: null, id: 'document-1',
     metadata: { author: null, category: 'article', readerUrl: null, sourceUrl: null, title: 'Remote title' },
     title: 'Remote title', unmatchedAnnotationCount: 0, updatedAt: '2026-09-07T00:00:00.000Z'
   };

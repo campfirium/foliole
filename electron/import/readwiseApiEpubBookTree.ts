@@ -5,7 +5,10 @@ import {
 } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
+import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
+
 interface BookNode {
+  attachmentIds: string[];
   content: string;
   key: string;
   parentKey: string | null;
@@ -13,7 +16,9 @@ interface BookNode {
 }
 
 export function buildReadwiseApiEpubBookNodes(
-  sections: NonNullable<PreparedReadwiseApiDocument['epubStructure']>['sections']
+  sections: Array<NonNullable<PreparedReadwiseApiDocument['epubStructure']>['sections'][number] & {
+    attachmentIds?: string[];
+  }>
 ) {
   const parents: Array<string | null> = [];
   const stack: Array<{ key: string; level: number }> = [];
@@ -31,11 +36,12 @@ export function buildReadwiseApiEpubBookNodes(
   return sections.flatMap((section, index): BookNode[] => {
     const parentKey = parents[index] ?? null;
     if (!parentKeys.has(section.markerKey)) {
-      return [{ content: section.content, key: section.markerKey, parentKey, title: section.title }];
+      return [{ attachmentIds: section.attachmentIds ?? [], content: section.content, key: section.markerKey, parentKey, title: section.title }];
     }
     return [
-      { content: `**${section.title}**`, key: section.markerKey, parentKey, title: section.title },
+      { attachmentIds: [], content: `**${section.title}**`, key: section.markerKey, parentKey, title: section.title },
       {
+        attachmentIds: section.attachmentIds ?? [],
         content: section.content,
         key: `${section.markerKey}:chapter-body`,
         parentKey: section.markerKey,
@@ -70,6 +76,7 @@ export function persistReadwiseApiEpubBookNodes(input: {
       title: node.title,
       updatedAt: input.importedAt
     });
+    replaceReadwiseApiEpubImageLinks(nodeId, node.attachmentIds);
   });
 }
 

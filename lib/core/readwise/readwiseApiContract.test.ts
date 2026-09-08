@@ -53,6 +53,9 @@ describe('Readwise API contract normalization', () => {
       source: 'reader'
     });
     expect(normalizeReaderDocument({ id: 'doc', raw_source_url: 'file:///private/book.epub' })?.rawSourceUrl).toBeNull();
+    expect(normalizeReaderDocument({ id: 'doc', image_url: 'https://cdn.example.com/cover.jpg' })?.imageUrl)
+      .toBe('https://cdn.example.com/cover.jpg');
+    expect(normalizeReaderDocument({ id: 'doc', image_url: 'file:///private/cover.jpg' })?.imageUrl).toBeNull();
   });
 
   it('summarizes readable HTML without retaining its content', () => {

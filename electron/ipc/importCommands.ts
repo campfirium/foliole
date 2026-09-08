@@ -208,7 +208,7 @@ async function handleTextImportCommand(
     const documentId = typeof args.document_id === 'string' ? args.document_id.trim() : '';
     if (documentId) {
       const result = loadReadwiseApiExternalReference(documentId)
-        ? promoteReadwiseApiExternalDocument(documentId)
+        ? await promoteReadwiseApiExternalDocument(documentId)
         : runImportForMirrorDocument(documentId, args);
       notifyIfTextImportChanged(result, resolveTargetWindow(context));
       return result;

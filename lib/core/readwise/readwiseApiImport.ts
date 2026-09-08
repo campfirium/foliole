@@ -30,6 +30,7 @@ export interface PreparedReadwiseApiDocument {
   annotations: PreparedReadwiseApiAnnotation[];
   body: string;
   category: Exclude<ReaderDocumentContract['category'], 'highlight' | 'note' | null>;
+  coverImageUrl: string | null;
   degradedReason: string | null;
   epubStructure?: PreparedReadwiseApiEpubStructure | null;
   id: string;
@@ -88,6 +89,7 @@ export function prepareReadwiseApiDocuments(
       annotations: annotationsByDocument.get(document.id) ?? [],
       body: converted.content,
       category: document.category as PreparedReadwiseApiDocument['category'],
+      coverImageUrl: document.imageUrl,
       degradedReason: converted.content.trim()
         ? (epubStructure?.degradedReason ?? formatHtmlConversionDegradedReason(converted.warnings))
         : 'Readable body is unavailable; this source was not imported.',

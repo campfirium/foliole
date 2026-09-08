@@ -18,6 +18,8 @@ import {
   buildReadwiseApiEpubBookNodes,
   persistReadwiseApiEpubBookNodes
 } from './readwiseApiEpubBookTree.js';
+import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
+import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
 interface BodyNode extends NodeBodyRow {
   id: string;
@@ -40,6 +42,7 @@ export function materializeReadwiseApiEpub(input: {
   importedAt: string;
   newAnnotations: PreparedReadwiseApiAnnotation[];
   previousState: ReadwiseApiDocumentImportState | null;
+  preparedImages?: PreparedReadwiseApiEpubImages | null | undefined;
   rebuildRoot: boolean;
   rootNodeId: string | null;
 }) {
@@ -83,11 +86,17 @@ export function materializeReadwiseApiEpub(input: {
 function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0]) {
   const structure = input.document.epubStructure;
   if (!structure?.sections.length) throw new Error('readwise_epub_structure_missing');
-  const root = runPreparedImport(buildPreparedImportRecord({
+  const projectedStructure = input.preparedImages ?? {
+    degradedReason: structure.degradedReason,
+    rootAttachmentIds: [],
+    rootBody: structure.rootBody,
+    sections: structure.sections
+  };
+  const preparedRoot = buildPreparedImportRecord({
     filePath: remoteLocator(input.document.id), kind: 'html', sourceName: `${input.document.title}.html`
   }, {
-    content: buildRootContent(input.document),
-    degradedReason: structure.degradedReason,
+    content: buildRootContent(input.document, projectedStructure.rootBody),
+    degradedReason: appendReason(structure.degradedReason, projectedStructure.degradedReason),
     highlightPolicy: 'reference_only',
     hideTitleHeadingOverride: false,
     importedAt: input.importedAt,
@@ -95,13 +104,18 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
     sourceIdentity: `readwise/api/${input.connectionRef}/${input.document.id}`,
     sourceLocator: remoteLocator(input.document.id),
     sourceProfile: 'body_with_highlight_sidecar'
-  }), input.rootNodeId ? { forceUpdateExistingNodeId: input.rootNodeId, resetImportedStructure: true } : undefined);
+  });
+  const root = runPreparedImport(
+    preparedRoot,
+    input.rootNodeId ? { forceUpdateExistingNodeId: input.rootNodeId, resetImportedStructure: true } : undefined
+  );
   if (!root.nodeId) throw new Error('readwise_epub_root_missing');
+  replaceReadwiseApiEpubImageLinks(root.nodeId, projectedStructure.rootAttachmentIds);
   persistReadwiseApiEpubBookNodes({
     connectionRef: input.connectionRef,
     documentId: input.document.id,
     importedAt: input.importedAt,
-    nodes: buildReadwiseApiEpubBookNodes(structure.sections),
+    nodes: buildReadwiseApiEpubBookNodes(projectedStructure.sections),
     rootNodeId: root.nodeId
   });
   return root.nodeId;
@@ -166,12 +180,16 @@ function toHighlight(connectionRef: string, annotation: PreparedReadwiseApiAnnot
   };
 }
 
-function buildRootContent(document: PreparedReadwiseApiDocument) {
+function buildRootContent(document: PreparedReadwiseApiDocument, rootBody = document.epubStructure?.rootBody) {
   const links = [
     document.metadata.readerUrl ? `[Open in Reader](${document.metadata.readerUrl})` : null,
     document.metadata.sourceUrl ? `[Open source](${document.metadata.sourceUrl})` : null
   ].filter(Boolean).join(' · ');
-  return [`# ${document.title}`, document.epubStructure?.rootBody, links].filter(Boolean).join('\n\n');
+  return [`# ${document.title}`, rootBody, links].filter(Boolean).join('\n\n');
+}
+
+function appendReason(first: string | null, second: string | null | undefined) {
+  return [first, second].filter(Boolean).join(' | ') || null;
 }
 
 function readSourceFingerprint(rootNodeId: string) {

@@ -7,6 +7,7 @@ import {
   saveReadwiseApiImportSource
 } from '../database/readwiseApiImportState.js';
 
+import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import {
@@ -35,9 +36,14 @@ export async function commitReadwiseApiDocument(input: {
   const document = isOriginalFile && destination === 'inbox'
     ? withOriginalFileStatus(input.document, prepared?.state ?? existingBefore?.state.originalFile ?? null)
     : input.document;
+  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
+    config: input.config,
+    connectionRef: input.connectionRef,
+    document
+  });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, document
+    config: input.config, connectionRef: input.connectionRef, document, preparedEpubImages
   });
   if (!isOriginalFile || result.status !== 'imported') return result;
 

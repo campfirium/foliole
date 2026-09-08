@@ -15,14 +15,17 @@ it('builds ordered heading sections while leaving unmarked headings in their bod
     return `<h1 data-rw-epub-toc="chapter-${chapterIndex}">Chapter ${chapterIndex + 1}: Title ${chapterIndex + 1}</h1>${sections}`;
   }).join('') + Array.from({ length: 4 }, (_, index) => `<h3>Trailing unlisted ${index}</h3>`).join('');
 
-  const structure = prepareReadwiseApiEpubStructure(`<html><body><p>Preface</p>${chapters}</body></html>`);
+  const structure = prepareReadwiseApiEpubStructure(
+    `<html><body><p>Preface</p><img src="cover.jpg">${chapters}</body></html>`
+  );
 
+  expect(structure.imageCount).toBe(1);
   expect(structure.markerCount).toBe(86);
   expect(structure.sections.filter((section) => section.headingLevel === 1)).toHaveLength(13);
   expect(structure.sections.filter((section) => section.headingLevel === 2)).toHaveLength(73);
   expect(structure.sections.map((section) => section.title)).not.toContain('Unlisted 1');
   expect(structure.sections.map((section) => section.content).join('\n')).toContain('### Unlisted 1');
-  expect(structure.rootBody).toBe('Preface');
+  expect(structure.rootBody).toBe('Preface\n\n![](cover.jpg)');
 });
 
 it('keeps non-heading markers flat and deduplicates nested markers at the same text position', () => {
@@ -49,7 +52,8 @@ it('keeps one useful marker without adding a level and drops an empty terminal m
 });
 
 it('reports missing toc markers and leaves structure materialization disabled', () => {
-  const structure = prepareReadwiseApiEpubStructure('<h1>Ordinary heading</h1><p>Body</p>');
+  const structure = prepareReadwiseApiEpubStructure('<h1>Ordinary heading</h1><p>Body</p><img src="body.jpg">');
+  expect(structure.imageCount).toBe(1);
   expect(structure.sections).toEqual([]);
   expect(structure.degradedReason).toContain('markers were unavailable');
 });

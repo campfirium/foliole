@@ -23,7 +23,10 @@ import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentit
 import { saveReadwiseApiStagePage } from '../database/readwiseApiImportState.js';
 
 import { reimportCurrentTopicSource } from './currentSourceReimport.js';
-import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import {
+  materializeReadwiseApiDocument,
+  shouldPrepareReadwiseApiEpubImages
+} from './readwiseApiMaterialization.js';
 
 let tempRoot = '';
 
@@ -72,6 +75,28 @@ it('creates a chapter container, chapter body, sections, and globally unique ann
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-readwise-%' AND deleted_at IS NULL"
   )).toEqual({ count: 2 });
+});
+
+it('prepares EPUB images only when a book tree is created or explicitly rebuilt', () => {
+  const document = { ...epubFixture(), annotations: [] };
+  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
+  const input = { config, connectionRef: 'connection', document };
+
+  expect(shouldPrepareReadwiseApiEpubImages(input)).toBe(true);
+  materializeReadwiseApiDocument(input);
+  expect(shouldPrepareReadwiseApiEpubImages(input)).toBe(false);
+  expect(shouldPrepareReadwiseApiEpubImages({ ...input, forceEpubStructure: true })).toBe(true);
+  expect(shouldPrepareReadwiseApiEpubImages({
+    ...input,
+    connectionRef: 'external-connection',
+    config: { ...config, withoutHighlightsDestination: 'external' }
+  })).toBe(false);
+  expect(shouldPrepareReadwiseApiEpubImages({
+    ...input,
+    connectionRef: 'promoted-connection',
+    config: { ...config, withoutHighlightsDestination: 'external' },
+    forceInbox: true
+  })).toBe(true);
 });
 
 it('does not rebuild or revive a persisted structure when remote sections drift', () => {
@@ -146,9 +171,11 @@ function epubFixture(): PreparedReadwiseApiDocument {
     annotations: [annotation('unique', 'Unique second excerpt'), annotation('ambiguous', 'Repeated excerpt')],
     body: '# Chapter 6: Shape\n\nIntro\n\n## First section\n\nRepeated excerpt\n\n## Second section\n\nRepeated excerpt\n\nUnique second excerpt',
     category: 'epub',
+    coverImageUrl: null,
     degradedReason: null,
     epubStructure: {
       degradedReason: null,
+      imageCount: 0,
       markerCount: 3,
       rootBody: 'Front matter',
       sections: [

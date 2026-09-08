@@ -9,9 +9,10 @@ import {
 } from '../database/readwiseApiImportState.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 
-export function promoteReadwiseApiExternalDocument(documentId: string): NativeTextImportResult | null {
+export async function promoteReadwiseApiExternalDocument(documentId: string): Promise<NativeTextImportResult | null> {
   const reference = loadReadwiseApiExternalReference(documentId);
   if (!reference) return null;
   const staged = loadStagedReadwiseApiContracts(reference.connection_ref);
@@ -22,12 +23,20 @@ export function promoteReadwiseApiExternalDocument(documentId: string): NativeTe
   if (!document) throw new Error('Refresh the Readwise preview before importing this source.');
   const importedAt = new Date().toISOString();
   const before = loadReadwiseApiImportSource(reference.connection_ref, document.id);
+  const config = loadImportManagerSettings().readwiseReaderConfig;
+  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
+    config,
+    connectionRef: reference.connection_ref,
+    document,
+    forceInbox: true
+  });
   const result = materializeReadwiseApiDocument({
-    config: loadImportManagerSettings().readwiseReaderConfig,
+    config,
     connectionRef: reference.connection_ref,
     document,
     forceInbox: true,
-    importedAt
+    importedAt,
+    preparedEpubImages
   });
   const source = loadReadwiseApiImportSource(reference.connection_ref, document.id);
   if (result.status !== 'imported' || !source?.nodeId) return null;

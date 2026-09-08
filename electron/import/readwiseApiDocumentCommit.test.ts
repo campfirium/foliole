@@ -87,7 +87,8 @@ it('never requests or persists an original file for API EPUB', async () => {
 
 function documentFixture(body: string): PreparedReadwiseApiDocument {
   return {
-    annotations: [], body, category: 'pdf', degradedReason: body ? null : 'Readable body is unavailable',
+    annotations: [], body, category: 'pdf', coverImageUrl: null,
+    degradedReason: body ? null : 'Readable body is unavailable',
     id: 'document-1', metadata: {
       author: null, category: 'pdf', readerUrl: 'https://readwise.io/reader/read/document-1',
       sourceUrl: 'https://example.com/source', title: 'Remote PDF'
