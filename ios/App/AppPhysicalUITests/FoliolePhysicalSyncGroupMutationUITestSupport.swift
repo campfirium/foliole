@@ -1,6 +1,17 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func triggerForegroundAutomaticSync(in app: XCUIApplication) {
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
+                      "Fri did not return to the foreground for automatic Sync.")
+        let catchUp = expectation(description: "Fri foreground automatic Sync")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { catchUp.fulfill() }
+        wait(for: [catchUp], timeout: 21)
+    }
+
     func waitForSyncNowCompletion(in app: XCUIApplication) {
         let completed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "enabled == true"), object: app.buttons["Sync Now"]

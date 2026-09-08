@@ -45,6 +45,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         if isTwoDeviceJourney { waitForJourneyFactCount("A", count: 2, in: app) }
         captureFriFact(in: app)
         if isTwoDeviceJourney {
+            triggerForegroundAutomaticSync(in: app)
             attachScreenshot(named: "Fri-two-device-joined-ready")
             print("[foliole-fri] t152-joined-ready")
             return
