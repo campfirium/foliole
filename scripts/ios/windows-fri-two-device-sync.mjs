@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
 import {
-  friAcceptanceBundle, runFriGroupIdentityPreflight, runFriSyncEventProjection
+  friAcceptanceBundle, runFriSyncEventProjection
 } from './ios-acceptance-sync-event-projection.mjs';
 import { writeFriTwoDeviceCellReceipt } from './fri-two-device-cell-receipt.mjs';
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
@@ -35,8 +35,6 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     await provider.waitForProgress('provider-ready');
     const providerIdentity = await provider.waitForGroupIdentity();
     const friRoot = path.join(evidenceRoot, 'fri-xcuitest');
-    await runFriGroupIdentityPreflight({ evidenceRoot: path.join(evidenceRoot, 'fri-identity'),
-      execute: executor(evidenceRoot, 'fri-identity'), ...providerIdentity, repoRoot, bundle });
     let conflictReleaseStarted = false;
     let conflictRelease = Promise.resolve();
     const fri = await executor(evidenceRoot, 'fri-xcuitest')('bash', [FRI_RUNNER,

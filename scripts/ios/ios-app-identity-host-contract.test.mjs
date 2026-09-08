@@ -58,6 +58,6 @@ describe('iOS app identity host contract', () => {
 
   it('reuses the prepared Fri build for every macOS two-device test batch', () => {
     const source = read('scripts/ios/macos-fri-two-device-sync.mjs');
-    expect(source.match(/'--test-without-building'/gu)).toHaveLength(4);
+    expect(source.match(/'--test-without-building'/gu)).toHaveLength(3);
   });
 });

@@ -58,19 +58,3 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
   if (result.code !== 0) throw new Error('Fri acceptance sync event projection failed.');
   return loadProjection(evidenceRoot, buildIdentity, bundle.applicationId);
 }
-
-export async function runFriGroupIdentityPreflight({ evidenceRoot, execute, groupId, groupTag,
-  repoRoot, bundle, runnerArgs = [] }) {
-  const result = await execute('bash', [FRI_RUNNER,
-    '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
-    '--artifacts-dir', evidenceRoot,
-    '--keep-app-foreground', bundle.applicationId,
-    ...runnerArgs,
-    '--only-testing', 'AppAcceptanceProjectionTests/FolioleAcceptanceGroupDiscoveryTests/testFindsExpectedSyncGroup'
-  ], { action: 'fri-group-identity', cwd: repoRoot, env: { ...process.env,
-    FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
-    FOLIOLE_T152_EXPECTED_GROUP_ID: groupId, FOLIOLE_T152_EXPECTED_GROUP_TAG: groupTag },
-  hardDeadlineMs: 30 * 60_000, host: 'ios-b', stage: 'fri-group-identity' });
-  if (result.code !== 0) throw new Error('Fri product discovery did not uniquely match the expected group.');
-  return result;
-}

@@ -10,7 +10,7 @@ import { runFriSyncGroupProvider } from './fri-sync-group-provider.mjs';
 import { writeFriTwoDeviceCellReceipt } from './fri-two-device-cell-receipt.mjs';
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
 import {
-  friAcceptanceBundle, runFriGroupIdentityPreflight, runFriSyncEventProjection
+  friAcceptanceBundle, runFriSyncEventProjection
 } from './ios-acceptance-sync-event-projection.mjs';
 
 const FRI_RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
@@ -47,9 +47,6 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   let conflictReleaseStarted = false;
   let conflictRelease = Promise.resolve();
   try {
-    await runFriGroupIdentityPreflight({ evidenceRoot: path.join(evidenceRoot, 'fri-identity'),
-      execute, groupId: ready.groupId, groupTag: ready.groupTag, repoRoot, bundle,
-      runnerArgs: ['--test-without-building'] });
     fri = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'join'),
