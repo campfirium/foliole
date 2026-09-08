@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global clearTimeout, console, process, setTimeout */
+/* global AbortController, clearTimeout, console, process, setTimeout */
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -87,9 +87,10 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   const providerRoot = path.join(evidenceRoot, 'macos-provider');
   const signals = createStateSignals();
   const releaseGate = createReleaseGate();
+  const providerAbort = new AbortController();
   const provider = runFriSyncGroupProvider({ acceptanceRoot: path.join(evidenceRoot, 'shared'),
     evidenceRoot: providerRoot, repoRoot, twoDevice: true,
-    onState: signals.publish,
+    abortSignal: providerAbort.signal, onState: signals.publish,
     waitForRelease: releaseGate.wait }).then((value) => ({ value }), (error) => {
       signals.fail(error); return { error };
     });
@@ -153,6 +154,9 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     fri = { ...fri, syncEvents: await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,
       runnerArgs: ['--test-without-building'] }) };
+  } catch (error) {
+    providerAbort.abort(error);
+    throw error;
   } finally {
     releaseGate.close('consumer_complete');
     const providerResult = await provider;
