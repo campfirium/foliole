@@ -14,6 +14,7 @@ import {
 } from './ios-acceptance-sync-event-projection.mjs';
 
 const FRI_RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
+const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 
 function stateSignals() {
   const waiting = new Map();
@@ -46,10 +47,12 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
   const providerRoot = path.join(evidenceRoot, 'macos-provider');
   const signals = stateSignals();
+  let abortProvider;
   let releaseProvider;
   const provider = runFriSyncGroupProvider({ acceptanceRoot: path.join(evidenceRoot, 'shared'),
     evidenceRoot: providerRoot, repoRoot, twoDevice: true,
     onState: signals.publish,
+    waitForAbort: () => new Promise((resolve) => { abortProvider = resolve; }),
     waitForRelease: () => new Promise((resolve) => { releaseProvider = resolve; }) });
   const ready = await signals.waitFor('ready');
   const friRoot = path.join(evidenceRoot, 'fri-xcuitest');
@@ -59,6 +62,13 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   let conflictReleaseStarted = false;
   let conflictRelease = Promise.resolve();
   try {
+    const prelaunch = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
+      '--activate', '--terminate-existing', '--device', FRI_COREDEVICE_ID, '--timeout', '30',
+      bundle.applicationId, '--foliole-physical-acceptance',
+      '-AppleLanguages', '(en)', '-AppleLocale', 'en_US'], {
+      action: 'fri-prelaunch', cwd: repoRoot, env: process.env,
+      hardDeadlineMs: 60_000, host: 'ios-b', stage: 'fri-prelaunch' });
+    if (prelaunch.code !== 0) throw new Error('Fri acceptance application prelaunch failed.');
     fri = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'join'),
@@ -67,6 +77,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch'
     ], { action: 'fri-two-device', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
+      FOLIOLE_ATTACH_TO_RUNNING_APP: '1',
       FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL: privateLanEndpoint(ready.serverStatus),
       FOLIOLE_PHYSICAL_SYNC_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_ID: ready.groupId,
@@ -74,6 +85,13 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: 'macos-fri-two-device' });
     if (fri.code !== 0) throw new Error('Fri physical two-Device XCUITest failed.');
     await signals.waitFor('conflict-fork-ready');
+    const conflictPrelaunch = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
+      '--activate', '--terminate-existing', '--device', FRI_COREDEVICE_ID, '--timeout', '30',
+      bundle.applicationId, '--foliole-physical-acceptance',
+      '-AppleLanguages', '(en)', '-AppleLocale', 'en_US'], {
+      action: 'fri-conflict-prelaunch', cwd: repoRoot, env: process.env,
+      hardDeadlineMs: 60_000, host: 'ios-b', stage: 'fri-conflict-prelaunch' });
+    if (conflictPrelaunch.code !== 0) throw new Error('Fri conflict application prelaunch failed.');
     const conflictStage = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'conflict'),
@@ -81,7 +99,8 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       '--test-without-building',
       '--only-testing', 'AppPhysicalUITests/FoliolePhysicalSyncGroupUITests/testCompletesTwoDeviceConflictAndRestart'
     ], { action: 'fri-two-device-conflict', cwd: repoRoot, env: { ...process.env,
-      FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
+      FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
+      FOLIOLE_ATTACH_TO_RUNNING_APP: '1', FOLIOLE_T152_TWO_DEVICE: '1' },
     onOutput: ({ stdout }) => {
       if (conflictReleaseStarted || !stdout.includes('[foliole-fri] t152-conflict-fork-ready')) return;
       conflictReleaseStarted = true;
@@ -94,6 +113,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,
       runnerArgs: ['--test-without-building'] }) };
   } finally {
+    abortProvider?.('consumer_failed');
     releaseProvider?.('consumer_complete');
     fri = { ...fri, provider: await provider };
   }

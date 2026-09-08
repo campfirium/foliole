@@ -1,6 +1,14 @@
 import XCTest
 
 extension XCTestCase {
+    func startAcceptanceApplication(_ app: XCUIApplication) {
+        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1" {
+            app.activate()
+        } else {
+            app.launch()
+        }
+    }
+
     func prepareRunnerLocalNetworkPermission() throws {
         let environment = ProcessInfo.processInfo.environment
         let suffix = try XCTUnwrap(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"])
