@@ -22,8 +22,7 @@ enum FolioleCompanionDesktopHttpTransport {
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         configuration.urlCache = nil
         configuration.urlCredentialStorage = nil
-        configuration.timeoutIntervalForResource = 300
-        configuration.waitsForConnectivity = true
+        configuration.waitsForConnectivity = false
         return configuration
     }
 

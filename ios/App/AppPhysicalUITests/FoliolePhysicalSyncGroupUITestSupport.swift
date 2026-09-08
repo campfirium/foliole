@@ -2,10 +2,7 @@ import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
     func acceptanceApplication() -> XCUIApplication {
-        let suffix = ProcessInfo.processInfo.environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"] ?? ""
-        let app = ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1"
-            ? XCUIApplication(bundleIdentifier: "com.foliole.ios\(suffix)")
-            : XCUIApplication()
+        let app = XCUIApplication()
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         return app
@@ -244,11 +241,10 @@ extension FoliolePhysicalSyncGroupUITests {
             format: "label IN %@", ["Allow", "允许"]
         )).firstMatch
         if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap() }
-        let fullAccessLabels = ["WLAN & Cellular Data", "Wi-Fi & Cellular Data",
-                                "无线局域网与蜂窝网络"]
-        let fullAccess = fullAccessLabels.lazy.map { springboard.buttons[$0] }
-            .first { $0.waitForExistence(timeout: 2) }
-        fullAccess?.tap()
+        let wlanOnly = springboard.buttons.matching(NSPredicate(
+            format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
+        )).firstMatch
+        if wlanOnly.waitForExistence(timeout: 3) { wlanOnly.tap() }
     }
 
     func attachScreenshot(named name: String) {

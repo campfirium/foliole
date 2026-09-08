@@ -11,8 +11,7 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertEqual(configuration.requestCachePolicy, .reloadIgnoringLocalCacheData)
         XCTAssertNil(configuration.urlCache)
         XCTAssertNil(configuration.urlCredentialStorage)
-        XCTAssertEqual(configuration.timeoutIntervalForResource, 300)
-        XCTAssertTrue(configuration.waitsForConnectivity)
+        XCTAssertFalse(configuration.waitsForConnectivity)
     }
 
     func testBonjourEndpointPrefersAdvertisedLanAddress() {

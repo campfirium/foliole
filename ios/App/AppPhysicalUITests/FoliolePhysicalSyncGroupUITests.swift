@@ -18,11 +18,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     }
 
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {
-        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] != "1" {
-            try prepareRunnerLocalNetworkPermission()
-        }
         let app = acceptanceApplication()
-        startAcceptanceApplication(app)
+        app.launch()
 
         openSyncSettings(in: app)
         if isTwoDeviceJourney {
@@ -76,7 +73,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     func testCompletesTwoDeviceConflictAndRestart() throws {
         XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
         let app = acceptanceApplication()
-        startAcceptanceApplication(app)
+        app.launch()
         openSyncSettings(in: app)
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not retain the accepted attempt Sync Group.")

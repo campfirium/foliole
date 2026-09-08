@@ -59,8 +59,7 @@ async function waitForJourneyOrigin(session, origin, count = 1, timeoutMs = 5 * 
 
 export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
   evidenceRoot, repoRoot = process.cwd(), twoDevice = false,
-  onState = () => {}, waitForAbort = () => new Promise(() => {}),
-  waitForRelease = waitForStop }) {
+  onState = () => {}, waitForRelease = waitForStop }) {
   const openSession = () => openMacosSyncGroupDesktopSession({
     env: macosAcceptanceEnv(), libraryHome: path.join(acceptanceRoot, 'macos-library'), repoRoot,
     runtimeRoot: path.join(acceptanceRoot, 'macos-runtime')
@@ -86,10 +85,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       resultStatus: 'ready', serverStatus: initial.server_status };
     writeJson(receiptPath, ready); onState(ready);
     console.log(`[fri-sync-group-provider] ready receipt=${receiptPath}`);
-    const request = await Promise.race([
-      waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 }),
-      waitForAbort().then(() => { throw new Error('Fri consumer stopped before requesting access.'); })
-    ]);
+    const request = await waitForMacosDeviceRequest(session, null, { timeoutMs: 10 * 60_000 });
     await session.accept(request.request_id);
     const accepted = await waitForDeviceCount(session, twoDevice ? 2 : 4);
     const automaticFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',

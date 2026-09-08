@@ -36,7 +36,6 @@ it('keeps the Bonjour service declaration in the final iOS application plist', (
 
 it('handles the iOS Local Network system card before waiting for a Device candidate', () => {
   const physicalTest = [
-    'ios/App/AppPhysicalUITests/FoliolePhysicalPermissionUITests.swift',
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift',
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift',
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupMutationUITestSupport.swift'
@@ -47,11 +46,6 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).not.toContain('addUIInterruptionMonitor');
   expect(physicalTest).not.toContain('alert.buttons[$0].tap()');
   expect(physicalTest).toContain('waitForLocalNetworkDecision(allow: true)');
-  expect(physicalTest).toContain('prepareRunnerLocalNetworkPermission()');
-  expect(physicalTest).toContain('FOLIOLE_ATTACH_TO_RUNNING_APP');
-  expect(physicalTest).toContain('app.state, .runningForeground');
-  expect(physicalTest).toContain('XCUIApplication(bundleIdentifier: "com.foliole.ios\\(suffix)")');
-  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL');
   expect(physicalTest).toContain('decision.tap()');
   expect(physicalTest).toContain('NSPredicate(format: "exists == false")');
   expect(physicalTest).toContain('Fri-local-network-allow');
@@ -101,7 +95,4 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).not.toMatch(/coordinate\s*:/u);
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
   expect(appDelegate).toContain('application.isIdleTimerDisabled = true');
-  const twoDevice = read('scripts/ios/macos-fri-two-device-sync.mjs');
-  expect(twoDevice).toContain("action: 'fri-prelaunch'");
-  expect(twoDevice).toContain("waitForAbort:");
 });
