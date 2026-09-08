@@ -1,3 +1,5 @@
+/* global process */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -70,10 +72,23 @@ describe('macOS fixed A5 development entry', () => {
   });
 
   it('maintains local storage and reuses one hidden Electron cache entry', () => {
+    const lifecycle = fs.readFileSync('scripts/android/macos-a5-formal-lifecycle.mjs', 'utf8');
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
-    expect(source).toContain("prepareCacheEntry({ entryName: 'native-hidden-electron'");
+    expect(lifecycle).toContain("prepareCacheEntry({ entryName: 'native-hidden-electron'");
     expect(source).toContain('FOLIOLE_SHARED_CACHE_ROOT: sharedCacheRoot');
-    expect(source).toContain('maintainBeforeProduction({ rootDir: repoRoot })');
+    expect(lifecycle).toContain('maintainBeforeProduction({ rootDir: repoRoot })');
+  });
+
+  it('rejects a missing formal retention task before production setup', async () => {
+    const previous = process.env.FOLIOLE_ACCEPTANCE_TASK_ID;
+    delete process.env.FOLIOLE_ACCEPTANCE_TASK_ID;
+    try {
+      await expect(runMacosA5Action('single-principal-sync-group', '/missing-repo', { formal: true }))
+        .rejects.toThrow('FOLIOLE_ACCEPTANCE_TASK_ID');
+    } finally {
+      if (previous === undefined) delete process.env.FOLIOLE_ACCEPTANCE_TASK_ID;
+      else process.env.FOLIOLE_ACCEPTANCE_TASK_ID = previous;
+    }
   });
 
   it('exposes only explicitly authorized fixed maintenance routes', () => {

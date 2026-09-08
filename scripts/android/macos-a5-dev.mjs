@@ -18,29 +18,22 @@ import {
 import { macosA5ActionEnv } from './macos-a5-extended-actions.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import {
-  closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run
-} from './macos-a5-execution-context.mjs';
-import {
   createMacosA5CaptureIdentity as captureIdentity,
   runMacosA5CaptureReadiness,
   runMacosA5PairingReadiness
 } from './macos-a5-readiness.mjs';
 import {
-  beginFormalA5Candidate
-} from './macos-a5-formal-candidate.mjs';
-import {
-  captureFormalA5Toolchain, completeFormalA5Receipt, failFormalA5Receipt,
-  formalA5AcceptedTipLine, formalA5FailureStage, markFormalA5ActionRunning,
+  captureFormalA5Toolchain, formalA5FailureStage, markFormalA5ActionRunning,
   markFormalA5MutationBoundary,
-  markFormalA5Stage, openFormalA5Receipt,
+  markFormalA5Stage,
   prepareFormalA5ReceiptCompletion, recordFormalA5DataProtection, recordFormalA5Lease
 } from './macos-a5-formal-receipt.mjs';
+import {
+  finishMacosA5Lifecycle, openMacosA5Lifecycle
+} from './macos-a5-formal-lifecycle.mjs';
 import { checked, captured, execute } from './macos-a5-process.mjs';
 import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
 import { acquireMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
-import {
-  maintainBeforeProduction, prepareCacheEntry
-} from '../diagnostics/local-artifact-cache-production.mjs';
 import {
   assertSafeMacosA5Environment, macosA5GradleEnv, macosA5Paths
 } from './macos-a5-runtime-paths.mjs';
@@ -151,30 +144,18 @@ async function captureAnnotation(
 export async function runMacosA5Action(action, repoRoot = process.cwd(), { formal = false } = {}) {
   const actionContract = assertRegisteredMacosA5Action(action);
   if (formal) assertFormalMacosA5Action(actionContract);
-  const sharedCacheRoot = path.join(path.resolve(repoRoot), '.cache');
-  if (actionContract.requiresHiddenDesktopRuntime) {
-    prepareCacheEntry({ entryName: 'native-hidden-electron', rootDir: repoRoot });
-  } else {
-    maintainBeforeProduction({ rootDir: repoRoot });
-  }
-  const formalCandidate = formal && actionContract.formalSourceClass === 'frozen-build'
-    ? beginFormalA5Candidate(repoRoot) : null;
-  let context = createMacosA5ExecutionContext({
-    acceptedRevision: formalCandidate?.revision, acceptedTree: formalCandidate?.tree,
-    action, formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot,
-    requiresHiddenDesktopRuntime: formal && actionContract.requiresHiddenDesktopRuntime
-  });
-  openMacosA5Run(context);
-  let receipt;
-  try { receipt = formal ? openFormalA5Receipt(context, actionContract) : null; }
-  catch (error) { closeMacosA5Run(context); throw error; }
+  const lifecycle = openMacosA5Lifecycle({ action, actionContract, formal, repoRoot });
+  let { context } = lifecycle;
+  const { receipt, sharedCacheRoot, taskId } = lifecycle;
   let lease;
   let failure;
   let failedStage;
   try {
-    if (formalCandidate) context = openMacosA5BuildCapsule(context, {
-      onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
-    });
+    if (formal && actionContract.formalSourceClass === 'frozen-build') {
+      context = openMacosA5BuildCapsule(context, {
+        onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
+      });
+    }
     const paths = macosA5Paths(context);
     const actionEnv = macosA5GradleEnv({
       ...macosA5ActionEnv(process.env, formal, actionContract.requiresHiddenDesktopRuntime),
@@ -220,13 +201,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     adb: macosA5Paths(context).adb, context, deviceLeaseMode: actionContract.deviceLeaseMode,
     lease, receipt });
   if (!failure && cleanupError) { failure = cleanupError; failedStage = 'cleanup'; }
-  if (failure) {
-    if (receipt) failFormalA5Receipt(receipt, failure, failedStage);
-    throw failure;
-  }
-  const completedReceipt = receipt ? completeFormalA5Receipt(receipt) : null;
-  const acceptedTip = completedReceipt ? formalA5AcceptedTipLine(completedReceipt) : null;
-  if (acceptedTip) process.stdout.write(acceptedTip);
+  finishMacosA5Lifecycle({ actionContract, context, failedStage, failure, receipt, taskId });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

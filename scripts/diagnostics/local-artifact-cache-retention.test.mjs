@@ -81,6 +81,19 @@ describe('local artifact and cache retention', () => {
     expect(existsSync(join(root, ARTIFACT_ROOT))).toBe(true);
   }));
 
+  it('leaves task-owned A5 evidence and receipts outside generic expiration', () => withFixture((root) => {
+    const evidence = makeEntry(root, `${ARTIFACT_ROOT}/a5-single-principal-sync-group`,
+      'old-evidence', 2, 20);
+    const receipt = makeEntry(root, `${ARTIFACT_ROOT}/macos-a5-formal`, 'old-receipt', 2, 20);
+    const generic = makeEntry(root, `${ARTIFACT_ROOT}/other`, 'old-run', 2, 20);
+
+    const result = runRetention({ apply: true, nowMs, rootDir: root, scope: 'artifact' });
+
+    expect(result.entries.map((entry) => entry.path)).toEqual([generic]);
+    expect(existsSync(evidence)).toBe(true);
+    expect(existsSync(receipt)).toBe(true);
+  }));
+
   it('refreshes cache use and evicts stale then least-recent entries as whole units', () => withFixture((root) => {
     const stale = makeEntry(root, CACHE_ROOT, 'stale', 5, 31);
     const oldest = makeEntry(root, CACHE_ROOT, 'oldest', 6, 20);

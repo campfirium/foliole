@@ -9,7 +9,8 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
-  'single-principal-sync-group': { requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
+  'single-principal-sync-group': { formalEvidenceRetention: 'latest-terminal-per-task',
+    requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-now': { requiresHiddenDesktopRuntime: true },
@@ -51,6 +52,7 @@ export function assertRegisteredMacosA5Action(action) {
   }
   return Object.freeze({ action, deviceLeaseMode: 'mutation', formalSourceClass: 'frozen-build',
     formalEvidence: FORMAL_EVIDENCE[action] ?? Object.freeze({ kind: 'receipt' }),
+    formalEvidenceRetention: null,
     formalTarget: 'fixed-a5',
     formalTargetIdentity: '87a33a4b',
     mutatesFixedA5: true, requiresHiddenDesktopRuntime: false,

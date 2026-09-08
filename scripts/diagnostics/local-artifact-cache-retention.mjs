@@ -21,6 +21,10 @@ export const CACHE_ROOT = '.cache';
 export const ARTIFACT_RETENTION_DAYS = 1;
 export const CACHE_RETENTION_DAYS = 30;
 export const CACHE_MAX_BYTES = 10 * 1024 ** 3;
+export const TASK_OWNED_ARTIFACT_CATEGORIES = new Set([
+  'a5-single-principal-sync-group',
+  'macos-a5-formal'
+]);
 
 function resolveAllowedRoot(rootArg) {
   const rootDir = resolve(rootArg ?? repoRoot);
@@ -56,6 +60,7 @@ function listEntries(rootDir, relativeRoot) {
 function artifactCandidates(rootDir, nowMs) {
   const cutoffMs = nowMs - ARTIFACT_RETENTION_DAYS * DAY_MS;
   return listEntries(rootDir, ARTIFACT_ROOT).flatMap((category) => {
+    if (TASK_OWNED_ARTIFACT_CATEGORIES.has(category.name)) return [];
     if (!lstatSync(category.path).isDirectory() || lstatSync(category.path).isSymbolicLink()) {
       return [];
     }
