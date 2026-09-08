@@ -241,11 +241,11 @@ extension FoliolePhysicalSyncGroupUITests {
             format: "label IN %@", ["Allow", "允许"]
         )).firstMatch
         if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap() }
-        let fullAccess = springboard.buttons.matching(NSPredicate(
-            format: "label IN %@", ["WLAN & Cellular Data", "Wi-Fi & Cellular Data",
-                                    "无线局域网与蜂窝数据"]
-        )).firstMatch
-        if fullAccess.waitForExistence(timeout: 3) { fullAccess.tap() }
+        let fullAccessLabels = ["WLAN & Cellular Data", "Wi-Fi & Cellular Data",
+                                "无线局域网与蜂窝网络"]
+        let fullAccess = fullAccessLabels.lazy.map { springboard.buttons[$0] }
+            .first { $0.waitForExistence(timeout: 2) }
+        fullAccess?.tap()
     }
 
     func attachScreenshot(named name: String) {
