@@ -2,7 +2,10 @@ import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
     func acceptanceApplication() -> XCUIApplication {
-        let app = XCUIApplication()
+        let suffix = ProcessInfo.processInfo.environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"] ?? ""
+        let app = ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1"
+            ? XCUIApplication(bundleIdentifier: "com.foliole.ios\(suffix)")
+            : XCUIApplication()
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         return app
