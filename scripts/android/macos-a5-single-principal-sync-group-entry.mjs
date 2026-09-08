@@ -33,8 +33,11 @@ export async function removeA5AcceptanceApplication(args) {
   const uninstall = await args.execute(args.paths.adb,
     ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID], options);
   if (uninstall.code === 0) return;
+  const userUninstall = await args.execute(args.paths.adb,
+    ['-s', args.serial, 'shell', 'pm', 'uninstall', '--user', '0', ACCEPTANCE_APP_ID], options);
+  if (userUninstall.code === 0 && /success/iu.test(String(userUninstall.output))) return;
   const installed = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'shell', 'pm', 'path', ACCEPTANCE_APP_ID], options);
+    ['-s', args.serial, 'shell', 'pm', 'path', '--user', '0', ACCEPTANCE_APP_ID], options);
   if (installed.code === 0 && !String(installed.output).includes('package:')) return;
   throw new Error(`A5 acceptance application cleanup failed: ${String(uninstall.output)}`);
 }

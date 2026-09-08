@@ -13,13 +13,14 @@ it('accepts a nonzero MIUI uninstall result only after the package is absent', a
   const execute = async (_command, args, executionOptions) => {
     calls.push(args);
     options.push(executionOptions);
-    return args.includes('uninstall')
+    return args[2] === 'uninstall'
     ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
     : { code: 0, output: '' };
   };
   await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
     .resolves.toBeUndefined();
   expect(options).toEqual([
+    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
@@ -34,6 +35,19 @@ it('rejects a failed uninstall while the acceptance package remains installed', 
     : { code: 0, output: 'package:/data/app/base.apk' };
   await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
     .rejects.toThrow('cleanup failed');
+});
+
+it('uses the user package manager when MIUI rejects the ordinary uninstall', async () => {
+  const calls = [];
+  const execute = async (_command, args) => {
+    calls.push(args);
+    if (args[2] === 'uninstall') return { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' };
+    if (args.includes('--user') && args.includes('uninstall')) return { code: 0, output: 'Success' };
+    return { code: 0, output: '' };
+  };
+  await removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' });
+  expect(calls.at(-1)).toEqual(['-s', 'a5', 'shell', 'pm', 'uninstall', '--user', '0',
+    'com.foliole.android.acceptance']);
 });
 
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
