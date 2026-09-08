@@ -20,11 +20,19 @@ extension XCTestCase {
         }.resume()
 
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let alert = springboard.alerts.firstMatch
-        if alert.waitForExistence(timeout: 5) {
-            let allow = ["Allow", "允许"].lazy.map { alert.buttons[$0] }.first { $0.exists }
-            XCTAssertNotNil(allow, "Missing xctrunner Local Network allow button.")
-            allow?.tap()
+        for _ in 0..<2 {
+            let alert = springboard.alerts.firstMatch
+            guard alert.waitForExistence(timeout: 5) else { break }
+            let labels = ["Allow", "允许", "WLAN & Cellular Data", "Wi-Fi & Cellular Data",
+                          "无线局域网与蜂窝网络"]
+            let decision = labels.lazy.map { alert.buttons[$0] }.first { $0.exists }
+            XCTAssertNotNil(decision, "Missing xctrunner network permission decision.")
+            decision?.tap()
+            let dismissed = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "exists == false"), object: alert
+            )
+            XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 10), .completed,
+                           "The xctrunner network permission card did not close.")
         }
         wait(for: [completed], timeout: 30)
         XCTAssertNil(requestError, "The xctrunner could not reach the Mac provider: \(String(describing: requestError))")
