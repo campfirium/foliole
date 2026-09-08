@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
 import {
   removeA5AcceptanceApplication
-} from './macos-a5-single-principal-sync-group-entry.mjs';
+} from './macos-a5-acceptance-package-cleanup.mjs';
 
 it('accepts a nonzero MIUI uninstall result only after the package is absent', async () => {
   const options = [];
@@ -19,14 +19,12 @@ it('accepts a nonzero MIUI uninstall result only after the package is absent', a
   };
   await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
     .resolves.toBeUndefined();
-  expect(options).toEqual([
-    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
-    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
-    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
+  expect(options).toHaveLength(8);
+  expect(options).toEqual(expect.arrayContaining([
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
-  ]);
+  ]));
   expect(calls[0]).toEqual(['-s', 'a5', 'shell', 'am', 'force-stop',
-    'com.foliole.android.acceptance']);
+    'com.foliole.android.acceptance.test']);
 });
 
 it('rejects a failed uninstall while the acceptance package remains installed', async () => {
@@ -53,6 +51,9 @@ it('uses the user package manager when MIUI rejects the ordinary uninstall', asy
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
   const source = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-sync-group-entry.mjs', 'utf8'
+  );
+  const cleanup = fs.readFileSync(
+    'scripts/android/macos-a5-acceptance-package-cleanup.mjs', 'utf8'
   );
   const buildSource = fs.readFileSync('scripts/android/a5-two-device-build.mjs', 'utf8');
   const joinEvidence = fs.readFileSync('scripts/android/a5-two-device-join-evidence.mjs', 'utf8');
@@ -88,7 +89,8 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
-  expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+  expect(cleanup).toContain('`${ACCEPTANCE_APP_ID}.test`');
+  expect(cleanup).toContain("'uninstall', packageId");
   expect(source.match(/await removeA5AcceptanceApplication\(args\)/gu)).toHaveLength(2);
   expect(source).not.toContain("protectData('backup'");
   expect(source).not.toContain('deviceBackupRoot');

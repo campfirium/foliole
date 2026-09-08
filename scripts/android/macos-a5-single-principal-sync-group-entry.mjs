@@ -19,28 +19,13 @@ import {
 } from '../desktop/sync-group-conflict-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
+import {
+  ACCEPTANCE_APP_ID, removeA5AcceptanceApplication
+} from './macos-a5-acceptance-package-cleanup.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
-
-export async function removeA5AcceptanceApplication(args) {
-  const options = { env: args.env, timeoutCode: 'a5_acceptance_cleanup_timeout',
-    timeoutMs: 60_000 };
-  await args.execute(args.paths.adb,
-    ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID], options);
-  const uninstall = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID], options);
-  if (uninstall.code === 0) return;
-  const userUninstall = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'shell', 'pm', 'uninstall', '--user', '0', ACCEPTANCE_APP_ID], options);
-  if (userUninstall.code === 0 && /success/iu.test(String(userUninstall.output))) return;
-  const installed = await args.execute(args.paths.adb,
-    ['-s', args.serial, 'shell', 'pm', 'path', '--user', '0', ACCEPTANCE_APP_ID], options);
-  if (installed.code === 0 && !String(installed.output).includes('package:')) return;
-  throw new Error(`A5 acceptance application cleanup failed: ${String(uninstall.output)}`);
-}
 
 async function waitForMacFact(session) {
   return session.waitForState({ command: 'load_workspace_list_snapshot',
