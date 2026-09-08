@@ -31,11 +31,6 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
         let groupId = requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID")
-        let join = app.buttons["Join \(groupId)"]
-        if !join.waitForExistence(timeout: 5),
-           app.staticTexts["A Sync Group was found, but Foliole could not connect to it."].exists {
-            tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
-        }
         tapButton(named: "Join \(groupId)", in: app, timeout: 90)
 
         XCTAssertTrue(
