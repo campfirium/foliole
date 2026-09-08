@@ -1,3 +1,4 @@
+import Network
 import XCTest
 
 extension XCTestCase {
@@ -14,11 +15,21 @@ extension XCTestCase {
         let environment = ProcessInfo.processInfo.environment
         let endpoint = try XCTUnwrap(environment["FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL"])
         let url = try XCTUnwrap(URL(string: endpoint + "/companion/discovery"))
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForResource = 30
-        configuration.waitsForConnectivity = true
-        let task = URLSession(configuration: configuration).dataTask(with: url)
-        task.resume()
+        let host = try XCTUnwrap(url.host).trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        let port = try XCTUnwrap(url.port).description
+        let suffix = try XCTUnwrap(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"])
+        XCUIApplication(bundleIdentifier:
+            "com.foliole.ios.physical-uitests\(suffix).xctrunner")
+            .activate()
+
+        let connected = expectation(description: "The Fri UI test runner reached the Mac LAN provider.")
+        let connection = NWConnection(host: NWEndpoint.Host(host),
+                                      port: try XCTUnwrap(NWEndpoint.Port(port)), using: .tcp)
+        connection.stateUpdateHandler = { state in
+            if case .ready = state { connected.fulfill() }
+            if case let .failed(error) = state { print("[foliole-fri] runner LAN failed: \(error)") }
+        }
+        connection.start(queue: DispatchQueue(label: "com.foliole.fri-runner-lan"))
 
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for _ in 0..<2 {
@@ -35,7 +46,9 @@ extension XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 10), .completed,
                            "The xctrunner network permission card did not close.")
         }
-        task.cancel()
+        XCTAssertEqual(XCTWaiter.wait(for: [connected], timeout: 30), .completed,
+                       "The Fri UI test runner could not reach the Mac LAN provider.")
+        connection.cancel()
     }
 }
 
