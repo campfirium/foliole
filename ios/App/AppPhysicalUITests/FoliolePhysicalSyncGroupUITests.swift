@@ -18,7 +18,9 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     }
 
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {
-        try prepareRunnerLocalNetworkPermission()
+        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] != "1" {
+            try prepareRunnerLocalNetworkPermission()
+        }
         let app = acceptanceApplication()
         startAcceptanceApplication(app)
 
