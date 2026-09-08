@@ -28,6 +28,8 @@ const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 export async function removeA5AcceptanceApplication(args) {
   const options = { env: args.env, timeoutCode: 'a5_acceptance_cleanup_timeout',
     timeoutMs: 60_000 };
+  await args.execute(args.paths.adb,
+    ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID], options);
   const uninstall = await args.execute(args.paths.adb,
     ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID], options);
   if (uninstall.code === 0) return;

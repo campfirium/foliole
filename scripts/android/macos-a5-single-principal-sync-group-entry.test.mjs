@@ -9,7 +9,9 @@ import {
 
 it('accepts a nonzero MIUI uninstall result only after the package is absent', async () => {
   const options = [];
+  const calls = [];
   const execute = async (_command, args, executionOptions) => {
+    calls.push(args);
     options.push(executionOptions);
     return args.includes('uninstall')
     ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
@@ -19,8 +21,11 @@ it('accepts a nonzero MIUI uninstall result only after the package is absent', a
     .resolves.toBeUndefined();
   expect(options).toEqual([
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
+    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 }),
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
   ]);
+  expect(calls[0]).toEqual(['-s', 'a5', 'shell', 'am', 'force-stop',
+    'com.foliole.android.acceptance']);
 });
 
 it('rejects a failed uninstall while the acceptance package remains installed', async () => {
