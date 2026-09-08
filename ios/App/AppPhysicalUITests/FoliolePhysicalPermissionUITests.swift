@@ -3,7 +3,8 @@ import XCTest
 extension XCTestCase {
     func startAcceptanceApplication(_ app: XCUIApplication) {
         if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1" {
-            app.activate()
+            XCTAssertEqual(app.state, .runningForeground,
+                           "The normally launched Fri acceptance app is not in the foreground.")
         } else {
             app.launch()
         }
@@ -11,12 +12,8 @@ extension XCTestCase {
 
     func prepareRunnerLocalNetworkPermission() throws {
         let environment = ProcessInfo.processInfo.environment
-        let suffix = try XCTUnwrap(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"])
         let endpoint = try XCTUnwrap(environment["FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL"])
         let url = try XCTUnwrap(URL(string: endpoint + "/companion/discovery"))
-        XCUIApplication(bundleIdentifier:
-            "com.foliole.ios.physical-uitests\(suffix).xctrunner").activate()
-
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForResource = 30
         configuration.waitsForConnectivity = true
