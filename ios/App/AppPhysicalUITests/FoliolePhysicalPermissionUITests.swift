@@ -63,7 +63,7 @@ extension XCTestCase {
         return reached
     }
 
-    private func enableLocalNetworkPermissionInSettings(displayName: String) {
+    func enableLocalNetworkPermissionInSettings(displayName: String) {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settings.terminate()
         settings.launch()
