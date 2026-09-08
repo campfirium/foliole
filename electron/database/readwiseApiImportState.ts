@@ -126,16 +126,6 @@ export function completeReadwiseApiImportRun(run: ReadwiseApiImportRunState, now
   }, now);
 }
 
-export function loadVerifiedReadwiseHighlightIds(connectionRef: string) {
-  const rows = openDatabaseConnection().driver.queryAll<{ remote_annotations_json: string }>(
-    `SELECT remote_annotations_json FROM import_sources
-     WHERE remote_provider = 'readwise' AND remote_connection_ref = ?`, [connectionRef]
-  );
-  return new Set(rows.flatMap((row) => normalizeRemoteAnnotationBindings(parseJson(row.remote_annotations_json)))
-    .filter((binding) => binding.kind === 'highlight')
-    .map((binding) => binding.remoteId));
-}
-
 export function loadReadwiseApiImportSource(connectionRef: string, documentId: string) {
   const row = openDatabaseConnection().driver.queryOne<RemoteImportSourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.remote_annotations_json, i.remote_import_state_json,

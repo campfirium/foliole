@@ -5,8 +5,7 @@ import type { NativeTextImportResult } from '../../lib/platform/nativeImportCont
 import { loadReadwiseApiExternalReference } from '../database/readwiseApiExternalDocuments.js';
 import {
   loadReadwiseApiImportSource,
-  loadStagedReadwiseApiContracts,
-  loadVerifiedReadwiseHighlightIds
+  loadStagedReadwiseApiContracts
 } from '../database/readwiseApiImportState.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -18,8 +17,7 @@ export function promoteReadwiseApiExternalDocument(documentId: string): NativeTe
   const staged = loadStagedReadwiseApiContracts(reference.connection_ref);
   const document = prepareReadwiseApiDocuments(
     staged.readerDocuments,
-    staged.exportBooks,
-    loadVerifiedReadwiseHighlightIds(reference.connection_ref)
+    staged.exportBooks
   ).find((candidate) => candidate.id === reference.remote_document_id);
   if (!document) throw new Error('Refresh the Readwise preview before importing this source.');
   const importedAt = new Date().toISOString();

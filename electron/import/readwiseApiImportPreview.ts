@@ -12,8 +12,7 @@ import {
 } from '../database/readwiseApiExternalDocuments.js';
 import {
   loadReadwiseApiImportSource,
-  loadStagedReadwiseApiContracts,
-  loadVerifiedReadwiseHighlightIds
+  loadStagedReadwiseApiContracts
 } from '../database/readwiseApiImportState.js';
 
 const MAX_PARENT_BATCH = 50;
@@ -52,19 +51,21 @@ export function buildReadwiseApiPreview(
 }
 
 export function selectReadwiseApiBatch(
-  preview: NativeReadwiseSyncPreviewResult,
+  settings: ImportManagerSettings,
   connectionRef: string
 ) {
-  const writableIds = new Set(preview.entries
+  const documents = prepareStagedDocuments(connectionRef);
+  const entries = documents.map((document) => buildEntry(settings, connectionRef, document));
+  const writableIds = new Set(entries
     .filter((entry) => entry.status === 'new' || entry.status === 'updated')
     .slice(0, MAX_PARENT_BATCH)
     .map((entry) => entry.remote_document_id));
-  const offExternalIds = new Set(preview.entries.flatMap((entry) => {
+  const offExternalIds = new Set(entries.flatMap((entry) => {
     const remoteId = entry.remote_document_id;
     return typeof remoteId === 'string' && entry.destination === 'off'
       && hasActiveReadwiseApiExternalDocument(connectionRef, remoteId) ? [remoteId] : [];
   }));
-  return prepareStagedDocuments(connectionRef)
+  return documents
     .filter((document) => writableIds.has(document.id) || offExternalIds.has(document.id));
 }
 
@@ -110,8 +111,7 @@ function prepareStagedDocuments(connectionRef: string) {
   const staged = loadStagedReadwiseApiContracts(connectionRef);
   return prepareReadwiseApiDocuments(
     staged.readerDocuments,
-    staged.exportBooks,
-    loadVerifiedReadwiseHighlightIds(connectionRef)
+    staged.exportBooks
   );
 }
 

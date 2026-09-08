@@ -33,7 +33,6 @@ vi.mock('./readwiseApiConnectionState.js', () => ({
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'SECRET' }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { createDefaultImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
@@ -42,6 +41,7 @@ import {
   previewReadwiseApiImport,
   runReadwiseApiImport
 } from './readwiseApiImportRun.js';
+import { apiSettings, documents, response } from './readwiseApiImportRun.testSupport.js';
 
 let tempRoot = '';
 
@@ -97,6 +97,28 @@ it('resumes a failed page cursor and commits no more than 50 parent documents pe
   )).toEqual({ count: 51 });
 });
 
+it('selects writable documents beyond the 200 preview rows', async () => {
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes('/v2/export/')) return response([{
+      external_id: 'document-204',
+      highlights: [{ external_id: 'highlight-204', text: 'Body 204' }],
+      source: 'reader'
+    }]);
+    return response([
+      ...documents(0, 205),
+      { category: 'highlight', id: 'highlight-204', parent_id: 'document-204' }
+    ]);
+  }) as typeof fetch;
+  const settings = apiSettings('off');
+
+  const preview = await previewReadwiseApiImport(settings, { fetchImpl, minIntervalMs: 0 });
+  expect(preview).toMatchObject({ batch_count: 1, write_count: 1 });
+  expect(preview.entries).toHaveLength(200);
+  const result = await runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 }, settings });
+  expect(result).toMatchObject({ committed_count: 1, remaining_count: 0, status: 'completed' });
+});
+
 it('preserves the completed page when a fetch is cancelled and resumes from its cursor', async () => {
   let releaseSecondPage: (() => void) | null = null;
   const secondPageStarted = new Promise<void>((resolve) => { releaseSecondPage = resolve; });
@@ -135,20 +157,22 @@ it('hydrates a note-only incremental update through its highlight to the body do
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) {
-      return response([{ external_id: 'document-1', highlights: [{ external_id: 'highlight-1' }], source: 'reader' }]);
+      return response([{ external_id: 'document-1', highlights: [{
+        external_id: 'highlight-1', note: 'My note', text: 'Excerpt'
+      }], source: 'reader' }]);
     }
     if (url.searchParams.get('id') === 'highlight-1') {
-      return response([{ category: 'highlight', html_content: '<p>Excerpt</p>', id: 'highlight-1', parent_id: 'document-1' }]);
+      return response([{ category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }]);
     }
     if (url.searchParams.get('id') === 'document-1') {
       return response([{ category: 'article', html_content: '<p>Body with Excerpt</p>', id: 'document-1', title: 'Document' }]);
     }
-    return response([{ category: 'note', html_content: '<p>My note</p>', id: 'note-1', parent_id: 'highlight-1' }]);
+    return response([{ category: 'note', id: 'note-1', parent_id: 'highlight-1' }]);
   }) as typeof fetch;
 
   const preview = await previewReadwiseApiImport(apiSettings(), { fetchImpl: fetchMock, minIntervalMs: 0 });
   expect(preview).toMatchObject({ total_count: 1, with_highlights_count: 1 });
-  expect(preview.entries[0]).toMatchObject({ detected_highlight_count: 2, remote_document_id: 'document-1' });
+  expect(preview.entries[0]).toMatchObject({ detected_highlight_count: 1, remote_document_id: 'document-1' });
 });
 
 it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
@@ -206,27 +230,3 @@ it('does not enable scheduled intake or advance the watermark after a failed fir
   await previewReadwiseApiImport(apiSettings(), { fetchImpl, minIntervalMs: 0 });
   expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/api/v3/list/'))).toHaveLength(2);
 });
-
-function response(results: unknown[], nextPageCursor: string | null = null) {
-  return new Response(JSON.stringify({ nextPageCursor, results }), { status: 200 });
-}
-
-function documents(start: number, count: number) {
-  return Array.from({ length: count }, (_, index) => ({
-    category: 'article', html_content: `<p>Body ${start + index}</p>`,
-    id: `document-${String(start + index).padStart(3, '0')}`, title: `Title ${start + index}`,
-    updated_at: '2026-09-07T00:00:00.000Z'
-  }));
-}
-
-function apiSettings() {
-  const settings = createDefaultImportManagerSettings();
-  return {
-    ...settings,
-    readwiseReaderConfig: {
-      ...settings.readwiseReaderConfig,
-      withoutHighlightsDestination: 'inbox' as const
-    },
-    readwiseSourceMode: 'api' as const
-  };
-}

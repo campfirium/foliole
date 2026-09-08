@@ -75,8 +75,7 @@ async function runNow(
       signal,
       onPage: (page) => publishProgress(input?.window, 0, 0, 'fetching', page.recordCount)
     });
-    const preview = buildReadwiseApiPreview(settings, connectionRef);
-    const documents = selectReadwiseApiBatch(preview, connectionRef);
+    const documents = selectReadwiseApiBatch(settings, connectionRef);
     let annotationCount = 0;
     updateReadwiseApiTrackedRunStage('writing');
     for (const [index, document] of documents.entries()) {

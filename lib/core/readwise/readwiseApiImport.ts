@@ -6,6 +6,7 @@ import { convertHtmlToMarkdownCompatible, formatHtmlConversionDegradedReason } f
 import {
   resolveReaderBodyAncestor,
   type ExportBookContract,
+  type ExportHighlightContract,
   type ReaderDocumentContract
 } from './readwiseApiContract.js';
 
@@ -43,26 +44,30 @@ export interface ReadwiseApiSourceMetadata extends Record<string, unknown> {
 
 export function prepareReadwiseApiDocuments(
   documents: ReaderDocumentContract[],
-  exportBooks: ExportBookContract[],
-  previouslyVerifiedHighlightIds: ReadonlySet<string> = new Set()
+  exportBooks: ExportBookContract[]
 ): PreparedReadwiseApiDocument[] {
   const byId = new Map(documents.map((document) => [document.id, document]));
-  const verifiedHighlights = new Set([
-    ...verifiedHighlightIds(exportBooks),
-    ...previouslyVerifiedHighlightIds
-  ]);
+  const exportedHighlights = indexExportedHighlights(exportBooks);
   const annotationsByDocument = new Map<string, PreparedReadwiseApiAnnotation[]>();
   const unmatchedByDocument = new Map<string, number>();
   for (const document of documents) {
     if (document.category !== 'highlight' && document.category !== 'note') continue;
     const ancestor = resolveReaderBodyAncestor(document.id, byId);
-    const annotation = prepareAnnotation(document, byId, verifiedHighlights);
-    if (!ancestor.documentId || !annotation) {
+    const exported = document.category === 'highlight'
+      ? exportedHighlights.get(document.id)
+      : document.parentId ? exportedHighlights.get(document.parentId) : null;
+    const joined = Boolean(ancestor.documentId && exported?.documentId === ancestor.documentId);
+    const annotation = document.category === 'highlight' && joined && exported
+      ? prepareAnnotation(document, exported.highlight)
+      : null;
+    const foldedNote = document.category === 'note' && joined && Boolean(exported?.highlight.note);
+    if (!ancestor.documentId || (!annotation && !foldedNote)) {
       if (ancestor.documentId) {
         unmatchedByDocument.set(ancestor.documentId, (unmatchedByDocument.get(ancestor.documentId) ?? 0) + 1);
       }
       continue;
     }
+    if (!annotation) continue;
     const current = annotationsByDocument.get(ancestor.documentId) ?? [];
     current.push(annotation);
     annotationsByDocument.set(ancestor.documentId, current);
@@ -95,32 +100,37 @@ export function prepareReadwiseApiDocuments(
 
 function prepareAnnotation(
   document: ReaderDocumentContract,
-  byId: ReadonlyMap<string, ReaderDocumentContract>,
-  verifiedHighlights: ReadonlySet<string>
+  exported: ExportHighlightContract
 ): PreparedReadwiseApiAnnotation | null {
-  const highlightId = document.category === 'note' ? document.parentId : document.id;
-  if (!highlightId || !verifiedHighlights.has(highlightId)) return null;
-  const converted = convertHtmlToMarkdownCompatible(document.htmlContent ?? '');
-  const text = converted.content.trim() || document.title?.trim() || document.summary?.trim() || '';
-  const note = document.category === 'highlight' ? document.notes?.trim() : '';
+  if (exported.isDeleted) return null;
+  const text = exported.text?.trim() ?? '';
+  const note = exported.note?.trim() ?? '';
   const content = formatHighlightCardContent({ ...(note ? { note } : {}), text });
   if (!content) return null;
-  const kind = document.category === 'note' ? 'note' : 'highlight';
   return {
     content,
     contentHash: sha256(content),
-    kind,
-    locatorText: document.category === 'highlight' ? text : null,
+    kind: 'highlight',
+    locatorText: text || null,
     parentRemoteId: document.parentId,
     remoteId: document.id,
-    updatedAt: document.updatedAt
+    updatedAt: exported.updatedAt ?? document.updatedAt
   };
 }
 
-function verifiedHighlightIds(exportBooks: ExportBookContract[]) {
-  return new Set(exportBooks
-    .filter((book) => book.source === 'reader' && !book.isDeleted)
-    .flatMap((book) => book.highlightExternalIds));
+function indexExportedHighlights(exportBooks: ExportBookContract[]) {
+  const index = new Map<string, { documentId: string; highlight: ExportHighlightContract }>();
+  const conflicts = new Set<string>();
+  for (const book of exportBooks) {
+    if (book.source !== 'reader' || book.isDeleted || !book.externalId) continue;
+    for (const highlight of book.highlights) {
+      const existing = index.get(highlight.externalId);
+      if (existing && existing.documentId !== book.externalId) conflicts.add(highlight.externalId);
+      else index.set(highlight.externalId, { documentId: book.externalId, highlight });
+    }
+  }
+  for (const id of conflicts) index.delete(id);
+  return index;
 }
 
 export function stableReadwiseAnnotationNodeId(connectionRef: string, remoteId: string) {

@@ -8,23 +8,39 @@ import { prepareReadwiseApiDocuments, stableReadwiseAnnotationNodeId } from './r
 it('normalizes readable bodies and only materializes export-verified annotations', () => {
   const documents = [
     { author: 'Author', category: 'article', html_content: '<h1>Heading</h1><p>Body</p>', id: 'doc', title: 'Title' },
-    { category: 'highlight', html_content: '<p>Body</p>', id: 'highlight', parent_id: 'doc' },
-    { category: 'note', html_content: '<p>Comment</p>', id: 'note', parent_id: 'highlight' },
+    { category: 'highlight', id: 'highlight', parent_id: 'doc' },
+    { category: 'note', id: 'note', parent_id: 'highlight' },
     { category: 'highlight', html_content: '<p>Unverified</p>', id: 'other', parent_id: 'doc' }
   ].map(normalizeReaderDocument).filter((item) => item !== null);
   const exported = [normalizeExportBook({
-    external_id: 'doc', highlights: [{ external_id: 'highlight' }], source: 'reader', user_book_id: 1
+    external_id: 'doc', highlights: [{
+      external_id: 'highlight', note: 'Comment', text: 'Body', updated_at: '2026-09-08T00:00:00Z'
+    }], source: 'reader', user_book_id: 1
   })!];
 
   expect(prepareReadwiseApiDocuments(documents, exported)).toMatchObject([{
     annotations: [
-      { kind: 'highlight', remoteId: 'highlight' },
-      { kind: 'note', remoteId: 'note', parentRemoteId: 'highlight' }
+      { content: expect.stringContaining('Comment'), kind: 'highlight', remoteId: 'highlight' }
     ],
     body: '# Heading\n\nBody',
     id: 'doc',
     title: 'Title'
   }]);
+});
+
+it('rejects a highlight whose Export book and Reader ancestry disagree', () => {
+  const documents = [
+    { category: 'article', html_content: '<p>Body</p>', id: 'doc' },
+    { category: 'highlight', id: 'highlight', parent_id: 'doc' }
+  ].map(normalizeReaderDocument).filter((item) => item !== null);
+  const exported = [normalizeExportBook({
+    external_id: 'other-doc', highlights: [{ external_id: 'highlight', text: 'Body' }],
+    source: 'reader', user_book_id: 1
+  })!];
+
+  expect(prepareReadwiseApiDocuments(documents, exported)[0]).toMatchObject({
+    annotations: [], unmatchedAnnotationCount: 1
+  });
 });
 
 it('fails closed instead of producing a metadata-only topic', () => {

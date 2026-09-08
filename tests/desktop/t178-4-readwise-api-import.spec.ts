@@ -32,7 +32,9 @@ async function installApiFixture(electronApp: ElectronApplication) {
       if (url.pathname === '/api/v2/auth/') return new Response(null, { status: 204 });
       if (url.pathname === '/api/v2/export/') {
         return Response.json({ nextPageCursor: null, results: [{
-          external_id: 'article-1', highlights: [{ external_id: 'highlight-1' }], source: 'reader'
+          external_id: 'article-1', highlights: [{
+            external_id: 'highlight-1', note: 'Reader note', text: 'quoted passage'
+          }], source: 'reader'
         }] });
       }
       if (scope.__t178ImportMode === 'interrupt') {
@@ -48,8 +50,8 @@ async function installApiFixture(electronApp: ElectronApplication) {
       }
       return Response.json({ nextPageCursor: null, results: [
         article('article-1', 'Body with quoted passage'),
-        { category: 'highlight', html_content: '<p>quoted passage</p>', id: 'highlight-1', parent_id: 'article-1' },
-        { category: 'note', html_content: '<p>Reader note</p>', id: 'note-1', parent_id: 'highlight-1' },
+        { category: 'highlight', id: 'highlight-1', parent_id: 'article-1' },
+        { category: 'note', id: 'note-1', parent_id: 'highlight-1' },
         article('article-2', 'Second body')
       ] });
     };
@@ -107,7 +109,7 @@ test('imports, repeats safely, cancels, and resumes a Reader API round', async (
     await expect(dialog).toHaveCount(0);
 
     const firstCounts = await inspectImportedState(session.electronApp, true);
-    expect(firstCounts).toMatchObject({ importSources: 2, readwiseNodes: 4 });
+    expect(firstCounts).toMatchObject({ annotationContentPreserved: true, importSources: 2, readwiseNodes: 3 });
     await previewButton.click();
     dialog = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
     await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
@@ -136,7 +138,7 @@ test('imports, repeats safely, cancels, and resumes a Reader API round', async (
     await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
     await expect(dialog).toHaveCount(0);
     expect(await inspectImportedState(session.electronApp, false))
-      .toMatchObject({ importSources: 4, readwiseNodes: 6 });
+      .toMatchObject({ importSources: 4, readwiseNodes: 5 });
   } finally {
     await session?.close();
     await rm(stateRoot, { force: true, recursive: true });
@@ -159,7 +161,10 @@ async function inspectImportedState(electronApp: ElectronApplication, addLocalEd
         previousContent: topic.content, title: topic.title, updatedAt: '2026-09-07T01:00:00.000Z'
       });
       const current = driver.queryOne("SELECT CAST(cbd.data AS TEXT) content FROM import_sources i JOIN nodes n ON n.id=i.latest_node_id JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE i.remote_document_id='article-1'");
+      const annotation = driver.queryOne("SELECT content FROM nodes WHERE id LIKE 'node-readwise-%' AND parent_id=?", [topic?.id]);
       return {
+        annotationContentPreserved: annotation?.content.includes('quoted passage')
+          && annotation.content.includes('Reader note'),
         bodyPreserved: current?.content.includes('Local edit') ?? false,
         importSources: driver.queryOne("SELECT COUNT(*) count FROM import_sources WHERE remote_provider='readwise'").count,
         readwiseNodes: driver.queryOne(`SELECT COUNT(*) count FROM nodes WHERE deleted_at IS NULL AND

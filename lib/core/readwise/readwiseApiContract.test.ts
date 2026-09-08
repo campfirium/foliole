@@ -46,6 +46,9 @@ describe('Readwise API contract normalization', () => {
     })).toEqual({
       externalId: 'reader-doc',
       highlightExternalIds: ['reader-highlight'],
+      highlights: [{
+        externalId: 'reader-highlight', isDeleted: false, note: null, text: null, updatedAt: null
+      }],
       isDeleted: true,
       source: 'reader'
     });

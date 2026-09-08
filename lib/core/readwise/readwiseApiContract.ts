@@ -22,8 +22,17 @@ export interface ReaderDocumentContract {
 export interface ExportBookContract {
   externalId: string | null;
   highlightExternalIds: string[];
+  highlights: ExportHighlightContract[];
   isDeleted: boolean;
   source: string | null;
+}
+
+export interface ExportHighlightContract {
+  externalId: string;
+  isDeleted: boolean;
+  note: string | null;
+  text: string | null;
+  updatedAt: string | null;
 }
 
 export function normalizeReaderDocument(value: unknown): ReaderDocumentContract | null {
@@ -52,13 +61,27 @@ export function normalizeExportBook(value: unknown): ExportBookContract | null {
   const externalId = text(row.external_id);
   const source = text(row.source);
   if (!externalId && !text(row.user_book_id)) return null;
+  const highlights = array(row.highlights)
+    .map(normalizeExportHighlight).filter((item) => item !== null);
   return {
     externalId,
-    highlightExternalIds: array(row.highlights)
-      .map((item) => text(record(item).external_id))
-      .filter((item): item is string => Boolean(item)),
+    highlightExternalIds: highlights.map((highlight) => highlight.externalId),
+    highlights,
     isDeleted: row.is_deleted === true,
     source
+  };
+}
+
+function normalizeExportHighlight(value: unknown): ExportHighlightContract | null {
+  const row = record(value);
+  const externalId = text(row.external_id);
+  if (!externalId) return null;
+  return {
+    externalId,
+    isDeleted: row.is_deleted === true,
+    note: text(row.note),
+    text: text(row.text),
+    updatedAt: text(row.updated_at)
   };
 }
 
