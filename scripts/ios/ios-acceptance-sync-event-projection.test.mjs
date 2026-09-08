@@ -4,7 +4,9 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
-import { friAcceptanceBundle } from './ios-acceptance-sync-event-projection.mjs';
+import {
+  friAcceptanceBundle, resolveFriEvidenceRoot
+} from './ios-acceptance-sync-event-projection.mjs';
 
 it('runs the isolated signed projection target and accepts only its fixed fields', () => {
   const source = fs.readFileSync('scripts/ios/ios-acceptance-sync-event-projection.mjs', 'utf8');
@@ -27,4 +29,12 @@ it('uses one fixed signed acceptance container for the task', () => {
   });
   expect(() => friAcceptanceBundle('12345678-1234-4234-8234-123456789abc'))
     .toThrow('task identity');
+});
+
+it('loads promoted Fri evidence from the runner receipt', () => {
+  const result = { lines: ['build output', JSON.stringify({
+    classification: 'accepted', promoted: '/evidence/accepted'
+  })] };
+  expect(resolveFriEvidenceRoot(result, '/requested')).toBe('/evidence/accepted');
+  expect(resolveFriEvidenceRoot({ lines: ['build output'] }, '/requested')).toBe('/requested');
 });

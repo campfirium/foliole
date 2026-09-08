@@ -43,6 +43,17 @@ function loadProjection(root, buildIdentity, applicationId) {
   throw new Error('Fri acceptance sync event projection attachment is missing.');
 }
 
+export function resolveFriEvidenceRoot(result, fallbackRoot) {
+  for (const line of [...result.lines].reverse()) {
+    let value;
+    try { value = JSON.parse(line); } catch { continue; }
+    if (value?.classification === 'accepted' && typeof value.promoted === 'string') {
+      return value.promoted;
+    }
+  }
+  return fallbackRoot;
+}
+
 export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, execute,
   repoRoot, bundle, runnerArgs = [] }) {
   const result = await execute('bash', [FRI_RUNNER,
@@ -56,5 +67,6 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
     FOLIOLE_T152_BUILD_IDENTITY: buildIdentity }, hardDeadlineMs: 30 * 60_000,
   host: 'ios-b', stage: 'fri-sync-event-projection' });
   if (result.code !== 0) throw new Error('Fri acceptance sync event projection failed.');
-  return loadProjection(evidenceRoot, buildIdentity, bundle.applicationId);
+  return loadProjection(resolveFriEvidenceRoot(result, evidenceRoot),
+    buildIdentity, bundle.applicationId);
 }
