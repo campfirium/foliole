@@ -15,7 +15,13 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertTrue(configuration.waitsForConnectivity)
     }
 
-    func testBonjourEndpointUsesResolvedServiceHost() {
+    func testBonjourEndpointUsesResolvedServiceAddress() {
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredResolvedIPv4([
+            "198.18.0.1", "169.254.12.28", "192.168.0.10"
+        ]), "192.168.0.10")
+        XCTAssertNil(FolioleCompanionBonjourEndpoint.preferredResolvedIPv4([
+            "127.0.0.1", "169.254.12.28"
+        ]))
         XCTAssertEqual(FolioleCompanionBonjourEndpoint.resolvedHost(" desktop.local. "),
                        "desktop.local")
         XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(" . "))
