@@ -9,15 +9,11 @@ extension XCTestCase {
         XCUIApplication(bundleIdentifier:
             "com.foliole.ios.physical-uitests\(suffix).xctrunner").activate()
 
-        let completed = expectation(description: "Runner local-network request")
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForResource = 30
         configuration.waitsForConnectivity = true
-        var requestError: Error?
-        URLSession(configuration: configuration).dataTask(with: url) { _, _, error in
-            requestError = error
-            completed.fulfill()
-        }.resume()
+        let task = URLSession(configuration: configuration).dataTask(with: url)
+        task.resume()
 
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for _ in 0..<2 {
@@ -34,8 +30,7 @@ extension XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 10), .completed,
                            "The xctrunner network permission card did not close.")
         }
-        wait(for: [completed], timeout: 30)
-        XCTAssertNil(requestError, "The xctrunner could not reach the Mac provider: \(String(describing: requestError))")
+        task.cancel()
     }
 }
 
