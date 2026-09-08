@@ -14,9 +14,10 @@ extension XCTestCase {
     func prepareRunnerLocalNetworkPermission() throws {
         let environment = ProcessInfo.processInfo.environment
         let endpoint = try XCTUnwrap(environment["FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL"])
-        let components = try XCTUnwrap(URLComponents(string: endpoint))
-        let host = try XCTUnwrap(components.host, "Invalid Fri LAN endpoint: \(endpoint)")
-        let port = try XCTUnwrap(components.port, "Missing Fri LAN port: \(endpoint)").description
+        let components = endpoint.split(separator: ":", maxSplits: 1).map(String.init)
+        XCTAssertEqual(components.count, 2, "Invalid Fri LAN authority: \(endpoint)")
+        let host = components.first ?? ""
+        let port = components.last ?? ""
         let suffix = try XCTUnwrap(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"])
         XCUIApplication(bundleIdentifier:
             "com.foliole.ios.physical-uitests\(suffix).xctrunner")

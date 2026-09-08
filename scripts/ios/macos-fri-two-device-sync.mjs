@@ -29,7 +29,7 @@ function stateSignals() {
   return { publish, waitFor };
 }
 
-function privateLanEndpoint(serverStatus) {
+function privateLanAuthority(serverStatus) {
   const endpoint = serverStatus?.advertised_urls?.find((value) => {
     try {
       const parts = new URL(value).hostname.split('.').map(Number);
@@ -38,7 +38,7 @@ function privateLanEndpoint(serverStatus) {
     } catch { return false; }
   });
   if (!endpoint) throw new Error('Mac provider did not expose a private LAN endpoint for Fri.');
-  return endpoint;
+  return new URL(endpoint).host;
 }
 
 export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
@@ -78,7 +78,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     ], { action: 'fri-two-device', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
       FOLIOLE_ATTACH_TO_RUNNING_APP: '1',
-      FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL: privateLanEndpoint(ready.serverStatus),
+      FOLIOLE_PHYSICAL_SYNC_GROUP_ENDPOINT_URL: privateLanAuthority(ready.serverStatus),
       FOLIOLE_PHYSICAL_SYNC_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_TAG: ready.groupTag, FOLIOLE_T152_TWO_DEVICE: '1' },
