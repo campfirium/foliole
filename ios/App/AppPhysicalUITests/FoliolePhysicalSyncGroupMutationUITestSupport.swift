@@ -3,7 +3,9 @@ import XCTest
 extension FoliolePhysicalSyncGroupUITests {
     func triggerForegroundAutomaticSync(in app: XCUIApplication) {
         XCUIDevice.shared.press(.home)
-        Thread.sleep(forTimeInterval: 2)
+        let backgroundInterval = expectation(description: "Fri foreground transition interval")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { backgroundInterval.fulfill() }
+        wait(for: [backgroundInterval], timeout: 3)
         app.activate()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
                       "Fri did not return to the foreground for automatic Sync.")
@@ -29,6 +31,20 @@ extension FoliolePhysicalSyncGroupUITests {
         } else {
             waitForVisibleTopic(prefix: title, in: app)
         }
+    }
+
+    func verifyVisibleConflictAlternative(in app: XCUIApplication) {
+        openBrowse(in: app)
+        let topic = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Open topic T152 conflict t152-conflict-")
+        ).firstMatch
+        XCTAssertTrue(topic.waitForExistence(timeout: 120),
+                      "Fri did not retain the converged conflict topic.")
+        topic.tap()
+        revealReadingChrome(in: app)
+        tapButton(named: "View another text version", in: app, timeout: 120)
+        XCTAssertTrue(app.staticTexts["Another text version"].waitForExistence(timeout: 30),
+                      "Fri did not expose the concurrent text alternative.")
     }
 
     func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {

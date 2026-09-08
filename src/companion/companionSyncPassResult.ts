@@ -143,8 +143,7 @@ function describePushPass(
       'retrying'
     );
   }
-  const rejectedOrConflicted = Math.max(
-    result.pushIssueCount ?? 0,
+  const rejectedOrConflicted = result.pushIssueCount ?? (
     (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0)
   );
   if (rejectedOrConflicted > 0) {

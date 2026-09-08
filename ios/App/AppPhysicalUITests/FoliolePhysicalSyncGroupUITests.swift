@@ -87,8 +87,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         tapButton(named: "Resume Sync", in: app, timeout: 30)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
-                      "Fri did not expose the concurrent business conflict.")
+        verifyVisibleConflictAlternative(in: app)
 
         app.terminate()
         app.launch()

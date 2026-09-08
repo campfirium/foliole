@@ -14,7 +14,7 @@ import {
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncAlternative
 } from '../desktop/sync-group-conflict-action.mjs';
 
 function option(argv, name) {
@@ -115,7 +115,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       await waitForRelease();
       await session.invoke('resume_companion_sync');
       const manualBeforeRestart = await session.invoke('sync_companion_now');
-      conflict = await loadVisibleDesktopSyncConflict({ nodeId: conflictSeed.nodeId, session });
+      conflict = await loadVisibleDesktopSyncAlternative({ nodeId: conflictSeed.nodeId, session });
       await session.close();
       session = await openSession();
       const restarted = await session.load();

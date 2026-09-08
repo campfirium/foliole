@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflict,
-  loadVisibleDesktopSyncConflictCopy
+  loadVisibleDesktopSyncAlternative, loadVisibleDesktopSyncConflictCopy
 } from './sync-group-conflict-action.mjs';
 
 it('creates and forks one business object only through product commands', async () => {
@@ -52,6 +52,17 @@ it('waits for the applied sync event before accepting a product conflict', async
     .resolves.toMatchObject({ conflictCount: 1, visible: true });
   expect(waitForState).toHaveBeenCalledWith({ command: 'load_sync_node_conflicts',
     commandArgs: { objectIds: ['node'] }, condition: { count: 1, kind: 'sync-conflict-count' },
+    eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
+});
+
+it('accepts a product-visible text alternative for the exact object', async () => {
+  const waitForState = vi.fn(async () => ({
+    kind: 'sync_alternative', source_node_id: 'node'
+  }));
+  await expect(loadVisibleDesktopSyncAlternative({ nodeId: 'node', session: { waitForState } }))
+    .resolves.toMatchObject({ resolution: 'text-alternative', silentOverwrite: false, visible: true });
+  expect(waitForState).toHaveBeenCalledWith({ command: 'load_node_text_alternative_preview',
+    commandArgs: { node_id: 'node' }, condition: { kind: 'node-text-alternative', nodeId: 'node' },
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 

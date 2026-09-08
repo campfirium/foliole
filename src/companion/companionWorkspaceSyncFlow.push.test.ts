@@ -45,6 +45,7 @@ async function testRecordsPushConflictWithoutCompleting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     localDirtyCount: 2,
     pushConflictCount: 1,
+    pushIssueCount: 2,
     pushRejectedCount: 1,
     remainingAttachmentResourceCount: 0,
     remainingContentBlobCount: 0
@@ -75,10 +76,39 @@ async function testRecordsPushConflictWithoutCompleting() {
   }));
 }
 
+async function testContinuesAfterPullResolvesPushConflict() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    localDirtyCount: 1,
+    pushConflictCount: 1,
+    pushIssueCount: 0
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: 'Device changes are still waiting to sync.',
+    result: 'waiting',
+    status: 'skipped'
+  }));
+}
+
 describe('tryForegroundAutoSync push outcomes', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
   it('records push failure without marking the pull pass failed', testRecordsPushFailureWithoutFailingPull);
 
   it('records push conflicts without marking the pass completed', testRecordsPushConflictWithoutCompleting);
+
+  it('continues when pull resolves the push conflict and creates outbound work', testContinuesAfterPullResolvesPushConflict);
 });
