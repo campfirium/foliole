@@ -85,7 +85,8 @@ export async function resolveTopicConflict(
   const resolution = buildResolutionRecord([local, ...ordered], winner, body);
   const applied = await applySyncNodesWithDbPort(port, [resolution], {
     enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true
+    includeAlreadyApplied: true,
+    operation: 'local_mutation'
   });
   if (!applied.appliedIds.includes(local.object_id)) {
     throw new Error(`sync_topic_resolution_not_applied:${local.object_id}`);
