@@ -84,6 +84,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     return runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env, evidenceRoot });
   }
   args.markMutationBoundary?.();
+  await removeA5AcceptanceApplication(args);
   const macosLibrary = path.join(sharedRoot, 'macos-library');
   if (process.env.FOLIOLE_T152_CELL_ID && fs.existsSync(macosLibrary)) {
     throw new Error('The T152 Mac task library locator was already used.');

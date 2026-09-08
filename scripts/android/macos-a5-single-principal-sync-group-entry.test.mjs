@@ -75,6 +75,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+  expect(source.match(/await removeA5AcceptanceApplication\(args\)/gu)).toHaveLength(2);
   expect(source).not.toContain("protectData('backup'");
   expect(source).not.toContain('deviceBackupRoot');
 });
