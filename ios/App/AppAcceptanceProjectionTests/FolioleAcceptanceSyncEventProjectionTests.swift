@@ -68,7 +68,8 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
         XCTAssertEqual(sqlite3_prepare_v2(database, sql, -1, &statement, nil), SQLITE_OK)
         defer { sqlite3_finalize(statement) }
         var rows: [[String: Any]] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        var step = sqlite3_step(statement)
+        while step == SQLITE_ROW {
             let body = column(statement, 5)
             rows.append([
                 "object_id": column(statement, 0), "version_id": column(statement, 1),
@@ -80,8 +81,9 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
                         : body.contains("Desktop fork macos")
                 }
             ])
+            step = sqlite3_step(statement)
         }
-        XCTAssertEqual(sqlite3_errcode(database), SQLITE_OK)
+        XCTAssertEqual(step, SQLITE_DONE)
         return rows
     }
 
