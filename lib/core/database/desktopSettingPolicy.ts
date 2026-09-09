@@ -12,6 +12,7 @@ const USER_SPACE_KEYS = new Set([
   'readwise_api_import_state',
   'readwise_remote_source',
   'readwise_source_cutover',
+  'readwise_source_cutover_v2',
   'review_scheduler_settings',
   'system_entry_display_names'
 ]);

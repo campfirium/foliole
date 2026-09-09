@@ -2,10 +2,12 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import { resolveReadwiseImportDestination } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import {
   loadReadwiseApiImportSource,
   saveReadwiseApiImportSource
 } from '../database/readwiseApiImportState.js';
+import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -23,8 +25,12 @@ export async function commitReadwiseApiDocument(input: {
   document: PreparedReadwiseApiDocument;
   replaceExistingBody?: boolean;
 }) {
+  const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
+  if (!guardedDocument) {
+    return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
+  }
+  input = { ...input, document: guardedDocument };
   const isOriginalFile = input.document.category === 'pdf';
-  const existingBefore = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const destination = existingBefore ? 'inbox' : resolveReadwiseImportDestination(
     input.config, input.document.annotations.length > 0
   );
@@ -68,6 +74,17 @@ export async function commitReadwiseApiDocument(input: {
   }
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
+}
+
+function guardPostCutoverDocument(connectionRef: string, document: PreparedReadwiseApiDocument) {
+  const existingBefore = loadReadwiseApiImportSource(connectionRef, document.id);
+  const binding = existingBefore ? {
+    annotationRemoteIds: new Set(existingBefore.annotations.map((item) => item.remoteId))
+  } : null;
+  return {
+    existingBefore,
+    guardedDocument: filterPostCutoverReadwiseDocument(loadReadwiseSourceCutover(), document, binding)
+  };
 }
 
 function saveOriginalFileState(connectionRef: string, documentId: string, originalFile: ReadwiseApiOriginalFileState) {

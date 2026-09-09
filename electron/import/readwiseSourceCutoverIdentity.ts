@@ -19,42 +19,33 @@ interface SourceRow extends DatabaseRow {
   source_location: string;
 }
 
-interface SourceArtifact extends SourceRow {
-  full: string;
-  identityIds: string[];
+interface SourceArtifact {
+  documentIds: Set<string>;
+  highlightIds: Set<string>;
+  latestNodeId: string;
   raw: string;
+  sourceFingerprint: string | null;
+}
+
+export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseIdentityBinding {
+  nodeId: string;
 }
 
 export async function prepareReadwiseSourceCutoverIdentity() {
-  const artifacts = await Promise.all(loadSources().map(readArtifact));
-  const byParent = new Map<string, SourceArtifact[]>();
-  for (const artifact of artifacts) {
-    for (const identityId of artifact.identityIds) {
-      const current = byParent.get(identityId) ?? [];
-      current.push(artifact);
-      byParent.set(identityId, current);
-    }
-  }
-  const matched = new Set<string>();
-  const conflicted = new Set<string>();
+  const artifacts = [...await loadSourceArtifacts(), ...await loadBookArtifacts()];
   return {
-    bindingFor(document: PreparedReadwiseApiDocument, connectionRef: string) {
-      const candidates = byParent.get(document.id) ?? [];
-      const artifact = candidates[0];
-      if (!artifact || candidates.length !== 1 || hasStoredConflict(artifact, document.id, connectionRef)) {
-        for (const candidate of candidates) conflicted.add(candidate.source_fingerprint);
-        return null;
-      }
-      matched.add(artifact.source_fingerprint);
-      return bindingFor(artifact, document);
-    },
-    conflictCount: () => conflicted.size,
-    unmatchedCount: () => artifacts.length - matched.size - conflicted.size
+    bindingFor(document: PreparedReadwiseApiDocument): ReadwiseSourceCutoverIdentityBinding | null {
+      const remoteHighlights = new Set(document.annotations.map((item) => item.remoteId));
+      const matches = artifacts.filter((artifact) => artifact.documentIds.has(document.id) ||
+        [...remoteHighlights].some((id) => artifact.highlightIds.has(id)));
+      if (matches.length !== 1) return null;
+      return bindingFor(matches[0]!, document);
+    }
   };
 }
 
-function loadSources() {
-  return openDatabaseConnection().driver.queryAll<SourceRow>(
+async function loadSourceArtifacts() {
+  const rows = openDatabaseConnection().driver.queryAll<SourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, d.root_path,
        json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
      FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
@@ -63,20 +54,54 @@ function loadSources() {
        AND i.remote_document_id IS NULL ORDER BY i.source_fingerprint`,
     [loadReadwiseHostAssignment().current_host_name]
   );
+  return Promise.all(rows.map(async (source): Promise<SourceArtifact> => {
+    const relative = safeRelative(source.source_location);
+    const full = relative ? await readText(path.resolve(source.root_path, relative)) : '';
+    const raw = relative && source.highlight_path
+      ? await readText(path.resolve(source.highlight_path, relative)) : '';
+    return {
+      documentIds: new Set(extractReaderLinkIds(full)),
+      highlightIds: new Set(extractReaderLinkIds(raw)),
+      latestNodeId: source.latest_node_id,
+      raw,
+      sourceFingerprint: source.source_fingerprint
+    };
+  }));
 }
 
-async function readArtifact(source: SourceRow): Promise<SourceArtifact> {
-  const relative = safeRelative(source.source_location);
-  const full = relative ? await readText(path.resolve(source.root_path, relative)) : '';
-  const raw = relative && source.highlight_path
-    ? await readText(path.resolve(source.highlight_path, relative)) : '';
-  return { ...source, full, identityIds: [...new Set(extractReaderLinkIds(full))], raw };
+async function loadBookArtifacts(): Promise<SourceArtifact[]> {
+  const value = openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'readwise_books_inventory_state'"
+  )?.value;
+  if (!value) return [];
+  let payload: Record<string, unknown>;
+  try { payload = JSON.parse(value) as Record<string, unknown>; } catch { return []; }
+  const inventories = payload.inventories && typeof payload.inventories === 'object'
+    ? Object.values(payload.inventories as Record<string, unknown>) : [];
+  const artifacts: SourceArtifact[] = [];
+  for (const entry of inventories) {
+    const inventory = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {};
+    for (const item of Array.isArray(inventory.books) ? inventory.books : []) {
+      const book = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+      if (typeof book.generatedNodeId !== 'string') continue;
+      const full = await readText(typeof book.fullDocumentMarkdownPath === 'string' ? book.fullDocumentMarkdownPath : '');
+      const raw = await readText(typeof book.highlightMarkdownPath === 'string' ? book.highlightMarkdownPath : '');
+      artifacts.push({
+        documentIds: new Set(extractReaderLinkIds(full)),
+        highlightIds: new Set(extractReaderLinkIds(raw)),
+        latestNodeId: book.generatedNodeId,
+        raw,
+        sourceFingerprint: null
+      });
+    }
+  }
+  return artifacts;
 }
 
 function bindingFor(
   artifact: SourceArtifact,
   document: PreparedReadwiseApiDocument
-): ConfirmedReadwiseIdentityBinding {
+): ReadwiseSourceCutoverIdentityBinding {
   const ids = extractReaderLinkIds(artifact.raw);
   const highlights = extractReadwiseSidecarHighlights(
     artifact.raw,
@@ -84,15 +109,16 @@ function bindingFor(
   );
   const annotations = highlights.length === ids.length
     ? highlights.flatMap((highlight, index) => resolveAnnotation(
-      artifact.latest_node_id,
+      artifact.latestNodeId,
       highlight.text,
       document.annotations.find((item) => item.remoteId === ids[index])
     ))
     : [];
   return {
     annotations,
+    nodeId: artifact.latestNodeId,
     remoteDocumentId: document.id,
-    sourceFingerprint: artifact.source_fingerprint
+    sourceFingerprint: artifact.sourceFingerprint ?? ''
   };
 }
 
@@ -104,20 +130,16 @@ function resolveAnnotation(
   if (!remote) return [];
   const children = openDatabaseConnection().driver.queryAll<{
     content: string; created_at: string; id: string; is_title_manual: number; updated_at: string;
-  }>('SELECT id, content, is_title_manual, created_at, updated_at FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [nodeId]);
+  }>(`WITH RECURSIVE tree(id) AS (
+       SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
+       UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE n.deleted_at IS NULL
+     ) SELECT n.id, n.content, n.is_title_manual, n.created_at, n.updated_at FROM nodes n JOIN tree t ON t.id=n.id`,
+  [nodeId]);
   const matches = children.filter((child) => child.is_title_manual === 0 && child.created_at === child.updated_at
     && normalizeReadwiseText(child.content) === normalizeReadwiseText(text));
   return matches.length === 1
     ? [{ kind: remote.kind, nodeId: matches[0]!.id, remoteId: remote.remoteId }]
     : [];
-}
-
-function hasStoredConflict(artifact: SourceArtifact, documentId: string, connectionRef: string) {
-  return Boolean(openDatabaseConnection().driver.queryOne(
-    `SELECT 1 AS present FROM import_sources WHERE remote_connection_ref = ?
-       AND (remote_document_id = ? OR latest_node_id = ?) AND source_fingerprint <> ? LIMIT 1`,
-    [connectionRef, documentId, artifact.latest_node_id, artifact.source_fingerprint]
-  ));
 }
 
 function safeRelative(value: string) {
@@ -127,5 +149,6 @@ function safeRelative(value: string) {
 }
 
 async function readText(filePath: string) {
+  if (!filePath) return '';
   try { return await fs.readFile(filePath, 'utf8'); } catch { return ''; }
 }

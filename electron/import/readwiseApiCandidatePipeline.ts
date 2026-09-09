@@ -20,8 +20,14 @@ export async function runReadwiseApiCandidatePipeline(input: {
   assertEligible: () => void;
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
-  beforeCommit?: (document: PreparedReadwiseApiDocument) => Promise<{ replaceExistingBody?: boolean } | void>;
+  afterCommit?: (document: PreparedReadwiseApiDocument) => Promise<void> | void;
+  beforeCommit?: (document: PreparedReadwiseApiDocument) => Promise<{
+    document?: PreparedReadwiseApiDocument;
+    replaceExistingBody?: boolean;
+    skip?: boolean;
+  } | void>;
   onCandidateCount?: (total: number) => void;
+  onCandidateIndex?: (documentIds: string[]) => void;
   onProgress?: (processed: number, total: number) => void;
   settings: ImportManagerSettings;
 }) {
@@ -31,6 +37,7 @@ export async function runReadwiseApiCandidatePipeline(input: {
     input.dependencies
   );
   const total = candidates.length;
+  input.onCandidateIndex?.(candidates.map((candidate) => candidate.documentId));
   input.onCandidateCount?.(total);
   const stats = {
     annotationCount: 0,
@@ -89,21 +96,30 @@ async function consumeCandidate(
     const document = loadPreparedReadwiseApiCandidate(input.connectionRef, documentId);
     if (!document) throw new Error('readwise_api_candidate_incomplete');
     const commitOptions = await input.beforeCommit?.(document);
+    if (commitOptions?.skip) {
+      setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed');
+      stats.skippedCount += 1;
+      stats.completedCount += 1;
+      input.onProgress?.(stats.completedCount, total);
+      return;
+    }
     const result = await commitReadwiseApiDocument({
       assertEligible: input.assertEligible,
       config: input.settings.readwiseReaderConfig,
       connectionRef: input.connectionRef,
       dependencies: input.dependencies,
-      document,
+      document: commitOptions?.document ?? document,
       ...(commitOptions?.replaceExistingBody === undefined
         ? {} : { replaceExistingBody: commitOptions.replaceExistingBody })
     });
+    await input.afterCommit?.(commitOptions?.document ?? document);
     stats.annotationCount += result.annotationCount;
     setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed');
     stats.committedCount += 1;
     stats.completedCount += 1;
     input.onProgress?.(stats.completedCount, total);
-  } catch {
+  } catch (error) {
+    console.error('[readwise-candidate] candidate failed', { documentId, error });
     setReadwiseApiCandidateStatus(
       input.connectionRef,
       documentId,

@@ -123,6 +123,7 @@
     "sqlite:search-index-report": "node --no-warnings scripts/sqlite/search-index-size-report.mjs",
     "sync:convergence:health": "node scripts/sync-convergence-health-report.mjs",
     "oneoff:sqlite:node-kind-report": "node scripts/electron-sqlite-runner.mjs scripts/oneoff/node-kind-report.ts",
+    "oneoff:readwise-source-cutover-recovery": "node scripts/electron-sqlite-runner.mjs scripts/oneoff/readwise-source-cutover-recovery.ts",
     "android:web:dev": "node scripts/android/android-web-dev.mjs",
     "guides:content:build": "node --experimental-strip-types scripts/demo/build-demo-guides-content.ts",
     "demo:content:build": "npm run guides:content:build",

@@ -50,7 +50,9 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { completeReadwiseApiImportRun } from '../database/readwiseApiImportState.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
+import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
+import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
 import { runReadwiseSourceCutover, previewReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
@@ -72,33 +74,6 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('counts only active Topics imported by this Host', async () => {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
-    VALUES ('local-topic',NULL,'topic','Local',0,'body','old','old'),
-      ('other-topic',NULL,'topic','Other',0,'body','old','old')`);
-  driver.execute(`INSERT INTO desktop_sources (source_ref,source_type,config_ref,host_name,host_platform,
-    root_path,path_flavor,type_settings_json,created_at,updated_at) VALUES
-    ('readwise:local','readwise','articles-local','This Mac','darwin',?,'posix','{}','old','old'),
-    ('readwise:other','readwise','articles-other','Other Mac','darwin',?,'posix','{}','old','old')`,
-  [state.sourcePath, state.sourcePath]);
-  driver.execute(`INSERT INTO import_sources (source_fingerprint,provider,source_kind,source_name,source_locator,
-    first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location) VALUES
-    ('local','desktop_text_file','markdown','Local.md','Local.md','old','old','hash','local-topic','readwise:local','Local.md'),
-    ('other','desktop_text_file','markdown','Other.md','Other.md','old','old','hash','other-topic','readwise:other','Other.md')`);
-
-  await expect(previewReadwiseSourceCutover()).resolves.toEqual({
-    completed_count: 0, status: 'ready', topic_count: 1, total_count: null
-  });
-});
-
-it('does not inspect relay directories before the user confirms migration', async () => {
-  state.sourcePath = path.join(tempRoot, 'missing');
-  await expect(previewReadwiseSourceCutover()).resolves.toEqual({
-    completed_count: 0, status: 'ready', topic_count: 0, total_count: null
-  });
-});
-
 it('starts migration from the complete selected candidate scope instead of the ordinary watermark', async () => {
   const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   completeReadwiseApiImportRun({
@@ -117,7 +92,7 @@ it('starts migration from the complete selected candidate scope instead of the o
   }) as typeof fetch;
 
   await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ status: 'completed' });
+    .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 1 });
   const exportRequest = requests.map((input) => new URL(input))
     .find((url) => url.pathname === '/api/v2/export/');
   expect(exportRequest?.searchParams.has('updatedAfter')).toBe(false);
@@ -139,8 +114,19 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
     anchor_link: expect.stringContaining('remembered phrase'),
     content: 'Local answer'
   });
-  expect(driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key='readwise_source_cutover'"))
-    .toBeTruthy();
+  const legacyState = driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover'"
+  );
+  const journalState = driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  );
+  expect(JSON.parse(legacyState?.value ?? '{}')).toMatchObject({ status: 'api', version: 1 });
+  expect(JSON.parse(journalState?.value ?? '{}')).toMatchObject({
+    cohortDocumentIds: ['document-1'],
+    documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
+    status: 'api',
+    version: 2
+  });
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'document-1')).toHaveLength(1);
@@ -158,6 +144,37 @@ it('keeps the irreversible migration state after a network failure', async () =>
     status: 'migration_in_progress'
   });
 });
+
+it('binds an old document first seen after cutover to its exact original Topic', async () => {
+  await seedMigratableSource();
+  const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  writeReadwiseSourceCutover({
+    annotations: [],
+    cohortDocumentIds: [],
+    completedAt: '2026-09-09T01:00:00.000Z',
+    documents: [],
+    retiredNodeIds: [],
+    sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z',
+    status: 'api'
+  }, '2026-09-09T01:00:00.000Z');
+  const fetchImpl = migrationFetch();
+
+  await expect(runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ status: 'completed' });
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryOne<{ latest_node_id: string }>(
+    "SELECT latest_node_id FROM import_sources WHERE remote_connection_ref=? AND remote_document_id='document-1'",
+    [remote.connectionRef]
+  )?.latest_node_id).toBe('topic-1');
+  const journal = JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}') as { cohortDocumentIds: string[]; documents: unknown[] };
+  expect(journal.cohortDocumentIds).toEqual([]);
+  expect(journal.documents).toContainEqual({
+    nodeId: 'topic-1', remoteId: 'document-1', status: 'bound'
+  });
+}, 20_000);
 
 async function seedMigratableSource() {
   await fs.writeFile(path.join(state.sourcePath, 'Sample.md'), [

@@ -20,6 +20,7 @@ import {
 } from './readwiseApiScheduleState.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
+import { createPostCutoverReadwiseDocumentPolicy } from './readwiseSourceCutoverJournal.js';
 
 interface ActiveApiImport {
   controller: AbortController;
@@ -88,11 +89,16 @@ async function runNow(
 ): Promise<NativeReadwiseImportRunResult> {
   const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
   const connectionRef = requireConnectionRef();
+  const cutoverPolicy = await createPostCutoverReadwiseDocumentPolicy(connectionRef);
   beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual');
   try {
     updateReadwiseApiTrackedRunStage('fetching');
     const result = await runReadwiseApiCandidatePipeline({
       assertEligible: () => assertEligible(signal, connectionRef),
+      ...(cutoverPolicy ? {
+        afterCommit: cutoverPolicy.afterCommit,
+        beforeCommit: cutoverPolicy.beforeCommit
+      } : {}),
       connectionRef,
       dependencies: {
         ...input?.dependencies,

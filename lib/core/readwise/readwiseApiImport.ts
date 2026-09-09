@@ -19,6 +19,7 @@ const BODY_CATEGORIES = new Set(['article', 'email', 'epub', 'pdf', 'rss', 'twee
 export interface PreparedReadwiseApiAnnotation {
   content: string;
   contentHash: string;
+  createdAt?: string | null;
   kind: 'highlight' | 'note';
   locatorText: string | null;
   parentRemoteId: string | null;
@@ -31,6 +32,7 @@ export interface PreparedReadwiseApiDocument {
   body: string;
   category: Exclude<ReaderDocumentContract['category'], 'highlight' | 'note' | null>;
   coverImageUrl: string | null;
+  createdAt?: string | null;
   degradedReason: string | null;
   epubStructure?: PreparedReadwiseApiEpubStructure | null;
   id: string;
@@ -78,35 +80,42 @@ export function prepareReadwiseApiDocuments(
     current.push(annotation);
     annotationsByDocument.set(ancestor.documentId, current);
   }
-  return documents.flatMap((document): PreparedReadwiseApiDocument[] => {
-    if (!document.category || !BODY_CATEGORIES.has(document.category)) return [];
-    const converted = convertHtmlToMarkdownCompatible(document.htmlContent ?? '');
-    const epubStructure = document.category === 'epub'
-      ? prepareReadwiseApiEpubStructure(document.htmlContent ?? '')
-      : null;
-    const title = document.title?.trim() || 'Untitled';
-    return [{
-      annotations: annotationsByDocument.get(document.id) ?? [],
-      body: converted.content,
-      category: document.category as PreparedReadwiseApiDocument['category'],
-      coverImageUrl: document.imageUrl,
-      degradedReason: converted.content.trim()
-        ? (epubStructure?.degradedReason ?? formatHtmlConversionDegradedReason(converted.warnings))
-        : 'Readable body is unavailable; this source was not imported.',
-      epubStructure,
-      id: document.id,
-      metadata: {
-        author: document.author,
-        category: document.category,
-        readerUrl: document.url,
-        sourceUrl: document.sourceUrl,
-        title
-      },
-      title,
-      unmatchedAnnotationCount: unmatchedByDocument.get(document.id) ?? 0,
-      updatedAt: document.updatedAt
-    }];
-  });
+  return documents.flatMap((document) => prepareDocument(
+    document,
+    annotationsByDocument.get(document.id) ?? [],
+    unmatchedByDocument.get(document.id) ?? 0
+  ));
+}
+
+function prepareDocument(
+  document: ReaderDocumentContract,
+  annotations: PreparedReadwiseApiAnnotation[],
+  unmatchedAnnotationCount: number
+): PreparedReadwiseApiDocument[] {
+  if (!document.category || !BODY_CATEGORIES.has(document.category)) return [];
+  const converted = convertHtmlToMarkdownCompatible(document.htmlContent ?? '');
+  const epubStructure = document.category === 'epub'
+    ? prepareReadwiseApiEpubStructure(document.htmlContent ?? '') : null;
+  const title = document.title?.trim() || 'Untitled';
+  return [{
+    annotations,
+    body: converted.content,
+    category: document.category as PreparedReadwiseApiDocument['category'],
+    coverImageUrl: document.imageUrl,
+    createdAt: document.createdAt ?? null,
+    degradedReason: converted.content.trim()
+      ? (epubStructure?.degradedReason ?? formatHtmlConversionDegradedReason(converted.warnings))
+      : 'Readable body is unavailable; this source was not imported.',
+    epubStructure,
+    id: document.id,
+    metadata: {
+      author: document.author, category: document.category, readerUrl: document.url,
+      sourceUrl: document.sourceUrl, title
+    },
+    title,
+    unmatchedAnnotationCount,
+    updatedAt: document.updatedAt
+  }];
 }
 
 function prepareAnnotation(
@@ -121,6 +130,7 @@ function prepareAnnotation(
   return {
     content,
     contentHash: sha256(content),
+    createdAt: document.createdAt ?? null,
     kind: 'highlight',
     locatorText: text || null,
     parentRemoteId: document.parentId,

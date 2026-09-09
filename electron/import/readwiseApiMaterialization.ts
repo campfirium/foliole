@@ -63,7 +63,7 @@ export function materializeReadwiseApiDocument(input: {
     return result(input.document.id, 'skipped');
   }
   if (!input.document.body.trim()) {
-    const record = runPreparedImport(prepareRecord(input, existing, importedAt));
+    const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt));
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
       annotations: existing?.state.annotations ?? [],
       bodyState: 'unavailable',
@@ -109,7 +109,7 @@ function materializeAvailableDocument(
   );
   const epubResult = materializeEpubIfStructured(input, existing, importedAt, annotationStates, newAnnotations);
   if (epubResult) return epubResult;
-  const prepared = prepareRecord(input, existing, importedAt);
+  const prepared = prepareReadwiseApiImportRecord(input, existing, importedAt);
   const materialized = newAnnotations.map((annotation) => ({
     content: annotation.content,
     label: null,
@@ -173,7 +173,7 @@ function materializeEpubIfStructured(
   });
 }
 
-function prepareRecord(
+export function prepareReadwiseApiImportRecord(
   input: Parameters<typeof materializeReadwiseApiDocument>[0],
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
   importedAt: string

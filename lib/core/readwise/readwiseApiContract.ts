@@ -7,6 +7,7 @@ export type ReaderCategory = 'article' | 'email' | 'epub' | 'highlight' | 'note'
 export interface ReaderDocumentContract {
   author: string | null;
   category: ReaderCategory | null;
+  createdAt?: string | null;
   htmlContent: string | null;
   id: string;
   imageUrl: string | null;
@@ -45,6 +46,7 @@ export function normalizeReaderDocument(value: unknown): ReaderDocumentContract 
   return {
     author: text(row.author),
     category: isReaderCategory(category) ? category : null,
+    createdAt: text(row.created_at),
     htmlContent: text(row.html_content),
     id,
     imageUrl: safeHttpUrl(row.image_url),

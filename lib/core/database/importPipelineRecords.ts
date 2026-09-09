@@ -175,6 +175,23 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
   });
 }
 
+export function recordImportSourceDeletionSync(
+  driver: DatabaseDriver,
+  sourceFingerprint: string,
+  deletedAt: string
+) {
+  const hostName = loadOrCreateDatabaseHostName(driver, deletedAt);
+  upsertSyncObjectState(driver, {
+    objectType: 'import_source',
+    objectId: sourceFingerprint,
+    contentHash: computeSyncContentHash('import_source', { source_fingerprint: sourceFingerprint }),
+    deletedAt,
+    lastModifiedByHostName: hostName,
+    syncDirty: true,
+    updatedAt: deletedAt
+  });
+}
+
 export function writeImportEvent(driver: DatabaseDriver, record: PersistedImportRecord) {
   driver.execute(
     `INSERT INTO import_runs (
