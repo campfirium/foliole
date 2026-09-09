@@ -71,6 +71,21 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
         XCTAssertThrowsError(try provider().receive(paddedKey, now: now))
     }
 
+    func testWindowsDesktopCanRequestJoinFromMobileProvider() throws {
+        let key = P256.KeyAgreement.PrivateKey().publicKey.x963Representation
+        var input = request(publicKey: key)
+        var device = try XCTUnwrap(input["device"] as? [String: Any])
+        device["canonical_library_path"] = "d:\\c\\foliole\\data\\foliole.db"
+        device["device_name"] = "Windows C"
+        device["path_flavor"] = "windows"
+        device["platform"] = "win32"
+        input["device"] = device
+        XCTAssertEqual(try provider().receive(input, now: now)["device_name"] as? String, "Windows C")
+        device["canonical_library_path"] = "D:\\C\\Foliole\\Data\\foliole.db"
+        input["device"] = device
+        XCTAssertThrowsError(try provider().receive(input, now: now))
+    }
+
     private func provider() throws -> FolioleCompanionSyncGroupJoinProvider {
         try FolioleCompanionSyncGroupJoinProvider(groupInfo: groupInfo())
     }

@@ -61,6 +61,15 @@ public final class FolioleCompanionJoinRequestProviderTest {
         assertRejected(noncanonicalPath);
     }
 
+    @Test public void windowsDesktopCanRequestJoinFromMobileProvider() throws Exception {
+        JSONObject input = requestInput(keyPair());
+        input.getJSONObject("device").put("canonical_library_path", "d:\\c\\foliole\\data\\foliole.db")
+            .put("device_name", "Windows C").put("path_flavor", "windows").put("platform", "win32");
+        assertEquals("Windows C", provider().receive(input, NOW).getString("device_name"));
+        input.getJSONObject("device").put("canonical_library_path", "D:\\C\\Foliole\\Data\\foliole.db");
+        assertRejected(input);
+    }
+
     private static FolioleCompanionJoinRequestProvider provider() throws Exception {
         return new FolioleCompanionJoinRequestProvider(groupInfo());
     }
