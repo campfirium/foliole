@@ -19,7 +19,6 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 /* global process */
 
 const exec = promisify(execFile);
-const ACCEPTANCE_APP = 'com.foliole.android.acceptance';
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = `${WINDOWS_DEV_REPO_ROOT_POSIX}/scripts/windows/windows-multi-device-sync-readiness.mjs`;
 
@@ -114,15 +113,8 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
         assertA5RuntimeState(power, policy);
         const route = await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'ip', 'route'], { env });
         assertA5LanRoute(route, networkInterfaces());
-        const packages = await execute(paths.adb,
-          ['-s', A5_SERIAL, 'shell', 'pm', 'list', 'packages', ACCEPTANCE_APP], { env });
-        if (packages.includes(ACCEPTANCE_APP)) throw Object.assign(
-          new Error('A5 acceptance package from another run is still installed.'), {
-            missingFact: 'android_acceptance_package_present',
-            lastSuccessfulAction: 'fixed_a5_lan_ready'
-          });
         return { facts: ['fixed_a5_ready', 'fixed_a5_lease_ready', 'fixed_a5_unlocked',
-          'fixed_a5_lan_ready', 'android_acceptance_isolated'] };
+          'fixed_a5_lan_ready', 'android_acceptance_profile_available'] };
       } finally { await execute(paths.adb, ['kill-server'], { env }).catch(() => undefined); }
     },
     'windows-c': async () => {

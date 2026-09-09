@@ -6,14 +6,17 @@ import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
 import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
+import {
+  MULTI_DEVICE_ANDROID_APP_ID, multiDeviceAndroidEnv
+} from './multi-device-sync-android-profile.mjs';
 
 /* global process */
 
 const exec = promisify(execFile);
 
-function run(command, args, repoRoot, timeout = 20 * 60_000, signal) {
+function run(command, args, repoRoot, timeout = 20 * 60_000, signal, options = {}) {
   return exec(command, args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
-    signal, timeout });
+    signal, timeout, ...options });
 }
 
 async function prepareMacos(execute, repoRoot, progress, signal) {
@@ -29,16 +32,22 @@ async function prepareMacos(execute, repoRoot, progress, signal) {
 async function prepareAndroid(execute, paths, repoRoot, progress, signal, assertFrozen) {
   progress('candidate-android-started');
   await execute(process.execPath, ['scripts/android/macos-a5-dev.mjs', 'build'],
-    repoRoot, 12 * 60_000, signal);
+    repoRoot, 12 * 60_000, signal, { env: multiDeviceAndroidEnv() });
   progress('candidate-android-built');
   assertFrozen();
+  await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', MULTI_DEVICE_ANDROID_APP_ID], repoRoot,
+    60_000, signal).catch((error) => {
+    if (!/not installed|unknown package/iu.test(`${error.stdout || ''}${error.stderr || ''}`)) {
+      throw error;
+    }
+  });
   await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], repoRoot,
     5 * 60_000, signal);
   progress('candidate-android-installed');
   await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop',
-    'com.foliole.android'], repoRoot, 10_000, signal);
+    MULTI_DEVICE_ANDROID_APP_ID], repoRoot, 10_000, signal);
   await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android/.MainActivity'], repoRoot, 20_000, signal);
+    `${MULTI_DEVICE_ANDROID_APP_ID}/com.foliole.android.MainActivity`], repoRoot, 20_000, signal);
   progress('candidate-android-launched');
 }
 

@@ -64,13 +64,13 @@ async function macosFacts(execute, repoRoot, databasePath, factIds) {
 }
 
 export async function restartARejoinAndroidProvider({
-  env, execute, paths,
+  appId = APP_ID, env, execute, paths,
   startProvider = startMacosA5SyncGroupApprovalProvider,
   stopProvider = stopMacosA5SyncGroupApprovalProvider
 }) {
   await startProvider({
-    env, execute,
-    onProviderStopped: () => stopProvider({ env, execute, paths }),
+    appId, env, execute,
+    onProviderStopped: () => stopProvider({ appId, env, execute, paths }),
     onReady: async () => {}, paths
   });
 }

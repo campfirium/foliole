@@ -24,17 +24,25 @@ it('prepares an A/B-only candidate without invoking Windows or LAN Git control',
   const calls = [];
   const input = fixture('run-ab');
   const result = await prepareCandidate({ ...input, candidate,
-    execute: async (command, args) => { calls.push([command, args]); return { stdout: '' }; },
+    execute: async (command, args, ...options) => {
+      calls.push([command, args, ...options]); return { stdout: '' };
+    },
     requiredHosts: ['macos-a', 'android-b'] });
   const receipt = JSON.parse(fs.readFileSync(result.evidenceRef, 'utf8'));
   expect(calls.some(([, args]) => args.some((arg) => arg.endsWith('windows-dev-control.mjs'))))
     .toBe(false);
   expect(calls.slice(0, 4)).toEqual([
-    ['npm', ['run', 'build']],
-    ['npm', ['run', 'electron:rebuild:native']],
-    ['npm', ['run', 'electron:compile']],
-    [process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight']]
+    expect.arrayContaining(['npm', ['run', 'build']]),
+    expect.arrayContaining(['npm', ['run', 'electron:rebuild:native']]),
+    expect.arrayContaining(['npm', ['run', 'electron:compile']]),
+    expect.arrayContaining([process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight']])
   ]);
+  const androidBuild = calls.find(([, args]) =>
+    args.some((arg) => arg.endsWith('macos-a5-dev.mjs')));
+  expect(androidBuild.at(-1).env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID)
+    .toBe('com.foliole.android.acceptance');
+  expect(calls.some(([, args]) => args.join(' ') ===
+    '-s 87a33a4b uninstall com.foliole.android.acceptance')).toBe(true);
   expect(receipt).toMatchObject({ preparedHosts: ['macos-a', 'android-b'], runId: 'run-ab' });
   expect(receipt).not.toHaveProperty('windowsReceipt');
 });

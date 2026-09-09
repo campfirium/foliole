@@ -21,9 +21,12 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertFreshJoinInitialConvergence, factObservation
 } from './sync-scenario-predicate.mjs';
+import {
+  MULTI_DEVICE_ANDROID_APP_ID, MULTI_DEVICE_ANDROID_CLASS_PREFIX
+} from './multi-device-sync-android-profile.mjs';
 
-const APP_ID = 'com.foliole.android';
-const JOIN_TEST = `${APP_ID}.FolioleCompanionSyncGroupJoinTest`;
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
+const JOIN_TEST = `${MULTI_DEVICE_ANDROID_CLASS_PREFIX}.FolioleCompanionSyncGroupJoinTest`;
 
 async function checked(execute, command, args, options, stage) {
   const result = await execute(command, args, options);
@@ -64,7 +67,8 @@ async function restartAndroid(execute, paths, env) {
   await checked(execute, paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID],
     { env, timeoutMs: 30_000 }, 'android_restart_stop');
   await checked(execute, paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n',
-    `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }, 'android_restart_start');
+    `${APP_ID}/${MULTI_DEVICE_ANDROID_CLASS_PREFIX}.MainActivity`],
+  { env, timeoutMs: 60_000 }, 'android_restart_start');
 }
 
 export async function performFreshJoinSequence({
@@ -97,7 +101,7 @@ function validateJoin({ evidencePath, stdout }) {
 }
 
 async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity, paths, session }) {
-  return runMacosA5InstrumentationMechanics({ buildIdentity, env,
+  return runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
     expectedGroupId: groupIdentity.group_id, expectedGroupTag: groupIdentity.group_tag,
     observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,

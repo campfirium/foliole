@@ -30,6 +30,7 @@ import {
   openMacosAcceptanceTransport
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, AbortSignal */
 
@@ -68,10 +69,11 @@ export async function syncAdmittedCToAndroid({
   waitForFact = waitForAndroidJourneyFact
 }) {
   const sync = await runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
+    appId: MULTI_DEVICE_ANDROID_APP_ID,
     evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
     observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
     paths, serial: A5_SERIAL });
-  await restartAndroid({ env, execute, paths });
+  await restartAndroid({ appId: MULTI_DEVICE_ANDROID_APP_ID, env, execute, paths });
   const restarted = await waitForFact(paths, factId, 'C');
   return { restarted, sync };
 }
@@ -118,6 +120,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       })),
       openTransport: () => openMacosAcceptanceTransport(runTransport),
       runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
+        appId: MULTI_DEVICE_ANDROID_APP_ID,
         allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
         ...lifecycle, prepare: () => {}, repoRoot
       }),

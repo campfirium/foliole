@@ -12,9 +12,7 @@ import {
 } from './macos-a5-dev.mjs';
 
 const APP_ID = 'com.foliole.android';
-const TEST_APP_ID = `${APP_ID}.test`;
 const TEST_CLASS = `${APP_ID}.FolioleCompanionSyncGroupApprovalTest`;
-const TEST_RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 
 function requireSuccess(result, stage) {
   if (result.code === 0) return result;
@@ -29,9 +27,10 @@ function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
-export async function installedMainMatches({ execute, paths, env, localHash = sha256File(paths.apk) }) {
+export async function installedMainMatches({ appId = APP_ID, execute, paths, env,
+  localHash = sha256File(paths.apk) }) {
   const packagePathResult = await execute(paths.adb, [
-    '-s', A5_SERIAL, 'shell', 'pm', 'path', APP_ID
+    '-s', A5_SERIAL, 'shell', 'pm', 'path', appId
   ], { env, timeoutMs: 30_000 });
   const packagePath = resultText(packagePathResult).split(/\r?\n/u)
     .find((line) => line.startsWith('package:'))?.slice('package:'.length);
@@ -67,27 +66,28 @@ export function finalizeSyncGroupApprovalEvidence({
 }
 
 export async function startMacosA5SyncGroupApprovalProvider({
-  execute, onProviderStopped, onReady, paths, env
+  appId = APP_ID, execute, onProviderStopped, onReady, paths, env
 }) {
   await onProviderStopped();
   requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
-    '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
+    '-W', '-n', `${appId}/${APP_ID}.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
   requireSuccess(await execute(process.execPath, [
     path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
-    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
-    '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
+    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', appId,
+    '--component', `${appId}/${APP_ID}.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { env, timeoutMs: 60_000 }), 'provider-stability');
   await onReady();
 }
 
-export async function stopMacosA5SyncGroupApprovalProvider({ execute, paths, env }) {
+export async function stopMacosA5SyncGroupApprovalProvider({ appId = APP_ID, execute, paths, env }) {
   requireSuccess(await execute(paths.adb, [
-    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
+    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', appId
   ], { env, timeoutMs: 30_000 }), 'provider-stop');
 }
 
 export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
   onReady = async () => {}, prepare = build, repoRoot,
+  appId = APP_ID,
   allowControlledCancellation = false, instrumentationExecute = execute,
   assertFixed = assertFixedA5, mainMatches = installedMainMatches,
   startProvider = startMacosA5SyncGroupApprovalProvider }) {
@@ -95,11 +95,11 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
   const env = macosA5GradleEnv();
   assertFixed(paths);
   prepare(paths);
-  const reuseInstalledMain = await mainMatches({ execute, paths, env });
+  const reuseInstalledMain = await mainMatches({ appId, execute, paths, env });
   const evidenceRoot = path.join(paths.artifactsRoot, 'a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   requireSuccess(await execute(paths.adb, [
-    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
+    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', appId
   ], { env, timeoutMs: 30_000 }), 'provider-stop-before-install');
   let evidence;
   try {
@@ -117,9 +117,11 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
-    await startProvider({ execute, onProviderStopped, onReady, paths, env });
+    await startProvider({ appId, execute, onProviderStopped, onReady, paths, env });
+    const testAppId = `${appId}.test`;
+    const testRunner = `${testAppId}/androidx.test.runner.AndroidJUnitRunner`;
     const run = await instrumentationExecute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
-      '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
+      '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, testRunner], {
       env, timeoutMs: 15 * 60_000
     });
     const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
@@ -128,11 +130,11 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
       allowControlledCancellation, providerOutput: providerLog.output, run
     });
   } finally {
-    await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
+    await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', `${appId}.test`], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
   }
-  await startProvider({ execute,
-    onProviderStopped: () => stopMacosA5SyncGroupApprovalProvider({ execute, paths, env }),
+  await startProvider({ appId, execute,
+    onProviderStopped: () => stopMacosA5SyncGroupApprovalProvider({ appId, execute, paths, env }),
     onReady: async () => {}, paths, env });
   return { output: evidence.output, receipt: evidence.receipt };
 }
