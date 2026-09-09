@@ -70,6 +70,9 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   );
   const buildSource = fs.readFileSync('scripts/android/a5-two-device-build.mjs', 'utf8');
   const joinEvidence = fs.readFileSync('scripts/android/a5-two-device-join-evidence.mjs', 'utf8');
+  const restartSource = fs.readFileSync(
+    'scripts/android/macos-a5-single-principal-macos-restart.mjs', 'utf8'
+  );
   expect(source).toContain('buildA5TwoDeviceAcceptance(args)');
   expect(buildSource).toContain("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID");
   expect(buildSource).toContain('macosAcceptanceEnv(args.env)');
@@ -88,6 +91,10 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");
   expect(source).toContain('observeA5JourneyFacts(args, buildIdentity, env');
+  expect(source).toContain('assertMacosAnchorReady(await session.load())');
+  expect(source).not.toContain('waitForMacosAutomaticRun');
+  expect(restartSource).toContain('observeMacosAnchorAfterElection(restartedSession)');
+  expect(restartSource).not.toContain('waitForMacosAutomaticRun');
   expect(source).toContain('createDesktopSyncGroupJourneyFact');
   expect(source).toContain("'desktop-initial-fact'");
   expect(source).toContain("'initial-union'");

@@ -9,8 +9,9 @@ import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
 import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession,
-  waitForMacosAutomaticRun, waitForMacosDeviceRequest
+  waitForMacosDeviceRequest
 } from './macos-sync-group-desktop-session.mjs';
+import { assertMacosAnchorReady } from './macos-a5-anchor-observation.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -107,7 +108,6 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
-    const macosBeforeAutomatic = await session.loadSyncTriggerResult();
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
@@ -115,9 +115,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     const factReceipt = JSON.parse(fs.readFileSync(androidFact.manifestPath, 'utf8')).receipt;
     await waitForMacFact(session);
-    const macosAutomaticBeforeRestart = await waitForMacosAutomaticRun(
-      session, macosBeforeAutomatic?.run_id
-    );
+    const macosTopologyBeforeRestart = assertMacosAnchorReady(await session.load());
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
     await waitForMacFact(session);
@@ -178,12 +176,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       idempotent: true, journeyOrigins: Object.keys(journeyFacts.counts), macosRestarted: true,
       observation: result.observation,
       conflict,
+      topology: { macosAfterRestart: macosRestart.topology,
+        macosBeforeRestart: macosTopologyBeforeRestart },
       runs: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
-        automaticAfterRestart: macosRestart.automaticRun,
-        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        automaticAfterRestart: null,
+        automaticBeforeRestart: null,
         manualAfterRestart: macosRestart.manualRun,
         manualBeforeRestart: macosManualBeforeRestart } },
       resultStatus: 'success', sharedRoot
@@ -198,8 +198,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
-        automaticAfterRestart: macosRestart.automaticRun,
-        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        automaticAfterRestart: null,
+        automaticBeforeRestart: null,
         manualAfterRestart: macosRestart.manualRun,
         manualBeforeRestart: macosManualBeforeRestart } } };
     process.stdout.write(result.output);
