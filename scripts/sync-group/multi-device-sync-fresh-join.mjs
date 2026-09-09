@@ -5,10 +5,13 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import {
   runMacosA5InstrumentationMechanics
 } from '../android/macos-a5-sync-group-maintenance-action.mjs';
+import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
+import { inspectDepartedHistory } from '../android/android-departed-history-inspection.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
+import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -32,6 +35,29 @@ async function checked(execute, command, args, options, stage) {
 async function createInitialFact({ evidenceRoot, session }) {
   return createDesktopSyncGroupJourneyFact({ device: 'A',
     evidenceRoot: path.join(evidenceRoot, 'initial-fact'), session });
+}
+
+function inspectA5Group(paths) {
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID,
+    includeAttachments: false, includeEvents: false, serial: A5_SERIAL, tables: [],
+    databaseInspector: inspectDepartedHistory });
+}
+
+export async function prepareA5ForFreshJoin({ buildIdentity, env, evidenceRoot, execute, paths,
+  inspect = inspectA5Group, leave = runMacosA5SyncGroupMaintenance }) {
+  const before = await inspect(paths);
+  const previousGroupId = before.database?.inspection?.syncGroupId ?? null;
+  if (!previousGroupId) return { leftExistingGroup: false, previousGroupId };
+  await leave({ action: 'leave-sync-group', buildIdentity, env,
+    evidenceRoot: path.join(evidenceRoot, 'existing-group-leave'), execute, installMain: false,
+    paths, serial: A5_SERIAL });
+  const after = await inspect(paths);
+  if (after.database?.inspection?.syncGroupId) {
+    throw Object.assign(new Error('A5 remained bound to its previous Sync Group.'), {
+      failureOwner: 'product', host: 'android-b', missingFact: 'a5_previous_group_departure'
+    });
+  }
+  return { leftExistingGroup: true, previousGroupId };
 }
 
 async function restartAndroid(execute, paths, env) {
@@ -99,7 +125,9 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     runtimeRoot: owned.root
   });
   const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  const providerOverview = await session.enable();
+  await session.enable();
+  await prepareA5ForFreshJoin({ buildIdentity: runId, env, evidenceRoot, execute, paths });
+  const providerOverview = await observeMacosAnchorAfterElection(session);
   let journey;
   try { journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, session }),
