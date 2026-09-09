@@ -54,7 +54,9 @@ export function normalizeReadwiseHostSettings(value: unknown): ReadwiseHostSetti
   return {
     readwiseReaderConfig: normalizeReadwiseReaderConfig(payload.readwiseReaderConfig),
     readwiseRootPath: typeof payload.readwiseRootPath === 'string' ? payload.readwiseRootPath : '',
-    readwiseSourceMode: payload.readwiseSourceMode === 'api' ? 'api' : 'folder',
+    readwiseSourceMode: payload.readwiseSourceMode === 'api' || payload.readwiseSourceMode === 'off'
+      ? payload.readwiseSourceMode
+      : 'folder',
     apiConnection: {
       secretRef: normalizeSecretRef(apiConnection.secretRef),
       state: apiConnection.state === 'connected' || apiConnection.state === 'reconnect_required'

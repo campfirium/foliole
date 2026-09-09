@@ -8,14 +8,9 @@ import {
   disconnectReadwiseApiInRuntime,
   loadReadwiseApiConnectionFromRuntime
 } from '../../shared/platform/import/readwiseApiConnectionRuntimeRepository';
-import {
-  previewReadwiseSourceCutoverInRuntime,
-  runReadwiseSourceCutoverInRuntime
-} from '../../shared/platform/import/readwiseSourceCutoverRuntimeRepository';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
   AppButton,
-  requestAppConfirmation,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
@@ -23,27 +18,17 @@ import {
   SettingsSegmentedRow
 } from '../../shared/ui';
 
+import { useReadwiseSourceMigration } from './useReadwiseSourceMigration';
+
 const READWISE_TOKEN_URL = 'https://readwise.io/access_token';
 
 function statusKey(state: NativeReadwiseApiConnection['state']) {
-  const keys = {
+  return {
     connected: 'desktop.readwise.api.status.connected',
     disconnected: 'desktop.readwise.api.status.disconnected',
     reconnect_required: 'desktop.readwise.api.status.reconnectRequired',
     secure_storage_unavailable: 'desktop.readwise.api.status.secureStorageUnavailable'
-  } as const;
-  return keys[state];
-}
-
-function cutoverResultKey(status: string) {
-  const keys = {
-    already_completed: 'desktop.readwise.cutover.result.already_completed',
-    connection_required: 'desktop.readwise.cutover.result.connection_required',
-    failed: 'desktop.readwise.cutover.result.failed',
-    not_active_host: 'desktop.readwise.cutover.result.not_active_host',
-    source_unavailable: 'desktop.readwise.cutover.result.source_unavailable'
-  } as const;
-  return keys[status as keyof typeof keys] ?? keys.failed;
+  }[state] as Parameters<Translate>[0];
 }
 
 function resultMessage(result: NativeReadwiseApiConnectionResult, t: Translate) {
@@ -65,7 +50,7 @@ function resultMessage(result: NativeReadwiseApiConnectionResult, t: Translate) 
   return key ? t(key) : null;
 }
 
-function useReadwiseApiConnection(t: Translate) {
+function useReadwiseApiConnection(t: Translate, onConnected: () => void) {
   const [connection, setConnection] = useState<NativeReadwiseApiConnection | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -80,6 +65,7 @@ function useReadwiseApiConnection(t: Translate) {
       const next = await action();
       setConnection(next.connection);
       setMessage(resultMessage(next, t));
+      if (next.status === 'connected') onConnected();
     } catch {
       setMessage(t('desktop.readwise.api.result.connectionFailed'));
     } finally {
@@ -89,9 +75,14 @@ function useReadwiseApiConnection(t: Translate) {
   return { connection, message, pending, run };
 }
 
-function ReadwiseApiConnectionRow({ migration }: { migration: boolean }) {
+function ReadwiseApiConnectionRow(props: {
+  migration: boolean;
+  migrationPending: boolean;
+  migrationPercent: number;
+  onConnected: () => void;
+}) {
   const t = useTranslation();
-  const state = useReadwiseApiConnection(t);
+  const state = useReadwiseApiConnection(t, props.onConnected);
   const connected = state.connection?.state === 'connected';
   return (
     <>
@@ -102,15 +93,17 @@ function ReadwiseApiConnectionRow({ migration }: { migration: boolean }) {
           </AppButton>
           <span className="text-sm text-foreground/60">{t(statusKey(state.connection?.state ?? 'disconnected'))}</span>
           <AppButton
-            disabled={state.pending}
+            disabled={state.pending || props.migrationPending}
             onClick={() => void state.run(connected
               ? disconnectReadwiseApiInRuntime
-              : () => connectReadwiseApiFromClipboardInRuntime('continue', migration ? 'migration' : 'normal'))}
+              : () => connectReadwiseApiFromClipboardInRuntime('continue', props.migration ? 'migration' : 'normal'))}
             size="sm"
             variant={connected ? 'default' : 'emphasis'}
           >
-            {state.pending ? t('desktop.readwise.api.connection.working') : connected
-              ? t('desktop.readwise.api.connection.disconnect') : t('desktop.readwise.api.connection.connect')}
+            {props.migrationPending
+              ? t('desktop.readwise.cutover.running', { count: props.migrationPercent })
+              : state.pending ? t('desktop.readwise.api.connection.working') : connected
+                ? t('desktop.readwise.api.connection.disconnect') : t('desktop.readwise.api.connection.connect')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
@@ -119,68 +112,31 @@ function ReadwiseApiConnectionRow({ migration }: { migration: boolean }) {
   );
 }
 
-function ReadwiseCutoverRow(props: { onCompleted: () => void }) {
-  const t = useTranslation();
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  async function run() {
-    setPending(true);
-    try {
-      const preview = await previewReadwiseSourceCutoverInRuntime();
-      if (preview.status !== 'ready') {
-        setMessage(t(cutoverResultKey(preview.status)));
-        return;
-      }
-      const confirmed = await requestAppConfirmation({
-        cancelLabel: t('shared.confirm.cancel'),
-        confirmLabel: t('desktop.readwise.cutover.confirm'),
-        description: [
-          t('desktop.readwise.cutover.count', { count: preview.topic_count }),
-          t('desktop.readwise.cutover.effect'),
-          t('desktop.readwise.cutover.experimental')
-        ],
-        title: t('desktop.readwise.cutover.title')
-      });
-      if (!confirmed) return;
-      const result = await runReadwiseSourceCutoverInRuntime();
-      if (result.status === 'completed' || result.status === 'already_completed') {
-        props.onCompleted();
-        setMessage(t('desktop.readwise.cutover.result.completed', {
-          count: result.migrated_count,
-          unmatched: result.unmatched_count
-        }));
-      } else {
-        setMessage(t(cutoverResultKey(result.status)));
-      }
-    } catch {
-      setMessage(t('desktop.readwise.cutover.result.failed'));
-    } finally {
-      setPending(false);
-    }
-  }
-  return (
-    <>
-      <SettingsRow description={t('desktop.readwise.cutover.description')} title={t('desktop.readwise.cutover.actionTitle')}>
-        <SettingsControlSlot>
-          <AppButton loading={pending} onClick={() => void run()} size="sm" variant="emphasis">
-            {t(pending ? 'desktop.readwise.cutover.running' : 'desktop.readwise.cutover.action')}
-          </AppButton>
-        </SettingsControlSlot>
-      </SettingsRow>
-      {message ? <p className="px-5 text-sm text-foreground/60" role="status">{message}</p> : null}
-    </>
-  );
-}
-
 export function ReadwiseSourceModeSection(props: {
   committedMode?: ReadwiseSourceMode;
   mode: ReadwiseSourceMode;
   onChange: (mode: ReadwiseSourceMode) => void;
-  onCutoverCompleted?: () => void;
+  onCommitMode?: (mode: ReadwiseSourceMode) => void;
 }) {
   const t = useTranslation();
   const committedMode = props.committedMode ?? props.mode;
-  const migrating = committedMode === 'folder' && props.mode === 'api';
+  const migration = useReadwiseSourceMigration({
+    committedMode,
+    ...(props.onCommitMode ? { onCommitMode: props.onCommitMode } : {}),
+    onSelectApi: () => props.onChange('api'),
+    t
+  });
+
+  async function chooseMode(mode: ReadwiseSourceMode) {
+    if (mode !== 'api' || committedMode === 'api') {
+      props.onChange(mode);
+      props.onCommitMode?.(mode);
+      return;
+    }
+    await migration.selectApi();
+  }
+
+  const migrating = committedMode !== 'api' && props.mode === 'api';
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.source.title')} description={t('desktop.readwise.source.description')} title={t('desktop.readwise.source.title')}>
       <SettingsSegmentedRow
@@ -188,15 +144,22 @@ export function ReadwiseSourceModeSection(props: {
         description={t('desktop.readwise.source.mode.description')}
         disabled={committedMode === 'api'}
         label={t('desktop.readwise.source.mode.title')}
-        onChange={(value) => props.onChange(value === 'api' ? 'api' : 'folder')}
+        onChange={(value) => void chooseMode(value as ReadwiseSourceMode)}
         options={[
-          { label: t('desktop.readwise.source.mode.api'), value: 'api' },
-          { label: t('desktop.readwise.source.mode.folder'), value: 'folder' }
+          { label: t('desktop.readwise.source.mode.off'), value: 'off' },
+          { label: t('desktop.readwise.source.mode.folder'), value: 'folder' },
+          { label: t('desktop.readwise.source.mode.api'), value: 'api' }
         ]}
         value={props.mode}
       />
-      {props.mode === 'api' ? <ReadwiseApiConnectionRow migration={migrating} /> : null}
-      {migrating ? <ReadwiseCutoverRow onCompleted={props.onCutoverCompleted ?? (() => undefined)} /> : null}
+      {props.mode === 'api' ? (
+        <ReadwiseApiConnectionRow
+          migration={migrating}
+          migrationPending={migration.pending}
+          migrationPercent={migration.percent}
+          onConnected={() => { if (migrating || migration.required) void migration.start(); }}
+        />
+      ) : null}
     </SettingsSection>
   );
 }

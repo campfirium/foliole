@@ -9,7 +9,7 @@ export async function previewReadwiseSourceCutoverInRuntime(): Promise<NativeRea
   const invoke = getRuntimeInvoke();
   return invoke
     ? invoke(NATIVE_COMMANDS.previewReadwiseSourceCutover)
-    : { status: 'source_unavailable', topic_count: 0 };
+    : { completed_count: 0, status: 'not_active_host', topic_count: 0, total_count: null };
 }
 
 export async function runReadwiseSourceCutoverInRuntime(): Promise<NativeReadwiseSourceCutoverResult> {

@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
-  canCurrentHostRunReadwise: () => false,
+  canCurrentHostRunReadwise: () => true,
   loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: true })
 }));
 vi.mock('./readwiseApiConnectionState.js', async () => {
@@ -86,13 +86,15 @@ it('counts only active Topics imported by this Host', async () => {
     ('local','desktop_text_file','markdown','Local.md','Local.md','old','old','hash','local-topic','readwise:local','Local.md'),
     ('other','desktop_text_file','markdown','Other.md','Other.md','old','old','hash','other-topic','readwise:other','Other.md')`);
 
-  await expect(previewReadwiseSourceCutover()).resolves.toEqual({ status: 'ready', topic_count: 1 });
+  await expect(previewReadwiseSourceCutover()).resolves.toEqual({
+    completed_count: 0, status: 'ready', topic_count: 1, total_count: null
+  });
 });
 
-it('blocks before migration when a configured relay directory is unavailable', async () => {
+it('does not inspect relay directories before the user confirms migration', async () => {
   state.sourcePath = path.join(tempRoot, 'missing');
   await expect(previewReadwiseSourceCutover()).resolves.toEqual({
-    status: 'source_unavailable', topic_count: 0
+    completed_count: 0, status: 'ready', topic_count: 0, total_count: null
   });
 });
 
@@ -114,6 +116,18 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   expect(driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key='readwise_source_cutover'"))
     .toBeTruthy();
 }, 20_000);
+
+it('keeps the irreversible migration state after a network failure', async () => {
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+
+  await expect(runReadwiseSourceCutover({ dependencies: { minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ status: 'failed' });
+  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
+    completed_count: 0,
+    status: 'migration_in_progress'
+  });
+});
 
 async function seedMigratableSource() {
   await fs.writeFile(path.join(state.sourcePath, 'Sample.md'), [
@@ -159,6 +173,7 @@ function migrationFetch() {
     if (id) {
       return Response.json({ results: [{
         category: id === 'highlight-1' ? 'highlight' : 'article', id,
+        ...(id === 'document-1' ? { html_content: '<p>API body with remembered phrase.</p>', title: 'Sample' } : {}),
         parent_id: id === 'highlight-1' ? 'document-1' : null
       }] });
     }

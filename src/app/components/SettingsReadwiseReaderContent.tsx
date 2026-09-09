@@ -100,10 +100,9 @@ function ReadwiseSelectedModeContent(props: {
   setup: ReturnType<typeof useReadwiseSetupController>;
   sourceMode: ReadwiseSourceMode;
 }) {
+  if (props.sourceMode === 'off') return null;
   if (props.sourceMode === 'api') {
-    return props.committedMode === 'api'
-      ? <ReadwiseApiSettingsContent reconcile={props.reconcile} settings={props.settings} setup={props.setup} />
-      : <ReadwiseBehaviorSection draft={props.setup.draft} />;
+    return <ReadwiseApiSettingsContent reconcile={props.reconcile} settings={props.settings} setup={props.setup} />;
   }
   return (
     <ReadwiseFolderSettingsSections
@@ -145,10 +144,7 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         committedMode={committedMode}
         mode={sourceMode}
         onChange={setSourceMode}
-        onCutoverCompleted={() => {
-          setSourceMode('api');
-          props.onChangeSourceMode?.('api');
-        }}
+        {...(props.onChangeSourceMode ? { onCommitMode: props.onChangeSourceMode } : {})}
       />
       <ReadwiseSelectedModeContent
         cleanup={cleanup}

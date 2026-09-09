@@ -155,3 +155,22 @@ it('lets the workspace cutover override a stale folder mode on this Host', () =>
 
   expect(canCurrentHostRunReadwise()).toBe(true);
 });
+
+it('blocks folder execution as soon as migration-in-progress is durable', () => {
+  saveJsonSetting('readwise_source_cutover', {
+    completedAt: '2026-09-09T00:00:00.000Z',
+    completedCandidateCount: 2,
+    migratedCount: 1,
+    sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z',
+    status: 'migration-in-progress',
+    totalCandidateCount: 8,
+    unmatchedCount: 0,
+    version: 1
+  });
+  apiState.mode = 'folder';
+  apiState.ready = true;
+
+  expect(canCurrentHostRunReadwise('folder')).toBe(false);
+  expect(canCurrentHostRunReadwise('api')).toBe(true);
+});

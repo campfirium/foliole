@@ -21,6 +21,7 @@ export async function commitReadwiseApiDocument(input: {
   connectionRef: string;
   dependencies?: ReadwiseApiFetchDependencies;
   document: PreparedReadwiseApiDocument;
+  replaceExistingBody?: boolean;
 }) {
   const isOriginalFile = input.document.category === 'pdf';
   const existingBefore = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
@@ -43,7 +44,8 @@ export async function commitReadwiseApiDocument(input: {
   });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, document, preparedEpubImages
+    config: input.config, connectionRef: input.connectionRef, document, preparedEpubImages,
+    ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody })
   });
   if (!isOriginalFile || result.status !== 'imported') return result;
 

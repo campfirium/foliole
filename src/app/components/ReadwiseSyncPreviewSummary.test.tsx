@@ -36,7 +36,7 @@ it('summarizes external destinations separately from inbox imports', () => {
   expect(screen.getByText('1 ready for external document mirrors (1 highlight-only), 1 skipped.')).toBeInTheDocument();
 });
 
-it('summarizes API batch safety, degradation, and unmatched annotations', () => {
+it('summarizes the complete API candidate round, degradation, and unmatched annotations', () => {
   const preview = createReadwiseImportPreview();
   Object.assign(preview, {
     batch_count: 50,
@@ -51,6 +51,6 @@ it('summarizes API batch safety, degradation, and unmatched annotations', () => 
   renderWithLocalization(<ReadwisePreviewSummary preview={preview} />);
 
   expect(screen.getByText(
-    'Source topics: 72 · Next batch: 50 · About 9s to import · Pending: 51 · Unavailable body: 2 · Unverified annotations: 3'
+    'Source topics: 72 · This sync: 50 · About 9s to import · Pending: 51 · Unavailable body: 2 · Unverified annotations: 3'
   )).toBeInTheDocument();
 });

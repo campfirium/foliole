@@ -1,4 +1,5 @@
 import { createDefaultImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
+import { openDatabaseConnection } from '../database/connection.js';
 
 export function response(results: unknown[], nextPageCursor: string | null = null) {
   return new Response(JSON.stringify({ nextPageCursor, results }), { status: 200 });
@@ -19,4 +20,29 @@ export function apiSettings(withoutHighlightsDestination: 'inbox' | 'off' = 'inb
     readwiseReaderConfig: { ...settings.readwiseReaderConfig, withoutHighlightsDestination },
     readwiseSourceMode: 'api' as const
   };
+}
+
+export function exportBook(documentId: string, highlightId: string, category: string) {
+  return {
+    category,
+    external_id: documentId,
+    highlights: [{ external_id: highlightId, text: `Body ${documentId}` }],
+    source: 'reader'
+  };
+}
+
+export function readerDocument(id: string, category: string, withBody = true) {
+  return {
+    category,
+    html_content: withBody ? `<p>Body ${id}</p>` : undefined,
+    id,
+    title: `Title ${id}`,
+    updated_at: '2026-09-07T00:00:00.000Z'
+  };
+}
+
+export function importedReadwiseApiCount() {
+  return openDatabaseConnection().driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM import_sources WHERE remote_provider = 'readwise'"
+  )?.count ?? 0;
 }

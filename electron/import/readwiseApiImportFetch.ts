@@ -148,28 +148,33 @@ function createRequest(token: string, dependencies: ReadwiseApiFetchDependencies
   const minIntervalMs = dependencies.minIntervalMs ?? 3_100;
   let lastRequestAt = 0;
   return async (url: URL) => {
-    const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
-    if (delay) await abortableDelay(delay, dependencies.signal);
-    assertEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
-    lastRequestAt = Date.now();
-    const requestSignal = dependencies.signal
-      ? AbortSignal.any([AbortSignal.timeout(30_000), dependencies.signal])
-      : AbortSignal.timeout(30_000);
-    const response = await fetchImpl(url, {
-      headers: { Authorization: `Token ${token}` },
-      method: 'GET',
-      redirect: 'error',
-      signal: requestSignal
-    });
-    if (response.status === 401 || response.status === 403) {
-      saveReconnectRequired(loadStoredReadwiseHostSettings());
-      throw new Error('readwise_api_reconnect_required');
+    for (let retry = 0; retry <= 2; retry += 1) {
+      const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
+      if (delay) await abortableDelay(delay, dependencies.signal);
+      assertEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+      lastRequestAt = Date.now();
+      const requestSignal = dependencies.signal
+        ? AbortSignal.any([AbortSignal.timeout(30_000), dependencies.signal])
+        : AbortSignal.timeout(30_000);
+      const response = await fetchImpl(url, {
+        headers: { Authorization: `Token ${token}` }, method: 'GET', redirect: 'error', signal: requestSignal
+      });
+      if (response.status === 401 || response.status === 403) {
+        saveReconnectRequired(loadStoredReadwiseHostSettings());
+        throw new Error('readwise_api_reconnect_required');
+      }
+      if (response.status === 429 && retry < 2) {
+        const retryAfter = Math.max(1, Number(response.headers.get('retry-after')) || 1);
+        await abortableDelay(retryAfter * 1_000, dependencies.signal);
+        continue;
+      }
+      if (response.status === 429) {
+        throw new Error(`readwise_api_rate_limited:${response.headers.get('retry-after') ?? ''}`);
+      }
+      if (!response.ok) throw new Error(`readwise_api_http_${response.status}`);
+      return response.json() as Promise<Record<string, unknown>>;
     }
-    if (response.status === 429) {
-      throw new Error(`readwise_api_rate_limited:${response.headers.get('retry-after') ?? ''}`);
-    }
-    if (!response.ok) throw new Error(`readwise_api_http_${response.status}`);
-    return response.json() as Promise<Record<string, unknown>>;
+    throw new Error('readwise_api_request_retry_exhausted');
   };
 }
 

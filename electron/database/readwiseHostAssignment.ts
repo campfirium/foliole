@@ -75,7 +75,8 @@ export function activateReadwiseOnThisHost() {
 }
 
 export function canCurrentHostRunReadwise(
-  mode: 'api' | 'folder' = loadReadwiseSourceCutover() ? 'api' : loadStoredReadwiseHostSettings().readwiseSourceMode
+  mode: 'api' | 'folder' = loadReadwiseSourceCutover() ? 'api' :
+    loadStoredReadwiseHostSettings().readwiseSourceMode === 'api' ? 'api' : 'folder'
 ) {
   if (!loadReadwiseHostAssignment().is_active) return false;
   const effectiveMode = loadReadwiseSourceCutover() ? 'api' : loadStoredReadwiseHostSettings().readwiseSourceMode;

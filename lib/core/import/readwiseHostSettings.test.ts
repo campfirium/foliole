@@ -30,6 +30,11 @@ it('preserves explicit API mode and redacted credential metadata', () => {
   });
 });
 
+it('preserves an explicit disabled source mode', () => {
+  expect(normalizeReadwiseHostSettings({ readwiseSourceMode: 'off', version: 2 }))
+    .toMatchObject({ readwiseSourceMode: 'off' });
+});
+
 it('rejects a future settings version instead of downgrading it', () => {
   expect(() => normalizeReadwiseHostSettings({ version: 3 }))
     .toThrow('readwise_host_settings_version_unsupported');

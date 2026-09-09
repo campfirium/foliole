@@ -12,7 +12,7 @@ import {
 import { READWISE_FOLDER_NAMES, type ReadwiseSourceKind } from './readwiseSourceKinds.js';
 
 export type ImportHighlightMode = 'merged' | 'split';
-export type ReadwiseSourceMode = 'api' | 'folder';
+export type ReadwiseSourceMode = 'api' | 'folder' | 'off';
 export type KeepImportRuleState = 'draft' | 'enabled' | 'previewed';
 
 export interface ImportManagerSourceDraft {
@@ -215,7 +215,9 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
-    readwiseSourceMode: value.readwiseSourceMode === 'api' ? 'api' : 'folder',
+    readwiseSourceMode: value.readwiseSourceMode === 'api' || value.readwiseSourceMode === 'off'
+      ? value.readwiseSourceMode
+      : 'folder',
     readwiseSources: defaultReadwiseSources.map((source) =>
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)
     ),

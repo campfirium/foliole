@@ -128,6 +128,29 @@ export function hasReadwiseApiExternalDocumentChanged(
   ));
 }
 
+export function hideReadwiseApiExternalDocumentsExcept(
+  connectionRef: string,
+  retainedRemoteIds: ReadonlySet<string>,
+  updatedAt = new Date().toISOString()
+) {
+  const rows = openDatabaseConnection().driver.queryAll<{
+    document_id: string;
+    reference_json: string | null;
+  }>(
+    `SELECT document_id, reference_json FROM external_documents
+     WHERE reference_kind = 'readwise_remote' AND is_present = 1`
+  );
+  let hiddenCount = 0;
+  for (const row of rows) {
+    const reference = parseReadwiseExternalReference(row.reference_json);
+    if (!reference || reference.connection_ref !== connectionRef
+      || retainedRemoteIds.has(reference.remote_document_id)) continue;
+    hideReadwiseApiExternalDocument(connectionRef, reference.remote_document_id, updatedAt);
+    hiddenCount += 1;
+  }
+  return hiddenCount;
+}
+
 function recordSync(
   documentId: string,
   payload: Parameters<typeof computeSyncContentHash>[1],

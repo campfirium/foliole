@@ -6,7 +6,7 @@ import { LocalizationProvider } from '../../shared/localization/LocalizationProv
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 
 const runtime = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn(), load: vi.fn() }));
-const cutoverRuntime = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
+const cutover = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
 const confirmation = vi.hoisted(() => ({ request: vi.fn() }));
 const navigation = vi.hoisted(() => ({ open: vi.fn() }));
 
@@ -16,8 +16,8 @@ vi.mock('../../shared/platform/import/readwiseApiConnectionRuntimeRepository', (
   loadReadwiseApiConnectionFromRuntime: runtime.load
 }));
 vi.mock('../../shared/platform/import/readwiseSourceCutoverRuntimeRepository', () => ({
-  previewReadwiseSourceCutoverInRuntime: cutoverRuntime.preview,
-  runReadwiseSourceCutoverInRuntime: cutoverRuntime.run
+  previewReadwiseSourceCutoverInRuntime: cutover.preview,
+  runReadwiseSourceCutoverInRuntime: cutover.run
 }));
 vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl: navigation.open }));
 vi.mock('../../shared/ui', async (importOriginal) => ({
@@ -32,9 +32,47 @@ beforeEach(() => {
     connection: { has_credential: true, state: 'connected', verified_at: '2026-09-07T00:00:00.000Z' },
     status: 'connected'
   });
-  cutoverRuntime.preview.mockResolvedValue({ status: 'ready', topic_count: 12 });
-  cutoverRuntime.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
+  cutover.preview.mockResolvedValue({
+    completed_count: 0, status: 'ready', topic_count: 12, total_count: null
+  });
+  cutover.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
   confirmation.request.mockResolvedValue(true);
+});
+
+it('shows Off, Obsidian relay, and API as one source selector', async () => {
+  const onChange = vi.fn();
+  const onCommitMode = vi.fn();
+  render(
+    <LocalizationProvider>
+      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} onCommitMode={onCommitMode} />
+    </LocalizationProvider>
+  );
+
+  expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'Obsidian relay import' })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'API mode' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+  expect(onChange).toHaveBeenCalledWith('off');
+  expect(onCommitMode).toHaveBeenCalledWith('off');
+});
+
+it('opens migration confirmation from API selection without a separate migration row', async () => {
+  const onChange = vi.fn();
+  render(
+    <LocalizationProvider>
+      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} />
+    </LocalizationProvider>
+  );
+
+  fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
+  await waitFor(() => expect(confirmation.request).toHaveBeenCalledWith(expect.objectContaining({
+    confirmLabel: 'Switch and migrate',
+    description: expect.arrayContaining([
+      '12 Topics were imported through the current Obsidian relay folders on this device.'
+    ])
+  })));
+  expect(onChange).toHaveBeenCalledWith('api');
+  expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
 });
 
 it('connects from the clipboard without exposing the token to the renderer', async () => {
@@ -59,31 +97,8 @@ it('uses the same instruction for a missing or invalid token', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();
   expect(runtime.connect).toHaveBeenCalledWith('continue', 'migration');
-});
-
-it('previews and performs the one-way cutover only after confirmation', async () => {
-  const onChange = vi.fn();
-  const onCutoverCompleted = vi.fn();
-  const { rerender } = render(
-    <LocalizationProvider><ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} /></LocalizationProvider>
-  );
-
-  fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
-  expect(onChange).toHaveBeenCalledWith('api');
-  rerender(
-    <LocalizationProvider>
-      <ReadwiseSourceModeSection committedMode="folder" mode="api" onChange={onChange} onCutoverCompleted={onCutoverCompleted} />
-    </LocalizationProvider>
-  );
-  fireEvent.click(await screen.findByRole('button', { name: 'Switch to API mode' }));
-
-  await waitFor(() => expect(cutoverRuntime.run).toHaveBeenCalledTimes(1));
-  expect(confirmation.request).toHaveBeenCalledWith(expect.objectContaining({
-    confirmLabel: 'Switch and migrate',
-    description: expect.arrayContaining(['12 Topics were imported through the current Obsidian relay folders on this device.'])
-  }));
-  expect(onCutoverCompleted).toHaveBeenCalledTimes(1);
-  expect(await screen.findByText('10 Topics were migrated; 2 unmatched Topics remain as local content.')).toBeInTheDocument();
+  expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Switch to API mode' })).not.toBeInTheDocument();
 });
 
 it('locks the source selector after the API cutover', async () => {

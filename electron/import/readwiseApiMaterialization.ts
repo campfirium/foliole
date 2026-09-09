@@ -37,6 +37,7 @@ export function materializeReadwiseApiDocument(input: {
   forceInbox?: boolean;
   importedAt?: string;
   preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
+  replaceExistingBody?: boolean;
 }): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
@@ -182,7 +183,7 @@ function prepareRecord(
     kind: input.document.category === 'pdf' ? 'pdf' : 'html',
     sourceName: `${input.document.title}.${input.document.category === 'pdf' ? 'pdf' : 'html'}`
   }, {
-    content: existing?.body ?? input.document.body,
+    content: input.replaceExistingBody ? input.document.body : existing?.body ?? input.document.body,
     degradedReason: input.document.degradedReason,
     highlightPolicy: 'reference_only',
     hideTitleHeadingOverride: false,

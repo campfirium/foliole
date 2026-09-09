@@ -21,6 +21,7 @@ export interface ReaderDocumentContract {
 }
 
 export interface ExportBookContract {
+  category: string | null;
   externalId: string | null;
   highlightExternalIds: string[];
   highlights: ExportHighlightContract[];
@@ -66,6 +67,7 @@ export function normalizeExportBook(value: unknown): ExportBookContract | null {
   const highlights = array(row.highlights)
     .map(normalizeExportHighlight).filter((item) => item !== null);
   return {
+    category: text(row.category),
     externalId,
     highlightExternalIds: highlights.map((highlight) => highlight.externalId),
     highlights,

@@ -126,8 +126,8 @@ function handleSourceSettingsCommand(command: string, args: Record<string, unkno
   return managementResult === undefined ? handleExternalSearchStorageCommand(command, args) : managementResult;
 }
 
-async function handleReadwiseHostCommand(command: string, args: Record<string, unknown>) {
-  const cutoverResult = await handleReadwiseCutoverCommand(command);
+async function handleReadwiseHostCommand(command: string, args: Record<string, unknown>, window: BrowserWindow | null) {
+  const cutoverResult = await handleReadwiseCutoverCommand(command, window);
   if (cutoverResult !== undefined) return cutoverResult;
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
   if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) {
@@ -187,7 +187,7 @@ export async function handleSettingsStorageCommand(
     );
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
-  const readwiseHostResult = await handleReadwiseHostCommand(command, args);
+  const readwiseHostResult = await handleReadwiseHostCommand(command, args, window);
   if (readwiseHostResult !== undefined) return readwiseHostResult;
   const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
   if (watchedFolderResult !== undefined) return watchedFolderResult;
