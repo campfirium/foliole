@@ -76,7 +76,7 @@ export async function syncAdmittedCToAndroid({
   return { restarted, sync };
 }
 
-async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
+async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-c');
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -113,7 +113,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       }),
       startWindows: async () => {
         windowsProvider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-c',
-          execute: executeWindows, repoRoot });
+          execute: executeWindows, repoRoot, sourceRef });
         return { code: 0, factId: await windowsProvider.waitForProgress() };
       },
       reportProgress,
@@ -140,13 +140,13 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
   }
 }
 
-export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId }) {
+export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId, sourceRef }) {
   const convergenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
   const zeroRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'sync-from-zero');
   return {
-    'admit-c': (context) => admitC(repoRoot, runId, context),
+    'admit-c': (context) => admitC(repoRoot, runId, sourceRef, context),
     'establish-a-b': (context) => establishFreshAB({ repoRoot, runId, ...context,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-b-group-sync'), context.signal, context.stage) }),

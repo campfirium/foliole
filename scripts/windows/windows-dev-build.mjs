@@ -71,7 +71,7 @@ function writeJson(fsApi, filePath, value) {
 export { formatWindowsDevFailure } from './windows-dev-build-support.mjs';
 
 export async function runWindowsDevBuild({
-  action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
+  acceptanceCandidate, action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
   fsApi = fs, id = randomUUID, inspectCandidate = currentAcceptanceCandidate,
   now = () => new Date(), paths = windowsDevPaths(),
   platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost,
@@ -152,7 +152,7 @@ export async function runWindowsDevBuild({
       actionResult = { desktopDeviceProfile: desktopDeviceProfile.evidence };
     } else if (!actionResult && !['build', 'frozen-revision-preflight'].includes(action)) {
       actionResult = await deviceAction({
-        action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
+        acceptanceCandidate, action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         ...(candidate ? { candidate } : {}),
         phase: 'execute'
       });

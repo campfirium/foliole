@@ -10,6 +10,7 @@ import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import {
   MULTI_DEVICE_ANDROID_APP_ID, multiDeviceAndroidEnv
 } from './multi-device-sync-android-profile.mjs';
+import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
@@ -58,9 +59,9 @@ async function prepareAndroid(execute, paths, repoRoot, progress, signal, assert
 
 async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   progress('candidate-windows-started');
+  const command = windowsSyncGroupCommand('multi-device-sync-candidate', candidate.sourceRef);
   const result = await execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-candidate',
-      '--source-ref', candidate.sourceRef], repoRoot,
+    command, repoRoot,
     18 * 60_000, signal);
   const line = result.stdout.split(/\r?\n/u).find((value) =>
     value.startsWith('[windows-dev-control] candidate-receipt='));
@@ -68,7 +69,8 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   if (!receipt || receipt.sourceRef !== candidate.sourceRef
       || receipt.revision !== candidate.revision
       || receipt.treeDigest !== candidate.treeDigest
-      || receipt.targetRef !== 'refs/heads/dev') {
+      || receipt.targetRef !== (candidate.sourceRef === 'refs/heads/sync'
+        ? candidate.sourceRef : 'refs/heads/dev')) {
     throw Object.assign(new Error('Windows candidate did not report the frozen boundary.'), {
       failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
     });

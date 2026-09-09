@@ -118,7 +118,7 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, candidate, evidenceRoot, execute, paths,
+  acceptanceCandidate, action, buildIdentity, candidate, evidenceRoot, execute, paths,
   phase = 'execute',
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runDefaultLiveReload,
   runSyncGroupDevice = runDefaultSyncGroupDevice,
@@ -126,6 +126,7 @@ export async function runWindowsDevDeviceAction({
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({
     action, buildIdentity, evidenceRoot, execute,
+    ...(acceptanceCandidate ? { candidateBoundary: acceptanceCandidate } : {}),
     expectedGroupId: process.env.FOLIOLE_T152_EXPECTED_GROUP_ID,
     expectedGroupTag: process.env.FOLIOLE_T152_EXPECTED_GROUP_TAG, paths
   });

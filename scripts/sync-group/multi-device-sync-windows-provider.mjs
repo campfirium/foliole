@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from '../windows/windows-sync-group-provider-release-control.mjs';
+import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
@@ -119,7 +120,8 @@ function receiptFromResult(result, repoRoot, action, spec) {
 }
 
 export function startWindowsSyncGroupProvider({
-  action, execute, expectedGroupId, expectedGroupTag, reportProgress = () => {}, repoRoot
+  action, execute, expectedGroupId, expectedGroupTag, reportProgress = () => {}, repoRoot,
+  sourceRef
 }) {
   const spec = actionSpec(action);
   let resolveGroupIdentity;
@@ -131,7 +133,7 @@ export function startWindowsSyncGroupProvider({
     const promise = new Promise((accept) => { resolve = accept; });
     return [milestone, { factId: null, promise, resolve }];
   }));
-  const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
+  const work = execute(process.execPath, windowsSyncGroupCommand(action, sourceRef), {
     action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
     ...(expectedGroupId ? { env: { ...process.env,
       FOLIOLE_T152_EXPECTED_GROUP_ID: expectedGroupId,
@@ -163,8 +165,7 @@ export function startWindowsSyncGroupProvider({
     const releaseAction = WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS[status];
     if (!releaseAction) throw controllerFailure('Windows C provider release status is invalid.',
       'windows_provider_release_status_invalid');
-    const released = await execute(process.execPath,
-      ['scripts/windows/windows-dev-control.mjs', releaseAction], {
+    const released = await execute(process.execPath, windowsSyncGroupCommand(releaseAction, sourceRef), {
         action: 'windows-c-provider-release', cwd: repoRoot, host: 'windows-c', timeoutMs: 30_000
       });
     if (released.code !== 0) throw controllerFailure('Windows C provider release action failed.',

@@ -74,6 +74,20 @@ it('holds the joined Windows C provider until Android consumes its fact', async 
   expect(reportProgress).toHaveBeenCalledWith('c-provider-ready');
 });
 
+it('keeps a sync provider and its release on the same candidate controller', async () => {
+  const execute = vi.fn((_command, args) => args[1] === 'multi-device-sync-provider-cancel'
+    ? Promise.resolve({ code: 0 }) : new Promise(() => {}));
+  const provider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-c', execute,
+    repoRoot: process.cwd(), sourceRef: 'refs/heads/sync' });
+  await provider.release('cancelled');
+  expect(execute.mock.calls.map(([, args]) => args)).toEqual([
+    ['scripts/acceptance/t173-windows-candidate-control.mjs', 'multi-device-sync-c',
+      '--source-ref', 'refs/heads/sync'],
+    ['scripts/acceptance/t173-windows-candidate-control.mjs',
+      'multi-device-sync-provider-cancel', '--source-ref', 'refs/heads/sync']
+  ]);
+});
+
 it('publishes the exact Windows-created group before product discovery', async () => {
   const execute = vi.fn((_command, _args, options) => {
     options.onOutput({ stdout: '[windows-dev-action] provider-ready '
