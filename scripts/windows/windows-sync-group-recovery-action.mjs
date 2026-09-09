@@ -134,7 +134,11 @@ export async function inspectWindowsSyncGroupDatabase(execute, paths, databasePa
     cwd: paths.repoRoot, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     timeoutCode: 'sync_group_inspect_timeout', timeoutMs: 30_000, windowsHide: true
   });
-  if (result.code !== 0) throw new Error('Windows C database inspection failed.');
+  if (result.code !== 0) {
+    const detail = `${result.stderr ?? ''}${result.stdout ?? ''}`.trim()
+      .split(/\r?\n/u).slice(-12).join(' | ');
+    throw new Error(`Windows C database inspection failed: ${detail || `exit_${result.code}`}`);
+  }
   return JSON.parse(result.stdout.trim());
 }
 
