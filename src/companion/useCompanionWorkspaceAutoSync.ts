@@ -57,7 +57,6 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
 function subscribeForegroundSyncEvents(
   refs: ForegroundSyncRefs,
   cadence: MemberSyncCadence<ForegroundSyncReason>,
-  run: (reason: ForegroundSyncReason, endpointUrl?: string) => void,
   cancelled: () => boolean
 ) {
   const unsubscribers: Array<() => void> = [];
@@ -73,7 +72,7 @@ function subscribeForegroundSyncEvents(
         && Boolean(resolveCompanionWorkspaceSyncEndpoint(refs.stateRef.current)),
       input: 'freshness'
     });
-    run('foreground');
+    void cadence.requestImmediate('foreground');
   }));
   void keep(subscribeNativeAppBackground(() => {
     refs.isAppActiveRef.current = false;
@@ -128,7 +127,7 @@ export function useForegroundAutoSync(
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
 
     runForegroundSyncCheck('endpoint-ready');
-    const unsubscribe = subscribeForegroundSyncEvents(refs, cadence, runForegroundSyncCheck, () => cancelled);
+    const unsubscribe = subscribeForegroundSyncEvents(refs, cadence, () => cancelled);
     return () => {
       cancelled = true;
       cadence.stop();

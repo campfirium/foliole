@@ -75,6 +75,27 @@ it('joins an external manual run and trails a mutation after it', async () => {
   expect(run).toHaveBeenCalledWith('mutation');
 });
 
+it('retains a trailing mutation while ineligible and consumes it on the next immediate run', async () => {
+  vi.useFakeTimers();
+  const first = deferred();
+  const run = vi.fn<(input: string) => Promise<void>>(async () => undefined)
+    .mockReturnValueOnce(first.promise).mockResolvedValue(undefined);
+  const cadence = createMemberSyncCadence({ run });
+  cadence.updateFreshness({ eligible: true, input: 'freshness' });
+  cadence.requestMutation('first');
+  cadence.requestMutation('later');
+
+  cadence.updateFreshness({ eligible: false, input: null });
+  first.resolve();
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  expect(run).toHaveBeenCalledOnce();
+
+  cadence.updateFreshness({ eligible: true, input: 'freshness' });
+  cadence.requestImmediate('foreground');
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  expect(run.mock.calls.map(([input]) => input)).toEqual(['first', 'foreground']);
+});
+
 it('runs freshness once per minute only while eligible', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(10_000);

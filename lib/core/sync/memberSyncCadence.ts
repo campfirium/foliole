@@ -42,6 +42,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
       if (!this.activeRun) this.trackRun(external);
       return external;
     }
+    if (this.trailingInput) this.clearTrailing();
     return this.trackRun(this.args.run(input));
   }
 
@@ -70,7 +71,12 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
         this.lastActualSyncAt, Math.min(next.lastActualSyncAt, this.now())
       );
     }
-    if (!this.eligible) this.clearTrailing();
+    if (!this.eligible) {
+      this.clearTimer(this.trailingTimer);
+      this.trailingTimer = null;
+    } else if (this.trailingInput) {
+      this.scheduleTrailingCheck();
+    }
     this.scheduleFreshness();
   }
 

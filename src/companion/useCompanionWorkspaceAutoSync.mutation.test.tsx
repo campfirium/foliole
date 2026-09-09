@@ -82,3 +82,28 @@ it('ignores ambient writes and requests no freshness or mutation sync in backgro
   expect(run).toHaveBeenCalledOnce();
   hook.unmount();
 });
+
+it('retains an active-run mutation across background and syncs it on foreground', async () => {
+  let finishRun: ((value: 'completed') => void) | undefined;
+  const activeRun = new Promise<'completed'>((resolve) => { finishRun = resolve; });
+  const run = vi.fn()
+    .mockResolvedValueOnce('completed' as const)
+    .mockReturnValueOnce(activeRun)
+    .mockResolvedValue('completed' as const);
+  const hook = renderHook(() => useForegroundAutoSync(
+    vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
+  ));
+  await act(async () => Promise.resolve());
+
+  await act(async () => { publishCompanionHighValueMutation(); await Promise.resolve(); });
+  publishCompanionHighValueMutation();
+  await act(async () => lifecycle.backgroundHandlers[0]?.());
+  finishRun?.('completed');
+  await act(async () => vi.advanceTimersByTimeAsync(5_000));
+  expect(run).toHaveBeenCalledTimes(2);
+
+  await act(async () => lifecycle.foregroundHandlers[0]?.());
+  await act(async () => vi.advanceTimersByTimeAsync(5_000));
+  expect(run).toHaveBeenCalledTimes(3);
+  hook.unmount();
+});
