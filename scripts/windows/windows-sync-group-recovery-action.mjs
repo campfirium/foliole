@@ -19,6 +19,7 @@ import {
   captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog
 } from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
+import { waitForWindowsDatabaseFile } from './windows-sync-group-database-readiness.mjs';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
@@ -30,6 +31,13 @@ export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
 export function windowsSyncGroupClientPaths(paths) {
   const root = path.join(windowsAcceptanceRoot(paths), 'client');
   return { libraryHome: path.join(root, 'library'), userData: path.join(root, 'user-data') };
+}
+
+export async function waitForWindowsClientDatabase(paths, {
+  exists = fs.existsSync, pause = delay, timeoutMs = 30_000
+} = {}) {
+  const databasePath = path.join(windowsSyncGroupClientPaths(paths).libraryHome, 'Data', 'foliole.db');
+  return waitForWindowsDatabaseFile(databasePath, { exists, pause, timeoutMs });
 }
 
 function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
@@ -58,6 +66,7 @@ export async function openWindowsSyncGroupSession(
   await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
     timeout: 90_000
   });
+  await waitForWindowsClientDatabase(paths);
   return { app, page, ...progress };
 }
 
