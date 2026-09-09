@@ -56,8 +56,10 @@ describe('iOS app identity host contract', () => {
     }
   });
 
-  it('reuses the prepared Fri build for every macOS two-device test batch', () => {
-    const source = read('scripts/ios/macos-fri-two-device-sync.mjs');
-    expect(source.match(/'--test-without-building'/gu)).toHaveLength(7);
+  it('reuses the prepared Fri build for every two-device test batch', () => {
+    const macos = read('scripts/ios/macos-fri-two-device-sync.mjs');
+    const windows = read('scripts/ios/windows-fri-two-device-sync.mjs');
+    expect(macos.match(/'--test-without-building'/gu)).toHaveLength(7);
+    expect(windows.match(/'--test-without-building'/gu)).toHaveLength(2);
   });
 });
