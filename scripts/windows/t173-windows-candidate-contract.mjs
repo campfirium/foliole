@@ -4,7 +4,9 @@ import path from 'node:path';
 export const T173_WINDOWS_SOURCE_REF = 'refs/heads/sync';
 export const T173_WINDOWS_REPO_ROOT = 'D:\\C\\foliole-sync';
 export const T173_WINDOWS_REPO_ROOT_POSIX = 'D:/C/foliole-sync';
-export const T173_WINDOWS_ACTIONS = new Set(['multi-device-sync-c']);
+export const T173_WINDOWS_ACTIONS = new Set([
+  'multi-device-sync-c', 'two-device-sync-provider'
+]);
 
 export function t173PreparedBuildPaths(repoRoot) {
   return {

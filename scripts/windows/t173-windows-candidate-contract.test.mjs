@@ -4,12 +4,18 @@ import { expect, it } from 'vitest';
 
 import {
   assertT173RuntimeIdentity, measureT173RuntimeIdentity, t173PreparedBuildPaths,
-  T173_WINDOWS_REPO_ROOT
+  T173_WINDOWS_ACTIONS, T173_WINDOWS_REPO_ROOT
 } from './t173-windows-candidate-contract.mjs';
 
 const expected = { branch: 'sync', clean: true, committed: true,
   revision: 'a'.repeat(40), sourceRef: 'refs/heads/sync',
   sourceRoot: T173_WINDOWS_REPO_ROOT, treeDigest: 'b'.repeat(40) };
+
+it('registers both formal T173 product actions under the candidate owner', () => {
+  expect([...T173_WINDOWS_ACTIONS]).toEqual([
+    'multi-device-sync-c', 'two-device-sync-provider'
+  ]);
+});
 
 it('binds prepared evidence to the compiled Electron entry', () => {
   expect(t173PreparedBuildPaths(T173_WINDOWS_REPO_ROOT)).toEqual({

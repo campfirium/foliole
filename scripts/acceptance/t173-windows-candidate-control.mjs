@@ -20,7 +20,10 @@ const HOST = 'zephu@192.168.0.11';
 const GIT_HOST = `${HOST}:foliole-dev.git`;
 const REMOTE_ACTION = `${T173_WINDOWS_REPO_ROOT_POSIX}/scripts/windows/`
   + 't173-windows-candidate-action.ps1';
-const RECEIPTS = { 'multi-device-sync-c': 'sync-group-recovery-receipt.json' };
+const RECEIPTS = {
+  'multi-device-sync-c': 'sync-group-recovery-receipt.json',
+  'two-device-sync-provider': 'two-device-sync-provider-receipt.json'
+};
 const ACTIVE_ROUTE = '.tmp/artifacts/multi-device-sync/windows-c/t173-active-route.json';
 
 export function parseT173WindowsCandidateControlArgs(argv) {
@@ -159,7 +162,7 @@ export async function runT173WindowsCandidateControl({
   const active = releasing
     ? JSON.parse(fs.readFileSync(path.join(repoRoot, ACTIVE_ROUTE), 'utf8')) : null;
   if (active && (active.revision !== candidate.revision || active.treeDigest !== candidate.treeDigest
-      || active.action !== 'multi-device-sync-c')) {
+      || !T173_WINDOWS_ACTIONS.has(active.action))) {
     throw new Error('T173 Windows active route does not match the current candidate.');
   }
   const routeIdentity = active?.routeIdentity

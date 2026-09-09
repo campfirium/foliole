@@ -12,6 +12,9 @@ it('accepts only the explicit sync source ref and registered T173 actions', () =
   expect(parseT173WindowsCandidateControlArgs([
     'multi-device-sync-c', '--source-ref', 'refs/heads/sync'
   ])).toEqual({ action: 'multi-device-sync-c', sourceRef: 'refs/heads/sync' });
+  expect(parseT173WindowsCandidateControlArgs([
+    'two-device-sync-provider', '--source-ref', 'refs/heads/sync'
+  ])).toEqual({ action: 'two-device-sync-provider', sourceRef: 'refs/heads/sync' });
   expect(() => parseT173WindowsCandidateControlArgs([
     'multi-device-sync-c', '--source-ref', 'refs/heads/dev'
   ])).toThrow('arguments are invalid');
