@@ -10,7 +10,9 @@ import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import {
   MULTI_DEVICE_ANDROID_APP_ID, multiDeviceAndroidEnv
 } from './multi-device-sync-android-profile.mjs';
-import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
+import {
+  windowsSyncGroupCommand, windowsSyncGroupTargetRef
+} from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
@@ -69,8 +71,7 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   if (!receipt || receipt.sourceRef !== candidate.sourceRef
       || receipt.revision !== candidate.revision
       || receipt.treeDigest !== candidate.treeDigest
-      || receipt.targetRef !== (candidate.sourceRef === 'refs/heads/sync'
-        ? candidate.sourceRef : 'refs/heads/dev')) {
+      || receipt.targetRef !== windowsSyncGroupTargetRef(candidate.sourceRef)) {
     throw Object.assign(new Error('Windows candidate did not report the frozen boundary.'), {
       failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
     });

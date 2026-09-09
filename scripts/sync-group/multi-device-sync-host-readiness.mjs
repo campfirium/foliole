@@ -15,6 +15,7 @@ import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
 import { WINDOWS_DEV_REPO_ROOT_POSIX } from '../windows/windows-dev-paths.mjs';
 import { MACOS_ACCEPTANCE_SYNC_PORT } from './multi-device-sync-macos-channel.mjs';
 import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { windowsSyncGroupTargetRef } from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
@@ -169,7 +170,7 @@ export function createMutationReadinessAdapters(options) {
       || (host === 'windows-c' && (receipt.windowsReceipt?.sourceRef !== current.sourceRef
         || receipt.windowsReceipt?.revision !== current.revision
         || receipt.windowsReceipt?.treeDigest !== current.treeDigest
-        || receipt.windowsReceipt?.targetRef !== 'refs/heads/dev'))
+        || receipt.windowsReceipt?.targetRef !== windowsSyncGroupTargetRef(current.sourceRef)))
       || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
           !== receipt.androidApkSha256)));
