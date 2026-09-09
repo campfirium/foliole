@@ -172,8 +172,9 @@ async function seedMigratableSource() {
        '{"id":"local","kind":"cloze","locator":{"from":17,"to":34,"originalText":"remembered phrase"}}','old','old')`);
   driver.execute(`INSERT INTO desktop_sources (source_ref,source_type,config_ref,host_name,host_platform,
     root_path,path_flavor,type_settings_json,created_at,updated_at) VALUES
-    ('readwise:local','readwise','articles-local','This Mac','darwin',?,'posix',?,'old','old')`,
-  [state.sourcePath, JSON.stringify({ highlightPath: state.sourcePath, keepState: 'enabled', kind: 'articles' })]);
+    ('readwise:local','readwise','articles-local','This Mac',?,?,?,?, 'old','old')`,
+  [process.platform, state.sourcePath, process.platform === 'win32' ? 'windows' : 'posix',
+    JSON.stringify({ highlightPath: state.sourcePath, keepState: 'enabled', kind: 'articles' })]);
   driver.execute(`INSERT INTO import_sources (source_fingerprint,provider,source_kind,source_name,source_locator,
     first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location) VALUES
     ('source-1','desktop_text_file','markdown','Sample.md',?,'old','old','hash','topic-1','readwise:local','Sample.md')`,
