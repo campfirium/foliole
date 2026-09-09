@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { captureA5SyncRun } from './a5-sync-event-proof.mjs';
+import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs';
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
 import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
@@ -140,11 +140,13 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'a5-resume-after-conflict'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial });
     await session.invoke('resume_companion_sync');
-    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+    const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
+      action: 'sync-now', appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
       execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
-    const a5ManualBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') }, 'manual');
+    const a5ManualBeforeRestart = await captureA5ActionRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') },
+    a5ManualBeforeRestartAction.manifestPath);
     const macosManualBeforeRestart = await session.invoke('sync_companion_now');
     const conflict = await loadVisibleDesktopSyncConflictCopy({
       nodeId: conflictSeed.nodeId, session
@@ -157,12 +159,13 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
     [a5Initial.run, a5AutomaticBeforeRestart.run]);
-    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+    const a5ManualAfterRestartAction = await runMacosA5SyncGroupMaintenance({
+      action: 'sync-now', appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-after-restart'),
       execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
-    const a5ManualAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'manual-after-restart-run') }, 'manual',
-    [a5ManualBeforeRestart.run]);
+    const a5ManualAfterRestart = await captureA5ActionRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-after-restart-run') },
+    a5ManualAfterRestartAction.manifestPath);
     const macosRestart = await verifyMacosA5Restart({ env,
       expectedGroupId: result.observation.groupId, openSession,
       repoRoot: args.paths.buildRoot, session, sharedRoot });

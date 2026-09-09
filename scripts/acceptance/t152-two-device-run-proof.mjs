@@ -43,6 +43,13 @@ export function selectProjectedRun(events, triggerReason, { exclude = [] } = {})
   return candidates[0];
 }
 
+export function selectProjectedRunById(events, runId) {
+  const run = (events ?? []).map(projectedRun).filter(Boolean)
+    .find((candidate) => candidate.runId === runId);
+  if (!run) throw new Error(`Completed mobile Sync run was not projected: ${runId}`);
+  return run;
+}
+
 export function projectedEvents(value, expectedContainer) {
   if (value?.container_identity !== expectedContainer
       && value?.application_id !== expectedContainer) {
