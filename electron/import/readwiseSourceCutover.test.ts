@@ -48,6 +48,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { completeReadwiseApiImportRun } from '../database/readwiseApiImportState.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
@@ -96,6 +97,30 @@ it('does not inspect relay directories before the user confirms migration', asyn
   await expect(previewReadwiseSourceCutover()).resolves.toEqual({
     completed_count: 0, status: 'ready', topic_count: 0, total_count: null
   });
+});
+
+it('starts migration from the complete selected candidate scope instead of the ordinary watermark', async () => {
+  const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  completeReadwiseApiImportRun({
+    connectionRef: remote.connectionRef,
+    exportCursor: null,
+    phase: 'ready',
+    queryUpdatedAfter: null,
+    readerCursor: null,
+    roundStartedAt: '2026-09-08T00:00:00.000Z'
+  });
+  const requests: string[] = [];
+  const baseFetch = migrationFetch();
+  const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    requests.push(String(input));
+    return baseFetch(input, init);
+  }) as typeof fetch;
+
+  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ status: 'completed' });
+  const exportRequest = requests.map((input) => new URL(input))
+    .find((url) => url.pathname === '/api/v2/export/');
+  expect(exportRequest?.searchParams.has('updatedAfter')).toBe(false);
 });
 
 it('reprojects a pristine body atomically while preserving a local cloze', async () => {

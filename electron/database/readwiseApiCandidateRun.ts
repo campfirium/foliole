@@ -42,7 +42,7 @@ export function restartReadwiseApiCandidateRun(
   resetCandidateRun(
     connectionRef,
     candidateScopeSignature(config),
-    loadReadwiseApiCompletedThrough(connectionRef),
+    null,
     now
   );
   return requireRun(connectionRef);
