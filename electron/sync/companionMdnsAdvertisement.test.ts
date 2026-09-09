@@ -51,7 +51,7 @@ describe('desktop OS DNS-SD advertisement', () => {
 
     expect(runtime.register).toHaveBeenCalledOnce();
     expect(runtime.register).toHaveBeenCalledWith({
-      domain: 'local.', name: 'V-runtimed',
+      domain: 'local.', name: 'V-runtimed-observing',
       port: 38683, type: '_foliole-sync._tcp',
       txt: { app_version: '0.1.0-test', device_id: 'desktop-local',
         group_id: 'group-1', group_tag: 'tag-1', provider_platform: process.platform,
@@ -82,6 +82,7 @@ describe('desktop OS DNS-SD advertisement', () => {
     await refreshed;
 
     expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
+      name: 'V-runtimed-anchor',
       txt: expect.objectContaining({ topology_role: 'anchor' })
     });
     expect(runtime.cancel).toHaveBeenCalledOnce();

@@ -48,9 +48,9 @@ export function resolveCompanionMdnsIpv4Addresses(interfaces = os.networkInterfa
 }
 
 export function resolveCompanionMdnsServiceName(
-  groupDisplayName: string, runtimeInstanceId: string
+  groupDisplayName: string, runtimeInstanceId: string, role: DesktopAnchorRole
 ) {
-  const suffix = runtimeSuffix(runtimeInstanceId);
+  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${role}`;
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -69,7 +69,7 @@ function registrationError(event: Extract<DesktopDnsSdEvent, { kind: 'error' }>)
 function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: number) {
   const runtimeId = loadSyncGroupRuntimeInstanceId();
   const addresses = resolveCompanionMdnsIpv4Addresses();
-  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId);
+  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, input.role);
   logDesktopDnsSdDiagnostic('register_started', {
     addresses, lifecycle, name, port: input.port, type: SERVICE.type
   });
