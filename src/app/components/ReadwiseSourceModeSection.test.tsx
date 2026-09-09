@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
@@ -9,6 +10,20 @@ const runtime = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn(), load:
 const cutover = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
 const confirmation = vi.hoisted(() => ({ request: vi.fn() }));
 const navigation = vi.hoisted(() => ({ open: vi.fn() }));
+const schedule = vi.hoisted(() => ({ load: vi.fn() }));
+
+function apiSettings() {
+  return {
+    cleanupDisabled: false,
+    config: createDefaultReadwiseReaderConfig(),
+    onChangeFrequency: vi.fn(),
+    onCleanup: vi.fn(),
+    onSync: vi.fn(),
+    syncDisabled: false,
+    syncIsRunning: false,
+    syncStatus: { failedSources: [], message: null, tone: 'normal' as const }
+  };
+}
 
 vi.mock('../../shared/platform/import/readwiseApiConnectionRuntimeRepository', () => ({
   connectReadwiseApiFromClipboardInRuntime: runtime.connect,
@@ -20,6 +35,9 @@ vi.mock('../../shared/platform/import/readwiseSourceCutoverRuntimeRepository', (
   runReadwiseSourceCutoverInRuntime: cutover.run
 }));
 vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl: navigation.open }));
+vi.mock('../../shared/platform/readwiseReaderImportRuntimeRepository', () => ({
+  loadReadwiseApiScheduleStatusInRuntime: schedule.load
+}));
 vi.mock('../../shared/ui', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../shared/ui')>(),
   requestAppConfirmation: confirmation.request
@@ -37,6 +55,13 @@ beforeEach(() => {
   });
   cutover.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
   confirmation.request.mockResolvedValue(true);
+  schedule.load.mockResolvedValue({
+    eligibility: 'ready',
+    initial_import: { completed_count: 0, status: 'completed', total_count: null },
+    last_result: null,
+    next_run_at: null,
+    running: false
+  });
 });
 
 it('shows Off, Obsidian relay, and API as one source selector', async () => {
@@ -76,7 +101,7 @@ it('opens migration confirmation from API selection without a separate migration
 });
 
 it('keeps the token link in the description and connects without exposing it to the renderer', async () => {
-  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   expect(await screen.findByText('Not connected')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Get Readwise token' })).toHaveClass('underline');
@@ -88,16 +113,67 @@ it('keeps the token link in the description and connects without exposing it to 
   expect(navigation.open).toHaveBeenCalledWith('https://readwise.io/access_token');
 });
 
-it('shows an inline spinner while migration progress is pending', async () => {
+it('shows the migration status in the API connection row while migration is pending', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, status: 'migration_in_progress', topic_count: 12, total_count: 31
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
-  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiSettings={apiSettings()}
+    committedMode="api"
+    mode="api"
+    onChange={() => undefined}
+  /></LocalizationProvider>);
 
+  expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
   const migration = await screen.findByRole('button', { name: 'Migrating to API mode 0%' });
   expect(migration).toHaveAttribute('aria-busy', 'true');
-  expect(migration.querySelector('.animate-spin')).toBeInTheDocument();
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+});
+
+it('offers to continue migration when the migration is paused', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 7, status: 'migration_in_progress', topic_count: 12, total_count: 31
+  });
+  cutover.run.mockResolvedValue({ migrated_count: 7, status: 'failed', unmatched_count: 0 });
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiSettings={apiSettings()}
+    committedMode="api"
+    mode="api"
+    onChange={() => undefined}
+  /></LocalizationProvider>);
+
+  await waitFor(() => expect(cutover.run).toHaveBeenCalled());
+  const migration = await screen.findByRole('button', { name: 'Continue migrating to API mode 22%' });
+  expect(migration).not.toHaveAttribute('aria-busy', 'true');
+});
+
+it('keeps showing durable initial API migration state without inventing a percentage', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 31, status: 'already_completed', topic_count: 31, total_count: 31
+  });
+  schedule.load.mockResolvedValue({
+    eligibility: 'ready',
+    initial_import: { completed_count: 30, status: 'pending', total_count: 169 },
+    last_result: {
+      completed_at: '2026-09-09T11:52:00.151Z', error_stage: null,
+      imported_count: 28, status: 'failed', trigger: 'startup'
+    },
+    next_run_at: '2026-09-09T12:52:00.151Z',
+    running: false
+  });
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiSettings={apiSettings()}
+    committedMode="api"
+    mode="api"
+    onChange={() => undefined}
+  /></LocalizationProvider>);
+
+  const migration = await screen.findByRole('button', { name: 'Continue migrating to API mode 17%' });
+  expect(migration).not.toHaveAttribute('aria-busy', 'true');
+  expect(screen.queryByText('Migrating to API mode 93%')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Clean up...' })).toBeDisabled();
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {
@@ -105,7 +181,7 @@ it('uses the same instruction for a missing or invalid token', async () => {
     connection: { has_credential: false, state: 'disconnected', verified_at: null },
     status: 'token_missing'
   });
-  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();

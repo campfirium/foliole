@@ -87,13 +87,7 @@ async function installApiFixture(electronApp: ElectronApplication) {
 
 async function configureExternalImport(page: Page) {
   const settings = await openSettingsCategory(page, 'ReadwiseReader');
-  await connectAndCutoverReadwiseApi(page, settings);
-  await settings.getByRole('radio', { name: /^(External|外部)$/ }).last().click();
-  await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
-  const preview = page.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-  await expect(preview.getByText('Remote External Article')).toBeVisible();
-  await preview.getByRole('button', { name: /^(Import|导入)$/ }).click();
-  await expect(preview).toHaveCount(0);
+  await connectAndCutoverReadwiseApi(page, settings, 'external');
   await page.locator('[role="presentation"][aria-label="Settings"], [role="presentation"][aria-label="设置"]')
     .click({ position: { x: 5, y: 5 } });
   await expect(settings).toHaveCount(0);

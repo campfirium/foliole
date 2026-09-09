@@ -25,6 +25,7 @@ interface SettingsSegmentedControlProps {
 
 interface SettingsSegmentedRowProps extends Omit<SettingsSegmentedControlProps, 'ariaLabel'> {
   ariaLabel?: string;
+  controlAlignment?: 'center' | 'description';
   description: ReactNode;
   label: string;
 }
@@ -78,7 +79,10 @@ export function SettingsSegmentedControl({
 export function SettingsSegmentedRow(props: SettingsSegmentedRowProps) {
   return (
     <SettingsRow description={props.description} title={props.label}>
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+      <SettingsControlSlot className={cn(
+        SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+        props.controlAlignment === 'description' && 'mt-5 self-start max-[1080px]:mt-0'
+      )}>
         <SettingsSegmentedControl
           ariaLabel={props.ariaLabel ?? props.label}
           {...(props.className !== undefined ? { className: props.className } : {})}

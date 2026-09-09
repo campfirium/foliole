@@ -13,7 +13,12 @@ export interface NativeReadwiseApiScheduleResult {
 }
 
 export interface NativeReadwiseApiScheduleStatus {
-  eligibility: 'connection_required' | 'first_import_required' | 'inactive_host' | 'ready' | 'source_mode_mismatch';
+  eligibility: 'connection_required' | 'inactive_host' | 'ready' | 'source_mode_mismatch';
+  initial_import: {
+    completed_count: number;
+    status: 'completed' | 'pending';
+    total_count: number | null;
+  };
   last_result: NativeReadwiseApiScheduleResult | null;
   next_run_at: string | null;
   running: boolean;

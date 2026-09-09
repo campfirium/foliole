@@ -62,6 +62,7 @@ export function ReadwiseReaderSyncRow(props: {
     <SettingsRow description={description} title={t('desktop.readwise.sync.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <ReadwiseSyncFrequencySelect
+          disabled={props.disabled}
           onChange={(value) => props.onChange('syncFrequency', value)}
           value={props.config.syncFrequency}
         />
@@ -74,6 +75,7 @@ export function ReadwiseReaderSyncRow(props: {
 }
 
 export function ReadwiseSyncFrequencySelect(props: {
+  disabled?: boolean;
   onChange: (value: ReadwiseSyncFrequency) => void;
   value: ReadwiseSyncFrequency;
 }) {
@@ -89,6 +91,7 @@ export function ReadwiseSyncFrequencySelect(props: {
     <select
       aria-label={t('desktop.readwise.sync.frequency.aria')}
       className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
+      disabled={props.disabled}
       onChange={(event) => props.onChange(event.target.value as ReadwiseSyncFrequency)}
       value={props.value}
     >

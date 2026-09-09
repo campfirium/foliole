@@ -1,3 +1,4 @@
+import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
@@ -28,7 +29,7 @@ export function ReadwiseBehaviorSection({ draft }: { draft: ReadwiseSetupDraft }
   );
 }
 
-function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void }) {
+export function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void }) {
   const t = useTranslation();
   return (
     <SettingsRow description={t('desktop.readwise.cleanup.description')} title={t('desktop.readwise.cleanup.title')}>
@@ -38,6 +39,31 @@ function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void })
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>
+  );
+}
+
+export function ReadwiseCommonRows(props: {
+  cleanupDisabled: boolean;
+  config: ReadwiseReaderConfig;
+  onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
+  onCleanup: () => void;
+  onSync: () => void;
+  syncDisabled: boolean;
+  syncIsRunning: boolean;
+  syncStatus: ReadwiseManualSyncStatus;
+}) {
+  return (
+    <>
+      <ReadwiseReaderSyncRow
+        config={props.config}
+        disabled={props.syncDisabled}
+        isSyncing={props.syncIsRunning}
+        onChange={props.onChange}
+        onSync={props.onSync}
+        status={props.syncStatus}
+      />
+      <ReadwiseCleanupRow disabled={props.cleanupDisabled} onCleanup={props.onCleanup} />
+    </>
   );
 }
 
@@ -92,15 +118,16 @@ export function ReadwiseFolderSettingsSections(props: {
           onCheck={props.onCheck}
           result={props.draft.previewResult}
         />
-        <ReadwiseReaderSyncRow
+        <ReadwiseCommonRows
+          cleanupDisabled={props.cleanupDisabled}
           config={props.draft.draftConfig}
-          disabled={props.syncDisabled}
-          isSyncing={props.syncIsRunning}
           onChange={props.draft.updateConfig}
+          onCleanup={props.onCleanup}
           onSync={props.onSync}
-          status={props.syncStatus}
+          syncDisabled={props.syncDisabled}
+          syncIsRunning={props.syncIsRunning}
+          syncStatus={props.syncStatus}
         />
-        <ReadwiseCleanupRow disabled={props.cleanupDisabled} onCleanup={props.onCleanup} />
       </SettingsSection>
       <ReadwiseBehaviorSection draft={props.draft} />
       <ReadwiseImportSettingsSection draft={props.draft} />

@@ -18,6 +18,7 @@ import {
   settingsSidebarBadgeClassName,
   settingsSidebarItemClassName
 } from './SettingsLayout';
+import { SettingsSegmentedRow } from './SettingsSegmentedControl';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
@@ -62,6 +63,21 @@ it('passes row DOM props through to the settings row element', () => {
   );
 
   expect(screen.getByTestId('draggable-row')).toHaveAttribute('draggable', 'true');
+});
+
+it('can align a segmented control with the row description', () => {
+  render(
+    <SettingsSegmentedRow
+      controlAlignment="description"
+      description="Second line"
+      label="First line"
+      onChange={() => undefined}
+      options={[{ label: 'Choice', value: 'choice' }]}
+      value="choice"
+    />
+  );
+
+  expect(screen.getByRole('radiogroup').closest('[data-settings-control-slot]')?.className).toContain('mt-5');
 });
 
 it('keeps compact settings control helpers on shared token chrome', () => {

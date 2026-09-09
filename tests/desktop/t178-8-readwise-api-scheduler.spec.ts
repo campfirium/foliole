@@ -107,7 +107,7 @@ async function capture(settings: Locator, testInfo: TestInfo) {
   await testInfo.attach('t178-8-readwise-scheduler', { contentType: 'image/png', path: target });
 }
 
-test('schedules only after first success and stops stale work on disconnect', async ({ browserName }, testInfo) => {
+test('starts automatically and stops stale work on disconnect', async ({ browserName }, testInfo) => {
   void browserName;
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-8-'));
   let session: T178AcceptanceSession | null = null;
@@ -117,12 +117,8 @@ test('schedules only after first success and stops stale work on disconnect', as
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await expectWorkspaceShell(session.firstWindow);
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await connectAndCutoverReadwiseApi(session.firstWindow, settings);
+    await connectAndCutoverReadwiseApi(session.firstWindow, settings, 'inbox');
     await settings.getByLabel(/^(Sync frequency|同步频率)$/).selectOption('weekly');
-    await settings.getByRole('radio', { name: /^(Inbox|收件箱)$/ }).last().click();
-    await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
-    await session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ })
-      .getByRole('button', { name: /^(Import|导入)$/ }).click();
     await expect.poll(() => sourceCount(session!.electronApp)).toBe(1);
 
     await setFixtureMode(session.electronApp, 'normal');
@@ -139,20 +135,16 @@ test('schedules only after first success and stops stale work on disconnect', as
       const settingsStore = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
       return settingsStore.loadJsonSetting('readwise_api_schedule_state')?.lastResult?.status;
     })).toBe('failed');
-    await openSettingsCategory(session.firstWindow, 'General');
-    const reopened = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await expect(reopened.getByText(/^(The last import stopped while reading remote changes.|最近一次导入在读取远程变化时停止。)$/)).toBeVisible();
-    await expect(reopened.getByRole('button', { name: /^(Retry import|重试导入)$/ })).toBeVisible();
 
     await setFixtureMode(session.electronApp, 'block', 'article-3');
-    await forceDue(reopened, session.electronApp);
+    await forceDue(settings, session.electronApp);
     await expect.poll(() => session!.electronApp.evaluate(() =>
       Boolean((globalThis as typeof globalThis & { __t178SchedulerBlocked?: boolean }).__t178SchedulerBlocked)
     )).toBe(true);
-    await reopened.getByRole('button', { name: /^(Disconnect|断开)$/ }).click();
-    await expect(reopened.getByText(/^(Not connected|未连接)$/)).toBeVisible();
+    await settings.getByRole('button', { name: /^(Disconnect|断开)$/ }).click();
+    await expect(settings.getByText(/^(Not connected|未连接)$/)).toBeVisible();
     await expect.poll(() => sourceCount(session!.electronApp)).toBe(2);
-    await capture(reopened, testInfo);
+    await capture(settings, testInfo);
   } finally {
     await session?.close();
     await rm(stateRoot, { force: true, recursive: true });

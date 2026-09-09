@@ -15,7 +15,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
-import { ReadwiseApiImportSection } from './ReadwiseApiImportSection';
+import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
 import { ReadwiseBehaviorSection, ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
@@ -56,30 +56,6 @@ function saveDisabledReadwiseSetup(props: SettingsReadwiseReaderContentProps, dr
   ));
 }
 
-function ReadwiseApiSettingsContent(props: {
-  setup: ReturnType<typeof useReadwiseSetupController>;
-  settings: SettingsReadwiseReaderContentProps;
-}) {
-  function saveFrequency(syncFrequency: ReadwiseSyncFrequency) {
-    const draft = props.setup.draft;
-    const config = { ...draft.draftConfig, syncFrequency };
-    draft.updateConfig('syncFrequency', syncFrequency);
-    props.settings.onSave(createReadwiseSetupPayload(draft, config, draft.draftSources));
-  }
-  return (
-    <div className="space-y-6">
-      <ReadwiseApiImportSection
-        disabled={!props.settings.onPreviewSync || props.setup.isStartingSync || props.setup.isSyncPreviewing}
-        frequency={props.setup.draft.draftConfig.syncFrequency}
-        isRunning={props.setup.isStartingSync || props.setup.isSyncPreviewing}
-        onChangeFrequency={saveFrequency}
-        onPreview={() => void props.setup.handleApiSync()}
-      />
-      <ReadwiseBehaviorSection draft={props.setup.draft} />
-    </div>
-  );
-}
-
 function ReadwiseSelectedModeContent(props: {
   cleanup: ReturnType<typeof useReadwiseCleanup>;
   settings: SettingsReadwiseReaderContentProps;
@@ -87,9 +63,7 @@ function ReadwiseSelectedModeContent(props: {
   sourceMode: ReadwiseSourceMode;
 }) {
   if (props.sourceMode === 'off') return null;
-  if (props.sourceMode === 'api') {
-    return <ReadwiseApiSettingsContent settings={props.settings} setup={props.setup} />;
-  }
+  if (props.sourceMode === 'api') return <ReadwiseBehaviorSection draft={props.setup.draft} />;
   return (
     <ReadwiseFolderSettingsSections
       canPreview={props.setup.canPreview}
@@ -107,6 +81,23 @@ function ReadwiseSelectedModeContent(props: {
   );
 }
 
+function createApiModeSettings(
+  setup: ReturnType<typeof useReadwiseSetupController>,
+  cleanup: ReturnType<typeof useReadwiseCleanup>,
+  onChangeFrequency: (frequency: ReadwiseSyncFrequency) => void
+): ReadwiseApiModeSettings {
+  return {
+    cleanupDisabled: cleanup.cleanupDisabled,
+    config: setup.draft.draftConfig,
+    onChangeFrequency,
+    onCleanup: () => void cleanup.openCleanupDialog(),
+    onSync: () => void setup.handleRunSync(),
+    syncDisabled: setup.syncDisabled,
+    syncIsRunning: setup.syncIsRunning,
+    syncStatus: setup.manualSyncStatus
+  };
+}
+
 function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
   const committedMode = props.readwiseSourceMode ?? 'folder';
@@ -119,10 +110,18 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
       onRunCleanup: props.onRunCleanup
     })
   });
+  function saveApiFrequency(syncFrequency: ReadwiseSyncFrequency) {
+    const draft = setup.draft;
+    const config = { ...draft.draftConfig, syncFrequency };
+    draft.updateConfig('syncFrequency', syncFrequency);
+    props.onSave(createReadwiseSetupPayload(draft, config, draft.draftSources));
+  }
+  const apiSettings = createApiModeSettings(setup, cleanup, saveApiFrequency);
   return (
     <>
       <ReadwiseSourceModeSection
         committedMode={committedMode}
+        apiSettings={apiSettings}
         mode={sourceMode}
         onChange={setSourceMode}
         {...(props.onChangeSourceMode ? { onCommitMode: props.onChangeSourceMode } : {})}

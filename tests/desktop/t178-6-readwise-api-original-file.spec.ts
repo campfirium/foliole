@@ -48,15 +48,7 @@ async function installFixture(desktopApp: ElectronApplication) {
 async function configureAndImport(session: T178AcceptanceSession) {
   await expectWorkspaceShell(session.firstWindow);
   const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-  await connectAndCutoverReadwiseApi(session.firstWindow, settings);
-  await settings.getByRole('radio', { name: /^(Inbox|收件箱)$/ }).last().click();
-  await settings.getByRole('button', { name: /^(Preview import|预览导入)$/ }).click();
-  const preview = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-  await expect(preview.getByText('Localized PDF')).toBeVisible();
-  await expect(preview.getByText('HTML EPUB')).toBeVisible();
-  await expect(preview.getByText('Unavailable PDF')).toBeVisible();
-  await preview.getByRole('button', { name: /^(Import|导入)$/ }).click();
-  await expect(preview).toHaveCount(0);
+  await connectAndCutoverReadwiseApi(session.firstWindow, settings, 'inbox');
   await session.firstWindow.locator('[role="presentation"][aria-label="Settings"], [role="presentation"][aria-label="设置"]')
     .click({ position: { x: 5, y: 5 } });
 }

@@ -17,18 +17,13 @@ const TEST_TOKEN = 't178-4-acceptance-token';
 
 async function installApiFixture(electronApp: ElectronApplication) {
   await electronApp.evaluate(({ clipboard }, token) => {
-    const scope = globalThis as typeof globalThis & {
-      __t178ImportMode?: 'interrupt' | 'normal' | 'resume'; __t178Requests?: string[];
-    };
-    scope.__t178ImportMode = 'normal';
-    scope.__t178Requests = [];
+    const scope = globalThis as typeof globalThis;
     const article = (id: string, body: string) => ({
       category: 'article', html_content: `<p>${body}</p>`, id, title: id,
       updated_at: '2026-09-07T00:00:00.000Z'
     });
-    scope.fetch = async (input, init) => {
+    scope.fetch = async (input) => {
       const url = new URL(String(input));
-      scope.__t178Requests?.push(url.toString());
       if (url.pathname === '/api/v2/auth/') return new Response(null, { status: 204 });
       if (url.pathname === '/api/v2/export/') {
         return Response.json({ nextPageCursor: null, results: [{
@@ -36,17 +31,6 @@ async function installApiFixture(electronApp: ElectronApplication) {
             external_id: 'highlight-1', note: 'Reader note', text: 'quoted passage'
           }], source: 'reader'
         }] });
-      }
-      if (scope.__t178ImportMode === 'interrupt') {
-        if (!url.searchParams.get('pageCursor')) {
-          return Response.json({ nextPageCursor: 'resume-page', results: [article('article-3', 'Third body')] });
-        }
-        return new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener(
-          'abort', () => reject(new DOMException('cancelled', 'AbortError')), { once: true }
-        ));
-      }
-      if (scope.__t178ImportMode === 'resume') {
-        return Response.json({ nextPageCursor: null, results: [article('article-4', 'Fourth body')] });
       }
       return Response.json({ nextPageCursor: null, results: [
         article('article-1', 'Body with quoted passage'),
@@ -66,26 +50,7 @@ async function capture(dialog: Locator, testInfo: TestInfo, name: string) {
   await testInfo.attach(name, { contentType: 'image/png', path: target });
 }
 
-async function resetRound(electronApp: ElectronApplication, mode: 'interrupt' | 'resume') {
-  await electronApp.evaluate((_electron, input) => {
-    const scope = globalThis as typeof globalThis & { __t178ImportMode?: string };
-    scope.__t178ImportMode = input.mode;
-    if (input.clear) {
-      const moduleApi = process.getBuiltinModule('module');
-      const pathApi = process.getBuiltinModule('path');
-      if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-      const require = moduleApi.createRequire(pathApi.join(input.cwd, 'package.json'));
-      const connection = require(pathApi.join(input.cwd, 'dist/electron/database/connection.js'));
-      connection.runWithDatabaseConnectionOwner(() => {
-        const driver = connection.openDatabaseConnection().driver;
-        driver.execute('DELETE FROM readwise_api_import_stage');
-        driver.execute('DELETE FROM readwise_api_import_runs');
-      });
-    }
-  }, { clear: mode === 'interrupt', cwd: process.cwd(), mode });
-}
-
-test('imports, repeats safely, cancels, and resumes a Reader API round', async ({ browserName }, testInfo) => {
+test('starts automatically and repeats a Reader API import safely', async ({ browserName }, testInfo) => {
   void browserName;
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-4-'));
   let session: T178AcceptanceSession | null = null;
@@ -95,53 +60,33 @@ test('imports, repeats safely, cancels, and resumes a Reader API round', async (
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await expectWorkspaceShell(session.firstWindow);
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await connectAndCutoverReadwiseApi(session.firstWindow, settings);
-    await settings.getByRole('radio', { name: /^(Inbox|收件箱)$/ }).last().click();
-
-    const previewButton = settings.getByRole('button', { name: /^(Preview import|预览导入)$/ });
-    await previewButton.click();
-    let dialog = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-    await expect(dialog.getByText(/^(Source topics: 2|源主题：2)/)).toBeVisible();
-    await capture(dialog, testInfo, 't178-4-api-first-preview');
-    await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-    await expect(dialog).toHaveCount(0);
+    await connectAndCutoverReadwiseApi(session.firstWindow, settings, 'inbox');
+    await expect.poll(() => inspectImportedState(session!.electronApp, false)).toMatchObject({
+      importSources: 2, readwiseNodes: 3
+    });
+    await capture(settings, testInfo, 't178-4-api-automatic-import');
 
     const firstCounts = await inspectImportedState(session.electronApp, true);
     expect(firstCounts).toMatchObject({ annotationContentPreserved: true, importSources: 2, readwiseNodes: 3 });
-    await previewButton.click();
-    dialog = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-    await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-    await expect(dialog).toHaveCount(0);
+    await runApiImport(session.electronApp);
     expect(await inspectImportedState(session.electronApp, false)).toEqual(firstCounts);
-
-    await previewButton.click();
-    dialog = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-    await expect(dialog.getByRole('button', { name: /^(Import|导入)$/ })).toBeEnabled();
-    await resetRound(session.electronApp, 'interrupt');
-    await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-    await expect.poll(() => session!.electronApp.evaluate(() =>
-      (globalThis as typeof globalThis & { __t178Requests?: string[] }).__t178Requests?.some(
-        (url) => url.includes('pageCursor=resume-page')
-      ))).toBe(true);
-    await session.firstWindow.getByRole('button', { name: /^(Cancel|取消)$/ }).click();
-    await expect(session.firstWindow.getByRole('dialog', {
-      name: /^(Readwise import|Readwise import preview|Readwise 导入|Readwise 导入预览)$/
-    })).toHaveCount(0);
-
-    await resetRound(session.electronApp, 'resume');
-    await previewButton.click();
-    dialog = session.firstWindow.getByRole('dialog', { name: /^(Readwise import preview|Readwise 导入预览)$/ });
-    await expect(dialog.getByText(/^(Source topics: 2|源主题：2)/)).toBeVisible();
-    await capture(dialog, testInfo, 't178-4-api-resumed-preview');
-    await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-    await expect(dialog).toHaveCount(0);
-    expect(await inspectImportedState(session.electronApp, false))
-      .toMatchObject({ importSources: 4, readwiseNodes: 5 });
   } finally {
     await session?.close();
     await rm(stateRoot, { force: true, recursive: true });
   }
 });
+
+async function runApiImport(electronApp: ElectronApplication) {
+  return electronApp.evaluate(async (_electron, cwd) => {
+    const moduleApi = process.getBuiltinModule('module');
+    const pathApi = process.getBuiltinModule('path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
+    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
+    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+    const apiImport = require(pathApi.join(cwd, 'dist/electron/import/readwiseApiImportRun.js'));
+    return connection.runWithDatabaseConnectionOwner(() => apiImport.runReadwiseApiImport());
+  }, process.cwd());
+}
 
 async function inspectImportedState(electronApp: ElectronApplication, addLocalEdit: boolean) {
   return electronApp.evaluate((_electron, input) => {

@@ -52,15 +52,23 @@ export async function openSettingsCategory(windowPage: Page, categoryName: strin
   return settingsDialog;
 }
 
-export async function connectAndCutoverReadwiseApi(windowPage: Page, settingsDialog: Locator) {
+export async function connectAndCutoverReadwiseApi(
+  windowPage: Page,
+  settingsDialog: Locator,
+  destination?: 'external' | 'inbox'
+) {
   await settingsDialog.getByRole('radio', { name: /^(API mode|API 模式)$/ }).click();
+  if (destination) {
+    const name = destination === 'inbox' ? /^(Inbox|收件箱)$/ : /^(External|外部)$/;
+    await settingsDialog.getByRole('radio', { name }).last().click();
+  }
   await settingsDialog.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }).click();
   await waitForVisible(settingsDialog.getByText(/^(Connected|已连接)$/));
   await settingsDialog.getByRole('button', { name: /^(Switch to API mode|切换到 API 模式)$/ }).click();
   const confirmation = windowPage.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
   await waitForVisible(confirmation);
   await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
-  await waitForVisible(settingsDialog.getByRole('button', { name: /^(Preview import|预览导入)$/ }));
+  await waitForVisible(settingsDialog.getByLabel(/^(Sync frequency|同步频率)$/));
 }
 
 export async function openBackupsSection(windowPage: Page) {
