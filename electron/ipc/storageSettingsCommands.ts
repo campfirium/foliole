@@ -124,7 +124,7 @@ export async function handleSettingsStorageCommand(
   const publishingResult = await handlePublishingStorageCommand(command, args);
   if (publishingResult !== undefined) {
     if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress)
-      notifyWorkspaceContentChanged();
+      notifyWorkspaceContentChanged(null, { requestSync: false });
     return publishingResult;
   }
   const appSettingsResult = await handleAppSettingsCommand(command, args);

@@ -12,9 +12,12 @@ const WORKSPACE_CONTENT_CHANGED_PAYLOAD: WorkspaceContentChangedEvent = {
   scope: 'workspace'
 };
 
-export function notifyWorkspaceContentChanged(excludedWindow: ElectronBrowserWindow | null = null) {
+export function notifyWorkspaceContentChanged(
+  excludedWindow: ElectronBrowserWindow | null = null,
+  options: { requestSync?: boolean } = {}
+) {
   refreshCompanionMdnsAdvertisement();
-  void requestDesktopHighValueSync();
+  if (options.requestSync !== false) void requestDesktopHighValueSync();
   const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
   for (const window of windows) {
     if (window === excludedWindow || window.isDestroyed()) {

@@ -44,3 +44,10 @@ it('broadcasts workspace content changes to live windows except the origin windo
     scope: 'workspace'
   });
 });
+
+it('can preserve ambient workspace notification without requesting high-value sync', () => {
+  notifyWorkspaceContentChanged(null, { requestSync: false });
+
+  expect(refreshCompanionMdnsAdvertisement).toHaveBeenCalledOnce();
+  expect(requestDesktopHighValueSync).not.toHaveBeenCalled();
+});
