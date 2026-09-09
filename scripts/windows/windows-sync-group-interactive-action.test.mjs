@@ -110,6 +110,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
     factId: 'two-device-sync', milestone: 'automatic-converged'
   });
   expect(validateSyncGroupInteractiveProgress({
+    factId: 'two-device-sync', milestone: 'conflict-fork-ready'
+  }, 'two-device-sync-provider')).toEqual({
+    factId: 'two-device-sync', milestone: 'conflict-fork-ready'
+  });
+  expect(validateSyncGroupInteractiveProgress({
     factId: 'single-principal-sync-group', milestone: 'restarted'
   }, 'single-principal-sync-group')).toEqual({
     factId: 'single-principal-sync-group', milestone: 'restarted'

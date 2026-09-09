@@ -81,7 +81,8 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
     return { factId: progress.factId, milestone: progress.milestone };
   }
   if (action === 'two-device-sync-provider'
-      && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted']
+      && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged',
+        'conflict-fork-ready', 'restarted']
         .includes(progress?.milestone)
       && progress.factId === 'two-device-sync') {
     if (progress.milestone === 'provider-ready'
