@@ -3,6 +3,29 @@ export type NativeReadwiseReconcileCancelResult = NativeReadwiseImportCancelResu
 
 export type NativeReadwiseApiRunTrigger = 'manual' | 'scheduled' | 'startup';
 export type NativeReadwiseApiRunStage = 'eligibility' | 'fetching' | 'writing' | 'completion';
+export type NativeReadwiseApiRunKind = 'initial' | 'routine';
+export type NativeReadwiseApiRunStatus = 'completed' | 'failed' | 'interrupted' | 'queued' | 'running';
+
+export interface NativeReadwiseApiRunLifecycle {
+  error_reason: string | null;
+  finished_at: string | null;
+  kind: NativeReadwiseApiRunKind;
+  progress: NativeReadwiseApiTaskProgress | null;
+  queued_at: string;
+  run_id: string;
+  stage: NativeReadwiseApiRunStage;
+  started_at: string | null;
+  status: NativeReadwiseApiRunStatus;
+  trigger: NativeReadwiseApiRunTrigger;
+}
+
+export interface NativeReadwiseApiTaskProgress {
+  completed_count: number;
+  failed_count: number;
+  pending_count: number;
+  total_count: number | null;
+  unexplained_failure_count: number;
+}
 
 export interface NativeReadwiseApiScheduleResult {
   completed_at: string;
@@ -13,15 +36,19 @@ export interface NativeReadwiseApiScheduleResult {
 }
 
 export interface NativeReadwiseApiScheduleStatus {
-  eligibility: 'connection_required' | 'inactive_host' | 'ready' | 'source_mode_mismatch';
-  initial_import: {
-    completed_count: number;
-    status: 'completed' | 'pending';
-    total_count: number | null;
+  cutover: NativeReadwiseApiTaskProgress & {
+    status: 'completed' | 'in_progress' | 'not_started';
   };
-  last_result: NativeReadwiseApiScheduleResult | null;
-  next_run_at: string | null;
-  running: boolean;
+  eligibility: 'connection_required' | 'inactive_host' | 'ready' | 'source_mode_mismatch';
+  initial_sync: NativeReadwiseApiTaskProgress & {
+    lifecycle: NativeReadwiseApiRunLifecycle | null;
+    status: 'completed' | 'failed' | 'interrupted' | 'pending' | 'queued' | 'running';
+  };
+  routine_sync: {
+    last_result: NativeReadwiseApiScheduleResult | null;
+    lifecycle: NativeReadwiseApiRunLifecycle | null;
+    next_run_at: string | null;
+  };
 }
 
 export interface NativeReadwiseReconcileResult {

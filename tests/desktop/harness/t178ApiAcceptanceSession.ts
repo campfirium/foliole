@@ -36,7 +36,13 @@ async function launchMacosSession(executablePath: string, stateRoot: string): Pr
   const firstWindow = await electronApp.firstWindow({ timeout: 30_000 });
   await firstWindow.waitForURL(rendererUrl, { timeout: 30_000 });
   await firstWindow.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true);
-  return { close: async () => { await electronApp.close(); release(); runtime.cleanup(); }, electronApp, firstWindow };
+  return {
+    close: async () => {
+      try { await electronApp.close(); } finally { release(); runtime.cleanup(); }
+    },
+    electronApp,
+    firstWindow
+  };
 }
 
 export async function createT178ApiAcceptanceSession(stateRoot: string) {

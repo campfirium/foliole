@@ -1,9 +1,10 @@
 import type { ReadwiseSyncFrequency } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { NativeReadwiseApiScheduleStatus } from '../../lib/platform/nativeReadwiseApiImportContract.js';
+import { loadReadwiseApiCandidateProgress } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
-import { loadReadwiseSourceMigrationProgress } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -12,8 +13,11 @@ import { cancelReadwiseApiImport, runReadwiseApiImport } from './readwiseApiImpo
 import {
   isReadwiseApiTrackedRunActive,
   loadReadwiseApiScheduleState,
+  queueReadwiseApiTrackedRun,
+  recoverInterruptedReadwiseApiRun,
   saveReadwiseApiNextRun
 } from './readwiseApiScheduleState.js';
+import { buildReadwiseApiTaskSnapshot } from './readwiseApiTaskSnapshot.js';
 
 const INTERVAL_MS: Record<ReadwiseSyncFrequency, number> = {
   daily: 86_400_000,
@@ -27,13 +31,16 @@ interface SchedulerDependencies {
   clearTimeout: (timer: ReturnType<typeof setTimeout>) => void;
   loadConnectionReady: typeof isStoredReadwiseApiConnectionReady;
   loadCompletedThrough: typeof loadReadwiseApiCompletedThrough;
-  loadInitialProgress: typeof loadReadwiseSourceMigrationProgress;
+  loadCandidateProgress: typeof loadReadwiseApiCandidateProgress;
+  loadCutover: typeof loadReadwiseSourceCutover;
   loadHostAssignment: typeof loadReadwiseHostAssignment;
   loadScheduleState: typeof loadReadwiseApiScheduleState;
   loadSettings: typeof loadImportManagerSettings;
   loadSource: typeof loadReadwiseRemoteSource;
   now: () => number;
   notifyChanged: () => void;
+  queueRun: typeof queueReadwiseApiTrackedRun;
+  recoverRun: typeof recoverInterruptedReadwiseApiRun;
   runImport: typeof runReadwiseApiImport;
   setTimeout: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>;
   saveNextRun: typeof saveReadwiseApiNextRun;
@@ -54,12 +61,16 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
 
   function refresh(startup = false) {
     stop();
+    if (startup) recoverStartupRun(dependencies);
     const eligibility = resolveEligibility(dependencies);
     const signature = eligibilitySignature(eligibility);
     if (lastSignature && lastSignature !== signature) dependencies.cancelImport();
     lastSignature = signature;
     if (eligibility.status !== 'ready') return;
     const state = dependencies.loadScheduleState(eligibility.connectionRef);
+    const candidateProgress = dependencies.loadCandidateProgress(eligibility.connectionRef);
+    if (!eligibility.completedThrough && state.lifecycle?.status === 'interrupted'
+      && candidateProgress.totalCount === 0) return;
     const base = eligibility.completedThrough
       ? state.lastResult?.completed_at ?? eligibility.completedThrough
       : startup ? null : state.lastResult?.completed_at ?? null;
@@ -67,7 +78,14 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
       ? Date.parse(base) + INTERVAL_MS[eligibility.frequency]
       : dependencies.now();
     const delay = Math.max(0, nextAt - dependencies.now());
-    dependencies.saveNextRun(eligibility.connectionRef, new Date(nextAt).toISOString());
+    const queuedAt = new Date(nextAt).toISOString();
+    dependencies.saveNextRun(eligibility.connectionRef, queuedAt);
+    dependencies.queueRun({
+      connectionRef: eligibility.connectionRef,
+      kind: eligibility.completedThrough ? 'routine' : 'initial',
+      queuedAt,
+      trigger: startup && delay === 0 ? 'startup' : 'scheduled'
+    });
     schedule(eligibility, delay, startup && delay === 0 ? 'startup' : 'scheduled');
   }
 
@@ -95,47 +113,27 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
   return { loadStatus, refresh, stop };
 }
 
-function buildScheduleStatus(dependencies: SchedulerDependencies): NativeReadwiseApiScheduleStatus {
-  const eligibility = resolveEligibility(dependencies);
-  if (eligibility.status !== 'ready') {
-    const connectionRef = 'connectionRef' in eligibility ? eligibility.connectionRef : null;
-    const state = connectionRef ? dependencies.loadScheduleState(connectionRef) : null;
-    return {
-      eligibility: eligibility.status,
-      initial_import: initialImportStatus(dependencies, connectionRef),
-      last_result: state?.lastResult ?? null,
-      next_run_at: null,
-      running: connectionRef ? dependencies.trackedRunActive(connectionRef) : false
-    };
-  }
-  const state = dependencies.loadScheduleState(eligibility.connectionRef);
-  return {
-    eligibility: 'ready',
-    initial_import: initialImportStatus(dependencies, eligibility.connectionRef),
-    last_result: state.lastResult,
-    next_run_at: state.nextRunAt,
-    running: dependencies.trackedRunActive(eligibility.connectionRef)
-  };
+function recoverStartupRun(dependencies: SchedulerDependencies) {
+  const source = dependencies.loadSource();
+  if (source) dependencies.recoverRun(source.connectionRef);
 }
 
-function initialImportStatus(dependencies: SchedulerDependencies, connectionRef: string | null) {
-  if (!connectionRef) return { completed_count: 0, status: 'pending' as const, total_count: null };
-  const progress = dependencies.loadInitialProgress();
-  if (progress.totalCount > progress.completedCount) {
-    return {
-      completed_count: progress.completedCount,
-      status: 'pending' as const,
-      total_count: progress.totalCount
-    };
-  }
-  if (dependencies.loadCompletedThrough(connectionRef)) {
-    return { completed_count: 0, status: 'completed' as const, total_count: null };
-  }
-  return {
-    completed_count: progress.completedCount,
-    status: 'pending' as const,
-    total_count: progress.totalCount || null
-  };
+function buildScheduleStatus(dependencies: SchedulerDependencies): NativeReadwiseApiScheduleStatus {
+  const eligibility = resolveEligibility(dependencies);
+  const connectionRef = dependencies.loadSource()?.connectionRef
+    ?? ('connectionRef' in eligibility ? eligibility.connectionRef : null);
+  const state = connectionRef ? dependencies.loadScheduleState(connectionRef) : null;
+  return buildReadwiseApiTaskSnapshot({
+    candidateProgress: connectionRef ? dependencies.loadCandidateProgress(connectionRef) : null,
+    completedThrough: connectionRef ? dependencies.loadCompletedThrough(connectionRef) : null,
+    cutover: dependencies.loadCutover(),
+    eligibility: eligibility.status,
+    initialProgress: state?.initialProgress ?? null,
+    lastResult: state?.lastResult ?? null,
+    lifecycle: state?.lifecycle ?? null,
+    nextRunAt: state?.nextRunAt ?? null,
+    workerOwned: connectionRef ? dependencies.trackedRunActive(connectionRef) : false
+  });
 }
 
 function resolveEligibility(dependencies: SchedulerDependencies) {
@@ -174,14 +172,17 @@ const scheduler = createReadwiseApiScheduler({
   cancelImport: cancelReadwiseApiImport,
   clearTimeout,
   loadConnectionReady: isStoredReadwiseApiConnectionReady,
+  loadCandidateProgress: loadReadwiseApiCandidateProgress,
   loadCompletedThrough: loadReadwiseApiCompletedThrough,
-  loadInitialProgress: loadReadwiseSourceMigrationProgress,
+  loadCutover: loadReadwiseSourceCutover,
   loadHostAssignment: loadReadwiseHostAssignment,
   loadScheduleState: loadReadwiseApiScheduleState,
   loadSettings: loadImportManagerSettings,
   loadSource: loadReadwiseRemoteSource,
   now: Date.now,
   notifyChanged: notifyWorkspaceContentChanged,
+  queueRun: queueReadwiseApiTrackedRun,
+  recoverRun: recoverInterruptedReadwiseApiRun,
   runImport: runReadwiseApiImport,
   saveNextRun: saveReadwiseApiNextRun,
   setTimeout,

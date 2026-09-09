@@ -56,11 +56,10 @@ beforeEach(() => {
   cutover.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
   confirmation.request.mockResolvedValue(true);
   schedule.load.mockResolvedValue({
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
-    initial_import: { completed_count: 0, status: 'completed', total_count: null },
-    last_result: null,
-    next_run_at: null,
-    running: false
+    initial_sync: { completed_count: 0, failed_count: 0, lifecycle: null, pending_count: 0, status: 'completed', total_count: null, unexplained_failure_count: 0 },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
 });
 
@@ -148,19 +147,15 @@ it('offers to continue migration when the migration is paused', async () => {
   expect(migration).not.toHaveAttribute('aria-busy', 'true');
 });
 
-it('keeps showing durable initial API migration state without inventing a percentage', async () => {
+it('shows completed cutover and the failed initial sync as separate tasks', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 31, status: 'already_completed', topic_count: 31, total_count: 31
   });
   schedule.load.mockResolvedValue({
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
-    initial_import: { completed_count: 30, status: 'pending', total_count: 169 },
-    last_result: {
-      completed_at: '2026-09-09T11:52:00.151Z', error_stage: null,
-      imported_count: 28, status: 'failed', trigger: 'startup'
-    },
-    next_run_at: '2026-09-09T12:52:00.151Z',
-    running: false
+    initial_sync: { completed_count: 29, failed_count: 2, lifecycle: null, pending_count: 0, status: 'failed', total_count: 31, unexplained_failure_count: 2 },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiSettings={apiSettings()}
@@ -169,11 +164,11 @@ it('keeps showing durable initial API migration state without inventing a percen
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  const migration = await screen.findByRole('button', { name: 'Continue migrating to API mode 17%' });
-  expect(migration).not.toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('Migrating to API mode 93%')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Clean up...' })).toBeDisabled();
+  expect(await screen.findByText('Migration: 31/31 completed.')).toBeInTheDocument();
+  expect(screen.getByText(/First sync: 29\/31 completed; 2 failed/)).toBeInTheDocument();
+  expect(screen.getByText('Routine sync: starts after the first sync completes.')).toBeInTheDocument();
+  expect(screen.queryByText(/Migrating to API mode/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Retry 2 failed' })).toBeEnabled();
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {

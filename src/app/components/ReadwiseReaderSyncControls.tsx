@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type {
   ReadwiseReaderConfig,
   ReadwiseSyncFrequency
@@ -43,9 +45,12 @@ function ReadwiseSyncStatusMessage(props: { status: ReadwiseManualSyncStatus }) 
 }
 
 export function ReadwiseReaderSyncRow(props: {
+  actionLabel?: string | undefined;
   config: ReadwiseReaderConfig;
+  detail?: ReactNode;
   disabled: boolean;
   isSyncing?: boolean;
+  loadingLabel?: string | undefined;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
   onSync: () => void;
   status?: ReadwiseManualSyncStatus;
@@ -54,6 +59,7 @@ export function ReadwiseReaderSyncRow(props: {
   const description = (
     <>
       {t('desktop.readwise.sync.description')}
+      {props.detail ? <span className="mt-1 block">{props.detail}</span> : null}
       {props.status ? <ReadwiseSyncStatusMessage status={props.status} /> : null}
     </>
   );
@@ -66,8 +72,8 @@ export function ReadwiseReaderSyncRow(props: {
           onChange={(value) => props.onChange('syncFrequency', value)}
           value={props.config.syncFrequency}
         />
-        <AppButton disabled={props.disabled} loading={Boolean(props.isSyncing)} loadingLabel={t('desktop.readwise.sync.running')} onClick={props.onSync} size="sm" variant="default">
-          {t('desktop.readwise.sync.action')}
+        <AppButton disabled={props.disabled} loading={Boolean(props.isSyncing)} loadingLabel={props.loadingLabel ?? t('desktop.readwise.sync.running')} onClick={props.onSync} size="sm" variant="default">
+          {props.actionLabel ?? t('desktop.readwise.sync.action')}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>

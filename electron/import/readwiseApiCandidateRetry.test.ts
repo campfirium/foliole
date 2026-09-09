@@ -35,6 +35,7 @@ vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'SECRET'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
@@ -61,12 +62,14 @@ afterEach(async () => {
 
 it('continues after one document fails and retries only unfinished candidates', async () => {
   let fail = true;
+  const requestedParents: string[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) {
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
     const id = url.searchParams.get('id') ?? '';
+    if (id === 'a' || id === 'b') requestedParents.push(id);
     if (id === 'a' && fail) return new Response('{}', { status: 500 });
     if (id === 'ha' || id === 'hb') {
       return response([{ category: 'highlight', id, parent_id: id === 'ha' ? 'a' : 'b' }]);
@@ -79,12 +82,18 @@ it('continues after one document fails and retries only unfinished candidates', 
   });
   expect(first).toMatchObject({ committed_count: 1, remaining_count: 1, status: 'failed' });
   expect(importedReadwiseApiCount()).toBe(1);
+  expect(loadReadwiseApiCandidates('connection')).toEqual(expect.arrayContaining([
+    expect.objectContaining({ documentId: 'a', failure: expect.objectContaining({ attemptCount: 1, stage: 'fetching' }), status: 'failed' }),
+    expect.objectContaining({ documentId: 'b', status: 'completed' })
+  ]));
 
   fail = false;
+  requestedParents.length = 0;
   const second = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   });
   expect(second).toMatchObject({ committed_count: 1, remaining_count: 0, status: 'completed' });
+  expect(requestedParents).toEqual(['a']);
   expect(importedReadwiseApiCount()).toBe(2);
 });
 

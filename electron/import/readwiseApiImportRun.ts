@@ -1,6 +1,7 @@
 import { normalizeImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract.js';
 import type { NativeReadwiseApiRunTrigger } from '../../lib/platform/nativeReadwiseApiImportContract.js';
+import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
@@ -16,6 +17,7 @@ import {
   beginReadwiseApiTrackedRun,
   completeReadwiseApiTrackedRun,
   failReadwiseApiTrackedRun,
+  updateReadwiseApiTrackedRunProgress,
   updateReadwiseApiTrackedRunStage
 } from './readwiseApiScheduleState.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
@@ -89,9 +91,10 @@ async function runNow(
 ): Promise<NativeReadwiseImportRunResult> {
   const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
   const connectionRef = requireConnectionRef();
-  const cutoverPolicy = await createPostCutoverReadwiseDocumentPolicy(connectionRef);
-  beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual');
+  const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';
+  beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual', kind);
   try {
+    const cutoverPolicy = await createPostCutoverReadwiseDocumentPolicy(connectionRef);
     updateReadwiseApiTrackedRunStage('fetching');
     const result = await runReadwiseApiCandidatePipeline({
       assertEligible: () => assertEligible(signal, connectionRef),
@@ -105,8 +108,10 @@ async function runNow(
         signal,
         onPage: (page) => publishProgress(input?.window, 0, 0, 'fetching', page.recordCount)
       },
+      onCandidateCount: updateReadwiseApiTrackedRunProgress,
       onProgress: (processed, total) => {
         updateReadwiseApiTrackedRunStage('writing');
+        updateReadwiseApiTrackedRunProgress(processed, total);
         publishProgress(input?.window, processed, total, 'writing');
       },
       settings
@@ -134,7 +139,7 @@ async function runNow(
       completeReadwiseApiTrackedRun(connectionRef, result);
       return result;
     }
-    failReadwiseApiTrackedRun(connectionRef);
+    failReadwiseApiTrackedRun(connectionRef, error);
     throw error;
   }
 }

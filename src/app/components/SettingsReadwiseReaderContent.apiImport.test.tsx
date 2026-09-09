@@ -30,11 +30,10 @@ vi.mock('../../shared/ui', async (importOriginal) => ({
 
 it('keeps the original sync and cleanup rows without extra API sections', async () => {
   scheduleRuntime.load.mockResolvedValue({
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
-    initial_import: { completed_count: 0, status: 'completed', total_count: null },
-    last_result: null,
-    next_run_at: null,
-    running: false
+    initial_sync: { completed_count: 0, failed_count: 0, lifecycle: null, pending_count: 0, status: 'completed', total_count: null, unexplained_failure_count: 0 },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   modeRuntime.preview.mockResolvedValue({
     completed_count: 0, status: 'ready', topic_count: 4, total_count: null
@@ -68,11 +67,10 @@ it('keeps the original sync and cleanup rows without extra API sections', async 
 
 it('saves the API import frequency on the active desktop host', async () => {
   scheduleRuntime.load.mockResolvedValue({
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
-    initial_import: { completed_count: 0, status: 'completed', total_count: null },
-    last_result: null,
-    next_run_at: null,
-    running: false
+    initial_sync: { completed_count: 0, failed_count: 0, lifecycle: null, pending_count: 0, status: 'completed', total_count: null, unexplained_failure_count: 0 },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   const onSave = vi.fn();
   render(

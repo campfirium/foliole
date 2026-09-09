@@ -1,6 +1,10 @@
 import type { ExportBookContract, ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
-import type { ReadwiseApiCandidate, CandidateStatus } from '../import/readwiseApiCandidateTypes.js';
+import type {
+  CandidateStatus,
+  ReadwiseApiCandidate,
+  ReadwiseApiCandidateFailure
+} from '../import/readwiseApiCandidateTypes.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -61,6 +65,21 @@ export function loadReadwiseApiCandidates(connectionRef: string) {
   }).sort(compareCandidates);
 }
 
+export function loadReadwiseApiCandidateProgress(connectionRef: string) {
+  const candidates = loadReadwiseApiCandidates(connectionRef);
+  const completedCount = candidates.filter((candidate) => candidate.status === 'completed').length;
+  const failedCount = candidates.filter((candidate) => candidate.status === 'failed').length;
+  const unexplainedFailureCount = candidates.filter((candidate) =>
+    candidate.status === 'failed' && !candidate.failure?.reason).length;
+  return {
+    completedCount,
+    failedCount,
+    pendingCount: candidates.length - completedCount - failedCount,
+    totalCount: candidates.length,
+    unexplainedFailureCount
+  };
+}
+
 export function loadPreparedReadwiseApiCandidate(connectionRef: string, documentId: string) {
   const candidate = loadReadwiseApiCandidate(documentId, connectionRef);
   if (!candidate) return null;
@@ -84,9 +103,10 @@ export function loadPreparedReadwiseApiCandidate(connectionRef: string, document
 export function setReadwiseApiCandidateStatus(
   connectionRef: string,
   documentId: string,
-  status: CandidateStatus
+  status: CandidateStatus,
+  failure?: Omit<ReadwiseApiCandidateFailure, 'attemptCount'> | null
 ) {
-  updateStatus(openDatabaseConnection().driver, connectionRef, documentId, status);
+  updateStatus(openDatabaseConnection().driver, connectionRef, documentId, status, failure);
 }
 
 export function clearReadwiseApiCandidateStage(connectionRef: string) {
@@ -109,7 +129,8 @@ function updateStatus(
   driver: ReturnType<typeof openDatabaseConnection>['driver'],
   connectionRef: string,
   documentId: string,
-  status: CandidateStatus
+  status: CandidateStatus,
+  failure?: Omit<ReadwiseApiCandidateFailure, 'attemptCount'> | null
 ) {
   const row = driver.queryOne<{ payload_json: string }>(
     `SELECT payload_json FROM readwise_api_import_stage
@@ -118,10 +139,16 @@ function updateStatus(
   );
   const candidate = row ? parseCandidate(row.payload_json) : null;
   if (!candidate) throw new Error('readwise_api_candidate_missing');
+  const nextFailure = failure === undefined
+    ? candidate.failure
+    : failure === null ? undefined : {
+      ...failure,
+      attemptCount: (candidate.failure?.attemptCount ?? 0) + 1
+    };
   driver.execute(
     `UPDATE readwise_api_import_stage SET payload_json = ?
      WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`,
-    [JSON.stringify({ ...candidate, status }), connectionRef, CANDIDATE_KIND, documentId]
+    [JSON.stringify({ ...candidate, failure: nextFailure, status }), connectionRef, CANDIDATE_KIND, documentId]
   );
 }
 
@@ -141,6 +168,7 @@ function mergeCandidate(previous: ReadwiseApiCandidate, next: ReadwiseApiCandida
   if (!previous.hasHighlights && next.hasHighlights) {
     return {
       ...next,
+      ...(previous.failure ? { failure: previous.failure } : {}),
       readerCategory: previous.readerCategory,
       status: previous.status,
       title: previous.title

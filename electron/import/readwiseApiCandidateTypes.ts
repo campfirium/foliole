@@ -9,10 +9,18 @@ export const READER_PARENT_CATEGORIES = [
 export type ReaderParentCategory = typeof READER_PARENT_CATEGORIES[number];
 export type CandidateStatus = 'completed' | 'failed' | 'pending' | 'ready';
 
+export interface ReadwiseApiCandidateFailure {
+  attemptCount: number;
+  failedAt: string;
+  reason: string | null;
+  stage: 'fetching' | 'writing';
+}
+
 export interface ReadwiseApiCandidate {
   destination: ReadwiseImportDestination;
   documentId: string;
   exportCategory: string | null;
+  failure?: ReadwiseApiCandidateFailure;
   hasHighlights: boolean;
   highlightIds: string[];
   readerCategory: ReaderParentCategory | null;

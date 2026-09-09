@@ -26,7 +26,7 @@ export async function runReadwiseApiCandidatePipeline(input: {
     replaceExistingBody?: boolean;
     skip?: boolean;
   } | void>;
-  onCandidateCount?: (total: number) => void;
+  onCandidateCount?: (completed: number, total: number, failed: number, unexplained: number) => void;
   onCandidateIndex?: (documentIds: string[]) => void;
   onProgress?: (processed: number, total: number) => void;
   settings: ImportManagerSettings;
@@ -38,13 +38,13 @@ export async function runReadwiseApiCandidatePipeline(input: {
   );
   const total = candidates.length;
   input.onCandidateIndex?.(candidates.map((candidate) => candidate.documentId));
-  input.onCandidateCount?.(total);
   const stats = {
     annotationCount: 0,
     committedCount: 0,
     completedCount: candidates.filter((candidate) => candidate.status === 'completed').length,
     skippedCount: 0
   };
+  reportCandidateProgress(input, candidates, stats.completedCount);
   const consumer = createCandidateConsumer(input, total, stats);
   let producerError: unknown = null;
   const fetchFacts = createReadwiseApiCandidateFactFetcher(input.connectionRef, input.dependencies);
@@ -55,7 +55,9 @@ export async function runReadwiseApiCandidatePipeline(input: {
       await fetchFacts(candidate);
       consumer.enqueue(candidate.documentId);
     } catch (error) {
-      setReadwiseApiCandidateStatus(input.connectionRef, candidate.documentId, 'failed');
+      setReadwiseApiCandidateStatus(input.connectionRef, candidate.documentId, 'failed', {
+        failedAt: new Date().toISOString(), reason: failureReason(error), stage: 'fetching'
+      });
       if (isRunStoppingError(error)) {
         producerError = error;
         break;
@@ -69,6 +71,20 @@ export async function runReadwiseApiCandidatePipeline(input: {
   const remainingCount = finalCandidates.filter((candidate) => candidate.status !== 'completed').length;
   if (remainingCount === 0) completeReadwiseApiCandidateRun(input.connectionRef);
   return { ...stats, failedCount, remainingCount, totalCount: total };
+}
+
+function reportCandidateProgress(
+  input: Parameters<typeof runReadwiseApiCandidatePipeline>[0],
+  candidates: ReturnType<typeof loadReadwiseApiCandidates>,
+  completedCount: number
+) {
+  const failed = candidates.filter((candidate) => candidate.status === 'failed');
+  input.onCandidateCount?.(
+    completedCount,
+    candidates.length,
+    failed.length,
+    failed.filter((candidate) => !candidate.failure?.reason).length
+  );
 }
 
 function createCandidateConsumer(
@@ -97,7 +113,7 @@ async function consumeCandidate(
     if (!document) throw new Error('readwise_api_candidate_incomplete');
     const commitOptions = await input.beforeCommit?.(document);
     if (commitOptions?.skip) {
-      setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed');
+      setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
       stats.skippedCount += 1;
       stats.completedCount += 1;
       input.onProgress?.(stats.completedCount, total);
@@ -114,7 +130,7 @@ async function consumeCandidate(
     });
     await input.afterCommit?.(commitOptions?.document ?? document);
     stats.annotationCount += result.annotationCount;
-    setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed');
+    setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
     stats.committedCount += 1;
     stats.completedCount += 1;
     input.onProgress?.(stats.completedCount, total);
@@ -123,9 +139,24 @@ async function consumeCandidate(
     setReadwiseApiCandidateStatus(
       input.connectionRef,
       documentId,
-      input.dependencies.signal?.aborted ? 'ready' : 'failed'
+      input.dependencies.signal?.aborted ? 'ready' : 'failed',
+      input.dependencies.signal?.aborted ? undefined : {
+        failedAt: new Date().toISOString(), reason: failureReason(error), stage: 'writing'
+      }
     );
   }
+}
+
+function failureReason(error: unknown) {
+  if (!(error instanceof Error)) return null;
+  if (error.message.startsWith('readwise_api_rate_limited:')) return 'rate_limited';
+  const safeReasons = [
+    'readwise_api_candidate_incomplete',
+    'readwise_api_reconnect_required',
+    'readwise_execution_connection_changed',
+    'readwise_execution_eligibility_lost'
+  ];
+  return safeReasons.includes(error.message) ? error.message : 'request_failed';
 }
 
 function isRunStoppingError(error: unknown) {

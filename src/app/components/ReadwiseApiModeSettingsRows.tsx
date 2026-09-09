@@ -8,11 +8,10 @@ import {
   disconnectReadwiseApiInRuntime,
   loadReadwiseApiConnectionFromRuntime
 } from '../../shared/platform/import/readwiseApiConnectionRuntimeRepository';
-import { loadReadwiseApiScheduleStatusInRuntime } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
-import { onWorkspaceContentChanged } from '../../shared/platform/runtimeShellEvents';
 import { AppButton, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../shared/ui';
 
+import { readwiseApiTaskPresentation, useReadwiseApiTaskStatus } from './ReadwiseApiTaskStatus';
 import { ReadwiseCommonRows } from './ReadwiseFolderSettingsSections';
 import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
 
@@ -87,6 +86,7 @@ function ReadwiseApiConnectionRow(props: {
   migrationActive: boolean;
   migrationRunning: boolean;
   migrationPercent: number | null;
+  taskStatus: ReturnType<typeof useReadwiseApiTaskStatus>;
   onConnected: () => void;
   onResume: () => void;
 }) {
@@ -96,7 +96,7 @@ function ReadwiseApiConnectionRow(props: {
   return (
     <>
       <SettingsRow
-        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
+        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}{props.taskStatus?.cutover.status === 'completed' && props.taskStatus.cutover.total_count !== null ? <span className="mt-1 block">{t('desktop.readwise.api.tasks.cutoverCompleted', { completed: props.taskStatus.cutover.completed_count, total: props.taskStatus.cutover.total_count })}</span> : null}</>}
         title={t('desktop.readwise.api.connection.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
@@ -132,62 +132,38 @@ export function ReadwiseApiModeSettingsRows(props: {
   onConnected: () => void;
   settings: ReadwiseApiModeSettings;
 }) {
-  const initialImport = useInitialApiImportProgress(props.settings.syncIsRunning);
-  const initialImportPending = initialImport?.status !== 'completed';
-  const migrationActive = props.migrationActive || initialImportPending;
-  const migrationPercent = props.migrationActive
-    ? props.migrationPercent
-    : percent(initialImport?.completedCount ?? 0, initialImport?.totalCount ?? null);
+  const t = useTranslation();
+  const taskStatus = useReadwiseApiTaskStatus(props.settings.syncIsRunning);
+  const task = readwiseApiTaskPresentation(taskStatus, t);
   return (
     <>
       <ReadwiseApiConnectionRow
-        migration={props.migrationMode || migrationActive}
-        migrationActive={migrationActive}
-        migrationPercent={migrationPercent}
-        migrationRunning={props.migrationPending || Boolean(initialImport?.running)}
+        migration={props.migrationMode || props.migrationActive}
+        migrationActive={props.migrationActive}
+        migrationPercent={props.migrationPercent}
+        migrationRunning={props.migrationPending}
         onConnected={props.onConnected}
-        onResume={props.migrationActive ? props.onConnected : props.settings.onSync}
+        onResume={props.onConnected}
+        taskStatus={taskStatus}
       />
       <ReadwiseCommonRows
-        cleanupDisabled={props.settings.cleanupDisabled || migrationActive}
+        cleanupDisabled={props.settings.cleanupDisabled || props.migrationActive}
         config={props.settings.config}
         onChange={(_field, value) => props.settings.onChangeFrequency(value as ReadwiseSyncFrequency)}
         onCleanup={props.settings.onCleanup}
         onSync={props.settings.onSync}
-        syncDisabled={props.settings.syncDisabled || migrationActive}
-        syncIsRunning={props.settings.syncIsRunning}
+        syncActionLabel={task.actionLabel}
+        syncDetail={(
+          <>
+            {task.initial ? <span className="block">{task.initial}</span> : null}
+            {task.routine ? <span className="block">{task.routine}</span> : null}
+          </>
+        )}
+        syncDisabled={props.settings.syncDisabled || props.migrationActive || task.running}
+        syncIsRunning={task.running}
+        syncLoadingLabel={task.loadingLabel}
         syncStatus={props.settings.syncStatus}
       />
     </>
   );
-}
-
-function useInitialApiImportProgress(refreshKey: boolean) {
-  const [progress, setProgress] = useState<{
-    completedCount: number;
-    running: boolean;
-    status: 'completed' | 'pending';
-    totalCount: number | null;
-  } | null>(null);
-  useEffect(() => {
-    let active = true;
-    let unsubscribe: (() => void) | null = null;
-    const refresh = () => void loadReadwiseApiScheduleStatusInRuntime().then((status) => {
-      if (!active || !status) return;
-      setProgress({
-        completedCount: status.initial_import.completed_count,
-        running: status.running,
-        status: status.initial_import.status,
-        totalCount: status.initial_import.total_count
-      });
-    });
-    refresh();
-    void onWorkspaceContentChanged(refresh).then((value) => { unsubscribe = value; });
-    return () => { active = false; unsubscribe?.(); };
-  }, [refreshKey]);
-  return progress;
-}
-
-function percent(completed: number, total: number | null) {
-  return total && total > 0 ? Math.floor((completed / total) * 100) : 0;
 }

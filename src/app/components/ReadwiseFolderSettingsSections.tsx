@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -48,16 +50,22 @@ export function ReadwiseCommonRows(props: {
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
   onCleanup: () => void;
   onSync: () => void;
+  syncActionLabel?: string;
+  syncDetail?: ReactNode;
   syncDisabled: boolean;
   syncIsRunning: boolean;
+  syncLoadingLabel?: string;
   syncStatus: ReadwiseManualSyncStatus;
 }) {
   return (
     <>
       <ReadwiseReaderSyncRow
+        actionLabel={props.syncActionLabel}
         config={props.config}
+        detail={props.syncDetail}
         disabled={props.syncDisabled}
         isSyncing={props.syncIsRunning}
+        loadingLabel={props.syncLoadingLabel}
         onChange={props.onChange}
         onSync={props.onSync}
         status={props.syncStatus}
