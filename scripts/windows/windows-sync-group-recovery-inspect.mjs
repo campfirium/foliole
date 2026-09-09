@@ -19,24 +19,20 @@ function hostsByPlatform(rows) {
 }
 
 function departedHosts(database) {
-  return hostsByPlatform(database.prepare(`SELECT DISTINCT members.host_platform, members.host_name
-    FROM sync_group_member_departures departures
-    JOIN sync_group_members members
-      ON members.group_id = departures.group_id AND members.host_name = departures.host_name
-    WHERE members.state = 'left' ORDER BY members.host_platform, members.host_name`).all());
+  return hostsByPlatform(database.prepare(`SELECT DISTINCT platform AS host_platform,
+    device_name AS host_name FROM sync_group_devices WHERE state = 'left'
+    ORDER BY platform, device_name`).all());
 }
 
 function activeHosts(database) {
-  return hostsByPlatform(database.prepare(`SELECT DISTINCT host_platform, host_name
-    FROM sync_group_members WHERE state = 'active' ORDER BY host_platform, host_name`).all());
+  return hostsByPlatform(database.prepare(`SELECT DISTINCT platform AS host_platform,
+    device_name AS host_name FROM sync_group_devices WHERE state = 'active'
+    ORDER BY platform, device_name`).all());
 }
 
 function departedAtByHost(database) {
-  const rows = database.prepare(`SELECT members.host_name, departures.left_at
-    FROM sync_group_member_departures departures
-    JOIN sync_group_members members
-      ON members.group_id = departures.group_id AND members.host_name = departures.host_name
-    ORDER BY departures.left_at, members.host_name`).all();
+  const rows = database.prepare(`SELECT device_name AS host_name, left_at
+    FROM sync_group_devices WHERE state = 'left' ORDER BY left_at, device_name`).all();
   return Object.fromEntries(rows.map(({ host_name, left_at }) => [host_name, left_at]));
 }
 
@@ -67,9 +63,12 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
-    const local = db.prepare(`SELECT local.group_id, local.local_host_name, local.member_state, groups.timeline_id
+    const local = db.prepare(`SELECT local.group_id, local.local_device_identity_key,
+      device.device_name AS local_host_name, local.state AS member_state, NULL AS timeline_id
       FROM sync_group_local_state local
       LEFT JOIN sync_groups groups ON groups.group_id = local.group_id
+      LEFT JOIN sync_group_devices device ON device.group_id = local.group_id
+        AND device.device_identity_key = local.local_device_identity_key
       WHERE local.singleton_id = 1 LIMIT 1`).get();
     const identity = inspectPairSyncRecoveryWorkspace(db);
     const factExists = db.prepare('SELECT COUNT(*) FROM nodes WHERE id = ? AND deleted_at IS NULL').pluck();
@@ -78,7 +77,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       ...inspectSyncFromZeroDatasetFacts(db),
       ...peerProgress(db),
       activeHosts: activeHosts(db),
-      activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
+      activeMemberCount: count("SELECT COUNT(*) FROM sync_group_devices WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
       availableAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
@@ -88,7 +87,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
       departedAtByHost: departedAtByHost(db),
       departedHosts: departedHosts(db),
-      localAuthorizationFingerprint: identity.localMemberAuthorizationFingerprint,
+      localAuthorizationFingerprint: identityFingerprint(local?.local_device_identity_key),
       integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
       journeyFacts: identity.journeyFacts,
       journeyFactUpdates: journeyFactUpdates(db),
