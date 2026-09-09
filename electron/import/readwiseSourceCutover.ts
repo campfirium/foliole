@@ -18,8 +18,8 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { prepareReadwiseIdentityBindingsForCutover } from './readwiseIdentityBindingPreview.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
+import { prepareReadwiseSourceCutoverIdentity } from './readwiseSourceCutoverIdentity.js';
 import { applyPristineReadwiseSourceProjection } from './readwiseSourceMigrationProjection.js';
 
 interface SourceCountRow { [column: string]: unknown; count: number }
@@ -77,13 +77,9 @@ async function runReadwiseSourceCutoverNow(input: {
   }
   const settings = loadImportManagerSettings();
   if (!current) restartReadwiseApiCandidateRun(source.connectionRef, settings.readwiseReaderConfig, startedAt);
-  const identityPromise = prepareReadwiseIdentityBindingsForCutover({
-    ...(input.dependencies?.fetchImpl ? { fetchImpl: input.dependencies.fetchImpl } : {}),
-    ...(input.dependencies?.minIntervalMs === undefined ? {} : { minIntervalMs: input.dependencies.minIntervalMs })
-  });
-  void identityPromise.catch(() => undefined);
   try {
-    const migration = createDocumentMigration(identityPromise, source.connectionRef);
+    const identity = await prepareReadwiseSourceCutoverIdentity();
+    const migration = createDocumentMigration(identity, source.connectionRef);
     const output = await runReadwiseApiCandidatePipeline({
       assertEligible: () => assertMigrationEligible(source.connectionRef),
       beforeCommit: migration.beforeCommit,
@@ -134,17 +130,16 @@ function completeMigration(migratedCount: number, unmatchedCount: number, total:
 }
 
 function createDocumentMigration(
-  identityPromise: ReturnType<typeof prepareReadwiseIdentityBindingsForCutover>,
+  identity: Awaited<ReturnType<typeof prepareReadwiseSourceCutoverIdentity>>,
   connectionRef: string
 ) {
   let migrated = loadReadwiseSourceCutover()?.migratedCount ?? 0;
   let unmatched = 0;
   return {
     async beforeCommit(document: PreparedReadwiseApiDocument) {
-      const prepared = await identityPromise;
-      unmatched = prepared.unmatchedCount + prepared.conflictCount;
       const existing = loadExistingBinding(connectionRef, document.id);
-      const binding = prepared.bindings.find((item) => item.remoteDocumentId === document.id) ?? existing;
+      const binding = identity.bindingFor(document, connectionRef) ?? existing;
+      unmatched = identity.unmatchedCount() + identity.conflictCount();
       if (!binding) return;
       const replaceExistingBody = await applyPristineReadwiseSourceProjection(binding.sourceFingerprint, document);
       if (!existing) {

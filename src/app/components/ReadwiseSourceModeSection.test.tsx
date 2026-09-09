@@ -75,16 +75,29 @@ it('opens migration confirmation from API selection without a separate migration
   expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
 });
 
-it('connects from the clipboard without exposing the token to the renderer', async () => {
+it('keeps the token link in the description and connects without exposing it to the renderer', async () => {
   render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   expect(await screen.findByText('Not connected')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Get Readwise token' })).toHaveClass('underline');
   fireEvent.click(screen.getByRole('button', { name: 'Connect Readwise' }));
   await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
   expect(runtime.connect).toHaveBeenCalledWith('continue', 'normal');
 
   fireEvent.click(screen.getByRole('button', { name: 'Get Readwise token' }));
   expect(navigation.open).toHaveBeenCalledWith('https://readwise.io/access_token');
+});
+
+it('shows an inline spinner while migration progress is pending', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 0, status: 'migration_in_progress', topic_count: 12, total_count: 31
+  });
+  cutover.run.mockReturnValue(new Promise(() => undefined));
+  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+
+  const migration = await screen.findByRole('button', { name: 'Migrating to API mode 0%' });
+  expect(migration).toHaveAttribute('aria-busy', 'true');
+  expect(migration.querySelector('.animate-spin')).toBeInTheDocument();
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {

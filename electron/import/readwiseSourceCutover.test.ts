@@ -111,9 +111,9 @@ it('starts migration from the complete selected candidate scope instead of the o
   });
   const requests: string[] = [];
   const baseFetch = migrationFetch();
-  const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     requests.push(String(input));
-    return baseFetch(input, init);
+    return baseFetch(input);
   }) as typeof fetch;
 
   await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
@@ -126,7 +126,8 @@ it('starts migration from the complete selected candidate scope instead of the o
 it('reprojects a pristine body atomically while preserving a local cloze', async () => {
   await seedMigratableSource();
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  vi.stubGlobal('fetch', migrationFetch());
+  const fetchImpl = migrationFetch();
+  vi.stubGlobal('fetch', fetchImpl);
 
   await expect(runReadwiseSourceCutover()).resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
   const driver = openDatabaseConnection().driver;
@@ -140,6 +141,10 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   });
   expect(driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key='readwise_source_cutover'"))
     .toBeTruthy();
+  const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
+  expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
+  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'document-1')).toHaveLength(1);
+  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(1);
 }, 20_000);
 
 it('keeps the irreversible migration state after a network failure', async () => {
@@ -206,5 +211,5 @@ function migrationFetch() {
       { category: 'article', html_content: '<p>API body with remembered phrase.</p>', id: 'document-1', title: 'Sample' },
       { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
     ] });
-  }) as typeof fetch;
+  });
 }

@@ -40,7 +40,7 @@ export const ZH_HANS_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.source.mode.folder': 'Obsidian 中转导入模式',
   'desktop.readwise.source.mode.api': 'API 模式',
   'desktop.readwise.api.connection.title': 'API 连接',
-  'desktop.readwise.api.connection.description': '获取并复制 Readwise Token。Token 安全保存在当前设备，不会同步。',
+  'desktop.readwise.api.connection.description': '，复制后放入剪贴板。Token 安全保存在当前设备，不会同步。',
   'desktop.readwise.api.connection.getToken': '获取 Readwise Token',
   'desktop.readwise.api.connection.connect': '连接 Readwise',
   'desktop.readwise.api.connection.disconnect': '断开',

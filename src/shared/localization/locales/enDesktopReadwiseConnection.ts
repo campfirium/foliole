@@ -40,7 +40,7 @@ export const EN_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.source.mode.folder': 'Obsidian relay import',
   'desktop.readwise.source.mode.api': 'API mode',
   'desktop.readwise.api.connection.title': 'API connection',
-  'desktop.readwise.api.connection.description': 'Get and copy your Readwise token. The token is stored securely on this device and is never synced.',
+  'desktop.readwise.api.connection.description': ', then copy it to the clipboard. The token is stored securely on this device and is never synced.',
   'desktop.readwise.api.connection.getToken': 'Get Readwise token',
   'desktop.readwise.api.connection.connect': 'Connect Readwise',
   'desktop.readwise.api.connection.disconnect': 'Disconnect',

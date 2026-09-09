@@ -86,24 +86,35 @@ function ReadwiseApiConnectionRow(props: {
   const connected = state.connection?.state === 'connected';
   return (
     <>
-      <SettingsRow description={t('desktop.readwise.api.connection.description')} title={t('desktop.readwise.api.connection.title')}>
+      <SettingsRow
+        description={(
+          <>
+            <button
+              className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onClick={() => void openExternalUrl(READWISE_TOKEN_URL)}
+              type="button"
+            >
+              {t('desktop.readwise.api.connection.getToken')}
+            </button>
+            {t('desktop.readwise.api.connection.description')}
+          </>
+        )}
+        title={t('desktop.readwise.api.connection.title')}
+      >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <AppButton onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} size="sm" variant="ghost">
-            {t('desktop.readwise.api.connection.getToken')}
-          </AppButton>
           <span className="text-sm text-foreground/60">{t(statusKey(state.connection?.state ?? 'disconnected'))}</span>
           <AppButton
-            disabled={state.pending || props.migrationPending}
+            disabled={state.pending}
+            loading={props.migrationPending}
+            loadingLabel={t('desktop.readwise.cutover.running', { count: props.migrationPercent })}
             onClick={() => void state.run(connected
               ? disconnectReadwiseApiInRuntime
               : () => connectReadwiseApiFromClipboardInRuntime('continue', props.migration ? 'migration' : 'normal'))}
             size="sm"
             variant={connected ? 'default' : 'emphasis'}
           >
-            {props.migrationPending
-              ? t('desktop.readwise.cutover.running', { count: props.migrationPercent })
-              : state.pending ? t('desktop.readwise.api.connection.working') : connected
-                ? t('desktop.readwise.api.connection.disconnect') : t('desktop.readwise.api.connection.connect')}
+            {state.pending ? t('desktop.readwise.api.connection.working') : connected
+              ? t('desktop.readwise.api.connection.disconnect') : t('desktop.readwise.api.connection.connect')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
