@@ -51,7 +51,7 @@ export async function prepareA5ForFreshJoin({ buildIdentity, env, evidenceRoot, 
   const before = await inspect(paths);
   const previousGroupId = before.database?.inspection?.syncGroupId ?? null;
   if (!previousGroupId) return { leftExistingGroup: false, previousGroupId };
-  await leave({ action: 'leave-sync-group', buildIdentity, env,
+  await leave({ action: 'leave-sync-group', appId: APP_ID, buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'existing-group-leave'), execute, installMain: false,
     paths, serial: A5_SERIAL });
   const after = await inspect(paths);
@@ -86,7 +86,8 @@ export async function performFreshJoinSequence({
 async function runFreshJoinInitialSync({
   buildIdentity, env, evidenceRoot, execute, observe, paths
 }) {
-  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
+    buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
     observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
   return result.observation;

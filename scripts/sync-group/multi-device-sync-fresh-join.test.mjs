@@ -52,7 +52,7 @@ it('leaves a previously joined A5 through the product before a fresh formal join
     leave, paths: { adb: '/adb', buildRoot: '/repo' } });
   expect(result).toEqual({ leftExistingGroup: true, previousGroupId: 'group-old' });
   expect(leave).toHaveBeenCalledWith(expect.objectContaining({
-    action: 'leave-sync-group', installMain: false
+    action: 'leave-sync-group', appId: 'com.foliole.android.acceptance', installMain: false
   }));
 });
 
