@@ -28,6 +28,11 @@ final class FolioleCompanionCaptureNavigation {
             if (!receipt.optBoolean("ok") && !"target_missing".equals(receipt.optString("code"))) {
                 throw new IllegalStateException("Browse navigation failed: " + receipt);
             }
+            if (READING_EXIT.equals(entry)) {
+                Thread.sleep(250);
+                enterBrowseSurface(instrumentation, webView, timeoutMs);
+                return;
+            }
         }
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
             instrumentation, webView, BROWSE_READY, timeoutMs
@@ -41,6 +46,7 @@ final class FolioleCompanionCaptureNavigation {
     ) throws Exception {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         while (System.nanoTime() < deadline) {
+            if (hasTestId(instrumentation, webView, READING_EXIT)) return READING_EXIT;
             if (hasTestId(instrumentation, webView, BROWSE_TAB)) return BROWSE_TAB;
             if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;
             Thread.sleep(100);
