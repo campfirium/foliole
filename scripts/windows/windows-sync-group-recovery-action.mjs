@@ -1,5 +1,4 @@
 /* global process */
-
 import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -20,13 +19,11 @@ import {
 } from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsDatabaseFile } from './windows-sync-group-database-readiness.mjs';
+import {
+  invokeWindowsSyncGroupCommand, waitForJoinedGroup
+} from './windows-sync-group-join-completion.mjs';
 
-export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
-  return page.evaluate(async ({ command, args }) => {
-    if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
-    return globalThis.electronAPI.invoke(command, args);
-  }, { args, command });
-}
+export { invokeWindowsSyncGroupCommand, waitForJoinedGroup };
 
 export function windowsSyncGroupClientPaths(paths) {
   const root = path.join(windowsAcceptanceRoot(paths), 'client');
@@ -81,19 +78,6 @@ export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () 
     await delay(1_000);
   }
   throw new Error('Timed out discovering a compatible Sync Group.');
-}
-
-export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const overview = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
-    if (overview.sync_group?.group_id === expectedGroupId
-        && overview.sync_group.devices.some((device) =>
-          device.device_identity_key === overview.sync_group.local_device_identity_key
-          && device.state === 'active')) return overview;
-    await delay(1_000);
-  }
-  throw new Error('Timed out waiting for ordinary Sync Group synchronization.');
 }
 
 async function waitForOrdinarySyncFacts(
