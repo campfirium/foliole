@@ -115,11 +115,14 @@ async function listenOnSyncPort(server: http.Server, port: number) {
   });
 }
 
-function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
+function buildRunningStatus(
+  port: number,
+  groupStatus: ReturnType<typeof resolveLatestGroupStatus>
+): LanWorkspaceSyncServerStatus {
   return {
     advertised_urls: collectLanWorkspaceSyncUrls(port),
     last_error: null,
-    ...resolveLatestGroupStatus(),
+    ...groupStatus,
     port,
     state: 'running',
     ...topologyStatus()
@@ -159,6 +162,7 @@ function recordMdnsWarning(error: unknown) {
 async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
+  const groupStatus = resolveLatestGroupStatus();
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
@@ -173,7 +177,7 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
     logDesktopDnsSdDiagnostic('http_listener_ready', { port });
     await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning, port });
     activeServer = server;
-    activeStatus = buildRunningStatus(port);
+    activeStatus = buildRunningStatus(port, groupStatus);
     logRunningStatus();
     return activeStatus;
   } catch (error) {

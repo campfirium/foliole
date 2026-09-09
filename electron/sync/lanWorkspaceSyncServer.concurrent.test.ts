@@ -5,6 +5,7 @@ const runtime = vi.hoisted(() => {
   let releaseAdvertisement = () => {};
   return {
     advertise: vi.fn(() => new Promise<void>((resolve) => { releaseAdvertisement = resolve; })),
+    loadGroup: vi.fn(() => ({ devices: [], group_id: 'group-test' })),
     releaseAdvertisement: () => releaseAdvertisement(),
     server: {
       close: vi.fn((callback?: (error?: Error) => void) => callback?.()),
@@ -16,7 +17,7 @@ const runtime = vi.hoisted(() => {
 
 vi.mock('node:http', () => ({ default: { createServer: () => runtime.server } }));
 vi.mock('../database/syncGroupStore.js', () => ({
-  loadDesktopSyncGroup: () => ({ devices: [], group_id: 'group-test' })
+  loadDesktopSyncGroup: runtime.loadGroup
 }));
 vi.mock('./companionLanRequestHandler.js', () => ({
   createLanWorkspaceSyncRequestHandler: () => (_request: unknown, response: { end: () => void }) => {
@@ -68,11 +69,13 @@ it('shares one listener start across concurrent recovery requests', async () => 
   const first = ensureLanWorkspaceSyncServer(identity);
   await vi.waitFor(() => expect(runtime.advertise).toHaveBeenCalledOnce());
   const second = ensureLanWorkspaceSyncServer(identity);
+  const groupReadsBeforeAdvertisement = runtime.loadGroup.mock.calls.length;
 
   runtime.releaseAdvertisement();
   const [firstStatus, secondStatus] = await Promise.all([first, second]);
 
   expect(runtime.advertise).toHaveBeenCalledOnce();
+  expect(runtime.loadGroup).toHaveBeenCalledTimes(groupReadsBeforeAdvertisement);
   expect(firstStatus.state).toBe('running');
   expect(secondStatus).toEqual(firstStatus);
 });
