@@ -70,9 +70,10 @@ function validateJoin({ evidencePath, stdout }) {
   });
 }
 
-async function joinA5({ buildIdentity, env, evidenceRoot, execute, paths, session }) {
+async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity, paths, session }) {
   return runMacosA5InstrumentationMechanics({ buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
+    expectedGroupId: groupIdentity.group_id, expectedGroupTag: groupIdentity.group_tag,
     observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,
     validateInstrumentation: validateJoin,
     observeWhileTransportOpen: async (options) => {
@@ -98,13 +99,13 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     runtimeRoot: owned.root
   });
   const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  await session.enable();
+  const providerOverview = await session.enable();
   let journey;
   try { journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, session }),
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
-        paths, session });
+        groupIdentity: providerOverview.sync_group, paths, session });
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },

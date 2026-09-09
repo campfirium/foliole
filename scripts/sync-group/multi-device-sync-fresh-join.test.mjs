@@ -34,5 +34,7 @@ it('joins as a Device before requesting public Sync Now and proves the exact fac
 it('keeps the formal A-B journey on the Device request contract', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-fresh-join.mjs', 'utf8');
   expect(source).toContain('waitForMacosDeviceRequest');
+  expect(source).toContain('expectedGroupId: groupIdentity.group_id');
+  expect(source).toContain('expectedGroupTag: groupIdentity.group_tag');
   expect(source).not.toMatch(/PairSync|pair_request|paired_authorizations/u);
 });
