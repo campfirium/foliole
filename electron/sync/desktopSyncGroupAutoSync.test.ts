@@ -96,3 +96,12 @@ it('uses only the selected anchor for an on-demand manual sync', async () => {
   }));
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
 });
+
+it('completes an anchor manual action without polling a member', async () => {
+  runtime.role = 'anchor';
+
+  await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
+
+  expect(runtime.discovery).not.toHaveBeenCalled();
+  expect(runtime.coordinator).not.toHaveBeenCalled();
+});

@@ -63,6 +63,7 @@ export function runDesktopManualSyncWithDiscovery() {
 async function runDesktopManualSync() {
   const group = loadDesktopSyncGroup();
   if (!group) return runDesktopSyncCoordinator('manual');
+  if (loadDesktopAnchorTopologyState().role === 'anchor') return null;
   const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
   if (current) return runDesktopSyncCoordinator('manual', current);
   const candidates = await discoverDesktopSyncGroups();
