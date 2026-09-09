@@ -61,5 +61,6 @@ describe('iOS app identity host contract', () => {
     const windows = read('scripts/ios/windows-fri-two-device-sync.mjs');
     expect(macos.match(/'--test-without-building'/gu)).toHaveLength(7);
     expect(windows.match(/'--test-without-building'/gu)).toHaveLength(2);
+    expect(windows).toContain("sourceRef: 'refs/heads/sync'");
   });
 });
