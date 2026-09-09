@@ -66,8 +66,13 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         source: 'source'
       },
       protocolTxtKeys: {
+        deviceId: 'device_id',
+        groupId: 'group_id',
+        groupTag: 'group_tag',
         maxSupportedVersion: 'protocol_max_version',
         minSupportedVersion: 'protocol_min_version',
+        providerPlatform: 'provider_platform',
+        topologyRole: 'topology_role',
         version: 'protocol_version'
       },
       requestKeys: {

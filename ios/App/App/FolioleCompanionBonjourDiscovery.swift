@@ -153,7 +153,7 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
         guard case let .service(name, type, domain, _) = result.endpoint else { return nil }
         return "\(name)|\(type)|\(domain)"
     }
-    private static func decodeTXT(_ data: Data) -> [String: String] {
+    static func decodeTXT(_ data: Data) -> [String: String] {
         NetService.dictionary(fromTXTRecord: data).compactMapValues { String(data: $0, encoding: .utf8) }
     }
     private static func isPermissionDenied(_ error: NWError) -> Bool {

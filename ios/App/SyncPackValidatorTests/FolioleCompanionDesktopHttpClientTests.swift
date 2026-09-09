@@ -28,6 +28,20 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(nil))
     }
 
+    func testBonjourProjectsPreparedTopologyRoleFromSharedHostFixture() throws {
+        let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: sharedFixtureURL()))
+            as? [String: Any]
+        let roleKey = try XCTUnwrap(fixture?["role_txt_key"] as? String)
+        let record = NetService.data(fromTXTRecord: [
+            roleKey: Data("anchor".utf8),
+            "protocol_version": Data("5".utf8)
+        ])
+        let decoded = FolioleCompanionBonjourDiscoverySession.decodeTXT(record)
+
+        XCTAssertEqual(decoded[roleKey], "anchor")
+        XCTAssertEqual(decoded["protocol_version"], "5")
+    }
+
     func testRefusesSignedRequestRedirects() throws {
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
@@ -52,5 +66,14 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         }
 
         wait(for: [completion], timeout: 1)
+    }
+
+    private func sharedFixtureURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v5.json")
     }
 }
