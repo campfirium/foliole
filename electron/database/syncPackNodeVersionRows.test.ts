@@ -32,7 +32,11 @@ function createDriver(args: {
   return {
     execute: vi.fn(),
     prepare: vi.fn(),
-    queryAll: vi.fn(() => args.parentRows ?? []),
+    queryAll: vi.fn((sql: string, params?: readonly unknown[]) => (
+      (args.parentRows ?? []).filter((row) => sql.includes(' IN ')
+        ? params?.includes(row.version_id)
+        : row.version_id === params?.[0])
+    )),
     queryOne: vi.fn((_sql: string, params?: readonly unknown[]) => (
       args.versions.find((row) => row.version_id === params?.[0])
     )),
@@ -54,6 +58,27 @@ it('packs current head lineage references without requiring missing historical p
 
   expect(versions).toEqual([head]);
   expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([]);
+});
+
+it('packs every retained branch of the current merge lineage', () => {
+  const base = createVersion({ version_id: 'base' });
+  const macos = createVersion({ parent_version_id: 'base', version_id: 'macos' });
+  const fri = createVersion({ parent_version_id: 'base', version_id: 'fri' });
+  const merged = createVersion({ parent_version_id: 'fri', version_id: 'merged' });
+  const parentRows = [
+    { ordinal: 0, parent_version_id: 'base', version_id: 'macos' },
+    { ordinal: 0, parent_version_id: 'base', version_id: 'fri' },
+    { ordinal: 0, parent_version_id: 'fri', version_id: 'merged' },
+    { ordinal: 1, parent_version_id: 'macos', version_id: 'merged' }
+  ];
+  const driver = createDriver({ parentRows, versions: [base, macos, fri, merged] });
+
+  const versions = loadSyncPackNodeVersionRows(driver, [{
+    current_version_id: 'merged', id: 'node-1'
+  } as never]);
+
+  expect(versions.map((version) => version.version_id)).toEqual(['base', 'fri', 'macos', 'merged']);
+  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual(parentRows);
 });
 
 it('keeps only pack-internal parent edges for the same node object', () => {
