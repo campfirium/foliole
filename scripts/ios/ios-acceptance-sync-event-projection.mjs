@@ -67,6 +67,13 @@ export function resolveFriEvidenceRoot(result, fallbackRoot) {
   return fallbackRoot;
 }
 
+export function persistFriProjection(projection, evidenceRoot) {
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  const file = path.join(evidenceRoot, 'projection.json');
+  fs.copyFileSync(projection.file, file);
+  return { file, value: projection.value };
+}
+
 export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, execute,
   repoRoot, bundle, runnerArgs = [] }) {
   const result = await execute('bash', [FRI_RUNNER,
@@ -80,6 +87,7 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
     FOLIOLE_T152_BUILD_IDENTITY: buildIdentity }, hardDeadlineMs: 30 * 60_000,
   host: 'ios-b', stage: 'fri-sync-event-projection' });
   if (result.code !== 0) throw new Error('Fri acceptance sync event projection failed.');
-  return loadProjection(resolveFriEvidenceRoot(result, evidenceRoot),
+  const projection = loadProjection(resolveFriEvidenceRoot(result, evidenceRoot),
     buildIdentity, bundle.applicationId);
+  return persistFriProjection(projection, evidenceRoot);
 }

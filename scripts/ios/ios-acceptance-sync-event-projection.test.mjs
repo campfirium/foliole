@@ -1,11 +1,13 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
 import {
-  friAcceptanceBundle, resolveFriEvidenceRoot
+  friAcceptanceBundle, persistFriProjection, resolveFriEvidenceRoot
 } from './ios-acceptance-sync-event-projection.mjs';
 
 it('runs the isolated signed projection target and accepts only its fixed fields', () => {
@@ -37,4 +39,17 @@ it('loads promoted Fri evidence from the runner receipt', () => {
   })] };
   expect(resolveFriEvidenceRoot(result, '/requested')).toBe('/evidence/accepted');
   expect(resolveFriEvidenceRoot({ lines: ['build output'] }, '/requested')).toBe('/requested');
+});
+
+it('copies a promoted projection into its run-specific evidence root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-projection-'));
+  const source = path.join(root, 'promoted.json');
+  const evidenceRoot = path.join(root, 'run');
+  fs.writeFileSync(source, '{"events":[]}\n');
+
+  const persisted = persistFriProjection({ file: source, value: { events: [] } }, evidenceRoot);
+
+  expect(persisted.file).toBe(path.join(evidenceRoot, 'projection.json'));
+  expect(fs.readFileSync(persisted.file, 'utf8')).toBe('{"events":[]}\n');
+  fs.rmSync(root, { force: true, recursive: true });
 });
