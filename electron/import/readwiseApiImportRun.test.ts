@@ -113,6 +113,25 @@ it('keeps v2 books ahead of other candidates without treating Reader epub as Boo
   expect(exactOrder).toContain('article');
 });
 
+it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes('/v2/export/')) return response([]);
+    const category = url.searchParams.get('category');
+    if (category === 'pdf') return response([readerDocument('pdf-1', 'pdf', false)]);
+    if (category === 'epub') return response([readerDocument('epub-1', 'epub', false)]);
+    return response([]);
+  }) as typeof fetch;
+
+  const preview = await previewReadwiseApiImport(apiSettings('inbox'), { fetchImpl, minIntervalMs: 0 });
+
+  expect(preview).toMatchObject({ failed_count: 0, total_count: 2, write_count: 2 });
+  expect(preview.entries).toEqual(expect.arrayContaining([
+    expect.objectContaining({ remote_document_id: 'pdf-1', status: 'new' }),
+    expect.objectContaining({ remote_document_id: 'epub-1', status: 'new' })
+  ]));
+});
+
 it('processes more than 50 parent candidates without an artificial pause', async () => {
   const books = Array.from({ length: 51 }, (_, index) => exportBook(`doc-${index}`, `h-${index}`, 'articles'));
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
