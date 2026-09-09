@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import android.app.Instrumentation;
+import android.database.sqlite.SQLiteReadOnlyDatabaseException;
 import android.webkit.WebView;
 
 import org.json.JSONArray;
@@ -101,15 +102,22 @@ final class FolioleCompanionSyncNowAction {
         Instrumentation instrumentation, String runId
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
+        SQLiteReadOnlyDatabaseException lastReadConflict = null;
         while (System.nanoTime() < deadline) {
-            JSONArray events = FolioleAcceptanceSyncEventProjection.read(
-                instrumentation.getTargetContext()
-            ).getJSONArray("events");
-            for (int index = 0; index < events.length(); index += 1) {
-                if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
+            try {
+                JSONArray events = FolioleAcceptanceSyncEventProjection.read(
+                    instrumentation.getTargetContext()
+                ).getJSONArray("events");
+                for (int index = 0; index < events.length(); index += 1) {
+                    if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
+                }
+            } catch (SQLiteReadOnlyDatabaseException error) {
+                lastReadConflict = error;
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for projected Sync Now run: " + runId);
+        throw new IllegalStateException(
+            "Timed out waiting for projected Sync Now run: " + runId, lastReadConflict
+        );
     }
 }
