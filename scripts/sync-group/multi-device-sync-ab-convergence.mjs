@@ -113,7 +113,7 @@ async function syncAndroidFact({ env, evidenceRoot, execute, factId, paths, runI
   const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-sync'), execute,
     installMain: false, observeWhileTransportOpen: () => waitForDesktopFact(session, factId),
-    paths, serial: A5_SERIAL });
+    paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 
@@ -121,7 +121,7 @@ async function syncDesktopFact({ env, evidenceRoot, execute, factId, paths, runI
   const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'a-sync'), execute,
     installMain: false, observeWhileTransportOpen: () => waitForAndroidJourneyFact(paths, factId),
-    paths, serial: A5_SERIAL });
+    paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 

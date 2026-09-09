@@ -72,7 +72,7 @@ export async function syncAdmittedCToAndroid({
     appId: MULTI_DEVICE_ANDROID_APP_ID,
     evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
     observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
-    paths, serial: A5_SERIAL });
+    paths, serial: A5_SERIAL, transportRequired: false });
   await restartAndroid({ appId: MULTI_DEVICE_ANDROID_APP_ID, env, execute, paths });
   const restarted = await waitForFact(paths, factId, 'C');
   return { restarted, sync };

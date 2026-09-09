@@ -89,7 +89,7 @@ async function runFreshJoinInitialSync({
   const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
     buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
-    observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
+    observeWhileTransportOpen: observe, paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 

@@ -64,13 +64,15 @@ function validateProductResult(receipt, expected, evidenceRef) {
 export async function runMacosA5SyncGroupMaintenance({
   action, appId, buildIdentity, env, evidenceRoot, execute, installMain = true,
   conflictToken, expectedJourneyCounts, mechanics = runMacosA5InstrumentationMechanics,
-  observeWhileTransportOpen, paths, serial
+  observeWhileTransportOpen, paths, serial, transportRequired
 }) {
   const spec = SPECS[action];
   if (!spec) throw proofFailure('Unsupported sync group action', {
     missingFact: 'scenario_action_binding'
   });
-  const [method, expected, needsTransport, restartApp, releaseAfterObservation = false] = spec;
+  const [method, expected, defaultNeedsTransport, restartApp,
+    releaseAfterObservation = false] = spec;
+  const needsTransport = transportRequired ?? defaultNeedsTransport;
   const className = action === 'read-sync-events'
     ? 'FolioleAcceptanceSyncEventProjectionTest' : action === 'observe-journey-facts'
       ? 'FolioleAcceptanceJourneyFactsTest' : action === 'fork-conflict'

@@ -88,6 +88,20 @@ it('maps the fixed device port to an explicit isolated macOS listener', async ()
     '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
 });
 
+it('can exercise public Sync Now through the discovered LAN anchor without adb reverse', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const mechanics = vi.fn(async () => ({ evidencePath: '/evidence/raw.json', stdout: [
+    'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed"}',
+    'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+    'INSTRUMENTATION_CODE: -1'
+  ].join('\n') }));
+  await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity: 'lan-anchor',
+    env: {}, evidenceRoot: root, execute: vi.fn(), mechanics,
+    paths: {}, serial: '87a33a4b', transportRequired: false });
+  expect(mechanics).toHaveBeenCalledWith(expect.objectContaining({ needsTransport: false }));
+});
+
 it('quotes journey counts across the adb shell boundary', async () => {
   const root = createTestRoot();
   roots.push(root);
