@@ -80,6 +80,12 @@ function createReleaseGate() {
   };
 }
 
+function preserveFriBatch(evidenceRoot, name) {
+  const accepted = path.join(path.dirname(evidenceRoot),
+    'fri-physical-acceptance/AppPhysicalUITests/accepted');
+  fs.cpSync(accepted, path.join(evidenceRoot, 'fri-evidence', name), { recursive: true });
+}
+
 export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -114,6 +120,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_T152_EXPECTED_GROUP_TAG: ready.groupTag, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: 'macos-fri-two-device' });
     if (fri.code !== 0) throw new Error('Fri physical two-Device XCUITest failed.');
+    preserveFriBatch(evidenceRoot, 'join');
     await signals.waitFor('conflict-fork-ready', 12 * 60_000);
     const conflictFork = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
@@ -125,6 +132,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-fork' });
     if (conflictFork.code !== 0) throw new Error('Fri conflict fork XCUITest failed.');
+    preserveFriBatch(evidenceRoot, 'conflict-fork');
     releaseGate.release('consumer_complete');
     const conflictPublish = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
@@ -136,6 +144,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-publish' });
     if (conflictPublish.code !== 0) throw new Error('Fri conflict publish XCUITest failed.');
+    preserveFriBatch(evidenceRoot, 'conflict-publish');
     await signals.waitFor('automatic-converged', 5 * 60_000);
     const conflictPull = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
@@ -147,6 +156,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-pull' });
     if (conflictPull.code !== 0) throw new Error('Fri conflict pull XCUITest failed.');
+    preserveFriBatch(evidenceRoot, 'conflict-pull');
     fri.conflictProjection = await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-conflict-projection'), execute, repoRoot, bundle,
       runnerArgs: ['--test-without-building'] });
@@ -161,6 +171,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-verify' });
     if (conflictVerify.code !== 0) throw new Error('Fri conflict/restart XCUITest failed.');
+    preserveFriBatch(evidenceRoot, 'conflict-verify');
     fri = { ...fri, syncEvents: await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,
       runnerArgs: ['--test-without-building'] }) };
@@ -176,6 +187,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   if (providerFailure) throw providerFailure;
   const friTimeline = buildFriRunTimeline(fri.syncEvents.value, bundle.applicationId);
   const receipt = { acceptedTip, completedAt: new Date().toISOString(), friRoot,
+    friEvidenceRoot: path.join(evidenceRoot, 'fri-evidence'),
     conflictProjection: fri.conflictProjection.file, conflictTrace: fri.conflictTrace,
     groupId: fri.provider.receipt.groupId, groupTag: fri.provider.receipt.groupTag,
     syncEventProjection: fri.syncEvents.file,

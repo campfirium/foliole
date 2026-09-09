@@ -81,5 +81,7 @@ it('resumes the Mac anchor before Fri publishes without making the anchor poll F
 
   expect(source.indexOf("releaseGate.release('consumer_complete')"))
     .toBeLessThan(source.indexOf("const conflictPublish = await execute"));
+  expect(source).toContain("preserveFriBatch(evidenceRoot, 'join')");
+  expect(source).toContain("preserveFriBatch(evidenceRoot, 'conflict-verify')");
   expect(provider).not.toContain("session.invoke('sync_companion_now')");
 });
