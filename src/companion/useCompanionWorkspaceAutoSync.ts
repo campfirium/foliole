@@ -124,6 +124,7 @@ export function useForegroundAutoSync(
       tryForegroundAutoSync
     });
     const cadence = createMemberSyncCadence<ForegroundSyncReason>({
+      didSync: (result) => result === 'completed',
       getActiveRun: () => loadActiveCompanionSyncRun()?.completion ?? null,
       run: (reason) => runForegroundSyncCheck(reason)
     });

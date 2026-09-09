@@ -88,3 +88,18 @@ it('runs freshness once per minute only while eligible', async () => {
   await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS * 2);
   expect(run).toHaveBeenCalledOnce();
 });
+
+it('does not reset freshness after a skipped or failed run', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(10_000);
+  const run = vi.fn<(input: string) => Promise<string>>()
+    .mockResolvedValueOnce('skipped').mockRejectedValueOnce(new Error('offline'));
+  const cadence = createMemberSyncCadence({ didSync: (result) => result === 'completed', run });
+  cadence.updateFreshness({ eligible: true, input: 'freshness', lastActualSyncAt: 10_000 });
+
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
+  expect(run).toHaveBeenCalledOnce();
+  await expect(cadence.requestImmediate('foreground')).rejects.toThrow('offline');
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
+  expect(run).toHaveBeenCalledTimes(2);
+});

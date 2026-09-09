@@ -5,6 +5,7 @@ type Timer = ReturnType<typeof setTimeout>;
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 export interface MemberSyncCadence<Input> {
+  markActualSync(at?: number): void;
   requestImmediate(input: Input): Promise<unknown> | null;
   requestMutation(input: Input): Promise<unknown> | null;
   stop(): void;
@@ -12,6 +13,7 @@ export interface MemberSyncCadence<Input> {
 }
 
 type CadenceArgs<Input> = {
+  didSync?: (result: unknown) => boolean;
   getActiveRun?: () => Promise<unknown> | null;
   now?: () => number;
   run: (input: Input) => Promise<unknown> | null;
@@ -36,7 +38,10 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   requestImmediate(input: Input) {
     if (this.stopped || !this.eligible) return null;
     const external = this.externalActiveRun();
-    if (external) return external;
+    if (external) {
+      if (!this.activeRun) this.trackRun(external);
+      return external;
+    }
     return this.trackRun(this.args.run(input));
   }
 
@@ -45,11 +50,16 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     const external = this.externalActiveRun();
     if (external || this.now() < this.trailingWindowUntil) {
       this.trailingInput = input;
-      if (external) void external.finally(() => this.scheduleTrailingCheck()).catch(() => undefined);
+      if (external && !this.activeRun) this.trackRun(external);
       this.scheduleTrailingCheck();
       return external;
     }
     return this.startMutationRun(input);
+  }
+
+  markActualSync(at = this.now()) {
+    this.lastActualSyncAt = Math.max(this.lastActualSyncAt, Math.min(at, this.now()));
+    this.scheduleFreshness();
   }
 
   updateFreshness(next: { eligible: boolean; input: Input | null; lastActualSyncAt?: number }) {
@@ -93,7 +103,9 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     const delay = Math.min(MAX_TIMER_DELAY_MS, Math.max(0, dueAt - this.now()));
     this.freshnessTimer = setTimeout(() => {
       this.freshnessTimer = null;
-      if (this.freshnessInput && this.eligible) void this.requestImmediate(this.freshnessInput);
+      if (this.freshnessInput && this.eligible) {
+        void this.requestImmediate(this.freshnessInput)?.catch(() => undefined);
+      }
     }, delay);
   }
 
@@ -104,7 +116,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     const delay = Math.max(0, this.trailingWindowUntil - this.now());
     this.trailingTimer = setTimeout(() => {
       this.trailingTimer = null;
-      void this.flushTrailing();
+      void this.flushTrailing().catch(() => undefined);
     }, delay);
   }
 
@@ -129,14 +141,18 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
 
   private trackRun(run: Promise<unknown> | null) {
     if (!run) return null;
-    const tracked = Promise.resolve(run).finally(() => {
+    let didSync = false;
+    const tracked = Promise.resolve(run).then((result) => {
+      didSync = this.args.didSync?.(result) ?? true;
+      return result;
+    }).finally(() => {
       if (this.activeRun !== tracked) return;
       this.activeRun = null;
-      this.lastActualSyncAt = this.now();
-      this.scheduleFreshness();
+      if (didSync) this.markActualSync();
       if (this.trailingInput) this.scheduleTrailingCheck();
     });
     this.activeRun = tracked;
+    void tracked.catch(() => undefined);
     return tracked;
   }
 }

@@ -13,9 +13,15 @@ import {
 
 const RESULT_SETTING_KEY = 'sync_group_last_trigger_result';
 let activeRun: Promise<SyncTriggerResult> | null = null;
+const completedListeners = new Set<() => void>();
 
 export function loadActiveDesktopSyncRun() {
   return activeRun;
+}
+
+export function subscribeDesktopSyncCompleted(listener: () => void) {
+  completedListeners.add(listener);
+  return () => completedListeners.delete(listener);
 }
 
 export function loadDesktopSyncTriggerResult() {
@@ -46,8 +52,10 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
         run_id: runId, started_at: startedAt, status: 'skipped' });
     }
     for (const peer of peers) await continueDesktopSyncGroupSync(peer);
-    return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+    const result = await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'completed' });
+    for (const listener of completedListeners) listener();
+    return result;
   } catch (error) {
     await persistResult({ error: syncTriggerError(error), finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'failed' });

@@ -12,7 +12,11 @@ vi.mock('../database/connection.js', () => ({
 }));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
 
-import { loadDesktopSyncTriggerResult, runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
+import {
+  loadDesktopSyncTriggerResult,
+  runDesktopSyncCoordinator,
+  subscribeDesktopSyncCompleted
+} from './desktopSyncCoordinator.js';
 
 const peer = { peer_authorization_id: 'peer-a' } as never;
 
@@ -58,4 +62,18 @@ it('loads the last durable trigger result', () => {
   const result = { reason: 'initial', status: 'completed' };
   settings.loadJsonSetting.mockReturnValue(result);
   expect(loadDesktopSyncTriggerResult()).toBe(result);
+});
+
+it('publishes actual completion but not failure or a no-peer skip', async () => {
+  const completed = vi.fn();
+  const unsubscribe = subscribeDesktopSyncCompleted(completed);
+  await runDesktopSyncCoordinator('manual');
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([]);
+  await runDesktopSyncCoordinator('automatic');
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([peer]);
+  transport.continueDesktopSyncGroupSync.mockRejectedValueOnce(new Error('offline'));
+  await expect(runDesktopSyncCoordinator('automatic')).rejects.toThrow('offline');
+
+  expect(completed).toHaveBeenCalledOnce();
+  unsubscribe();
 });

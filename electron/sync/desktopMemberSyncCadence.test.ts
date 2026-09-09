@@ -1,19 +1,23 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   active: null as Promise<unknown> | null,
+  completed: null as (() => void) | null,
   run: vi.fn(async () => ({ status: 'completed' }))
 }));
 
 vi.mock('./desktopSyncCoordinator.js', () => ({
   loadActiveDesktopSyncRun: () => runtime.active,
-  runDesktopSyncCoordinator: runtime.run
+  runDesktopSyncCoordinator: runtime.run,
+  subscribeDesktopSyncCompleted: (listener: () => void) => { runtime.completed = listener; }
 }));
 
 import {
   requestDesktopHighValueSync,
   updateDesktopSyncFreshness
 } from './desktopMemberSyncCadence.js';
+
+beforeEach(() => vi.clearAllMocks());
 
 afterEach(() => {
   updateDesktopSyncFreshness(false);
@@ -34,4 +38,16 @@ it('projects desktop commits into one leading, one trailing, and minute freshnes
 
   await vi.advanceTimersByTimeAsync(60_000);
   expect(runtime.run).toHaveBeenCalledTimes(3);
+});
+
+it('restarts the freshness minute after a manual coordinator completion', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(1_000_000);
+  updateDesktopSyncFreshness(true, 1_000_000);
+  await vi.advanceTimersByTimeAsync(30_000);
+  runtime.completed?.();
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(runtime.run).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(runtime.run).toHaveBeenCalledOnce();
 });
