@@ -32,8 +32,8 @@ function currentGroupEvidence(database) {
   if (rows.length !== 1) {
     return { activeSyncGroupMemberCount: 0, syncGroupId: null, syncGroupTimelineId: null };
   }
-  const active = tableExists(database, 'sync_group_members')
-    ? count(database, `SELECT COUNT(*) AS count FROM sync_group_members
+  const active = tableExists(database, 'sync_group_devices')
+    ? count(database, `SELECT COUNT(*) AS count FROM sync_group_devices
       WHERE group_id = ? AND state = 'active'`, rows[0].group_id) : 0;
   return { activeSyncGroupMemberCount: active, syncGroupId: rows[0].group_id,
     syncGroupTimelineId: null };
@@ -57,19 +57,17 @@ function storedGroupEvidence(database) {
   const groups = all(database, 'SELECT group_id FROM sync_groups LIMIT 2');
   if (groups.length !== 1) return emptyStoredEvidence(groups.length);
   const group = groups[0];
-  const members = tableExists(database, 'sync_group_members')
-    ? count(database, 'SELECT COUNT(*) AS count FROM sync_group_members WHERE group_id = ?', group.group_id) : 0;
-  const departures = tableExists(database, 'sync_group_member_departures')
-    ? count(database, 'SELECT COUNT(*) AS count FROM sync_group_member_departures WHERE group_id = ?', group.group_id) : 0;
+  const members = tableExists(database, 'sync_group_devices')
+    ? count(database, 'SELECT COUNT(*) AS count FROM sync_group_devices WHERE group_id = ?', group.group_id) : 0;
+  const departures = tableExists(database, 'sync_group_devices')
+    ? count(database, `SELECT COUNT(*) AS count FROM sync_group_devices
+      WHERE group_id = ? AND state = 'left'`, group.group_id) : 0;
   const hostName = meta(database, 'host_name');
   const matches = hostName && members && departures ? all(database, `SELECT
-      member.authorization_id AS member_authorization_id,
-      departure.authorization_id AS departure_authorization_id
-    FROM sync_group_members member JOIN sync_group_member_departures departure
-      ON departure.group_id = member.group_id AND departure.host_name = member.host_name
-    WHERE member.group_id = ? AND member.host_name = ? AND member.state = 'left'
-      AND departure.authorized_by_host_name = member.host_name
-      AND departure.left_at = member.left_at LIMIT 2`, group.group_id, hostName) : [];
+      device_identity_key AS member_authorization_id,
+      device_identity_key AS departure_authorization_id
+    FROM sync_group_devices WHERE group_id = ? AND device_name = ? AND state = 'left'
+      AND left_at IS NOT NULL LIMIT 2`, group.group_id, hostName) : [];
   const match = matches.length === 1 ? matches[0] : null;
   return {
     storedLocalDepartureAuthorizationFingerprint:
