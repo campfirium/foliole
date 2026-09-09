@@ -50,6 +50,7 @@ function topologyStatus() {
 
 let activeJoinRequestHandler: (() => void) | null = null;
 let activeServer: http.Server | null = null;
+let activeStart: Promise<LanWorkspaceSyncServerStatus> | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
   last_error: null,
@@ -155,8 +156,7 @@ function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
 }
 
-export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
-  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
   startDesktopSyncGroupAutoSync();
@@ -193,8 +193,20 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
   }
 }
 
+export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
+  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+  if (activeStart) return activeStart;
+  const start = startLanWorkspaceSyncServer(args);
+  activeStart = start;
+  void start.finally(() => {
+    if (activeStart === start) activeStart = null;
+  }).catch(() => undefined);
+  return start;
+}
+
 export async function stopLanWorkspaceSyncServer() {
   stopDesktopSyncGroupAutoSync();
+  await activeStart?.catch(() => undefined);
   if (!activeServer) {
     activeStatus = {
       advertised_urls: [],
