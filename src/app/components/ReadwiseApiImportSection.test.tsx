@@ -17,8 +17,7 @@ loadScheduleStatus.mockResolvedValue({
 function renderSection(overrides: Partial<Parameters<typeof ReadwiseApiImportSection>[0]> = {}) {
   const props = {
     disabled: false, frequency: 'hourly' as const, isRunning: false,
-    onCancelReconcile: vi.fn(), onChangeFrequency: vi.fn(), onPreview: vi.fn(),
-    onReconcile: vi.fn(), reconcileIsRunning: false, reconcileResult: null, ...overrides
+    onChangeFrequency: vi.fn(), onPreview: vi.fn(), ...overrides
   };
   render(<LocalizationProvider initialLanguagePreference="en">
     <ReadwiseApiImportSection {...props} />
@@ -26,27 +25,13 @@ function renderSection(overrides: Partial<Parameters<typeof ReadwiseApiImportSec
   return props;
 }
 
-it('starts explicit reconciliation independently from import preview', () => {
-  const props = renderSection();
-  fireEvent.click(screen.getByRole('button', { name: 'Reconcile status' }));
-  expect(props.onReconcile).toHaveBeenCalledOnce();
-  expect(props.onPreview).not.toHaveBeenCalled();
-});
+it('keeps only import and automatic frequency tasks', async () => {
+  renderSection();
 
-it('shows the full-set result and exposes cancellation only while running', () => {
-  const onCancelReconcile = vi.fn();
-  renderSection({
-    onCancelReconcile, reconcileIsRunning: true,
-    reconcileResult: {
-      export_deleted_count: 2, present_count: 3, reader_missing_count: 4,
-      reconciled_at: 'now', status: 'completed', unconfirmed_count: 5
-    }
-  });
-  expect(screen.getByRole('status')).toHaveTextContent(
-    'Present: 3; Reader missing: 4; Export deleted: 2; Unconfirmed: 5.'
-  );
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel reconciliation' }));
-  expect(onCancelReconcile).toHaveBeenCalledOnce();
+  expect(screen.getByRole('button', { name: 'Preview import' })).toBeInTheDocument();
+  expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
+  expect(screen.queryByText('Remote status')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reconcile status' })).not.toBeInTheDocument();
 });
 
 it('shows the failed stage and retries through the existing preview flow', async () => {

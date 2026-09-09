@@ -3,9 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeReadwiseImportRunResult, NativeReadwiseSyncPreviewResult } from '../../../lib/platform/nativeContract';
 import type {
   NativeReadwiseImportCancelResult,
-  NativeReadwiseApiScheduleStatus,
-  NativeReadwiseReconcileCancelResult,
-  NativeReadwiseReconcileResult
+  NativeReadwiseApiScheduleStatus
 } from '../../../lib/platform/nativeReadwiseApiImportContract';
 
 import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
@@ -46,14 +44,4 @@ export async function cancelReadwiseReaderImportInRuntime(): Promise<NativeReadw
 export async function loadReadwiseApiScheduleStatusInRuntime(): Promise<NativeReadwiseApiScheduleStatus | null> {
   const runtimeInvoke = getRuntimeInvoke();
   return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadReadwiseApiScheduleStatus) : null;
-}
-
-export async function runReadwiseApiReconcileInRuntime(): Promise<NativeReadwiseReconcileResult | null> {
-  const runtimeInvoke = getRuntimeInvoke();
-  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.runReadwiseApiReconcile) : null;
-}
-
-export async function cancelReadwiseApiReconcileInRuntime(): Promise<NativeReadwiseReconcileCancelResult | null> {
-  const runtimeInvoke = getRuntimeInvoke();
-  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.cancelReadwiseApiReconcile) : null;
 }

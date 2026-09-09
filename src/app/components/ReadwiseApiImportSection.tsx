@@ -1,33 +1,12 @@
 import { useEffect, useState } from 'react';
 
 import type { ReadwiseSyncFrequency } from '../../../lib/core/import/readwiseReaderSettings';
-import type {
-  NativeReadwiseApiScheduleStatus,
-  NativeReadwiseReconcileResult
-} from '../../../lib/platform/nativeReadwiseApiImportContract';
+import type { NativeReadwiseApiScheduleStatus } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { loadReadwiseApiScheduleStatusInRuntime } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
 import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import { ReadwiseSyncFrequencySelect } from './ReadwiseReaderSyncControls';
-
-function ReconcileResult(props: { result: NativeReadwiseReconcileResult }) {
-  const t = useTranslation();
-  if (props.result.status !== 'completed') {
-    return <span className="mt-1 block text-error">{t(props.result.status === 'cancelled'
-      ? 'desktop.readwise.api.reconcile.cancelled' : 'desktop.readwise.api.reconcile.failed')}</span>;
-  }
-  return (
-    <span className="mt-1 block text-foreground/70" role="status">
-      {t('desktop.readwise.api.reconcile.summary', {
-        deleted: props.result.export_deleted_count,
-        missing: props.result.reader_missing_count,
-        present: props.result.present_count,
-        unconfirmed: props.result.unconfirmed_count
-      })}
-    </span>
-  );
-}
 
 export function ReadwiseApiImportSection(props: {
   disabled: boolean;
@@ -35,10 +14,6 @@ export function ReadwiseApiImportSection(props: {
   isRunning: boolean;
   onChangeFrequency: (value: ReadwiseSyncFrequency) => void;
   onPreview: () => void;
-  onCancelReconcile: () => void;
-  onReconcile: () => void;
-  reconcileIsRunning: boolean;
-  reconcileResult: NativeReadwiseReconcileResult | null;
 }) {
   const t = useTranslation();
   const schedule = useReadwiseApiScheduleStatus(props.isRunning);
@@ -62,7 +37,6 @@ export function ReadwiseApiImportSection(props: {
           ) : null}
         </SettingsControlSlot>
       </SettingsRow>
-      <ReconcileRow {...props} t={t} />
     </SettingsSection>
   );
 }
@@ -73,25 +47,6 @@ function ManualImportRow(props: Parameters<typeof ReadwiseApiImportSection>[0] &
       <SettingsControlSlot>
         <AppButton disabled={props.disabled} onClick={props.onPreview} size="sm" variant="emphasis">
           {props.t(props.isRunning ? 'desktop.readwise.api.import.preparing' : 'desktop.readwise.api.import.preview')}
-        </AppButton>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function ReconcileRow(props: Parameters<typeof ReadwiseApiImportSection>[0] & { t: Translate }) {
-  return (
-    <SettingsRow
-      description={<>{props.t('desktop.readwise.api.reconcile.actionDescription')}{props.reconcileResult ? <ReconcileResult result={props.reconcileResult} /> : null}</>}
-      title={props.t('desktop.readwise.api.reconcile.actionTitle')}
-    >
-      <SettingsControlSlot>
-        <AppButton
-          disabled={props.disabled && !props.reconcileIsRunning}
-          onClick={props.reconcileIsRunning ? props.onCancelReconcile : props.onReconcile}
-          size="sm"
-        >
-          {props.t(props.reconcileIsRunning ? 'desktop.readwise.api.reconcile.cancel' : 'desktop.readwise.api.reconcile.action')}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>

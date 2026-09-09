@@ -118,3 +118,23 @@ describe('ReadableArticleDocument editing', () => {
     expect(markdownEditorMock.props?.hideTitleHeading).toBe(true);
   });
 });
+
+it('ignores historical Readwise lifecycle values while rendering the same topic body', () => {
+  renderReadableArticleDocument({
+    readableArticle: createReadableArticle({
+      readwiseRemoteLifecycle: {
+        checkedAt: '2026-09-09T00:00:00.000Z',
+        connectionRef: 'readwise-connection',
+        export: 'deleted',
+        reader: 'missing',
+        scope: {
+          readerLocation: 'all',
+          version: 1
+        }
+      }
+    })
+  });
+
+  expect(screen.getByLabelText('Topic body')).toHaveValue('Original body');
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});

@@ -5,7 +5,7 @@ export const WINDOWS_DEV_BUILD_ACTIONS = [
   'default-sync-journey',
   'desktop-dnssd-host-facts',
   'frozen-revision-preflight', 'live', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
-  'readwise-api-reconcile', 'readwise-api-scheduler', 'secondary',
+  'readwise-api-scheduler', 'secondary',
   'sync-group-join-prepare',
   ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];

@@ -10,7 +10,7 @@ const DESKTOP_SYNC_GROUP_BUILD_ACTIONS = new Set([
 
 export function requiresWindowsDevDesktopBuild(action) {
   return ['device-profile', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
-    'readwise-api-reconcile', 'readwise-api-scheduler', 'sync-group-join-prepare'].includes(action)
+    'readwise-api-scheduler', 'sync-group-join-prepare'].includes(action)
     || DESKTOP_SYNC_GROUP_BUILD_ACTIONS.has(action)
     || preparesWindowsSyncGroupCandidate(action);
 }
@@ -25,7 +25,7 @@ export function windowsDevRequiredTools(action, paths) {
   const tarRequired = action === 'frozen-revision-preflight';
   const adbRequired = !['build', 'default-sync-journey', 'desktop-dnssd-host-facts',
     'device-profile', 'frozen-revision-preflight', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
-    'readwise-api-reconcile', 'readwise-api-scheduler',
+    'readwise-api-scheduler',
     'sync-group-join-prepare'].includes(action)
     && !isWindowsSyncGroupAction(action);
   return [paths.systemNode, ...(npmRequired ? [paths.systemNpmCli] : []),

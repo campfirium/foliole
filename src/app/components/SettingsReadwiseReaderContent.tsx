@@ -11,10 +11,6 @@ import type {
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
-import type {
-  NativeReadwiseReconcileCancelResult,
-  NativeReadwiseReconcileResult
-} from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 
@@ -26,7 +22,6 @@ import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './Readwise
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
 import { useReadwiseCleanup } from './useReadwiseCleanup';
-import { useReadwiseRemoteReconcile } from './useReadwiseRemoteReconcile';
 import {
   useReadwiseSetupController,
   type ReadwiseSetupPayload
@@ -46,8 +41,6 @@ interface SettingsReadwiseReaderContentProps {
   onCancelSync?: () => Promise<unknown>;
   onRunCleanup?: () => Promise<NativeReadwiseCleanupRunResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
-  onRunReconcile?: () => Promise<NativeReadwiseReconcileResult | null>;
-  onCancelReconcile?: () => Promise<NativeReadwiseReconcileCancelResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
   onChangeSourceMode?: (mode: ReadwiseSourceMode) => void;
   readwiseRootPath: string;
@@ -64,7 +57,6 @@ function saveDisabledReadwiseSetup(props: SettingsReadwiseReaderContentProps, dr
 }
 
 function ReadwiseApiSettingsContent(props: {
-  reconcile: ReturnType<typeof useReadwiseRemoteReconcile>;
   setup: ReturnType<typeof useReadwiseSetupController>;
   settings: SettingsReadwiseReaderContentProps;
 }) {
@@ -82,10 +74,6 @@ function ReadwiseApiSettingsContent(props: {
         isRunning={props.setup.isStartingSync || props.setup.isSyncPreviewing}
         onChangeFrequency={saveFrequency}
         onPreview={() => void props.setup.handleApiSync()}
-        onCancelReconcile={() => void props.reconcile.cancel()}
-        onReconcile={() => void props.reconcile.run()}
-        reconcileIsRunning={props.reconcile.isRunning}
-        reconcileResult={props.reconcile.result}
       />
       <ReadwiseBehaviorSection draft={props.setup.draft} />
     </div>
@@ -94,15 +82,13 @@ function ReadwiseApiSettingsContent(props: {
 
 function ReadwiseSelectedModeContent(props: {
   cleanup: ReturnType<typeof useReadwiseCleanup>;
-  committedMode: ReadwiseSourceMode;
-  reconcile: ReturnType<typeof useReadwiseRemoteReconcile>;
   settings: SettingsReadwiseReaderContentProps;
   setup: ReturnType<typeof useReadwiseSetupController>;
   sourceMode: ReadwiseSourceMode;
 }) {
   if (props.sourceMode === 'off') return null;
   if (props.sourceMode === 'api') {
-    return <ReadwiseApiSettingsContent reconcile={props.reconcile} settings={props.settings} setup={props.setup} />;
+    return <ReadwiseApiSettingsContent settings={props.settings} setup={props.setup} />;
   }
   return (
     <ReadwiseFolderSettingsSections
@@ -133,11 +119,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
       onRunCleanup: props.onRunCleanup
     })
   });
-  const reconcile = useReadwiseRemoteReconcile({
-    onCancel: props.onCancelReconcile,
-    onRun: props.onRunReconcile
-  });
-
   return (
     <>
       <ReadwiseSourceModeSection
@@ -148,8 +129,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
       />
       <ReadwiseSelectedModeContent
         cleanup={cleanup}
-        committedMode={committedMode}
-        reconcile={reconcile}
         settings={props}
         setup={setup}
         sourceMode={sourceMode}

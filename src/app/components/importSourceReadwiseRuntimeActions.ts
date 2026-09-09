@@ -6,10 +6,8 @@ import {
 } from '../../shared/platform/readwiseImportCleanupRuntimeRepository';
 import {
   cancelReadwiseReaderImportInRuntime,
-  cancelReadwiseApiReconcileInRuntime,
   previewReadwiseReaderImportInRuntime,
-  runReadwiseReaderImportInRuntime,
-  runReadwiseApiReconcileInRuntime
+  runReadwiseReaderImportInRuntime
 } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
@@ -45,8 +43,6 @@ export function createReadwiseReaderImportActions(
       return runReadwiseReaderImportInRuntime(nextSettings);
     },
     cancelReadwiseReaderImport: cancelReadwiseReaderImportInRuntime,
-    cancelReadwiseApiReconcile: cancelReadwiseApiReconcileInRuntime,
-    runReadwiseApiReconcile: runReadwiseApiReconcileInRuntime,
     previewReadwiseImportCleanup: previewReadwiseImportCleanupInRuntime,
     runReadwiseImportCleanup: runReadwiseImportCleanupInRuntime
   };
