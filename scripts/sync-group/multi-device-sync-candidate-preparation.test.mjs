@@ -41,6 +41,7 @@ it('prepares an A/B-only candidate without invoking Windows or LAN Git control',
     args.some((arg) => arg.endsWith('macos-a5-dev.mjs')));
   expect(androidBuild.at(-1).env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID)
     .toBe('com.foliole.android.acceptance');
+  expect(androidBuild.at(-1).env.FOLIOLE_ANDROID_COMPANION_SYNC_PORT).toBe('38644');
   expect(calls.some(([, args]) => args.join(' ') ===
     '-s 87a33a4b uninstall com.foliole.android.acceptance')).toBe(true);
   expect(receipt).toMatchObject({ preparedHosts: ['macos-a', 'android-b'], runId: 'run-ab' });
