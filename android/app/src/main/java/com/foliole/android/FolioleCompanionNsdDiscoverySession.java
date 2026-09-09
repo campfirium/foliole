@@ -163,7 +163,9 @@ final class FolioleCompanionNsdDiscoverySession {
             if (own != null && FolioleCompanionSyncGroupProvider.runtimeInstanceId().equals(
                 new String(own, StandardCharsets.UTF_8))) return;
             Map<String, JSObject> resolved = FolioleCompanionNsdServiceCandidates.create(
-                context, service, protocol(service)
+                context, service, FolioleCompanionNsdProtocolTxt.read(
+                    context, service.getAttributes()
+                )
             );
             boolean changed;
             synchronized (candidates) {
@@ -184,16 +186,6 @@ final class FolioleCompanionNsdDiscoverySession {
         return candidates.keySet().removeIf(
             key -> FolioleCompanionNsdServiceCandidates.belongsToService(key, serviceName)
         );
-    }
-
-    private JSObject protocol(NsdServiceInfo service) throws Exception {
-        JSObject result = new JSObject();
-        for (String name : new String[] {"maxSupportedVersion", "minSupportedVersion", "version"}) {
-            String key = FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtKey(context, name);
-            byte[] value = service.getAttributes().get(key);
-            if (value != null) result.put(key, new String(value, StandardCharsets.UTF_8));
-        }
-        return result;
     }
 
     private JSObject emit(String change, String status, String error) {
