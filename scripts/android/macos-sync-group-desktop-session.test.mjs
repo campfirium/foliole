@@ -53,10 +53,16 @@ it('creates, resumes, or enables the single Device group without a legacy select
   const resume = vi.fn(async () => 'resumed');
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
     load: async () => overview({ sync_group: null }) })).resolves.toBe('created');
+  const resumed = overview({ sync_paused: false });
+  const enabled = overview();
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
-    load: async () => overview({ sync_paused: true }) })).resolves.toBe('resumed');
+    load: vi.fn().mockResolvedValueOnce(overview({ sync_paused: true }))
+      .mockResolvedValueOnce(resumed) })).resolves.toBe(resumed);
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
-    load: async () => overview() })).resolves.toBe('enabled');
+    load: vi.fn().mockResolvedValueOnce(overview()).mockResolvedValueOnce(enabled) }))
+    .resolves.toBe(enabled);
+  expect(resume).toHaveBeenCalledOnce();
+  expect(enable).toHaveBeenCalledOnce();
 });
 
 it('binds acceptance to the fixed A5 Device request id', async () => {

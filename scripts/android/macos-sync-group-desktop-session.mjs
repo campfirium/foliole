@@ -64,7 +64,9 @@ export function sanitizeMacosSyncGroupOverview(overview) {
 export async function ensureMacosDeviceSyncGroup(actions) {
   const overview = await actions.load();
   if (!overview.sync_group) return actions.create();
-  return overview.sync_paused === true ? actions.resume() : actions.enable();
+  if (overview.sync_paused === true) await actions.resume();
+  else await actions.enable();
+  return actions.load();
 }
 
 function launchOptions(repoRoot, env, session, libraryHome, runtime, rendererUrl) {
