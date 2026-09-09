@@ -8,7 +8,7 @@ import {
   closePairSyncRecoveryTransport, openPairSyncRecoveryTransport, PAIR_SYNC_PORT
 } from './pair-sync-transport.mjs';
 
-export const MACOS_ACCEPTANCE_SYNC_PORT = '38642';
+export const MACOS_ACCEPTANCE_SYNC_PORT = '38643';
 
 export function macosAcceptanceEnv(env = process.env) {
   return { ...env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',

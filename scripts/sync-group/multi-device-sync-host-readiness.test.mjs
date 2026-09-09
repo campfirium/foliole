@@ -98,7 +98,7 @@ it('records fixed sync port availability in macOS readiness', async () => {
   await expect(adapters['macos-a']()).resolves.toMatchObject({
     facts: expect.arrayContaining(['macos_sync_port_ready'])
   });
-  expect(ports).toEqual([38642]);
+  expect(ports).toEqual([38643]);
 });
 
 it('does not require a Windows candidate receipt for an A/B-only target', async () => {
