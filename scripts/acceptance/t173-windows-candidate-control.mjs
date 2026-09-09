@@ -142,7 +142,7 @@ async function executeAction(config, key, repoRoot) {
   ) || !remoteActionPath.endsWith(`/${receiptName}`)) {
     throw new Error('T173 Windows product receipt escaped its candidate root.');
   }
-  const actionPath = path.join(localRoot, receiptName);
+  const actionPath = path.join(localRoot, `${config.action}-receipt.json`);
   await copy(key, remoteActionPath, actionPath, repoRoot);
   process.stdout.write(`[windows-dev-action] ${config.action} identity=${config.routeIdentity} `
     + `manifest=${wrapper.actionReceiptPath}\n`);

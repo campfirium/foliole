@@ -29,7 +29,9 @@ it('accepts receipts only from the route-bound task-owned Windows root', () => {
 });
 
 it('uses a committed task-owned wrapper and never names the T152 capsule or daily checkout', () => {
+  const controller = fs.readFileSync('scripts/acceptance/t173-windows-candidate-control.mjs', 'utf8');
   const wrapper = fs.readFileSync('scripts/windows/t173-windows-candidate-action.ps1', 'utf8');
+  expect(controller).toContain('`${config.action}-receipt.json`');
   expect(wrapper).toContain('t173-windows-candidate-action.mjs');
   expect(wrapper).not.toContain('t152-windows');
   expect(wrapper).not.toContain('D:\\C\\foliole"');
