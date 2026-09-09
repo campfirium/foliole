@@ -31,6 +31,7 @@ import {
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
+import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
 
 /* global AbortController, AbortSignal */
 
@@ -130,7 +131,11 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
         return { code: 0, factId: await windowsProvider.waitForProgress() };
       },
       reportProgress,
-      waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
+      waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId),
+      waitForListener: async (session) => {
+        await observeMacosAnchorAfterElection(session);
+        return session.load();
+      }
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
     const android = await windowsProvider.raceConsumer(syncAdmittedCToAndroid({

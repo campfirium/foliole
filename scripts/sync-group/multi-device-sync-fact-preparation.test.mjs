@@ -35,6 +35,24 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });
 });
 
+it('waits for the v5 listener before creating the offline admission fact', async () => {
+  const order = [];
+  const session = { close: vi.fn(async () => {}), enable: vi.fn(async () => {
+    order.push('enable'); return { server_status: { state: 'starting' } };
+  }) };
+  await runAOfflineAdmissionPrelude({ closeTransport: async () => {},
+    createFact: async () => { order.push('fact'); return { factId: 'fact-a' }; },
+    openSession: async () => session, openTransport: async () => {},
+    runApproval: async ({ onProviderStopped, onReady }) => {
+      await onProviderStopped(); await onReady(); return 'approved';
+    }, startWindows: async () => 'windows', waitForFact: async () => {},
+    waitForListener: async () => {
+      order.push('anchor-ready');
+      return { server_status: { state: 'running' }, sync_enabled: true };
+    } });
+  expect(order.slice(0, 3)).toEqual(['enable', 'anchor-ready', 'fact']);
+});
+
 it('closes the product transport when B never receives the A fact', async () => {
   const closeTransport = vi.fn(async () => undefined);
   await expect(runAOfflineAdmissionPrelude({

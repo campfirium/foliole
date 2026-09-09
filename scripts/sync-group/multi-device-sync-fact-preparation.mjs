@@ -2,7 +2,8 @@ import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 
 export async function runAOfflineAdmissionPrelude({
   cancelSiblings = () => {}, closeTransport, createFact, openSession, openTransport,
-  reportProgress = () => {}, runApproval, startWindows, waitForFact
+  reportProgress = () => {}, runApproval, startWindows, waitForFact,
+  waitForListener = async (_session, listener) => listener
 }) {
   const session = await openSession();
   let closed = false;
@@ -15,7 +16,7 @@ export async function runAOfflineAdmissionPrelude({
   let windowsStarted;
   const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
   try {
-    const listener = await session.enable();
+    const listener = await waitForListener(session, await session.enable());
     if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
       throw Object.assign(new Error('MacOS A product sync listener did not become ready.'), {
         failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
