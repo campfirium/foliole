@@ -26,7 +26,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   });
   const stage = resolveStage('b-admit-c');
   expect(stage).toMatchObject({
-    milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
+    milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'],
     siblings: expect.arrayContaining([
@@ -63,7 +63,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
     action: 'prove-sync-from-zero', activities: expect.arrayContaining([
       'dataset-mutation-progress', 'windows-cursor-progress', 'windows-resource-progress'
     ]), milestones: [
-      'dataset-created', 'b-provider-stopped', 'b-transport-ready',
+      'dataset-created', 'b-provider-stopped', 'b-anchor-sync-ready',
       'android-structure-batches-complete', 'android-content-batches-complete',
       'android-attachment-batches-complete', 'macos-offline', 'windows-join-started',
       'android-approval-completed', 'windows-cursor-resumed',

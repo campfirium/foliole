@@ -25,10 +25,7 @@ import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
-import {
-  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
-  openMacosAcceptanceTransport
-} from './multi-device-sync-macos-channel.mjs';
+import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
@@ -95,15 +92,6 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
-  const runTransport = async (args, stage) => {
-    const result = await execute(paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 10_000 });
-    if (result.code === 0) return result;
-    throw Object.assign(new Error(`${stage} failed`), {
-      executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
-      lastSuccessfulAction: 'a_deterministic_fact_created',
-      missingFact: 'a5_product_transport_unavailable'
-    });
-  };
   let windowsProvider;
   let windowsSettled = false;
   try {
@@ -111,7 +99,6 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       cancelSiblings: (name, status) => cancelAdmissionSibling(
         approvalController, approvalRelease, name, status
       ),
-      closeTransport: () => closeMacosAcceptanceTransport(runTransport),
       createFact: (session) => createDesktopSyncGroupJourneyFact({
         device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
       }),
@@ -119,7 +106,6 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
         libraryHome: path.join(owned.root, 'library'), repoRoot,
         runtimeRoot: owned.root
       })),
-      openTransport: () => openMacosAcceptanceTransport(runTransport),
       runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
         appId: MULTI_DEVICE_ANDROID_APP_ID,
         allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
