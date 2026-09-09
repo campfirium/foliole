@@ -92,6 +92,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("action: 'create-journey-fact'");
   expect(source).toContain('observeA5JourneyFacts(args, buildIdentity, env');
   expect(source).toContain('assertMacosAnchorReady(await session.load())');
+  expect(source).toContain('await observeMacosAnchorAfterElection(session)');
   expect(source).not.toContain('waitForMacosAutomaticRun');
   expect(restartSource).toContain('observeMacosAnchorAfterElection(restartedSession)');
   expect(restartSource).not.toContain('waitForMacosAutomaticRun');

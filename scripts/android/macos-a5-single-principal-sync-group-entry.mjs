@@ -11,7 +11,9 @@ import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest
 } from './macos-sync-group-desktop-session.mjs';
-import { assertMacosAnchorReady } from './macos-a5-anchor-observation.mjs';
+import {
+  assertMacosAnchorReady, observeMacosAnchorAfterElection
+} from './macos-a5-anchor-observation.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -138,6 +140,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'a5-resume-after-conflict'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial });
     await session.invoke('resume_companion_sync');
+    await observeMacosAnchorAfterElection(session);
     const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
       action: 'sync-now', appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
