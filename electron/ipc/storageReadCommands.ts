@@ -12,6 +12,7 @@ import { loadSyncObjects } from '../database/syncObjects.js';
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import {
   asNullableString,
@@ -22,6 +23,11 @@ import {
   parseNodeViewStatePayloadArray
 } from './commandParsers.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
+
+function completeHighValueWrite<T>(result: T) {
+  void requestDesktopHighValueSync();
+  return result;
+}
 
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
@@ -79,25 +85,27 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
     });
   }
   if (command === NATIVE_COMMANDS.saveNodeReadingState) {
-    return saveNodeReadingState({
+    return completeHighValueWrite(saveNodeReadingState({
       nodeId: asString(args.nodeId, 'nodeId'),
       reading: args.reading as Parameters<typeof saveNodeReadingState>[0]['reading'],
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
-    });
+    }));
   }
   if (command === NATIVE_COMMANDS.saveNodeReviewState) {
-    return saveNodeReviewState({
+    return completeHighValueWrite(saveNodeReviewState({
       nodeId: asString(args.nodeId, 'nodeId'),
       review: args.review as Parameters<typeof saveNodeReviewState>[0]['review'],
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
-    });
+    }));
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {
     applyReviewGrade(parseApplyReviewGradeArgs(args));
+    void requestDesktopHighValueSync();
     return null;
   }
   if (command === NATIVE_COMMANDS.relearnNode) {
     resetNodeReviewState(asString(args.nodeId, 'nodeId'));
+    void requestDesktopHighValueSync();
     return null;
   }
   return undefined;

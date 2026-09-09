@@ -4,6 +4,7 @@ type MutationListener = () => void;
 
 let mutationRevision = 0;
 const mutationListeners = new Set<MutationListener>();
+const highValueMutationListeners = new Set<MutationListener>();
 
 export function getCompanionSyncMutationRevision() {
   return mutationRevision;
@@ -14,9 +15,25 @@ export function subscribeCompanionSyncMutationRevision(listener: MutationListene
   return () => mutationListeners.delete(listener);
 }
 
+export function subscribeCompanionHighValueMutation(listener: MutationListener) {
+  highValueMutationListeners.add(listener);
+  return () => highValueMutationListeners.delete(listener);
+}
+
 export function publishCompanionSyncMutationRevision() {
   mutationRevision += 1;
   for (const listener of mutationListeners) {
+    try {
+      listener();
+    } catch {
+      // A committed native write must not be reported as failed by an observer.
+    }
+  }
+}
+
+export function publishCompanionHighValueMutation() {
+  publishCompanionSyncMutationRevision();
+  for (const listener of highValueMutationListeners) {
     try {
       listener();
     } catch {
@@ -34,5 +51,17 @@ export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
 export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promise<T | null>) {
   const result = await runCompanionSyncWriterTask(task);
   if (result !== null) publishCompanionSyncMutationRevision();
+  return result;
+}
+
+export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>) {
+  const result = await runCompanionSyncWriterTask(task);
+  publishCompanionHighValueMutation();
+  return result;
+}
+
+export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>) {
+  const result = await runCompanionSyncWriterTask(task);
+  if (result !== null) publishCompanionHighValueMutation();
   return result;
 }

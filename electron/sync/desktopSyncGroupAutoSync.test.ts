@@ -37,6 +37,7 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
 vi.mock('./desktopSyncCoordinator.js', () => ({
+  loadActiveDesktopSyncRun: () => null,
   runDesktopSyncCoordinator: runtime.continueSync
 }));
 
@@ -80,7 +81,7 @@ it('discovers a transient route for manual sync while automatic sync is disabled
   runtime.participating = false;
   const manual = runDesktopManualSyncWithDiscovery();
   runtime.onService?.({ kind: 'found', service: service() });
-  await vi.runAllTimersAsync();
+  await vi.advanceTimersByTimeAsync(1_000);
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
   expect(runtime.continueSync).toHaveBeenCalledWith('manual', expect.objectContaining({
@@ -96,7 +97,7 @@ it('starts on-demand discovery when automatic discovery has no cached route', as
   startDesktopSyncGroupAutoSync();
   const manual = runDesktopManualSyncWithDiscovery();
   runtime.onService?.({ kind: 'found', service: service() });
-  await vi.runAllTimersAsync();
+  await vi.advanceTimersByTimeAsync(1_000);
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
   expect(runtime.start).toHaveBeenCalledTimes(2);
@@ -116,7 +117,7 @@ it('syncs every same-group Device discovered during one manual action', async ()
   const manual = runDesktopManualSyncWithDiscovery();
   runtime.onService?.({ kind: 'found', service: service() });
   runtime.onService?.({ kind: 'found', service: mobileService({ provider_device_id: 'ios-c' }) });
-  await vi.runAllTimersAsync();
+  await vi.advanceTimersByTimeAsync(1_000);
 
   await expect(manual).resolves.toEqual({ complete: true, cursor: 9 });
   expect(runtime.continueSync).toHaveBeenCalledTimes(2);

@@ -39,4 +39,17 @@ describe('companion sync run handles', () => {
     expect(next).toMatchObject({ mode: 'owned', runId: 'run-next' });
     await expect(next.completion).resolves.toBe('next');
   });
+
+  it('keeps one member-wide owner across different peer endpoints', async () => {
+    const work = deferred<string>();
+    const owner = runCompanionSyncAsOwner('http://desktop-a:38641', 'run-owner', () => work.promise);
+    const joined = runCompanionSyncAsOwner(
+      'http://desktop-b:38641', 'run-unused', async () => 'must-not-run'
+    );
+
+    expect(joined).toMatchObject({ mode: 'joined', runId: 'run-owner' });
+    work.resolve('completed');
+    await expect(owner.completion).resolves.toBe('completed');
+    await expect(joined.completion).resolves.toBe('completed');
+  });
 });

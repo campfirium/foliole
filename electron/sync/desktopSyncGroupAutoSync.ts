@@ -6,6 +6,7 @@ import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndp
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
 import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
+import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import {
   isCurrentGroupPeerService,
@@ -71,6 +72,7 @@ export function startDesktopSyncGroupAutoSync() {
       if (kind === 'lost') {
         const deviceId = readSyncGroupServiceDeviceId(service);
         if (deviceId) removeDesktopSyncGroupRoute(deviceId);
+        updateDesktopSyncFreshness(loadDesktopSyncGroupRoutes(localGroup?.group_id ?? '').length > 0);
         return;
       }
       logDesktopDnsSdDiagnostic('route_candidate', {
@@ -91,6 +93,7 @@ export function stopDesktopSyncGroupAutoSync() {
   manualSettleTimer = null;
   retryAfterFlight.clear();
   clearDesktopSyncGroupRoutes();
+  updateDesktopSyncFreshness(false);
 }
 
 export function runDesktopManualSyncWithDiscovery() {
@@ -143,7 +146,10 @@ async function continueManualRun(peers: AvailablePeer[]) {
     }
     return result;
   } finally {
-    if (ownsRoute) peers.forEach((peer) => removeDesktopSyncGroupRoute(peer.peerDeviceId));
+    if (ownsRoute) {
+      peers.forEach((peer) => removeDesktopSyncGroupRoute(peer.peerDeviceId));
+      updateDesktopSyncFreshness(false);
+    }
   }
 }
 
@@ -182,10 +188,12 @@ async function syncAcrossAvailableEndpoints(
     const peer = resolveDiscoveredPeer(group, args, endpoint);
     if (!peer) return;
     saveDesktopSyncGroupRoute(peer);
+    updateDesktopSyncFreshness(true);
     try {
       return await runDesktopSyncCoordinator(reason, peer);
     } catch (error) {
       removeDesktopSyncGroupRoute(peer.peer_device_id);
+      updateDesktopSyncFreshness(loadDesktopSyncGroupRoutes(group.group_id).length > 0);
       lastError = error;
     }
   }

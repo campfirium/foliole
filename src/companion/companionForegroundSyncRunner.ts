@@ -11,7 +11,8 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
-export type ForegroundSyncReason = 'endpoint-ready' | 'foreground' | 'retry' | 'service-hint';
+export type ForegroundSyncReason =
+  | 'endpoint-ready' | 'foreground' | 'freshness' | 'mutation' | 'retry' | 'service-hint';
 export type CompanionSyncContinuationMode = 'full' | 'resources-only';
 const FOREGROUND_DUPLICATE_EVENT_WINDOW_MS = 1_000;
 const AUTO_SYNC_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000] as const;
@@ -113,7 +114,7 @@ function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: Foreg
     args.lastForegroundAtRef.current = now;
   }
   return shouldRunForegroundAutoSyncCheck({
-    force: reason === 'foreground' || reason === 'retry' || reason === 'service-hint',
+    force: reason !== 'endpoint-ready',
     isNativeRuntime: isAvailableNativeCompanionRuntime(),
     lastCheckedAt: args.lastCheckedAtRef.current,
     now
@@ -129,7 +130,7 @@ function startForegroundSync(
 ) {
   let retryOutcome: Exclude<ForegroundAutoSyncOutcome, 'completed' | 'skipped'> | null = null;
   args.inFlightRef.current = true;
-  void args.tryForegroundAutoSync({
+  const work = args.tryForegroundAutoSync({
     cancelled: args.cancelled,
     continuationMode: reason === 'retry' ? args.resourceContinuationModeRef.current : 'full',
     onContinuationModeChange: (mode) => {
@@ -176,6 +177,7 @@ function startForegroundSync(
         runForegroundSyncCheck('service-hint', pendingServiceHint);
       } else if (retryOutcome) scheduleRetry(args, runForegroundSyncCheck, retryOutcome);
     });
+  return work;
 }
 
 export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
@@ -183,13 +185,13 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
     if (args.inFlightRef.current) {
       if (reason === 'service-hint' && endpointUrl) args.pendingServiceHintRef.current.add(endpointUrl);
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'backlog');
-      return;
+      return null;
     }
     const now = Date.now();
-    if (!shouldStartForegroundSync(args, reason, now)) return;
+    if (!shouldStartForegroundSync(args, reason, now)) return null;
     if (reason !== 'retry') clearRetryTimer(args.retryTimerRef);
     args.lastCheckedAtRef.current = now;
-    startForegroundSync(args, runForegroundSyncCheck, reason, endpointUrl, args.stateRef.current);
+    return startForegroundSync(args, runForegroundSyncCheck, reason, endpointUrl, args.stateRef.current);
   };
 
   return runForegroundSyncCheck;

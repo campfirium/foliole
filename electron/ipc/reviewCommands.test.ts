@@ -6,6 +6,8 @@ import { handleInvokeRequest } from './commands.js';
 import { reviewGrade, reviewPreview } from './review.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
+const requestDesktopHighValueSync = vi.hoisted(() => vi.fn());
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -47,6 +49,7 @@ vi.mock('./review.js', () => ({
 vi.mock('./workspaceContentChangedEvents.js', () => ({
   notifyWorkspaceContentChanged: vi.fn()
 }));
+vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -122,5 +125,6 @@ it('does not broadcast workspace content changed after review grading', async ()
   await handleInvokeRequest({ command: 'review_grade', args: reviewArgs() });
 
   expect(reviewGrade).toHaveBeenCalledTimes(1);
+  expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
   expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
 });

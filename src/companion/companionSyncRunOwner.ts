@@ -13,19 +13,18 @@ export type CompanionSyncRunHandle<T> = {
   runId: string;
 };
 
-const activeSyncRuns = new Map<string, ActiveSyncRun>();
+let activeSyncRun: ActiveSyncRun | null = null;
 
-function syncRunKey(endpointUrl: string) {
-  return endpointUrl.trim();
+export function loadActiveCompanionSyncRun() {
+  return activeSyncRun;
 }
 
 export function runCompanionSyncAsOwner<T>(
-  endpointUrl: string,
+  _endpointUrl: string,
   runId: string,
   work: () => Promise<T>
 ): CompanionSyncRunHandle<T> {
-  const key = syncRunKey(endpointUrl);
-  const activeRun = activeSyncRuns.get(key);
+  const activeRun = activeSyncRun;
   if (activeRun) {
     return { completion: activeRun.completion, mode: 'joined', runId: activeRun.runId };
   }
@@ -36,11 +35,9 @@ export function runCompanionSyncAsOwner<T>(
     rejectRun = reject;
   });
   const active: ActiveSyncRun = { completion, runId };
-  activeSyncRuns.set(key, active);
+  activeSyncRun = active;
   const release = () => {
-    if (activeSyncRuns.get(key) === active) {
-      activeSyncRuns.delete(key);
-    }
+    if (activeSyncRun === active) activeSyncRun = null;
   };
   void Promise.resolve().then(work).then(resolveRun, rejectRun);
   void completion.then(release, release);

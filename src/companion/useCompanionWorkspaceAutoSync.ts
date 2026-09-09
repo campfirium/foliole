@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 
+import { createMemberSyncCadence, type MemberSyncCadence } from '../../lib/core/sync/memberSyncCadence';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
   readNativeAppActiveState,
   subscribeNativeAppBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
+import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { subscribeCompanionSyncGroupServiceHint } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
@@ -19,6 +21,7 @@ import {
   type ForegroundSyncRefs,
   type TryForegroundAutoSync
 } from './companionForegroundSyncRunner';
+import { loadActiveCompanionSyncRun } from './companionSyncRunOwner';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanionWorkspaceSyncState) {
@@ -56,6 +59,7 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
 
 function subscribeForegroundSyncEvents(
   refs: ForegroundSyncRefs,
+  cadence: MemberSyncCadence<ForegroundSyncReason>,
   run: (reason: ForegroundSyncReason, endpointUrl?: string) => void,
   cancelled: () => boolean
 ) {
@@ -68,11 +72,20 @@ function subscribeForegroundSyncEvents(
   void keep(subscribeCompanionSyncGroupServiceHint((hint) => run('service-hint', hint.endpoint_url)));
   void keep(subscribeNativeAppForeground(() => {
     refs.isAppActiveRef.current = true;
+    cadence.updateFreshness({
+      eligible: refs.isSyncGroupReadyRef.current
+        && Boolean(resolveCompanionWorkspaceSyncEndpoint(refs.stateRef.current)),
+      input: 'freshness'
+    });
     run('foreground');
   }));
   void keep(subscribeNativeAppBackground(() => {
     refs.isAppActiveRef.current = false;
+    cadence.updateFreshness({ eligible: false, input: null });
     clearRetryTimer(refs.retryTimerRef);
+  }));
+  unsubscribers.push(subscribeCompanionHighValueMutation(() => {
+    void cadence.requestMutation('mutation');
   }));
   return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
 }
@@ -89,8 +102,9 @@ export function useForegroundAutoSync(
 ) {
   const refs = useForegroundSyncRefs(isSyncGroupReady, state);
   const runForegroundSyncCheckRef = useRef<
-    (reason: ForegroundSyncReason, endpointUrl?: string) => void
+    (reason: ForegroundSyncReason, endpointUrl?: string) => unknown
   >(() => undefined);
+  const cadenceRef = useRef<MemberSyncCadence<ForegroundSyncReason> | null>(null);
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(state);
 
   useEffect(() => {
@@ -109,14 +123,30 @@ export function useForegroundAutoSync(
       setStatus,
       tryForegroundAutoSync
     });
+    const cadence = createMemberSyncCadence<ForegroundSyncReason>({
+      getActiveRun: () => loadActiveCompanionSyncRun()?.completion ?? null,
+      run: (reason) => runForegroundSyncCheck(reason)
+    });
+    cadenceRef.current = cadence;
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
 
     runForegroundSyncCheck('endpoint-ready');
-    const unsubscribe = subscribeForegroundSyncEvents(refs, runForegroundSyncCheck, () => cancelled);
+    const unsubscribe = subscribeForegroundSyncEvents(refs, cadence, runForegroundSyncCheck, () => cancelled);
     return () => {
       cancelled = true;
+      cadence.stop();
+      if (cadenceRef.current === cadence) cadenceRef.current = null;
       clearRetryTimer(refs.retryTimerRef);
       unsubscribe();
     };
   }, [refs, setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
+
+  useEffect(() => {
+    const lastActualSyncAt = state.last_synced_at ? Date.parse(state.last_synced_at) : undefined;
+    cadenceRef.current?.updateFreshness({
+      eligible: isSyncGroupReady && refs.isAppActiveRef.current && Boolean(endpointUrl),
+      input: 'freshness',
+      ...(lastActualSyncAt !== undefined && Number.isFinite(lastActualSyncAt) ? { lastActualSyncAt } : {})
+    });
+  }, [endpointUrl, isSyncGroupReady, refs, state.last_synced_at]);
 }

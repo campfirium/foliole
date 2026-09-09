@@ -6,7 +6,7 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
-import { runCompanionSyncOptionalMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
   applyCompanionLocalNodeVersions,
   applyCompanionSyncNodeVersionsWithinWriterTask,
@@ -134,7 +134,7 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
 }
 
 async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
-  return runCompanionSyncOptionalMutationTask(async () => {
+  return runCompanionOptionalHighValueMutationTask(async () => {
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
     if (!draft) return null;

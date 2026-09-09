@@ -2,7 +2,9 @@ import { expect, it, vi } from 'vitest';
 
 import {
   getCompanionSyncMutationRevision,
+  runCompanionHighValueMutationTask,
   runCompanionSyncMutationTask,
+  subscribeCompanionHighValueMutation,
   subscribeCompanionSyncMutationRevision
 } from './companionSyncMutationRevision';
 
@@ -29,5 +31,18 @@ it('does not turn an observer error into a failed committed mutation', async () 
   });
 
   await expect(runCompanionSyncMutationTask(async () => 'saved')).resolves.toBe('saved');
+  unsubscribe();
+});
+
+it('publishes a high-value trigger only after its permanent write succeeds', async () => {
+  const listener = vi.fn();
+  const unsubscribe = subscribeCompanionHighValueMutation(listener);
+
+  await runCompanionHighValueMutationTask(async () => 'saved');
+  await expect(runCompanionHighValueMutationTask(async () => {
+    throw new Error('write failed');
+  })).rejects.toThrow('write failed');
+
+  expect(listener).toHaveBeenCalledOnce();
   unsubscribe();
 });

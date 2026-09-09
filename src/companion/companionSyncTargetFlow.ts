@@ -93,15 +93,9 @@ export async function tryForegroundAutoSyncTarget(
   runStreamSync: RunCompanionStreamSync
 ) {
   const runId = syncArgs.runId ?? createCompanionSyncRunId();
-  while (!syncArgs.cancelled()) {
-    const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
-      runId, target, runStreamSync, syncArgs
-    }));
-    if (run.mode === 'owned') return run.completion;
-    if (syncArgs.triggerReason !== 'manual') {
-      return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
-    }
-    await run.completion.catch(() => undefined);
-  }
-  return 'skipped';
+  if (syncArgs.cancelled()) return 'skipped';
+  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
+    runId, target, runStreamSync, syncArgs
+  }));
+  return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
 }

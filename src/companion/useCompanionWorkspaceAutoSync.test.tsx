@@ -1,22 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-function createSyncState(endpointUrl: string | null) {
-  return {
-    endpoint_url: endpointUrl,
-    last_synced_at: endpointUrl ? '2026-04-22T12:00:00.000Z' : null,
-    remembered_targets: endpointUrl ? [endpointUrl] : [],
-    sync_events: [],
-    sync_onboarding_status: 'completed' as const,
-    workspace_snapshot: null
-  };
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
-}
+import { createSyncState, deferred } from './useCompanionWorkspaceAutoSync.testSupport';
 
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
@@ -29,6 +14,7 @@ async function renderAutoSyncHook(
     isAvailableNativeCompanionRuntime: () => isNativeRuntime,
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
+  const backgroundHandlers: Array<() => void> = [];
   const foregroundHandlers: Array<() => void> = [];
   const serviceHintHandlers: Array<(hint: { endpoint_url: string }) => void> = [];
   vi.doMock('../shared/platform/companion/sync/syncGroupProvider', () => ({
@@ -46,7 +32,10 @@ async function renderAutoSyncHook(
   });
   vi.doMock('../shared/platform/appLifecycle', () => ({
     readNativeAppActiveState: vi.fn(async () => true),
-    subscribeNativeAppBackground: vi.fn(async () => vi.fn()),
+    subscribeNativeAppBackground: vi.fn(async (handler: () => void) => {
+      backgroundHandlers.push(handler);
+      return vi.fn();
+    }),
     subscribeNativeAppForeground
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
@@ -54,7 +43,7 @@ async function renderAutoSyncHook(
     useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
     { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
-  return { foregroundHandlers, hook, serviceHintHandlers, setStatus, subscribeNativeAppForeground,
+  return { backgroundHandlers, foregroundHandlers, hook, serviceHintHandlers, setStatus, subscribeNativeAppForeground,
     tryForegroundAutoSync };
 }
 
@@ -151,7 +140,7 @@ async function expectBacklogKeepsVisibleSyncingUntilContinuationCompletes() {
   expect(setStatus).toHaveBeenLastCalledWith('idle');
 }
 
-async function expectSkippedPassDoesNotRetry() {
+async function expectSkippedPassWaitsForFreshness() {
   vi.useFakeTimers();
   vi.spyOn(Date, 'now').mockReturnValue(1_000);
   const tryForegroundAutoSync = vi.fn(async () => 'skipped' as const);
@@ -164,7 +153,7 @@ async function expectSkippedPassDoesNotRetry() {
     await vi.advanceTimersByTimeAsync(60_000);
   });
 
-  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
 }
 
 async function expectWaitsForNativePairing() {
@@ -313,5 +302,5 @@ describe('useForegroundAutoSync retry cadence', () => {
 
   it('keeps backlog continuation visibly syncing until the retry completes', expectBacklogKeepsVisibleSyncingUntilContinuationCompletes);
 
-  it('does not keep retrying a skipped pass with idle visible backlog', expectSkippedPassDoesNotRetry);
+  it('waits for the one-minute freshness request after a skipped pass', expectSkippedPassWaitsForFreshness);
 });

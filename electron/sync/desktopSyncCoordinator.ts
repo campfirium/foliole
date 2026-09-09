@@ -14,6 +14,10 @@ import {
 const RESULT_SETTING_KEY = 'sync_group_last_trigger_result';
 let activeRun: Promise<SyncTriggerResult> | null = null;
 
+export function loadActiveDesktopSyncRun() {
+  return activeRun;
+}
+
 export function loadDesktopSyncTriggerResult() {
   return loadJsonSetting(RESULT_SETTING_KEY) as SyncTriggerResult | null;
 }
