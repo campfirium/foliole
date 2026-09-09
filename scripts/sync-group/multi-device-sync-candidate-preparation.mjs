@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
+import { removeA5AcceptanceApplication } from '../android/macos-a5-acceptance-package-cleanup.mjs';
 import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import {
   MULTI_DEVICE_ANDROID_APP_ID, multiDeviceAndroidEnv
@@ -35,12 +36,16 @@ async function prepareAndroid(execute, paths, repoRoot, progress, signal, assert
     repoRoot, 12 * 60_000, signal, { env: multiDeviceAndroidEnv() });
   progress('candidate-android-built');
   assertFrozen();
-  await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', MULTI_DEVICE_ANDROID_APP_ID], repoRoot,
-    60_000, signal).catch((error) => {
-    if (!/not installed|unknown package/iu.test(`${error.stdout || ''}${error.stderr || ''}`)) {
-      throw error;
+  const cleanupExecute = async (command, args, options = {}) => {
+    try {
+      const result = await execute(command, args, repoRoot, options.timeoutMs, signal);
+      return { code: 0, output: `${result.stdout || ''}${result.stderr || ''}`, ...result };
+    } catch (error) {
+      return { code: Number.isInteger(error.code) ? error.code : 1,
+        output: `${error.stdout || ''}${error.stderr || ''}` };
     }
-  });
+  };
+  await removeA5AcceptanceApplication({ execute: cleanupExecute, paths, serial: A5_SERIAL });
   await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], repoRoot,
     5 * 60_000, signal);
   progress('candidate-android-installed');
