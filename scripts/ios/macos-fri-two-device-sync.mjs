@@ -125,7 +125,6 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-fork' });
     if (conflictFork.code !== 0) throw new Error('Fri conflict fork XCUITest failed.');
-    releaseGate.release('consumer_complete');
     const conflictPublish = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
       '--artifacts-dir', path.join(friRoot, 'conflict-publish'),
@@ -136,6 +135,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-publish' });
     if (conflictPublish.code !== 0) throw new Error('Fri conflict publish XCUITest failed.');
+    releaseGate.release('consumer_complete');
     await signals.waitFor('automatic-converged', 5 * 60_000);
     const conflictPull = await execute('bash', [FRI_RUNNER,
       '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',

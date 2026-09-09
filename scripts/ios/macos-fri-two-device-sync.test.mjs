@@ -74,3 +74,10 @@ it('requires both concurrent parents behind the Fri converged version', () => {
     versionId: 'merged'
   });
 });
+
+it('publishes the Fri fork before releasing the Mac fork', () => {
+  const source = fs.readFileSync('scripts/ios/macos-fri-two-device-sync.mjs', 'utf8');
+
+  expect(source.indexOf("if (conflictPublish.code !== 0)"))
+    .toBeLessThan(source.indexOf("releaseGate.release('consumer_complete')"));
+});
