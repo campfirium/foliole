@@ -75,9 +75,11 @@ it('requires both concurrent parents behind the Fri converged version', () => {
   });
 });
 
-it('publishes the Fri fork before releasing the Mac fork', () => {
+it('resumes the Mac anchor before Fri publishes without making the anchor poll Fri', () => {
   const source = fs.readFileSync('scripts/ios/macos-fri-two-device-sync.mjs', 'utf8');
+  const provider = fs.readFileSync('scripts/ios/fri-sync-group-provider.mjs', 'utf8');
 
-  expect(source.indexOf("if (conflictPublish.code !== 0)"))
-    .toBeLessThan(source.indexOf("releaseGate.release('consumer_complete')"));
+  expect(source.indexOf("releaseGate.release('consumer_complete')"))
+    .toBeLessThan(source.indexOf("const conflictPublish = await execute"));
+  expect(provider).not.toContain("session.invoke('sync_companion_now')");
 });

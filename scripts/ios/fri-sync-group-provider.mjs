@@ -135,9 +135,6 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       console.log('[fri-sync-group-provider] conflict-fork-ready');
       await runStage('wait-for-concurrent-release', waitForRelease, 15 * 60_000);
       await runStage('resume-macos-sync', () => session.invoke('resume_companion_sync'));
-      const manualBeforeRestart = await runStage(
-        'publish-macos-fork', () => session.invoke('sync_companion_now')
-      );
       conflict = await runStage('load-converged-conflict', () => (
         loadConvergedDesktopSyncForks({ nodeId: conflictSeed.nodeId, session })
       ));
@@ -154,9 +151,6 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       await runStage('wait-for-anchor-after-restart', () => (
         observeMacosAnchorAfterElection(session)
       ));
-      const manualAfterRestart = await runStage(
-        'sync-after-macos-restart', () => session.invoke('sync_companion_now')
-      );
       const afterRestart = await runStage('load-after-macos-restart', () => (
         session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false })
       ));
@@ -166,7 +160,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       macosRestarted = true;
       idempotent = true;
       runs = { automaticAfterRestart: null, automaticBeforeRestart: null,
-        manualAfterRestart, manualBeforeRestart };
+        manualAfterRestart: null, manualBeforeRestart: null };
     }
     const converged = { acceptedDeviceName: request.device_name,
       acceptedRequestId: request.request_id, deviceCount: accepted.sync_group.devices.length,
