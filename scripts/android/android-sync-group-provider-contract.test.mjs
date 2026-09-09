@@ -12,13 +12,14 @@ const readJava = (name) => readFile(path.join(javaRoot, name), 'utf8');
 
 it('serves one active Group/Device provider surface on the stable LAN port', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
-  expect(server).toContain('private static final int SYNC_PORT = 38641;');
+  expect(server).toContain('private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;');
   for (const route of [
     '/companion/discovery', '/sync-group/join-requests', '/sync-group/join-acceptance',
     '/companion/sync-pack', '/companion/content-blobs', '/companion/content-blob',
     '/companion/attachment-resource'
   ]) expect(server).toContain(`path.equals("${route}")`);
   expect(server).not.toMatch(/pairing|member|authorization_id|timeline_id/iu);
+  expect(server).toMatch(/joins\.receive[\s\S]*stateChanged\.run\(\)/u);
 });
 
 it('authenticates provider reads with the group key and an active Device fact', async () => {

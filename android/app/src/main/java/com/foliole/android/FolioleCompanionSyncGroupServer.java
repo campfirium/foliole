@@ -20,14 +20,15 @@ final class FolioleCompanionSyncGroupServer {
     private final FolioleCompanionJoinRequestProvider joins;
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
+    private final Runnable stateChanged;
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
         Context context, JSONObject config, FolioleCompanionJoinRequestProvider joins,
-        FolioleCompanionSyncGroupDataBridge dataBridge
+        FolioleCompanionSyncGroupDataBridge dataBridge, Runnable stateChanged
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config;
-        this.joins = joins; this.dataBridge = dataBridge;
+        this.joins = joins; this.dataBridge = dataBridge; this.stateChanged = stateChanged;
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
@@ -92,7 +93,7 @@ final class FolioleCompanionSyncGroupServer {
 
     private void createJoin(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         JSONObject result = joins.receive(new JSONObject(request.bodyText()), System.currentTimeMillis());
-        FolioleCompanionSyncGroupProvider.state();
+        stateChanged.run();
         FolioleCompanionHttpResponse.json(output, 202, result);
     }
 

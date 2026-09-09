@@ -114,7 +114,9 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void startRuntime() throws Exception {
-        server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinProvider, dataBridge);
+        server = new FolioleCompanionSyncGroupServer(
+            activeContext, activeConfig, joinProvider, dataBridge, stateListener
+        );
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
 
