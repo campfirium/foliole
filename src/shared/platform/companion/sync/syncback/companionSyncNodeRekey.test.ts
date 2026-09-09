@@ -4,15 +4,19 @@ import type { DbParams, DbPort, DbRow } from '../../../../../../lib/core/sync/db
 
 import { rekeyNodeObject } from './companionSyncNodeRekey';
 
-it('rekeys version snapshots without requiring SQLite JSON functions', async () => {
+it('creates a canonical branch head without rewriting shared version history', async () => {
   const port = new RecordingPort();
 
-  await rekeyNodeObject(port, 'highlight-1', 'highlight-1~canonical');
+  await rekeyNodeObject(
+    port, 'highlight-1', 'highlight-1~canonical', 'android#1', 'ver_canonical'
+  );
 
-  expect(port.runs).toContainEqual([
-    'UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?',
-    [JSON.stringify({ id: 'highlight-1~canonical', title: 'Selection' }), 'android#1']
-  ]);
+  expect(port.runs.some(([sql, params]) => sql.startsWith('INSERT INTO node_sync_versions (')
+    && params[0] === 'ver_canonical'
+    && params[1] === 'highlight-1~canonical'
+    && params.at(-1) === JSON.stringify({ id: 'highlight-1~canonical', title: 'Selection' })))
+    .toBe(true);
+  expect(port.runs.some(([sql]) => sql.startsWith('UPDATE node_sync_versions SET'))).toBe(false);
   expect(port.runs.some(([sql]) => sql.includes('json_'))).toBe(false);
   expect(port.runs.at(-1)).toEqual([
     'DELETE FROM nodes WHERE id = ?',
@@ -27,10 +31,13 @@ class RecordingPort implements DbPort {
     if (sql === 'PRAGMA table_info(nodes)') {
       return [{ name: 'id' }, { name: 'title' }] as unknown as T[];
     }
-    if (sql.startsWith('SELECT version_id, snapshot_json')) {
+    if (sql.startsWith('SELECT host_name, created_at')) {
       return [{
+        body_text: 'Selection',
+        content_hash: 'hash-1',
+        created_at: '2026-09-09T00:00:00.000Z',
+        host_name: 'A5',
         snapshot_json: JSON.stringify({ id: 'highlight-1', title: 'Selection' }),
-        version_id: 'android#1'
       }] as unknown as T[];
     }
     return [];

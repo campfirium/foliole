@@ -110,7 +110,11 @@ it('preserves both additive objects under a stable canonical id', async () => {
   const canonicalId = first.acks[0]?.canonicalObjectId;
 
   expect(canonicalId).toMatch(/^highlight-1~[0-9a-f]{12}$/u);
-  expect(first.acks).toMatchObject([{ status: 'accepted', versionId: 'ios#remote' }]);
+  expect(first.acks).toMatchObject([{
+    canonicalVersionId: `ver_${canonicalId?.split('~')[1]}`,
+    status: 'accepted',
+    versionId: 'ios#remote'
+  }]);
   expect(openDatabaseConnection().driver.queryAll<{ anchor_link: string; id: string }>(
     `SELECT id, anchor_link FROM nodes WHERE id LIKE 'highlight-1%' ORDER BY id`
   )).toEqual([

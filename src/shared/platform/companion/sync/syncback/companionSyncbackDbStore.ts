@@ -163,7 +163,12 @@ async function savePushAcks(port: DbPort, peerId: string, acks: SyncPushAck[]) {
       if (!isValidAck(ack)) continue;
       if (ack.identity.objectType === 'node' && ack.canonicalObjectId
         && ack.canonicalObjectId !== ack.identity.objectId) {
-        await rekeyNodeObject(tx, ack.identity.objectId, ack.canonicalObjectId);
+        if (!ack.versionId || !ack.canonicalVersionId) {
+          throw new Error('canonical_node_version_identity_missing');
+        }
+        await rekeyNodeObject(
+          tx, ack.identity.objectId, ack.canonicalObjectId, ack.versionId, ack.canonicalVersionId
+        );
       }
       saved.push(...await savePeerPushAcksWithinTransaction(tx, peerId, [ack]));
     }

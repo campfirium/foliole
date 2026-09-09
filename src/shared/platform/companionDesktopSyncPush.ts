@@ -32,6 +32,7 @@ export interface CompanionDesktopSyncPushResult {
 interface DesktopSyncPushResponse {
   acks: Array<{
     canonical_object_id?: string;
+    canonical_version_id?: string;
     client_op_id: string;
     conflict_reason?: string;
     identity: SyncPushAck['identity'];
@@ -69,6 +70,7 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
   }
   return {
     ...(raw.canonical_object_id !== undefined ? { canonicalObjectId: raw.canonical_object_id } : {}),
+    ...(raw.canonical_version_id !== undefined ? { canonicalVersionId: raw.canonical_version_id } : {}),
     clientOpId: raw.client_op_id,
     ...(raw.conflict_reason !== undefined ? { conflictReason: raw.conflict_reason } : {}),
     identity: raw.identity,

@@ -36,6 +36,7 @@ export interface SyncPushPayload {
 
 export interface SyncPushAck {
   canonicalObjectId?: string;
+  canonicalVersionId?: string;
   clientOpId: string;
   conflictReason?: string;
   desktopBase?: SyncBaseReference;
