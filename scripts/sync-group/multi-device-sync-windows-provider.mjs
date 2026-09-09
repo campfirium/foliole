@@ -159,9 +159,13 @@ export function startWindowsSyncGroupProvider({
       }
     }, timeoutMs: spec.timeoutMs ?? 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
-  let releaseSent = false;
+  let releaseCount = 0;
+  const releaseLimit = action === 'two-device-sync-provider' ? 2 : 1;
   const release = async (status) => {
-    if (releaseSent) return;
+    if (releaseCount >= releaseLimit) {
+      throw controllerFailure('Windows C provider release limit exceeded.',
+        'windows_provider_release_limit_exceeded');
+    }
     const releaseAction = WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS[status];
     if (!releaseAction) throw controllerFailure('Windows C provider release status is invalid.',
       'windows_provider_release_status_invalid');
@@ -170,7 +174,7 @@ export function startWindowsSyncGroupProvider({
       });
     if (released.code !== 0) throw controllerFailure('Windows C provider release action failed.',
       'windows_provider_release_action_failed');
-    releaseSent = true;
+    releaseCount += 1;
   };
   const finish = async () => {
     const result = await work;

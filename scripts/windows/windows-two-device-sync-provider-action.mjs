@@ -151,6 +151,8 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
       throw new Error('Windows anchor restart did not preserve the received union idempotently.');
     }
     report(options.reportProgress, 'restarted');
+    await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
+      repoRoot: options.paths.repoRoot });
   } finally {
     await closeWindowsSyncGroupSession(session);
   }

@@ -75,7 +75,7 @@ export function persistFriProjection(projection, evidenceRoot) {
 }
 
 export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, execute,
-  repoRoot, bundle, runnerArgs = [] }) {
+  repoRoot, bundle, desktopForkLabel, runnerArgs = [] }) {
   const result = await execute('bash', [FRI_RUNNER,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', evidenceRoot,
@@ -84,6 +84,7 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
     '--only-testing', 'AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests/testProjectsSyncEvents'
   ], { action: 'fri-sync-event-projection', cwd: repoRoot, env: { ...process.env,
     FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
+    ...(desktopForkLabel ? { FOLIOLE_T152_DESKTOP_FORK_LABEL: desktopForkLabel } : {}),
     FOLIOLE_T152_BUILD_IDENTITY: buildIdentity }, hardDeadlineMs: 30 * 60_000,
   host: 'ios-b', stage: 'fri-sync-event-projection' });
   if (result.code !== 0) throw new Error('Fri acceptance sync event projection failed.');

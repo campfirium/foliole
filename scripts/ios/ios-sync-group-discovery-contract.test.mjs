@@ -65,7 +65,9 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('"Pause Sync"');
   expect(physicalTest).toContain('"Resume Sync"');
   expect(physicalTest).toContain('verifyConvergedConflictForks(in: app)');
-  expect(physicalTest).toContain('"Fri conflict fork", "Desktop fork macos"');
+  expect(physicalTest).toContain('FOLIOLE_T152_DESKTOP_FORK_LABEL');
+  expect(physicalTest).toContain('"Desktop fork \\(twoDeviceDesktopForkLabel)"');
+  expect(physicalTest).toContain('verifyVisibleTwoDeviceConflict(in: app)');
   expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now"');
   expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');

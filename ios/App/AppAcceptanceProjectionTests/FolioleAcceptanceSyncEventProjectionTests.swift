@@ -24,7 +24,8 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
             try project($0, identity: identity)
         }
         let projection: [String: Any] = [
-            "build_identity": build, "conflict_versions": try conflictVersions(connection),
+            "build_identity": build,
+            "conflict_versions": try conflictVersions(connection, peer: desktopForkLabel()),
             "container_identity": bundle, "events": events
         ]
         let data = try JSONSerialization.data(withJSONObject: projection, options: [.prettyPrinted])
@@ -50,7 +51,11 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
         return String(cString: try XCTUnwrap(sqlite3_column_text(statement, 0)))
     }
 
-    private func conflictVersions(_ database: OpaquePointer?) throws -> [[String: Any]] {
+    private func desktopForkLabel() -> String {
+        ProcessInfo.processInfo.environment["FOLIOLE_T152_DESKTOP_FORK_LABEL"] ?? "macos"
+    }
+
+    private func conflictVersions(_ database: OpaquePointer?, peer: String) throws -> [[String: Any]] {
         let sql = """
             SELECT version.object_id, version.version_id, version.content_hash,
                    COALESCE(GROUP_CONCAT(parent.parent_version_id, CHAR(31)), ''),
@@ -76,9 +81,9 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
                 "content_hash": column(statement, 2),
                 "parents": column(statement, 3).split(separator: "\u{001f}").map(String.init),
                 "is_current": sqlite3_column_int(statement, 4) == 1,
-                "forks": ["fri", "macos"].filter {
+                "forks": ["fri", peer].filter {
                     $0 == "fri" ? body.contains("Fri conflict fork")
-                        : body.contains("Desktop fork macos")
+                        : body.contains("Desktop fork \(peer)")
                 }
             ])
             step = sqlite3_step(statement)

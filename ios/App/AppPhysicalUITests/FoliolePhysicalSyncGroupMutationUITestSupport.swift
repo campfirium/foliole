@@ -39,14 +39,23 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func verifyTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
-        verifyConvergedConflictForks(in: app)
+        if twoDeviceDesktopForkLabel == "windows" {
+            verifyVisibleTwoDeviceConflict(in: app)
+        } else {
+            verifyConvergedConflictForks(in: app)
+        }
 
         app.terminate()
         app.launch()
         openSyncSettings(in: app)
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its attempt Sync Group after relaunch.")
-        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        if twoDeviceDesktopForkLabel == "windows" {
+            XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
+                          "Fri did not retain the concurrent version after relaunch.")
+        } else {
+            tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        }
         openBrowse(in: app)
         waitForJourneyFacts(["A", "B"], in: app)
         attachScreenshot(named: "Fri-two-device-conflict-restored")
@@ -92,13 +101,23 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(topic.waitForExistence(timeout: 120),
                       "Fri did not retain the converged conflict topic.")
         topic.tap()
-        for text in ["Fri conflict fork", "Desktop fork macos"] {
+        for text in ["Fri conflict fork", "Desktop fork \(twoDeviceDesktopForkLabel)"] {
             let fork = app.staticTexts.matching(
                 NSPredicate(format: "label CONTAINS %@", text)
             ).firstMatch
             XCTAssertTrue(fork.waitForExistence(timeout: 120),
                           "Fri did not retain concurrent content: \(text)")
         }
+    }
+
+    func verifyVisibleTwoDeviceConflict(in app: XCUIApplication) {
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
+                      "Fri did not expose the retained concurrent version.")
+    }
+
+    var twoDeviceDesktopForkLabel: String {
+        ProcessInfo.processInfo.environment["FOLIOLE_T152_DESKTOP_FORK_LABEL"] ?? "macos"
     }
 
     func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {
