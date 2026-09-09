@@ -127,7 +127,8 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
   const session = await openMacosSyncGroupDesktopSession(sessionOptions);
   await session.enable();
   await prepareA5ForFreshJoin({ buildIdentity: runId, env, evidenceRoot, execute, paths });
-  const providerOverview = await observeMacosAnchorAfterElection(session);
+  await observeMacosAnchorAfterElection(session);
+  const providerOverview = await session.load();
   let journey;
   try { journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, session }),

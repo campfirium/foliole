@@ -7,8 +7,9 @@ import { pathToFileURL } from 'node:url';
 
 import {
   openMacosSyncGroupDesktopSession,
-  waitForMacosAutomaticRun, waitForMacosDeviceRequest
+  waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
+import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
 import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
@@ -81,8 +82,9 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
     }
     const conflictSeed = twoDevice ? await createDesktopSyncConflictSeed({
       evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session }) : null;
-    const beforeJoinRun = twoDevice ? await session.loadSyncTriggerResult() : null;
-    const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
+    await session.enable();
+    await observeMacosAnchorAfterElection(session);
+    const initial = assertMacosAcceptanceSyncGroupServer(await session.load());
     const initialOrigins = journeyOrigins(await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     }));
@@ -123,9 +125,6 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       const beforeRestart = await session.invoke('load_workspace_list_snapshot', {
         includePdfOpenings: false
       });
-      const automaticBeforeRestart = await runStage('wait-for-automatic-before-restart', () => (
-        waitForMacosAutomaticRun(session, beforeJoinRun?.run_id)
-      ));
       await runStage('pause-macos-sync', () => session.invoke('pause_companion_sync'));
       await runStage('fork-macos-conflict', () => (
         forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session })
@@ -152,8 +151,8 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       if (restarted.sync_group?.group_id !== accepted.sync_group.group_id) {
         throw new Error('Mac did not restore its Fri Sync Group.');
       }
-      const automaticAfterRestart = await runStage('wait-for-automatic-after-restart', () => (
-        waitForMacosAutomaticRun(session, manualBeforeRestart?.run_id)
+      await runStage('wait-for-anchor-after-restart', () => (
+        observeMacosAnchorAfterElection(session)
       ));
       const manualAfterRestart = await runStage(
         'sync-after-macos-restart', () => session.invoke('sync_companion_now')
@@ -166,7 +165,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       }
       macosRestarted = true;
       idempotent = true;
-      runs = { automaticAfterRestart, automaticBeforeRestart,
+      runs = { automaticAfterRestart: null, automaticBeforeRestart: null,
         manualAfterRestart, manualBeforeRestart };
     }
     const converged = { acceptedDeviceName: request.device_name,
