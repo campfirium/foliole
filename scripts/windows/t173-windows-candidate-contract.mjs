@@ -50,7 +50,10 @@ export function assertT173RuntimeIdentity(expected, actual) {
 }
 
 function git(exec, gitPath, repoRoot, args) {
-  return exec(gitPath, args, { cwd: repoRoot, encoding: 'utf8' }).trim();
+  const safeRoot = repoRoot.replaceAll('\\', '/');
+  return exec(gitPath, ['-c', `safe.directory=${safeRoot}`, ...args], {
+    cwd: repoRoot, encoding: 'utf8'
+  }).trim();
 }
 
 export function measureT173RuntimeIdentity({

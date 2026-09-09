@@ -20,8 +20,9 @@ it('binds prepared evidence to the compiled Electron entry', () => {
 
 it('measures the actual task-owned source root instead of trusting request fields', () => {
   const values = [`${'a'.repeat(40)}\n`, `${'b'.repeat(40)}\n`, 'sync\n', ''];
-  const exec = (_git, _args, options) => {
+  const exec = (_git, args, options) => {
     expect(options.cwd).toBe(T173_WINDOWS_REPO_ROOT);
+    expect(args.slice(0, 2)).toEqual(['-c', 'safe.directory=D:/C/foliole-sync']);
     return values.shift();
   };
   expect(measureT173RuntimeIdentity({ exec, gitPath: 'git.exe' })).toEqual(expected);
