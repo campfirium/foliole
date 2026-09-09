@@ -107,5 +107,8 @@ it('keeps the Mac provider available until the Fri consumer completes', () => {
   expect(provider).toContain('const signal = await waitForRelease();');
   expect(provider.indexOf('session.loadSyncTriggerResult()'))
     .toBeLessThan(provider.indexOf('session.enable()'));
+  expect(provider).toContain("FOLIOLE_T173_STANDALONE_PROVIDER === '1'");
+  expect(provider).toContain("for (const device of ['A', 'B', 'C'])");
+  expect(provider).toContain('standalone || twoDevice ? 2 : 4');
   expect(provider).not.toContain("twoDevice ? 'consumer_complete' : await waitForRelease()");
 });

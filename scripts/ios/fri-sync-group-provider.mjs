@@ -59,7 +59,7 @@ async function waitForJourneyOrigin(session, origin, count = 1, timeoutMs = 5 * 
 }
 
 export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
-  evidenceRoot, repoRoot = process.cwd(), twoDevice = false,
+  evidenceRoot, repoRoot = process.cwd(), standalone = false, twoDevice = false,
   abortSignal, onState = () => {}, waitForRelease = waitForStop }) {
   const openSession = () => openMacosSyncGroupDesktopSession({
     env: macosAcceptanceEnv(), libraryHome: path.join(acceptanceRoot, 'macos-library'), repoRoot,
@@ -73,6 +73,12 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
   try {
     const initialFact = twoDevice ? await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session }) : null;
+    if (standalone) {
+      for (const device of ['A', 'B', 'C']) {
+        await createDesktopSyncGroupJourneyFact({ device,
+          evidenceRoot: path.join(evidenceRoot, `macos-${device.toLowerCase()}-fact`), session });
+      }
+    }
     const conflictSeed = twoDevice ? await createDesktopSyncConflictSeed({
       evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session }) : null;
     const beforeJoinRun = twoDevice ? await session.loadSyncTriggerResult() : null;
@@ -94,7 +100,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
     ), 10 * 60_000);
     await runStage('accept-device-request', () => session.accept(request.request_id));
     const accepted = await runStage('wait-for-device-count', () => (
-      waitForDeviceCount(session, twoDevice ? 2 : 4)
+      waitForDeviceCount(session, standalone || twoDevice ? 2 : 4)
     ));
     const automaticFact = twoDevice ? await runStage('create-automatic-fact', () => (
       createDesktopSyncGroupJourneyFact({ device: 'A',
@@ -199,5 +205,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   await runFriSyncGroupProvider({ acceptanceRoot: acceptanceRoot
     ? path.resolve(acceptanceRoot) : path.resolve(evidenceRoot),
   evidenceRoot: path.resolve(evidenceRoot),
+  standalone: process.env.FOLIOLE_T173_STANDALONE_PROVIDER === '1',
   twoDevice: process.env.FOLIOLE_T152_TWO_DEVICE === '1' });
 }
