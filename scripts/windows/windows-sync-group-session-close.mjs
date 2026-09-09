@@ -33,7 +33,8 @@ export async function closeWindowsSyncGroupSession(session, {
     return { forced: true };
   }
   const graceful = Promise.resolve().then(() => session.app.close()).then(() => true, () => false);
-  if (await Promise.race([graceful, delay(timeoutMs).then(() => false)])) return { forced: false };
+  const closeReturned = await Promise.race([graceful, delay(timeoutMs).then(() => false)]);
+  if (closeReturned && hasExited(child)) return { forced: false };
   if (!hasExited(child)) await terminateTree(child, timeoutMs);
   return { forced: true };
 }
