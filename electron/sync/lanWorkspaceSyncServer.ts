@@ -16,6 +16,7 @@ import {
 import {
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
+import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
@@ -38,6 +39,13 @@ export interface LanWorkspaceSyncServerStatus {
   pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
+  topology_role: 'anchor' | 'member' | 'observing';
+  topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
+}
+
+function topologyStatus() {
+  const topology = loadDesktopAnchorTopologyState();
+  return { topology_role: topology.role, topology_status: topology.status };
 }
 
 let activeJoinRequestHandler: (() => void) | null = null;
@@ -48,7 +56,8 @@ let activeStatus: LanWorkspaceSyncServerStatus = {
   active_device_count: 0,
   pending_join_request_count: 0,
   port: null,
-  state: 'stopped'
+  state: 'stopped',
+  ...topologyStatus()
 };
 
 function resolveLatestGroupStatus() {
@@ -111,7 +120,8 @@ function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
     last_error: null,
     ...resolveLatestGroupStatus(),
     port,
-    state: 'running'
+    state: 'running',
+    ...topologyStatus()
   };
 }
 
@@ -175,7 +185,8 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
       active_device_count: 0,
       pending_join_request_count: 0,
       port: null,
-      state: 'failed'
+      state: 'failed',
+      ...topologyStatus()
     };
     console.error('[companion-sync] lan workspace sync server failed', error);
     return activeStatus;
@@ -191,7 +202,8 @@ export async function stopLanWorkspaceSyncServer() {
       active_device_count: 0,
       pending_join_request_count: 0,
       port: null,
-      state: 'stopped'
+      state: 'stopped',
+      ...topologyStatus()
     };
     return activeStatus;
   }
@@ -214,11 +226,12 @@ export async function stopLanWorkspaceSyncServer() {
     active_device_count: 0,
     pending_join_request_count: 0,
     port: null,
-    state: 'stopped'
+    state: 'stopped',
+    ...topologyStatus()
   };
   return activeStatus;
 }
 
 export function getLanWorkspaceSyncServerStatus() {
-  return refreshLanWorkspaceSyncServerJoinRequestStatus();
+  return { ...refreshLanWorkspaceSyncServerJoinRequestStatus(), ...topologyStatus() };
 }

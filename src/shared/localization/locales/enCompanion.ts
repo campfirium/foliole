@@ -165,6 +165,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.discovery.connect': 'Join',
   'companion.sync.discovery.connecting': 'Joining...',
   'companion.sync.discovery.incompatible': 'Update Foliole on both devices to connect.',
+  'companion.sync.discovery.waitingAnchor': 'Waiting for a desktop Sync anchor.',
   'companion.sync.discovery.permissionRequired': 'Allow Local Network access to find Sync Groups nearby.',
   'companion.sync.discovery.unavailable': 'Sync Group discovery is unavailable on this device or network.',
   'companion.sync.discovery.connectionFailed': 'A Sync Group was found, but Foliole could not connect to it.',

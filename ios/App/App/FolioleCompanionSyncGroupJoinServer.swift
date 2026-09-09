@@ -183,7 +183,7 @@ final class FolioleCompanionSyncGroupJoinServer {
             "min_supported_version": discovery["protocol_min_version"] as Any,
             "max_supported_version": discovery["protocol_max_version"] as Any,
             "capabilities": discovery["protocol_capabilities"] as Any]
-        for key in ["facts_revision", "protocol_version", "protocol_min_version",
+        for key in ["protocol_version", "protocol_min_version",
                     "protocol_max_version", "protocol_capabilities"] { result.removeValue(forKey: key) }
         return result
     }

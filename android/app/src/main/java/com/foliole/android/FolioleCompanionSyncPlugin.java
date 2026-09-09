@@ -15,14 +15,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
     private boolean lifecycleActive = true;
-    private FolioleCompanionNsdMonitor serviceMonitor;
 
     @Override public void load() {
         super.load();
         try {
             FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest);
-            serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
-            reconcileServiceMonitor();
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
         }
@@ -78,7 +75,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
                 getContext(), getActivity(), call, this, this::dispatchDataRequest,
                 this::dispatchProviderState, isParticipating()
             );
-            reconcileServiceMonitor();
             return result;
         });
     }
@@ -86,7 +82,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
         async(call, "Failed to stop Sync Group provider.", () -> {
             JSObject result = FolioleCompanionSyncGroupProvider.stop(this);
-            reconcileServiceMonitor();
             return withParticipation(result);
         });
     }
@@ -178,15 +173,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         getActivity().runOnUiThread(() -> notifyListeners(name, event));
     }
 
-    private void dispatchServiceHint(JSObject event) {
-        try {
-            String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderServiceHintEvent(getContext());
-            getActivity().runOnUiThread(() -> notifyListeners(name, event));
-        } catch (Exception error) {
-            android.util.Log.w("FolioleSyncDiscovery", "Hint dispatch failed", error);
-        }
-    }
-
     private void dispatchProviderState() {
         try {
             String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderStateEvent(getContext());
@@ -207,7 +193,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             } else {
                 FolioleCompanionSyncParticipationStore.setSyncPaused(getContext(), value);
             }
-            reconcileServiceMonitor();
             FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
             return FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
         });
@@ -215,14 +200,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     private boolean isParticipating() throws Exception {
         return FolioleCompanionSyncParticipationStore.isParticipating(getContext(), lifecycleActive);
-    }
-
-    private void reconcileServiceMonitor() throws Exception {
-        if (serviceMonitor == null) return;
-        if (isParticipating() && !FolioleCompanionSyncGroupProvider.activeGroupId().isEmpty()) {
-            serviceMonitor.start();
-        }
-        else serviceMonitor.stop();
     }
 
     private JSObject withParticipation(JSObject result) throws Exception {
@@ -236,7 +213,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @Override protected void handleOnDestroy() {
         lifecycleActive = false;
-        if (serviceMonitor != null) serviceMonitor.stop();
         fileExecutor.execute(() -> {
             FolioleCompanionSyncGroupProvider.pause(this);
             FolioleCompanionSyncGroupDataBridge.uninstall(this);
@@ -247,7 +223,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @Override protected void handleOnPause() {
         lifecycleActive = false;
-        if (serviceMonitor != null) serviceMonitor.stop();
         fileExecutor.execute(() -> FolioleCompanionSyncGroupProvider.pause(this));
         super.handleOnPause();
     }
@@ -255,8 +230,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @Override protected void handleOnResume() {
         super.handleOnResume();
         lifecycleActive = true;
-        try { reconcileServiceMonitor(); }
-        catch (Exception error) { android.util.Log.w("FolioleSyncDiscovery", "Resume failed", error); }
         fileExecutor.execute(() -> {
             try { FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating()); }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }

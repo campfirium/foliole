@@ -45,16 +45,12 @@ describe('iOS Sync Group host contract', () => {
     expect(discovery).toContain('service.resolve(withTimeout: 3.0)');
   });
 
-  it('keeps listening for same-group provider revisions after joining', () => {
+  it('does not run a business-revision discovery monitor after joining', () => {
     const provider = read('ios/App/App/FolioleCompanionSyncGroupProviderPlugin.swift');
     const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
 
-    expect(plugin).toContain('let serviceMonitor = FolioleCompanionBonjourServiceMonitor()');
-    expect(provider).toContain('self.serviceMonitor.start(');
-    expect(provider).toContain('self?.notifyListeners(hint.eventName, data: event)');
-    expect(provider).toContain('txt["group_id"] == groupId');
-    expect(provider).toContain('txt["runtime_instance_id"] != localRuntimeId');
-    expect(provider).toContain('txt["facts_revision"]');
-    expect(provider).toMatch(/stopSyncGroupProvider[\s\S]*serviceMonitor\.stop\(\)/);
+    expect(plugin).not.toContain('FolioleCompanionBonjourServiceMonitor');
+    expect(provider).not.toContain('facts_revision');
+    expect(provider).not.toContain('syncGroupServiceHint');
   });
 });

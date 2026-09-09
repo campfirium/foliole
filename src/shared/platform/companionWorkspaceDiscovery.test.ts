@@ -28,8 +28,10 @@ import { discoverCompanionDesktop, discoverCompanionDesktops } from './companion
 const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
 const protocolTxt = serializeSyncProtocolTxt(protocol);
 
-function nsdCandidate(endpoint_url: string) {
-  return { endpoint_url, protocol_txt: protocolTxt, source: 'nsd' };
+function nsdCandidate(endpoint_url: string, peerId: string, platform: string) {
+  return { endpoint_url, protocol_txt: { ...protocolTxt,
+    device_id: peerId, group_id: 'group-1', group_tag: 'group-tag-1',
+    provider_platform: platform, topology_role: 'anchor' }, source: 'nsd' };
 }
 
 function discoveryBody(args: { hostName: string; peerId: string; platform: string }) {
@@ -42,7 +44,8 @@ function discoveryBody(args: { hostName: string; peerId: string; platform: strin
     provider_device_name: `Foliole Desktop on ${args.hostName}`,
     provider_platform: args.platform,
     runtime_instance_id: `runtime-${args.peerId}`,
-    protocol
+    protocol,
+    topology_role: 'anchor'
   });
 }
 
@@ -64,7 +67,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
   it('uses iOS native Bonjour candidates and native HTTP', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      candidates: [nsdCandidate('http://foliole-desktop.local:38641')]
+      candidates: [nsdCandidate('http://foliole-desktop.local:38641', 'desktop-ios', 'macOS')]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url.startsWith('http://foliole-desktop.local:38641')) {
@@ -79,22 +82,17 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
   });
 
-  it('probes the accepted endpoint without Android emulator fallbacks when iOS Bonjour is empty', async () => {
+  it('does not fall back to a remembered endpoint when iOS Bonjour has no anchor', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
-    capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
-      desktopResponse({ hostName: 'Mac', peerId: 'desktop-ios', platform: 'macOS' })
-    );
-
-    const result = await discoverCompanionDesktop('http://accepted-mac.local:38641');
-
-    expect(result.endpointUrl).toBe('http://accepted-mac.local:38641');
-    expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledTimes(1);
+    await expect(discoverCompanionDesktop('http://accepted-mac.local:38641'))
+      .rejects.toThrow('No desktop sync device found');
+    expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
   });
 
   it('discovers a native Android desktop candidate beyond the emulator default', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      candidates: [nsdCandidate('http://192.168.1.44:38641')]
+      candidates: [nsdCandidate('http://192.168.1.44:38641', 'desktop-local', 'Windows')]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url.startsWith('http://192.168.1.44:38641')) {
@@ -110,7 +108,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     expect(result.compatibility.status).toBe('compatible');
   });
 
-  it('uses the adb reverse loopback endpoint in emulator development', async () => {
+  it('does not use an emulator loopback fallback without an advertised anchor', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url.startsWith('http://127.0.0.1:38641')) {
@@ -119,9 +117,8 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
       throw new TypeError('Failed to fetch');
     });
 
-    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
-
-    expect(result.endpointUrl).toBe('http://127.0.0.1:38641');
+    await expect(discoverCompanionDesktop('http://10.0.2.2:38641'))
+      .rejects.toThrow('No desktop sync device found');
   });
 });
 
@@ -130,7 +127,7 @@ it('keeps ordinary discovery stopped while allowing explicit Leave routing when 
     lifecycle_active: true, participating: false, sync_enabled: true, sync_paused: true
   });
   capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-    candidates: [nsdCandidate('http://192.168.1.44:38641')]
+    candidates: [nsdCandidate('http://192.168.1.44:38641', 'desktop-c', 'Windows')]
   });
   capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
     desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-c', platform: 'Windows' })
@@ -152,7 +149,7 @@ it('does not let a transient native inactive snapshot veto a foreground discover
     lifecycle_active: false, participating: false, sync_enabled: true, sync_paused: false
   });
   capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-    candidates: [nsdCandidate('http://192.168.1.44:38641')]
+    candidates: [nsdCandidate('http://192.168.1.44:38641', 'desktop-mac', 'macOS')]
   });
   capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
     desktopResponse({ hostName: 'Mac', peerId: 'desktop-mac', platform: 'macOS' })
@@ -168,8 +165,8 @@ describe('companionWorkspaceDiscovery compatibility', () => {
   it('returns multiple desktops and deduplicates emulator aliases by peer id', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
       candidates: [
-        nsdCandidate('http://192.168.1.44:38641'),
-        nsdCandidate('http://192.168.1.45:38641')
+        nsdCandidate('http://192.168.1.44:38641', 'desktop-dev', 'Windows'),
+        nsdCandidate('http://192.168.1.45:38641', 'desktop-studio', 'macOS')
       ]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
@@ -194,7 +191,7 @@ describe('companionWorkspaceDiscovery compatibility', () => {
 
   it('keeps an incompatible desktop with an explainable compatibility result', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      candidates: [nsdCandidate('http://192.168.1.44:38641')]
+      candidates: [nsdCandidate('http://192.168.1.44:38641', 'desktop-old', 'Windows')]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Failed to fetch');
@@ -215,8 +212,8 @@ describe('companionWorkspaceDiscovery compatibility', () => {
   it('keeps separate providers that advertise the same Sync Group timeline', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
       candidates: [
-        nsdCandidate('http://192.168.1.44:38641'),
-        nsdCandidate('http://192.168.1.45:38641')
+        nsdCandidate('http://192.168.1.44:38641', 'desktop-a', 'macOS'),
+        nsdCandidate('http://192.168.1.45:38641', 'desktop-c', 'macOS')
       ]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
@@ -235,7 +232,7 @@ describe('companionWorkspaceDiscovery compatibility', () => {
 
 it('requires full capabilities from public discovery rather than the TXT hint', async () => {
   capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-    candidates: [nsdCandidate('http://192.168.1.44:38641')]
+    candidates: [nsdCandidate('http://192.168.1.44:38641', 'desktop-old', 'Windows')]
   });
   capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
     if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Failed to fetch');

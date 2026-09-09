@@ -69,9 +69,13 @@ enum FolioleCompanionSignedClientRequests {
             pending = pending.filter { $0.value.0.timeIntervalSinceNow > -60 }
             pending[nonce] = (Date(), request)
         }
-        var headers = ["X-Device-Id": deviceId, "X-Nonce": nonce, "X-Signature": signature,
-                       "X-Sync-Group-Id": groupId, "X-Timestamp": timestamp]
-        if encrypted != nil { headers["Content-Type"] = FolioleCompanionSyncGroupWorkgroup.envelopeContentType }
+        let headerKeys = try FolioleCompanionContractStore().networkContract().signatureHeaderKeys
+        var headers = [headerKeys["deviceId"]!: deviceId, headerKeys["nonce"]!: nonce,
+                       headerKeys["signature"]!: signature, "X-Sync-Group-Id": groupId,
+                       headerKeys["timestamp"]!: timestamp]
+        if encrypted != nil {
+            headers["Content-Type"] = FolioleCompanionSyncGroupWorkgroup.envelopeContentType
+        }
         var result: [String: Any] = ["headers": headers]
         if let encrypted { result["body"] = String(decoding: encrypted, as: UTF8.self) }
         return result

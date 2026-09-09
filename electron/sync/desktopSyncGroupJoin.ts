@@ -14,12 +14,11 @@ import {
   createDesktopSyncGroupJoinKey,
   decryptDesktopSyncGroupJoinInfo
 } from './desktopSyncGroupJoinCrypto.js';
-import { refreshDesktopSyncGroupPendingJoinFromDiscovery } from './desktopSyncGroupJoinEndpoint.js';
 import {
   loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupPendingJoin
 } from './desktopSyncGroupJoinState.js';
-import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
+import { removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
 
@@ -74,18 +73,14 @@ export async function completeDesktopSyncGroupJoin() {
 async function completeDesktopSyncGroupJoinOnce() {
   const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
   if (!pending) throw new Error('sync_group_join_not_pending');
-  let payload: Record<string, unknown>;
-  try {
-    payload = await requestJson(`${pending.candidate.endpoint_url}/sync-group/join-acceptance`, {
-      body: JSON.stringify({ request_id: pending.request.request_id }),
-      headers: { 'Content-Type': 'application/json' }, method: 'POST'
-    });
-  } catch (error) {
-    if (error instanceof TypeError && await refreshDesktopSyncGroupPendingJoinFromDiscovery()) {
-      throw new Error('sync_group_join_provider_changed');
-    }
-    throw error;
+  if (Date.now() >= new Date(pending.request.expires_at).getTime()) {
+    saveDesktopSyncGroupPendingJoin(null);
+    throw new Error('sync_group_join_request_expired');
   }
+  const payload = await requestJson(`${pending.candidate.endpoint_url}/sync-group/join-acceptance`, {
+    body: JSON.stringify({ request_id: pending.request.request_id }),
+    headers: { 'Content-Type': 'application/json' }, method: 'POST'
+  });
   const acceptance = parseAcceptance(payload, pending.request.request_id);
   const plaintext = await decryptDesktopSyncGroupJoinInfo(
     pending.key.privateKey, acceptance.encrypted_group_info
@@ -109,11 +104,17 @@ async function completeDesktopSyncGroupJoinOnce() {
       local_device_id: group.local_device_identity_key,
       peer_device_id: pending.candidate.provider_device_id,
       peer_device_name: pending.candidate.provider_device_name,
-      peer_platform: pending.candidate.provider_platform
+      peer_platform: pending.candidate.provider_platform,
+      route_kind: isMobileProvider(pending.candidate.provider_platform) ? 'mobile_guide' : 'anchor'
     });
   });
   await runDesktopSyncCoordinator('initial', route);
+  if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
+}
+
+function isMobileProvider(platform: string) {
+  return ['android-capacitor', 'ios-capacitor'].includes(platform.toLowerCase());
 }
 
 function parseAcceptance(value: Record<string, unknown>, requestId: string): SyncGroupJoinAcceptance {

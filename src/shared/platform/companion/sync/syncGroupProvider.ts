@@ -13,10 +13,6 @@ import {
 
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
-export interface CompanionSyncGroupServiceHint {
-  endpoint_url: string;
-}
-
 const participationListeners = new Set<() => void>();
 let participationSnapshot = createSyncParticipationSnapshot({
   lifecycle_active: true, sync_enabled: true, sync_paused: false
@@ -40,7 +36,6 @@ export function subscribeCompanionSyncParticipation(listener: () => void) {
 export async function reconcileCompanionSyncGroupProvider(
   bootstrap: NativeCompanionBootstrapState,
   group: SyncGroupPayload | null,
-  factsRevision = '0',
   participating = true
 ) {
   if (!isNativeCompanionSyncGroupRuntime()) return null;
@@ -56,22 +51,8 @@ export async function reconcileCompanionSyncGroupProvider(
     device_id: localDevice.device_identity_key,
     device_name: localDevice.device_name,
     platform: localDevice.platform,
-    facts_revision: factsRevision,
     sync_group: group
   });
-}
-
-export async function subscribeCompanionSyncGroupServiceHint(
-  listener: (hint: CompanionSyncGroupServiceHint) => void
-) {
-  if (!isNativeCompanionSyncGroupRuntime()) return () => undefined;
-  const eventSource = FolioleCompanionSync as typeof FolioleCompanionSync & {
-    addListener(
-      eventName: 'syncGroupServiceHint', next: (hint: CompanionSyncGroupServiceHint) => void
-    ): Promise<{ remove(): Promise<void> }>;
-  };
-  const handle = await eventSource.addListener('syncGroupServiceHint', listener);
-  return () => { void handle.remove(); };
 }
 
 export async function subscribeCompanionSyncGroupProviderState(

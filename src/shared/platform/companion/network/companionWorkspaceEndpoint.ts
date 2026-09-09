@@ -1,5 +1,4 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
-import { resolveRemoteSyncGroupDevices } from '../../../../../lib/platform/syncGroupContract';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
@@ -34,20 +33,24 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
-  const remoteDevices = resolveRemoteSyncGroupDevices(group);
-  if (remoteDevices.length === 0) {
-    return [{ endpointUrl: normalized, groupId: group.group_id }];
+  const remoteDesktopDevices = group.devices.filter((device) =>
+    device.device_identity_key !== group.local_device_identity_key
+    && device.state === 'active' && isDesktopDevice(device.platform));
+  if (remoteDesktopDevices.length === 0) throw new Error('discovery_waiting_anchor');
+  const discovered = await discoverCompanionDesktops(normalized, options);
+  const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
+    && candidate.discovery.group_id === group.group_id
+    && remoteDesktopDevices.some((device) =>
+      device.device_identity_key === candidate.discovery.provider_device_id));
+  if (!match) {
+    const incompatible = discovered.some((candidate) => candidate.compatibility.status === 'incompatible'
+      && candidate.discovery.group_id === group.group_id);
+    throw new Error(incompatible ? 'discovery_incompatible' : 'discovery_waiting_anchor');
   }
-  const remoteDesktopDevices = remoteDevices.filter((device) => isDesktopDevice(device.platform));
-  if (remoteDesktopDevices.length === 0) return [];
-  const discovered = await discoverCompanionDesktops(normalized, options).catch(() => []);
-  return remoteDesktopDevices.flatMap((device) => {
-    const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
-      && candidate.discovery.group_id === group.group_id
-      && candidate.discovery.provider_device_id === device.device_identity_key);
-    return match ? [{ deviceId: device.device_identity_key, deviceName: device.device_name,
-      endpointUrl: match.endpointUrl, groupId: group.group_id }] : [];
-  });
+  const device = remoteDesktopDevices.find((value) =>
+    value.device_identity_key === match.discovery.provider_device_id)!;
+  return [{ deviceId: device.device_identity_key, deviceName: device.device_name,
+    endpointUrl: match.endpointUrl, groupId: group.group_id }];
 }
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoint(

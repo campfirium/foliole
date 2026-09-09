@@ -14,7 +14,9 @@ export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload 
     last_error: null,
     pending_join_request_count: 0,
     port: null,
-    state: 'stopped'
+    state: 'stopped',
+    topology_role: 'observing',
+    topology_status: 'observing'
   },
   sync_group: null,
   sync_enabled: false,

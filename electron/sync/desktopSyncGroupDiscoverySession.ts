@@ -6,15 +6,19 @@ import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtoc
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
+import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const PROBE_TIMEOUT_MS = 2_000;
+const OBSERVATION_MS = 1_800;
 
 export class DesktopSyncGroupDiscoverySession {
   private readonly services = new Map<string, DesktopDnsSdService>();
   private readonly candidates = new Map<string, DesktopSyncGroupJoinCandidatePayload>();
   private runtime: DesktopDnsSdSession | null = null;
   private stopped = true;
+  private observationComplete = false;
+  private observationTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly emit: (snapshot: SyncGroupDiscoverySnapshot) => void,
@@ -24,6 +28,11 @@ export class DesktopSyncGroupDiscoverySession {
   start() {
     this.stop(false);
     this.stopped = false;
+    this.observationComplete = false;
+    this.observationTimer = setTimeout(() => {
+      this.observationComplete = true;
+      if (!this.stopped) this.emitSnapshot('changed');
+    }, OBSERVATION_MS);
     this.emitSnapshot('started');
     try {
       this.runtime = startDesktopDnsSdSession({
@@ -43,6 +52,8 @@ export class DesktopSyncGroupDiscoverySession {
     this.stopped = true;
     this.runtime?.stop();
     this.runtime = null;
+    if (this.observationTimer) clearTimeout(this.observationTimer);
+    this.observationTimer = null;
     this.services.clear();
     this.candidates.clear();
     const snapshot = this.snapshot('stopped');
@@ -85,8 +96,7 @@ export class DesktopSyncGroupDiscoverySession {
   }
 
   private snapshot(change: SyncGroupDiscoverySnapshot['change']): SyncGroupDiscoverySnapshot {
-    const candidates = [...this.candidates.values()]
-      .sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
+    const candidates = selectJoinCandidates([...this.candidates.values()], this.observationComplete);
     return { candidates, change, error_code: null,
       status: change === 'stopped' ? 'stopped' : candidates.length > 0 ? 'results' : 'searching' };
   }
@@ -94,12 +104,11 @@ export class DesktopSyncGroupDiscoverySession {
 
 async function probeService(fetchDiscovery: typeof fetch, service: DesktopDnsSdService) {
   if (typeof service.txt.group_id !== 'string') return null;
-  const endpoints = resolveCompanionMdnsServiceEndpoints(service);
-  for (const endpointUrl of endpoints) {
-    const result = await probeEndpoint(fetchDiscovery, service, endpointUrl);
-    if (result?.status !== 'connection_failed') return result;
-  }
-  return endpoints.length > 0 ? { status: 'connection_failed' as const } : null;
+  const endpointUrl = resolveCompanionMdnsServiceEndpoints(service)[0];
+  return endpointUrl
+    ? await probeEndpoint(fetchDiscovery, service, endpointUrl)
+      ?? { status: 'connection_failed' as const }
+    : null;
 }
 
 async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSdService, endpointUrl: string) {
@@ -113,16 +122,47 @@ async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSd
     if (evaluateSyncProtocolCompatibility(payload.protocol).status !== 'compatible') {
       return { status: 'incompatible' as const };
     }
+    const providerPlatform = text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '');
+    if (!isMobile(providerPlatform)) {
+      const qualification = qualifyPreparedDesktopAnchorCandidate({
+        endpoint_url: endpointUrl,
+        http: payload,
+        txt: service.txt as Record<string, unknown>
+      });
+      if (!qualification.eligible) {
+        return { status: qualification.reason === 'not_anchor'
+          ? 'waiting_anchor' as const : 'incompatible' as const };
+      }
+    }
     const candidate = {
       endpoint_url: endpointUrl,
       group_display_name: text(payload.group_display_name) ?? service.name,
       group_id: String(payload.group_id), group_tag: String(payload.group_tag),
       provider_device_id: text(payload.provider_device_id) ?? String(service.txt.device_id),
       provider_device_name: text(payload.provider_device_name) ?? service.name,
-      provider_platform: text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '')
+      provider_platform: providerPlatform
     } satisfies DesktopSyncGroupJoinCandidatePayload;
     return { candidate, status: 'results' as const };
   } catch { return { status: 'connection_failed' as const }; }
+}
+
+function selectJoinCandidates(candidates: DesktopSyncGroupJoinCandidatePayload[], observationComplete: boolean) {
+  const groups = new Map<string, DesktopSyncGroupJoinCandidatePayload[]>();
+  for (const candidate of candidates) {
+    const current = groups.get(candidate.group_tag) ?? [];
+    current.push(candidate);
+    groups.set(candidate.group_tag, current);
+  }
+  return [...groups.values()].flatMap((members) => {
+    const ordered = [...members].sort((left, right) =>
+      left.provider_device_id.localeCompare(right.provider_device_id));
+    const anchor = ordered.find((candidate) => !isMobile(candidate.provider_platform));
+    return anchor ? [anchor] : observationComplete ? ordered.slice(0, 1) : [];
+  }).sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
+}
+
+function isMobile(platform: string) {
+  return ['android-capacitor', 'ios-capacitor'].includes(platform.toLowerCase());
 }
 
 function desktopKind(platform: string) {

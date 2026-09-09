@@ -51,7 +51,7 @@ it('does not probe a mobile provider while finding desktop sync targets', async 
 
   await discoverCompanionDesktops('http://accepted-mac.local:38641');
 
-  expect(runtime.plugin.desktopHttpRequest).toHaveBeenCalledOnce();
+  expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalled();
   expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalledWith(
     expect.objectContaining({ url: expect.stringContaining('iphone.local') })
   );
@@ -62,7 +62,9 @@ it('does not let a stalled native probe block a reachable iOS desktop', async ()
   runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
     candidates: [{
       endpoint_url: 'http://reachable-mac.local:38641',
-      protocol_txt: serializeSyncProtocolTxt(protocol),
+      protocol_txt: { ...serializeSyncProtocolTxt(protocol), device_id: 'desktop-mac',
+        group_id: 'group-1', group_tag: 'group-tag-1', provider_platform: 'macOS',
+        topology_role: 'anchor' },
       source: 'nsd'
     }]
   });
@@ -72,7 +74,8 @@ it('does not let a stalled native probe block a reachable iOS desktop', async ()
         body: JSON.stringify({
           app_version: '0.1.0', group_display_name: 'Foliole', group_id: 'group-1',
           group_tag: 'group-tag-1', protocol, provider_device_id: 'desktop-mac',
-          provider_device_name: 'Mac', provider_platform: 'macOS', runtime_instance_id: 'runtime-mac'
+          provider_device_name: 'Mac', provider_platform: 'macOS', runtime_instance_id: 'runtime-mac',
+          topology_role: 'anchor'
         }),
         status: 200
       };

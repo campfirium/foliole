@@ -41,7 +41,7 @@ final class FolioleCompanionSyncGroupProvider {
             .put("device_id", deviceId)
             .put("device_name", value(context, call, "deviceName"))
             .put("platform", value(context, call, "platform"))
-            .put("facts_revision", value(context, call, "factsRevision"))
+            .put("topology_role", "member")
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", group)
             .put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
@@ -113,11 +113,6 @@ final class FolioleCompanionSyncGroupProvider {
         return activeConfig == null ? "" : activeConfig.optString("runtime_instance_id");
     }
 
-    static synchronized String activeGroupId() {
-        JSONObject group = activeConfig == null ? null : activeConfig.optJSONObject("sync_group");
-        return group == null ? "" : group.optString("group_id");
-    }
-
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinProvider, dataBridge);
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
@@ -151,7 +146,6 @@ final class FolioleCompanionSyncGroupProvider {
     private static boolean sameProvider(JSONObject left, JSONObject right) {
         if (left == null) return false;
         return left.optString("device_id").equals(right.optString("device_id"))
-            && left.optString("facts_revision").equals(right.optString("facts_revision"))
             && left.optJSONObject("sync_group").optString("group_id")
                 .equals(right.optJSONObject("sync_group").optString("group_id"));
     }

@@ -47,6 +47,12 @@ function pendingFromCandidate(
     providerPlatform: candidate.providerPlatform, requestId: result.request_id };
 }
 
+function matchesPending(candidate: Parameters<typeof mapCandidates>[0]['candidates'][number], pending: PendingSyncGroupJoinRequest) {
+  return candidate.group_id === pending.groupId
+    && candidate.provider_device_id === pending.providerDeviceId
+    && candidate.endpoint_url === pending.endpointUrl;
+}
+
 function useJoinCompletion(args: {
   config: SyncGroupJoinArgs;
   pendingRequest: PendingSyncGroupJoinRequest | null;
@@ -127,34 +133,29 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const [joined, setJoined] = useState(false);
   const pendingRequestRef = useRef<PendingSyncGroupJoinRequest | null>(null);
   const stopRef = useRef<null | (() => Promise<void>)>(null);
-  const complete = useJoinCompletion({
-    config: args, pendingRequest, setJoined, setPendingRequest, setStatus
-  });
-  const cancel = useJoinCancellation({
-    config: args, pendingRequest, pendingRequestRef, setPendingRequest, setStatus
-  });
-
+  const complete = useJoinCompletion({ config: args, pendingRequest, setJoined, setPendingRequest, setStatus });
+  const cancel = useJoinCancellation({ config: args, pendingRequest, pendingRequestRef, setPendingRequest, setStatus });
   const stopDiscovery = useCallback(async () => {
     const stop = stopRef.current;
     stopRef.current = null;
     await stop?.();
   }, []);
-
   const discover = useCallback(async () => {
     await stopDiscovery();
     setStatus('discovering'); args.onError(null);
     stopRef.current = await startCompanionSyncGroupDiscoverySession((snapshot) => {
       setDiscoveries(mapCandidates(snapshot));
       if (snapshot.status === 'permission_required' || snapshot.status === 'unavailable'
-        || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed') {
+        || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed'
+        || snapshot.status === 'waiting_anchor') {
         args.onError(`discovery_${snapshot.status}`); setStatus('idle');
       }
       const pending = pendingRequestRef.current;
-      if (pending && snapshot.candidates.some((candidate) =>
-        candidate.group_id === pending.groupId)) void complete(pending).catch(() => undefined);
+      if (pending && snapshot.candidates.some((candidate) => matchesPending(candidate, pending))) {
+        void complete(pending).catch(() => undefined);
+      }
     });
   }, [args, complete, stopDiscovery]);
-
   const request = useCallback(async (endpointUrl: string) => {
     if (!args.bootstrapState.database_path) throw new Error('companion_database_unavailable');
     const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);

@@ -60,7 +60,7 @@ it('reports an old bridge as incompatible without a timed fallback', async () =>
   expect(runtime.load).not.toHaveBeenCalled();
 });
 
-it('keeps searching when a mobile-only advertisement arrives before a desktop', async () => {
+it('shows that a mobile-only group is waiting for a desktop anchor', async () => {
   const subscription: { listener?: (event: CompanionNativeDiscoveryEvent) => void } = {};
   runtime.addListener.mockImplementation(async (_name, next) => {
     subscription.listener = next;
@@ -74,14 +74,16 @@ it('keeps searching when a mobile-only advertisement arrives before a desktop', 
     protocol_txt: { provider_platform: 'ios-capacitor' }
   }], change: 'found', error_code: null, status: 'results' });
 
-  expect(snapshots.at(-1)).toEqual(expect.objectContaining({ candidates: [], status: 'searching' }));
+  expect(snapshots.at(-1)).toEqual(expect.objectContaining({ candidates: [], status: 'waiting_anchor' }));
   expect(runtime.load).not.toHaveBeenCalled();
 });
 
 it('publishes one join result when several members advertise the same Sync Group', async () => {
   runtime.start.mockResolvedValue({ candidates: [
-    { endpoint_url: 'http://android:38643', source: 'bonjour' },
-    { endpoint_url: 'http://windows:38641', source: 'bonjour' }
+    { endpoint_url: 'http://android:38643', protocol_txt: {
+      provider_platform: 'android-capacitor' }, source: 'nsd' },
+    { endpoint_url: 'http://windows:38641', protocol_txt: {
+      provider_platform: 'windows', topology_role: 'anchor' }, source: 'nsd' }
   ], change: 'found', error_code: null, status: 'results' });
   runtime.load.mockResolvedValue([
     { compatibility: { status: 'compatible' }, endpointUrl: 'http://android:38643', discovery: {

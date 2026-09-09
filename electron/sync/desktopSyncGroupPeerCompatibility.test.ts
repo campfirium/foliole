@@ -11,7 +11,8 @@ const peer = {
 
 function response(protocol: unknown = CURRENT_SYNC_PROTOCOL_DESCRIPTOR) {
   return {
-    json: vi.fn(async () => ({ group_id: 'group-1', protocol, provider_device_id: 'peer-1' })),
+    json: vi.fn(async () => ({ group_id: 'group-1', protocol, provider_device_id: 'peer-1',
+      provider_platform: 'darwin', topology_role: 'anchor' })),
     ok: true,
     status: 200
   } as unknown as Response;

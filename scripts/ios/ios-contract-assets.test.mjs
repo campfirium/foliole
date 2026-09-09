@@ -39,12 +39,12 @@ describe('iOS companion contract assets', () => {
 
   it('makes iOS Sync Group discovery and signing consume generated contract keys', async () => {
     const contractStore = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionContractStore.swift'), 'utf8');
-    const signing = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionSyncGroupSigning.swift'), 'utf8');
+    const signing = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionWorkgroupClient.swift'), 'utf8');
 
     expect(contractStore).toContain('protocolVersion: try integer(path: ["syncProtocol", "version"], root: sync)');
     expect(contractStore).toContain('["syncGroupSecurity", "signature", "headerKeys"]');
     expect(contractStore).toContain('["hostApi", "syncGroupProvider"]');
-    expect(signing).toContain('contract.signatureHeaderKeys["deviceId"]');
+    expect(signing).toContain('headerKeys["deviceId"]');
     expect(signing).not.toContain('Pairing');
   });
 

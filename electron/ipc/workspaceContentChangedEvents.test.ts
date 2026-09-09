@@ -2,7 +2,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const getAllWindows = vi.hoisted(() => vi.fn());
-const refreshCompanionMdnsAdvertisement = vi.hoisted(() => vi.fn());
 const requestDesktopHighValueSync = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({
@@ -10,7 +9,6 @@ vi.mock('electron', () => ({
     getAllWindows
   }
 }));
-vi.mock('../sync/companionMdnsAdvertisement.js', () => ({ refreshCompanionMdnsAdvertisement }));
 vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync }));
 
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
@@ -36,7 +34,6 @@ it('broadcasts workspace content changes to live windows except the origin windo
 
   notifyWorkspaceContentChanged(originWindow as never);
 
-  expect(refreshCompanionMdnsAdvertisement).toHaveBeenCalledOnce();
   expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
   expect(originWindow.webContents.send).not.toHaveBeenCalled();
   expect(destroyedWindow.webContents.send).not.toHaveBeenCalled();
@@ -48,6 +45,5 @@ it('broadcasts workspace content changes to live windows except the origin windo
 it('can preserve ambient workspace notification without requesting high-value sync', () => {
   notifyWorkspaceContentChanged(null, { requestSync: false });
 
-  expect(refreshCompanionMdnsAdvertisement).toHaveBeenCalledOnce();
   expect(requestDesktopHighValueSync).not.toHaveBeenCalled();
 });

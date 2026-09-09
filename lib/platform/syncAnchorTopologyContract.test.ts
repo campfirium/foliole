@@ -25,7 +25,7 @@ function evidence(overrides: Partial<PreparedAnchorEvidence> = {}): PreparedAnch
   };
 }
 
-it('keeps production sync and join contracts unchanged while preparing v5', () => {
+it('uses the prepared v5 topology as the production sync contract while preserving join v1', () => {
   expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.production_protocol_version);
   expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.prepared_protocol_version);
   expect(SYNC_GROUP_JOIN_CONTRACT_VERSION).toBe(fixture.join_contract_version);
@@ -43,7 +43,8 @@ it.each([
   [{}, { provider_device_id: 'desktop-b' }, 'identity_mismatch'],
   [{}, { endpoint_url: 'http://desktop-b.local:38641' }, 'endpoint_mismatch'],
   [{ provider_kind: 'mobile' as const }, { provider_kind: 'mobile' as const }, 'provider_not_desktop'],
-  [{}, { protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR }, 'protocol_incompatible']
+  [{}, { protocol: { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    max_supported_version: 4, min_supported_version: 4, version: 4 } }, 'protocol_incompatible']
 ])('rejects discontinuous TXT and HTTP anchor evidence', (advertised, discovered, reason) => {
   expect(qualifyPreparedAnchorEvidence(evidence(advertised), evidence(discovered))).toEqual({
     eligible: false, reason

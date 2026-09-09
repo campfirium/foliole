@@ -86,6 +86,7 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_device_id", config.getString("device_id"))
             .put("provider_device_name", config.getString("device_name"))
             .put("provider_platform", config.getString("platform"))
+            .put("topology_role", config.getString("topology_role"))
             .put("runtime_instance_id", config.getString("runtime_instance_id")));
     }
 

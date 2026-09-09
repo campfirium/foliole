@@ -35,7 +35,6 @@ it('does not continue a backlog after automatic sync is paused', async () => {
     isSyncGroupReadyRef: ready,
     lastCheckedAtRef: { current: 0 },
     lastForegroundAtRef: { current: 0 },
-    pendingServiceHintRef: { current: new Set<string>() },
     readAppActiveState: vi.fn(async () => true),
     resourceContinuationModeRef: { current: 'full' },
     retryAttemptRef: { current: 0 },

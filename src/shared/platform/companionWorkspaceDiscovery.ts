@@ -5,7 +5,7 @@ import {
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import { qualifyPreparedCompanionAnchorCandidate } from './companion/preparedAnchorDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
@@ -30,7 +30,6 @@ export type DiscoveryCandidate = {
   source: 'direct' | 'nsd';
 };
 
-const DEV_REVERSE_ENDPOINT = 'http://127.0.0.1:38641';
 const DISCOVERY_TIMEOUT_MS = 1200;
 const DISCOVERY_BATCH_SIZE = 24;
 
@@ -66,10 +65,6 @@ async function loadNativeDiscoveryCandidates(
     const participation = await FolioleCompanionSync.loadSyncParticipationState().catch(() => null);
     if (participation?.sync_enabled !== true || participation.sync_paused) return [];
   }
-  const runtime = getCompanionRuntimeCapability();
-  const direct = runtime.kind === 'android-native'
-    ? [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)]
-    : runtime.kind === 'ios-native' ? [directCandidate(preferredEndpointUrl)] : [];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
     const native = (payload.candidates ?? [])
@@ -79,9 +74,9 @@ async function loadNativeDiscoveryCandidates(
         protocolTxt: candidate.protocol_txt ?? null,
         source: candidate.source
       }));
-    return uniqueCandidates([...direct, ...native]);
+    return uniqueCandidates(native);
   } catch {
-    return uniqueCandidates(direct);
+    return [];
   }
 }
 
@@ -97,7 +92,17 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
       status: 'incompatible'
     } satisfies SyncProtocolCompatibilityResult;
   }
-  return compatibility;
+  const qualification = qualifyPreparedCompanionAnchorCandidate({
+    endpoint_url: candidate.endpointUrl,
+    http: discovery as unknown as Record<string, unknown>,
+    protocol_txt: candidate.protocolTxt ?? {}
+  });
+  return qualification.eligible ? compatibility : {
+    missing_capabilities: [],
+    negotiated_version: null,
+    reason: 'protocol_advertisement_mismatch',
+    status: 'incompatible'
+  } satisfies SyncProtocolCompatibilityResult;
 }
 
 async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise<CompanionDiscoveryResult | null> {
@@ -165,11 +170,6 @@ function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: Comp
   const key = getDiscoveryKey(result);
   const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
   if (existingIndex < 0) return void results.push(result);
-  if (providerRank(result) < providerRank(results[existingIndex]!)) results[existingIndex] = result;
-}
-
-function providerRank(result: CompanionDiscoveryResult) {
-  return result.discovery.provider_platform === 'android-capacitor' ? 1 : 0;
 }
 
 export async function discoverCompanionDesktops(

@@ -1,10 +1,6 @@
 export const ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS = {
   dataRequestEvent: 'syncGroupDataRequest',
-  serviceHintEvent: 'syncGroupServiceHint',
   stateChangedEvent: 'syncGroupProviderStateChanged',
-  serviceHintKeys: {
-    endpointUrl: 'endpoint_url'
-  },
   dataRequestKeys: {
     operation: 'operation',
     payload: 'payload',
@@ -20,7 +16,6 @@ export const ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS = {
     databasePath: 'database_path',
     deviceId: 'device_id',
     deviceName: 'device_name',
-    factsRevision: 'facts_revision',
     group: 'sync_group',
     platform: 'platform',
     requestId: 'request_id'

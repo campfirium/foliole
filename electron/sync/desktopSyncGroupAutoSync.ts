@@ -1,221 +1,138 @@
-import type { DesktopDnsSdService } from '@foliole/desktop-dnssd';
-
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
+import { updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
+import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
+import {
+  startDesktopAnchorTopologySession,
+  type DesktopAnchorTarget
+} from './desktopAnchorTopologySession.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
-import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
-import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
+import type { DesktopDnsSdSession } from './desktopDnsSd.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
-import {
-  isCurrentGroupPeerService,
-  readSyncGroupServiceDeviceId
-} from './desktopSyncGroupPeerService.js';
+import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import {
   clearDesktopSyncGroupRoutes,
   loadDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute,
-  saveDesktopSyncGroupRoute
+  saveDesktopSyncGroupRoute,
+  type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
-import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
-
-type AvailablePeer = { endpoints: string[]; groupId: string; peerDeviceId: string };
-const MANUAL_DISCOVERY_SETTLE_MS = 1_000;
 
 let runtime: DesktopDnsSdSession | null = null;
-let manualRuntime: DesktopDnsSdSession | null = null;
 let manualRun: Promise<unknown> | null = null;
-let manualSettleTimer: ReturnType<typeof setTimeout> | null = null;
-let rejectManualRun: ((error: Error) => void) | null = null;
-let resolveManualPeer: ((peer: AvailablePeer) => void) | null = null;
-const inFlight = new Map<string, Promise<unknown>>();
-const retryAfterFlight = new Map<string, AvailablePeer>();
-
-function readAvailablePeer(service: DesktopDnsSdService): AvailablePeer | null {
-  const endpoints = resolveCompanionMdnsServiceEndpoints(service);
-  const txt = service.txt as Record<string, unknown>;
-  if (evaluateDiscoveredSyncProtocol(txt).status === 'incompatible') return null;
-  const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
-  const peerDeviceId = readSyncGroupServiceDeviceId(service);
-  return endpoints.length > 0 && groupId && peerDeviceId ? { endpoints, groupId, peerDeviceId } : null;
-}
+const inFlight = new Map<string, Promise<boolean>>();
 
 export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtime) return;
-  const localGroup = loadDesktopSyncGroup();
-  const handleService = (service: DesktopDnsSdService) => {
-    if (!isDesktopCompanionSyncParticipating()) return;
-    const peer = readAvailablePeer(service);
-    if (!peer) return null;
-    resolveManualPeer?.(peer);
-    return syncAvailablePeer(peer);
-  };
-  runtime = startDesktopDnsSdSession({
-    onError: (error) => {
-      console.warn('[sync-group] OS DNS-SD discovery unavailable', error);
-      rejectManualRun?.(error);
-      runtime?.stop();
-      runtime = null;
-      clearDesktopSyncGroupRoutes();
+  const group = loadDesktopSyncGroup();
+  if (!group) return;
+  runtime = startDesktopAnchorTopologySession({
+    group,
+    onAnchor: (target, requireSyncBeforeDemote) => (
+      activateAnchorRoute(group, target, requireSyncBeforeDemote)
+    ),
+    onAnchorLost: (deviceId) => {
+      removeDesktopSyncGroupRoute(deviceId);
+      updateDesktopSyncFreshness(false);
     },
-    onService: ({ kind, service }) => {
-      if (!isCurrentGroupPeerService(service, localGroup)) {
-        logDesktopDnsSdDiagnostic('route_rejected', {
-          deviceDiffers: readSyncGroupServiceDeviceId(service) !== localGroup?.local_device_identity_key,
-          eventKind: kind, reason: 'not_current_group_peer',
-          groupMatches: service.txt.group_id === localGroup?.group_id,
-          ...desktopDnsSdServiceFacts(service)
-        });
-        return;
-      }
-      if (kind === 'lost') {
-        const deviceId = readSyncGroupServiceDeviceId(service);
-        if (deviceId) removeDesktopSyncGroupRoute(deviceId);
-        updateDesktopSyncFreshness(loadDesktopSyncGroupRoutes(localGroup?.group_id ?? '').length > 0);
-        return;
-      }
-      logDesktopDnsSdDiagnostic('route_candidate', {
-        eventKind: kind, ...desktopDnsSdServiceFacts(service)
+    onState: (state) => {
+      void updateCompanionMdnsAdvertisementRole(state.role).catch((error) => {
+        console.warn('[sync-group] failed to publish desktop topology role', error);
       });
-      void handleService(service);
+      updateDesktopSyncFreshness(
+        state.role === 'member' && loadDesktopSyncGroupRoutes(group.group_id).length > 0
+      );
     }
   });
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  rejectManualRun?.(new Error('desktop_dnssd_session_stopped'));
   runtime?.stop();
   runtime = null;
-  manualRuntime?.stop();
-  manualRuntime = null;
-  if (manualSettleTimer) clearTimeout(manualSettleTimer);
-  manualSettleTimer = null;
-  retryAfterFlight.clear();
   clearDesktopSyncGroupRoutes();
   updateDesktopSyncFreshness(false);
 }
 
 export function runDesktopManualSyncWithDiscovery() {
   if (manualRun) return manualRun;
-  const group = loadDesktopSyncGroup();
-  if (!group || loadDesktopSyncGroupRoutes(group.group_id).length > 0) {
-    return runDesktopSyncCoordinator('manual');
-  }
-  manualRun = new Promise((resolve, reject) => {
-    const peers = new Map<string, AvailablePeer>();
-    rejectManualRun = reject;
-    resolveManualPeer = (peer) => {
-      peers.set(peer.peerDeviceId, peer);
-      if (manualSettleTimer) clearTimeout(manualSettleTimer);
-      manualSettleTimer = setTimeout(() => {
-        manualSettleTimer = null;
-        resolveManualPeer = null;
-        void continueManualRun([...peers.values()]).then(resolve, reject);
-      }, MANUAL_DISCOVERY_SETTLE_MS);
-    };
-    manualRuntime = startDesktopDnsSdSession({
-      onError: reject,
-      onService: ({ kind, service }) => {
-        if (kind === 'lost' || !isCurrentGroupPeerService(service, group)) return;
-        const peer = readAvailablePeer(service);
-        if (peer) resolveManualPeer?.(peer);
-      }
-    });
-  }).finally(() => {
-    if (manualSettleTimer) clearTimeout(manualSettleTimer);
-    manualSettleTimer = null;
-    manualRuntime?.stop();
-    manualRuntime = null;
-    manualRun = null;
-    rejectManualRun = null;
-    resolveManualPeer = null;
-  });
+  manualRun = runDesktopManualSync().finally(() => { manualRun = null; });
   return manualRun;
 }
 
-async function continueManualRun(peers: AvailablePeer[]) {
-  if (!manualRun) return;
-  const ownsRoute = Boolean(manualRuntime);
-  manualRuntime?.stop();
-  manualRuntime = null;
-  try {
-    let result: unknown;
-    for (const peer of peers) {
-      result = await syncAcrossAvailableEndpoints(loadDesktopSyncGroup(), peer, 'manual');
-    }
-    return result;
-  } finally {
-    if (ownsRoute) {
-      peers.forEach((peer) => removeDesktopSyncGroupRoute(peer.peerDeviceId));
-      updateDesktopSyncFreshness(false);
-    }
-  }
-}
-
-async function syncAvailablePeer(args: AvailablePeer) {
-  if (!isDesktopCompanionSyncParticipating()) return;
+async function runDesktopManualSync() {
   const group = loadDesktopSyncGroup();
-  if (!group || group.group_id !== args.groupId) return;
-  const firstEndpoint = args.endpoints[0];
-  if (!firstEndpoint || !resolveDiscoveredPeer(group, args, firstEndpoint)) return;
-  if (inFlight.has(args.peerDeviceId)) {
-    retryAfterFlight.set(args.peerDeviceId, args);
-    return;
+  if (!group) return runDesktopSyncCoordinator('manual');
+  const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
+  if (current) return runDesktopSyncCoordinator('manual', current);
+  const candidates = await discoverDesktopSyncGroups();
+  const candidate = candidates.find((value) => value.group_id === group.group_id
+    && value.provider_device_id !== group.local_device_identity_key
+    && !['android-capacitor', 'ios-capacitor'].includes(value.provider_platform.toLowerCase()));
+  if (!candidate) return runDesktopSyncCoordinator('manual');
+  const route = routeFromCandidate(group, candidate);
+  if (!route) return runDesktopSyncCoordinator('manual');
+  saveDesktopSyncGroupRoute(route);
+  try {
+    return await runDesktopSyncCoordinator('manual', route);
+  } finally {
+    removeDesktopSyncGroupRoute(route.peer_device_id);
   }
-  const work = syncAcrossAvailableEndpoints(group, args).catch((error) => {
-    console.info('[sync-group] sync paused until provider is available', {
-      error: error instanceof Error ? error.message : String(error), peerDeviceId: args.peerDeviceId
-    });
-  }).finally(() => {
-    inFlight.delete(args.peerDeviceId);
-    const retry = retryAfterFlight.get(args.peerDeviceId);
-    if (!retry) return;
-    retryAfterFlight.delete(args.peerDeviceId);
-    void syncAvailablePeer(retry);
-  });
-  inFlight.set(args.peerDeviceId, work);
-  await work;
 }
 
-async function syncAcrossAvailableEndpoints(
-  group: ReturnType<typeof loadDesktopSyncGroup>, args: AvailablePeer,
-  reason: 'automatic' | 'manual' = 'automatic'
-) {
-  if (!group || group.group_id !== args.groupId) return;
-  let lastError: unknown;
-  for (const endpoint of args.endpoints) {
-    const peer = resolveDiscoveredPeer(group, args, endpoint);
-    if (!peer) return;
-    saveDesktopSyncGroupRoute(peer);
-    updateDesktopSyncFreshness(true);
-    try {
-      return await runDesktopSyncCoordinator(reason, peer);
-    } catch (error) {
-      removeDesktopSyncGroupRoute(peer.peer_device_id);
-      updateDesktopSyncFreshness(loadDesktopSyncGroupRoutes(group.group_id).length > 0);
-      lastError = error;
-    }
-  }
-  throw lastError;
-}
-
-function resolveDiscoveredPeer(
+function activateAnchorRoute(
   group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  args: AvailablePeer,
-  endpoint: string
+  target: DesktopAnchorTarget,
+  requireSyncBeforeDemote = false
 ) {
-  const local = group.devices.find((device) =>
-    device.device_identity_key === group.local_device_identity_key && device.state === 'active');
+  if (loadDesktopAnchorTopologyState().role === 'anchor' && !requireSyncBeforeDemote) {
+    return Promise.resolve(false);
+  }
+  const route = routeFromTarget(group, target);
+  if (!route) return Promise.resolve(false);
+  saveDesktopSyncGroupRoute(route);
+  updateDesktopSyncFreshness(true);
+  const active = inFlight.get(target.peerDeviceId);
+  if (active) return active;
+  const work = runDesktopSyncCoordinator('automatic', route)
+    .then(() => true)
+    .catch((error) => {
+      console.info('[sync-group] anchor sync paused until it is available', {
+        error: error instanceof Error ? error.message : String(error),
+        peerDeviceId: target.peerDeviceId
+      });
+      return false;
+    })
+    .finally(() => inFlight.delete(target.peerDeviceId));
+  inFlight.set(target.peerDeviceId, work);
+  return work;
+}
+
+function routeFromTarget(
+  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
+  target: DesktopAnchorTarget
+) {
+  return routeFromCandidate(group, {
+    endpoint_url: target.endpointUrl,
+    group_id: target.groupId,
+    provider_device_id: target.peerDeviceId
+  });
+}
+
+function routeFromCandidate(
+  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
+  candidate: { endpoint_url: string; group_id: string; provider_device_id: string }
+): DesktopSyncGroupPeer | null {
   const remote = group.devices.find((device) =>
-    device.device_identity_key === args.peerDeviceId && device.state === 'active');
-  if (!local || !remote || remote.device_identity_key === local.device_identity_key) return null;
+    device.device_identity_key === candidate.provider_device_id && device.state === 'active');
+  if (!remote || candidate.group_id !== group.group_id) return null;
   return {
-    endpoint_url: endpoint,
+    endpoint_url: candidate.endpoint_url,
     group_id: group.group_id,
-    local_device_id: local.device_identity_key,
+    local_device_id: group.local_device_identity_key,
     peer_device_id: remote.device_identity_key,
     peer_device_name: remote.device_name,
-    peer_platform: remote.platform
+    peer_platform: remote.platform,
+    route_kind: 'anchor'
   };
 }

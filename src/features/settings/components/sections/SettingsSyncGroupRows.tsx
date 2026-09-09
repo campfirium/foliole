@@ -43,6 +43,7 @@ function DeviceRow(props: {
   group: SyncGroupPayload;
   onTogglePause(): void;
   syncPaused: boolean;
+  topologyLabel: string | undefined;
 }) {
   const t = useTranslation();
   const local = props.device.device_identity_key === props.group.local_device_identity_key;
@@ -54,7 +55,9 @@ function DeviceRow(props: {
       </div>
       <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
         disabled={props.disabled || !local} onClick={props.onTogglePause} type="button">
-        {local ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause') : t('companion.sync.member.active')}
+        {local && props.topologyLabel ? props.topologyLabel
+          : local ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause')
+            : t('companion.sync.member.active')}
       </button>
     </div>
   );
@@ -147,7 +150,7 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
   );
 }
 
-export function SettingsSyncGroupRows(props: {
+type SettingsSyncGroupRowsProps = {
   candidates: DesktopSyncGroupJoinCandidatePayload[];
   discovery?: SyncGroupDiscoverySnapshot;
   currentDevice: { device_name: string; platform: string } | null;
@@ -164,10 +167,22 @@ export function SettingsSyncGroupRows(props: {
   onTogglePause(): void;
   joinRequests: DesktopSyncGroupJoinRequestSummaryPayload[];
   syncPaused: boolean;
-}) {
+  topologyRole: 'anchor' | 'member' | 'observing';
+  topologyStatus: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
+};
+
+function topologyMessageKey(props: SettingsSyncGroupRowsProps) {
+  return props.topologyStatus === 'ready'
+    ? `settings.companionSync.group.topology.${props.topologyRole}` as const
+    : `settings.companionSync.group.topology.${props.topologyStatus}` as const;
+}
+
+export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
   const t = useTranslation();
   if (!props.group) return <EmptySyncGroupRow {...props} />;
-  const groupHeadingId = `sync-group-${props.group.group_id}-heading`;
+  const group = props.group;
+  const groupHeadingId = `sync-group-${group.group_id}-heading`;
+  const topologyKey = topologyMessageKey(props);
   return (
     <>
       <div className="px-settings-panel-x pt-1">
@@ -186,9 +201,11 @@ export function SettingsSyncGroupRows(props: {
           </div>
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
-            {props.group.devices.filter((device) => device.state === 'active').map((device) => (
-              <DeviceRow device={device} disabled={props.isBusy} group={props.group!} key={device.device_identity_key}
-                onTogglePause={props.onTogglePause} syncPaused={props.syncPaused} />
+            {group.devices.filter((device) => device.state === 'active').map((device) => (
+              <DeviceRow device={device} disabled={props.isBusy} group={group} key={device.device_identity_key}
+                onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
+                topologyLabel={device.device_identity_key === group.local_device_identity_key
+                  ? t(topologyKey) : undefined} />
             ))}
           </div>
         </section>

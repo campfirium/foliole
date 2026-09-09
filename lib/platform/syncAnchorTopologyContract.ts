@@ -1,5 +1,6 @@
 import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  DESKTOP_SOFT_ANCHOR_CAPABILITY,
   evaluateSyncProtocolVersionHint,
   parseSyncProtocolTxt,
   serializeSyncProtocolTxt,
@@ -7,17 +8,14 @@ import {
   type SyncProtocolDescriptor
 } from './syncProtocolContract.js';
 
-export const PREPARED_ANCHOR_TOPOLOGY_CAPABILITY = 'desktop-soft-anchor-v1';
+export const PREPARED_ANCHOR_TOPOLOGY_CAPABILITY = DESKTOP_SOFT_ANCHOR_CAPABILITY;
 export const SYNC_ANCHOR_ROLE_TXT_KEY = 'topology_role';
 
 export const PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
-  capabilities: Object.freeze([
-    ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities,
-    PREPARED_ANCHOR_TOPOLOGY_CAPABILITY
-  ].sort()),
-  max_supported_version: 5,
-  min_supported_version: 5,
-  version: 5
+  capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities,
+  max_supported_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.max_supported_version,
+  min_supported_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.min_supported_version,
+  version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
 } as const satisfies SyncProtocolDescriptor);
 
 export type DesktopAnchorRole = 'observing' | 'member' | 'anchor';

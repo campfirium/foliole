@@ -14,9 +14,6 @@ const lifecycle = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   isAvailableNativeCompanionRuntime: () => true
 }));
-vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-  subscribeCompanionSyncGroupServiceHint: vi.fn(async () => vi.fn())
-}));
 vi.mock('../shared/platform/appLifecycle', () => ({
   readNativeAppActiveState: vi.fn(async () => true),
   subscribeNativeAppBackground: vi.fn(async (handler: () => void) => {

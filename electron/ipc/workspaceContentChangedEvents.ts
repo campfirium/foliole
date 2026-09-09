@@ -1,6 +1,5 @@
 import { BrowserWindow, type BrowserWindow as ElectronBrowserWindow } from 'electron';
 
-import { refreshCompanionMdnsAdvertisement } from '../sync/companionMdnsAdvertisement.js';
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import {
@@ -16,7 +15,6 @@ export function notifyWorkspaceContentChanged(
   excludedWindow: ElectronBrowserWindow | null = null,
   options: { requestSync?: boolean } = {}
 ) {
-  refreshCompanionMdnsAdvertisement();
   if (options.requestSync !== false) void requestDesktopHighValueSync();
   const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
   for (const window of windows) {

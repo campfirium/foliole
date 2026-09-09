@@ -7,11 +7,13 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 } as const;
 
 export const COMPLETE_MEMBER_DATA_PLANE_CAPABILITY = 'complete-member-data-plane';
+export const DESKTOP_SOFT_ANCHOR_CAPABILITY = 'desktop-soft-anchor-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
     'device-delivery-receipts-v1',
+    DESKTOP_SOFT_ANCHOR_CAPABILITY,
     'device-sync-groups-v1',
     'group-key-routing-v1',
     'lan-sync-v1',
@@ -22,9 +24,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
   ].sort()),
-  max_supported_version: 4,
-  min_supported_version: 4,
-  version: 4
+  max_supported_version: 5,
+  min_supported_version: 5,
+  version: 5
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

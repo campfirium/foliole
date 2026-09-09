@@ -4,6 +4,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import {
   startCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
+import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 interface DesktopSyncGroupAdvertisementInput {
@@ -27,6 +28,7 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
     groupId: group.group_id,
     groupTag: workgroup.group_tag,
     onWarning: args.onWarning,
-    port: args.port
+    port: args.port,
+    role: loadDesktopAnchorTopologyState().role
   });
 }

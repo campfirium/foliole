@@ -8,7 +8,6 @@ import {
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
-import { subscribeCompanionSyncGroupServiceHint } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
@@ -30,7 +29,6 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
   const isSyncGroupReadyRef = useRef(isSyncGroupReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
-  const pendingServiceHintRef = useRef(new Set<string>());
   const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,7 +39,6 @@ function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanion
     isSyncGroupReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
-    pendingServiceHintRef,
     readAppActiveState: readNativeAppActiveState,
     resourceContinuationModeRef,
     retryAttemptRef,
@@ -69,7 +66,6 @@ function subscribeForegroundSyncEvents(
     if (cancelled()) unsubscribe();
     else unsubscribers.push(unsubscribe);
   };
-  void keep(subscribeCompanionSyncGroupServiceHint((hint) => run('service-hint', hint.endpoint_url)));
   void keep(subscribeNativeAppForeground(() => {
     refs.isAppActiveRef.current = true;
     cadence.updateFreshness({

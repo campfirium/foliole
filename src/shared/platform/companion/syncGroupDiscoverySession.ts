@@ -1,4 +1,8 @@
 import type { SyncGroupDiscoverySnapshot } from '../../../../lib/platform/syncGroupDiscoveryContract';
+import {
+  evaluateSyncProtocolVersionHint,
+  parseSyncProtocolTxt
+} from '../../../../lib/platform/syncProtocolContract';
 import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery';
 import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
@@ -13,7 +17,12 @@ function isMobileAdvertisement(candidate: CompanionNativeDiscoveryEvent['candida
 }
 
 function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDiscoverySnapshot {
-  return { candidates: [], change: event.change, error_code: null, status: 'searching' };
+  const incompatible = event.candidates.some((candidate) =>
+    !isMobileAdvertisement(candidate)
+    && evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
+  const status = incompatible ? 'incompatible' : 'waiting_anchor';
+  return { candidates: [], change: event.change,
+    error_code: incompatible ? 'incompatible' : null, status };
 }
 
 function uniqueSyncGroups<T extends {
@@ -43,7 +52,8 @@ export async function startCompanionSyncGroupDiscoverySession(
       onSnapshot({ candidates: [], change: event.change, error_code: event.error_code, status: event.status });
       return;
     }
-    const desktopAdvertisements = event.candidates.filter((candidate) => !isMobileAdvertisement(candidate));
+    const desktopAdvertisements = event.candidates.filter((candidate) =>
+      !isMobileAdvertisement(candidate) && candidate.protocol_txt?.topology_role === 'anchor');
     if (desktopAdvertisements.length === 0) return void onSnapshot(searchingSnapshot(event));
     const candidates = await loadCompanionDiscoveryCandidates(desktopAdvertisements.map((candidate) => ({
       endpointUrl: candidate.endpoint_url,

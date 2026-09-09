@@ -104,6 +104,29 @@ async function testRecordsMissingFailureDetails() {
   }));
 }
 
+async function testSurfacesMissingAnchorBeforeSyncStarts() {
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+    .mockRejectedValueOnce(new Error('discovery_waiting_anchor'));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setError = vi.fn();
+  const setStatus = vi.fn();
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError,
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus,
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('failed');
+  expect(setError).toHaveBeenCalledWith('discovery_waiting_anchor');
+  expect(setStatus).toHaveBeenLastCalledWith('idle');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
+}
+
 describe('tryForegroundAutoSync failures', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
@@ -114,4 +137,6 @@ describe('tryForegroundAutoSync failures', () => {
   it('records native bridge failure causes in sync activity', testRecordsNativeBridgeFailureCause);
 
   it('records when a failed sync returns no error details', testRecordsMissingFailureDetails);
+
+  it('surfaces a missing desktop anchor before sync starts', testSurfacesMissingAnchorBeforeSyncStarts);
 });

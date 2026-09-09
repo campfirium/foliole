@@ -32,7 +32,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()
-    let serviceMonitor = FolioleCompanionBonjourServiceMonitor()
     let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
     private let contentBlobSessions = FolioleCompanionContentBlobSessions()
     lazy var groupData = FolioleCompanionSyncGroupDataBridge { [weak self] event in

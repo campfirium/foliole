@@ -86,7 +86,6 @@ export interface CompanionWorkspaceSyncPlugin
     app_version: string;
     device_id: string;
     device_name: string;
-    facts_revision: string;
     platform: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
   }): Promise<CompanionSyncGroupProviderState>;
