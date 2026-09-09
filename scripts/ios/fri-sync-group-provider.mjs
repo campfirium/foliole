@@ -75,8 +75,8 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
       evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session }) : null;
     const conflictSeed = twoDevice ? await createDesktopSyncConflictSeed({
       evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session }) : null;
-    const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
     const beforeJoinRun = twoDevice ? await session.loadSyncTriggerResult() : null;
+    const initial = assertMacosAcceptanceSyncGroupServer(await session.enable());
     const initialOrigins = journeyOrigins(await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     }));
