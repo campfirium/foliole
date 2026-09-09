@@ -6,6 +6,13 @@ export const T173_WINDOWS_REPO_ROOT = 'D:\\C\\foliole-sync';
 export const T173_WINDOWS_REPO_ROOT_POSIX = 'D:/C/foliole-sync';
 export const T173_WINDOWS_ACTIONS = new Set(['multi-device-sync-c']);
 
+export function t173PreparedBuildPaths(repoRoot) {
+  return {
+    electron: path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe'),
+    main: path.join(repoRoot, 'dist', 'electron', 'main.js')
+  };
+}
+
 const SHA = /^[0-9a-f]{40}$/u;
 const ROUTE = /^t173-sync-[0-9a-f]{10}-[0-9a-f-]{36}$/u;
 

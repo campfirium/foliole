@@ -14,7 +14,8 @@ import { writeWindowsSyncGroupProviderRelease } from
 import { readJson, syncGroupInteractivePaths } from './windows-sync-group-interactive-state.mjs';
 import {
   assertT173RouteIdentity, assertT173RuntimeIdentity, measureT173RuntimeIdentity,
-  T173_WINDOWS_ACTIONS, T173_WINDOWS_REPO_ROOT, T173_WINDOWS_SOURCE_REF
+  t173PreparedBuildPaths, T173_WINDOWS_ACTIONS, T173_WINDOWS_REPO_ROOT,
+  T173_WINDOWS_SOURCE_REF
 } from './t173-windows-candidate-contract.mjs';
 
 const RELEASES = Object.freeze({
@@ -38,8 +39,7 @@ function digest(filePath) {
 }
 
 function assertPreparedBuild(build, repoRoot) {
-  const electron = path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
-  const main = path.join(repoRoot, 'dist-electron', 'main.js');
+  const { electron, main } = t173PreparedBuildPaths(repoRoot);
   if (build?.electronPath !== electron || build.mainPath !== main
       || build.electronSha256 !== digest(electron) || build.mainSha256 !== digest(main)) {
     throw new Error('T173 Windows prepared runtime/build identity mismatch.');
@@ -70,8 +70,7 @@ async function prepare(paths, identity) {
       timeoutMs: 20 * 60_000, windowsHide: true
     });
   }
-  const electron = path.join(paths.repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
-  const main = path.join(paths.repoRoot, 'dist-electron', 'main.js');
+  const { electron, main } = t173PreparedBuildPaths(paths.repoRoot);
   return { build: { electronPath: electron, electronSha256: digest(electron),
     mainPath: main, mainSha256: digest(main) }, runtimeIdentity: identity };
 }

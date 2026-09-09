@@ -1,12 +1,22 @@
+import path from 'node:path';
+
 import { expect, it } from 'vitest';
 
 import {
-  assertT173RuntimeIdentity, measureT173RuntimeIdentity, T173_WINDOWS_REPO_ROOT
+  assertT173RuntimeIdentity, measureT173RuntimeIdentity, t173PreparedBuildPaths,
+  T173_WINDOWS_REPO_ROOT
 } from './t173-windows-candidate-contract.mjs';
 
 const expected = { branch: 'sync', clean: true, committed: true,
   revision: 'a'.repeat(40), sourceRef: 'refs/heads/sync',
   sourceRoot: T173_WINDOWS_REPO_ROOT, treeDigest: 'b'.repeat(40) };
+
+it('binds prepared evidence to the compiled Electron entry', () => {
+  expect(t173PreparedBuildPaths(T173_WINDOWS_REPO_ROOT)).toEqual({
+    electron: path.join(T173_WINDOWS_REPO_ROOT, 'node_modules', 'electron', 'dist', 'electron.exe'),
+    main: path.join(T173_WINDOWS_REPO_ROOT, 'dist', 'electron', 'main.js')
+  });
+});
 
 it('measures the actual task-owned source root instead of trusting request fields', () => {
   const values = [`${'a'.repeat(40)}\n`, `${'b'.repeat(40)}\n`, 'sync\n', ''];
