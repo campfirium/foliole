@@ -97,5 +97,6 @@ export async function tryForegroundAutoSyncTarget(
   const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
     runId, target, runStreamSync, syncArgs
   }));
+  syncArgs.onRunIdentified?.(run.runId, run.mode);
   return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
 }

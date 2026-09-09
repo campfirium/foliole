@@ -69,6 +69,11 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         setState: args.setState,
         setSyncProgress: args.setSyncProgress,
         setStatus: args.setStatus,
+        onRunIdentified: (actualRunId) => {
+          if (action.runId === actualRunId) return;
+          action = { ...action, runId: actualRunId };
+          args.setManualSyncAction?.(action);
+        },
         runId,
         state: { ...args.state, endpoint_url: endpointUrl },
         triggerReason: 'manual'

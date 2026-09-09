@@ -200,7 +200,11 @@ describe('companion sync run owner', () => {
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
     expect(countRunEvents()).toBe(2);
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
-    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
+    expect(lifecycle.map(({ status }) => status)).toEqual([
+      'starting', 'running', 'running', 'terminal'
+    ]);
+    const automaticRunId = persistedEvents.find((event) => event.kind === 'run_finished')?.run_id;
+    expect(lifecycle.at(-1)?.runId).toBe(automaticRunId);
     expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });
 });
