@@ -46,6 +46,9 @@ extension FoliolePhysicalSyncGroupUITests {
         openSyncSettings(in: app)
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its attempt Sync Group after relaunch.")
+        let automaticRetry = expectation(description: "Fri post-relaunch automatic Sync retry")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { automaticRetry.fulfill() }
+        wait(for: [automaticRetry], timeout: 61)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         waitForSyncNowCompletion(in: app)
         openBrowse(in: app)
