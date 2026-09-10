@@ -65,8 +65,8 @@ public class FolioleCompanionNsdDiscoveryTest {
 
     @Test
     public void projectsThePreparedTopologyRoleFromTheSharedHostFixture() throws Exception {
-        JSONObject fixture = new JSONObject(Files.readString(sharedFixturePath()));
-        JSONObject bridge = new JSONObject(Files.readString(bridgeContractPath()));
+        JSONObject fixture = new JSONObject(readUtf8(sharedFixturePath()));
+        JSONObject bridge = new JSONObject(readUtf8(bridgeContractPath()));
         String roleTxtKey = fixture.getString("role_txt_key");
 
         assertEquals(roleTxtKey, bridge.getJSONObject("hostApi").getJSONObject("network")
@@ -86,5 +86,9 @@ public class FolioleCompanionNsdDiscoveryTest {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         if (Files.exists(root.resolve("android"))) root = root.resolve("android");
         return root.resolve("app/src/main/assets/companion-bridge-contract-definitions.json");
+    }
+
+    private static String readUtf8(Path path) throws Exception {
+        return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }
 }
