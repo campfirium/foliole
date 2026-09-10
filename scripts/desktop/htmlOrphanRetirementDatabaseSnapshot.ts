@@ -92,7 +92,7 @@ function restoreDatabase(sqlite: Sqlite, snapshot: DatabaseSnapshot, attachmentI
 export async function restoreHtmlOrphanRetirement(database: string, journal: string) {
   const snapshot = readDesktopAttachmentRetirementDatabaseSnapshot(journal) as DatabaseSnapshot | undefined;
   if (!snapshot) throw new Error('Attachment retirement journal has no database snapshot.');
-  const attachmentIds = snapshot.rows.attachments.map((row) => String(row.id));
+  const attachmentIds = (snapshot.rows.attachments ?? []).map((row) => String(row.id));
   const sqlite = new BetterSqlite3(database, { fileMustExist: true });
   try {
     sqlite.transaction(() => {

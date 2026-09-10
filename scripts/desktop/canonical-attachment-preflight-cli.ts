@@ -26,9 +26,10 @@ function parseArgs(argv: string[]): PreflightPaths {
     }
     values.set(key, value);
   }
+  const snapshotDir = values.get('--snapshot');
   const result = {
     assetsDir: values.get('--assets') ?? '', databasePath: values.get('--database') ?? '',
-    outputPath: values.get('--output') ?? '', snapshotDir: values.get('--snapshot')
+    outputPath: values.get('--output') ?? '', ...(snapshotDir ? { snapshotDir } : {})
   };
   if (![result.assetsDir, result.databasePath, result.outputPath].every(path.isAbsolute) ||
       (result.snapshotDir && !path.isAbsolute(result.snapshotDir))) throw new Error('all_paths_must_be_absolute');
