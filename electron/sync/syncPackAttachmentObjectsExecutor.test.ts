@@ -4,6 +4,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from '../../lib/core/sync/syncPackAttachmentObjectsExecutor.js';
 
 it('applies attachment and pdf page text payload records', async () => {
+  const contentHash = 'a'.repeat(64);
   const runs: Array<{ params: unknown[]; sql: string }> = [];
   const port = {
     query: vi.fn(async () => [
@@ -13,7 +14,8 @@ it('applies attachment and pdf page text payload records', async () => {
         object_id: 'att-1',
         object_type: 'attachment',
         payload_json: JSON.stringify({
-          blob: { availability: 'local', content_hash: 'blob-hash', size_bytes: 128 },
+          blob: { availability: 'local', content_hash: contentHash, mime_type: 'application/pdf',
+            size_bytes: 128, storage_key: `${contentHash}.pdf` },
           mime_type: 'application/pdf',
           original_name: 'doc.pdf',
           size_bytes: 128
@@ -41,7 +43,9 @@ it('applies attachment and pdf page text payload records', async () => {
   expect(runs[0]?.sql).toContain('INSERT INTO attachments');
   expect(runs[0]?.params.slice(0, 4)).toEqual(['att-1', 'doc.pdf', 'application/pdf', 128]);
   expect(runs[1]?.sql).toContain('INSERT INTO attachment_blobs');
-  expect(runs[1]?.params.slice(0, 6)).toEqual(['att-1', 'blob-hash', null, 128, null, 'remote_known']);
+  expect(runs[1]?.params.slice(0, 6)).toEqual([
+    'att-1', contentHash, `${contentHash}.pdf`, 128, 'application/pdf', 'remote_known'
+  ]);
   expect(runs[2]?.sql).toContain('INSERT INTO pdf_page_text');
   expect(runs[2]?.params.slice(0, 3)).toEqual(['att-1', 3, 'page text']);
 });

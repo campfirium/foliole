@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+
 import { finalizeCanonicalAttachmentMigration, runCanonicalAttachmentMigration } from './canonicalAttachmentMigration.js';
 
 let root = '';
@@ -54,7 +55,7 @@ it('dry-runs without mutation, then prepares, commits, stages, resumes, and fina
   const args = { assetsDir, journalPath, sqlite: openDatabaseConnection().sqlite };
 
   const dryRun = runCanonicalAttachmentMigration({ ...args, dryRun: true });
-  expect(dryRun.conflicts).toEqual([]);
+  expect(dryRun.residualBlockers).toEqual([]);
   await expect(fs.access(journalPath)).rejects.toThrow();
   runCanonicalAttachmentMigration(args);
   expect(JSON.parse(await fs.readFile(journalPath, 'utf8')).stage).toBe('verified');
@@ -79,6 +80,38 @@ it('blocks before database commit when a canonical target has different bytes', 
     .toThrow('canonical_attachment_target_conflict');
   expect(openDatabaseConnection().sqlite.prepare('SELECT storage_key FROM attachment_blobs').get())
     .toEqual({ storage_key: hash });
+});
+
+it('repairs detected image metadata and retires an unreferenced HTML attachment', async () => {
+  const assetsDir = path.join(root, 'Assets-repair');
+  const journalPath = path.join(root, 'repair.json');
+  await fs.mkdir(assetsDir);
+  const sqlite = openDatabaseConnection().sqlite;
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10]);
+  const html = Buffer.from('<!DOCTYPE html><html>retire</html>');
+  const rows = [
+    { bytes: png, id: 'repair-image', mime: 'image/jpeg' },
+    { bytes: html, id: 'retire-html', mime: 'image/png' }
+  ];
+  for (const row of rows) {
+    const hash = createHash('sha256').update(row.bytes).digest('hex');
+    sqlite.prepare('INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run(row.id, row.id, row.mime, row.bytes.length, '2026-09-10T00:00:00.000Z');
+    sqlite.prepare(`INSERT INTO attachment_blobs
+      (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(row.id, hash, row.id, row.bytes.length, row.mime, 'local', '2026-09-10T00:00:00.000Z');
+    await fs.writeFile(path.join(assetsDir, row.id), row.bytes);
+  }
+
+  runCanonicalAttachmentMigration({ assetsDir, journalPath, sqlite });
+  expect(sqlite.prepare('SELECT mime_type FROM attachments WHERE id = ?').get('repair-image'))
+    .toEqual({ mime_type: 'image/png' });
+  expect(sqlite.prepare('SELECT storage_key, mime_type FROM attachment_blobs WHERE attachment_id = ?')
+    .get('repair-image')).toMatchObject({ mime_type: 'image/png', storage_key: expect.stringMatching(/\.png$/) });
+  expect(sqlite.prepare('SELECT COUNT(*) AS count FROM attachments WHERE id = ?').get('retire-html'))
+    .toEqual({ count: 0 });
+  finalizeCanonicalAttachmentMigration(journalPath);
 });
 
 function hashPlaceholder(bytes: Buffer) {
