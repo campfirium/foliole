@@ -182,8 +182,9 @@ test('recovers an abandoned worker and retries only two failed candidates', asyn
       }
     });
     const resumedSettings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await expect(resumedSettings.getByText(/^(Migration: 31\/31 completed\.|迁移：已完成 31\/31。)$/)).toBeVisible();
-    await expect(resumedSettings.getByText(/^(First sync: 31\/31 completed\.|首次同步：已完成 31\/31。)$/)).toBeVisible();
+    await expect(resumedSettings.getByRole('button', { name: /^(Sync|同步)$/ })).toBeVisible();
+    await expect(resumedSettings.getByText(/^(Migration:|迁移：)/)).toHaveCount(0);
+    await expect(resumedSettings.getByText(/^(First sync:|首次同步：)/)).toHaveCount(0);
     await mkdir(path.dirname(ARTIFACT), { recursive: true });
     await resumedSettings.screenshot({ path: ARTIFACT });
   } finally {

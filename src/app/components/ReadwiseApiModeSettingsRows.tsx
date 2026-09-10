@@ -86,7 +86,6 @@ function ReadwiseApiConnectionRow(props: {
   migrationActive: boolean;
   migrationRunning: boolean;
   migrationPercent: number | null;
-  taskStatus: ReturnType<typeof useReadwiseApiTaskStatus>;
   onConnected: () => void;
   onResume: () => void;
 }) {
@@ -96,7 +95,7 @@ function ReadwiseApiConnectionRow(props: {
   return (
     <>
       <SettingsRow
-        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}{props.taskStatus?.cutover.status === 'completed' && props.taskStatus.cutover.total_count !== null ? <span className="mt-1 block">{t('desktop.readwise.api.tasks.cutoverCompleted', { completed: props.taskStatus.cutover.completed_count, total: props.taskStatus.cutover.total_count })}</span> : null}</>}
+        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
         title={t('desktop.readwise.api.connection.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
@@ -144,7 +143,6 @@ export function ReadwiseApiModeSettingsRows(props: {
         migrationRunning={props.migrationPending}
         onConnected={props.onConnected}
         onResume={props.onConnected}
-        taskStatus={taskStatus}
       />
       <ReadwiseCommonRows
         cleanupDisabled={props.settings.cleanupDisabled || props.migrationActive}
@@ -153,16 +151,12 @@ export function ReadwiseApiModeSettingsRows(props: {
         onCleanup={props.settings.onCleanup}
         onSync={props.settings.onSync}
         syncActionLabel={task.actionLabel}
-        syncDetail={(
-          <>
-            {task.initial ? <span className="block">{task.initial}</span> : null}
-            {task.routine ? <span className="block">{task.routine}</span> : null}
-          </>
-        )}
         syncDisabled={props.settings.syncDisabled || props.migrationActive || task.running}
         syncIsRunning={task.running}
         syncLoadingLabel={task.loadingLabel}
-        syncStatus={props.settings.syncStatus}
+        syncStatus={props.settings.syncStatus.tone === 'error'
+          ? props.settings.syncStatus
+          : { failedSources: [], message: null, tone: 'normal' }}
       />
     </>
   );

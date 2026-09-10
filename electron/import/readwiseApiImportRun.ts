@@ -5,7 +5,7 @@ import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportSt
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
-import { IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
+import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportProgressEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { ensureReadwiseApiCandidateIndex } from './readwiseApiCandidateFetch.js';
@@ -121,7 +121,6 @@ async function runNow(
     });
     updateReadwiseApiTrackedRunStage('completion');
     assertEligible(signal, connectionRef);
-    publishProgress(input?.window, result.completedCount, result.totalCount, 'source_completed');
     const output: NativeReadwiseImportRunResult = {
       annotation_count: result.annotationCount,
       committed_count: result.committedCount,
@@ -135,14 +134,17 @@ async function runNow(
       status: result.remainingCount > 0 ? 'failed' : 'completed'
     };
     completeReadwiseApiTrackedRun(connectionRef, output);
+    publishProgress(input?.window, result.completedCount, result.totalCount, 'source_completed');
     return output;
   } catch (error) {
     if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
       const result = createCancelledReadwiseApiImportResult();
       completeReadwiseApiTrackedRun(connectionRef, result);
+      publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'cancelled');
       return result;
     }
     failReadwiseApiTrackedRun(connectionRef, error);
+    publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'failed');
     throw error;
   }
 }
@@ -167,11 +169,11 @@ function publishProgress(
   processedCount: number,
   totalCount: number,
   phase: 'fetching' | 'source_completed' | 'writing',
-  sourceProcessedCount?: number
+  sourceProcessedCount?: number,
+  terminalStatus?: 'cancelled' | 'completed' | 'failed'
 ) {
-  if (!window || window.isDestroyed()) return;
-  window.webContents.send(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, {
+  notifyReadwiseReaderImportProgress({
     phase, processedCount, ...(sourceProcessedCount === undefined ? {} : { sourceProcessedCount }),
-    status: phase === 'source_completed' ? 'completed' : 'running', totalCount
-  });
+    status: phase === 'source_completed' ? terminalStatus ?? 'completed' : 'running', totalCount
+  }, window);
 }

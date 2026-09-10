@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
+import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 
 const runtime = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn(), load: vi.fn() }));
@@ -12,7 +13,7 @@ const confirmation = vi.hoisted(() => ({ request: vi.fn() }));
 const navigation = vi.hoisted(() => ({ open: vi.fn() }));
 const schedule = vi.hoisted(() => ({ load: vi.fn() }));
 
-function apiSettings() {
+function apiSettings(): ReadwiseApiModeSettings {
   return {
     cleanupDisabled: false,
     config: createDefaultReadwiseReaderConfig(),
@@ -147,7 +148,7 @@ it('offers to continue migration when the migration is paused', async () => {
   expect(migration).not.toHaveAttribute('aria-busy', 'true');
 });
 
-it('shows completed cutover and the failed initial sync as separate tasks', async () => {
+it('hides completed and failed task summaries behind the single sync action', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 31, status: 'already_completed', topic_count: 31, total_count: 31
   });
@@ -157,18 +158,35 @@ it('shows completed cutover and the failed initial sync as separate tasks', asyn
     initial_sync: { completed_count: 29, failed_count: 2, lifecycle: null, pending_count: 0, status: 'failed', total_count: 31, unexplained_failure_count: 2 },
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
+  const settings = apiSettings();
+  settings.syncStatus = { failedSources: [], message: 'Synced 29 Readwise source topics.', tone: 'normal' };
   render(<LocalizationProvider><ReadwiseSourceModeSection
-    apiSettings={apiSettings()}
+    apiSettings={settings}
     committedMode="api"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByText('Migration: 31/31 completed.')).toBeInTheDocument();
-  expect(screen.getByText(/First sync: 29\/31 completed; 2 failed/)).toBeInTheDocument();
-  expect(screen.getByText('Routine sync: starts after the first sync completes.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled();
+  expect(screen.queryByText(/Migration:/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Synced 29 Readwise source topics.')).not.toBeInTheDocument();
   expect(screen.queryByText(/Migrating to API mode/)).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Retry 2 failed' })).toBeEnabled();
+});
+
+it('keeps the existing failure message beside the same sync action', async () => {
+  const settings = apiSettings();
+  settings.syncStatus = { failedSources: [], message: 'Readwise sync failed.', tone: 'error' };
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiSettings={settings}
+    committedMode="api"
+    mode="api"
+    onChange={() => undefined}
+  /></LocalizationProvider>);
+
+  expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled();
+  expect(screen.getByRole('status')).toHaveTextContent('Readwise sync failed.');
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {
