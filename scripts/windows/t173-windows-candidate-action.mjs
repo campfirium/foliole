@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { executeBounded } from './windows-bounded-process.mjs';
 import { runWindowsDevBuild } from './windows-dev-build.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
+import { syncGroupResultManifestPath } from './windows-sync-group-build-routing.mjs';
 import { writeWindowsSyncGroupProviderRelease } from
   './windows-sync-group-provider-release-control.mjs';
 import { readJson, syncGroupInteractivePaths } from './windows-sync-group-interactive-state.mjs';
@@ -118,7 +119,7 @@ export async function runT173WindowsCandidateAction(config, {
   const after = assertT173RuntimeIdentity(config.expected,
     inspect({ gitPath: paths.gitPath, repoRoot: paths.repoRoot }));
   assertPreparedBuild(prepared.build, paths.repoRoot);
-  const actionReceiptPath = action.summary.multiDeviceSyncC?.manifestPath;
+  const actionReceiptPath = syncGroupResultManifestPath(action.summary, config.action);
   if (!actionReceiptPath || !fs.existsSync(actionReceiptPath)) {
     throw new Error('T173 Windows product action receipt is missing.');
   }
