@@ -106,6 +106,15 @@ function dispatchRoutedCommand(
 }
 
 function shouldCoordinateStorageDispatch(command: string) {
-  return command !== NATIVE_COMMANDS.completeSyncGroupJoin
-    && command !== NATIVE_COMMANDS.syncCompanionNow;
+  return !STORAGE_COMMANDS_WITH_EXTERNAL_WAIT.has(command);
 }
+
+const STORAGE_COMMANDS_WITH_EXTERNAL_WAIT = new Set<string>([
+  NATIVE_COMMANDS.completeSyncGroupJoin,
+  NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
+  NATIVE_COMMANDS.importReadwiseManualSource,
+  NATIVE_COMMANDS.prepareReadwiseManualSearch,
+  NATIVE_COMMANDS.previewReadwiseIdentityBindings,
+  NATIVE_COMMANDS.runReadwiseSourceCutover,
+  NATIVE_COMMANDS.syncCompanionNow
+]);

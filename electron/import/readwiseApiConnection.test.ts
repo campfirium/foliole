@@ -2,7 +2,10 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { createDefaultReadwiseHostSettings } from '../../lib/core/import/readwiseHostSettings.js';
+import {
+  createDefaultReadwiseHostSettings,
+  READWISE_HOST_SETTINGS_VERSION
+} from '../../lib/core/import/readwiseHostSettings.js';
 
 const state = vi.hoisted(() => ({
   active: true,
@@ -75,7 +78,8 @@ it('validates and stores a clipboard token without returning or persisting it', 
   expect(JSON.stringify(connected)).not.toContain('READWISE-SECRET');
   expect(JSON.stringify(state.settings)).not.toContain('READWISE-SECRET');
   expect(state.settings).toMatchObject({
-    apiConnection: { secretRef: expect.stringMatching(/^readwise-api-/), state: 'connected' }, version: 2
+    apiConnection: { secretRef: expect.stringMatching(/^readwise-api-/), state: 'connected' },
+    version: READWISE_HOST_SETTINGS_VERSION
   });
 });
 
