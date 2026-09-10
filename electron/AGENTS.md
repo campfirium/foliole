@@ -60,6 +60,7 @@
 ## macOS Desktop Interaction
 
 - macOS Codex 会话调试或操作桌面客户端时，默认不得抢占用户当前桌面；优先使用日志 / CLI、应用级后台状态读取或不激活窗口的 Computer Use 操作，能在后台完成时不得将 Foliole 拉到前台。
+- 当目标是已由统一脚本启动的 Foliole DEV 且验收确需 Computer Use 时，先用 `cua.getState()` 核实 `com.campfirium.foliole.dev` 正在运行，再仅按该 bundle ID 连接；不得调用 `cua.getApp("Foliole")`，它会解析并启动正式版 `/Applications/Foliole.app`。DEV 不在 inventory 时返回统一脚本诊断，不尝试应用名称。此规则由本文件拥有；仅当 DEV bundle identity 改变或 Computer Use 提供经验证的 non-launching process binding 时修订，固定成本是一轮 inventory 读取。
 - 只有验收目标依赖真实焦点、键盘输入、菜单栏、拖拽或窗口呈现，或用户当次明确要求可见预览时，才允许前台操作；执行前必须先在 commentary 说明会短暂打扰桌面，结束后只停止或隐藏本轮启动的窗口，不得关闭用户原有窗口。
 
 ## Validation
