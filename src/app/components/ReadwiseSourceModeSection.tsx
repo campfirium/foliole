@@ -5,13 +5,16 @@ import { SettingsSection, SettingsSegmentedRow } from '../../shared/ui';
 import { ReadwiseApiModeSettingsRows, type ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { useReadwiseSourceMigration } from './useReadwiseSourceMigration';
 
-export function ReadwiseSourceModeSection(props: {
+interface ReadwiseSourceModeSectionProps {
   apiSettings?: ReadwiseApiModeSettings;
   committedMode?: ReadwiseSourceMode;
   mode: ReadwiseSourceMode;
   onChange: (mode: ReadwiseSourceMode) => void;
+  onConnected?: () => void;
   onCommitMode?: (mode: ReadwiseSourceMode) => void;
-}) {
+}
+
+export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps) {
   const t = useTranslation();
   const committedMode = props.committedMode ?? props.mode;
   const migration = useReadwiseSourceMigration({
@@ -57,7 +60,10 @@ export function ReadwiseSourceModeSection(props: {
           migrationActive={migration.required}
           migrationMode={migrating}
           migrationPending={migration.pending}
-          onConnected={() => { if (migrating || migration.required) void migration.start(); }}
+          onConnected={() => {
+            props.onConnected?.();
+            if (migrating || migration.required) void migration.start();
+          }}
           migrationPercent={migration.percent}
           settings={props.apiSettings}
         />

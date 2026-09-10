@@ -14,6 +14,7 @@ import {
   SettingsSection
 } from '../../shared/ui';
 
+import { ReadwiseManualImportSection } from './ReadwiseManualImportSection';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -149,6 +150,7 @@ export function ReadwiseFolderSettingsSections(props: {
         />
       </SettingsSection>
       <ReadwiseBehaviorSection onChange={props.onChangePolicy} policy={props.policy} />
+      <ReadwiseManualImportSection />
       <ReadwiseImportSettingsSection draft={props.draft} />
     </div>
   );

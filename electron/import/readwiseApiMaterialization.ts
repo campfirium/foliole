@@ -39,9 +39,11 @@ export function materializeReadwiseApiDocument(input: {
   importedAt?: string;
   preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
   replaceExistingBody?: boolean;
+  reimportDeleted?: boolean;
 }): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
-  const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
+  const previous = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
+  const existing = input.reimportDeleted && previous?.nodeDeleted ? null : previous;
   const destination = input.forceInbox || existing ? 'inbox' : input.destination;
   if (existing?.nodeDeleted) {
     saveState(input, existing.sourceFingerprint, existing.annotations, {
@@ -161,7 +163,8 @@ function materializeEpubIfStructured(
     annotationStates,
     connectionRef: input.connectionRef,
     document: input.document,
-    existingSourceFingerprint: existing?.sourceFingerprint ?? null,
+    existingSourceFingerprint: existing?.sourceFingerprint ?? (input.reimportDeleted
+      ? loadReadwiseApiImportSource(input.connectionRef, input.document.id)?.sourceFingerprint ?? null : null),
     importedAt,
     newAnnotations,
     previousState: existing?.state ?? null,
@@ -191,7 +194,9 @@ export function prepareReadwiseApiImportRecord(
     sourceLocator: remoteLocator(input.document.id),
     sourceProfile: 'body_with_highlight_sidecar'
   });
-  if (existing) prepared.sourceFingerprint = existing.sourceFingerprint;
+  const retainedSource = existing ?? (input.reimportDeleted
+    ? loadReadwiseApiImportSource(input.connectionRef, input.document.id) : null);
+  if (retainedSource) prepared.sourceFingerprint = retainedSource.sourceFingerprint;
   return prepared;
 }
 

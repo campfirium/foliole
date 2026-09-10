@@ -27,6 +27,8 @@ import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwis
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { softDeleteNodes } from '../database/nodeMutations.js';
+import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 
@@ -95,3 +97,19 @@ function documentFixture(body: string): PreparedReadwiseApiDocument {
     }, title: 'Remote PDF', unmatchedAnnotationCount: 0, updatedAt: '2026-09-08T00:00:00.000Z'
   };
 }
+
+it('localizes the PDF again when the user explicitly reimports a deleted Topic', async () => {
+  prepareOriginal.mockResolvedValue({ bytes: new Uint8Array([1]), state: {
+    attachmentId: 'pdf', contentHash: 'hash', mimeType: 'application/pdf', reason: null,
+    sizeBytes: 1, status: 'localized'
+  } });
+  const input = { config: createDefaultReadwiseReaderConfig(), connectionRef: 'connection',
+    destination: 'inbox' as const, document: documentFixture('Readable PDF') };
+  await commitReadwiseApiDocument(input);
+  const original = loadReadwiseApiImportSource('connection', 'document-1')!;
+  softDeleteNodes({ nodeIds: [original.nodeId!], deletedAt: '2026-09-10T00:00:00Z' });
+  expect((await commitReadwiseApiDocument({ ...input, reimportDeleted: true })).status).toBe('imported');
+  expect(prepareOriginal).toHaveBeenCalledTimes(2);
+  expect(persistOriginal).toHaveBeenCalledTimes(2);
+  expect(loadReadwiseApiImportSource('connection', 'document-1')?.nodeDeleted).toBe(false);
+});

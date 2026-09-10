@@ -29,6 +29,7 @@ import { handleLocalFileStorageCommand } from './storageLocalFileCommands.js';
 import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
 import { handleStoragePdfImageExcerptCommand } from './storagePdfImageExcerptCommand.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
+import { handleReadwiseManualCommand } from './storageReadwiseManualCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
@@ -38,6 +39,8 @@ export async function handleStorageCommand(
   args: Record<string, unknown>,
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
 ): Promise<unknown> {
+  const readwiseManualResult = await handleReadwiseManualCommand(command, args);
+  if (readwiseManualResult !== undefined) return readwiseManualResult;
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
     return syncMutationResult;

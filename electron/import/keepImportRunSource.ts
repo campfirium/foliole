@@ -138,7 +138,7 @@ async function runSingleKeepImportSourceResolved(
   const notifyUpdate = options.notifyUpdate ?? true;
   const preview = await classifySource(config, source);
   if (
-    preview.status === 'unchanged' &&
+    !options.forceTopicImport && preview.status === 'unchanged' &&
     !(await shouldRunUnchangedReadwiseDestination(config, source))
   ) {
     const cleanupDetail = await applySuccessfulSourceHandling(config, source);

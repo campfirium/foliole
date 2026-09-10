@@ -30,12 +30,25 @@ import type {
   NativeReadwiseIdentityBindingPreview,
   NativeReadwiseIdentityBindingResult
 } from './nativeReadwiseIdentityContract.js';
+import type { NativeReadwiseManualSearchResult, NativeReadwiseManualImportResult } from './nativeReadwiseManualImportContract.js';
 import type {
   NativeReadwiseSourceCutoverPreview,
   NativeReadwiseSourceCutoverResult
 } from './nativeReadwiseSourceCutoverContract.js';
 
 export type NativeReadwiseCommandMap = {
+  [NATIVE_COMMANDS.prepareReadwiseManualSearch]: {
+    args: undefined;
+    result: NativeReadwiseManualSearchResult;
+  };
+  [NATIVE_COMMANDS.searchReadwiseManualSources]: {
+    args: { query: string };
+    result: NativeReadwiseManualSearchResult;
+  };
+  [NATIVE_COMMANDS.importReadwiseManualSource]: {
+    args: { id: string; reimport: boolean };
+    result: NativeReadwiseManualImportResult;
+  };
   [NATIVE_COMMANDS.loadReadwiseApiConnection]: {
     args: undefined;
     result: NativeReadwiseApiConnection;

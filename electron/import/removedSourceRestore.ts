@@ -33,7 +33,7 @@ function isSuccessfulRemovedSourceImport(status: Awaited<ReturnType<typeof runSi
   return Boolean(status && status !== 'failed');
 }
 
-export async function restoreRemovedSource(ruleId: string, sourcePath: string): Promise<NativeRestoreRemovedSourceResult> {
+export async function restoreRemovedSource(ruleId: string, sourcePath: string, options: { forceTopicImport?: boolean } = {}): Promise<NativeRestoreRemovedSourceResult> {
   const restoredAt = new Date().toISOString();
   const config = resolveKeepImportRuleConfig(ruleId);
   if (!config) {
@@ -43,7 +43,7 @@ export async function restoreRemovedSource(ruleId: string, sourcePath: string): 
     const source = await buildKeepImportSourceDescriptor(config, sourcePath);
     unblockRemovedSource(ruleId, source.sourceName, restoredAt);
     const result = await runSingleKeepImportSource(config, source, {
-      forceTopicImport: shouldForceRemovedSourceTopicImport(config)
+      forceTopicImport: options.forceTopicImport ?? shouldForceRemovedSourceTopicImport(config)
     });
     if (result.importStatus === 'failed' || !result.importStatus) {
       reblockRemovedSource(ruleId, source.sourceName, restoredAt);

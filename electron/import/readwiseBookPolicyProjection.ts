@@ -102,6 +102,7 @@ async function projectBook(input: {
   book: ReadwiseBook;
   inventory: ReadwiseBooksInventory;
   policy: ReadwiseAutoImportPolicy;
+  reimport?: boolean;
   source: EnabledBooksSource;
   updatedAt: string;
 }) {
@@ -111,7 +112,7 @@ async function projectBook(input: {
   });
   const sourcePath = resolveSourcePath(book, inventory);
   const blocked = blockedState(source.id, sourcePath);
-  if (blocked.blocked) {
+  if (blocked.blocked && !input.reimport) {
     persist({
       book, inventory, nodeId: blocked.existingItem?.last_node_id ?? book.generatedNodeId,
       ruleId: source.id, sourcePath, status: 'blocked_deleted',
@@ -173,4 +174,22 @@ export async function syncReadwiseBookPolicyProjection(
     : inventory;
   if (createdCount > 0 || inventoryChanged) savePersistedReadwiseBooksInventory(updatedInventory);
   return { createdCount, inventory: updatedInventory };
+}
+
+export async function adoptReadwiseInventoryBook(
+  source: EnabledBooksSource, inventory: ReadwiseBooksInventory, bookKey: string, reimport: boolean
+) {
+  const book = inventory.books.find((item) => item.bookKey === bookKey);
+  if (!book) throw new Error('readwise_search_source_missing');
+  const selected = reimport ? { ...book, generatedNodeId: null } : book;
+  const projected = await projectBook({
+    book: selected, inventory, source, reimport, updatedAt: new Date().toISOString(),
+    policy: { version: 1, articleWithHighlights: 'inbox', articleWithoutHighlights: 'inbox',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox' }
+  });
+  savePersistedReadwiseBooksInventory({
+    ...inventory, books: inventory.books.map((item) => item.bookKey === bookKey ? projected.book : item),
+    scannedAt: new Date().toISOString()
+  });
+  return projected.book.generatedNodeId;
 }

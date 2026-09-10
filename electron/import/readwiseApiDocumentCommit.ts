@@ -1,6 +1,6 @@
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { stableReadwiseAnnotationNodeId, stableReadwiseEpubNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
+import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
 import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
@@ -17,7 +18,7 @@ import {
   prepareReadwiseApiOriginalFile
 } from './readwiseApiOriginalFile.js';
 
-export async function commitReadwiseApiDocument(input: {
+interface ReadwiseApiDocumentCommitInput {
   assertEligible?: () => void;
   config: ReadwiseReaderConfig;
   connectionRef: string;
@@ -25,38 +26,45 @@ export async function commitReadwiseApiDocument(input: {
   destination: Exclude<ReadwiseImportDestination, 'off'>;
   document: PreparedReadwiseApiDocument;
   replaceExistingBody?: boolean;
-}) {
+  reimportDeleted?: boolean;
+}
+
+export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommitInput) {
   const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
   if (!guardedDocument) {
     return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
   }
   input = { ...input, document: guardedDocument };
   const isOriginalFile = input.document.category === 'pdf';
+  const previousOriginalFile = input.reimportDeleted && existingBefore?.nodeDeleted
+    ? null : existingBefore?.state.originalFile;
   const destination = existingBefore ? 'inbox' : input.destination;
-  const prepared = isOriginalFile && destination === 'inbox' && existingBefore?.state.originalFile?.status !== 'localized'
+  const prepared = isOriginalFile && destination === 'inbox' && previousOriginalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
       category: 'pdf',
       ...(input.dependencies ? { dependencies: input.dependencies } : {}),
       documentId: input.document.id, hasHtmlBody: Boolean(input.document.body.trim())
     }) : null;
   const document = isOriginalFile && destination === 'inbox'
-    ? withOriginalFileStatus(input.document, prepared?.state ?? existingBefore?.state.originalFile ?? null)
+    ? withOriginalFileStatus(input.document, prepared?.state ?? previousOriginalFile ?? null)
     : input.document;
   const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
     destination,
-    document
+    document,
+    forceEpubStructure: Boolean(input.reimportDeleted && existingBefore?.nodeDeleted)
   });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
     config: input.config, connectionRef: input.connectionRef, destination, document, preparedEpubImages,
+    ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
     ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody })
   });
   if (!isOriginalFile || result.status !== 'imported') return result;
 
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  if (!prepared || existingBefore?.state.originalFile?.status === 'localized') return result;
+  if (!prepared || previousOriginalFile?.status === 'localized') return result;
   input.assertEligible?.();
   let finalState = prepared.state;
   if (prepared.bytes && prepared.state.status === 'localized' && existing?.nodeId) {
@@ -81,10 +89,17 @@ function guardPostCutoverDocument(connectionRef: string, document: PreparedReadw
   const binding = existingBefore ? {
     annotationRemoteIds: new Set(existingBefore.annotations.map((item) => item.remoteId))
   } : null;
-  return {
-    existingBefore,
-    guardedDocument: filterPostCutoverReadwiseDocument(loadReadwiseSourceCutover(), document, binding)
-  };
+  const cutover = loadReadwiseSourceCutover();
+  let guardedDocument = filterPostCutoverReadwiseDocument(cutover, document, binding);
+  if (cutover?.version === 2 && guardedDocument) {
+    const retired = new Set(cutover.retiredNodeIds);
+    const structureNodes = buildReadwiseApiEpubBookNodes(document.epubStructure?.sections ?? []);
+    if ((existingBefore?.nodeId && retired.has(existingBefore.nodeId)) || structureNodes.some((node) =>
+      retired.has(stableReadwiseEpubNodeId(connectionRef, document.id, node.key)))) guardedDocument = null;
+    else guardedDocument = { ...guardedDocument, annotations: guardedDocument.annotations.filter((annotation) =>
+      !retired.has(stableReadwiseAnnotationNodeId(connectionRef, annotation.remoteId))) };
+  }
+  return { existingBefore, guardedDocument };
 }
 
 function saveOriginalFileState(connectionRef: string, documentId: string, originalFile: ReadwiseApiOriginalFileState) {

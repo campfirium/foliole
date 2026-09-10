@@ -26,6 +26,7 @@ export interface ReadwiseApiImportRunState {
 interface RemoteImportSourceRow extends NodeBodyRow {
   latest_node_id: string | null;
   node_deleted_at: string | null;
+  node_id: string | null;
   node_title: string | null;
   remote_annotations_json: string;
   remote_import_state_json: string;
@@ -129,7 +130,7 @@ export function completeReadwiseApiImportRun(run: ReadwiseApiImportRunState, now
 export function loadReadwiseApiImportSource(connectionRef: string, documentId: string) {
   const row = openDatabaseConnection().driver.queryOne<RemoteImportSourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.remote_annotations_json, i.remote_import_state_json,
-       n.title node_title, n.content, n.body_blob_hash, cbd.data body_blob_data, n.deleted_at node_deleted_at
+       n.id node_id, n.title node_title, n.content, n.body_blob_hash, cbd.data body_blob_data, n.deleted_at node_deleted_at
      FROM import_sources i LEFT JOIN nodes n ON n.id = i.latest_node_id
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE i.remote_provider = 'readwise' AND i.remote_connection_ref = ? AND i.remote_document_id = ?`,
@@ -140,8 +141,8 @@ export function loadReadwiseApiImportSource(connectionRef: string, documentId: s
   try { parsed = JSON.parse(row.remote_import_state_json); } catch { /* defaults below */ }
   return {
     annotations: normalizeRemoteAnnotationBindings(parseJson(row.remote_annotations_json)),
-    body: row.latest_node_id && !row.node_deleted_at ? requireResolvedNodeBody(row, row.latest_node_id).content : null,
-    nodeDeleted: Boolean(row.latest_node_id && row.node_deleted_at),
+    body: row.node_id && !row.node_deleted_at ? requireResolvedNodeBody(row, row.node_id).content : null,
+    nodeDeleted: Boolean(row.latest_node_id && (!row.node_id || row.node_deleted_at)),
     nodeId: row.latest_node_id,
     sourceFingerprint: row.source_fingerprint,
     state: normalizeReadwiseApiDocumentImportState(parsed),

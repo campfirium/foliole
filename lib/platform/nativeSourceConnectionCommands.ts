@@ -1,4 +1,7 @@
 export const NATIVE_SOURCE_CONNECTION_COMMANDS = {
+  prepareReadwiseManualSearch: 'prepare_readwise_manual_search',
+  searchReadwiseManualSources: 'search_readwise_manual_sources',
+  importReadwiseManualSource: 'import_readwise_manual_source',
   activateReadwiseOnThisHost: 'activate_readwise_on_this_host',
   connectReadwiseApiFromClipboard: 'connect_readwise_api_from_clipboard',
   confirmSourceManagement: 'confirm_source_management',

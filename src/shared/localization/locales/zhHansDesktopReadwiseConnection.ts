@@ -1,4 +1,14 @@
 export const ZH_HANS_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
+  'desktop.readwise.manual.title': '手动导入',
+  'desktop.readwise.manual.query': '搜索标题或作者',
+  'desktop.readwise.manual.preparing': '正在准备搜索',
+  'desktop.readwise.manual.failed': '搜索或导入失败。请重新打开此页面再试。',
+  'desktop.readwise.manual.empty': '没有匹配结果',
+  'desktop.readwise.manual.imported': '已导入',
+  'desktop.readwise.manual.suppressed': '不可重复导入',
+  'desktop.readwise.manual.reimport': '重新导入',
+  'desktop.readwise.manual.import': '导入',
+
   'desktop.readwise.api.preview.batch': '本轮同步：{count}',
   'desktop.readwise.api.preview.degraded': '正文不可用：{count}',
   'desktop.readwise.api.preview.estimate': '预计导入约 {count} 秒',

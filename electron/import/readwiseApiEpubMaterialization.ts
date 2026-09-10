@@ -105,6 +105,7 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
     sourceLocator: remoteLocator(input.document.id),
     sourceProfile: 'body_with_highlight_sidecar'
   });
+  if (input.existingSourceFingerprint) preparedRoot.sourceFingerprint = input.existingSourceFingerprint;
   const root = runPreparedImport(
     preparedRoot,
     input.rootNodeId ? { forceUpdateExistingNodeId: input.rootNodeId, resetImportedStructure: true } : undefined

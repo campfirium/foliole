@@ -9,8 +9,7 @@ import {
 } from '../database/readwiseApiImportState.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
-import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
-import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 
 export async function promoteReadwiseApiExternalDocument(documentId: string): Promise<NativeTextImportResult | null> {
   const reference = loadReadwiseApiExternalReference(documentId);
@@ -24,21 +23,11 @@ export async function promoteReadwiseApiExternalDocument(documentId: string): Pr
   const importedAt = new Date().toISOString();
   const before = loadReadwiseApiImportSource(reference.connection_ref, document.id);
   const config = loadImportManagerSettings().readwiseReaderConfig;
-  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
+  const result = await commitReadwiseApiDocument({
     config,
     connectionRef: reference.connection_ref,
     destination: 'inbox',
-    document,
-    forceInbox: true
-  });
-  const result = materializeReadwiseApiDocument({
-    config,
-    connectionRef: reference.connection_ref,
-    destination: 'inbox',
-    document,
-    forceInbox: true,
-    importedAt,
-    preparedEpubImages
+    document
   });
   const source = loadReadwiseApiImportSource(reference.connection_ref, document.id);
   if (result.status !== 'imported' || !source?.nodeId) return null;

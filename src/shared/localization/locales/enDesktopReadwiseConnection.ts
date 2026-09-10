@@ -1,4 +1,14 @@
 export const EN_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
+  'desktop.readwise.manual.title': 'Manual import',
+  'desktop.readwise.manual.query': 'Search by title or author',
+  'desktop.readwise.manual.preparing': 'Preparing search…',
+  'desktop.readwise.manual.failed': 'Search or import failed. Reopen this page to try again.',
+  'desktop.readwise.manual.empty': 'No matches',
+  'desktop.readwise.manual.imported': 'Imported',
+  'desktop.readwise.manual.suppressed': 'Cannot import again',
+  'desktop.readwise.manual.reimport': 'Import again',
+  'desktop.readwise.manual.import': 'Import',
+
   'desktop.readwise.api.preview.batch': 'This sync: {count}',
   'desktop.readwise.api.preview.degraded': 'Unavailable body: {count}',
   'desktop.readwise.api.preview.estimate': 'About {count}s to import',
