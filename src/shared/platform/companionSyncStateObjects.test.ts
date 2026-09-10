@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../../lib/core/database/syncState';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -84,12 +85,15 @@ function settingObject(): NativeSyncObjectRecord {
 }
 
 function attachmentTombstone(): NativeSyncObjectRecord {
+  const deletedAt = '2026-05-04T02:00:00.000Z';
+  const payload = { attachment_id: 'att-1', content_hash: 'a'.repeat(64),
+    mime_type: 'image/png', storage_key: 'att-1' };
   return {
-    content_hash: 'attachment-delete-hash-1',
-    deleted_at: '2026-05-04T02:00:00.000Z',
+    content_hash: computeSyncContentHash('attachment', { ...payload, deleted_at: deletedAt }),
+    deleted_at: deletedAt,
     object_id: 'att-1',
     object_type: 'attachment',
-    payload_json: null,
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-05-04T02:00:00.000Z'
   };
 }
@@ -165,7 +169,12 @@ function installAttachmentSchema(database: Database.Database) {
       created_at TEXT NOT NULL
     );
     CREATE TABLE attachment_blobs (
-      attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE
+      attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE,
+      content_hash TEXT, storage_key TEXT, mime_type TEXT
+    );
+    CREATE TABLE attachment_sync_tombstones (
+      attachment_id TEXT PRIMARY KEY, content_hash TEXT NOT NULL, storage_key TEXT NOT NULL,
+      mime_type TEXT NOT NULL, deleted_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
     CREATE TABLE pdf_page_text (
       attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
@@ -181,7 +190,8 @@ function installAttachmentSchema(database: Database.Database) {
     );
     INSERT INTO nodes (id) VALUES ('node-1');
     INSERT INTO attachments (id, created_at) VALUES ('att-1', '2026-05-04T01:00:00.000Z');
-    INSERT INTO attachment_blobs (attachment_id) VALUES ('att-1');
+    INSERT INTO attachment_blobs (attachment_id, content_hash, storage_key, mime_type)
+      VALUES ('att-1', '${'a'.repeat(64)}', 'att-1', 'image/png');
     INSERT INTO pdf_page_text (attachment_id, page, text) VALUES ('att-1', 1, 'PDF text');
     INSERT INTO node_attachments (node_id, attachment_id, role) VALUES ('node-1', 'att-1', 'reference');
   `);

@@ -138,6 +138,21 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));
     }
 
+    @PluginMethod public void prepareAttachmentRetirement(PluginCall call) {
+        async(call, "Failed to prepare attachment retirement.", () ->
+            FolioleCompanionResourcePluginActions.prepareAttachmentRetirement(getContext(), call));
+    }
+
+    @PluginMethod public void finishAttachmentRetirement(PluginCall call) {
+        async(call, "Failed to finish attachment retirement.", () ->
+            FolioleCompanionResourcePluginActions.finishAttachmentRetirement(getContext(), call));
+    }
+
+    @PluginMethod public void finalizeAttachmentRetirement(PluginCall call) {
+        async(call, "Failed to finalize attachment retirement.", () ->
+            FolioleCompanionResourcePluginActions.finalizeAttachmentRetirement(getContext(), call));
+    }
+
     @PluginMethod public void stageAttachmentResourceBatch(PluginCall call) {
         async(call, "Failed to stage companion attachment resources.", () ->
             FolioleCompanionResourcePluginActions.stageAttachmentResourceBatch(getContext(), call));

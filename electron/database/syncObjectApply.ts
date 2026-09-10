@@ -1,10 +1,17 @@
+import { recordAttachmentRetirementObligation } from '../../lib/core/sync/attachmentRetirementObligation.js';
 import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+import {
+  commitDesktopAttachmentRetirement,
+  prepareDesktopAttachmentRetirement,
+  restoreDesktopAttachmentRetirement
+} from '../attachments/attachmentRetirementJournal.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 import { loadDesktopHostName } from './hostProfile.js';
+import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 interface ApplySyncObjectsOptions {
   hostName?: string;
@@ -29,10 +36,30 @@ export async function applySyncObjectsAsync(records: NativeSyncObjectRecord[], o
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-object-apply' });
   const hostName = options.hostName ?? loadDesktopHostName();
-  return applySyncObjectsWithDbPort(port, records, {
-    ...options,
-    ...(hostName ? { hostName } : {}),
-    onPayloadAppliedInTransaction: materializeDesktopSettingRecord,
-    onSkippedRecord: warnSkippedSyncObject
-  });
+  const paths = resolveRuntimeDataPaths();
+  const retirement = prepareDesktopAttachmentRetirement(records, paths.assetsDir, new Map(), paths.databasePath);
+  try {
+    return await port.transaction(async (tx) => {
+      const applied = await applySyncObjectsWithDbPort(tx, records, {
+        ...options,
+        ...(hostName ? { hostName } : {}),
+        onPayloadAppliedInTransaction: materializeDesktopSettingRecord,
+        onSkippedRecord: warnSkippedSyncObject
+      });
+      if (retirement) {
+        const obligation = {
+          items: retirement.tombstones,
+          journalToken: retirement.journalToken,
+          libraryScope: retirement.libraryScope
+        };
+        await recordAttachmentRetirementObligation(tx, obligation, 'database_committed');
+        commitDesktopAttachmentRetirement(retirement, connection.driver);
+        await recordAttachmentRetirementObligation(tx, obligation, 'verified');
+      }
+      return applied;
+    });
+  } catch (error) {
+    restoreDesktopAttachmentRetirement(retirement);
+    throw error;
+  }
 }

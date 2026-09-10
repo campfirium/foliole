@@ -22,6 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const DESKTOP_SCHEMA_FILES = {
+  ATTACHMENT_SYNC_TOMBSTONE_SCHEMA_STATEMENTS: 'lib/core/database/attachmentSyncTombstoneSchemaStatements.ts',
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS: 'lib/core/database/nodeSyncTombstoneSchemaStatements.ts',
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',

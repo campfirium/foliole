@@ -61,3 +61,8 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   ) AS payload_json FROM watched_folder_bindings b
     JOIN desktop_sources s ON s.source_ref = b.source_ref WHERE b.binding_id = ?`
 } as const;
+
+export const ATTACHMENT_TOMBSTONE_PAYLOAD_SQL = `SELECT json_object(
+  'attachment_id', attachment_id, 'content_hash', content_hash, 'storage_key', storage_key,
+  'mime_type', mime_type
+) AS payload_json FROM attachment_sync_tombstones WHERE attachment_id = ?`;

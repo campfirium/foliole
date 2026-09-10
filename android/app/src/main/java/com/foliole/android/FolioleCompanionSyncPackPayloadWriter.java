@@ -41,8 +41,12 @@ final class FolioleCompanionSyncPackPayloadWriter {
     private static void copyState(SQLiteDatabase pack, Map<String, String> payloads, Cursor state) throws Exception {
         String objectType = state.getString(0);
         String objectId = state.getString(1);
-        String payload = state.isNull(4) ? payloads.get(key(objectType, objectId)) : null;
-        if (state.isNull(4) && payload == null) return;
+            String payload = payloads.get(key(objectType, objectId));
+            if (state.isNull(4) && payload == null) return;
+            if (!state.isNull(4) && "attachment".equals(objectType) && payload == null) {
+                throw new IllegalStateException("Attachment tombstone payload is missing.");
+            }
+            if (!state.isNull(4) && !"attachment".equals(objectType)) payload = null;
         ContentValues values = new ContentValues();
         values.put("object_type", objectType); values.put("object_id", objectId);
         values.put("content_hash", state.getString(2)); values.put("updated_at", state.getString(3));

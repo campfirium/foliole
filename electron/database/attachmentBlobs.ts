@@ -1,6 +1,7 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import type { AttachmentSyncTombstone } from '../../lib/platform/attachmentSyncTombstone.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -160,13 +161,26 @@ function recordAttachmentSyncState(driver: DatabaseDriver, payload: ReturnType<t
   });
 }
 
-export function recordAttachmentDeleted(driver: DatabaseDriver, attachmentId: string, deletedAt: string) {
+export function recordAttachmentDeleted(
+  driver: DatabaseDriver,
+  tombstone: AttachmentSyncTombstone,
+  deletedAt: string
+) {
   const hostName = loadOrCreateDesktopHostName(deletedAt);
-  const payload = { attachment_id: attachmentId };
-  const contentHash = computeSyncContentHash('attachment', { ...payload, deleted_at: deletedAt });
+  driver.execute(
+    `INSERT INTO attachment_sync_tombstones (
+       attachment_id, content_hash, storage_key, mime_type, deleted_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(attachment_id) DO UPDATE SET
+       content_hash = excluded.content_hash, storage_key = excluded.storage_key,
+       mime_type = excluded.mime_type, deleted_at = excluded.deleted_at, updated_at = excluded.updated_at`,
+    [tombstone.attachment_id, tombstone.content_hash, tombstone.storage_key,
+      tombstone.mime_type, deletedAt, deletedAt]
+  );
+  const contentHash = computeSyncContentHash('attachment', { ...tombstone, deleted_at: deletedAt });
   upsertSyncObjectState(driver, {
     objectType: 'attachment',
-    objectId: attachmentId,
+    objectId: tombstone.attachment_id,
     contentHash,
     lastModifiedByHostName: hostName,
     updatedAt: deletedAt,

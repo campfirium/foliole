@@ -42,9 +42,10 @@ describe('Android Java SQL surface', () => {
     expect(methods).toEqual([
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
       'downloadAttachmentResourceBatch',
-      'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
+      'downloadContentBlobBatch', 'finalizeAttachmentRetirement',
+      'finishAttachmentResourceBatch', 'finishAttachmentRetirement', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
-      'rejectSyncGroupJoinRequest',
+      'prepareAttachmentRetirement', 'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',

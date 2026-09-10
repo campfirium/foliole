@@ -1,3 +1,4 @@
+import { ATTACHMENT_TOMBSTONE_CAPABILITY } from './attachmentSyncTombstone.js';
 import { SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY } from './systemEntryDisplayNameContract.js';
 
 export const SYNC_PROTOCOL_TXT_KEYS = {
@@ -8,6 +9,7 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
+    ATTACHMENT_TOMBSTONE_CAPABILITY,
     'author-host-snapshots-v1',
     'device-delivery-receipts-v1',
     'device-sync-groups-v1',
@@ -19,9 +21,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
     'workgroup-aead-v1'
   ]),
-  max_supported_version: 4,
-  min_supported_version: 4,
-  version: 4
+  max_supported_version: 5,
+  min_supported_version: 5,
+  version: 5
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

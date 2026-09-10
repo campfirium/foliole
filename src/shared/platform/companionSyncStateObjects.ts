@@ -4,6 +4,12 @@ import { applySyncObjectsWithDbPort } from '../../../lib/core/sync/syncObjectApp
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import {
+  confirmCompanionAttachmentRetirement,
+  finishCompanionAttachmentRetirement,
+  prepareCompanionAttachmentRetirement,
+  recordCompanionAttachmentRetirement
+} from './companion/attachmentRetirement';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
@@ -19,9 +25,25 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
     return [];
   }
   if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
-    return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
-      applySyncObjectsWithDbPort(db, objects)
-    )));
+    return runCompanionSyncWriterTask(async () => {
+      const owner = getIosCompanionDatabaseOwner();
+      const retirement = await prepareCompanionAttachmentRetirement(objects, owner.databasePath);
+      try {
+        return await owner.runWriter((db) => db.transaction(async (tx) => {
+          const applied = await applySyncObjectsWithDbPort(tx, objects);
+          await recordCompanionAttachmentRetirement(tx, retirement, 'database_committed');
+          if (!await confirmCompanionAttachmentRetirement(tx, retirement)) {
+            throw new Error('Attachment retirement database identity was not committed.');
+          }
+          await finishCompanionAttachmentRetirement(retirement, true);
+          await recordCompanionAttachmentRetirement(tx, retirement, 'verified');
+          return applied;
+        }));
+      } catch (error) {
+        await finishCompanionAttachmentRetirement(retirement, false);
+        throw error;
+      }
+    });
   }
   return runCompanionSyncWriterTask(() => applyCompanionSyncObjectsWithSharedCoreOnDevice(objects));
 }

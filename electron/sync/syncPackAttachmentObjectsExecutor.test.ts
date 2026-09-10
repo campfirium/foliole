@@ -1,12 +1,13 @@
 import { expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from '../../lib/core/sync/syncPackAttachmentObjectsExecutor.js';
 
 it('applies attachment and pdf page text payload records', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
   const port = {
-    query: vi.fn(async () => [
+    query: vi.fn(async (sql: string) => sql.includes('attachment_sync_tombstones') ? [] : [
       {
         content_hash: 'hash-attachment',
         deleted_at: null,
@@ -48,13 +49,17 @@ it('applies attachment and pdf page text payload records', async () => {
 
 it('deletes attachment payload rows for tombstones', async () => {
   const runs: string[] = [];
+  const deletedAt = '2026-05-04T05:00:00.000Z';
+  const tombstone = {
+    attachment_id: 'att-1', content_hash: 'a'.repeat(64), mime_type: 'image/png', storage_key: 'att-1'
+  };
   const port = {
-    query: vi.fn(async () => [{
-      content_hash: 'hash-attachment',
-      deleted_at: '2026-05-04T05:00:00.000Z',
+    query: vi.fn(async (sql: string) => sql.includes('FROM attachment_blobs') ? [] : [{
+      content_hash: computeSyncContentHash('attachment', { ...tombstone, deleted_at: deletedAt }),
+      deleted_at: deletedAt,
       object_id: 'att-1',
       object_type: 'attachment',
-      payload_json: null,
+      payload_json: JSON.stringify(tombstone),
       updated_at: '2026-05-04T05:00:00.000Z'
     }]),
     run: vi.fn(async (sql: string) => {
@@ -67,6 +72,7 @@ it('deletes attachment payload rows for tombstones', async () => {
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
   expect(runs).toEqual([
+    expect.stringContaining('INSERT INTO attachment_sync_tombstones'),
     'DELETE FROM pdf_page_text WHERE attachment_id = ?',
     'DELETE FROM attachment_blobs WHERE attachment_id = ?',
     'DELETE FROM node_attachments WHERE attachment_id = ?',
