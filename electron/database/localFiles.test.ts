@@ -123,7 +123,7 @@ it('indexes opened local documents without storing content in local_files', asyn
 
 it('updates the local document search index after save', async () => {
   const filePath = path.join(tempRoot, 'indexed.md');
-  await fs.writeFile(filePath, '# Local\nOld searchable marker', 'utf8');
+  await fs.writeFile(filePath, '# Local\nObsoletecontentmarker', 'utf8');
   const opened = await readLocalFile(filePath);
   expect(opened.status).toBe('ready');
 
@@ -137,7 +137,7 @@ it('updates the local document search index after save', async () => {
   expect(searchExternalDocuments('new searchable')).toEqual([
     expect.objectContaining({ externalMatch: expect.objectContaining({ absolutePath: filePath }) })
   ]);
-  expect(searchExternalDocuments('old searchable')).toEqual([]);
+  expect(searchExternalDocuments('obsoletecontentmarker')).toEqual([]);
 });
 
 it('can save local file edits without refreshing the search index on the autosave path', async () => {
