@@ -15,10 +15,15 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertTrue(configuration.waitsForConnectivity)
     }
 
-    func testBonjourEndpointUsesResolvedServiceAddress() {
+    func testBonjourEndpointUsesResolvedServiceAddress() throws {
         XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredResolvedIPv4([
             "198.18.0.1", "169.254.12.28", "192.168.0.10"
-        ]), "192.168.0.10")
+        ], localSubnets: []), "192.168.0.10")
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredResolvedIPv4([
+            "192.168.56.1", "192.168.111.1", "192.168.0.10", "172.26.144.1"
+        ], localSubnets: [try XCTUnwrap(FolioleIPv4Subnet(
+            address: "192.168.0.24", netmask: "255.255.255.0"
+        ))]), "192.168.0.10")
         XCTAssertNil(FolioleCompanionBonjourEndpoint.preferredResolvedIPv4([
             "127.0.0.1", "169.254.12.28"
         ]))
