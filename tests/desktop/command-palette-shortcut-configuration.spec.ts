@@ -6,6 +6,7 @@ import { expectWorkspaceShell, getSettingsDialog } from './harness/settings';
 test('shows native shortcut symbols and opens the matching Hotkeys row', async ({ desktopWindow }, testInfo) => {
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-app-language', 'en');
+    window.localStorage.setItem('foliole-settings-active-category', 'about');
   });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
@@ -32,8 +33,19 @@ test('shows native shortcut symbols and opens the matching Hotkeys row', async (
   const shortcut = settingsDialog.getByRole('button', { name: 'Shortcut for Create Folder', exact: true });
   await expect(shortcut).toHaveText('⇧ ⌘ N');
   await expect(shortcut).toBeFocused();
+  await expect.poll(() => desktopWindow.evaluate(() =>
+    window.localStorage.getItem('foliole-settings-active-category')
+  )).toBe('about');
 
   const screenshotPath = path.join(process.cwd(), '.tmp/artifacts/command-palette-shortcut-configuration.png');
   await settingsDialog.screenshot({ path: screenshotPath });
   await testInfo.attach('command-palette-shortcut-configuration', { path: screenshotPath });
+
+  await desktopWindow.keyboard.press('Escape');
+  await expect(settingsDialog).toBeHidden();
+  await ribbon.getByRole('button', { name: 'Settings' }).click();
+  await expect(settingsDialog.getByRole('button', { name: 'About', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
 });

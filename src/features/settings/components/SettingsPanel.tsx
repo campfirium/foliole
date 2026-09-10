@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
@@ -60,7 +60,10 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
   const libraryPathSettings = useLibraryPathSettings();
   const externalSearchFolders = useExternalSearchFolders();
 
-  useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
+  const selectActiveCategory = useCallback((category: SettingsCategoryId) => {
+    setActiveCategory(category);
+    setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, category);
+  }, []);
   useEffect(() => {
     if (requestedCategory) {
       setActiveCategory(requestedCategory);
@@ -73,7 +76,7 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
   return {
     activeCategory,
     description,
-    setActiveCategory,
+    setActiveCategory: selectActiveCategory,
     title,
     ...externalSearchFolders,
     ...libraryPathSettings
