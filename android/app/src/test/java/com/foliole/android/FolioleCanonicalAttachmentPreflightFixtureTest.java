@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -17,7 +18,7 @@ public final class FolioleCanonicalAttachmentPreflightFixtureTest {
 
     @Test
     public void consumesSharedCanonicalAttachmentFixture() throws Exception {
-        String json = Files.readString(findFixture());
+        String json = new String(Files.readAllBytes(findFixture()), StandardCharsets.UTF_8);
         Matcher entries = Pattern.compile("\\{[^}]+\\}").matcher(json);
         int count = 0;
         while (entries.find()) {

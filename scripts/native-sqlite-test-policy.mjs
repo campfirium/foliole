@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'electron/attachments/canonicalAttachmentPreflight.test.ts',
   'electron/database/androidCompanionVisibleNodesQueryDefinitions.contract.test.ts',
   'electron/database/androidSyncPackProviderDefinitions.test.ts',
   'electron/database/authorHostSnapshotsMigration.test.ts',
