@@ -117,6 +117,7 @@ function mockWorkspaceSync(args: {
     desktopDiscovery: null,
     error: null,
     isWorkspaceSyncStateReady: true,
+    syncParticipation: { participating: true },
     syncGroupDiscoveries: [],
     pendingJoinRequest: null,
     joinStatus: 'idle',

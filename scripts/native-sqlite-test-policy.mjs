@@ -8,6 +8,7 @@ const controlledElectronSqliteTests = [
   'electron/database/betterSqliteDbPort.ownership.test.ts',
   'electron/database/companionDatabaseLifecycle.host.test.ts',
   'electron/database/companionDatabaseLifecycle.test.ts',
+  'electron/database/companionDatabaseFreshInitialization.test.ts',
   'electron/database/companionHostStateCutover.test.ts',
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/companionOpaqueSyncRefMigration.test.ts',
@@ -36,6 +37,7 @@ const controlledElectronSqliteTests = [
   'electron/database/publicDesktopDatabaseUpgrades.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
+  'electron/database/syncPackAcceptedSettingAtomicity.test.ts',
   'electron/database/syncDeliveryMigration.test.ts',
   'electron/database/syncDeviceCopyPreparation.test.ts',
   'electron/database/syncPackGroupRows.test.ts',
@@ -76,6 +78,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncReviewLogApply.test.ts',
   'src/shared/platform/companionSyncGroupStore.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
+  'src/shared/platform/companion/sync/syncGroupStore.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 

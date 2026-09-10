@@ -54,6 +54,7 @@ function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {
       runtime_kind: 'android-capacitor'
     },
     isWorkspaceSyncStateReady: true,
+    syncParticipation: { participating: true },
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     completePairing: vi.fn(),
