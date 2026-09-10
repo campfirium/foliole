@@ -10,8 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.json.JSONObject;
 import org.junit.Test;
 
 public class FolioleCompanionNsdDiscoveryTest {
@@ -65,13 +66,19 @@ public class FolioleCompanionNsdDiscoveryTest {
 
     @Test
     public void projectsThePreparedTopologyRoleFromTheSharedHostFixture() throws Exception {
-        JSONObject fixture = new JSONObject(readUtf8(sharedFixturePath()));
-        JSONObject bridge = new JSONObject(readUtf8(bridgeContractPath()));
-        String roleTxtKey = fixture.getString("role_txt_key");
+        String roleTxtKey = jsonStringField(readUtf8(sharedFixturePath()), "role_txt_key");
+        String bridgeRoleTxtKey = jsonStringField(readUtf8(bridgeContractPath()), "topologyRole");
 
-        assertEquals(roleTxtKey, bridge.getJSONObject("hostApi").getJSONObject("network")
-            .getJSONObject("protocolTxtKeys").getString("topologyRole"));
+        assertEquals(roleTxtKey, bridgeRoleTxtKey);
         assertTrue(FolioleCompanionNsdProtocolTxt.contractKeys().contains("topologyRole"));
+    }
+
+    private static String jsonStringField(String json, String fieldName) {
+        Matcher matcher = Pattern.compile(
+            "\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"([^\\\"]+)\\\""
+        ).matcher(json);
+        if (!matcher.find()) throw new IllegalStateException("json_string_field_missing: " + fieldName);
+        return matcher.group(1);
     }
 
     private static Path sharedFixturePath() {
