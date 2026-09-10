@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
 
+import type {
+  ReadwiseAutoImportPolicy,
+  ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -22,11 +26,16 @@ import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 
 type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 
-export function ReadwiseBehaviorSection({ draft }: { draft: ReadwiseSetupDraft }) {
+type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
+
+export function ReadwiseBehaviorSection(props: {
+  onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
+  policy: ReadwiseAutoImportPolicy;
+}) {
   const t = useTranslation();
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
-      <ReadwiseReaderImportBehavior config={draft.draftConfig} onChange={draft.updateConfig} />
+      <ReadwiseReaderImportBehavior onChange={props.onChange} policy={props.policy} />
     </SettingsSection>
   );
 }
@@ -98,7 +107,9 @@ export function ReadwiseFolderSettingsSections(props: {
   onChangeIntegration: () => void;
   onCheck: () => void;
   onCleanup: () => void;
+  onChangePolicy: (field: PolicyField, value: ReadwiseImportDestination) => void;
   onSync: () => void;
+  policy: ReadwiseAutoImportPolicy;
   syncDisabled: boolean;
   syncIsRunning: boolean;
   syncStatus: ReadwiseManualSyncStatus;
@@ -137,7 +148,7 @@ export function ReadwiseFolderSettingsSections(props: {
           syncStatus={props.syncStatus}
         />
       </SettingsSection>
-      <ReadwiseBehaviorSection draft={props.draft} />
+      <ReadwiseBehaviorSection onChange={props.onChangePolicy} policy={props.policy} />
       <ReadwiseImportSettingsSection draft={props.draft} />
     </div>
   );

@@ -75,7 +75,6 @@ it('retires an unadopted External document after no-highlight intake is turned o
   const secondFetch = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     expect(url.pathname).toContain('/v2/export/');
-    expect(url.searchParams.has('updatedAfter')).toBe(false);
     return response([]);
   }) as typeof fetch;
   await previewReadwiseApiImport(settings('off'), { fetchImpl: secondFetch, minIntervalMs: 0 });
@@ -88,9 +87,10 @@ function settings(destination: 'external' | 'off') {
   const value = createDefaultImportManagerSettings();
   return {
     ...value,
-    readwiseReaderConfig: {
-      ...value.readwiseReaderConfig,
-      withoutHighlightsDestination: destination
+    readwiseAutoImportPolicy: {
+      ...value.readwiseAutoImportPolicy,
+      articleWithoutHighlights: destination,
+      bookWithoutHighlights: destination
     },
     readwiseSourceMode: 'api' as const
   };

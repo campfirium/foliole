@@ -106,6 +106,7 @@ function DemoReadwiseReaderSettingsPreview() {
   return (
     <SettingsReadwiseReaderContent
       config={demoImportSettings.readwiseReaderConfig}
+      policy={demoImportSettings.readwiseAutoImportPolicy}
       onChangeSourceMode={() => undefined}
       onSave={() => undefined}
       readwiseRootPath={demoImportSettings.readwiseRootPath}

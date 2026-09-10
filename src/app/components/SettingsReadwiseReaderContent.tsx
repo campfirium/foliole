@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
 import type {
+  ReadwiseAutoImportPolicy,
+  ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
+import { createDefaultReadwiseAutoImportPolicy } from '../../../lib/core/import/readwiseAutoImportPolicy';
+import type {
   ReadwiseReaderConfig,
   ReadwiseSyncFrequency
 } from '../../../lib/core/import/readwiseReaderSettings';
@@ -43,6 +48,11 @@ interface SettingsReadwiseReaderContentProps {
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
   onChangeSourceMode?: (mode: ReadwiseSourceMode) => void;
+  onChangePolicy?: (
+    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    value: ReadwiseImportDestination
+  ) => void;
+  policy?: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
   readwiseSourceMode?: ReadwiseSourceMode;
   readwiseSources: DraftImportSource[];
@@ -63,7 +73,14 @@ function ReadwiseSelectedModeContent(props: {
   sourceMode: ReadwiseSourceMode;
 }) {
   if (props.sourceMode === 'off') return null;
-  if (props.sourceMode === 'api') return <ReadwiseBehaviorSection draft={props.setup.draft} />;
+  if (props.sourceMode === 'api') {
+    return (
+      <ReadwiseBehaviorSection
+        onChange={props.settings.onChangePolicy ?? (() => undefined)}
+        policy={props.settings.policy ?? createDefaultReadwiseAutoImportPolicy()}
+      />
+    );
+  }
   return (
     <ReadwiseFolderSettingsSections
       canPreview={props.setup.canPreview}
@@ -71,9 +88,11 @@ function ReadwiseSelectedModeContent(props: {
       integrationEnabled={props.setup.integrationEnabled}
       cleanupDisabled={props.cleanup.cleanupDisabled}
       onCleanup={() => void props.cleanup.openCleanupDialog()}
+      onChangePolicy={props.settings.onChangePolicy ?? (() => undefined)}
       onChangeIntegration={props.setup.handleChangeIntegration}
       onCheck={props.setup.handleCheck}
       onSync={() => void props.setup.handleRunSync()}
+      policy={props.settings.policy ?? createDefaultReadwiseAutoImportPolicy()}
       syncStatus={props.setup.manualSyncStatus}
       syncDisabled={props.setup.syncDisabled}
       syncIsRunning={props.setup.syncIsRunning}

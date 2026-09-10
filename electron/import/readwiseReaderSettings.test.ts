@@ -6,33 +6,21 @@ import { normalizeImportManagerSettings } from '../../lib/core/import/importMana
 import { normalizeReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 
 describe('normalizeReadwiseReaderConfig', () => {
-  it('keeps the default behavior as only importing files with highlights', () => {
+  it('keeps parser and schedule defaults independent from automatic import policy', () => {
     expect(normalizeReadwiseReaderConfig(null)).toMatchObject({
       enabled: false,
       importScope: 'highlights_only',
-      syncFrequency: 'hourly',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      syncFrequency: 'hourly'
     });
   });
 
-  it('normalizes the legacy highlights-only scope into destination settings', () => {
-    expect(normalizeReadwiseReaderConfig({ importScope: 'highlights_only' })).toMatchObject({
-      importScope: 'highlights_only',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
-    });
-  });
-
-  it('normalizes the legacy all scope into inbox destinations', () => {
+  it('preserves the parser import scope without deriving destinations', () => {
     expect(normalizeReadwiseReaderConfig({ importScope: 'all' })).toMatchObject({
-      importScope: 'all',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'inbox'
+      importScope: 'all'
     });
   });
 
-  it('keeps explicit destinations, enabled state, and sync frequency', () => {
+  it('drops legacy destinations while keeping enabled state and sync frequency', () => {
     expect(
       normalizeReadwiseReaderConfig({
         enabled: true,
@@ -43,14 +31,14 @@ describe('normalizeReadwiseReaderConfig', () => {
       })
     ).toMatchObject({
       enabled: true,
-      importScope: 'highlights_only',
-      syncFrequency: 'every_12_hours',
-      withHighlightsDestination: 'external',
-      withoutHighlightsDestination: 'external'
+      importScope: 'all',
+      syncFrequency: 'every_12_hours'
     });
+    expect(normalizeReadwiseReaderConfig({ withHighlightsDestination: 'external' }))
+      .not.toHaveProperty('withHighlightsDestination');
   });
 
-  it('falls back safely for invalid destinations and frequency values', () => {
+  it('falls back safely for an invalid frequency value', () => {
     expect(
       normalizeReadwiseReaderConfig({
         syncFrequency: 'manual',
@@ -58,9 +46,7 @@ describe('normalizeReadwiseReaderConfig', () => {
         withoutHighlightsDestination: 'archive'
       })
     ).toMatchObject({
-      syncFrequency: 'hourly',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      syncFrequency: 'hourly'
     });
   });
 });

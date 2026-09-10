@@ -131,9 +131,14 @@ async function applyReadwiseBooksRun(
   accumulator: ReadwiseRunAccumulator
 ) {
   try {
-    const result = await runReadwiseBooksSource(source, accumulator.readwiseConfig, {
+    const result = await runReadwiseBooksSource(
+      source,
+      accumulator.readwiseConfig,
+      accumulator.readwiseAutoImportPolicy,
+      {
       ...(accumulator.signal ? { signal: accumulator.signal } : {})
-    });
+      }
+    );
     accumulator.entryCount += result.entryCount;
     accumulator.importedCount += result.importedCount;
   } catch (error) {
@@ -205,6 +210,7 @@ async function runReadwiseReaderImportNow(input?: {
   const sources = settings.readwiseSources.filter(isEnabledReadwiseSource);
   const accumulator = createRunAccumulator({
     readwiseConfig: settings.readwiseReaderConfig,
+    readwiseAutoImportPolicy: settings.readwiseAutoImportPolicy,
     ...(signal ? { signal } : {}),
     sourceCount: sources.length,
     ...(input?.window ? { window: input.window } : {})

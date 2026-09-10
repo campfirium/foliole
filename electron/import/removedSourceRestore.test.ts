@@ -67,13 +67,15 @@ function saveGenericKeepSettings(sourceDir: string) {
 
 function saveReadwiseSettings(paths: { fullDocumentDir: string; highlightDir: string; readwiseRoot: string }) {
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'inbox',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'inbox'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: paths.readwiseRoot,
     readwiseSources: [

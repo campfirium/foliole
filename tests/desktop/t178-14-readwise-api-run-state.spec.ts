@@ -54,7 +54,7 @@ async function setupConnection(app: ElectronApplication) {
       remoteIdentity.saveReadwiseConnectionState({
         ...defaults,
         apiConnection: { secretRef, state: 'connected', verifiedAt: '2026-09-10T00:00:00.000Z' },
-        readwiseReaderConfig: { ...defaults.readwiseReaderConfig, withoutHighlightsDestination: 'inbox' },
+        readwiseReaderConfig: defaults.readwiseReaderConfig,
         readwiseSourceMode: 'api', updatedAt: '2026-09-10T00:00:00.000Z'
       }, source, '2026-09-10T00:00:00.000Z');
       cutover.writeLegacyReadwiseSourceCutover({

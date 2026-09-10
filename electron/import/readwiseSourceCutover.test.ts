@@ -33,8 +33,10 @@ vi.mock('./readwiseApiConnectionState.js', async () => {
   };
 });
 vi.mock('./importManagerSettings.js', async () => {
+  const { createDefaultReadwiseAutoImportPolicy } = await import('../../lib/core/import/readwiseAutoImportPolicy.js');
   const { createDefaultReadwiseReaderConfig } = await import('../../lib/core/import/readwiseReaderSettings.js');
   return { loadImportManagerSettings: () => ({
+    readwiseAutoImportPolicy: createDefaultReadwiseAutoImportPolicy(),
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseSources: [{
       highlightMode: 'split', highlightPath: state.sourcePath, id: 'local', keepState: 'enabled',
@@ -104,7 +106,8 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   const fetchImpl = migrationFetch();
   vi.stubGlobal('fetch', fetchImpl);
 
-  await expect(runReadwiseSourceCutover()).resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
+  await expect(runReadwiseSourceCutover({ dependencies: { minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
     .toContain('API body with remembered phrase.');
@@ -129,7 +132,9 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   });
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
-  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'document-1')).toHaveLength(1);
+  const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
+  expect(documentRequests).toHaveLength(2);
+  expect(documentRequests.map((url) => url.searchParams.get('withHtmlContent'))).toEqual([null, 'true']);
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(1);
 }, 20_000);
 

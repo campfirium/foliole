@@ -110,7 +110,10 @@ async function consumeCandidate(
   try {
     input.assertEligible();
     const document = loadPreparedReadwiseApiCandidate(input.connectionRef, documentId);
+    const candidate = loadReadwiseApiCandidates(input.connectionRef)
+      .find((item) => item.documentId === documentId);
     if (!document) throw new Error('readwise_api_candidate_incomplete');
+    if (!candidate) throw new Error('readwise_api_candidate_missing');
     const commitOptions = await input.beforeCommit?.(document);
     if (commitOptions?.skip) {
       setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
@@ -124,6 +127,7 @@ async function consumeCandidate(
       config: input.settings.readwiseReaderConfig,
       connectionRef: input.connectionRef,
       dependencies: input.dependencies,
+      destination: candidate.destination,
       document: commitOptions?.document ?? document,
       ...(commitOptions?.replaceExistingBody === undefined
         ? {} : { replaceExistingBody: commitOptions.replaceExistingBody })

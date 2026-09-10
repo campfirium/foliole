@@ -1,3 +1,7 @@
+import type {
+  ReadwiseAutoImportPolicy,
+  ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
@@ -45,7 +49,12 @@ function ReadwiseConfigDialogHeader(props: {
 function ReadwiseConfigDialogBody(props: {
   canPreview: boolean;
   draft: ReturnType<typeof useReadwiseSetupDraft>;
+  onChangePolicy: (
+    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    value: ReadwiseImportDestination
+  ) => void;
   onCheck: () => void;
+  policy: ReadwiseAutoImportPolicy;
 }) {
   const t = useTranslation();
 
@@ -69,8 +78,8 @@ function ReadwiseConfigDialogBody(props: {
         </SettingsSection>
         <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
           <ReadwiseReaderImportBehavior
-            config={props.draft.draftConfig}
-            onChange={props.draft.updateConfig}
+            onChange={props.onChangePolicy}
+            policy={props.policy}
           />
         </SettingsSection>
         <SettingsSection ariaLabel={t('desktop.readwise.section.settings.aria')} title={t('desktop.readwise.section.settings.title')}>
@@ -97,7 +106,12 @@ export function ReadwiseConfigDialogSurface(props: {
   integrationEnabled: boolean;
   onCancel: () => void;
   onChangeIntegration: () => void;
+  onChangePolicy: (
+    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    value: ReadwiseImportDestination
+  ) => void;
   onCheck: () => void;
+  policy: ReadwiseAutoImportPolicy;
 }) {
   const t = useTranslation();
 
@@ -118,7 +132,9 @@ export function ReadwiseConfigDialogSurface(props: {
             <ReadwiseConfigDialogBody
               canPreview={props.canPreview}
               draft={props.draft}
+              onChangePolicy={props.onChangePolicy}
               onCheck={props.onCheck}
+              policy={props.policy}
             />
             <footer className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4">
               <AppButton onClick={props.onCancel} variant="ghost">

@@ -97,6 +97,8 @@ async function buildSourceEntry(
 ): Promise<ReadwiseSyncPreviewEntry> {
   const decision = await resolveReadwiseSourceImportDecision(source, {
     highlightDirectoryPath: readwiseSource.highlightPath,
+    kind: readwiseSource.kind,
+    policy: settings.readwiseAutoImportPolicy,
     readwiseConfig: settings.readwiseReaderConfig
   });
   const sourceSignature = await resolveReadwiseSourceSignature(source, {
@@ -120,7 +122,7 @@ async function buildSourceEntry(
         : null,
     detected_highlight_count: decision.detectedHighlightCount,
     highlight_status: highlightStatus,
-    highlight_type: hasHighlightFile ? 'with_highlights' : 'without_highlights',
+    highlight_type: decision.hasHighlights ? 'with_highlights' : 'without_highlights',
     open_path: hasHighlightFile ? path.join(readwiseSource.highlightPath, source.sourceName) : source.filePath,
     source_kind: readwiseSource.kind,
     source_path: source.sourceName,

@@ -182,7 +182,7 @@ function mergeCandidate(previous: ReadwiseApiCandidate, next: ReadwiseApiCandida
 }
 
 function compareCandidates(left: ReadwiseApiCandidate, right: ReadwiseApiCandidate) {
-  const priority = Number(left.exportCategory !== 'books') - Number(right.exportCategory !== 'books');
+  const priority = Number(left.readerCategory !== 'epub') - Number(right.readerCategory !== 'epub');
   const requestCount = left.highlightIds.length - right.highlightIds.length;
   return priority || requestCount || left.documentId.localeCompare(right.documentId);
 }

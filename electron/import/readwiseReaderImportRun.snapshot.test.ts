@@ -30,12 +30,14 @@ import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 
 function createSettings() {
   return {
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
-      importScope: 'highlights_only',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      importScope: 'highlights_only'
     },
     readwiseRootPath: '/readwise',
     readwiseSources: [

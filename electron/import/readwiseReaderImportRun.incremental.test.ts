@@ -58,13 +58,15 @@ async function seedReadwiseFixture() {
   await fs.writeFile(path.join(highlightPath, 'Highlighted.md'), '# Highlighted\n\n## Highlights\nimportant sentence\n', 'utf8');
   await fs.writeFile(path.join(primaryPath, 'Plain.md'), '# Plain\n\nNo sidecar highlights.\n', 'utf8');
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: readwiseRoot,
     readwiseSources: [

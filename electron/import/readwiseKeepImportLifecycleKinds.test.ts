@@ -30,6 +30,7 @@ import {
   type ImportManagerSourceDraft,
   type ReadwiseSourceKind
 } from '../../lib/core/import/importManagerSettings.js';
+import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -130,7 +131,7 @@ async function runReadwiseKindImport(source: ImportManagerSourceDraft & { kind: 
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only'
-    });
+    }, createDefaultReadwiseAutoImportPolicy());
     return;
   }
   await runKeepImportRule({

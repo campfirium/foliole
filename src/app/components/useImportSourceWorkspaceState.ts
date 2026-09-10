@@ -6,6 +6,10 @@ import {
   type ImportNodeTitleStrategy,
   type ReadwiseSourceMode,
 } from '../../../lib/core/import/importManagerSettings';
+import type {
+  ReadwiseAutoImportPolicy,
+  ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 
@@ -109,6 +113,15 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
         readwiseReaderConfig: config
       }));
     },
+    handleChangeReadwiseAutoImportPolicy(
+      field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+      value: ReadwiseImportDestination
+    ) {
+      setSettings((current) => ({
+        ...current,
+        readwiseAutoImportPolicy: { ...current.readwiseAutoImportPolicy, [field]: value }
+      }));
+    },
     handleSaveReadwiseReaderSetup(input: {
       config: ReadwiseReaderConfig;
       readwiseRootPath: string;
@@ -149,6 +162,7 @@ export function useImportSourceWorkspaceState() {
     ...createReadwiseSourceActions(setSettings),
     ...createWorkspaceMetaActions(setSettings),
     readwiseReaderConfig: settings.readwiseReaderConfig,
+    readwiseAutoImportPolicy: settings.readwiseAutoImportPolicy,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSourceMode: settings.readwiseSourceMode,
     readwiseSources: settings.readwiseSources,

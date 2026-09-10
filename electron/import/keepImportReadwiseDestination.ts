@@ -2,11 +2,9 @@ import fs from 'node:fs/promises';
 
 import { needsReadwiseFrontmatterRefresh } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
+import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { extractReadwiseFullDocumentFrontmatter } from '../../lib/core/import/readwiseFullDocumentParsing.js';
-import {
-  resolveReadwiseImportDestination,
-  type ReadwiseReaderConfig
-} from '../../lib/core/import/readwiseReaderSettings.js';
+import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { readKeepImportItem, readKeepImportNodeContent, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { hasReadwiseExternalDocument } from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -17,6 +15,7 @@ import { upsertReadwiseExternalDocument } from './readwiseExternalDocuments.js';
 import {
   readwiseKeepAdapter
 } from './readwiseKeepAdapter.js';
+import { resolveReadwiseSourceImportDecision } from './readwisePreparedImport.js';
 
 type ResolvedReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
 
@@ -31,8 +30,13 @@ function resolveReadwiseSource(config: KeepImportRuleConfig) {
   }
   return {
     readwiseConfig: settings.readwiseReaderConfig,
+    readwisePolicy: settings.readwiseAutoImportPolicy,
     readwiseSource: readwiseSource as ResolvedReadwiseSource
-  } satisfies { readwiseConfig: ReadwiseReaderConfig; readwiseSource: ResolvedReadwiseSource };
+  } satisfies {
+    readwiseConfig: ReadwiseReaderConfig;
+    readwisePolicy: ReadwiseAutoImportPolicy;
+    readwiseSource: ResolvedReadwiseSource;
+  };
 }
 
 export async function resolveReadwiseKeepImportDestination(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
@@ -43,10 +47,13 @@ export async function resolveReadwiseKeepImportDestination(config: KeepImportRul
   if (resolved.readwiseSource.kind === 'books') {
     return 'off';
   }
-  const sourceSignature = await readwiseKeepAdapter.resolveSourceSignature(source, {
-    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim()
+  const decision = await resolveReadwiseSourceImportDecision(source, {
+    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
+    kind: resolved.readwiseSource.kind,
+    policy: resolved.readwisePolicy,
+    readwiseConfig: resolved.readwiseConfig
   });
-  return resolveReadwiseImportDestination(resolved.readwiseConfig, sourceSignature.highlight !== null);
+  return decision.destination;
 }
 
 export async function shouldRunUnchangedReadwiseDestination(
@@ -57,10 +64,13 @@ export async function shouldRunUnchangedReadwiseDestination(
   if (!resolved) {
     return false;
   }
-  const sourceSignature = await readwiseKeepAdapter.resolveSourceSignature(source, {
-    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim()
+  const decision = await resolveReadwiseSourceImportDecision(source, {
+    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
+    kind: resolved.readwiseSource.kind,
+    policy: resolved.readwisePolicy,
+    readwiseConfig: resolved.readwiseConfig
   });
-  const destination = resolveReadwiseImportDestination(resolved.readwiseConfig, sourceSignature.highlight !== null);
+  const destination = decision.destination;
   if (destination === 'off') {
     return false;
   }

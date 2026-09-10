@@ -37,6 +37,8 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   }
   return readwiseKeepAdapter.shouldImportSource(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim(),
+    kind: readwiseSource.kind ?? 'articles',
+    policy: settings.readwiseAutoImportPolicy,
     readwiseConfig: settings.readwiseReaderConfig
   });
 }

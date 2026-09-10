@@ -55,8 +55,8 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
     }
   });
   const result = await commitReadwiseApiDocument({
-    config: { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' },
-    connectionRef: 'connection', document: documentFixture('')
+    config: createDefaultReadwiseReaderConfig(),
+    connectionRef: 'connection', destination: 'inbox', document: documentFixture('')
   });
   expect(result.status).toBe('imported');
   expect(prepareOriginal).toHaveBeenCalledWith(expect.objectContaining({ category: 'pdf' }));
@@ -73,8 +73,8 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
 
 it('never requests or persists an original file for API EPUB', async () => {
   await commitReadwiseApiDocument({
-    config: { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' },
-    connectionRef: 'connection', document: { ...documentFixture('Readable HTML'), category: 'epub' }
+    config: createDefaultReadwiseReaderConfig(),
+    connectionRef: 'connection', destination: 'inbox', document: { ...documentFixture('Readable HTML'), category: 'epub' }
   });
   expect(prepareOriginal).not.toHaveBeenCalled();
   expect(persistOriginal).not.toHaveBeenCalled();

@@ -1,85 +1,55 @@
 import type {
-  ReadwiseImportDestination,
-  ReadwiseReaderConfig,
-  ReadwiseWithoutHighlightsDestination
-} from '../../../lib/core/import/readwiseReaderSettings';
+  ReadwiseAutoImportPolicy,
+  ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import {
-  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SettingsControlSlot,
-  SettingsRow,
-  SettingsSegmentedControl
-} from '../../shared/ui';
+import { SettingsChoiceMatrix, SettingsSegmentedControl } from '../../shared/ui';
 
-type Translate = ReturnType<typeof useTranslation>;
-
-function getWithHighlightsOptions(t: Translate): Array<{ label: string; value: ReadwiseImportDestination }> {
-  return [
-    { label: t('desktop.readwise.destination.inbox'), value: 'inbox' },
-    { label: t('desktop.readwise.destination.external'), value: 'external' }
-  ];
-}
-
-function getWithoutHighlightsOptions(t: Translate): Array<{
-  label: string;
-  value: ReadwiseWithoutHighlightsDestination;
-}> {
-  return [...getWithHighlightsOptions(t), { label: t('desktop.readwise.destination.off'), value: 'off' }];
-}
+type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
 
 export function ReadwiseReaderImportBehavior(props: {
-  config: ReadwiseReaderConfig;
-  onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
+  onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
+  policy: ReadwiseAutoImportPolicy;
 }) {
   const t = useTranslation();
-
-  return (
-    <>
-      <ReadwiseBehaviorRow
-        ariaLabel={t('desktop.readwise.behavior.withHighlights.aria')}
-        description={t('desktop.readwise.behavior.withHighlights.description')}
-        onChange={(value) => props.onChange('withHighlightsDestination', value)}
-        options={getWithHighlightsOptions(t)}
-        title={t('desktop.readwise.behavior.withHighlights.title')}
-        value={props.config.withHighlightsDestination}
+  const options: Array<{ label: string; value: ReadwiseImportDestination }> = [
+    { label: t('desktop.readwise.destination.inbox'), value: 'inbox' },
+    { label: t('desktop.readwise.destination.external'), value: 'external' },
+    { label: t('desktop.readwise.destination.off'), value: 'off' }
+  ];
+  function control(field: PolicyField, ariaLabel: string) {
+    return (
+      <SettingsSegmentedControl
+        ariaLabel={ariaLabel}
+        onChange={(value) => props.onChange(field, value as ReadwiseImportDestination)}
+        options={options}
+        value={props.policy[field]}
       />
-      <ReadwiseBehaviorRow
-        ariaLabel={t('desktop.readwise.behavior.withoutHighlights.aria')}
-        description={t('desktop.readwise.behavior.withoutHighlights.description')}
-        onChange={(value) => props.onChange('withoutHighlightsDestination', value)}
-        options={getWithoutHighlightsOptions(t)}
-        title={t('desktop.readwise.behavior.withoutHighlights.title')}
-        value={props.config.withoutHighlightsDestination}
-      />
-    </>
-  );
-}
-
-function ReadwiseBehaviorRow(props: {
-  ariaLabel: string;
-  description: string;
-  onChange: (value: ReadwiseImportDestination | ReadwiseWithoutHighlightsDestination) => void;
-  options: Array<{
-    label: string;
-    value: ReadwiseImportDestination | ReadwiseWithoutHighlightsDestination;
-  }>;
-  title: string;
-  value: ReadwiseImportDestination | ReadwiseWithoutHighlightsDestination;
-}) {
+    );
+  }
   return (
-    <SettingsRow description={props.description} title={props.title}>
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <SettingsSegmentedControl
-          ariaLabel={props.ariaLabel}
-          onChange={(value) =>
-            props.onChange(
-              value as ReadwiseImportDestination | ReadwiseWithoutHighlightsDestination
-            )
-          }
-          options={props.options}
-          value={props.value}
-        />
-      </SettingsControlSlot>
-    </SettingsRow>
+    <SettingsChoiceMatrix
+      ariaLabel={t('desktop.readwise.section.behavior.aria')}
+      columns={[
+        t('desktop.readwise.behavior.withHighlights.title'),
+        t('desktop.readwise.behavior.withoutHighlights.title')
+      ]}
+      rows={[
+        {
+          cells: [
+            control('articleWithHighlights', t('desktop.readwise.behavior.article.withHighlights.aria')),
+            control('articleWithoutHighlights', t('desktop.readwise.behavior.article.withoutHighlights.aria'))
+          ],
+          label: t('desktop.readwise.behavior.article.title')
+        },
+        {
+          cells: [
+            control('bookWithHighlights', t('desktop.readwise.behavior.book.withHighlights.aria')),
+            control('bookWithoutHighlights', t('desktop.readwise.behavior.book.withoutHighlights.aria'))
+          ],
+          label: t('desktop.readwise.behavior.book.title')
+        }
+      ]}
+    />
   );
 }

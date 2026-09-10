@@ -48,13 +48,15 @@ it('keeps sidecar files with unparsed highlights at the top of preview entries',
   await fs.writeFile(path.join(primaryPath, 'Unparsed.md'), '# Unparsed\n\nBody text.\n', 'utf8');
   await fs.writeFile(path.join(highlightPath, 'Unparsed.md'), '# Unparsed\n\n## Highlights\n', 'utf8');
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: readwiseRoot,
     readwiseSources: [
@@ -74,18 +76,18 @@ it('keeps sidecar files with unparsed highlights at the top of preview entries',
 
   expect(preview).toMatchObject({
     total_count: 2,
-    with_highlights_count: 2,
-    without_highlights_count: 0,
-    write_count: 2
+    with_highlights_count: 1,
+    without_highlights_count: 1,
+    write_count: 1
   });
   expect(preview.entries[0]).toMatchObject({
-    destination: 'inbox',
+    destination: 'off',
     detected_highlight_count: 0,
     highlight_status: 'unparsed',
-    highlight_type: 'with_highlights',
+    highlight_type: 'without_highlights',
     open_path: path.join(highlightPath, 'Unparsed.md'),
     source_path: 'Unparsed.md',
-    status: 'new'
+    status: 'off'
   });
 });
 
@@ -102,13 +104,15 @@ it('treats image-only sidecar highlights with alt text as parsed highlights', as
     'utf8'
   );
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: readwiseRoot,
     readwiseSources: [
@@ -149,13 +153,15 @@ it('includes highlight sidecars without full document files in preview and impor
   await fs.writeFile(path.join(highlightPath, 'Ready.md'), '# Ready\n\n## Highlights\nUseful highlight.\n', 'utf8');
   await fs.writeFile(path.join(highlightPath, 'Orphan.md'), '# Orphan\n\n## Highlights\nOrphan highlight.\n', 'utf8');
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: readwiseRoot,
     readwiseSources: [

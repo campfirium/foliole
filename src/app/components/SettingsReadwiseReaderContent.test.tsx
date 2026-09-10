@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
+import {
+  createDefaultReadwiseAutoImportPolicy,
+  type ReadwiseAutoImportPolicy
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
@@ -45,8 +50,13 @@ function mockSuccessfulSetupInspection() {
   });
 }
 
-function renderReadwiseSettingsHarness(input: { config?: ReadwiseReaderConfig } = {}) {
+function renderReadwiseSettingsHarness(input: {
+  config?: ReadwiseReaderConfig;
+  policy?: ReadwiseAutoImportPolicy;
+  readwiseSourceMode?: ReadwiseSourceMode;
+} = {}) {
   const onSave = vi.fn();
+  const onChangePolicy = vi.fn();
   const onPreviewSync = vi.fn().mockResolvedValue(createReadwiseImportPreview());
   const onRunSync = vi.fn().mockResolvedValue(createReadwiseImportRunResult());
   const config = input.config ?? createDefaultReadwiseReaderConfig();
@@ -56,15 +66,18 @@ function renderReadwiseSettingsHarness(input: { config?: ReadwiseReaderConfig } 
     <LocalizationProvider>
       <SettingsReadwiseReaderContent
         config={config}
+        onChangePolicy={onChangePolicy}
         onPreviewSync={onPreviewSync}
         onRunSync={onRunSync}
         onSave={onSave}
+        policy={input.policy ?? createDefaultReadwiseAutoImportPolicy()}
         readwiseRootPath="/Readwise"
+        {...(input.readwiseSourceMode ? { readwiseSourceMode: input.readwiseSourceMode } : {})}
         readwiseSources={readwiseSources}
       />
     </LocalizationProvider>
   );
-  return { onPreviewSync, onRunSync, onSave };
+  return { onChangePolicy, onPreviewSync, onRunSync, onSave };
 }
 
 async function checkSetupPreview() {
@@ -189,43 +202,51 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
   expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
 });
 
-it('previews changed import behavior before running manual Readwise sync', async () => {
-  const { onPreviewSync, onRunSync, onSave } = renderReadwiseSettingsHarness({
-    config: {
-      ...createEnabledReadwiseConfig(),
-      withoutHighlightsDestination: 'off'
-    }
-  });
-  const withoutHighlightsGroup = screen.getByRole('radiogroup', {
-    name: 'Content without highlights destination'
+it('edits each automatic import policy cell independently', () => {
+  const { onChangePolicy } = renderReadwiseSettingsHarness({
+    config: createEnabledReadwiseConfig()
   });
 
-  fireEvent.click(within(withoutHighlightsGroup).getByRole('radio', { name: 'External' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+  const group = screen.getByRole('radiogroup', { name: 'Articles without highlights destination' });
+  fireEvent.click(within(group).getByRole('radio', { name: 'External document library' }));
 
-  await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'Readwise import preview' })).toBeInTheDocument();
-  });
-  expect(onPreviewSync).toHaveBeenCalledWith(
-    expect.objectContaining({
-      config: expect.objectContaining({ withoutHighlightsDestination: 'external' })
-    })
-  );
-  expect(onRunSync).not.toHaveBeenCalled();
+  expect(onChangePolicy).toHaveBeenCalledWith('articleWithoutHighlights', 'external');
+});
 
-  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+it('shows the same four-cell policy matrix with the documented defaults', () => {
+  renderReadwiseSettingsHarness({ config: createEnabledReadwiseConfig() });
 
-  await waitFor(() => {
-    expect(onRunSync).toHaveBeenCalledWith(
-      expect.objectContaining({
-        config: expect.objectContaining({ withoutHighlightsDestination: 'external' })
-      })
+  const selected = [
+    ['Articles with highlights destination', 'Inbox'],
+    ['Articles without highlights destination', 'Off'],
+    ['Books with highlights destination', 'Inbox'],
+    ['Books without highlights destination', 'Inbox']
+  ] as const;
+  selected.forEach(([groupName, optionName]) => {
+    const group = screen.getByRole('radiogroup', { name: groupName });
+    expect(within(group).getByRole('radio', { name: optionName })).toHaveAttribute(
+      'aria-checked',
+      'true'
     );
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
   });
-  expect(onSave).not.toHaveBeenCalled();
-  expect(onRunSync).toHaveBeenCalledWith(
-    expect.objectContaining({
-      config: expect.objectContaining({ withoutHighlightsDestination: 'external' })
-    })
-  );
+});
+
+it('shows the four-cell policy matrix in API mode', async () => {
+  renderReadwiseSettingsHarness({
+    config: createEnabledReadwiseConfig(),
+    readwiseSourceMode: 'api'
+  });
+
+  await waitFor(() => {
+    expect(screen.getByRole('radiogroup', {
+      name: 'Books without highlights destination'
+    })).toBeInTheDocument();
+  });
+  expect([
+    'Articles with highlights destination',
+    'Articles without highlights destination',
+    'Books with highlights destination',
+    'Books without highlights destination'
+  ].every((name) => Boolean(screen.getByRole('radiogroup', { name })))).toBe(true);
 });

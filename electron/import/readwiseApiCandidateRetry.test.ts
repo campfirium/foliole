@@ -69,8 +69,12 @@ it('continues after one document fails and retries only unfinished candidates', 
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
     const id = url.searchParams.get('id') ?? '';
-    if (id === 'a' || id === 'b') requestedParents.push(id);
-    if (id === 'a' && fail) return new Response('{}', { status: 500 });
+    if ((id === 'a' || id === 'b') && url.searchParams.has('withHtmlContent')) {
+      requestedParents.push(id);
+    }
+    if (id === 'a' && fail && url.searchParams.has('withHtmlContent')) {
+      return new Response('{}', { status: 500 });
+    }
     if (id === 'ha' || id === 'hb') {
       return response([{ category: 'highlight', id, parent_id: id === 'ha' ? 'a' : 'b' }]);
     }
@@ -106,8 +110,10 @@ it('honors Retry-After without refetching an already completed candidate', async
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
     const id = url.searchParams.get('id') ?? '';
-    if (id === 'a' || id === 'b') requestedParents.push(id);
-    if (id === 'b' && limited) {
+    if ((id === 'a' || id === 'b') && url.searchParams.has('withHtmlContent')) {
+      requestedParents.push(id);
+    }
+    if (id === 'b' && limited && url.searchParams.has('withHtmlContent')) {
       limited = false;
       return new Response('{}', { headers: { 'Retry-After': '1' }, status: 429 });
     }
@@ -131,6 +137,9 @@ it('keeps a candidate failed after three exact parent lookups return empty', asy
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) return response([exportBook('gone', 'hg', 'articles')]);
+    if (url.searchParams.get('id') === 'gone' && !url.searchParams.has('withHtmlContent')) {
+      return response([readerDocument('gone', 'article', false)]);
+    }
     if (url.searchParams.get('id') === 'gone') {
       parentRequests += 1;
       return response([]);

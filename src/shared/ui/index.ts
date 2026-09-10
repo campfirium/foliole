@@ -65,5 +65,6 @@ export { SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME, SETTINGS_AUTO_CONTROL_WIDTH_CL
 export { SettingsFlow, SettingsFlowItem } from './SettingsFlow';
 
 export { SettingsSegmentedControl, SettingsSegmentedRow } from './SettingsSegmentedControl';
+export { SettingsChoiceMatrix } from './SettingsChoiceMatrix';
 export { SettingsEmptyState, SettingsErrorState, SettingsLoadingState, SettingsStateAction } from './SettingsStateSurface';
 export { settingsDialogSurfaceClassName, settingsNestedDialogSurfaceClassName, settingsPopoverSurfaceClassName } from './SettingsDialogSurface';

@@ -91,12 +91,14 @@ function readRows<T>(sql: string) {
 it('keeps Readwise inbox checks on the lightweight path without remote image downloads', async () => {
   const fixture = await seedFixture();
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: fixture.readwiseRoot,
     readwiseSources: [
@@ -125,7 +127,7 @@ it('keeps Readwise inbox checks on the lightweight path without remote image dow
   ]);
 });
 
-it('skips Readwise sources without a sidecar on the off path without reading source content', async () => {
+it('classifies the off path from normalized highlight count before skipping source content', async () => {
   const fixture = await seedFixture();
   await fs.rm(path.join(fixture.fullDocumentDir, 'Highlighted.md'));
   await fs.rm(path.join(fixture.highlightDir, 'Highlighted.md'));
@@ -143,12 +145,14 @@ it('skips Readwise sources without a sidecar on the off path without reading sou
     'utf8'
   );
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: fixture.readwiseRoot,
     readwiseSources: [
@@ -170,7 +174,7 @@ it('skips Readwise sources without a sidecar on the off path without reading sou
 
   expect(
     readFileSpy.mock.calls.some(([filePath]) => String(filePath).endsWith('No Highlight.md'))
-  ).toBe(false);
+  ).toBe(true);
   expect(readRows("SELECT source_name FROM import_runs WHERE source_name = 'No Highlight'")).toEqual([]);
   expect(readRows("SELECT source_name FROM import_sources WHERE source_name = 'No Highlight'")).toEqual([]);
   expect(readRows("SELECT object_id FROM sync_object_state WHERE object_type = 'import_source'")).toEqual([]);

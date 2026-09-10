@@ -1,4 +1,4 @@
-import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseReaderSettings.js';
+import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 
 export const READWISE_API_PIPELINE_VERSION = 2;
 
@@ -17,7 +17,7 @@ export interface ReadwiseApiCandidateFailure {
 }
 
 export interface ReadwiseApiCandidate {
-  destination: ReadwiseImportDestination;
+  destination: Exclude<ReadwiseImportDestination, 'off'>;
   documentId: string;
   exportCategory: string | null;
   failure?: ReadwiseApiCandidateFailure;

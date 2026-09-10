@@ -121,6 +121,8 @@ function ReadwiseReaderCategoryContent(props: { importSettings: ImportSettingsSt
   return (
     <SettingsReadwiseReaderContent
       config={importSettings.readwiseReaderConfig}
+      policy={importSettings.readwiseAutoImportPolicy}
+      onChangePolicy={importSettings.handleChangeReadwiseAutoImportPolicy}
       onChangeSourceMode={importSettings.handleChangeReadwiseSourceMode}
       onSave={importSettings.handleSaveReadwiseReaderSetup}
       onCancelSync={importSettings.cancelReadwiseReaderImport}

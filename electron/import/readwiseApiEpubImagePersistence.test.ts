@@ -44,8 +44,8 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
     createAttachmentRecord({ createdAt, id, mimeType: 'image/png', originalName: `${id}.png`, sizeBytes: 3 });
   }
   const preparedEpubImages = preparedImages(document);
-  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document, preparedEpubImages });
+  const config = createDefaultReadwiseReaderConfig();
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document, preparedEpubImages });
 
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
@@ -63,7 +63,7 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
   createNodeAttachmentLink({ attachmentId: 'stale-attachment', nodeId: section.id, role: 'image' });
 
   materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', document, forceEpubStructure: true, preparedEpubImages
+    config, connectionRef: 'connection', destination: 'inbox', document, forceEpubStructure: true, preparedEpubImages
   });
 
   expect(driver.queryAll<{ attachment_id: string; node_id: string }>(

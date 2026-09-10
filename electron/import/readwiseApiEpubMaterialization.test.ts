@@ -44,9 +44,9 @@ afterEach(async () => {
 
 it('creates a chapter container, chapter body, sections, and globally unique annotation placement once', () => {
   const document = epubFixture();
-  const config = { ...createDefaultReadwiseReaderConfig(), withHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
 
-  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', document }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document }))
     .toMatchObject({ annotationCount: 2, status: 'imported' });
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
@@ -68,7 +68,7 @@ it('creates a chapter container, chapter body, sections, and globally unique ann
   const ambiguous = descendants.find((node) => node.id.includes('readwise') && node.content === 'Repeated excerpt')!;
   expect(ambiguous.parent_id).toBe(source.latest_node_id);
 
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
   )).toEqual({ count: 4 });
@@ -79,8 +79,8 @@ it('creates a chapter container, chapter body, sections, and globally unique ann
 
 it('prepares EPUB images only when a book tree is created or explicitly rebuilt', () => {
   const document = { ...epubFixture(), annotations: [] };
-  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
-  const input = { config, connectionRef: 'connection', document };
+  const config = createDefaultReadwiseReaderConfig();
+  const input = { config, connectionRef: 'connection', destination: 'inbox' as const, document };
 
   expect(shouldPrepareReadwiseApiEpubImages(input)).toBe(true);
   materializeReadwiseApiDocument(input);
@@ -89,20 +89,20 @@ it('prepares EPUB images only when a book tree is created or explicitly rebuilt'
   expect(shouldPrepareReadwiseApiEpubImages({
     ...input,
     connectionRef: 'external-connection',
-    config: { ...config, withoutHighlightsDestination: 'external' }
+    destination: 'external'
   })).toBe(false);
   expect(shouldPrepareReadwiseApiEpubImages({
     ...input,
     connectionRef: 'promoted-connection',
-    config: { ...config, withoutHighlightsDestination: 'external' },
+    destination: 'external',
     forceInbox: true
   })).toBe(true);
 });
 
 it('does not rebuild or revive a persisted structure when remote sections drift', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const document = epubFixture();
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   const driver = openDatabaseConnection().driver;
   const section = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'First section'")!;
   driver.execute('UPDATE nodes SET content = ?, deleted_at = ? WHERE id = ?', [
@@ -113,7 +113,7 @@ it('does not rebuild or revive a persisted structure when remote sections drift'
     sections: [{ content: '# Replacement\n\nRemote drift', headingLevel: 1, markerKey: 'replacement', title: 'Replacement' }]
   } };
 
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: drifted });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: drifted });
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE title = 'Replacement'"))
     .toEqual({ count: 0 });
   expect(driver.queryOne<{ deleted_at: string }>('SELECT deleted_at FROM nodes WHERE id = ?', [section.id])?.deleted_at)
@@ -121,12 +121,12 @@ it('does not rebuild or revive a persisted structure when remote sections drift'
 });
 
 it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const structured = { ...epubFixture(), annotations: [] };
   const flat = { ...structured, body: 'Legacy flat body', epubStructure: null };
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: flat });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: flat });
 
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: structured });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: structured });
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 0 });
@@ -134,7 +134,7 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
     .toBe('Legacy flat body');
 
   materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', document: structured, forceEpubStructure: true
+    config, connectionRef: 'connection', destination: 'inbox', document: structured, forceEpubStructure: true
   });
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 4 });
@@ -143,9 +143,9 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
 });
 
 it('routes the current-source re-import command from a flat API EPUB to staged Reader HTML', async () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const flat = { ...epubFixture(), annotations: [], body: 'Legacy flat body', epubStructure: null };
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: flat });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: flat });
   const source = openDatabaseConnection().driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
   )!;

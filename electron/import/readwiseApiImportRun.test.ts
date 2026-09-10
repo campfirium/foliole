@@ -77,7 +77,9 @@ it('does not scan Reader when content without highlights is off', async () => {
 
   const preview = await previewReadwiseApiImport(apiSettings('off'), { fetchImpl, minIntervalMs: 0 });
   expect(preview).toMatchObject({ total_count: 1, with_highlights_count: 1, without_highlights_count: 0 });
-  expect(fetchMock.mock.calls.map(([input]) => String(input))).toHaveLength(1);
+  expect(fetchMock.mock.calls.map(([input]) => String(input)).filter(
+    (value) => new URL(value).searchParams.has('category')
+  )).toHaveLength(0);
 
   const result = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
@@ -89,8 +91,9 @@ it('does not scan Reader when content without highlights is off', async () => {
   ]));
 });
 
-it('keeps v2 books ahead of other candidates without treating Reader epub as Books', async () => {
+it('prioritizes books by Reader category instead of the v2 export category', async () => {
   const exactOrder: string[] = [];
+  const parentRequestOrder: string[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) {
@@ -100,7 +103,10 @@ it('keeps v2 books ahead of other candidates without treating Reader epub as Boo
       ]);
     }
     const id = url.searchParams.get('id') ?? '';
-    exactOrder.push(id);
+    if (id && !id.endsWith('highlight')) {
+      parentRequestOrder.push(`${id}:${url.searchParams.has('withHtmlContent') ? 'body' : 'metadata'}`);
+    }
+    if (url.searchParams.has('withHtmlContent') || id.endsWith('highlight')) exactOrder.push(id);
     if (id.endsWith('highlight')) {
       return response([{ category: 'highlight', id, parent_id: id.startsWith('book') ? 'book' : 'article' }]);
     }
@@ -109,8 +115,11 @@ it('keeps v2 books ahead of other candidates without treating Reader epub as Boo
 
   await runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off') });
 
-  expect(exactOrder.slice(0, 2)).toEqual(['book', 'book-highlight']);
-  expect(exactOrder).toContain('article');
+  expect(exactOrder.slice(0, 2)).toEqual(['article', 'article-highlight']);
+  expect(exactOrder).toContain('book');
+  expect(parentRequestOrder.slice(0, 3)).toEqual([
+    'article:metadata', 'book:metadata', 'article:body'
+  ]);
 });
 
 it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
@@ -188,7 +197,7 @@ it('commits the first complete document while the producer waits for the next bo
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
     const id = url.searchParams.get('id') ?? '';
-    if (id === 'b') {
+    if (id === 'b' && url.searchParams.has('withHtmlContent')) {
       secondStarted?.();
       await blocked;
     }

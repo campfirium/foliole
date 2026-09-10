@@ -146,13 +146,15 @@ function expectPendingBookInventory(paths: Awaited<ReturnType<typeof seedReadwis
 
 function saveReaderSettings(paths: Awaited<ReturnType<typeof seedReadwiseSources>>) {
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: paths.readwiseRoot,
     readwiseSources: [

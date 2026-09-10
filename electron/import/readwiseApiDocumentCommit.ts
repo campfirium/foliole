@@ -1,5 +1,5 @@
+import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { resolveReadwiseImportDestination } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
@@ -22,6 +22,7 @@ export async function commitReadwiseApiDocument(input: {
   config: ReadwiseReaderConfig;
   connectionRef: string;
   dependencies?: ReadwiseApiFetchDependencies;
+  destination: Exclude<ReadwiseImportDestination, 'off'>;
   document: PreparedReadwiseApiDocument;
   replaceExistingBody?: boolean;
 }) {
@@ -31,9 +32,7 @@ export async function commitReadwiseApiDocument(input: {
   }
   input = { ...input, document: guardedDocument };
   const isOriginalFile = input.document.category === 'pdf';
-  const destination = existingBefore ? 'inbox' : resolveReadwiseImportDestination(
-    input.config, input.document.annotations.length > 0
-  );
+  const destination = existingBefore ? 'inbox' : input.destination;
   const prepared = isOriginalFile && destination === 'inbox' && existingBefore?.state.originalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
       category: 'pdf',
@@ -46,11 +45,12 @@ export async function commitReadwiseApiDocument(input: {
   const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
+    destination,
     document
   });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, document, preparedEpubImages,
+    config: input.config, connectionRef: input.connectionRef, destination, document, preparedEpubImages,
     ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody })
   });
   if (!isOriginalFile || result.status !== 'imported') return result;

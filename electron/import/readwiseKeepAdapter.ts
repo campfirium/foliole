@@ -1,5 +1,6 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
+import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -12,13 +13,17 @@ import {
 
 export interface ReadwiseKeepAdapterInput {
   highlightDirectoryPath: string;
+  kind: ReadwiseSourceKind;
+  policy: ReadwiseAutoImportPolicy;
   readwiseConfig: ReadwiseReaderConfig;
 }
 
-export interface ReadwiseKeepPreparedRecordInput extends ReadwiseKeepAdapterInput {
+export interface ReadwiseKeepPreparedRecordInput {
+  highlightDirectoryPath: string;
   highlightPolicy: ImportHighlightPolicy;
   importedAt: string;
   kind: ReadwiseSourceKind;
+  readwiseConfig: ReadwiseReaderConfig;
 }
 
 export const readwiseKeepAdapter = {

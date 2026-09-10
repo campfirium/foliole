@@ -48,9 +48,9 @@ afterEach(async () => {
 });
 
 it('preserves the local body and materializes distinct remote annotation identities once', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const first = documentFixture([{ content: 'Repeated excerpt', remoteId: 'highlight-1' }]);
-  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: first }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: first }))
     .toMatchObject({ annotationCount: 1, status: 'imported' });
 
   const driver = openDatabaseConnection().driver;
@@ -69,7 +69,7 @@ it('preserves the local body and materializes distinct remote annotation identit
     { content: 'Repeated excerpt', remoteId: 'highlight-1' },
     { content: 'Repeated excerpt', remoteId: 'highlight-2' }
   ], '# Replaced remote body');
-  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: second }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: second }))
     .toMatchObject({ annotationCount: 1, status: 'imported' });
 
   const body = driver.queryOne<{ body: string }>(
@@ -82,23 +82,23 @@ it('preserves the local body and materializes distinct remote annotation identit
     'SELECT COUNT(*) count FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [source.latest_node_id]
   )).toEqual({ count: 2 });
 
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document: second });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: second });
   expect(driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) count FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [source.latest_node_id]
   )).toEqual({ count: 2 });
 });
 
 it('keeps deleted topics blocked instead of reviving them', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const document = documentFixture([{ content: 'Excerpt', remoteId: 'highlight-1' }]);
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', document });
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'document-1'"
   )!;
   driver.execute('UPDATE nodes SET deleted_at = ? WHERE id = ?', ['2026-09-07T02:00:00.000Z', source.latest_node_id]);
 
-  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', document }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document }))
     .toMatchObject({ status: 'blocked' });
   expect(driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) count FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [source.latest_node_id]
@@ -110,9 +110,9 @@ it('keeps deleted topics blocked instead of reviving them', () => {
 });
 
 it('keeps a deleted annotation child blocked while appending a different remote identity', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', document: documentFixture([{ content: 'Excerpt', remoteId: 'highlight-1' }])
+    config, connectionRef: 'connection', destination: 'inbox', document: documentFixture([{ content: 'Excerpt', remoteId: 'highlight-1' }])
   });
   const driver = openDatabaseConnection().driver;
   const childId = stableReadwiseAnnotationNodeId('connection', 'highlight-1');
@@ -121,6 +121,7 @@ it('keeps a deleted annotation child blocked while appending a different remote 
   const result = materializeReadwiseApiDocument({
     config,
     connectionRef: 'connection',
+    destination: 'inbox',
     document: documentFixture([
       { content: 'Excerpt', remoteId: 'highlight-1' },
       { content: 'Excerpt', remoteId: 'highlight-2' }
@@ -138,9 +139,9 @@ it('keeps a deleted annotation child blocked while appending a different remote 
 });
 
 it('records unavailable bodies without creating an empty Topic', () => {
-  const config = { ...createDefaultReadwiseReaderConfig(), withoutHighlightsDestination: 'inbox' as const };
+  const config = createDefaultReadwiseReaderConfig();
   const result = materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', document: documentFixture([], '')
+    config, connectionRef: 'connection', destination: 'inbox', document: documentFixture([], '')
   });
   expect(result.status).toBe('degraded');
   const driver = openDatabaseConnection().driver;
@@ -153,15 +154,12 @@ it('records unavailable bodies without creating an empty Topic', () => {
 });
 
 it('stores API External documents as remote references and suppresses them after Inbox adoption', () => {
-  const externalConfig = {
-    ...createDefaultReadwiseReaderConfig(),
-    withoutHighlightsDestination: 'external' as const
-  };
+  const config = createDefaultReadwiseReaderConfig();
   const document = documentFixture([], 'Searchable remote body');
   document.metadata.readerUrl = 'https://readwise.io/reader/read/01';
   document.metadata.sourceUrl = 'https://example.com/source';
 
-  expect(materializeReadwiseApiDocument({ config: externalConfig, connectionRef: 'connection', document }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'external', document }))
     .toMatchObject({ status: 'external_pending' });
   const folder = loadReadwiseExternalSearchFolders()[0]!;
   const entry = loadReadwiseExternalSearchBrowseEntries(folder.id)[0]!;
@@ -182,8 +180,7 @@ it('stores API External documents as remote references and suppresses them after
   expect(searchReadwiseExternalDocuments(buildFtsSearchQueryPlan('searchable'))[0])
     .toMatchObject({ id: `readwise-document:${entry.document_id}` });
 
-  const inboxConfig = { ...externalConfig, withoutHighlightsDestination: 'inbox' as const };
-  expect(materializeReadwiseApiDocument({ config: inboxConfig, connectionRef: 'connection', document }))
+  expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document }))
     .toMatchObject({ status: 'imported' });
   expect(loadReadwiseExternalSearchBrowseEntries(folder.id)).toEqual([]);
   expect(searchReadwiseExternalDocuments(buildFtsSearchQueryPlan('searchable'))).toEqual([]);

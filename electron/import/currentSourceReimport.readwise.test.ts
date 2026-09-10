@@ -44,13 +44,15 @@ afterEach(async () => {
 
 function saveReadwiseKeepSettings(primaryDir: string, highlightDir: string) {
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-18T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-18T00:00:00.000Z'
     },
     readwiseSources: [
       {

@@ -1,4 +1,4 @@
-import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import {
   READWISE_API_PIPELINE_VERSION,
   READER_PARENT_CATEGORIES,
@@ -19,15 +19,17 @@ const MANIFEST_ID = 'manifest';
 
 export function loadOrCreateReadwiseApiCandidateRun(
   connectionRef: string,
-  config: ReadwiseReaderConfig,
+  policy: ReadwiseAutoImportPolicy,
   now = new Date().toISOString()
 ) {
-  const signature = candidateScopeSignature(config);
+  const signature = candidateScopeSignature(policy);
   const current = loadManifest(connectionRef);
   const row = loadRunRow(connectionRef);
   if (!current || current.pipelineVersion !== READWISE_API_PIPELINE_VERSION
-    || current.scopeSignature !== signature || (row && !isCandidatePhase(row.phase))) {
+    || (row && !isCandidatePhase(row.phase))) {
     resetCandidateRun(connectionRef, signature, null, now);
+  } else if (!row && current.scopeSignature !== signature) {
+    resetCandidateRun(connectionRef, signature, loadReadwiseApiCompletedThrough(connectionRef), now);
   } else if (!row) {
     startCandidateRun(connectionRef, loadReadwiseApiCompletedThrough(connectionRef), now);
   }
@@ -36,12 +38,12 @@ export function loadOrCreateReadwiseApiCandidateRun(
 
 export function restartReadwiseApiCandidateRun(
   connectionRef: string,
-  config: ReadwiseReaderConfig,
+  policy: ReadwiseAutoImportPolicy,
   now = new Date().toISOString()
 ) {
   resetCandidateRun(
     connectionRef,
-    candidateScopeSignature(config),
+    candidateScopeSignature(policy),
     null,
     now
   );
@@ -97,11 +99,8 @@ export function completeReadwiseApiCandidateRun(connectionRef: string) {
   clearReadwiseApiCandidateStage(connectionRef);
 }
 
-export function candidateScopeSignature(config: ReadwiseReaderConfig) {
-  return JSON.stringify({
-    withHighlightsDestination: config.withHighlightsDestination,
-    withoutHighlightsDestination: config.withoutHighlightsDestination
-  });
+export function candidateScopeSignature(policy: ReadwiseAutoImportPolicy) {
+  return JSON.stringify(policy);
 }
 
 function resetCandidateRun(

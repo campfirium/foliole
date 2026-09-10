@@ -56,8 +56,14 @@ function saveReadwiseSettings(
   behavior: { withHighlightsDestination: 'external' | 'inbox'; withoutHighlightsDestination: 'external' | 'inbox' | 'off' }
 ) {
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: behavior.withHighlightsDestination,
+      articleWithoutHighlights: behavior.withoutHighlightsDestination,
+      bookWithHighlights: 'inbox',
+      bookWithoutHighlights: 'inbox',
+      version: 1
+    },
     readwiseReaderConfig: {
-      ...behavior,
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
       validatedAt: '2026-05-11T00:00:00.000Z'

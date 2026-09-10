@@ -1,4 +1,9 @@
 import {
+  createDefaultReadwiseAutoImportPolicy,
+  type ReadwiseAutoImportPolicy,
+  type ReadwiseImportDestination
+} from '../../../lib/core/import/readwiseAutoImportPolicy';
+import {
   isReadwiseReaderConfigReady,
   type ReadwiseReaderConfig
 } from '../../../lib/core/import/readwiseReaderSettings';
@@ -12,6 +17,10 @@ interface ReadwiseReaderConfigDialogProps {
   config: ReadwiseReaderConfig;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChangePolicy?: (
+    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    value: ReadwiseImportDestination
+  ) => void;
   onPreview: (input: {
     articleDirectoryPath: string;
     config: ReadwiseReaderConfig;
@@ -28,6 +37,7 @@ interface ReadwiseReaderConfigDialogProps {
     readwiseSources: DraftImportSource[];
   }) => void;
   readwiseRootPath: string;
+  policy?: ReadwiseAutoImportPolicy;
   readwiseSources: DraftImportSource[];
 }
 
@@ -122,10 +132,12 @@ export function ReadwiseReaderConfigDialog(props: ReadwiseReaderConfigDialogProp
             : { ...getValidatedReadwiseConfig(draft), enabled: true }
         );
       }}
+      onChangePolicy={props.onChangePolicy ?? (() => undefined)}
       onCheck={() => {
         saveReadwiseSetup(draft.draftSources);
         void draft.runPreview();
       }}
+      policy={props.policy ?? createDefaultReadwiseAutoImportPolicy()}
     />
   ) : null;
 }

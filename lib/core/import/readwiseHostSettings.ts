@@ -6,7 +6,8 @@ import {
 } from './readwiseReaderSettings.js';
 
 export const READWISE_HOST_SETTINGS_KEY = 'readwise_import_settings';
-export const READWISE_HOST_SETTINGS_VERSION = 2;
+export const READWISE_HOST_SETTINGS_VERSION = 3;
+export const READWISE_HOST_AUTO_IMPORT_POLICY_VERSION = 1;
 
 export interface ReadwiseHostApiConnection {
   secretRef: string | null;
@@ -15,6 +16,7 @@ export interface ReadwiseHostApiConnection {
 }
 
 export interface ReadwiseHostSettings {
+  autoImportPolicyVersion: typeof READWISE_HOST_AUTO_IMPORT_POLICY_VERSION;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
   readwiseSourceMode: ReadwiseSourceMode;
@@ -35,6 +37,7 @@ function normalizeSecretRef(value: unknown) {
 
 export function createDefaultReadwiseHostSettings(): ReadwiseHostSettings {
   return {
+    autoImportPolicyVersion: READWISE_HOST_AUTO_IMPORT_POLICY_VERSION,
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
     readwiseSourceMode: 'folder',
@@ -52,6 +55,7 @@ export function normalizeReadwiseHostSettings(value: unknown): ReadwiseHostSetti
   }
   const apiConnection = isRecord(payload.apiConnection) ? payload.apiConnection : {};
   return {
+    autoImportPolicyVersion: READWISE_HOST_AUTO_IMPORT_POLICY_VERSION,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(payload.readwiseReaderConfig),
     readwiseRootPath: typeof payload.readwiseRootPath === 'string' ? payload.readwiseRootPath : '',
     readwiseSourceMode: payload.readwiseSourceMode === 'api' || payload.readwiseSourceMode === 'off'

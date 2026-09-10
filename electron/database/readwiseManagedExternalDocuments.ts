@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { matchesFtsSearchText, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -41,6 +42,36 @@ export function hasReadwiseExternalDocument(kind: ReadwiseSourceKind, sourceName
     .prepare('SELECT is_present FROM external_documents WHERE document_id = ?')
     .get(documentId) as { is_present: number } | undefined;
   return row?.is_present === 1;
+}
+
+export function hideReadwiseExternalDocument(
+  kind: ReadwiseSourceKind,
+  sourceName: string,
+  updatedAt = new Date().toISOString()
+) {
+  const documentId = buildReadwiseExternalDocumentId(kind, sourceName);
+  const connection = openDatabaseConnection();
+  const row = connection.driver.queryOne<{ is_present: number }>(
+    'SELECT is_present FROM external_documents WHERE document_id = ?', [documentId]
+  );
+  if (!row || row.is_present === 0) return;
+  connection.driver.execute(
+    `UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ?
+     WHERE document_id = ? AND is_present = 1`,
+    [updatedAt, updatedAt, documentId]
+  );
+  upsertSyncObjectState(connection.driver, {
+    contentHash: computeSyncContentHash('external_document', {
+      deleted_at: updatedAt,
+      document_id: documentId
+    }),
+    deletedAt: updatedAt,
+    lastModifiedByHostName: loadOrCreateDesktopHostName(updatedAt),
+    objectId: documentId,
+    objectType: 'external_document',
+    syncDirty: true,
+    updatedAt
+  });
 }
 
 function resolveReadwiseFolderPath(folderId: string) {

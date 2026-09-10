@@ -27,12 +27,14 @@ export async function promoteReadwiseApiExternalDocument(documentId: string): Pr
   const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config,
     connectionRef: reference.connection_ref,
+    destination: 'inbox',
     document,
     forceInbox: true
   });
   const result = materializeReadwiseApiDocument({
     config,
     connectionRef: reference.connection_ref,
+    destination: 'inbox',
     document,
     forceInbox: true,
     importedAt,

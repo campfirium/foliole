@@ -3,12 +3,13 @@ import path from 'node:path';
 
 import { appendFilePlaceholderHighlights } from '../../lib/core/import/filePlaceholderContent.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
+import {
+  resolveReadwiseAutoImportDestination,
+  type ReadwiseAutoImportPolicy
+} from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { parseReadwiseFullDocumentImport } from '../../lib/core/import/readwiseFullDocumentParsing.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
-import {
-  resolveReadwiseImportDestination,
-  type ReadwiseReaderConfig
-} from '../../lib/core/import/readwiseReaderSettings.js';
+import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 export interface ReadwiseSourceSignature {
@@ -53,30 +54,12 @@ export async function resolveReadwiseSourceImportDecision(
   source: DirectoryImportSourceDescriptor,
   options: {
     highlightDirectoryPath: string;
+    kind: ReadwiseSourceKind;
+    policy: ReadwiseAutoImportPolicy;
     readwiseConfig: ReadwiseReaderConfig;
   }
 ) {
   const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
-  if (options.readwiseConfig.withoutHighlightsDestination === 'off') {
-    try {
-      const articleStats = await fs.stat(articlePath);
-      if (articleStats.size === 0) {
-        return {
-          destination: resolveReadwiseImportDestination(options.readwiseConfig, true),
-          detectedHighlightCount: 0,
-          hasHighlightFile: true,
-          hasHighlights: true
-        };
-      }
-    } catch {
-      return {
-        destination: 'off' as const,
-        detectedHighlightCount: 0,
-        hasHighlightFile: false,
-        hasHighlights: false
-      };
-    }
-  }
   let detectedHighlightCount = 0;
   let hasHighlightFile = false;
   try {
@@ -86,9 +69,13 @@ export async function resolveReadwiseSourceImportDecision(
   } catch {
     detectedHighlightCount = 0;
   }
-  const hasHighlights = hasHighlightFile;
+  const hasHighlights = detectedHighlightCount > 0;
   return {
-    destination: resolveReadwiseImportDestination(options.readwiseConfig, hasHighlights),
+    destination: resolveReadwiseAutoImportDestination(
+      options.policy,
+      options.kind === 'books' ? 'book' : 'article',
+      hasHighlights
+    ),
     detectedHighlightCount,
     hasHighlightFile,
     hasHighlights
@@ -99,6 +86,8 @@ export async function shouldImportReadwiseSource(
   source: DirectoryImportSourceDescriptor,
   options: {
     highlightDirectoryPath: string;
+    kind: ReadwiseSourceKind;
+    policy: ReadwiseAutoImportPolicy;
     readwiseConfig: ReadwiseReaderConfig;
   }
 ) {

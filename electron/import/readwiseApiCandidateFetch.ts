@@ -1,4 +1,5 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
+import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import {
   advanceReadwiseApiCandidateRun,
@@ -29,7 +30,7 @@ export async function ensureReadwiseApiCandidateIndex(
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
-  let run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseReaderConfig);
+  let run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
   const request = createReadwiseApiRequest(dependencies);
   try {
     while (run.phase !== 'ready') {
@@ -39,12 +40,17 @@ export async function ensureReadwiseApiCandidateIndex(
       if (run.phase === 'export') {
         const books = values(payload).map(normalizeExportBook).filter((item) => item !== null);
         saveReadwiseApiCandidateExportPage(connectionRef, books);
-        saveReadwiseApiCandidates(connectionRef, books.flatMap((book) => exportCandidate(book, settings)));
+        for (const book of books) {
+          if (book.source !== 'reader' || book.isDeleted || !book.externalId) continue;
+          const parent = await fetchExact(book.externalId, false, request);
+          if (!parent || parent.category === 'highlight' || parent.category === 'note') continue;
+          saveReadwiseApiCandidates(connectionRef, exportCandidate(book, parent, settings));
+        }
       } else {
         const category = run.phase.slice('reader:'.length) as ReaderParentCategory;
         const documents = values(payload).map(normalizeReaderDocument).filter((item) => item !== null);
         saveReadwiseApiCandidates(connectionRef, documents.flatMap((document) =>
-          document.category === category ? [readerCandidate(document, settings)] : []
+          document.category === category ? readerCandidate(document, settings) : []
         ));
       }
       dependencies.onPage?.({ phase: run.phase === 'export' ? 'export' : 'reader', recordCount: values(payload).length });
@@ -52,25 +58,22 @@ export async function ensureReadwiseApiCandidateIndex(
         saveReadwiseApiCandidateCursor({ connectionRef, cursor, phase: run.phase });
         run = { ...run, cursor };
       } else {
-        if (run.phase === 'export' && settings.readwiseReaderConfig.withoutHighlightsDestination === 'off') {
-          hideReadwiseApiExternalDocumentsExcept(
-            connectionRef,
-            new Set(loadReadwiseApiCandidates(connectionRef).filter((item) => item.hasHighlights)
-              .map((item) => item.documentId))
-          );
-        }
         run = advanceReadwiseApiCandidateRun(
           connectionRef,
           run.phase,
-          settings.readwiseReaderConfig.withoutHighlightsDestination !== 'off'
+          hasEnabledWithoutHighlights(settings)
         );
       }
     }
   } catch (error) {
     if (!isExpiredCursorFailure(error, run.cursor)) throw error;
-    restartReadwiseApiCandidateRun(connectionRef, settings.readwiseReaderConfig);
+    restartReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
     return ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies);
   }
+  hideReadwiseApiExternalDocumentsExcept(
+    connectionRef,
+    new Set(loadReadwiseApiCandidates(connectionRef).map((item) => item.documentId))
+  );
   return loadReadwiseApiCandidates(connectionRef);
 }
 
@@ -110,17 +113,24 @@ export function createReadwiseApiCandidateFactFetcher(
 
 function exportCandidate(
   book: NonNullable<ReturnType<typeof normalizeExportBook>>,
+  parent: NonNullable<ReturnType<typeof normalizeReaderDocument>>,
   settings: ImportManagerSettings
 ): ReadwiseApiCandidate[] {
   const highlightIds = book.highlights.filter((item) => !item.isDeleted).map((item) => item.externalId);
   if (book.source !== 'reader' || book.isDeleted || !book.externalId || highlightIds.length === 0) return [];
+  const destination = resolveReadwiseAutoImportDestination(
+    settings.readwiseAutoImportPolicy,
+    parent.category === 'epub' ? 'book' : 'article',
+    true
+  );
+  if (destination === 'off') return [];
   return [{
-    destination: settings.readwiseReaderConfig.withHighlightsDestination,
+    destination,
     documentId: book.externalId,
     exportCategory: book.category,
     hasHighlights: true,
     highlightIds,
-    readerCategory: null,
+    readerCategory: parent.category as ReaderParentCategory,
     status: 'pending',
     title: null
   }];
@@ -129,10 +139,15 @@ function exportCandidate(
 function readerCandidate(
   document: NonNullable<ReturnType<typeof normalizeReaderDocument>>,
   settings: ImportManagerSettings
-): ReadwiseApiCandidate {
-  return {
-    destination: settings.readwiseReaderConfig.withoutHighlightsDestination === 'off'
-      ? 'inbox' : settings.readwiseReaderConfig.withoutHighlightsDestination,
+): ReadwiseApiCandidate[] {
+  const destination = resolveReadwiseAutoImportDestination(
+    settings.readwiseAutoImportPolicy,
+    document.category === 'epub' ? 'book' : 'article',
+    false
+  );
+  if (destination === 'off') return [];
+  return [{
+    destination,
     documentId: document.id,
     exportCategory: null,
     hasHighlights: false,
@@ -140,7 +155,12 @@ function readerCandidate(
     readerCategory: document.category as ReaderParentCategory,
     status: 'pending',
     title: document.title
-  };
+  }];
+}
+
+function hasEnabledWithoutHighlights(settings: ImportManagerSettings) {
+  const policy = settings.readwiseAutoImportPolicy;
+  return policy.articleWithoutHighlights !== 'off' || policy.bookWithoutHighlights !== 'off';
 }
 
 async function fetchExact(

@@ -140,12 +140,14 @@ it('hides a Readwise external document while its imported Topic is active', asyn
   const filePath = path.join(fullDocumentDir, 'Plain.md');
   await fs.writeFile(filePath, '# Plain\n\nvisible body\n', 'utf8');
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'external',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'external'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: path.join(tempRoot, 'readwise'),
     readwiseSources: [

@@ -1,3 +1,4 @@
+import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type {
   NativeReadwiseImportRunFailedSource,
@@ -20,6 +21,7 @@ export interface ReadwiseRunAccumulator {
   importedCount: number;
   processedCount: number;
   readwiseConfig: ReadwiseReaderConfig;
+  readwiseAutoImportPolicy: ReadwiseAutoImportPolicy;
   skippedCount: number;
   signal?: AbortSignal;
   totalCount: number;
@@ -28,6 +30,7 @@ export interface ReadwiseRunAccumulator {
 
 export function createRunAccumulator(input: {
   readwiseConfig: ReadwiseReaderConfig;
+  readwiseAutoImportPolicy: ReadwiseAutoImportPolicy;
   signal?: AbortSignal;
   sourceCount: number;
   window?: ReadwiseImportProgressWindow | null;
@@ -39,6 +42,7 @@ export function createRunAccumulator(input: {
     importedCount: 0,
     processedCount: 0,
     readwiseConfig: input.readwiseConfig,
+    readwiseAutoImportPolicy: input.readwiseAutoImportPolicy,
     ...(input.signal ? { signal: input.signal } : {}),
     skippedCount: 0,
     totalCount: input.sourceCount,

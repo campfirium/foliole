@@ -6,13 +6,8 @@ const DEFAULT_TAG_KEYWORD = 'Tags:';
 const DEFAULT_NOTE_KEYWORD = 'Note:';
 const DEFAULT_IMPORT_SCOPE = 'highlights_only';
 const DEFAULT_SYNC_FREQUENCY = 'hourly';
-const DEFAULT_WITH_HIGHLIGHTS_DESTINATION = 'inbox';
-const DEFAULT_WITHOUT_HIGHLIGHTS_DESTINATION = 'off';
-
-export type ReadwiseImportDestination = 'external' | 'inbox';
 export type ReadwiseImportScope = 'all' | 'highlights_only';
 export type ReadwiseSyncFrequency = 'daily' | 'every_12_hours' | 'hourly' | 'weekly';
-export type ReadwiseWithoutHighlightsDestination = ReadwiseImportDestination | 'off';
 
 export interface ReadwiseReaderConfig {
   enabled: boolean;
@@ -24,8 +19,6 @@ export interface ReadwiseReaderConfig {
   syncFrequency: ReadwiseSyncFrequency;
   tagKeyword: string;
   validatedAt: string;
-  withHighlightsDestination: ReadwiseImportDestination;
-  withoutHighlightsDestination: ReadwiseWithoutHighlightsDestination;
 }
 
 interface NormalizeReadwiseReaderConfigOptions {
@@ -40,27 +33,10 @@ function normalizeReadwiseImportScope(value: unknown, fallback: ReadwiseImportSc
   return value === 'all' ? 'all' : fallback;
 }
 
-function normalizeWithHighlightsDestination(value: unknown, fallback: ReadwiseImportDestination) {
-  return value === 'external' || value === 'inbox' ? value : fallback;
-}
-
-function normalizeWithoutHighlightsDestination(
-  value: unknown,
-  fallback: ReadwiseWithoutHighlightsDestination
-) {
-  return value === 'external' || value === 'inbox' || value === 'off' ? value : fallback;
-}
-
 function normalizeSyncFrequency(value: unknown, fallback: ReadwiseSyncFrequency) {
   return value === 'hourly' || value === 'every_12_hours' || value === 'daily' || value === 'weekly'
     ? value
     : fallback;
-}
-
-function deriveLegacyImportScope(
-  destination: ReadwiseWithoutHighlightsDestination
-): ReadwiseImportScope {
-  return destination === 'inbox' ? 'all' : 'highlights_only';
 }
 
 export function createDefaultReadwiseReaderConfig(): ReadwiseReaderConfig {
@@ -73,9 +49,7 @@ export function createDefaultReadwiseReaderConfig(): ReadwiseReaderConfig {
     noteKeyword: DEFAULT_NOTE_KEYWORD,
     syncFrequency: DEFAULT_SYNC_FREQUENCY,
     tagKeyword: DEFAULT_TAG_KEYWORD,
-    validatedAt: DEFAULT_VALIDATED_AT,
-    withHighlightsDestination: DEFAULT_WITH_HIGHLIGHTS_DESTINATION,
-    withoutHighlightsDestination: DEFAULT_WITHOUT_HIGHLIGHTS_DESTINATION
+    validatedAt: DEFAULT_VALIDATED_AT
   };
 }
 
@@ -88,14 +62,6 @@ export function normalizeReadwiseReaderConfig(
     return { ...defaults, enabled: options.enabledFallback ?? defaults.enabled };
   }
   const payload = value as Record<string, unknown>;
-  const legacyImportScope = normalizeReadwiseImportScope(payload.importScope, defaults.importScope);
-  const legacyWithoutHighlightsDestination =
-    legacyImportScope === 'all' ? 'inbox' : defaults.withoutHighlightsDestination;
-  const withoutHighlightsDestination = normalizeWithoutHighlightsDestination(
-    payload.withoutHighlightsDestination,
-    legacyWithoutHighlightsDestination
-  );
-
   return {
     enabled:
       typeof payload.enabled === 'boolean'
@@ -103,7 +69,7 @@ export function normalizeReadwiseReaderConfig(
         : (options.enabledFallback ?? defaults.enabled),
     highlightsHeading: normalizeString(payload.highlightsHeading, defaults.highlightsHeading),
     highlightSeparator: normalizeString(payload.highlightSeparator, defaults.highlightSeparator),
-    importScope: deriveLegacyImportScope(withoutHighlightsDestination),
+    importScope: normalizeReadwiseImportScope(payload.importScope, defaults.importScope),
     newHighlightsHeading: normalizeString(
       payload.newHighlightsHeading,
       defaults.newHighlightsHeading
@@ -111,20 +77,8 @@ export function normalizeReadwiseReaderConfig(
     noteKeyword: normalizeString(payload.noteKeyword, defaults.noteKeyword),
     syncFrequency: normalizeSyncFrequency(payload.syncFrequency, defaults.syncFrequency),
     tagKeyword: normalizeString(payload.tagKeyword, defaults.tagKeyword),
-    validatedAt: normalizeString(payload.validatedAt, defaults.validatedAt),
-    withHighlightsDestination: normalizeWithHighlightsDestination(
-      payload.withHighlightsDestination,
-      defaults.withHighlightsDestination
-    ),
-    withoutHighlightsDestination
+    validatedAt: normalizeString(payload.validatedAt, defaults.validatedAt)
   };
-}
-
-export function resolveReadwiseImportDestination(
-  config: Pick<ReadwiseReaderConfig, 'withHighlightsDestination' | 'withoutHighlightsDestination'>,
-  hasHighlights: boolean
-) {
-  return hasHighlights ? config.withHighlightsDestination : config.withoutHighlightsDestination;
 }
 
 export function isReadwiseReaderConfigReady(config: ReadwiseReaderConfig) {

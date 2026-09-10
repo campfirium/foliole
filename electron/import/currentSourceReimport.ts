@@ -48,12 +48,14 @@ async function reimportReadwiseApiEpubSource(
   const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config,
     connectionRef: source.remote_connection_ref,
+    destination: 'inbox',
     document,
     forceEpubStructure: true
   });
   const result = materializeReadwiseApiDocument({
     config,
     connectionRef: source.remote_connection_ref,
+    destination: 'inbox',
     document,
     forceEpubStructure: true,
     importedAt: reimportedAt,

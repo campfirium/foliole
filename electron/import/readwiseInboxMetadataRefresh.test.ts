@@ -50,12 +50,14 @@ async function seedReadwiseSource(fullDocumentMarkdown: string) {
   await fs.writeFile(path.join(fullDocumentDir, 'Highlighted.md'), fullDocumentMarkdown, 'utf8');
   await fs.writeFile(path.join(highlightDir, 'Highlighted.md'), '# Same Title\n\n## Highlights\nHighlighted body.\n', 'utf8');
   saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+    },
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       importScope: 'highlights_only',
-      validatedAt: '2026-05-11T00:00:00.000Z',
-      withHighlightsDestination: 'inbox',
-      withoutHighlightsDestination: 'off'
+      validatedAt: '2026-05-11T00:00:00.000Z'
     },
     readwiseRootPath: path.join(tempRoot, 'readwise'),
     readwiseSources: [

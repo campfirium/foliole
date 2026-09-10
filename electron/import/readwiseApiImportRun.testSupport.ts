@@ -17,7 +17,11 @@ export function apiSettings(withoutHighlightsDestination: 'inbox' | 'off' = 'inb
   const settings = createDefaultImportManagerSettings();
   return {
     ...settings,
-    readwiseReaderConfig: { ...settings.readwiseReaderConfig, withoutHighlightsDestination },
+    readwiseAutoImportPolicy: {
+      ...settings.readwiseAutoImportPolicy,
+      articleWithoutHighlights: withoutHighlightsDestination,
+      bookWithoutHighlights: withoutHighlightsDestination
+    },
     readwiseSourceMode: 'api' as const
   };
 }

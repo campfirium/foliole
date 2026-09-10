@@ -81,7 +81,7 @@ async function runNow(
     await input.onMigrationStarted?.();
     restartReadwiseApiCandidateRun(
       source.connectionRef,
-      loadImportManagerSettings().readwiseReaderConfig,
+      loadImportManagerSettings().readwiseAutoImportPolicy,
       startedAt
     );
   }

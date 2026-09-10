@@ -6,6 +6,10 @@ import { IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL } from '../ipc/contra
 
 const requestKeepImportRuleRun = vi.hoisted(() => vi.fn());
 const readwiseSettings = vi.hoisted(() => ({
+  readwiseAutoImportPolicy: {
+    articleWithHighlights: 'inbox', articleWithoutHighlights: 'off',
+    bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox', version: 1
+  },
   readwiseReaderConfig: {
     enabled: true,
     highlightsHeading: '## Highlights',
@@ -13,9 +17,7 @@ const readwiseSettings = vi.hoisted(() => ({
     importScope: 'highlights_only',
     newHighlightsHeading: '## New highlights added',
     noteKeyword: 'Note:',
-    tagKeyword: 'Tags:',
-    withHighlightsDestination: 'inbox',
-    withoutHighlightsDestination: 'off'
+    tagKeyword: 'Tags:'
   },
   readwiseRootPath: '/readwise',
   readwiseSources: [

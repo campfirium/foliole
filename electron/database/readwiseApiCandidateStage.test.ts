@@ -17,9 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
+import { loadOrCreateReadwiseApiCandidateRun } from './readwiseApiCandidateRun.js';
 import {
   loadReadwiseApiCandidateProgress,
   loadReadwiseApiCandidates,
@@ -41,11 +43,11 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('keeps Books first while preferring candidates that can complete sooner', () => {
+it('keeps Reader EPUB books first while preferring candidates that can complete sooner', () => {
   saveReadwiseApiCandidates('connection', [
-    candidate('book-large', 'books', 360),
-    candidate('article-small', 'articles', 1),
-    candidate('book-small', 'books', 3)
+    candidate('book-large', 'epub', 360),
+    candidate('article-small', 'article', 1),
+    candidate('book-small', 'epub', 3)
   ]);
 
   expect(loadReadwiseApiCandidates('connection').map((item) => item.documentId)).toEqual([
@@ -55,8 +57,38 @@ it('keeps Books first while preferring candidates that can complete sooner', () 
   ]);
 });
 
+it('keeps an active 29-of-31 manifest frozen when the policy changes', () => {
+  const initialPolicy = createDefaultReadwiseAutoImportPolicy();
+  const initialRun = loadOrCreateReadwiseApiCandidateRun(
+    'connection', initialPolicy, '2026-09-10T00:00:00.000Z'
+  );
+  const candidates = Array.from({ length: 31 }, (_, index) =>
+    candidate(`document-${index + 1}`, 'article', 1));
+  saveReadwiseApiCandidates('connection', candidates);
+  candidates.forEach((item, index) => setReadwiseApiCandidateStatus(
+    'connection', item.documentId, index < 29 ? 'completed' : 'failed',
+    index < 29 ? null : {
+      failedAt: '2026-09-10T00:00:00.000Z',
+      reason: 'request_failed',
+      stage: 'fetching'
+    }
+  ));
+
+  const resumed = loadOrCreateReadwiseApiCandidateRun('connection', {
+    ...initialPolicy,
+    articleWithoutHighlights: 'external'
+  }, '2026-09-10T01:00:00.000Z');
+
+  expect(resumed).toEqual(initialRun);
+  expect(loadReadwiseApiCandidateProgress('connection')).toMatchObject({
+    completedCount: 29,
+    failedCount: 2,
+    totalCount: 31
+  });
+});
+
 it('persists retryable candidate failure facts without resetting completed candidates', () => {
-  saveReadwiseApiCandidates('connection', [candidate('completed', 'books', 1), candidate('failed', 'articles', 1)]);
+  saveReadwiseApiCandidates('connection', [candidate('completed', 'epub', 1), candidate('failed', 'article', 1)]);
   setReadwiseApiCandidateStatus('connection', 'completed', 'completed', null);
   setReadwiseApiCandidateStatus('connection', 'failed', 'failed', {
     failedAt: '2026-09-10T00:00:00.000Z', reason: 'request_failed', stage: 'fetching'
@@ -74,14 +106,14 @@ it('persists retryable candidate failure facts without resetting completed candi
   expect(loadReadwiseApiCandidateProgress('connection')).toMatchObject({ completedCount: 2, failedCount: 0 });
 });
 
-function candidate(documentId: string, exportCategory: string, highlightCount: number) {
+function candidate(documentId: string, readerCategory: 'article' | 'epub', highlightCount: number) {
   return {
     destination: 'inbox' as const,
     documentId,
-    exportCategory,
+    exportCategory: readerCategory === 'epub' ? 'articles' : 'books',
     hasHighlights: true,
     highlightIds: Array.from({ length: highlightCount }, (_, index) => `${documentId}-highlight-${index}`),
-    readerCategory: null,
+    readerCategory,
     status: 'pending' as const,
     title: null
   };

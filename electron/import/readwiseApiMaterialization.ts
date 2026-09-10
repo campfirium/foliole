@@ -1,5 +1,5 @@
+import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { resolveReadwiseImportDestination } from '../../lib/core/import/readwiseReaderSettings.js';
 import { stableReadwiseAnnotationNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
   READWISE_API_IMPORT_STATE_VERSION,
@@ -32,6 +32,7 @@ export interface ReadwiseApiMaterializationResult {
 export function materializeReadwiseApiDocument(input: {
   config: ReadwiseReaderConfig;
   connectionRef: string;
+  destination: ReadwiseImportDestination;
   document: PreparedReadwiseApiDocument;
   forceEpubStructure?: boolean;
   forceInbox?: boolean;
@@ -41,9 +42,7 @@ export function materializeReadwiseApiDocument(input: {
 }): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  const destination = input.forceInbox || existing
-    ? 'inbox'
-    : resolveReadwiseImportDestination(input.config, input.document.annotations.length > 0);
+  const destination = input.forceInbox || existing ? 'inbox' : input.destination;
   if (existing?.nodeDeleted) {
     saveState(input, existing.sourceFingerprint, existing.annotations, {
       ...existing.state,
@@ -86,15 +85,14 @@ export function materializeReadwiseApiDocument(input: {
 export function shouldPrepareReadwiseApiEpubImages(input: {
   config: ReadwiseReaderConfig;
   connectionRef: string;
+  destination: ReadwiseImportDestination;
   document: PreparedReadwiseApiDocument;
   forceEpubStructure?: boolean;
   forceInbox?: boolean;
 }) {
   if (input.document.category !== 'epub' || !input.document.epubStructure?.sections.length) return false;
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  const destination = input.forceInbox || existing
-    ? 'inbox'
-    : resolveReadwiseImportDestination(input.config, input.document.annotations.length > 0);
+  const destination = input.forceInbox || existing ? 'inbox' : input.destination;
   return destination === 'inbox' && (!existing || Boolean(input.forceEpubStructure));
 }
 

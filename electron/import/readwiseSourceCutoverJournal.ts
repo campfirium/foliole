@@ -118,6 +118,7 @@ function adoptBookSource(
   const prepared = prepareReadwiseApiImportRecord({
     config: loadImportManagerSettings().readwiseReaderConfig,
     connectionRef,
+    destination: 'inbox',
     document
   }, null, now);
   binding.sourceFingerprint = prepared.sourceFingerprint;

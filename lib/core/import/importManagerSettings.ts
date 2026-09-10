@@ -5,6 +5,11 @@ import {
   type KeepImportPreviewSummary
 } from './keepImportPreviewSettings.js';
 import {
+  createDefaultReadwiseAutoImportPolicy,
+  normalizeReadwiseAutoImportPolicy,
+  type ReadwiseAutoImportPolicy
+} from './readwiseAutoImportPolicy.js';
+import {
   createDefaultReadwiseReaderConfig,
   normalizeReadwiseReaderConfig,
   type ReadwiseReaderConfig
@@ -30,6 +35,7 @@ export interface ImportManagerSourceDraft {
 export interface ImportManagerSettings {
   detailsOpen: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
+  readwiseAutoImportPolicy: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
   readwiseSourceMode: ReadwiseSourceMode;
   readwiseSources: ImportManagerSourceDraft[];
@@ -39,7 +45,7 @@ export interface ImportManagerSettings {
   version: number;
 }
 
-const IMPORT_MANAGER_SETTINGS_VERSION = 4;
+export const IMPORT_MANAGER_SETTINGS_VERSION = 5;
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
 
@@ -173,6 +179,7 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
 export function createDefaultImportManagerSettings(): ImportManagerSettings {
   return {
     detailsOpen: true,
+    readwiseAutoImportPolicy: createDefaultReadwiseAutoImportPolicy(),
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
     readwiseSourceMode: 'folder',
@@ -213,6 +220,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
+    readwiseAutoImportPolicy: normalizeReadwiseAutoImportPolicy(value.readwiseAutoImportPolicy),
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
     readwiseSourceMode: value.readwiseSourceMode === 'api' || value.readwiseSourceMode === 'off'

@@ -25,6 +25,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
   canCurrentHostRunReadwise: vi.fn(() => true)
 }));
 
+import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
@@ -76,7 +77,7 @@ async function importManualBookPlaceholder() {
     enabled: true,
     highlightsHeading: '## Highlights',
     importScope: 'highlights_only'
-  });
+  }, createDefaultReadwiseAutoImportPolicy());
 }
 
 it('moves permanently deleted readwise book nodes to Removed without recreating them', async () => {

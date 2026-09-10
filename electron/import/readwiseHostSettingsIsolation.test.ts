@@ -42,6 +42,10 @@ it('keeps another Host Readwise config and Source reference independent', () => 
       'darwin', '/remote/readwise/articles', 'posix', '{"kind":"articles"}', 'old', 'old')`);
 
   const saved = saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'external', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'external', version: 1
+    },
     readwiseRootPath: '/local/readwise',
     readwiseSources: [{
       highlightMode: 'merged', highlightPath: '', id: 'readwise-articles',
@@ -58,6 +62,16 @@ it('keeps another Host Readwise config and Source reference independent', () => 
   expect(driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key = 'import_manager_settings'"
   )?.value).not.toContain('readwiseRootPath');
+  expect(JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  )!.value)).toMatchObject({
+    readwiseAutoImportPolicy: {
+      articleWithHighlights: 'external', articleWithoutHighlights: 'off',
+      bookWithHighlights: 'inbox', bookWithoutHighlights: 'external', version: 1
+    }
+  });
+  expect(driver.queryOne(`SELECT scope, host_name FROM setting_records
+    WHERE key = 'import_manager_settings'`)).toEqual({ host_name: '*', scope: 'user_space' });
   expect(driver.queryAll(`SELECT scope, host_name FROM setting_records
     WHERE key = 'readwise_import_settings'`)).toEqual([
     expect.objectContaining({ scope: 'host' })
