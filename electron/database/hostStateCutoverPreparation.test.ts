@@ -19,10 +19,10 @@ import { migrateDesktopHostProfile } from './hostProfile.js';
 
 const BASELINE = {
   companionSchema: 36,
-  desktopSchema: 83,
-  protocol: 4,
+  desktopSchema: 84,
+  protocol: 5,
   syncPack: 12,
-  syncPackPayloadSchema: 83
+  syncPackPayloadSchema: 84
 } as const;
 
 it('freezes the Host-state cutover versions and generated protocol assets', () => {
@@ -93,7 +93,7 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
     INSERT INTO node_view_state VALUES ('n', 'Old Mac', 120, 2, 5, 'close-flush', 'old');
     INSERT INTO setting_records VALUES
       ('window_state','session_resume','windows','desktop','Old Mac','{"maximized":true}','old-hash','old',NULL),
-      ('readwise_import_settings','host','windows','desktop','Old Mac','{"version":2,"readwiseRootPath":"/Readwise"}','readwise-hash','old',NULL);
+      ('readwise_import_settings','host','windows','desktop','Old Mac','{"version":3,"readwiseRootPath":"/Readwise"}','readwise-hash','old',NULL);
     INSERT INTO workspace_meta VALUES ('active_node_id', 'n', 'old');
     INSERT INTO sync_object_state
       (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
@@ -113,7 +113,7 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
     .toEqual({ host_name: 'New Mac', scroll_top: 120, selection_from: 2, selection_to: 5 });
   expect(sqlite.prepare('SELECT key, host_name, value_json FROM setting_records ORDER BY key').all())
     .toEqual([
-      { host_name: 'New Mac', key: 'readwise_import_settings', value_json: '{"version":2,"readwiseRootPath":"/Readwise"}' },
+      { host_name: 'New Mac', key: 'readwise_import_settings', value_json: '{"version":3,"readwiseRootPath":"/Readwise"}' },
       { host_name: 'New Mac', key: 'window_state', value_json: '{"maximized":true}' }
     ]);
   expect(sqlite.prepare("SELECT value FROM workspace_meta WHERE key = 'active_node_id'").pluck().get()).toBe('n');

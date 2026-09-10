@@ -4,6 +4,7 @@ export const CLASSIFICATIONS = {
     files: [
       'FolioleCompanionAssetReader.java',
       'FolioleCompanionAttachmentResourceHash.java',
+      'FolioleCompanionCanonicalAttachmentKey.java',
       'FolioleCompanionContentBlobCasRules.java',
       'FolioleCompanionJsonAssetCache.java'
     ]
