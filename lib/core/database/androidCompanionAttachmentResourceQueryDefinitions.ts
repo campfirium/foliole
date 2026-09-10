@@ -16,7 +16,7 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
       'LEFT JOIN node_review nr ON nr.node_id = n.id' +
       '), ranked_refs AS (' +
       'SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id' +
-      ') SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key ' +
+      ') SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key, b.mime_type ' +
       'FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id ' +
       "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
       "ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = '" +
@@ -28,7 +28,8 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'content_hash', source: 'content_hash', type: 'string' },
       { key: 'size_bytes', source: 'size_bytes', type: 'long' },
       { key: 'availability', source: 'availability', type: 'string' },
-      { key: 'storage_key', source: 'storage_key', type: 'nullableString' }
+      { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
+      { key: 'mime_type', source: 'mime_type', type: 'nullableString' }
     ]
   },
   attachmentResourceMissingSummaryRows: {
@@ -57,14 +58,15 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   attachmentResourceMissingById: {
     resultKey: 'resources',
     sql:
-      'SELECT attachment_id, content_hash, COALESCE(size_bytes, 0) AS size_bytes, availability, storage_key FROM attachment_blobs ' +
+      'SELECT attachment_id, content_hash, COALESCE(size_bytes, 0) AS size_bytes, availability, storage_key, mime_type FROM attachment_blobs ' +
       "WHERE attachment_id = ? AND content_hash IS NOT NULL AND TRIM(content_hash) != '' LIMIT 1",
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },
       { key: 'size_bytes', source: 'size_bytes', type: 'long' },
       { key: 'availability', source: 'availability', type: 'string' },
-      { key: 'storage_key', source: 'storage_key', type: 'nullableString' }
+      { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
+      { key: 'mime_type', source: 'mime_type', type: 'nullableString' }
     ]
   },
   attachmentResourceResolve: {

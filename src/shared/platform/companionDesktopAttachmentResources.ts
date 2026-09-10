@@ -1,4 +1,5 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
+import { isCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { createSignedRequestHeaders } from './companion/network/signedRequest';
@@ -17,6 +18,8 @@ export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 64;
 interface AttachmentResourceRequest {
   attachmentId: string;
   contentHash: string;
+  mimeType: string;
+  storageKey: string;
 }
 
 function parsePayload(record: NativeSyncObjectRecord) {
@@ -43,12 +46,17 @@ export function toAttachmentResourceRequest(record: NativeSyncObjectRecord): Att
     ? payload.blob as Record<string, unknown>
     : null;
   const contentHash = text(blob?.content_hash);
-  if (!contentHash) {
+  const mimeType = text(blob?.mime_type);
+  const storageKey = text(blob?.storage_key);
+  if (!contentHash || !mimeType || !storageKey ||
+      !isCanonicalAttachmentStorageKey(storageKey, contentHash, mimeType)) {
     return null;
   }
   return {
     attachmentId: record.object_id,
-    contentHash
+    contentHash,
+    mimeType,
+    storageKey
   };
 }
 
@@ -64,6 +72,8 @@ async function buildSignedAttachmentResourceRequest(endpoint: string, request: A
   return {
     attachment_id: request.attachmentId,
     content_hash: request.contentHash,
+    mime_type: request.mimeType,
+    storage_key: request.storageKey,
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   };
@@ -149,7 +159,9 @@ export async function syncCompanionAttachmentResourceFromDesktop(
   }
   const syncedIds = await syncCompanionAttachmentResourceRequestsFromDesktop(endpointUrl, [{
     attachmentId: request.attachment_id,
-    contentHash: request.content_hash
+    contentHash: request.content_hash,
+    mimeType: request.mime_type,
+    storageKey: request.storage_key
   }]);
   if (syncedIds.includes(attachmentId)) {
     invalidateAttachmentResourceResolution(attachmentId);

@@ -35,6 +35,7 @@ vi.mock('../database/pdfIndexingTaskQueue.js', () => ({
 
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
@@ -94,9 +95,10 @@ function readPdfOpenDetails(nodeId: string) {
 }
 
 function resolvePdfAttachmentAssetUrl(attachmentId: string) {
-  const resolved = resolveAttachmentFile(attachmentId);
+  const description = loadAttachmentResourceDescription(attachmentId)!;
+  const resolved = resolveAttachmentFile(description);
   expect(resolved.status).toBe('ready');
-  return buildAttachmentAssetUrl(attachmentId);
+  return buildAttachmentAssetUrl(description);
 }
 
 async function expectPdfImportChain(options: {

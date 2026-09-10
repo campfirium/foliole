@@ -1,4 +1,5 @@
 import { buildAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
+import { buildCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
 
 interface AttachmentMigrationTarget {
   exec(sql: string): void;
@@ -42,8 +43,8 @@ export function migrateAttachmentIdsToHashes(sqlite: AttachmentMigrationTarget) 
   sqlite.exec('CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)');
 
   const legacyAttachments = sqlite
-    .prepare('SELECT id, hash, original_name FROM attachments_legacy')
-    .all() as Array<{ hash: string; id: string; original_name: string | null }>;
+    .prepare('SELECT id, hash, mime_type FROM attachments_legacy')
+    .all() as Array<{ hash: string; id: string; mime_type: string }>;
 
   const updateNodeContent = sqlite.prepare(
     `UPDATE nodes
@@ -53,7 +54,9 @@ export function migrateAttachmentIdsToHashes(sqlite: AttachmentMigrationTarget) 
 
   for (const attachment of legacyAttachments) {
     const oldReference = `attachment://${attachment.id}`;
-    const newReference = buildAssetMarkdownUrl(attachment.hash, attachment.original_name);
+    const storageKey = buildCanonicalAttachmentStorageKey(attachment.hash, attachment.mime_type);
+    if (!storageKey) continue;
+    const newReference = buildAssetMarkdownUrl(storageKey);
     updateNodeContent.run(oldReference, newReference, `%${oldReference}%`);
   }
 

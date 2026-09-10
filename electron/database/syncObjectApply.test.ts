@@ -176,12 +176,12 @@ it('applies attachment metadata and blob manifests', async () => {
       blob: {
         availability: 'remote_known',
         cached_at: '2026-04-21T11:00:00.000Z',
-        content_hash: 'sha256:att-1',
+        content_hash: 'a'.repeat(64),
         created_at: '2026-04-21T10:00:00.000Z',
         last_verified_at: '2026-04-21T12:00:00.000Z',
         mime_type: 'image/png',
         size_bytes: 12,
-        storage_key: 'sha256-att-1.png'
+        storage_key: `${'a'.repeat(64)}.png`
       }
     }),
     updated_at: '2026-04-21T16:00:00.000Z'
@@ -194,17 +194,17 @@ it('applies attachment metadata and blob manifests', async () => {
     .toEqual({ original_name: 'cover.png' });
   expect(driver.queryOne<{
     availability: string;
-    cached_at: string;
+    cached_at: string | null;
     content_hash: string;
-    last_verified_at: string;
+    last_verified_at: string | null;
   }>(
     'SELECT availability, cached_at, content_hash, last_verified_at FROM attachment_blobs WHERE attachment_id = ?',
     ['att-1']
   )).toEqual({
     availability: 'remote_known',
-    cached_at: '2026-04-21T11:00:00.000Z',
-    content_hash: 'sha256:att-1',
-    last_verified_at: '2026-04-21T12:00:00.000Z'
+    cached_at: null,
+    content_hash: 'a'.repeat(64),
+    last_verified_at: null
   });
 });
 

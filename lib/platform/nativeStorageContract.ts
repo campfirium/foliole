@@ -2,6 +2,7 @@ import type { WorkspaceExternalSearchSourceKind } from '../core/database/workspa
 import type { NodeKind } from '../core/nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
+import type { AttachmentResourceDescription } from './attachmentResource.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
 import type { NativeNodeOpenStateResult } from './nativeNodeOpenStateContract.js';
@@ -22,6 +23,16 @@ export interface NativeWorkspaceReviewProfile {
 }
 
 export interface NativeWorkspaceNodeSnapshot {
+  attachments?: Array<{
+    availability?: AttachmentResourceDescription['availability'];
+    attachmentId: string;
+    contentHash?: string;
+    libraryScope?: string;
+    mimeType: string | null;
+    originalName: string | null;
+    role: string;
+    storageKey?: string;
+  }>;
   id: string;
   parentNodeId: string | null;
   kind: NodeKind;
@@ -55,6 +66,7 @@ export interface NativeWorkspaceNodeSnapshot {
 
 export interface NativeWorkspaceSnapshot {
   activeNodeId: string | null;
+  libraryScope?: string;
   nodeOpenStateById?: Record<string, NativeNodeOpenStateResult>;
   nodeOrder: string[];
   nodesById: Record<string, NativeWorkspaceNodeSnapshot>;

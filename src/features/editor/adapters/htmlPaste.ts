@@ -3,6 +3,7 @@ import type { EditorView } from '@codemirror/view';
 import { decideClipboardPasteSource } from '../../../../lib/clipboard/clipboardPasteSource';
 import { convertHtmlToMarkdownCompatible } from '../../../../lib/core/import/htmlToMarkdownCompatible';
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
+import { buildCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 import { importClipboardImageAttachment } from '../../../shared/platform/attachmentImports';
 import {
   extractMarkedTextAnchorRanges,
@@ -125,10 +126,12 @@ function replacePlaceholder(view: EditorView, placeholder: string, content: stri
   return true;
 }
 
-function createMarkdownImageLine(attachmentId: string, originalName: string) {
+function createMarkdownImageLine(contentHash: string, mimeType: string, originalName: string) {
   const baseName = originalName.replace(/\.[^.]+$/, '').trim();
   const altText = baseName.length > 0 ? baseName : 'Pasted image';
-  return `![${altText}](${buildAssetMarkdownUrl(attachmentId, originalName)})`;
+  const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
+  if (!storageKey) throw new Error('clipboard image did not produce a canonical storage key');
+  return `![${altText}](${buildAssetMarkdownUrl(storageKey)})`;
 }
 
 export function handleClipboardImagePaste(clipboard: ClipboardLike | null, view: EditorView, nodeId: string | null) {
@@ -151,7 +154,7 @@ export function handleClipboardImagePaste(clipboard: ClipboardLike | null, view:
     for (const imageFile of imageFiles) {
       const result = await importClipboardImageAttachment(nodeId, imageFile);
       if (result?.status === 'imported') {
-        importedLines.push(createMarkdownImageLine(result.attachment_id, result.original_name));
+        importedLines.push(createMarkdownImageLine(result.hash, result.mime_type, result.original_name));
       }
     }
 

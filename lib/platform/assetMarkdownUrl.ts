@@ -1,22 +1,12 @@
+import { parseCanonicalAttachmentStorageKey } from './attachmentResource.js';
+
 const ASSET_MARKDOWN_SCHEME = 'asset://';
 
-function resolveAssetExtension(originalName: string | null | undefined) {
-  const trimmedName = originalName?.trim() ?? '';
-  if (!trimmedName) {
-    return '';
+export function buildAssetMarkdownUrl(storageKey: string) {
+  if (!parseCanonicalAttachmentStorageKey(storageKey)) {
+    throw new Error('attachment storage key is not canonical');
   }
-
-  const fileName = trimmedName.split(/[\\/]/).pop() ?? trimmedName;
-  const dotIndex = fileName.lastIndexOf('.');
-  if (dotIndex <= 0 || dotIndex === fileName.length - 1) {
-    return '';
-  }
-
-  return fileName.slice(dotIndex);
-}
-
-export function buildAssetMarkdownUrl(attachmentId: string, originalName?: string | null) {
-  return `${ASSET_MARKDOWN_SCHEME}${encodeURIComponent(attachmentId)}${resolveAssetExtension(originalName)}`;
+  return `${ASSET_MARKDOWN_SCHEME}${storageKey}`;
 }
 
 export function parseAssetMarkdownUrl(resourceUrl: string) {
@@ -29,16 +19,14 @@ export function parseAssetMarkdownUrl(resourceUrl: string) {
     return null;
   }
 
-  const decodedValue = (() => {
+  const storageKey = (() => {
     try {
       return decodeURIComponent(encodedValue);
     } catch {
-      return encodedValue;
+      return null;
     }
   })();
-  const dotIndex = decodedValue.lastIndexOf('.');
-  const attachmentId = dotIndex > 0 ? decodedValue.slice(0, dotIndex) : decodedValue;
-  return attachmentId || null;
+  return storageKey && parseCanonicalAttachmentStorageKey(storageKey)?.storageKey || null;
 }
 
 export { ASSET_MARKDOWN_SCHEME };

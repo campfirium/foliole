@@ -71,6 +71,10 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.resolveAttachmentResource]: {
     args: {
       attachment_id: string;
+      content_hash: string;
+      library_scope: string;
+      mime_type: string;
+      storage_key: string;
     };
     result: NativeAttachmentResourceResolution;
   };

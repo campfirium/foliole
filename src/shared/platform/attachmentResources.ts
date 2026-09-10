@@ -1,11 +1,18 @@
 import { Capacitor } from '@capacitor/core';
 
 import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
+import { parseCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
+import type { AttachmentResourceDescription } from '../../../lib/platform/attachmentResource';
+import {
+  clearAttachmentResourceDescriptions,
+  listAttachmentResourceDescriptions,
+  registerAttachmentResourceDescriptions,
+  resolveAttachmentResourceDescription
+} from '../../../lib/platform/attachmentResourceRegistry';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 import { createBoundedCache } from '../lib/boundedCache';
 
-import { queryIosCompanionDatabase } from './companion/runtime/iosCompanionActiveDatabase';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   FolioleCompanionSync,
@@ -30,18 +37,17 @@ const attachmentResourceResolutionCache = createBoundedCache<
   Promise<NativeAttachmentResourceResolution | null>
 >(MAX_ATTACHMENT_RESOURCE_RESOLUTIONS);
 
-function parseAttachmentId(resourceUrl: string) {
-  return parseAssetMarkdownUrl(resourceUrl);
-}
+export { registerAttachmentResourceDescriptions };
 
 export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
-  const attachmentId = parseAttachmentId(resourceUrl);
-  if (!attachmentId) {
-    return null;
-  }
+  const storageKey = parseAssetMarkdownUrl(resourceUrl);
+  const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
+  if (!storageKey || !parsed) return null;
+  const description = resolveAttachmentResourceDescription(storageKey);
+  if (!description) return null;
 
   if (isNativeCompanionAttachmentResourceRuntime()) {
-    return resolveNativeAttachmentResource(attachmentId);
+    return resolveNativeAttachmentResource(description);
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -49,23 +55,29 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
     return null;
   }
 
-  const cached = attachmentResourceResolutionCache.get(attachmentId);
+  const cached = attachmentResourceResolutionCache.get(storageKey);
   if (cached) {
     updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
     return cached;
   }
 
-  const resolutionPromise = runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, { attachment_id: attachmentId })
+  const resolutionPromise = runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, {
+    attachment_id: description.attachmentId,
+    content_hash: description.contentHash,
+    library_scope: description.libraryScope,
+    mime_type: description.mimeType,
+    storage_key: description.storageKey
+  })
     .then((result) => {
       if (!isAttachmentResourceResolution(result)) {
         logRuntimeWarning('native attachment resource payload invalid', {
           area: 'bridge',
           action: 'resolve_attachment_resource',
           command: NATIVE_COMMANDS.resolveAttachmentResource,
-          attachment_id: attachmentId,
+          storage_key: storageKey,
           fallback: 'return_null'
         });
-        attachmentResourceResolutionCache.delete(attachmentId);
+        attachmentResourceResolutionCache.delete(storageKey);
         return null;
       }
       return result;
@@ -75,58 +87,52 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
         area: 'bridge',
         action: 'resolve_attachment_resource',
         command: NATIVE_COMMANDS.resolveAttachmentResource,
-        attachment_id: attachmentId,
+        storage_key: storageKey,
         fallback: 'return_null',
         error
       });
-      attachmentResourceResolutionCache.delete(attachmentId);
+      attachmentResourceResolutionCache.delete(storageKey);
       return null;
     });
 
-  attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
+  attachmentResourceResolutionCache.set(storageKey, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
   return resolutionPromise;
 }
 
-async function resolveNativeAttachmentResource(attachmentId: string) {
-  const cached = attachmentResourceResolutionCache.get(attachmentId);
+async function resolveNativeAttachmentResource(description: AttachmentResourceDescription) {
+  const cached = attachmentResourceResolutionCache.get(description.storageKey);
   if (cached) {
     updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
     return cached;
   }
 
-  const resolutionPromise = resolveNativeAttachmentResourceUncached(attachmentId)
-    .then((result) => normalizeNativeAttachmentResolution(result, attachmentId))
+  const resolutionPromise = resolveNativeAttachmentResourceUncached(description)
+    .then((result) => normalizeNativeAttachmentResolution(result, description.storageKey))
     .catch((error) => {
       logRuntimeWarning('native companion attachment resource resolve failed', {
         area: 'bridge',
         action: 'resolve_attachment_resource',
-        attachment_id: attachmentId,
+        storage_key: description.storageKey,
         fallback: 'return_null',
         error
       });
-      attachmentResourceResolutionCache.delete(attachmentId);
+      attachmentResourceResolutionCache.delete(description.storageKey);
       return null;
     });
 
-  attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
+  attachmentResourceResolutionCache.set(description.storageKey, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
   return resolutionPromise;
 }
 
-async function resolveNativeAttachmentResourceUncached(attachmentId: string) {
-  const kind = getCompanionRuntimeCapability().kind;
-  if (kind !== 'android-native' && kind !== 'ios-native') {
-    return FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId });
-  }
-  const row = (await queryIosCompanionDatabase<{ mime_type: string | null; storage_key: string | null } & Record<string, unknown>>(
-    'attachmentResourceResolve', [attachmentId]
-  ))[0];
-  if (!row) return { resource_url: null, status: 'not_found' as const };
+async function resolveNativeAttachmentResourceUncached(description: AttachmentResourceDescription) {
   return FolioleCompanionSync.resolveAttachmentResource({
-    attachment_id: attachmentId,
-    mime_type: row.mime_type,
-    storage_key: row.storage_key
+    attachment_id: description.attachmentId,
+    content_hash: description.contentHash,
+    library_scope: description.libraryScope,
+    mime_type: description.mimeType,
+    storage_key: description.storageKey
   });
 }
 
@@ -160,9 +166,12 @@ export function readAttachmentResourceCacheStats() {
 }
 
 export function invalidateAttachmentResourceResolution(attachmentId: string) {
-  attachmentResourceResolutionCache.delete(attachmentId);
+  for (const description of listAttachmentResourceDescriptions()) {
+    if (description.attachmentId === attachmentId) attachmentResourceResolutionCache.delete(description.storageKey);
+  }
 }
 
 export function resetAttachmentResourceResolutionCacheForTest() {
   attachmentResourceResolutionCache.clear();
+  clearAttachmentResourceDescriptions();
 }

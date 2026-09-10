@@ -21,7 +21,7 @@ interface AttachmentLinkRow extends DatabaseRow {
 
 interface AttachmentFileRow extends DatabaseRow {
   id: string;
-  original_name: string | null;
+  mime_type: string | null;
 }
 
 interface AttachmentCleanupPlan {
@@ -31,15 +31,18 @@ interface AttachmentCleanupPlan {
 }
 
 function collectInlineAttachmentIds(text: string) {
-  const attachmentIds = new Set<string>();
+  const storageKeys = new Set<string>();
   for (const reference of collectMarkdownImageReferences(text)) {
     const target = parseMarkdownImageTarget(reference.rawTarget);
-    const attachmentId = target ? parseAssetMarkdownUrl(target.destination) : null;
-    if (attachmentId) {
-      attachmentIds.add(attachmentId);
-    }
+    const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
+    if (storageKey) storageKeys.add(storageKey);
   }
-  return attachmentIds;
+  if (!storageKeys.size) return new Set<string>();
+  const keys = [...storageKeys];
+  const rows = openDatabaseConnection().driver.queryAll<{ attachment_id: string }>(
+    `SELECT attachment_id FROM attachment_blobs WHERE storage_key IN (${buildInClause(keys.length)})`, keys
+  );
+  return new Set(rows.map((row) => row.attachment_id));
 }
 
 function toUniqueSortedArray(values: Set<string>) {
@@ -157,7 +160,7 @@ function listAttachmentFileRows(attachmentIds: string[]) {
     return [];
   }
   return openDatabaseConnection().driver.queryAll<AttachmentFileRow>(
-    `SELECT id, original_name
+    `SELECT id, mime_type
      FROM attachments
      WHERE id IN (${buildInClause(attachmentIds.length)})`,
     attachmentIds
@@ -182,7 +185,8 @@ function deleteAttachmentRows(driver: DatabaseDriver, attachmentIds: string[]) {
 export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
   const { assetsDir } = resolveRuntimeDataPaths();
   for (const row of rows) {
-    for (const filePath of resolveAttachmentStoragePathCandidates(row.id, row.original_name, assetsDir)) {
+    if (!row.mime_type) continue;
+    for (const filePath of resolveAttachmentStoragePathCandidates(row.id, row.mime_type, assetsDir)) {
       try {
         fs.rmSync(filePath, { force: true });
       } catch {

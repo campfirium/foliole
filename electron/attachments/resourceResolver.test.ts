@@ -1,108 +1,54 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-let mockedAppDataDir = '/tmp/foliole-attachment-resource-tests';
-let mockedDocumentsDir = '/tmp/foliole-attachment-resource-documents';
-
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_data_dir: mockedAppDataDir,
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    documents_dir: mockedDocumentsDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
-
-import { createAttachmentRecord } from '../database/attachments.js';
-import { closeDatabaseConnection } from '../database/connection.js';
-import { initializeDatabase } from '../database/migrate.js';
+import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
-import { resolveAttachmentResource, resolveAttachmentStoragePath } from './resourceResolver.js';
+import { resolveAttachmentFile, resolveAttachmentResource } from './resourceResolver.js';
+import { resolveAttachmentStorageKeyPath } from './storagePath.js';
 
 let tempRoot = '';
 
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-attachment-resource-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
-  mockedDocumentsDir = path.join(tempRoot, 'Documents');
-  initializeDatabase();
-});
+beforeEach(async () => { tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-resource-')); });
+afterEach(async () => { vi.restoreAllMocks(); await fs.rm(tempRoot, { recursive: true, force: true }); });
 
-afterEach(async () => {
-  closeDatabaseConnection();
-  vi.restoreAllMocks();
-  await fs.rm(tempRoot, { recursive: true, force: true });
-});
-
-function createImageAttachment() {
-  createAttachmentRecord({
-    id: 'hash-1',
-    originalName: 'diagram.png',
-    mimeType: 'image/png',
-    sizeBytes: 2048,
-    createdAt: '2026-03-20T00:00:00.000Z'
-  });
+function description(bytes: Buffer): AttachmentResourceDescription {
+  const contentHash = createHash('sha256').update(bytes).digest('hex');
+  return {
+    attachmentId: 'attachment-not-equal-to-hash', availability: 'local', contentHash,
+    libraryScope: 'library-1', mimeType: 'image/png',
+    storageKey: buildCanonicalAttachmentStorageKey(contentHash, 'image/png')!
+  };
 }
 
-it('returns a unified attachment resource URL when the record and file both exist', async () => {
-  createImageAttachment();
-  const storedFilePath = resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'diagram.png');
-
-  await fs.mkdir(path.dirname(storedFilePath), { recursive: true });
-  await fs.writeFile(storedFilePath, 'image-bytes');
-
-  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
-    status: 'ready',
-    mime_type: 'image/png',
-    resource_url: buildAttachmentAssetUrl('hash-1')
+it('reads only the canonical file named by a self-contained description', async () => {
+  const bytes = Buffer.from('image-bytes');
+  const resource = description(bytes);
+  const filePath = resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey);
+  await fs.writeFile(filePath, bytes);
+  expect(resolveAttachmentResource(resource, tempRoot)).toEqual({
+    status: 'ready', mime_type: 'image/png', resource_url: buildAttachmentAssetUrl(resource)
   });
 });
 
-it('returns a distinct not-found result for unknown attachment ids', () => {
-  expect(resolveAttachmentResource('missing-id', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
-    status: 'not_found',
-    resource_url: null
-  });
+it('rejects a hash mismatch and does not open a bare-name fallback', async () => {
+  const bytes = Buffer.from('expected');
+  const resource = description(bytes);
+  await fs.writeFile(path.join(tempRoot, resource.contentHash), bytes);
+  expect(resolveAttachmentFile(resource, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+  await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey), Buffer.from('wrong'));
+  expect(resolveAttachmentFile(resource, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
 });
 
-it('returns a distinct missing-file result and logs a warning when the file is gone', () => {
-  createImageAttachment();
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
-    status: 'missing_file',
-    mime_type: 'image/png',
-    resource_url: null
-  });
-  expect(warn).toHaveBeenCalledWith(
-    '[native] attachment resource file missing',
-    expect.objectContaining({
-      area: 'native',
-      action: 'resolve_attachment_resource',
-      attachment_id: 'hash-1',
-      fallback: 'return_missing_file',
-      expected_path: resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'diagram.png')
-    })
-  );
-});
-
-it('still resolves legacy bare attachment files while new writes use suffixed names', async () => {
-  createImageAttachment();
-  const legacyFilePath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'hash-1');
-
-  await fs.mkdir(path.dirname(legacyFilePath), { recursive: true });
-  await fs.writeFile(legacyFilePath, 'legacy-image-bytes');
-
-  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
-    status: 'ready',
-    mime_type: 'image/png',
-    resource_url: buildAttachmentAssetUrl('hash-1')
-  });
+it('rejects non-canonical or mismatched descriptions before touching bytes', () => {
+  const resource = description(Buffer.from('bytes'));
+  expect(resolveAttachmentFile({ ...resource, storageKey: resource.contentHash }, tempRoot)).toEqual({ status: 'not_found' });
+  expect(resolveAttachmentFile({ ...resource, contentHash: 'f'.repeat(64) }, tempRoot)).toEqual({ status: 'not_found' });
 });

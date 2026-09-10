@@ -37,6 +37,8 @@ interface AttachmentRow {
   [key: string]: null | number | string;
   attachment_id: string;
   content_hash: string;
+  mime_type: string;
+  storage_key: string;
 }
 
 export function assertDesktopSyncGroupResourcesComplete() {
@@ -65,8 +67,9 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
     });
   }
   const attachments = await port.query<AttachmentRow>(
-    `SELECT attachment_id, content_hash FROM attachment_blobs
-     WHERE content_hash IS NOT NULL AND availability NOT IN ('cached', 'local')
+    `SELECT attachment_id, content_hash, mime_type, storage_key FROM attachment_blobs
+     WHERE content_hash IS NOT NULL AND storage_key IS NOT NULL AND mime_type IS NOT NULL
+       AND availability NOT IN ('cached', 'local')
      ORDER BY attachment_id`
   );
   for (let index = 0; index < attachments.length; index += ATTACHMENT_CONCURRENCY) {
@@ -109,7 +112,9 @@ async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow)
   const query = new URLSearchParams({ attachment_id: attachment.attachment_id, content_hash: attachment.content_hash });
   const body = await downloadResource(peer, `/companion/attachment-resource?${query.toString()}`);
   if (sha256(body) !== attachment.content_hash) throw new Error('attachment_checksum_mismatch');
-  return { attachment, body, filePath: resolveAttachmentStoragePath(attachment.attachment_id, undefined, null) };
+  return { attachment, body, filePath: resolveAttachmentStoragePath(
+    attachment.content_hash, undefined, attachment.mime_type
+  ) };
 }
 
 async function persistBlob(port: DbPort, blob: BlobRow, body: Buffer) {

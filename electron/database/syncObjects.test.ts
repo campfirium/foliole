@@ -212,10 +212,7 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
     attachment_id: 'att-1',
     original_name: 'cover.png',
     blob: {
-      availability: 'local',
-      cached_at: '2026-04-21T10:00:00.000Z',
       content_hash: 'sha256:att-1',
-      last_verified_at: '2026-04-21T10:00:00.000Z',
       storage_key: 'sha256-att-1.png'
     }
   });

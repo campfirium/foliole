@@ -66,10 +66,13 @@ export interface WorkspaceNodeSnapshot {
 }
 
 export interface WorkspaceNodeAttachmentSnapshot {
+  availability?: string;
   attachmentId: string;
+  contentHash?: string | null;
   mimeType: string | null;
   originalName: string | null;
   role: string;
+  storageKey?: string | null;
 }
 
 export interface WorkspaceNodeRowShape {

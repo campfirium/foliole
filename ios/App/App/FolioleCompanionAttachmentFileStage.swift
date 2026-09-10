@@ -21,7 +21,10 @@ enum FolioleCompanionAttachmentFileStage {
         var created: [URL] = []
         var manifest: [[String: Any]] = []
         for item in batch.downloaded {
-            let target = root.appendingPathComponent(item.contentHash)
+            guard FolioleCompanionCanonicalAttachmentKey.matches(
+                contentHash: item.contentHash, mimeType: item.mimeType, storageKey: item.storageKey
+            ) else { throw invalid("Attachment storage key is not canonical.") }
+            let target = root.appendingPathComponent(item.storageKey)
             if FileManager.default.fileExists(atPath: target.path) {
                 guard try FolioleCompanionAttachmentResourceDownloader.digestHex(target) == item.contentHash else {
                     throw invalid("Existing attachment resource hash mismatch.")
@@ -35,8 +38,9 @@ enum FolioleCompanionAttachmentFileStage {
             manifest.append([
                 "attachment_id": item.attachmentId,
                 "content_hash": item.contentHash,
+                "mime_type": item.mimeType,
                 "size_bytes": size,
-                "storage_key": item.contentHash
+                "storage_key": item.storageKey
             ])
         }
         return Result(createdURLs: created, manifest: manifest)

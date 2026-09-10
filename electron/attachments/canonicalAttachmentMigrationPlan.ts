@@ -82,9 +82,7 @@ function mergeReferences(
   index: ReturnType<typeof collectAttachmentReferenceIndex>
 ): AttachmentReferenceEvidence {
   const result: AttachmentReferenceEvidence = {
-    externalDocuments: [], importSourceOriginalFiles: index.importSourceOriginalFiles.get(row.attachment_id) ?? [],
-    invalidImportSourceStates: index.invalidImportSourceStates,
-    nodeAttachments: [], nodeBodies: [], nodeSyncVersions: [], pdfPageCount: 0
+    externalDocuments: [], nodeAttachments: [], nodeBodies: [], nodeSyncVersions: [], pdfPageCount: 0
   };
   for (const name of names) {
     const refs = index.targetIndex.get(name);
@@ -102,8 +100,7 @@ function mergeReferences(
 }
 
 function referenceCount(references: AttachmentReferenceEvidence) {
-  return references.externalDocuments.length + references.importSourceOriginalFiles.length +
-    references.invalidImportSourceStates.length + references.nodeAttachments.length + references.nodeBodies.length +
+  return references.externalDocuments.length + references.nodeAttachments.length + references.nodeBodies.length +
     references.nodeSyncVersions.length + references.pdfPageCount;
 }
 

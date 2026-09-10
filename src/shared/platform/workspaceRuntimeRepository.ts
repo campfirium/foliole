@@ -4,6 +4,7 @@ import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository'
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
+import { registerAttachmentResourceDescriptions } from './attachmentResources';
 import {
   capturePendingNodeOrderAck,
   drainPendingWorkspaceRelearnNode,
@@ -63,7 +64,12 @@ export async function loadWorkspaceListSnapshotFromRuntime(args?: {
   if (!runtimeInvoke) {
     return null;
   }
-  return runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, args);
+  const snapshot = await runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, args);
+  const descriptions = Object.values(snapshot.nodesById).flatMap((node) => node.attachments ?? [])
+    .filter((value): value is typeof value & import('../../../lib/platform/attachmentResource').AttachmentResourceDescription =>
+      Boolean(value.availability && value.contentHash && value.storageKey && value.mimeType && value.libraryScope));
+  registerAttachmentResourceDescriptions(descriptions);
+  return snapshot;
 }
 
 export async function loadReadingProgressFromRuntime(): Promise<WorkspaceReadingProgressSnapshot | null> {

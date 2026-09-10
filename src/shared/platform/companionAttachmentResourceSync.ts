@@ -3,16 +3,18 @@ import { isNativeCompanionAttachmentResourceRuntime } from './companionWorkspace
 
 export async function loadCompanionMissingAttachmentResources(limit = 50) {
   if (!isNativeCompanionAttachmentResourceRuntime()) {
-    return [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>;
+    return [] as Array<{ attachment_id: string; content_hash: string; mime_type: string; size_bytes?: number; storage_key: string }>;
   }
-  return loadIosMissingAttachments(limit) as Promise<Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>>;
+  return loadIosMissingAttachments(limit) as Promise<Array<{
+    attachment_id: string; content_hash: string; mime_type: string; size_bytes?: number; storage_key: string
+  }>>;
 }
 
 export async function loadCompanionMissingAttachmentResource(attachmentId: string) {
   if (!isNativeCompanionAttachmentResourceRuntime()) {
-    return null as { attachment_id: string; content_hash: string; size_bytes?: number } | null;
+    return null as { attachment_id: string; content_hash: string; mime_type: string; size_bytes?: number; storage_key: string } | null;
   }
   return (await loadIosMissingAttachments(1, attachmentId))[0] as {
-    attachment_id: string; content_hash: string; size_bytes?: number
+    attachment_id: string; content_hash: string; mime_type: string; size_bytes?: number; storage_key: string
   } | undefined ?? null;
 }

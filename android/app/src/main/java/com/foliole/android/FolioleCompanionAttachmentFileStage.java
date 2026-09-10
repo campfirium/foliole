@@ -22,15 +22,21 @@ final class FolioleCompanionAttachmentFileStage {
         for (Map.Entry<String, File> entry : session.tempFilesById.entrySet()) {
             String id = entry.getKey();
             String hash = session.contentHashesById.get(id);
-            if (hash == null) throw new IllegalStateException("Attachment batch content hash is missing.");
-            File target = target(context, hash);
+            String mimeType = session.mimeTypesById.get(id);
+            String storageKey = session.storageKeysById.get(id);
+            if (hash == null || mimeType == null || storageKey == null ||
+                !FolioleCompanionCanonicalAttachmentKey.matches(hash, mimeType, storageKey)) {
+                throw new IllegalStateException("Attachment batch resource description is invalid.");
+            }
+            File target = target(context, storageKey);
             boolean created = publish(entry.getValue(), target, hash, context);
             if (created) createdFiles.put(id, target);
             JSObject item = new JSObject();
             item.put("attachment_id", id);
             item.put("content_hash", hash);
             item.put("size_bytes", target.length());
-            item.put("storage_key", hash);
+            item.put("mime_type", mimeType);
+            item.put("storage_key", storageKey);
             manifest.put(item);
         }
         FolioleCompanionAttachmentResourceBatchSessions.markStaged(token, manifest, createdFiles);
@@ -57,8 +63,8 @@ final class FolioleCompanionAttachmentFileStage {
         return true;
     }
 
-    private static File target(Context context, String hash) {
-        return new File(new File(context.getFilesDir(), "attachments"), hash);
+    private static File target(Context context, String storageKey) {
+        return new File(new File(context.getFilesDir(), "attachments"), storageKey);
     }
 
     private static JSObject response(

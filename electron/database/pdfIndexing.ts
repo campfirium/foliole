@@ -5,6 +5,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
@@ -124,7 +125,9 @@ function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: numbe
 }
 
 async function extractPdfPageText(attachmentId: string) {
-  const resolved = resolveAttachmentFile(attachmentId);
+  const description = loadAttachmentResourceDescription(attachmentId);
+  if (!description) throw new Error('PDF attachment description is not available.');
+  const resolved = resolveAttachmentFile(description);
   if (resolved.status !== 'ready') {
     throw new Error('PDF attachment file is not available.');
   }

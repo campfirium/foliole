@@ -1,4 +1,5 @@
 import { parseAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
+import { resolveAttachmentIdByStorageKey } from '../../platform/attachmentResourceRegistry.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../import/markdownImageReferences.js';
 
 import type { TextAnchorLocator } from './textAnchorLocator.js';
@@ -70,7 +71,8 @@ export function deriveMarkdownImageTextAnchorRegions(input: {
     const to = Math.max(from, Math.min(locator.to, input.content.length));
     collectMarkdownImageReferences(input.content.slice(from, to)).forEach((image) => {
       const target = parseMarkdownImageTarget(image.rawTarget);
-      const attachmentId = target ? parseAssetMarkdownUrl(target.destination) : null;
+      const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
+      const attachmentId = storageKey ? resolveAttachmentIdByStorageKey(storageKey) : null;
       if (!attachmentId) {
         return;
       }

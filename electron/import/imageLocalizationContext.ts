@@ -1,5 +1,6 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { importImageAttachmentResource } from '../attachments/importImageAttachmentResource.js';
 import { fetchRemoteImageResource } from '../attachments/remoteImagePipeline.js';
 import { createNodeAttachmentLink } from '../database/attachments.js';
@@ -147,7 +148,7 @@ export class ImageLocalizationContext {
     }
     return {
       attachmentId: imported.attachment_id,
-      markdownUrl: buildAssetMarkdownUrl(imported.attachment_id, imported.original_name),
+      markdownUrl: buildAssetMarkdownUrl(requireStorageKey(imported.hash, imported.mime_type)),
       size: readImageIntrinsicSize(fetched.resource.bytes)
     };
   }
@@ -168,6 +169,12 @@ export class ImageLocalizationContext {
   private deadlineExpired() {
     return this.options.deadlineAt !== undefined && Date.now() >= this.options.deadlineAt;
   }
+}
+
+function requireStorageKey(contentHash: string, mimeType: string) {
+  const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
+  if (!storageKey) throw new Error('localized image did not produce a canonical storage key');
+  return storageKey;
 }
 
 function imageLocalizationBudgetError(sourceUrl: string) {

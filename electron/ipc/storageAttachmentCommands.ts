@@ -9,6 +9,7 @@ import {
 } from '../attachments/remoteImageLearnedSources.js';
 import { resolveRemoteImageSourceContext } from '../attachments/remoteImageSourceContext.js';
 import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { asString } from './commandParsers.js';
 
@@ -80,7 +81,20 @@ export function handleStorageAttachmentCommand(
   }
 
   if (command === NATIVE_COMMANDS.resolveAttachmentResource) {
-    return resolveAttachmentResource(asString(args.attachment_id, 'attachment_id'));
+    const storageKey = asString(args.storage_key, 'storage_key');
+    const parsed = parseCanonicalAttachmentStorageKey(storageKey);
+    if (!parsed || parsed.contentHash !== asString(args.content_hash, 'content_hash') ||
+        parsed.mimeType !== asString(args.mime_type, 'mime_type')) {
+      throw new Error('invalid argument: attachment resource description');
+    }
+    return resolveAttachmentResource({
+      attachmentId: asString(args.attachment_id, 'attachment_id'),
+      availability: 'local',
+      contentHash: parsed.contentHash,
+      libraryScope: asString(args.library_scope, 'library_scope'),
+      mimeType: parsed.mimeType,
+      storageKey
+    });
   }
 
   if (command === NATIVE_COMMANDS.copyAttachmentImageToClipboard) {

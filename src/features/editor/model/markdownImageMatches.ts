@@ -1,4 +1,5 @@
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
+import { resolveAttachmentIdByStorageKey } from '../../../../lib/platform/attachmentResourceRegistry';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { parseMarkdownImageLabelSize } from './markdownImageSize';
@@ -219,7 +220,9 @@ export function collectImageMatchesFromTree(
     ) {
       const start = from + match.start;
       matches.push({
-        attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
+        attachmentId: isInternalImageSource(source)
+          ? resolveAttachmentIdByStorageKey(parseAssetMarkdownUrl(source) ?? '')
+          : null,
         alt: label.alt,
         display: resolveImageDisplay(text, match.start, match.fullMatch),
         ...(label.displayWidth ? { displayWidth: label.displayWidth } : {}),

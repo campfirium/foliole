@@ -107,7 +107,7 @@ function recordAttachmentBlobManifest(input: {
   upsertAttachmentBlobManifest({
     attachmentId: input.attachment.id,
     contentHash: input.hash,
-    storageKey: buildAttachmentStorageFileName(input.hash, input.attachment.originalName),
+    storageKey: buildAttachmentStorageFileName(input.hash, input.mimeType),
     sizeBytes: input.sizeBytes,
     mimeType: input.mimeType,
     availability: 'local',
@@ -127,13 +127,13 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
     const hash = createContentHash(sourceBytes);
     const existingAttachment = findAttachmentRecordById(hash);
     persistAttachmentFile(
-      resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? path.basename(sourcePath)),
+      resolveAttachmentStoragePath(hash, undefined, mimeType),
       sourceBytes
     );
     const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, mimeType, sourceBytes.byteLength);
     recordAttachmentBlobManifest({ attachment, hash, mimeType, sizeBytes: sourceBytes.byteLength });
     createNodeAttachmentLink({ attachmentId: attachment.id, nodeId, role: IMAGE_ATTACHMENT_ROLE });
-    return { attachmentId: attachment.id, originalName: attachment.originalName, status: 'imported' as const };
+    return { attachmentId: attachment.id, mimeType, originalName: attachment.originalName, status: 'imported' as const };
   } catch {
     return { message: `Local image unavailable: ${sourcePath}`, status: 'error' as const };
   }
@@ -176,7 +176,7 @@ export function importPdfSourceAttachment(nodeId: string, sourcePath: string) {
   const hash = createContentHash(sourceBytes);
   const existingAttachment = findAttachmentRecordById(hash);
   persistAttachmentFile(
-    resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? path.basename(sourcePath)),
+    resolveAttachmentStoragePath(hash, undefined, PDF_MIME_TYPE),
     sourceBytes
   );
   const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, PDF_MIME_TYPE, sourceBytes.byteLength);

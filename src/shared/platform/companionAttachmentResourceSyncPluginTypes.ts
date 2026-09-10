@@ -3,6 +3,8 @@ export interface CompanionAttachmentResourceSyncPlugin {
     resources: Array<{
       attachment_id: string;
       content_hash: string;
+      mime_type: string;
+      storage_key: string;
       headers: Record<string, string>;
       url: string;
     }>;
@@ -17,6 +19,7 @@ export interface CompanionAttachmentResourceSyncPlugin {
     manifest: Array<{
       attachment_id: string;
       content_hash: string;
+      mime_type: string;
       size_bytes: number;
       storage_key: string;
     }>;

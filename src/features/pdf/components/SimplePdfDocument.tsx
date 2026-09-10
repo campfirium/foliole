@@ -4,6 +4,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { resolveAttachmentResourceDescriptionById } from '../../../../lib/platform/attachmentResourceRegistry';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
@@ -35,7 +36,10 @@ function useAttachmentPdfSource(
     setSource(null);
     setState('loading');
     async function resolvePdfSource() {
-      const resolution = await resolveRuntimeAttachmentResource(`asset://${attachmentId}`);
+      const description = resolveAttachmentResourceDescriptionById(attachmentId);
+      const resolution = description
+        ? await resolveRuntimeAttachmentResource(`asset://${description.storageKey}`)
+        : null;
       if (cancelled) {
         return;
       }

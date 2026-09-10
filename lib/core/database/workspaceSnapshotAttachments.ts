@@ -3,10 +3,13 @@ import type { WorkspaceNodeAttachmentSnapshot, WorkspaceNodeSnapshot } from './w
 
 interface NodeAttachmentSnapshotRow extends DatabaseRow {
   attachment_id: string;
+  availability: string | null;
+  content_hash: string | null;
   mime_type: string | null;
   node_id: string;
   original_name: string | null;
   role: string;
+  storage_key: string | null;
 }
 
 function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshotRow[] {
@@ -17,8 +20,12 @@ function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshot
        node_attachments.role,
        attachments.mime_type,
        attachments.original_name
+       , attachment_blobs.content_hash
+       , attachment_blobs.storage_key
+       , attachment_blobs.availability
      FROM node_attachments
      LEFT JOIN attachments ON attachments.id = node_attachments.attachment_id
+     LEFT JOIN attachment_blobs ON attachment_blobs.attachment_id = node_attachments.attachment_id
      ORDER BY node_attachments.node_id ASC, node_attachments.role ASC, node_attachments.attachment_id ASC`
   );
 }
@@ -37,9 +44,12 @@ export function attachWorkspaceNodeAttachments(
     }
     const attachment: WorkspaceNodeAttachmentSnapshot = {
       attachmentId: row.attachment_id,
+      availability: row.availability ?? 'unresolved',
+      contentHash: row.content_hash,
       mimeType: row.mime_type,
       originalName: row.original_name,
-      role: row.role
+      role: row.role,
+      storageKey: row.storage_key
     };
     node.attachments = [...(node.attachments ?? []), attachment];
   }

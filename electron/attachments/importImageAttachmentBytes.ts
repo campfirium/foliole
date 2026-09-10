@@ -149,7 +149,7 @@ function createAttachmentRecordIfNeeded(hash: string, originalName: string, mime
 
 function resolveCanonicalStoragePath(hash: string, originalName: string) {
   const existingAttachment = findAttachmentRecordById(hash);
-  return resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? originalName);
+  return resolveAttachmentStoragePath(hash, undefined, existingAttachment?.mimeType ?? resolveImageMimeType(originalName) ?? '');
 }
 
 export function normalizeImageFileName(originalName: string | null | undefined, mimeType: string) {
@@ -199,7 +199,7 @@ export async function importImageAttachmentBytes(
   upsertAttachmentBlobManifest({
     attachmentId: attachment.id,
     contentHash: hash,
-    storageKey: buildAttachmentStorageFileName(hash, attachment.originalName ?? normalizedOriginalName),
+    storageKey: buildAttachmentStorageFileName(hash, normalizedMimeType),
     sizeBytes: input.bytes.byteLength,
     mimeType: normalizedMimeType,
     availability: 'local',

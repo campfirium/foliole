@@ -1,5 +1,6 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences';
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
+import { resolveAttachmentIdByStorageKey } from '../../lib/platform/attachmentResourceRegistry';
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
 import { collectMarkdownInlineRanges } from '../features/editor/model/markdownInlineProjection';
 import type { MarkdownInlineRange } from '../features/editor/model/markdownInlineProjectionTypes';
@@ -186,7 +187,8 @@ function buildSelectedImageRegions(content: string, entries: SelectionCommandEnt
       return;
     }
     const target = parseMarkdownImageTarget(match.rawTarget);
-    const attachmentId = target ? parseAssetMarkdownUrl(target.destination) : null;
+    const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
+    const attachmentId = storageKey ? resolveAttachmentIdByStorageKey(storageKey) : null;
     if (!attachmentId) {
       return;
     }

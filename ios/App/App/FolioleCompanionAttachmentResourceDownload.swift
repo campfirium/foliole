@@ -4,6 +4,8 @@ import Foundation
 struct FolioleCompanionAttachmentDownloadRequest {
     let attachmentId: String
     let contentHash: String
+    let mimeType: String
+    let storageKey: String
     let headers: [String: String]
     let url: String
 }
@@ -11,6 +13,8 @@ struct FolioleCompanionAttachmentDownloadRequest {
 struct FolioleCompanionDownloadedAttachment {
     let attachmentId: String
     let contentHash: String
+    let mimeType: String
+    let storageKey: String
     let temporaryURL: URL
 }
 
@@ -41,6 +45,9 @@ enum FolioleCompanionAttachmentResourceDownloader {
     ) async throws -> FolioleCompanionDownloadedAttachment {
         guard !request.attachmentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               matches(request.contentHash, expression: expression),
+              FolioleCompanionCanonicalAttachmentKey.matches(
+                contentHash: request.contentHash, mimeType: request.mimeType, storageKey: request.storageKey
+              ),
               let endpoint = URL(string: request.url),
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
             throw invalid("Attachment download request is invalid.")
@@ -64,6 +71,8 @@ enum FolioleCompanionAttachmentResourceDownloader {
         return FolioleCompanionDownloadedAttachment(
             attachmentId: request.attachmentId,
             contentHash: request.contentHash,
+            mimeType: request.mimeType,
+            storageKey: request.storageKey,
             temporaryURL: outputURL
         )
     }

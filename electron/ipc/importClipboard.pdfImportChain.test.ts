@@ -55,6 +55,7 @@ vi.mock('../database/pdfIndexing.js', async () => ({
 
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -94,7 +95,8 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
 
   expect(imported).toEqual(expect.objectContaining({ result_status: 'imported', source_kind: 'pdf' }));
   const pdfAttachment = listNodeAttachments(imported?.node_id as string)[0];
-  const resolvedAttachment = resolveAttachmentFile(pdfAttachment?.attachmentId as string);
+  const description = loadAttachmentResourceDescription(pdfAttachment?.attachmentId as string)!;
+  const resolvedAttachment = resolveAttachmentFile(description);
   expect(resolvedAttachment.status).toBe('ready');
   expect(pdfAttachment).toEqual(
     expect.objectContaining({
@@ -105,7 +107,7 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
   expect(toNativeNodeSourceDetails(imported?.node_id as string)?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
-      source_locator: buildAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
+      source_locator: buildAttachmentAssetUrl(description),
       source_name: '渐进阅读报告.pdf'
     })
   );

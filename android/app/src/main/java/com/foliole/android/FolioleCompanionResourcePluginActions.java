@@ -49,6 +49,7 @@ final class FolioleCompanionResourcePluginActions {
     static JSObject resolveAttachmentResource(Context context, PluginCall call) throws Exception {
         return FolioleCompanionAttachmentFileResolver.resolve(
             context,
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceMimeTypeRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context))
         );

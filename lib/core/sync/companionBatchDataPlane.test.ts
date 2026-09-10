@@ -38,11 +38,12 @@ it('commits attachment availability from a small manifest without attachment byt
   const port = fakePort();
   port.query = vi.fn(async () => [{ content_hash: 'c'.repeat(64), size_bytes: 12 }]) as DbPort['query'];
   await expect(applyCompanionAttachmentManifest(port, {
-    entries: [{ attachmentId: 'att-1', contentHash: 'c'.repeat(64), sizeBytes: 12, storageKey: 'c'.repeat(64) }],
+    entries: [{ attachmentId: 'att-1', contentHash: 'c'.repeat(64), mimeType: 'image/png',
+      sizeBytes: 12, storageKey: `${'c'.repeat(64)}.png` }],
     failedIds: [], now: '2026-08-06T00:00:00.000Z'
   })).resolves.toEqual({ failedIds: [], syncedIds: ['att-1'] });
   expect(port.run).toHaveBeenCalledWith(expect.stringContaining("availability = 'cached'"), [
-    'c'.repeat(64), '2026-08-06T00:00:00.000Z', '2026-08-06T00:00:00.000Z', 'att-1'
+    `${'c'.repeat(64)}.png`, '2026-08-06T00:00:00.000Z', '2026-08-06T00:00:00.000Z', 'att-1'
   ]);
 });
 

@@ -40,7 +40,7 @@ export async function persistCreatedNodeImageAttachment(args: {
   if (hash !== args.expectedHash) throw new Error('invalid argument: image hash');
   const originalName = args.originalName.trim() || 'pdf-image-excerpt.png';
   const existing = findAttachmentRecordById(hash);
-  const storagePath = resolveAttachmentStoragePath(hash, undefined, existing?.originalName ?? originalName);
+  const storagePath = resolveAttachmentStoragePath(hash, undefined, args.mimeType);
   const createdFile = await writeCanonicalFile(storagePath, args.bytes);
   const createdAt = existing?.createdAt ?? new Date().toISOString();
   try {
@@ -59,7 +59,7 @@ export async function persistCreatedNodeImageAttachment(args: {
         mimeType: args.mimeType,
         sizeBytes: args.bytes.byteLength,
         sourceHostName: null,
-        storageKey: buildAttachmentStorageFileName(hash, existing?.originalName ?? originalName)
+        storageKey: buildAttachmentStorageFileName(hash, args.mimeType)
       });
       createNodeAttachmentLink({ attachmentId: hash, nodeId: args.nodeId, role: 'image' });
     });

@@ -68,12 +68,18 @@ extension FolioleCompanionSyncPlugin {
             let contract = try FolioleCompanionContractStore().attachmentResourceContract()
             let storageKey = call.getString("storage_key")?.trimmingCharacters(in: .whitespacesAndNewlines)
             let mimeType = call.getString("mime_type")
-            guard let storageKey, !storageKey.isEmpty else {
+            let contentHash = call.getString("content_hash")?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let storageKey, let contentHash, let mimeType,
+                  FolioleCompanionCanonicalAttachmentKey.matches(
+                    contentHash: contentHash, mimeType: mimeType, storageKey: storageKey
+                  ) else {
                 call.resolve(["status": "missing_file", "mime_type": mimeType ?? NSNull(), "resource_url": NSNull()])
                 return
             }
             let fileURL = try attachmentRoot(contract).appendingPathComponent(storageKey)
-            let exists = FileManager.default.fileExists(atPath: fileURL.path)
+            let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            let exists = values?.isRegularFile == true && values?.isSymbolicLink != true &&
+                (try? FolioleCompanionAttachmentResourceDownloader.digestHex(fileURL)) == contentHash
             call.resolve([
                 "status": exists ? "ready" : "missing_file",
                 "mime_type": mimeType ?? NSNull(),
@@ -108,9 +114,26 @@ private func attachmentRequests(
         return FolioleCompanionAttachmentDownloadRequest(
             attachmentId: try attachmentString(object, "attachmentId", contract),
             contentHash: try attachmentString(object, "contentHash", contract),
+            mimeType: try attachmentString(object, "mimeType", contract),
+            storageKey: try attachmentString(object, "storageKey", contract),
             headers: try attachmentHeaders(object, contract),
             url: try attachmentString(object, "url", contract)
         )
+    }
+}
+
+enum FolioleCompanionCanonicalAttachmentKey {
+    private static let extensions = [
+        "application/pdf": ".pdf", "image/gif": ".gif", "image/jpeg": ".jpg",
+        "image/png": ".png", "image/webp": ".webp"
+    ]
+
+    static func matches(contentHash: String, mimeType: String, storageKey: String) -> Bool {
+        guard contentHash.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
+              let suffix = extensions[mimeType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] else {
+            return false
+        }
+        return storageKey == contentHash + suffix
     }
 }
 

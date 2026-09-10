@@ -54,8 +54,7 @@ export async function persistReadwiseApiOriginalFile(input: {
 }) {
   const originalName = `${safeFileStem(input.title)}.pdf`;
   const existing = findAttachmentRecordById(input.state.attachmentId);
-  const storedName = existing?.originalName ?? originalName;
-  const storagePath = resolveAttachmentStoragePath(input.state.attachmentId, undefined, storedName);
+  const storagePath = resolveAttachmentStoragePath(input.state.contentHash, undefined, input.state.mimeType);
   await persistValidatedFile(storagePath, input.bytes);
   const createdAt = existing?.createdAt ?? new Date().toISOString();
   if (!existing) {
@@ -68,7 +67,7 @@ export async function persistReadwiseApiOriginalFile(input: {
     attachmentId: input.state.attachmentId, availability: 'local', cachedAt: createdAt,
     contentHash: input.state.contentHash, createdAt, lastVerifiedAt: createdAt,
     mimeType: input.state.mimeType, sizeBytes: input.state.sizeBytes,
-    sourceHostName: null, storageKey: buildAttachmentStorageFileName(input.state.attachmentId, storedName)
+    sourceHostName: null, storageKey: buildAttachmentStorageFileName(input.state.contentHash, input.state.mimeType)
   });
   createNodeAttachmentLink({ attachmentId: input.state.attachmentId, nodeId: input.nodeId, role: 'reference' });
   markPdfAttachmentIndexPending(input.state.attachmentId);

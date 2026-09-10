@@ -1,0 +1,10 @@
+[
+  { "name": "png", "prefixHex": "89504e470d0a1a0a0000", "expectedKind": "image/png" },
+  { "name": "jpeg", "prefixHex": "ffd8ffe00000", "expectedKind": "image/jpeg" },
+  { "name": "gif", "prefixText": "GIF89a", "expectedKind": "image/gif" },
+  { "name": "webp", "prefixText": "RIFF0000WEBP", "expectedKind": "image/webp" },
+  { "name": "pdf", "prefixText": "%PDF-1.7", "expectedKind": "application/pdf" },
+  { "name": "html5", "prefixText": "<!DOCTYPE html>\n<html lang=\"zh-CN\">", "expectedKind": "approved_html" },
+  { "name": "xhtml", "prefixText": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"", "expectedKind": "approved_html" },
+  { "name": "unknown", "prefixText": "not an attachment", "expectedKind": "unknown" }
+]

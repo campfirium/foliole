@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentResource, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 
 import { listNodeAttachments } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -113,13 +114,14 @@ async function expectStoredAttachmentFiles(args: {
   attachments: ReturnType<typeof listNodeAttachments>;
 }) {
   for (const entry of args.attachments) {
-    const expectedStoragePath = resolveAttachmentStoragePath(entry.attachmentId, args.assetsDir, entry.attachment.originalName);
+    const expectedStoragePath = resolveAttachmentStoragePath(entry.attachmentId, args.assetsDir, entry.attachment.mimeType!);
 
     await expect(fs.access(expectedStoragePath)).resolves.toBeUndefined();
     await expect(fs.access(path.join(args.assetsDir, entry.attachmentId))).rejects.toThrow();
-    expect(resolveAttachmentResource(entry.attachmentId, args.assetsDir)).toEqual({
+    const description = loadAttachmentResourceDescription(entry.attachmentId)!;
+    expect(resolveAttachmentResource(description, args.assetsDir)).toEqual({
       mime_type: entry.attachment.mimeType,
-      resource_url: buildAttachmentAssetUrl(entry.attachmentId),
+      resource_url: buildAttachmentAssetUrl(description),
       status: 'ready'
     });
   }

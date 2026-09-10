@@ -16,10 +16,12 @@ final class FolioleCompanionAttachmentResourceBatchSessions {
     static synchronized String create(
         Map<String, File> tempFilesById,
         Map<String, String> contentHashesById,
+        Map<String, String> mimeTypesById,
+        Map<String, String> storageKeysById,
         List<String> failedIds
     ) {
         String token = UUID.randomUUID().toString();
-        SESSIONS.put(token, new Session(tempFilesById, contentHashesById, failedIds));
+        SESSIONS.put(token, new Session(tempFilesById, contentHashesById, mimeTypesById, storageKeysById, failedIds));
         return token;
     }
 
@@ -52,13 +54,18 @@ final class FolioleCompanionAttachmentResourceBatchSessions {
     static final class Session {
         final Map<String, String> contentHashesById;
         final List<String> failedIds;
+        final Map<String, String> mimeTypesById;
+        final Map<String, String> storageKeysById;
         final Map<String, File> tempFilesById;
         JSArray stagedManifest;
         Map<String, File> stagedCreatedFiles;
         private List<String> committedIds;
 
-        Session(Map<String, File> tempFilesById, Map<String, String> contentHashesById, List<String> failedIds) {
+        Session(Map<String, File> tempFilesById, Map<String, String> contentHashesById,
+                Map<String, String> mimeTypesById, Map<String, String> storageKeysById, List<String> failedIds) {
             this.contentHashesById = contentHashesById;
+            this.mimeTypesById = mimeTypesById;
+            this.storageKeysById = storageKeysById;
             this.failedIds = failedIds;
             this.tempFilesById = tempFilesById;
         }

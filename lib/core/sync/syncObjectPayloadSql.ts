@@ -3,8 +3,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type,
     'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object(
       'content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes,
-      'mime_type', b.mime_type, 'availability', b.availability, 'source_host_name', b.source_host_name,
-      'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at
+      'mime_type', b.mime_type, 'source_host_name', b.source_host_name, 'created_at', b.created_at
     )) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ?`,
   external_folder: `SELECT json_object(
     'id', f.id, 'folder_path', f.folder_path, 'attachment_mode', f.attachment_mode,

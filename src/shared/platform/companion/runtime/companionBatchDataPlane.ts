@@ -52,12 +52,14 @@ export async function commitStagedCompanionAttachmentBatch(
 function toAttachmentManifestEntry(entry: {
   attachment_id: string;
   content_hash: string;
+  mime_type: string;
   size_bytes: number;
   storage_key: string;
 }): CompanionAttachmentManifestEntry {
   return {
     attachmentId: entry.attachment_id,
     contentHash: entry.content_hash,
+    mimeType: entry.mime_type,
     sizeBytes: entry.size_bytes,
     storageKey: entry.storage_key
   };

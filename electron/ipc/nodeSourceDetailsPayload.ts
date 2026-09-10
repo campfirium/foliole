@@ -3,6 +3,7 @@ import path from 'node:path';
 import { formatReadwiseSourceLabel } from '../../lib/core/import/importManagerSettings.js';
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
@@ -46,7 +47,8 @@ function resolvePdfSourceLocator(sourceNodeId: string) {
     return '';
   }
 
-  return buildAttachmentAssetUrl(attachment.attachmentId);
+  const description = loadAttachmentResourceDescription(attachment.attachmentId);
+  return description ? buildAttachmentAssetUrl(description) : '';
 }
 
 function toNativeImportSource(

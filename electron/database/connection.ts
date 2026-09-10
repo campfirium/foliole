@@ -11,6 +11,7 @@ import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from '
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
+import { clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -95,6 +96,7 @@ export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
 }
 
 export function closeDatabaseConnection() {
+  clearAttachmentLibraryPathSnapshot();
   for (const callback of connectionCleanupCallbacks) {
     callback();
   }

@@ -9,6 +9,7 @@ import type {
 } from '../../lib/platform/nativeUtilityContract.js';
 import { electronClipboardAccess } from '../clipboardAccess.js';
 import { findAttachmentRecordById } from '../database/attachments.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 
 import { resolveAttachmentFile } from './resourceResolver.js';
 
@@ -47,7 +48,9 @@ function resolveDialogFilters(fileName: string, mimeType: string | null) {
 }
 
 export async function copyAttachmentImageToClipboard(attachmentId: string): Promise<NativeCopyAttachmentImageResult> {
-  const resolved = resolveAttachmentFile(attachmentId);
+  const description = loadAttachmentResourceDescription(attachmentId);
+  if (!description) return { status: 'not_found' };
+  const resolved = resolveAttachmentFile(description);
   if (resolved.status !== 'ready') {
     return { status: resolved.status };
   }
@@ -65,7 +68,9 @@ export async function exportAttachmentImage(
   attachmentId: string,
   window: BrowserWindow | null
 ): Promise<NativeExportAttachmentImageResult> {
-  const resolved = resolveAttachmentFile(attachmentId);
+  const description = loadAttachmentResourceDescription(attachmentId);
+  if (!description) return { path: null, status: 'not_found' };
+  const resolved = resolveAttachmentFile(description);
   if (resolved.status !== 'ready') {
     return { path: null, status: resolved.status };
   }

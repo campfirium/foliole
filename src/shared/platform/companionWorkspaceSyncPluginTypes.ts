@@ -93,6 +93,8 @@ export interface CompanionWorkspaceSyncPlugin
   stopSyncGroupProvider(): Promise<CompanionSyncGroupProviderState>;
   resolveAttachmentResource(args: {
     attachment_id: string;
+    content_hash: string;
+    library_scope: string;
     mime_type?: string | null;
     storage_key?: string | null;
   }): Promise<{

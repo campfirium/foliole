@@ -81,6 +81,16 @@ function attachmentRecord(payload: unknown): NativeSyncObjectRecord {
   };
 }
 
+function resource(attachmentId: string, digit: string) {
+  const contentHash = digit.repeat(64);
+  return { attachmentId, contentHash, mimeType: 'image/png', storageKey: `${contentHash}.png` };
+}
+
+function portableBlob(digit: string) {
+  const request = resource('unused', digit);
+  return { content_hash: request.contentHash, mime_type: request.mimeType, storage_key: request.storageKey };
+}
+
 function resetAttachmentResourceMocks() {
   vi.clearAllMocks();
   capacitorMock.plugin.commitAttachmentResourceBatch.mockReset();
@@ -115,26 +125,28 @@ describe('companion desktop attachment resource manifests', () => {
 
   it('extracts attachment resource requests from manifest payloads', () => {
     expect(toAttachmentResourceRequest(attachmentRecord({
-      blob: { content_hash: 'blob-hash' }
-    }))).toEqual({ attachmentId: 'att-1', contentHash: 'blob-hash' });
+      blob: portableBlob('1')
+    }))).toEqual(resource('att-1', '1'));
   });
 
   it('downloads attachment resources during native Android sync', async () => {
     await expect(syncCompanionAttachmentResourcesFromDesktop('http://10.0.2.2:38641/', [
-      attachmentRecord({ blob: { content_hash: 'blob-hash' } })
+      attachmentRecord({ blob: portableBlob('1') })
     ])).resolves.toEqual(['att-1']);
 
     expect(pairingMock.createSignedRequestHeaders).toHaveBeenCalledWith({
       endpointUrl: 'http://10.0.2.2:38641',
       method: 'GET',
-      pathWithQuery: '/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
+      pathWithQuery: `/companion/attachment-resource?attachment_id=att-1&content_hash=${'1'.repeat(64)}`
     });
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
       resources: [{
         attachment_id: 'att-1',
-        content_hash: 'blob-hash',
+        content_hash: '1'.repeat(64),
+        mime_type: 'image/png',
+        storage_key: `${'1'.repeat(64)}.png`,
         headers: { 'X-Signature': 'signed' },
-        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
+        url: `http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=${'1'.repeat(64)}`
       }]
     });
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
@@ -148,15 +160,17 @@ describe('companion desktop attachment resource manifests', () => {
 
   it('downloads already enumerated missing attachment resources', async () => {
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      { attachmentId: 'att-2', contentHash: 'blob-hash-2' }
+      resource('att-2', '2')
     ])).resolves.toEqual(['att-2']);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
       resources: [{
         attachment_id: 'att-2',
-        content_hash: 'blob-hash-2',
+        content_hash: '2'.repeat(64),
+        mime_type: 'image/png',
+        storage_key: `${'2'.repeat(64)}.png`,
         headers: { 'X-Signature': 'signed' },
-        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
+        url: `http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=${'2'.repeat(64)}`
       }]
     });
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
@@ -168,7 +182,7 @@ describe('companion desktop attachment resource manifests', () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://192.168.1.2:38641/', [
-      { attachmentId: 'att-ios', contentHash: 'hash-ios' }
+      resource('att-ios', '3')
     ])).resolves.toEqual(['att-ios']);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
@@ -196,8 +210,8 @@ describe('companion desktop attachment resource queue', () => {
       });
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
-      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+      resource('att-2', '2'),
+      resource('att-3', '3')
     ])).resolves.toEqual(['att-3']);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(3);
@@ -219,8 +233,8 @@ describe('companion desktop attachment resource queue', () => {
     }));
 
     const download = syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
-      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+      resource('att-2', '2'),
+      resource('att-3', '3')
     ]);
 
     await Promise.resolve();
@@ -239,8 +253,8 @@ describe('companion desktop attachment resource queue', () => {
     capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValue(new Error('Desktop returned 404.'));
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
-      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+      resource('att-2', '2'),
+      resource('att-3', '3')
     ])).rejects.toThrow('Attachment batch could not download any requested file.');
   });
 });
@@ -252,7 +266,7 @@ describe('companion desktop attachment resource runtime guard', () => {
     capacitorMock.isNativePlatform.mockReturnValue(false);
 
     await expect(syncCompanionAttachmentResourcesFromDesktop('http://10.0.2.2:38641/', [
-      attachmentRecord({ blob: { content_hash: 'blob-hash' } })
+      attachmentRecord({ blob: portableBlob('1') })
     ])).resolves.toEqual([]);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();

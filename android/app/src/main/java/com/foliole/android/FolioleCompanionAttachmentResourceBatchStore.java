@@ -31,6 +31,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         String token = FolioleCompanionAttachmentResourceBatchSessions.create(
             result.tempFilesById,
             result.contentHashesById,
+            result.mimeTypesById,
+            result.storageKeysById,
             result.failedIds
         );
         JSArray syncedAttachmentIds = new JSArray();
@@ -52,6 +54,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                 completionService.submit(downloadTask(context, resource));
             }
             Map<String, String> contentHashesById = new HashMap<>();
+            Map<String, String> mimeTypesById = new HashMap<>();
+            Map<String, String> storageKeysById = new HashMap<>();
             List<String> failedIds = new ArrayList<>();
             List<String> syncedIds = new ArrayList<>();
             Map<String, File> tempFilesById = new HashMap<>();
@@ -61,12 +65,14 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                 if (result.synced) {
                     syncedIds.add(result.attachmentId);
                     contentHashesById.put(result.attachmentId, result.contentHash);
+                    mimeTypesById.put(result.attachmentId, result.mimeType);
+                    storageKeysById.put(result.attachmentId, result.storageKey);
                     tempFilesById.put(result.attachmentId, result.tempFile);
                 } else {
                     failedIds.add(result.attachmentId);
                 }
             }
-            return new DownloadResult(contentHashesById, failedIds, syncedIds, tempFilesById);
+            return new DownloadResult(contentHashesById, mimeTypesById, storageKeysById, failedIds, syncedIds, tempFilesById);
         } finally {
             executor.shutdownNow();
         }
@@ -86,8 +92,15 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private static SingleDownloadResult downloadResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
         String contentHashKey = FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context);
+        String mimeTypeKey = FolioleCompanionBridgeContractDefinitions.resourceMimeTypeRequestKey(context);
+        String storageKeyKey = FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context);
         String urlKey = FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context);
         String contentHash = requireText(resource.optString(contentHashKey, null), contentHashKey);
+        String mimeType = requireText(resource.optString(mimeTypeKey, null), mimeTypeKey);
+        String storageKey = requireText(resource.optString(storageKeyKey, null), storageKeyKey);
+        if (!FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)) {
+            throw new IllegalArgumentException("Attachment storage key is not canonical.");
+        }
         File tempFile = tempAttachmentFile(context, contentHash);
         File parent = tempFile.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
@@ -103,7 +116,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             tempFile.delete();
             throw new IllegalStateException("Attachment resource hash mismatch.");
         }
-        return SingleDownloadResult.synced(attachmentId, contentHash, tempFile);
+        return SingleDownloadResult.synced(attachmentId, contentHash, mimeType, storageKey, tempFile);
     }
 
     private static File tempAttachmentFile(Context context, String contentHash) throws Exception {
@@ -135,16 +148,22 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     private static final class DownloadResult {
         final Map<String, String> contentHashesById;
         final List<String> failedIds;
+        final Map<String, String> mimeTypesById;
+        final Map<String, String> storageKeysById;
         final List<String> syncedIds;
         final Map<String, File> tempFilesById;
 
         DownloadResult(
             Map<String, String> contentHashesById,
+            Map<String, String> mimeTypesById,
+            Map<String, String> storageKeysById,
             List<String> failedIds,
             List<String> syncedIds,
             Map<String, File> tempFilesById
         ) {
             this.contentHashesById = contentHashesById;
+            this.mimeTypesById = mimeTypesById;
+            this.storageKeysById = storageKeysById;
             this.failedIds = failedIds;
             this.syncedIds = syncedIds;
             this.tempFilesById = tempFilesById;
@@ -154,22 +173,28 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     private static final class SingleDownloadResult {
         final String attachmentId;
         final String contentHash;
+        final String mimeType;
+        final String storageKey;
         final boolean synced;
         final File tempFile;
 
-        private SingleDownloadResult(String attachmentId, String contentHash, boolean synced, File tempFile) {
+        private SingleDownloadResult(String attachmentId, String contentHash, String mimeType, String storageKey,
+                                     boolean synced, File tempFile) {
             this.attachmentId = attachmentId;
             this.contentHash = contentHash;
+            this.mimeType = mimeType;
+            this.storageKey = storageKey;
             this.synced = synced;
             this.tempFile = tempFile;
         }
 
         static SingleDownloadResult failed(String attachmentId) {
-            return new SingleDownloadResult(attachmentId, null, false, null);
+            return new SingleDownloadResult(attachmentId, null, null, null, false, null);
         }
 
-        static SingleDownloadResult synced(String attachmentId, String contentHash, File tempFile) {
-            return new SingleDownloadResult(attachmentId, contentHash, true, tempFile);
+        static SingleDownloadResult synced(String attachmentId, String contentHash, String mimeType,
+                                           String storageKey, File tempFile) {
+            return new SingleDownloadResult(attachmentId, contentHash, mimeType, storageKey, true, tempFile);
         }
     }
 }

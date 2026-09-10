@@ -73,7 +73,9 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
         endpointUrl,
         resources.map((resource) => ({
           attachmentId: resource.attachment_id,
-          contentHash: resource.content_hash
+          contentHash: resource.content_hash,
+          mimeType: resource.mime_type,
+          storageKey: resource.storage_key
         })),
         (syncedChunkIds) => {
           syncedAttachmentIds.push(...syncedChunkIds);

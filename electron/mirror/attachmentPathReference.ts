@@ -12,5 +12,6 @@ export function resolveMirrorAttachmentPath(attachmentId: string) {
     return null;
   }
 
-  return resolveAttachmentStoragePath(attachment.id, undefined, attachment.originalName);
+  if (!attachment.mimeType) return null;
+  return resolveAttachmentStoragePath(attachment.id, undefined, attachment.mimeType);
 }

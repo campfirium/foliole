@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+
 import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
 import {
   DATABASE_SCHEMA_VERSION,
@@ -7,6 +10,9 @@ import {
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
+import { runCanonicalAttachmentMigration } from '../attachments/canonicalAttachmentMigration.js';
+import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
+import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 import {
   closeDatabaseConnection,
@@ -109,6 +115,16 @@ function initializeSchemaWorkspaceAndSearch(
 ) {
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
+  });
+  const assetsDir = resolveRuntimeDataPaths().assetsDir;
+  runCanonicalAttachmentMigration({
+    assetsDir,
+    journalPath: path.join(path.dirname(initializedConnection.dbPath), 'attachment-migrations', 'canonical-v1.json'),
+    sqlite: initializedConnection.sqlite
+  });
+  publishAttachmentLibraryPathSnapshot({
+    assetsDir,
+    libraryScope: createHash('sha256').update(initializedConnection.dbPath).digest('hex')
   });
   seedInitialWorkspace(initializedConnection);
   return initializeWorkspaceSearchSidecar(initializedConnection);

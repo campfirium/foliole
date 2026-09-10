@@ -39,7 +39,6 @@ function createFixture() {
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT, snapshot_json TEXT);
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, content TEXT, body_blob_hash TEXT);
     CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT);
-    CREATE TABLE import_sources (source_fingerprint TEXT PRIMARY KEY, remote_import_state_json TEXT NOT NULL);
   `);
   return { assetsDir, databasePath, db, root };
 }
@@ -79,7 +78,6 @@ it('produces a self-contained readonly receipt and executable planned journal cl
   addHtml(fixture, 'html-version', 'version');
   addHtml(fixture, 'html-external', 'external');
   addHtml(fixture, 'html-pdf', 'pdf');
-  addHtml(fixture, 'html-readwise', 'readwise');
   addAttachment(fixture, 'unknown', Buffer.from('unknown bytes'), 'image/png');
   addAttachment(fixture, `missing-${'a'.repeat(56)}`, null, 'image/webp');
   addAttachment(fixture, 'unresolved', null, null);
@@ -96,7 +94,6 @@ it('produces a self-contained readonly receipt and executable planned journal cl
     INSERT INTO node_sync_versions VALUES ('v1', 'version-node', '{"attachmentId":"html-version"}');
     INSERT INTO external_documents VALUES ('external', '![x](asset://html-external)', NULL);
     INSERT INTO pdf_page_text VALUES ('html-pdf', 1, 'derived');
-    INSERT INTO import_sources VALUES ('readwise-source', '{"originalFile":{"attachmentId":"html-readwise"}}');
   `);
   fixture.db.close();
   const outputPath = path.join(fixture.root, 'receipt.json');
@@ -108,14 +105,10 @@ it('produces a self-contained readonly receipt and executable planned journal cl
     .toEqual(['cover', 'image', 'reference']);
   expect(byId.get('repair')).toMatchObject({ decision: 'image_mime_repair', detectedKind: 'image/png' });
   expect(byId.get('html-orphan')?.decision).toBe('html_orphan_delete');
-  for (const id of ['html-attached', 'html-current', 'html-trash', 'html-version', 'html-external', 'html-pdf',
-    'html-readwise']) {
+  for (const id of ['html-attached', 'html-current', 'html-trash', 'html-version', 'html-external', 'html-pdf']) {
     expect(byId.get(id)).toMatchObject({ decision: 'residual_blocker',
       residualReasons: expect.arrayContaining(['html_has_authoritative_reference']) });
   }
-  expect(byId.get('html-readwise')?.references.importSourceOriginalFiles).toEqual([
-    { sourceFingerprint: 'readwise-source' }
-  ]);
   expect(byId.get('unknown')?.decision).toBe('residual_blocker');
   expect(byId.get(`missing-${'a'.repeat(56)}`)?.decision).toBe('known_missing');
   expect(byId.get('unresolved')?.decision).toBe('no_bytes_unresolved');
@@ -123,23 +116,4 @@ it('produces a self-contained readonly receipt and executable planned journal cl
   expect(receipt.openContract).toEqual({ fileMustExist: true, mode: 'readonly', productionInitializationCalled: false });
   expect(JSON.parse(fs.readFileSync(outputPath, 'utf8')).plan.journalPlan).toEqual(receipt.plan.journalPlan);
   expect(receipt.plan.files.some((file) => file.name === 'different-hash-neighbor')).toBe(true);
-});
-
-it('scans a frozen WAL snapshot without changing any production database file', () => {
-  const fixture = createFixture();
-  addHtml(fixture, 'html-orphan', 'wal');
-  fixture.db.pragma('journal_mode = WAL');
-  fixture.db.pragma('wal_autocheckpoint = 0');
-  fixture.db.exec("INSERT INTO nodes VALUES ('wal-row', '', NULL, NULL)");
-  const sourceFiles = [fixture.databasePath, `${fixture.databasePath}-wal`, `${fixture.databasePath}-shm`];
-  const before = sourceFiles.map((file) => fs.existsSync(file) ? fs.readFileSync(file) : null);
-  const outputPath = path.join(fixture.root, 'snapshot-receipt.json');
-  const snapshotDir = path.join(fixture.root, 'snapshot');
-  const receipt = runCanonicalAttachmentPreflight({ ...fixture, outputPath, snapshotDir });
-  expect(receipt.openContract).toMatchObject({ mode: 'readonly-frozen-snapshot' });
-  expect(receipt.plan.items.some((item) => item.attachmentId === 'html-orphan')).toBe(true);
-  expect(receipt.productionState.unchanged).toBe(true);
-  expect(fs.existsSync(snapshotDir)).toBe(false);
-  expect(sourceFiles.map((file) => fs.existsSync(file) ? fs.readFileSync(file) : null)).toEqual(before);
-  fixture.db.close();
 });

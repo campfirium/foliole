@@ -66,8 +66,7 @@ export async function importImageAttachmentResource(
     return { status: 'error', error_code: 'unsupported_format', message: 'Unsupported image format.', source_path: input.errorSource };
   }
   const hash = createContentHash(input.bytes);
-  const existingAttachment = findAttachmentRecordById(hash);
-  const storagePath = resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? normalizedOriginalName);
+  const storagePath = resolveAttachmentStoragePath(hash, undefined, normalizedMimeType);
   let storedFile: 'created' | 'reused';
   try {
     storedFile = await persistAttachmentFile(storagePath, input.bytes);
@@ -83,7 +82,7 @@ export async function importImageAttachmentResource(
   upsertAttachmentBlobManifest({
     attachmentId: attachment.id,
     contentHash: hash,
-    storageKey: buildAttachmentStorageFileName(hash, attachment.originalName ?? normalizedOriginalName),
+    storageKey: buildAttachmentStorageFileName(hash, normalizedMimeType),
     sizeBytes: input.bytes.byteLength,
     mimeType: normalizedMimeType,
     availability: 'local',

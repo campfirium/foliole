@@ -134,11 +134,8 @@ function toSyncPayload(input: AttachmentBlobManifestInput, attachment: Attachmen
     original_name: attachment?.original_name ?? null,
     size_bytes: attachment?.size_bytes ?? input.sizeBytes,
     blob: {
-      availability: input.availability,
-      cached_at: input.cachedAt ?? null,
       content_hash: input.contentHash,
       created_at: input.createdAt,
-      last_verified_at: input.lastVerifiedAt ?? null,
       mime_type: input.mimeType,
       size_bytes: input.sizeBytes,
       source_host_name: input.sourceHostName,
@@ -158,6 +155,17 @@ function recordAttachmentSyncState(driver: DatabaseDriver, payload: ReturnType<t
     updatedAt,
     syncDirty: true
   });
+}
+
+export function refreshAttachmentSyncState(driver: DatabaseDriver, attachmentId: string, updatedAt: string) {
+  const row = driver.queryOne<AttachmentBlobManifestRow>(
+    `SELECT attachment_id, content_hash, storage_key, size_bytes, mime_type, availability,
+       source_host_name, created_at, cached_at, last_verified_at
+     FROM attachment_blobs WHERE attachment_id = ?`,
+    [attachmentId]
+  );
+  if (!row) return;
+  recordAttachmentSyncState(driver, toSyncPayload(toAttachmentBlobManifest(row), readAttachmentSyncRow(driver, attachmentId)), updatedAt);
 }
 
 export function recordAttachmentDeleted(driver: DatabaseDriver, attachmentId: string, deletedAt: string) {

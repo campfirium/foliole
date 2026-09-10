@@ -1,38 +1,19 @@
 import path from 'node:path';
 
-function resolveAttachmentFileExtension(originalName: string | null) {
-  if (!originalName) {
-    return '';
+import { buildCanonicalAttachmentStorageKey, parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
+
+export function buildAttachmentStorageFileName(contentHash: string, mimeType: string) {
+  const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
+  if (!storageKey) throw new Error('attachment storage key cannot be canonicalized');
+  return storageKey;
+}
+
+export function resolveAttachmentStorageKeyPath(assetsDir: string, storageKey: string) {
+  if (!parseCanonicalAttachmentStorageKey(storageKey)) {
+    throw new Error('attachment storage key is not canonical');
   }
-
-  return path.extname(originalName);
-}
-
-export function buildAttachmentStorageFileName(attachmentId: string, originalName: string | null) {
-  return `${attachmentId}${resolveAttachmentFileExtension(originalName)}`;
-}
-
-export function resolveAttachmentStoragePathCandidates(
-  attachmentId: string,
-  originalName: string | null,
-  assetsDir: string
-) {
-  const canonicalPath = resolveAttachmentStoragePath(
-    assetsDir,
-    buildAttachmentStorageFileName(attachmentId, originalName)
-  );
-  const legacyPath = resolveAttachmentStoragePath(assetsDir, attachmentId);
-
-  if (canonicalPath === legacyPath) {
-    return [canonicalPath];
-  }
-
-  return [canonicalPath, legacyPath];
-}
-
-function resolveAttachmentStoragePath(assetsDir: string, fileName: string) {
   const resolvedAssetsDir = path.resolve(assetsDir);
-  const resolvedPath = path.resolve(resolvedAssetsDir, fileName);
+  const resolvedPath = path.resolve(resolvedAssetsDir, storageKey);
   const relativePath = path.relative(resolvedAssetsDir, resolvedPath);
 
   if (relativePath.length === 0 || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
@@ -40,4 +21,14 @@ function resolveAttachmentStoragePath(assetsDir: string, fileName: string) {
   }
 
   return resolvedPath;
+}
+
+/** Only cleanup and versioned migration code may enumerate historical aliases. */
+export function resolveAttachmentStoragePathCandidates(
+  contentHash: string,
+  mimeType: string,
+  assetsDir: string
+) {
+  const canonical = resolveAttachmentStorageKeyPath(assetsDir, buildAttachmentStorageFileName(contentHash, mimeType));
+  return [canonical, path.join(path.resolve(assetsDir), contentHash)];
 }
