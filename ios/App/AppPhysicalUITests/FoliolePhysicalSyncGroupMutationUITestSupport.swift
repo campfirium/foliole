@@ -54,13 +54,12 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func triggerForegroundAutomaticSync(in app: XCUIApplication) {
-        XCUIDevice.shared.press(.home)
-        let backgroundInterval = expectation(description: "Fri foreground transition interval")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { backgroundInterval.fulfill() }
-        wait(for: [backgroundInterval], timeout: 3)
-        app.activate()
+        app.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 30),
+                      "Fri did not stop before the automatic Sync relaunch.")
+        app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
-                      "Fri did not return to the foreground for automatic Sync.")
+                      "Fri did not relaunch in the foreground for automatic Sync.")
         let catchUp = expectation(description: "Fri foreground automatic Sync")
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { catchUp.fulfill() }
         wait(for: [catchUp], timeout: 21)
