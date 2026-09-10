@@ -135,7 +135,7 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
     func netServiceDidResolveAddress(_ sender: NetService) {
         guard let entry = services.first(where: { $0.value === sender }),
               let data = sender.txtRecordData() else { return }
-        let txt = Self.decodeTXT(data)
+        let txt = FolioleCompanionBonjourTXT.decode(data)
         guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
         var candidate: [String: Any] = [candidateKey("endpointUrl"): endpoint, candidateKey("source"): "nsd"]
         candidate[candidateKey("protocolTxt")] = txt
@@ -152,9 +152,6 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
     private static func key(_ result: NWBrowser.Result) -> String? {
         guard case let .service(name, type, domain, _) = result.endpoint else { return nil }
         return "\(name)|\(type)|\(domain)"
-    }
-    static func decodeTXT(_ data: Data) -> [String: String] {
-        NetService.dictionary(fromTXTRecord: data).compactMapValues { String(data: $0, encoding: .utf8) }
     }
     private static func isPermissionDenied(_ error: NWError) -> Bool {
         if case let .dns(code) = error { return code == -65570 }
@@ -211,7 +208,7 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
     }
 
     func netServiceDidResolveAddress(_ sender: NetService) {
-        let txt = sender.txtRecordData().map(Self.decodeTXT) ?? [:]
+        let txt = sender.txtRecordData().map(FolioleCompanionBonjourTXT.decode) ?? [:]
         guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
         guard !results.contains(where: { $0[endpointKey] as? String == endpoint }) else { return }
         var candidate: [String: Any] = [endpointKey: endpoint, sourceKey: "nsd"]
@@ -236,9 +233,4 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
         contract.discoveryCandidateKeys[name] ?? "invalid.\(name)"
     }
 
-    private static func decodeTXT(_ data: Data) -> [String: String] {
-        NetService.dictionary(fromTXTRecord: data).reduce(into: [:]) { result, entry in
-            if let value = String(data: entry.value, encoding: .utf8) { result[entry.key] = value }
-        }
-    }
 }

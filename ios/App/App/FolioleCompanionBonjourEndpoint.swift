@@ -1,6 +1,14 @@
 import Foundation
 import Network
 
+enum FolioleCompanionBonjourTXT {
+    static func decode(_ data: Data) -> [String: String] {
+        NetService.dictionary(fromTXTRecord: data).compactMapValues {
+            String(data: $0, encoding: .utf8)
+        }
+    }
+}
+
 struct FolioleIPv4Subnet {
     let address: [UInt8]
     let netmask: [UInt8]

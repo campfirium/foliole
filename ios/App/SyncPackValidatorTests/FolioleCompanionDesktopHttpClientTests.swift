@@ -41,7 +41,7 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
             roleKey: Data("anchor".utf8),
             "protocol_version": Data("5".utf8)
         ])
-        let decoded = FolioleCompanionBonjourDiscoverySession.decodeTXT(record)
+        let decoded = FolioleCompanionBonjourTXT.decode(record)
 
         XCTAssertEqual(decoded[roleKey], "anchor")
         XCTAssertEqual(decoded["protocol_version"], "5")
