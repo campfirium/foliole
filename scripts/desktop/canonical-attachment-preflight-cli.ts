@@ -63,6 +63,7 @@ function stableJson(value: unknown) {
 }
 
 function createDatabaseSnapshot(databasePath: string, snapshotDir: string) {
+  fs.mkdirSync(path.dirname(snapshotDir), { recursive: true });
   fs.mkdirSync(snapshotDir);
   const snapshotDatabasePath = path.join(snapshotDir, path.basename(databasePath));
   for (const suffix of ['', '-wal', '-shm']) {
