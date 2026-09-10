@@ -68,6 +68,17 @@ it('accepts both concurrent content forks on the exact product object', async ()
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 
+it('accepts the actual Windows peer label when requested', async () => {
+  const waitForState = vi.fn(async () => ({
+    content: 'Fri conflict fork\nDesktop fork windows', nodeId: 'node'
+  }));
+  await expect(loadConvergedDesktopSyncForks({ desktopLabel: 'windows', nodeId: 'node',
+    session: { waitForState } })).resolves.toMatchObject({ resolution: 'merged-content' });
+  expect(waitForState).toHaveBeenCalledWith(expect.objectContaining({ condition: expect.objectContaining({
+    fragments: ['Fri conflict fork', 'Desktop fork windows']
+  }) }));
+});
+
 it('loads and accepts an A5 conflict copy exposed by the product snapshot', async () => {
   const invoke = vi.fn(async (command) => command === 'load_workspace_list_snapshot'
     ? { nodesById: { 'node~a5': { content: '' } } }

@@ -8,15 +8,20 @@ import { assertWindowsConflictTrace } from './windows-fri-two-device-sync.mjs';
 
 it('requires both real peer forks in the Fri conflict projection', () => {
   const projection = { conflict_versions: [
-    { forks: ['fri'], object_id: 'topic', version_id: 'fri-version' },
-    { forks: ['windows'], object_id: 'topic', version_id: 'windows-version' }
+    { forks: ['windows'], is_current: false, object_id: 'topic', parents: ['base'],
+      version_id: 'windows-version' },
+    { forks: ['fri'], is_current: false, object_id: 'topic', parents: ['base'],
+      version_id: 'fri-version' },
+    { content_hash: 'merged', forks: ['fri', 'windows'], is_current: true, object_id: 'topic',
+      parents: ['windows-version', 'fri-version'], version_id: 'merged-version' }
   ] };
 
   expect(assertWindowsConflictTrace(projection)).toEqual({
-    friVersionIds: ['fri-version'], objectId: 'topic', windowsVersionIds: ['windows-version']
+    contentHash: 'merged', objectId: 'topic', parents: ['windows-version', 'fri-version'],
+    versionId: 'merged-version'
   });
-  expect(() => assertWindowsConflictTrace({ conflict_versions: projection.conflict_versions.slice(0, 1) }))
-    .toThrow('both Windows and Fri concurrent versions');
+  expect(() => assertWindowsConflictTrace({ conflict_versions: projection.conflict_versions.slice(0, 2) }))
+    .toThrow('two-parent conflict version');
 });
 
 it('keeps the Windows anchor alive through Fri publish, pull, and restart verification', () => {

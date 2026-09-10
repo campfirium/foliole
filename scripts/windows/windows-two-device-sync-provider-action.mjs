@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadConvergedDesktopSyncForks
 } from '../desktop/sync-group-conflict-action.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
@@ -125,13 +125,11 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
       repoRoot: options.paths.repoRoot });
     await invokeWindowsSyncGroupCommand(session.page, 'resume_companion_sync');
-    const conflicts = await waitForDesktopProductState(session.page, {
-      command: 'load_sync_node_conflicts', commandArgs: { objectIds: [conflictSeed.nodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000
+    conflictProof = await loadConvergedDesktopSyncForks({ desktopLabel: 'windows',
+      nodeId: conflictSeed.nodeId, session: { waitForState: (args) => (
+        waitForDesktopProductState(session.page, args)
+      ) }
     });
-    conflictProof = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
-      silentOverwrite: false, visible: true };
   } finally {
     await closeWindowsSyncGroupSession(session);
   }

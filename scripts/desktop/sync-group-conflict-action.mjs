@@ -77,8 +77,8 @@ export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
   return { conflictCount: conflicts.length, nodeId, silentOverwrite: false, visible: true };
 }
 
-export async function loadConvergedDesktopSyncForks({ nodeId, session }) {
-  const fragments = ['Fri conflict fork', 'Desktop fork macos'];
+export async function loadConvergedDesktopSyncForks({ desktopLabel = 'macos', nodeId, session }) {
+  const fragments = ['Fri conflict fork', `Desktop fork ${desktopLabel}`];
   const document = await session.waitForState({
     command: 'load_node_document',
     commandArgs: { nodeId },

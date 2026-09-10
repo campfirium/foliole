@@ -39,23 +39,14 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func verifyTwoDeviceConflictAfterProviderConverges(in app: XCUIApplication) {
-        if twoDeviceDesktopForkLabel == "windows" {
-            verifyVisibleTwoDeviceConflict(in: app)
-        } else {
-            verifyConvergedConflictForks(in: app)
-        }
+        verifyConvergedConflictForks(in: app)
 
         app.terminate()
         app.launch()
         openSyncSettings(in: app)
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its attempt Sync Group after relaunch.")
-        if twoDeviceDesktopForkLabel == "windows" {
-            XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
-                          "Fri did not retain the concurrent version after relaunch.")
-        } else {
-            tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
-        }
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         openBrowse(in: app)
         waitForJourneyFacts(["A", "B"], in: app)
         attachScreenshot(named: "Fri-two-device-conflict-restored")
@@ -108,12 +99,6 @@ extension FoliolePhysicalSyncGroupUITests {
             XCTAssertTrue(fork.waitForExistence(timeout: 120),
                           "Fri did not retain concurrent content: \(text)")
         }
-    }
-
-    func verifyVisibleTwoDeviceConflict(in app: XCUIApplication) {
-        openSyncSettings(in: app)
-        XCTAssertTrue(app.staticTexts["Issues to resolve"].waitForExistence(timeout: 120),
-                      "Fri did not expose the retained concurrent version.")
     }
 
     var twoDeviceDesktopForkLabel: String {

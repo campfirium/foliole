@@ -16,5 +16,7 @@ it('creates and accepts one equal Device through fixed Windows product commands'
   expect(source).toContain("'onSyncGroupJoinRequestsChanged' : 'onSyncGroupDiscoveryChanged'");
   expect(source).not.toMatch(/while \(Date\.now\(\) < deadline\)/u);
   expect(source).toContain("['A', 'B'], { B: 2 }");
+  expect(source).toContain("loadConvergedDesktopSyncForks({ desktopLabel: 'windows'");
+  expect(source).not.toContain("kind: 'sync-conflict-count'");
   expect(source).not.toMatch(/manager|pairing|authorization|DELETE FROM|UPDATE sync_/u);
 });

@@ -47,17 +47,19 @@ async function runFriBatch({ bundle, evidenceRoot, extraEnv = {}, name, repoRoot
 
 export function assertWindowsConflictTrace(projection) {
   const versions = projection?.conflict_versions ?? [];
-  const fri = versions.filter((version) => version.forks.includes('fri'));
-  const windows = versions.filter((version) => version.forks.includes('windows'));
-  if (fri.length === 0 || windows.length === 0) {
-    throw new Error('Fri database did not retain both Windows and Fri concurrent versions.');
+  const current = versions.filter((version) => version.is_current);
+  if (current.length !== 1 || current[0].parents.length < 2
+      || !['fri', 'windows'].every((fork) => current[0].forks.includes(fork))) {
+    throw new Error('Fri database did not retain one Windows/Fri two-parent conflict version.');
   }
-  const objectId = fri[0].object_id;
-  if (!windows.some((version) => version.object_id === objectId)) {
-    throw new Error('Fri concurrent versions do not describe the same product object.');
+  const byId = new Map(versions.map((version) => [version.version_id, version]));
+  const parents = current[0].parents.map((versionId) => byId.get(versionId));
+  if (parents.some((version) => !version)
+      || !['fri', 'windows'].every((fork) => parents.some((version) => version.forks.includes(fork)))) {
+    throw new Error('Fri database did not retain both Windows and Fri parent versions.');
   }
-  return { objectId, friVersionIds: fri.map((version) => version.version_id),
-    windowsVersionIds: windows.map((version) => version.version_id) };
+  return { contentHash: current[0].content_hash, objectId: current[0].object_id,
+    parents: current[0].parents, versionId: current[0].version_id };
 }
 
 export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
