@@ -12,6 +12,7 @@ it('creates and accepts one equal Device through fixed Windows product commands'
   expect(source).toContain('Windows anchor incorrectly ran member synchronization.');
   expect(source).toContain('anchorDoesNotPollMembers: true');
   expect(source).toContain("waitForWindowsSyncGroupProviderRelease({ action: ACTION");
+  expect(source).toContain("report(options.reportProgress, 'conflict-sync-resumed')");
   expect(source).not.toContain("'discover_sync_groups'");
   expect(source).toContain("'onSyncGroupJoinRequestsChanged' : 'onSyncGroupDiscoveryChanged'");
   expect(source).not.toMatch(/while \(Date\.now\(\) < deadline\)/u);

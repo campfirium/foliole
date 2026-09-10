@@ -28,14 +28,15 @@ it('keeps the Windows anchor alive through Fri publish, pull, and restart verifi
   const source = fs.readFileSync('scripts/ios/windows-fri-two-device-sync.mjs', 'utf8');
   const fork = source.indexOf("test: 'testForksTwoDeviceConflict'");
   const firstRelease = source.indexOf("provider.release('consumer_complete')", fork);
-  const publish = source.indexOf("test: 'testPublishesTwoDeviceConflictFork'", firstRelease);
+  const resumed = source.indexOf("provider.waitForProgress('conflict-sync-resumed')", firstRelease);
+  const publish = source.indexOf("test: 'testPublishesTwoDeviceConflictFork'", resumed);
   const restarted = source.indexOf("provider.waitForProgress('restarted')", publish);
   const pull = source.indexOf("test: 'testPullsTwoDeviceConflictAfterProviderConverges'", restarted);
   const verify = source.indexOf("test: 'testVerifiesTwoDeviceConflictAfterProviderConverges'", pull);
   const secondRelease = source.indexOf("provider.release('consumer_complete')", firstRelease + 1);
 
-  expect([fork, firstRelease, publish, restarted, pull, verify, secondRelease])
-    .toEqual([...new Set([fork, firstRelease, publish, restarted, pull, verify, secondRelease])]
+  expect([fork, firstRelease, resumed, publish, restarted, pull, verify, secondRelease])
+    .toEqual([...new Set([fork, firstRelease, resumed, publish, restarted, pull, verify, secondRelease])]
       .sort((left, right) => left - right));
   expect(source).toContain("FOLIOLE_T152_DESKTOP_FORK_LABEL: 'windows'");
 });

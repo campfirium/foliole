@@ -125,6 +125,7 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
       repoRoot: options.paths.repoRoot });
     await invokeWindowsSyncGroupCommand(session.page, 'resume_companion_sync');
+    report(options.reportProgress, 'conflict-sync-resumed');
     conflictProof = await loadConvergedDesktopSyncForks({ desktopLabel: 'windows',
       nodeId: conflictSeed.nodeId, session: { waitForState: (args) => (
         waitForDesktopProductState(session.page, args)

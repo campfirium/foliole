@@ -82,7 +82,7 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
   }
   if (action === 'two-device-sync-provider'
       && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged',
-        'conflict-fork-ready', 'restarted']
+        'conflict-fork-ready', 'conflict-sync-resumed', 'restarted']
         .includes(progress?.milestone)
       && progress.factId === 'two-device-sync') {
     if (progress.milestone === 'provider-ready'

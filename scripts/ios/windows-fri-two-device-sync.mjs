@@ -83,6 +83,7 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     await runFriBatch({ bundle, evidenceRoot, name: 'conflict-fork', repoRoot,
       test: 'testForksTwoDeviceConflict' });
     await provider.release('consumer_complete');
+    await provider.waitForProgress('conflict-sync-resumed');
     await runFriBatch({ bundle, evidenceRoot, name: 'conflict-publish', repoRoot,
       test: 'testPublishesTwoDeviceConflictFork' });
     await provider.waitForProgress('restarted');

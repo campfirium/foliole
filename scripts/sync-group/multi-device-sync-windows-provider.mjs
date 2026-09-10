@@ -70,7 +70,7 @@ const PROVIDER_ACTIONS = Object.freeze({
     missingPrefix: 'windows_two_device', progressFactPattern: 'two-device-sync',
     progressMilestone: 'provider-ready', progressMilestones: [
       'provider-ready', 'request-pending', 'accepted', 'automatic-converged',
-      'conflict-fork-ready', 'restarted'
+      'conflict-fork-ready', 'conflict-sync-resumed', 'restarted'
     ]
   }
 });
