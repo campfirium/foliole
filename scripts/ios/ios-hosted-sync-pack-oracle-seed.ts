@@ -3,7 +3,9 @@ import path from 'node:path';
 
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.js';
 import type { SqliteDatabase } from '../../electron/database/connection.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { readHostedPack } from './ios-hosted-sync-pack-evidence.js';
 import {
@@ -23,6 +25,7 @@ export async function seedHostedSourceFromOracle(args: {
   args.source.prepare('ATTACH DATABASE ? AS oracle_seed').run(oraclePath);
   try {
     ensureOracleExternalReferenceColumns(args.source);
+    const attachmentFacts = canonicalizeOracleAttachmentPayloads(args.source);
     await applySyncPackNodeSurfaceWithDbPort(
       createBetterSqliteDbPort(args.source, { name: 'ios-hosted-oracle-seed' }),
       {
@@ -33,7 +36,7 @@ export async function seedHostedSourceFromOracle(args: {
         sourcePeerId: pack.manifest.from_peer_id
       }
     );
-    restoreOracleFacts(args.source);
+    restoreOracleFacts(args.source, attachmentFacts);
     assertNoGroupState(args.source);
     return {
       fromStateSeq: pack.manifest.from_state_seq,
@@ -45,6 +48,54 @@ export async function seedHostedSourceFromOracle(args: {
   } finally {
     args.source.exec('DETACH DATABASE oracle_seed');
   }
+}
+
+function canonicalizeOracleAttachmentPayloads(database: SqliteDatabase) {
+  const rows = database.prepare(
+    "SELECT object_id, payload_json FROM oracle_seed.sync_objects WHERE object_type = 'attachment'"
+  ).all() as Array<{ object_id: string; payload_json: string }>;
+  const updateObject = database.prepare(
+    `UPDATE oracle_seed.sync_objects SET content_hash = ?, payload_json = ?
+     WHERE object_type = 'attachment' AND object_id = ?`
+  );
+  const updateState = database.prepare(
+    `UPDATE oracle_seed.sync_object_state SET content_hash = ?
+     WHERE object_type = 'attachment' AND object_id = ?`
+  );
+  const facts: OracleAttachmentFact[] = [];
+  for (const row of rows) {
+    const payload = JSON.parse(row.payload_json) as { blob?: Record<string, unknown> };
+    const blob = payload.blob ?? {};
+    const storageKey = buildCanonicalAttachmentStorageKey(
+      String(blob.content_hash ?? ''),
+      String(blob.mime_type ?? '')
+    );
+    if (!storageKey) throw new Error('ios_hosted_oracle_attachment_address_invalid');
+    facts.push({ attachmentId: row.object_id, blob: { ...blob, storage_key: storageKey } });
+    const canonicalPayload = {
+      ...payload,
+      blob: {
+        content_hash: blob.content_hash,
+        storage_key: storageKey,
+        size_bytes: blob.size_bytes,
+        mime_type: blob.mime_type,
+        source_host_name: blob.source_host_name,
+        created_at: blob.created_at
+      }
+    };
+    const contentHash = computeSyncContentHash(
+      'attachment',
+      canonicalPayload as Parameters<typeof computeSyncContentHash>[1]
+    );
+    updateObject.run(contentHash, JSON.stringify(canonicalPayload), row.object_id);
+    updateState.run(contentHash, row.object_id);
+  }
+  return facts;
+}
+
+interface OracleAttachmentFact {
+  attachmentId: string;
+  blob: Record<string, unknown>;
 }
 
 function ensureOracleExternalReferenceColumns(database: SqliteDatabase) {
@@ -68,32 +119,27 @@ function oracleHostName(database: SqliteDatabase, fallback: string) {
   return names[0] ?? fallback;
 }
 
-function restoreOracleFacts(database: SqliteDatabase) {
+function restoreOracleFacts(database: SqliteDatabase, attachmentFacts: OracleAttachmentFact[]) {
   const replace = database.transaction(() => {
     database.exec('DELETE FROM main.sync_object_state');
     copyCommonColumns(database, 'sync_object_state');
     database.exec('DELETE FROM main.content_blobs');
     copyCommonColumns(database, 'content_blobs');
-    restoreAttachmentBlobFacts(database);
+    restoreAttachmentBlobFacts(database, attachmentFacts);
   });
   replace();
 }
 
-function restoreAttachmentBlobFacts(database: SqliteDatabase) {
-  const rows = database.prepare(
-    "SELECT object_id, payload_json FROM oracle_seed.sync_objects WHERE object_type = 'attachment'"
-  ).all() as Array<{ object_id: string; payload_json: string }>;
+function restoreAttachmentBlobFacts(database: SqliteDatabase, facts: OracleAttachmentFact[]) {
   const update = database.prepare(
     `UPDATE main.attachment_blobs SET content_hash = ?, storage_key = ?, size_bytes = ?, mime_type = ?,
        availability = ?, source_host_name = ?, created_at = ?, cached_at = ?, last_verified_at = ?
      WHERE attachment_id = ?`
   );
-  for (const row of rows) {
-    const payload = JSON.parse(row.payload_json) as { blob?: Record<string, unknown> };
-    const blob = payload.blob ?? {};
+  for (const { attachmentId, blob } of facts) {
     update.run(blob.content_hash, blob.storage_key, blob.size_bytes, blob.mime_type,
       blob.availability, blob.source_host_name, blob.created_at, blob.cached_at,
-      blob.last_verified_at, row.object_id);
+      blob.last_verified_at, attachmentId);
   }
 }
 

@@ -92,14 +92,20 @@ function resolveRepairFailureReason(content: string, locators: TextAnchorLocator
     : 'ambiguous_text';
 }
 
-function toImageRegions(anchorId: string, content: string, locators: TextAnchorLocator[]) {
-  const regions = deriveMarkdownImageTextAnchorRegions({ anchorId, content, locators });
+function toImageRegions(
+  anchorId: string,
+  content: string,
+  locators: TextAnchorLocator[],
+  resolveAttachmentId: (storageKey: string) => string | null
+) {
+  const regions = deriveMarkdownImageTextAnchorRegions({ anchorId, content, locators, resolveAttachmentId });
   return regions ? JSON.stringify(regions) : null;
 }
 
 function remapRawAnchorLinkInContent(input: {
   content: string;
   imageRegions: string | null;
+  resolveAttachmentId: (storageKey: string) => string | null;
   value: string;
 }): AnchorRepairResult | SyncNodeAnchorUnmappedReason | null {
   const parsed = parseStoredAnchorLink(input.value);
@@ -127,17 +133,40 @@ function remapRawAnchorLinkInContent(input: {
   return {
     imageRegions: raw.kind === 'image-excerpt'
       ? input.imageRegions
-      : toImageRegions(raw.id, input.content, repairedLocators),
+      : toImageRegions(raw.id, input.content, repairedLocators, input.resolveAttachmentId),
     value: JSON.stringify(raw)
   };
 }
 
-function remapChildAnchorInContent(row: ChildAnchorRow, content: string) {
+function remapChildAnchorInContent(
+  row: ChildAnchorRow,
+  content: string,
+  resolveAttachmentId: (storageKey: string) => string | null
+) {
   return remapRawAnchorLinkInContent({
     content,
     imageRegions: row.image_regions,
+    resolveAttachmentId,
     value: row.anchor_link ?? ''
   });
+}
+
+async function loadAttachmentIdsByStorageKey(port: DbPort) {
+  const rows = await port.query<{ attachment_id: string; storage_key: string }>(
+    'SELECT attachment_id, storage_key FROM attachment_blobs WHERE storage_key IS NOT NULL'
+  );
+  return new Map(rows.map((row) => [row.storage_key, row.attachment_id]));
+}
+
+function loadDirectChildAnchors(port: DbPort, parentNodeId: string) {
+  return port.query<ChildAnchorRow>(
+    `SELECT id, anchor_link, image_regions
+     FROM nodes
+     WHERE parent_id = ?
+       AND deleted_at IS NULL
+       AND anchor_link IS NOT NULL`,
+    [parentNodeId]
+  );
 }
 
 export async function repairDirectChildAnchorsForAppliedParent(input: {
@@ -150,14 +179,8 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
 }) {
   const repaired: SyncNodeAnchorRepairRecord[] = [];
   const unmapped: SyncNodeAnchorUnmappedRecord[] = [];
-  const rows = await input.port.query<ChildAnchorRow>(
-    `SELECT id, anchor_link, image_regions
-     FROM nodes
-     WHERE parent_id = ?
-       AND deleted_at IS NULL
-       AND anchor_link IS NOT NULL`,
-    [input.parentNodeId]
-  );
+  const attachmentIdsByStorageKey = await loadAttachmentIdsByStorageKey(input.port);
+  const rows = await loadDirectChildAnchors(input.port, input.parentNodeId);
 
   for (const row of rows) {
     if (input.excludedNodeIds?.has(row.id)) {
@@ -167,7 +190,11 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
       continue;
     }
     const anchorId = parseStoredAnchorLink(row.anchor_link)?.id ?? null;
-    const result = remapChildAnchorInContent(row, input.content);
+    const result = remapChildAnchorInContent(
+      row,
+      input.content,
+      (storageKey) => attachmentIdsByStorageKey.get(storageKey) ?? null
+    );
     if (!result) {
       await writeAnchorStatus(input.port, row.id, 'resolved', input.sourceVersionId, input.updatedAt);
       continue;

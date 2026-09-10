@@ -63,6 +63,17 @@ function readNode(nodeId: string) {
     .get(nodeId) as { anchor_link: string | null; content: string; image_regions: string | null };
 }
 
+function seedAttachmentResource(attachmentId: string, contentHash: string, mimeType: string, storageKey: string) {
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.prepare(
+    'INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(attachmentId, storageKey, mimeType, 1, '2026-05-13T00:00:00.000Z');
+  sqlite.prepare(`INSERT INTO attachment_blobs
+    (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(attachmentId, contentHash, storageKey, 1, mimeType, 'local', '2026-05-13T00:00:00.000Z');
+}
+
 it('updates parent content and remaps text child locators through image rewrites', () => {
   const previousContent = '![Cover](cover.png)\n\nTarget sentence.\n\n![Chart](chart.png)';
   seedNode({ content: previousContent, nodeId: 'node-parent', parentNodeId: null });
@@ -124,6 +135,8 @@ it('expands remapped image locators to the full localized image markdown', () =>
   });
 
   const localImage = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
+  const contentHash = '7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec';
+  seedAttachmentResource(contentHash, contentHash, 'image/jpeg', `${contentHash}.jpg`);
   const nextContent = `Lead\n\n${localImage}`;
   applyParentContentChange({
     driver: openDatabaseConnection().driver,

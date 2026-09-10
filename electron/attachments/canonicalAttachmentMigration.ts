@@ -41,7 +41,7 @@ function writeJournal(journalPath: string, journal: CanonicalAttachmentJournal) 
   fs.mkdirSync(path.dirname(journalPath), { recursive: true });
   const temporary = `${journalPath}.tmp`;
   fs.writeFileSync(temporary, JSON.stringify(journal, null, 2));
-  const descriptor = fs.openSync(temporary, 'r');
+  const descriptor = fs.openSync(temporary, 'r+');
   try { fs.fsyncSync(descriptor); } finally { fs.closeSync(descriptor); }
   fs.renameSync(temporary, journalPath);
 }
@@ -60,7 +60,7 @@ function prepareTargets(journalPath: string, journal: CanonicalAttachmentJournal
     assertFileIdentity(sourcePath, item.sourceIdentity);
     const temporary = `${canonicalPath}.t180-${process.pid}`;
     fs.copyFileSync(sourcePath, temporary, fs.constants.COPYFILE_EXCL);
-    const descriptor = fs.openSync(temporary, 'r');
+    const descriptor = fs.openSync(temporary, 'r+');
     try { fs.fsyncSync(descriptor); } finally { fs.closeSync(descriptor); }
     fs.renameSync(temporary, canonicalPath);
     journal.createdTargets.push(canonicalPath);

@@ -34,14 +34,12 @@ function buildAssetFileUrl(assetUrl: string, assetsDir: string | null, parseAsse
     return assetUrl;
   }
 
-  const attachmentId = parseAssetUrl(assetUrl);
-  if (!attachmentId) {
+  const storageKey = parseAssetUrl(assetUrl);
+  if (!storageKey) {
     return assetUrl;
   }
 
-  const dotIndex = assetUrl.lastIndexOf('.');
-  const extension = dotIndex > assetUrl.indexOf('://') ? assetUrl.slice(dotIndex) : '';
-  return toFileUrl(`${assetsDir}/${attachmentId}${extension}`);
+  return toFileUrl(`${assetsDir}/${storageKey}`);
 }
 
 function replaceAssetUrls(

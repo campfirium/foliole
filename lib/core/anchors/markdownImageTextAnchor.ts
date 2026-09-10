@@ -62,6 +62,7 @@ export function deriveMarkdownImageTextAnchorRegions(input: {
   anchorId: string;
   content: string;
   locators: Array<Pick<TextAnchorLocator, 'from' | 'to'>>;
+  resolveAttachmentId?: (storageKey: string) => string | null;
 }) {
   const groups: MarkdownImageAnchorRegionGroup[] = [];
   let imageIndex = 0;
@@ -72,7 +73,8 @@ export function deriveMarkdownImageTextAnchorRegions(input: {
     collectMarkdownImageReferences(input.content.slice(from, to)).forEach((image) => {
       const target = parseMarkdownImageTarget(image.rawTarget);
       const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
-      const attachmentId = storageKey ? resolveAttachmentIdByStorageKey(storageKey) : null;
+      const resolveAttachmentId = input.resolveAttachmentId ?? resolveAttachmentIdByStorageKey;
+      const attachmentId = storageKey ? resolveAttachmentId(storageKey) : null;
       if (!attachmentId) {
         return;
       }

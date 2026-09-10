@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createClipboardExportPayload } from './anchorClipboardExport';
 
 function parseAssetUrl(assetUrl: string) {
-  const match = /^asset:\/\/([^./]+)(?:\..+)?$/.exec(assetUrl);
+  const match = /^asset:\/\/(.+)$/.exec(assetUrl);
   return match?.[1] ?? null;
 }
 

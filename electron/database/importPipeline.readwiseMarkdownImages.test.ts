@@ -116,6 +116,16 @@ async function loadPreparedReadwiseFixture(fullDir: string, highlightDir: string
   });
 }
 
+function seedAvatarAttachment(contentHash: string, storageKey: string) {
+  openDatabaseConnection().sqlite.prepare(
+    'INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).run('attachment-avatar', 'avatar.png', 'image/png', 1, '2026-05-13T00:00:00.000Z');
+  openDatabaseConnection().sqlite.prepare(`INSERT INTO attachment_blobs
+    (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run('attachment-avatar', contentHash, storageKey, 1, 'image/png', 'local', '2026-05-13T00:00:00.000Z');
+}
+
 it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
   const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
   const { fullDir, highlightDir } = await createReadwiseImageFixture(readwiseRoot);
@@ -135,9 +145,12 @@ it('matches readwise highlights before remote image localization and remaps afte
   expect(locator?.originalText).toContain('![Avatar](https://cdn.example.com/avatar.png)');
   expect(locator ? nodeRow.content.slice(locator.from, locator.to) : null).toBe(locator?.originalText);
 
+  const contentHash = 'a'.repeat(64);
+  const storageKey = `${contentHash}.png`;
+  seedAvatarAttachment(contentHash, storageKey);
   const rewrittenContent = nodeRow.content.replace(
     '![Avatar](https://cdn.example.com/avatar.png)',
-    '![Avatar](asset://attachment-avatar.png)'
+    `![Avatar](asset://${storageKey})`
   );
   applyParentContentChange({
     driver: openDatabaseConnection().driver,
@@ -157,7 +170,7 @@ it('matches readwise highlights before remote image localization and remaps afte
   expect(remappedLocator ? rewrittenContent.slice(remappedLocator.from, remappedLocator.to) : null).toBe(
     remappedLocator?.originalText
   );
-  expect(remappedLocator?.originalText).toContain('![Avatar](asset://attachment-avatar.png)');
+  expect(remappedLocator?.originalText).toContain(`![Avatar](asset://${storageKey})`);
   expect(imageRegions).toEqual([
     {
       attachmentId: 'attachment-avatar',

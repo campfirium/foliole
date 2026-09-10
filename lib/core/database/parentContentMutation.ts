@@ -1,3 +1,4 @@
+import { resolveAttachmentIdFromDriver } from './attachmentResourceLookup.js';
 import type { DatabaseDriver } from './driver.js';
 import { writeNodeBody } from './nodeBodyMutation.js';
 import { requireResolvedNodeBody } from './nodeBodyResolution.js';
@@ -54,12 +55,32 @@ function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
   );
 }
 
-function remapRawAnchorLink(value: string, imageRegions: string | null, previousContent: string, nextContent: string): RawAnchorRemapResult {
+function remapRawAnchorLink(
+  driver: DatabaseDriver,
+  value: string,
+  imageRegions: string | null,
+  previousContent: string,
+  nextContent: string
+): RawAnchorRemapResult {
   return remapRawStoredAnchorLink({
     imageRegions,
     nextContent,
     previousContent,
+    resolveAttachmentId: (storageKey) => resolveAttachmentIdFromDriver(driver, storageKey),
     value
+  });
+}
+
+function writeUpdatedParent(
+  input: Parameters<typeof applyParentContentChange>[0],
+  title: string
+) {
+  writeNodeBody({
+    content: input.nextContent,
+    driver: input.driver,
+    nodeId: input.nodeId,
+    title,
+    updatedAt: input.updatedAt
   });
 }
 
@@ -85,13 +106,7 @@ export function applyParentContentChange(input: {
     };
   }
 
-  writeNodeBody({
-    content: input.nextContent,
-    driver: input.driver,
-    nodeId: input.nodeId,
-    title,
-    updatedAt: input.updatedAt
-  });
+  writeUpdatedParent(input, title);
 
   const affectedChildIds: string[] = [];
   const skippedAnchors: ParentContentChangeResult['skippedAnchors'] = [];
@@ -99,7 +114,13 @@ export function applyParentContentChange(input: {
     if (!row.anchor_link) {
       return;
     }
-    const remapped = remapRawAnchorLink(row.anchor_link, row.image_regions, previousContent, input.nextContent);
+    const remapped = remapRawAnchorLink(
+      input.driver,
+      row.anchor_link,
+      row.image_regions,
+      previousContent,
+      input.nextContent
+    );
     if (!('value' in remapped)) {
       skippedAnchors.push({ nodeId: row.id, reason: remapped.reason });
       return;
