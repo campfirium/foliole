@@ -76,16 +76,27 @@ public class FolioleCompanionNsdDiscoveryTest {
 
     private static Path sharedFixturePath() {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
-        if (Files.exists(root.resolve("lib"))) return root.resolve(
-            "lib/platform/fixtures/sync-anchor-topology-v5.json"
+        return firstExistingPath(
+            root.resolve("lib/platform/fixtures/sync-anchor-topology-v5.json"),
+            root.resolve("../lib/platform/fixtures/sync-anchor-topology-v5.json").normalize(),
+            root.resolve("../../lib/platform/fixtures/sync-anchor-topology-v5.json").normalize()
         );
-        return root.resolve("../lib/platform/fixtures/sync-anchor-topology-v5.json").normalize();
     }
 
     private static Path bridgeContractPath() {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
-        if (Files.exists(root.resolve("android"))) root = root.resolve("android");
-        return root.resolve("app/src/main/assets/companion-bridge-contract-definitions.json");
+        return firstExistingPath(
+            root.resolve("android/app/src/main/assets/companion-bridge-contract-definitions.json"),
+            root.resolve("app/src/main/assets/companion-bridge-contract-definitions.json"),
+            root.resolve("src/main/assets/companion-bridge-contract-definitions.json")
+        );
+    }
+
+    private static Path firstExistingPath(Path... candidates) {
+        for (Path candidate : candidates) {
+            if (Files.exists(candidate)) return candidate;
+        }
+        throw new IllegalStateException("fixture_path_missing: " + Arrays.toString(candidates));
     }
 
     private static String readUtf8(Path path) throws Exception {
