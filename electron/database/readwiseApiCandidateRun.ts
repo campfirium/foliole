@@ -1,7 +1,6 @@
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import {
   READWISE_API_PIPELINE_VERSION,
-  READER_PARENT_CATEGORIES,
   type ReaderParentCategory,
   type ReadwiseApiCandidateManifest,
   type ReadwiseApiCandidateRun
@@ -29,7 +28,7 @@ export function loadOrCreateReadwiseApiCandidateRun(
     || (row && !isCandidatePhase(row.phase))) {
     resetCandidateRun(connectionRef, signature, null, now);
   } else if (!row && current.scopeSignature !== signature) {
-    resetCandidateRun(connectionRef, signature, loadReadwiseApiCompletedThrough(connectionRef), now);
+    resetCandidateRun(connectionRef, signature, null, now);
   } else if (!row) {
     startCandidateRun(connectionRef, loadReadwiseApiCompletedThrough(connectionRef), now);
   }
@@ -68,9 +67,9 @@ export function saveReadwiseApiCandidateCursor(input: {
 export function advanceReadwiseApiCandidateRun(
   connectionRef: string,
   current: ReadwiseApiCandidateRun['phase'],
-  includeWithoutHighlights: boolean
+  enabledCategories: readonly ReaderParentCategory[]
 ) {
-  const phase = nextPhase(current, includeWithoutHighlights);
+  const phase = nextPhase(current, enabledCategories);
   saveReadwiseApiCandidateCursor({ connectionRef, cursor: null, phase });
   return requireRun(connectionRef);
 }
@@ -185,12 +184,14 @@ function toRun(row: Record<string, unknown>): ReadwiseApiCandidateRun {
 
 function nextPhase(
   current: ReadwiseApiCandidateRun['phase'],
-  includeWithoutHighlights: boolean
+  enabledCategories: readonly ReaderParentCategory[]
 ): ReadwiseApiCandidateRun['phase'] {
-  if (current === 'export') return includeWithoutHighlights ? `reader:${READER_PARENT_CATEGORIES[0]}` : 'ready';
+  if (current === 'export') {
+    return enabledCategories[0] ? `reader:${enabledCategories[0]}` : 'ready';
+  }
   if (!current.startsWith('reader:')) return 'ready';
   const category = current.slice('reader:'.length) as ReaderParentCategory;
-  const next = READER_PARENT_CATEGORIES[READER_PARENT_CATEGORIES.indexOf(category) + 1];
+  const next = enabledCategories[enabledCategories.indexOf(category) + 1];
   return next ? `reader:${next}` : 'ready';
 }
 

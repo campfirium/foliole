@@ -90,7 +90,12 @@ function settings(destination: 'external' | 'off') {
     readwiseAutoImportPolicy: {
       ...value.readwiseAutoImportPolicy,
       articleWithoutHighlights: destination,
-      bookWithoutHighlights: destination
+      emailWithoutHighlights: destination,
+      epubWithoutHighlights: destination,
+      pdfWithoutHighlights: destination,
+      rssWithoutHighlights: destination,
+      tweetWithoutHighlights: destination,
+      videoWithoutHighlights: destination
     },
     readwiseSourceMode: 'api' as const
   };

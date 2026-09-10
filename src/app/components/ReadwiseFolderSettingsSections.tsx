@@ -32,11 +32,16 @@ type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
 export function ReadwiseBehaviorSection(props: {
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
   policy: ReadwiseAutoImportPolicy;
+  sourceMode: 'api' | 'folder';
 }) {
   const t = useTranslation();
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
-      <ReadwiseReaderImportBehavior onChange={props.onChange} policy={props.policy} />
+      <ReadwiseReaderImportBehavior
+        onChange={props.onChange}
+        policy={props.policy}
+        sourceMode={props.sourceMode}
+      />
     </SettingsSection>
   );
 }
@@ -149,7 +154,11 @@ export function ReadwiseFolderSettingsSections(props: {
           syncStatus={props.syncStatus}
         />
       </SettingsSection>
-      <ReadwiseBehaviorSection onChange={props.onChangePolicy} policy={props.policy} />
+      <ReadwiseBehaviorSection
+        onChange={props.onChangePolicy}
+        policy={props.policy}
+        sourceMode="folder"
+      />
       <ReadwiseManualImportSection />
       <ReadwiseImportSettingsSection draft={props.draft} />
     </div>

@@ -1,15 +1,35 @@
+import type { ReactNode } from 'react';
+
 import type {
+  ReadwiseAutoImportCategory,
   ReadwiseAutoImportPolicy,
+  ReadwiseAutoImportPolicyField,
   ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { SettingsChoiceMatrix, SettingsSegmentedControl } from '../../shared/ui';
 
-type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
+type PolicyField = ReadwiseAutoImportPolicyField;
+
+const API_ROWS = [
+  ['article', 'desktop.readwise.behavior.article.title'],
+  ['email', 'desktop.readwise.behavior.email.title'],
+  ['rss', 'desktop.readwise.behavior.rss.title'],
+  ['pdf', 'desktop.readwise.behavior.pdf.title'],
+  ['epub', 'desktop.readwise.behavior.epub.title'],
+  ['video', 'desktop.readwise.behavior.video.title'],
+  ['tweet', 'desktop.readwise.behavior.tweet.title']
+] as const;
+
+const FOLDER_ROWS = [
+  ['article', 'desktop.readwise.behavior.article.title', 'article'],
+  ['epub', 'desktop.readwise.behavior.book.title', 'book']
+] as const;
 
 export function ReadwiseReaderImportBehavior(props: {
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
   policy: ReadwiseAutoImportPolicy;
+  sourceMode: 'api' | 'folder';
 }) {
   const t = useTranslation();
   const options: Array<{ label: string; value: ReadwiseImportDestination }> = [
@@ -27,6 +47,24 @@ export function ReadwiseReaderImportBehavior(props: {
       />
     );
   }
+  function row(
+    category: ReadwiseAutoImportCategory,
+    labelKey: typeof API_ROWS[number][1] | typeof FOLDER_ROWS[number][1],
+    ariaCategory: ReadwiseAutoImportCategory | 'book' = category
+  ) {
+    const withHighlights = `${category}WithHighlights` as PolicyField;
+    const withoutHighlights = `${category}WithoutHighlights` as PolicyField;
+    return {
+      cells: [
+        control(withHighlights, t(`desktop.readwise.behavior.${ariaCategory}.withHighlights.aria`)),
+        control(withoutHighlights, t(`desktop.readwise.behavior.${ariaCategory}.withoutHighlights.aria`))
+      ] as [ReactNode, ReactNode],
+      label: t(labelKey)
+    };
+  }
+  const rows = props.sourceMode === 'api'
+    ? API_ROWS.map(([category, label]) => row(category, label))
+    : FOLDER_ROWS.map(([category, label, ariaCategory]) => row(category, label, ariaCategory));
   return (
     <SettingsChoiceMatrix
       ariaLabel={t('desktop.readwise.section.behavior.aria')}
@@ -34,22 +72,7 @@ export function ReadwiseReaderImportBehavior(props: {
         t('desktop.readwise.behavior.withHighlights.title'),
         t('desktop.readwise.behavior.withoutHighlights.title')
       ]}
-      rows={[
-        {
-          cells: [
-            control('articleWithHighlights', t('desktop.readwise.behavior.article.withHighlights.aria')),
-            control('articleWithoutHighlights', t('desktop.readwise.behavior.article.withoutHighlights.aria'))
-          ],
-          label: t('desktop.readwise.behavior.article.title')
-        },
-        {
-          cells: [
-            control('bookWithHighlights', t('desktop.readwise.behavior.book.withHighlights.aria')),
-            control('bookWithoutHighlights', t('desktop.readwise.behavior.book.withoutHighlights.aria'))
-          ],
-          label: t('desktop.readwise.behavior.book.title')
-        }
-      ]}
+      rows={rows}
     />
   );
 }

@@ -68,7 +68,7 @@ function prepareV83() {
   return { connection, global, host };
 }
 
-it('atomically migrates the legacy article grid and defaults both book cells to Inbox', () => {
+it('atomically migrates the legacy article grid to seven categories', () => {
   const { connection } = prepareV83();
   initializeDatabaseSchema(connection.sqlite);
 
@@ -81,19 +81,23 @@ it('atomically migrates the legacy article grid and defaults both book cells to 
   expect(global.readwiseAutoImportPolicy).toEqual({
     articleWithHighlights: 'external',
     articleWithoutHighlights: 'inbox',
-    bookWithHighlights: 'inbox',
-    bookWithoutHighlights: 'inbox',
-    version: 1
+    emailWithHighlights: 'inbox', emailWithoutHighlights: 'off',
+    epubWithHighlights: 'inbox', epubWithoutHighlights: 'inbox',
+    pdfWithHighlights: 'inbox', pdfWithoutHighlights: 'inbox',
+    rssWithHighlights: 'inbox', rssWithoutHighlights: 'off',
+    tweetWithHighlights: 'inbox', tweetWithoutHighlights: 'off',
+    version: 2,
+    videoWithHighlights: 'inbox', videoWithoutHighlights: 'off'
   });
   expect(global).not.toHaveProperty('readwiseReaderConfig');
-  expect(host).toMatchObject({ autoImportPolicyVersion: 1, version: 3 });
+  expect(host).toMatchObject({ autoImportPolicyVersion: 2, version: 4 });
   expect(host.readwiseReaderConfig).not.toHaveProperty('withHighlightsDestination');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(84);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(85);
   expect(connection.driver.queryAll<{ sync_dirty: number }>(
     "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'setting'"
   ).every((row) => row.sync_dirty === 1)).toBe(true);
   expect(() => connection.driver.execute(
-    "UPDATE settings SET value = '{\"version\":2}' WHERE key = 'readwise_import_settings'"
+    "UPDATE settings SET value = '{\"version\":3}' WHERE key = 'readwise_import_settings'"
   )).toThrow('readwise_host_settings_version_unsupported');
 });
 

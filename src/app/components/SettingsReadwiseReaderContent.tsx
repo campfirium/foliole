@@ -81,6 +81,7 @@ function ReadwiseSelectedModeContent(props: {
         <ReadwiseBehaviorSection
           onChange={props.settings.onChangePolicy ?? (() => undefined)}
           policy={props.settings.policy ?? createDefaultReadwiseAutoImportPolicy()}
+          sourceMode="api"
         />
         <ReadwiseManualImportSection key={`${props.settings.readwiseSourceMode}:${props.searchRevision}`} />
       </>

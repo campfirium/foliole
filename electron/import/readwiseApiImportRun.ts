@@ -20,6 +20,7 @@ import {
   updateReadwiseApiTrackedRunProgress,
   updateReadwiseApiTrackedRunStage
 } from './readwiseApiScheduleState.js';
+import { assertReadwiseApiScopeAllowed } from './readwiseApiScopeGate.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import { createPostCutoverReadwiseDocumentPolicy } from './readwiseSourceCutoverJournal.js';
@@ -35,6 +36,7 @@ export async function previewReadwiseApiImport(
   settingsInput?: unknown,
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
+  assertReadwiseApiScopeAllowed('api');
   const settings = settingsInput ? normalizeImportManagerSettings(settingsInput) : loadImportManagerSettings();
   const connectionRef = requireConnectionRef();
   const candidates = await ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies);
@@ -89,6 +91,7 @@ export function cancelReadwiseApiImport() {
 async function runNow(
   input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal
 ): Promise<NativeReadwiseImportRunResult> {
+  assertReadwiseApiScopeAllowed('api');
   const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
   const connectionRef = requireConnectionRef();
   const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';

@@ -14,6 +14,7 @@ import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigra
 import { migrateReadwiseExternalReferences } from './readwiseExternalReferenceMigration.js';
 import { migrateReadwiseHostSettingsVersion } from './readwiseHostSettingsVersionMigration.js';
 import { migrateReadwiseRemoteIdentity } from './readwiseRemoteIdentityMigration.js';
+import { migrateReadwiseSevenCategoryPolicy } from './readwiseSevenCategoryPolicyMigration.js';
 
 export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 70, migrate: migrateHostPermanentState },
@@ -30,5 +31,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 81, migrate: migrateReadwiseApiImport },
   { version: 82, migrate: migrateReadwiseExternalReferences },
   { version: 83, migrate: migrateReadwiseApiReconcile },
-  { version: 84, migrate: migrateReadwiseAutoImportPolicy }
+  { version: 84, migrate: migrateReadwiseAutoImportPolicy },
+  { version: 85, migrate: migrateReadwiseSevenCategoryPolicy }
 ];

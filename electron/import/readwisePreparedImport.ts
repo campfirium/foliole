@@ -73,7 +73,7 @@ export async function resolveReadwiseSourceImportDecision(
   return {
     destination: resolveReadwiseAutoImportDestination(
       options.policy,
-      options.kind === 'books' ? 'book' : 'article',
+      options.kind === 'books' ? 'epub' : 'article',
       hasHighlights
     ),
     detectedHighlightCount,

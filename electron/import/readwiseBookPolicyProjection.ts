@@ -1,7 +1,11 @@
 import path from 'node:path';
 
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
-import { resolveReadwiseAutoImportDestination, type ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
+import {
+  createDefaultReadwiseAutoImportPolicy,
+  resolveReadwiseAutoImportDestination,
+  type ReadwiseAutoImportPolicy
+} from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { resolveImportedNodeIdForExternalDocument } from '../database/externalDocumentImportVisibility.js';
 import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -131,7 +135,7 @@ async function projectBook(input: {
   if (book.generatedNodeId && readKeepImportNodeState(book.generatedNodeId)?.deleted_at === null) {
     hideReadwiseExternalDocument('books', sourcePath, updatedAt);
   } else {
-    const destination = resolveReadwiseAutoImportDestination(policy, 'book', book.highlightCount > 0);
+    const destination = resolveReadwiseAutoImportDestination(policy, 'epub', book.highlightCount > 0);
     if (destination !== 'inbox') {
       if (destination === 'external') {
         const sourceSignature = resolveSignature(book, inventory, sourcePath).primary;
@@ -184,8 +188,7 @@ export async function adoptReadwiseInventoryBook(
   const selected = reimport ? { ...book, generatedNodeId: null } : book;
   const projected = await projectBook({
     book: selected, inventory, source, reimport, updatedAt: new Date().toISOString(),
-    policy: { version: 1, articleWithHighlights: 'inbox', articleWithoutHighlights: 'inbox',
-      bookWithHighlights: 'inbox', bookWithoutHighlights: 'inbox' }
+    policy: createDefaultReadwiseAutoImportPolicy()
   });
   savePersistedReadwiseBooksInventory({
     ...inventory, books: inventory.books.map((item) => item.bookKey === bookKey ? projected.book : item),

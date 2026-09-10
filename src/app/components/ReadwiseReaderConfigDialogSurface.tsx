@@ -79,6 +79,7 @@ function ReadwiseConfigDialogBody(props: {
           <ReadwiseReaderImportBehavior
             onChange={props.onChangePolicy}
             policy={props.policy}
+            sourceMode="folder"
           />
         </SettingsSection>
         <SettingsSection ariaLabel={t('desktop.readwise.section.settings.aria')} title={t('desktop.readwise.section.settings.title')}>

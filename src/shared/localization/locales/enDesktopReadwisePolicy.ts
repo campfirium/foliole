@@ -1,0 +1,20 @@
+export const EN_DESKTOP_READWISE_POLICY_TRANSLATIONS = {
+  'desktop.readwise.behavior.email.title': 'Emails',
+  'desktop.readwise.behavior.email.withHighlights.aria': 'Emails with highlights destination',
+  'desktop.readwise.behavior.email.withoutHighlights.aria': 'Emails without highlights destination',
+  'desktop.readwise.behavior.rss.title': 'RSS',
+  'desktop.readwise.behavior.rss.withHighlights.aria': 'RSS with highlights destination',
+  'desktop.readwise.behavior.rss.withoutHighlights.aria': 'RSS without highlights destination',
+  'desktop.readwise.behavior.pdf.title': 'PDF',
+  'desktop.readwise.behavior.pdf.withHighlights.aria': 'PDFs with highlights destination',
+  'desktop.readwise.behavior.pdf.withoutHighlights.aria': 'PDFs without highlights destination',
+  'desktop.readwise.behavior.epub.title': 'EPUB',
+  'desktop.readwise.behavior.epub.withHighlights.aria': 'EPUBs with highlights destination',
+  'desktop.readwise.behavior.epub.withoutHighlights.aria': 'EPUBs without highlights destination',
+  'desktop.readwise.behavior.video.title': 'Videos',
+  'desktop.readwise.behavior.video.withHighlights.aria': 'Videos with highlights destination',
+  'desktop.readwise.behavior.video.withoutHighlights.aria': 'Videos without highlights destination',
+  'desktop.readwise.behavior.tweet.title': 'Tweets',
+  'desktop.readwise.behavior.tweet.withHighlights.aria': 'Tweets with highlights destination',
+  'desktop.readwise.behavior.tweet.withoutHighlights.aria': 'Tweets without highlights destination'
+} as const;

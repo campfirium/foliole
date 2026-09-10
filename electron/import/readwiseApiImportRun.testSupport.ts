@@ -20,7 +20,12 @@ export function apiSettings(withoutHighlightsDestination: 'inbox' | 'off' = 'inb
     readwiseAutoImportPolicy: {
       ...settings.readwiseAutoImportPolicy,
       articleWithoutHighlights: withoutHighlightsDestination,
-      bookWithoutHighlights: withoutHighlightsDestination
+      emailWithoutHighlights: withoutHighlightsDestination,
+      epubWithoutHighlights: withoutHighlightsDestination,
+      pdfWithoutHighlights: withoutHighlightsDestination,
+      rssWithoutHighlights: withoutHighlightsDestination,
+      tweetWithoutHighlights: withoutHighlightsDestination,
+      videoWithoutHighlights: withoutHighlightsDestination
     },
     readwiseSourceMode: 'api' as const
   };

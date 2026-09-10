@@ -6,8 +6,8 @@ import {
 } from './readwiseReaderSettings.js';
 
 export const READWISE_HOST_SETTINGS_KEY = 'readwise_import_settings';
-export const READWISE_HOST_SETTINGS_VERSION = 3;
-export const READWISE_HOST_AUTO_IMPORT_POLICY_VERSION = 1;
+export const READWISE_HOST_SETTINGS_VERSION = 4;
+export const READWISE_HOST_AUTO_IMPORT_POLICY_VERSION = 2;
 
 export interface ReadwiseHostApiConnection {
   secretRef: string | null;

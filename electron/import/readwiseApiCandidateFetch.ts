@@ -1,5 +1,8 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
-import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
+import {
+  enabledReadwiseWithoutHighlightCategories,
+  resolveReadwiseAutoImportDestination
+} from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import {
   advanceReadwiseApiCandidateRun,
@@ -15,21 +18,28 @@ import {
 } from '../database/readwiseApiCandidateStage.js';
 import { hideReadwiseApiExternalDocumentsExcept } from '../database/readwiseApiExternalDocuments.js';
 
-import type { ReadwiseApiCandidate, ReaderParentCategory } from './readwiseApiCandidateTypes.js';
+import {
+  READER_PARENT_CATEGORIES,
+  type ReadwiseApiCandidate,
+  type ReaderParentCategory
+} from './readwiseApiCandidateTypes.js';
 import {
   createReadwiseApiRequest,
   READWISE_EXPORT_URL,
   READWISE_READER_LIST_URL,
   type ReadwiseApiFetchDependencies
 } from './readwiseApiImportFetch.js';
+import { assertReadwiseApiScopeAllowed, type ReadwiseApiScopePurpose } from './readwiseApiScopeGate.js';
 
 const MISSING_PARENT_ATTEMPTS = 3;
 
 export async function ensureReadwiseApiCandidateIndex(
   settings: ImportManagerSettings,
   connectionRef: string,
-  dependencies: ReadwiseApiFetchDependencies = {}
+  dependencies: ReadwiseApiFetchDependencies = {},
+  purpose: ReadwiseApiScopePurpose = 'api'
 ) {
+  assertReadwiseApiScopeAllowed(purpose);
   let run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
   const request = createReadwiseApiRequest(dependencies);
   try {
@@ -43,7 +53,7 @@ export async function ensureReadwiseApiCandidateIndex(
         for (const book of books) {
           if (book.source !== 'reader' || book.isDeleted || !book.externalId) continue;
           const parent = await fetchExact(book.externalId, false, request);
-          if (!parent || parent.category === 'highlight' || parent.category === 'note') continue;
+          if (!parent || !isReaderParentCategory(parent.category)) continue;
           saveReadwiseApiCandidates(connectionRef, exportCandidate(book, parent, settings));
         }
       } else {
@@ -61,14 +71,14 @@ export async function ensureReadwiseApiCandidateIndex(
         run = advanceReadwiseApiCandidateRun(
           connectionRef,
           run.phase,
-          hasEnabledWithoutHighlights(settings)
+          enabledReadwiseWithoutHighlightCategories(settings.readwiseAutoImportPolicy)
         );
       }
     }
   } catch (error) {
     if (!isExpiredCursorFailure(error, run.cursor)) throw error;
     restartReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
-    return ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies);
+    return ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies, purpose);
   }
   hideReadwiseApiExternalDocumentsExcept(
     connectionRef,
@@ -95,7 +105,8 @@ export function createReadwiseApiCandidateFactFetcher(
     for (let attempt = 0; attempt < MISSING_PARENT_ATTEMPTS && !parent; attempt += 1) {
       parent = await fetchExact(candidate.documentId, true, request);
     }
-    if (!parent || parent.category === 'highlight' || parent.category === 'note') {
+    if (!parent || !isReaderParentCategory(parent.category)
+      || parent.category !== candidate.readerCategory) {
       throw new Error('readwise_api_candidate_parent_missing');
     }
     const highlights = [];
@@ -120,7 +131,7 @@ function exportCandidate(
   if (book.source !== 'reader' || book.isDeleted || !book.externalId || highlightIds.length === 0) return [];
   const destination = resolveReadwiseAutoImportDestination(
     settings.readwiseAutoImportPolicy,
-    parent.category === 'epub' ? 'book' : 'article',
+    parent.category as ReaderParentCategory,
     true
   );
   if (destination === 'off') return [];
@@ -142,7 +153,7 @@ function readerCandidate(
 ): ReadwiseApiCandidate[] {
   const destination = resolveReadwiseAutoImportDestination(
     settings.readwiseAutoImportPolicy,
-    document.category === 'epub' ? 'book' : 'article',
+    document.category as ReaderParentCategory,
     false
   );
   if (destination === 'off') return [];
@@ -156,11 +167,6 @@ function readerCandidate(
     status: 'pending',
     title: document.title
   }];
-}
-
-function hasEnabledWithoutHighlights(settings: ImportManagerSettings) {
-  const policy = settings.readwiseAutoImportPolicy;
-  return policy.articleWithoutHighlights !== 'off' || policy.bookWithoutHighlights !== 'off';
 }
 
 async function fetchExact(
@@ -198,4 +204,8 @@ function nextCursor(payload: Record<string, unknown>) {
 
 function isExpiredCursorFailure(error: unknown, cursor: string | null) {
   return Boolean(cursor) && error instanceof Error && error.message === 'readwise_api_http_400';
+}
+
+function isReaderParentCategory(value: unknown): value is ReaderParentCategory {
+  return READER_PARENT_CATEGORIES.includes(value as ReaderParentCategory);
 }

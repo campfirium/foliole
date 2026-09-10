@@ -96,6 +96,7 @@ async function runNow(
       dependencies: input.dependencies ?? {},
       onCandidateIndex: promoteReadwiseSourceCutoverCohort,
       onProgress: (completed, total) => publishProgress(input.window, completed, total),
+      purpose: 'cutover',
       settings: loadImportManagerSettings()
     });
     const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());

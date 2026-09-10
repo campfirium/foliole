@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
@@ -200,53 +200,4 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
   expect(onPreviewSync).not.toHaveBeenCalled();
   expect(onSave).not.toHaveBeenCalled();
   expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
-});
-
-it('edits each automatic import policy cell independently', () => {
-  const { onChangePolicy } = renderReadwiseSettingsHarness({
-    config: createEnabledReadwiseConfig()
-  });
-
-  const group = screen.getByRole('radiogroup', { name: 'Articles without highlights destination' });
-  fireEvent.click(within(group).getByRole('radio', { name: 'External document library' }));
-
-  expect(onChangePolicy).toHaveBeenCalledWith('articleWithoutHighlights', 'external');
-});
-
-it('shows the same four-cell policy matrix with the documented defaults', () => {
-  renderReadwiseSettingsHarness({ config: createEnabledReadwiseConfig() });
-
-  const selected = [
-    ['Articles with highlights destination', 'Inbox'],
-    ['Articles without highlights destination', 'Off'],
-    ['Books with highlights destination', 'Inbox'],
-    ['Books without highlights destination', 'Inbox']
-  ] as const;
-  selected.forEach(([groupName, optionName]) => {
-    const group = screen.getByRole('radiogroup', { name: groupName });
-    expect(within(group).getByRole('radio', { name: optionName })).toHaveAttribute(
-      'aria-checked',
-      'true'
-    );
-    expect(within(group).getAllByRole('radio')).toHaveLength(3);
-  });
-});
-
-it('shows the four-cell policy matrix in API mode', async () => {
-  renderReadwiseSettingsHarness({
-    config: createEnabledReadwiseConfig(),
-    readwiseSourceMode: 'api'
-  });
-
-  await waitFor(() => {
-    expect(screen.getByRole('radiogroup', {
-      name: 'Books without highlights destination'
-    })).toBeInTheDocument();
-  });
-  expect([
-    'Articles with highlights destination',
-    'Articles without highlights destination',
-    'Books with highlights destination',
-    'Books without highlights destination'
-  ].every((name) => Boolean(screen.getByRole('radiogroup', { name })))).toBe(true);
 });

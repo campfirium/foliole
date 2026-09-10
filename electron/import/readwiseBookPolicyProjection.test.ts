@@ -85,7 +85,7 @@ it('routes highlighted Books through External and adopts the selected document o
   const paths = await seedBook();
   const policy = {
     ...createDefaultReadwiseAutoImportPolicy(),
-    bookWithHighlights: 'external' as const
+    epubWithHighlights: 'external' as const
   };
   saveSettings(paths, policy);
   await runReadwiseReaderImport();
@@ -96,7 +96,7 @@ it('routes highlighted Books through External and adopts the selected document o
 
   const imported = await runImportForFilePath(paths.filePath);
   await runReadwiseReaderImport();
-  saveSettings(paths, { ...policy, bookWithHighlights: 'off' });
+  saveSettings(paths, { ...policy, epubWithHighlights: 'off' });
   await runReadwiseReaderImport();
 
   expect(activeBookNodes()).toHaveLength(1);
@@ -120,7 +120,7 @@ it('routes a Book without normalized highlights to Off without creating a Topic'
   const paths = await seedBook('');
   saveSettings(paths, {
     ...createDefaultReadwiseAutoImportPolicy(),
-    bookWithoutHighlights: 'off'
+    epubWithoutHighlights: 'off'
   });
 
   await expect(runReadwiseReaderImport()).resolves.toMatchObject({ status: 'completed' });

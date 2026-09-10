@@ -15,6 +15,7 @@ import {
 } from './readwiseApiCandidateFetch.js';
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import type { ReadwiseApiScopePurpose } from './readwiseApiScopeGate.js';
 
 export async function runReadwiseApiCandidatePipeline(input: {
   assertEligible: () => void;
@@ -29,12 +30,14 @@ export async function runReadwiseApiCandidatePipeline(input: {
   onCandidateCount?: (completed: number, total: number, failed: number, unexplained: number) => void;
   onCandidateIndex?: (documentIds: string[]) => void;
   onProgress?: (processed: number, total: number) => void;
+  purpose?: ReadwiseApiScopePurpose;
   settings: ImportManagerSettings;
 }) {
   const candidates = await ensureReadwiseApiCandidateIndex(
     input.settings,
     input.connectionRef,
-    input.dependencies
+    input.dependencies,
+    input.purpose
   );
   const total = candidates.length;
   input.onCandidateIndex?.(candidates.map((candidate) => candidate.documentId));

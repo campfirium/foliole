@@ -59,7 +59,7 @@ it.each(['off', 'external'] as const)('adopts a %s book without creating a secon
   await fs.writeFile(path.join(primaryPath, 'Book.md'), '# Book\n## Metadata\n- Author: Writer\n## Full Document\nBook body');
   const settings = loadImportManagerSettings();
   saveImportManagerSettings({ ...settings, readwiseRootPath: path.join(root, 'Readwise'),
-    readwiseAutoImportPolicy: { ...settings.readwiseAutoImportPolicy, bookWithoutHighlights: destination },
+    readwiseAutoImportPolicy: { ...settings.readwiseAutoImportPolicy, epubWithoutHighlights: destination },
     readwiseReaderConfig: { ...settings.readwiseReaderConfig, enabled: true, validatedAt: '2026-09-10T00:00:00Z' },
     readwiseSources: [{ id: 'books', kind: 'books', primaryPath, highlightPath, keepState: 'enabled', highlightMode: 'split' }]
   });
