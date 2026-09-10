@@ -17,6 +17,13 @@ import { recordAttachmentRetirementObligation } from '../../lib/core/sync/attach
 import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
+import {
+  captureHtmlOrphanRetirementDatabaseSnapshot,
+  restoreHtmlOrphanRetirement
+} from './htmlOrphanRetirementDatabaseSnapshot.js';
+
+export { restoreHtmlOrphanRetirement } from './htmlOrphanRetirementDatabaseSnapshot.js';
+
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
@@ -46,7 +53,7 @@ interface PreflightReceipt {
 interface ApplyArgs { assets: string; database: string; preflight: string }
 type ParsedArgs =
   | { database: string; journal: string; mode: 'finalize' }
-  | { journal: string; mode: 'restore' }
+  | { database: string; journal: string; mode: 'restore' }
   | (ApplyArgs & { mode: 'apply' });
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -58,13 +65,9 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
   if (mode === 'finalize' || mode === 'restore') {
     const journal = values.get('--journal');
-    if (!journal || !path.isAbsolute(journal)) throw usage();
-    if (mode === 'finalize') {
-      const database = values.get('--database');
-      if (!database || !path.isAbsolute(database)) throw usage();
-      return { database, journal, mode };
-    }
-    return { journal, mode } as const;
+    const database = values.get('--database');
+    if (!journal || !database || !path.isAbsolute(journal) || !path.isAbsolute(database)) throw usage();
+    return { database, journal, mode };
   }
   if (mode !== 'apply') throw usage();
   const result = { assets: values.get('--assets') ?? '', database: values.get('--database') ?? '',
@@ -76,7 +79,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 function usage() {
   return new Error(
     'usage: apply --database <path> --assets <path> --preflight <path> | ' +
-    'finalize --database <path> --journal <path> | restore --journal <path>'
+    'finalize --database <path> --journal <path> | restore --database <path> --journal <path>'
   );
 }
 
@@ -129,9 +132,14 @@ export async function runHtmlOrphanRetirement(args: ApplyArgs) {
     references: item.references,
     row_snapshot: item.row
   }]));
-  const prepared = prepareDesktopAttachmentRetirement(records, args.assets, aliases, args.database, evidence);
-  if (!prepared) throw new Error('Attachment retirement journal was not created.');
   const sqlite = new BetterSqlite3(args.database, { fileMustExist: true });
+  const databaseSnapshot = captureHtmlOrphanRetirementDatabaseSnapshot(
+    sqlite, items.map((item) => item.attachmentId), records
+  );
+  const prepared = prepareDesktopAttachmentRetirement(
+    records, args.assets, aliases, args.database, evidence, databaseSnapshot
+  );
+  if (!prepared) { sqlite.close(); throw new Error('Attachment retirement journal was not created.'); }
   const driver = createBetterSqlite3Driver(sqlite);
   const port = createBetterSqliteDbPort(sqlite, { name: 'html-orphan-retirement' });
   try {
@@ -178,8 +186,7 @@ async function main() {
     return;
   }
   if (args.mode === 'restore') {
-    restoreDesktopAttachmentRetirement({ journalPath: args.journal });
-    process.stdout.write(`${JSON.stringify({ journalPath: args.journal, resultStatus: 'restored' }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(await restoreHtmlOrphanRetirement(args.database, args.journal), null, 2)}\n`);
     return;
   }
   process.stdout.write(`${JSON.stringify(await runHtmlOrphanRetirement(args), null, 2)}\n`);

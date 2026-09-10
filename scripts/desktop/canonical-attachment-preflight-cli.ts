@@ -11,27 +11,33 @@ const BetterSqlite3 = require('better-sqlite3') as new (
   path: string, options: { fileMustExist: boolean; readonly: boolean }
 ) => { close(): void; readonly: boolean };
 
-interface PreflightPaths { assetsDir: string; databasePath: string; outputPath: string }
+interface PreflightPaths { assetsDir: string; databasePath: string; outputPath: string; snapshotDir?: string }
 
 function parseArgs(argv: string[]): PreflightPaths {
   const values = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
     const value = argv[index + 1];
-    if (!key || !value || !['--assets', '--database', '--output'].includes(key) || values.has(key)) {
-      throw new Error('usage: --database <absolute path> --assets <absolute path> --output <.tmp/artifacts path>');
+    if (!key || !value || !['--assets', '--database', '--output', '--snapshot'].includes(key) || values.has(key)) {
+      throw new Error(
+        'usage: --database <absolute path> --assets <absolute path> --output <.tmp/artifacts path> ' +
+        '[--snapshot <new .tmp/artifacts directory>]'
+      );
     }
     values.set(key, value);
   }
   const result = {
     assetsDir: values.get('--assets') ?? '', databasePath: values.get('--database') ?? '',
-    outputPath: values.get('--output') ?? ''
+    outputPath: values.get('--output') ?? '', snapshotDir: values.get('--snapshot')
   };
-  if (!Object.values(result).every(path.isAbsolute)) throw new Error('all_paths_must_be_absolute');
+  if (![result.assetsDir, result.databasePath, result.outputPath].every(path.isAbsolute) ||
+      (result.snapshotDir && !path.isAbsolute(result.snapshotDir))) throw new Error('all_paths_must_be_absolute');
   const artifactRoot = path.resolve(process.cwd(), '.tmp', 'artifacts');
-  const output = path.resolve(result.outputPath);
-  if (output !== artifactRoot && !output.startsWith(`${artifactRoot}${path.sep}`)) {
-    throw new Error('output_must_be_inside_tmp_artifacts');
+  for (const candidate of [result.outputPath, result.snapshotDir].filter(Boolean) as string[]) {
+    const resolved = path.resolve(candidate);
+    if (resolved !== artifactRoot && !resolved.startsWith(`${artifactRoot}${path.sep}`)) {
+      throw new Error('output_and_snapshot_must_be_inside_tmp_artifacts');
+    }
   }
   return result;
 }
@@ -55,16 +61,29 @@ function stableJson(value: unknown) {
   return JSON.stringify(value);
 }
 
+function createDatabaseSnapshot(databasePath: string, snapshotDir: string) {
+  fs.mkdirSync(snapshotDir);
+  const snapshotDatabasePath = path.join(snapshotDir, path.basename(databasePath));
+  for (const suffix of ['', '-wal', '-shm']) {
+    const source = `${databasePath}${suffix}`;
+    if (fs.existsSync(source)) fs.copyFileSync(source, `${snapshotDatabasePath}${suffix}`, fs.constants.COPYFILE_EXCL);
+  }
+  return { databasePath: snapshotDatabasePath, manifest: databaseManifest(snapshotDatabasePath) };
+}
+
 export function runCanonicalAttachmentPreflight(paths: PreflightPaths) {
   if (!fs.statSync(paths.databasePath).isFile()) throw new Error('database_path_not_file');
   const before = productionManifest(paths.databasePath, paths.assetsDir);
-  const sqlite = new BetterSqlite3(paths.databasePath, { fileMustExist: true, readonly: true });
+  const snapshot = paths.snapshotDir ? createDatabaseSnapshot(paths.databasePath, paths.snapshotDir) : null;
+  const scanDatabasePath = snapshot?.databasePath ?? paths.databasePath;
+  const sqlite = new BetterSqlite3(scanDatabasePath, { fileMustExist: true, readonly: true });
   if (!sqlite.readonly) throw new Error('database_connection_not_readonly');
   let plan;
   try {
     plan = buildCanonicalAttachmentMigrationPlan(sqlite as never, paths.assetsDir);
   } finally {
     sqlite.close();
+    if (paths.snapshotDir) fs.rmSync(paths.snapshotDir, { force: true, recursive: true });
   }
   const after = productionManifest(paths.databasePath, paths.assetsDir);
   const productionStateUnchanged = stableJson(before) === stableJson(after);
@@ -73,7 +92,8 @@ export function runCanonicalAttachmentPreflight(paths: PreflightPaths) {
     [decision, plan.items.filter((item) => item.decision === decision).length]));
   const receipt = {
     generatedAt: new Date().toISOString(), input: { assetsDir: plan.assetsRoot, databasePath: paths.databasePath },
-    openContract: { fileMustExist: true, mode: 'readonly', productionInitializationCalled: false },
+    openContract: { fileMustExist: true, mode: snapshot ? 'readonly-frozen-snapshot' : 'readonly',
+      productionInitializationCalled: false, ...(snapshot ? { snapshotManifest: snapshot.manifest } : {}) },
     plan, productionState: { after, before, unchanged: productionStateUnchanged }, summary: counts, version: 2
   };
   fs.mkdirSync(path.dirname(paths.outputPath), { recursive: true });

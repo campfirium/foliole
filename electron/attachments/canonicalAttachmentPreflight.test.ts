@@ -117,3 +117,22 @@ it('produces a self-contained readonly receipt and executable planned journal cl
   expect(JSON.parse(fs.readFileSync(outputPath, 'utf8')).plan.journalPlan).toEqual(receipt.plan.journalPlan);
   expect(receipt.plan.files.some((file) => file.name === 'different-hash-neighbor')).toBe(true);
 });
+
+it('scans a frozen WAL snapshot without changing any production database file', () => {
+  const fixture = createFixture();
+  addHtml(fixture, 'html-orphan', 'wal');
+  fixture.db.pragma('journal_mode = WAL');
+  fixture.db.pragma('wal_autocheckpoint = 0');
+  fixture.db.exec("INSERT INTO nodes VALUES ('wal-row', '', NULL, NULL)");
+  const sourceFiles = [fixture.databasePath, `${fixture.databasePath}-wal`, `${fixture.databasePath}-shm`];
+  const before = sourceFiles.map((file) => fs.existsSync(file) ? fs.readFileSync(file) : null);
+  const outputPath = path.join(fixture.root, 'snapshot-receipt.json');
+  const snapshotDir = path.join(fixture.root, 'snapshot');
+  const receipt = runCanonicalAttachmentPreflight({ ...fixture, outputPath, snapshotDir });
+  expect(receipt.openContract).toMatchObject({ mode: 'readonly-frozen-snapshot' });
+  expect(receipt.plan.items.some((item) => item.attachmentId === 'html-orphan')).toBe(true);
+  expect(receipt.productionState.unchanged).toBe(true);
+  expect(fs.existsSync(snapshotDir)).toBe(false);
+  expect(sourceFiles.map((file) => fs.existsSync(file) ? fs.readFileSync(file) : null)).toEqual(before);
+  fixture.db.close();
+});

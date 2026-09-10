@@ -22,6 +22,7 @@ interface JournalItem extends AttachmentSyncTombstone {
 
 interface AttachmentRetirementJournal {
   created_at: string;
+  database_snapshot?: unknown;
   items: JournalItem[];
   library_scope: string;
   stage: JournalStage;
@@ -41,7 +42,8 @@ export function prepareDesktopAttachmentRetirement(
   assetsDir: string,
   aliasesByAttachmentId: ReadonlyMap<string, readonly string[]> = new Map(),
   libraryScope = path.resolve(assetsDir),
-  evidenceByAttachmentId: ReadonlyMap<string, unknown> = new Map()
+  evidenceByAttachmentId: ReadonlyMap<string, unknown> = new Map(),
+  databaseSnapshot?: unknown
 ): PreparedAttachmentRetirement | null {
   const tombstones = records.flatMap((record) => toTombstone(record));
   if (!tombstones.length) return null;
@@ -58,10 +60,15 @@ export function prepareDesktopAttachmentRetirement(
   });
   writeJournal(journalPath, {
     created_at: new Date().toISOString(), items, library_scope: libraryScope,
+    ...(databaseSnapshot === undefined ? {} : { database_snapshot: databaseSnapshot }),
     stage: 'planned', stage_history: ['planned'], version: 1
   });
   writeStage(journalPath, 'targets_prepared');
   return { journalPath, journalToken: id, libraryScope, tombstones };
+}
+
+export function readDesktopAttachmentRetirementDatabaseSnapshot(journalPath: string) {
+  return readJournal(journalPath).database_snapshot;
 }
 
 export function commitDesktopAttachmentRetirement(
@@ -100,8 +107,14 @@ export function restoreDesktopAttachmentRetirement(
   if (!prepared || !fs.existsSync(prepared.journalPath)) return;
   const journal = readJournal(prepared.journalPath);
   for (const item of journal.items) {
-    if (!fs.existsSync(item.staged_path)) continue;
+    if (!item.source_present) continue;
+    if (!fs.existsSync(item.staged_path) || hashFile(item.staged_path) !== item.content_hash) {
+      throw new Error(`Attachment retirement staged identity is missing: ${item.attachment_id}`);
+    }
     if (fs.existsSync(item.source_path)) throw new Error(`Attachment retirement restore target exists: ${item.source_path}`);
+  }
+  for (const item of journal.items) {
+    if (!fs.existsSync(item.staged_path)) continue;
     fs.renameSync(item.staged_path, item.source_path);
   }
   writeStage(prepared.journalPath, 'restored');

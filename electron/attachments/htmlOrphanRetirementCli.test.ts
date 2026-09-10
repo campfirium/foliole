@@ -6,7 +6,10 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-import { runHtmlOrphanRetirement } from '../../scripts/desktop/html-orphan-retirement-cli.js';
+import {
+  restoreHtmlOrphanRetirement,
+  runHtmlOrphanRetirement
+} from '../../scripts/desktop/html-orphan-retirement-cli.js';
 
 import { finalizeDesktopAttachmentRetirement } from './attachmentRetirementJournal.js';
 
@@ -88,4 +91,28 @@ it('blocks before database mutation when the staged source identity drifted', as
   expect(sqlite.pragma('user_version', { simple: true })).toBe(84);
   expect(sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get()).toEqual({ count: 1 });
   sqlite.close();
+});
+
+it('restores exact database rows, schema version, and staged bytes after failed acceptance', async () => {
+  const target = fixture();
+  const before = new Database(target.database);
+  before.prepare(`INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run('attachment', target.contentHash, 7, 'old-version', 'old-hash', 'Mac',
+      '2026-01-01T00:00:00.000Z', null, 1);
+  before.close();
+  const result = await runHtmlOrphanRetirement(target);
+  await restoreHtmlOrphanRetirement(target.database, result.journalPath);
+  expect(fs.readFileSync(path.join(target.assets, target.contentHash), 'utf8'))
+    .toBe('<!doctype html><title>wrong</title>');
+  const restored = new Database(target.database, { readonly: true });
+  expect(restored.pragma('user_version', { simple: true })).toBe(84);
+  expect(restored.prepare('SELECT id, mime_type FROM attachments').get())
+    .toEqual({ id: target.contentHash, mime_type: 'image/webp' });
+  expect(restored.prepare("SELECT state_seq, content_hash, deleted_at FROM sync_object_state WHERE object_type = 'attachment'").get())
+    .toEqual({ state_seq: 7, content_hash: 'old-hash', deleted_at: null });
+  expect(restored.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'attachment_%tombstone%' OR name = 'attachment_retirement_obligations'").all())
+    .toEqual([]);
+  restored.close();
+  const journal = JSON.parse(fs.readFileSync(result.journalPath, 'utf8')) as { stage_history: string[] };
+  expect(journal.stage_history.at(-1)).toBe('restored');
 });
