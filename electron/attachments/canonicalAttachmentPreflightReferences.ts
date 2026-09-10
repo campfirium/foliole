@@ -3,6 +3,8 @@ import type { SqliteDatabase } from '../database/connection.js';
 
 export interface AttachmentReferenceEvidence {
   externalDocuments: Array<{ documentId: string; target: string }>;
+  importSourceOriginalFiles: Array<{ sourceFingerprint: string }>;
+  invalidImportSourceStates: Array<{ sourceFingerprint: string }>;
   nodeAttachments: Array<{ deletedAt: string | null; nodeId: string; role: string }>;
   nodeBodies: Array<{ deletedAt: string | null; nodeId: string; target: string }>;
   nodeSyncVersions: Array<{ objectId: string; target: string; versionId: string }>;
@@ -11,6 +13,7 @@ export interface AttachmentReferenceEvidence {
 
 interface BodyRow { content: string | Buffer | null; deleted_at?: string | null; id: string }
 interface VersionRow { object_id: string; snapshot_json: string | null; version_id: string }
+interface ImportSourceRow { remote_import_state_json: string; source_fingerprint: string }
 
 function maskCode(markdown: string) {
   const result = [...markdown];
@@ -52,7 +55,8 @@ export function collectAttachmentReferenceIndex(sqlite: SqliteDatabase) {
   const ensure = (key: string) => {
     let value = targetIndex.get(key);
     if (!value) {
-      value = { externalDocuments: [], nodeAttachments: [], nodeBodies: [], nodeSyncVersions: [], pdfPageCount: 0 };
+      value = { externalDocuments: [], importSourceOriginalFiles: [], invalidImportSourceStates: [],
+        nodeAttachments: [], nodeBodies: [], nodeSyncVersions: [], pdfPageCount: 0 };
       targetIndex.set(key, value);
     }
     return value;
@@ -74,7 +78,24 @@ export function collectAttachmentReferenceIndex(sqlite: SqliteDatabase) {
       ensure(target).nodeSyncVersions.push({ objectId: row.object_id, target, versionId: row.version_id });
     }
   }
-  return { ensure, targetIndex, versions };
+  const importSourceOriginalFiles = new Map<string, AttachmentReferenceEvidence['importSourceOriginalFiles']>();
+  const invalidImportSourceStates: AttachmentReferenceEvidence['invalidImportSourceStates'] = [];
+  const sources = sqlite.prepare(
+    'SELECT source_fingerprint, remote_import_state_json FROM import_sources ORDER BY source_fingerprint'
+  ).all() as ImportSourceRow[];
+  for (const source of sources) {
+    try {
+      const state = JSON.parse(source.remote_import_state_json) as { originalFile?: { attachmentId?: unknown } | null };
+      const attachmentId = state?.originalFile?.attachmentId;
+      if (typeof attachmentId !== 'string' || !attachmentId) continue;
+      importSourceOriginalFiles.set(attachmentId, [
+        ...(importSourceOriginalFiles.get(attachmentId) ?? []), { sourceFingerprint: source.source_fingerprint }
+      ]);
+    } catch {
+      invalidImportSourceStates.push({ sourceFingerprint: source.source_fingerprint });
+    }
+  }
+  return { ensure, importSourceOriginalFiles, invalidImportSourceStates, targetIndex, versions };
 }
 
 export function collectDirectReferences(sqlite: SqliteDatabase, attachmentId: string) {
