@@ -43,10 +43,8 @@ export function useReadwiseManualSearch() {
     } catch { if (request === generation.current) setError(true); }
   }
   function changeQuery(value: string) {
-    generation.current += 1;
     setQuery(value);
-    setSources([]);
-    setSearched(false);
+    void search(value);
   }
   async function adopt(source: NativeReadwiseManualSource) {
     setPending(source.id);

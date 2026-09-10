@@ -38,13 +38,16 @@ it('shows preparation without reporting an empty result, then keeps empty querie
   expect(screen.queryByText('No matches')).not.toBeInTheDocument();
 });
 
-it('shows all matches and separates import, explicit reimport, and protected sources', async () => {
+it('searches while typing and separates import, explicit reimport, and protected sources', async () => {
   runtime.search.mockResolvedValue({ status: 'ready', sources: ['available', 'deleted', 'imported', 'suppressed'].map((status) => ({
     id: status, title: status, author: 'Writer', kind: 'article', status
   })) });
   mount();
-  await submit('Writer');
+  const input = screen.getByRole('searchbox');
+  await waitFor(() => expect(input).toBeEnabled());
+  fireEvent.change(input, { target: { value: 'Writer' } });
   await screen.findByText('available');
+  expect(runtime.search).toHaveBeenCalledWith('Writer');
   expect(screen.getByRole('button', { name: 'Imported' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Cannot import again' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Import again' }));
