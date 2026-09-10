@@ -113,6 +113,17 @@ it('keeps the token link in the description and connects without exposing it to 
   expect(navigation.open).toHaveBeenCalledWith('https://readwise.io/access_token');
 });
 
+it('does not render a disconnected state before the saved credential is restored', async () => {
+  let restore!: (value: { has_credential: boolean; state: 'connected'; verified_at: string }) => void;
+  runtime.load.mockReturnValue(new Promise((resolve) => { restore = resolve; }));
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+
+  expect(screen.queryByText('Not connected')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Connect Readwise' })).not.toBeInTheDocument();
+  restore({ has_credential: true, state: 'connected', verified_at: '2026-09-10T00:00:00.000Z' });
+  expect(await screen.findByText('Connected')).toBeInTheDocument();
+});
+
 it('shows the migration status in the API connection row while migration is pending', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, status: 'migration_in_progress', topic_count: 12, total_count: 31

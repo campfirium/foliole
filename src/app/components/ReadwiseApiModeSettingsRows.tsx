@@ -91,6 +91,14 @@ function ReadwiseApiConnectionRow(props: {
 }) {
   const t = useTranslation();
   const state = useReadwiseApiConnection(t, props.onConnected);
+  if (!state.connection) {
+    return (
+      <SettingsRow
+        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
+        title={t('desktop.readwise.api.connection.title')}
+      />
+    );
+  }
   const connected = state.connection?.state === 'connected';
   return (
     <>
@@ -99,7 +107,7 @@ function ReadwiseApiConnectionRow(props: {
         title={t('desktop.readwise.api.connection.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <span className="text-sm text-foreground/60">{t(statusKey(state.connection?.state ?? 'disconnected'))}</span>
+          <span className="text-sm text-foreground/60">{t(statusKey(state.connection.state))}</span>
           <AppButton
             disabled={state.pending}
             loading={props.migrationActive && props.migrationRunning}

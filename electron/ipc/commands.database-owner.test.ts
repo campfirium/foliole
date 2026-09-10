@@ -49,6 +49,11 @@ it('queues storage commands behind the active database owner', async () => {
 
 it.each([
   NATIVE_COMMANDS.completeSyncGroupJoin,
+  NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
+  NATIVE_COMMANDS.importReadwiseManualSource,
+  NATIVE_COMMANDS.prepareReadwiseManualSearch,
+  NATIVE_COMMANDS.previewReadwiseIdentityBindings,
+  NATIVE_COMMANDS.runReadwiseSourceCutover,
   NATIVE_COMMANDS.syncCompanionNow
 ])('keeps internally coordinated network command %s outside the outer owner', async (command) => {
   handleStorageCommand.mockResolvedValue('completed');
@@ -57,4 +62,20 @@ it.each([
 
   expect(runWithDatabaseConnectionOwner).not.toHaveBeenCalled();
   expect(handleStorageCommand).toHaveBeenCalledTimes(1);
+});
+
+it('lets ordinary storage work finish while a Readwise network command is waiting', async () => {
+  let finishNetwork!: (value: string) => void;
+  handleStorageCommand.mockImplementation((command: string) => command === NATIVE_COMMANDS.prepareReadwiseManualSearch
+    ? new Promise((resolve) => { finishNetwork = resolve; })
+    : Promise.resolve('workspace'));
+
+  const network = handleInvokeRequest({ command: NATIVE_COMMANDS.prepareReadwiseManualSearch });
+  await Promise.resolve();
+  await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.loadWorkspaceListSnapshot }))
+    .resolves.toBe('workspace');
+  expect(runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
+
+  finishNetwork('ready');
+  await expect(network).resolves.toBe('ready');
 });
