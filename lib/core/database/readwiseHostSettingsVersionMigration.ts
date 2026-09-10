@@ -103,10 +103,18 @@ function migrateCanonicalRecords(sqlite: DatabaseMigrationTarget) {
 export function migrateReadwiseHostSettingsVersion(sqlite: DatabaseMigrationTarget) {
   if (tableExists(sqlite, 'settings')) {
     migrateProjection(sqlite);
-    for (const statement of READWISE_HOST_SETTINGS_PROJECTION_GUARDS) sqlite.exec(statement);
   }
   if (tableExists(sqlite, 'setting_records')) {
     migrateCanonicalRecords(sqlite);
+  }
+  installReadwiseHostSettingsVersionGuards(sqlite);
+}
+
+export function installReadwiseHostSettingsVersionGuards(sqlite: DatabaseMigrationTarget) {
+  if (tableExists(sqlite, 'settings')) {
+    for (const statement of READWISE_HOST_SETTINGS_PROJECTION_GUARDS) sqlite.exec(statement);
+  }
+  if (tableExists(sqlite, 'setting_records')) {
     for (const statement of READWISE_HOST_SETTINGS_CANONICAL_GUARDS) sqlite.exec(statement);
   }
 }

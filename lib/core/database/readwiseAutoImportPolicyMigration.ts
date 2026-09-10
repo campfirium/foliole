@@ -13,7 +13,7 @@ import {
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { tableExists } from './numberedMigrationHelpers.js';
-import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
+import { installReadwiseHostSettingsVersionGuards } from './readwiseHostSettingsVersionMigration.js';
 import { computeSyncContentHash } from './syncState.js';
 
 const IMPORT_MANAGER_SETTINGS_KEY = 'import_manager_settings';
@@ -103,7 +103,7 @@ function migrateProjection(sqlite: DatabaseMigrationTarget) {
   const byKey = new Map(rows.map((row) => [row.key, parseJson(row.value)]));
   const host = byKey.get(READWISE_HOST_SETTINGS_KEY);
   const imports = byKey.get(IMPORT_MANAGER_SETTINGS_KEY);
-  if (imports) {
+  if (imports && host) {
     sqlite.prepare('UPDATE settings SET value = ? WHERE key = ?')
       .run(JSON.stringify(migrateImportSettings(imports, host)), IMPORT_MANAGER_SETTINGS_KEY);
   }
@@ -143,5 +143,5 @@ export function migrateReadwiseAutoImportPolicy(sqlite: DatabaseMigrationTarget)
   for (const name of GUARD_NAMES) sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
   const projectedLegacyHost = migrateProjection(sqlite);
   migrateCanonical(sqlite, projectedLegacyHost);
-  for (const statement of READWISE_HOST_SETTINGS_VERSION_GUARDS) sqlite.exec(statement);
+  installReadwiseHostSettingsVersionGuards(sqlite);
 }
