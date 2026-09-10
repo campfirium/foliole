@@ -68,6 +68,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_T152_DESKTOP_FORK_LABEL');
   expect(physicalTest).toContain('"Desktop fork \\(twoDeviceDesktopForkLabel)"');
   expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now"');
+  expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now", in: app, timeout: 120)\n'
+    + '        waitForSyncNowCompletion(in: app)\n        openBrowse(in: app)');
   expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');

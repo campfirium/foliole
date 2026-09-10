@@ -47,6 +47,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
                       "Fri did not restore its attempt Sync Group after relaunch.")
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
         openBrowse(in: app)
         waitForJourneyFacts(["A", "B"], in: app)
         attachScreenshot(named: "Fri-two-device-conflict-restored")
