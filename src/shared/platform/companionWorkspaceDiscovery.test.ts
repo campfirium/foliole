@@ -64,29 +64,31 @@ beforeEach(() => {
 });
 
 describe('companionWorkspaceDiscovery endpoint selection', () => {
-  it('uses iOS native Bonjour candidates and native HTTP', async () => {
+  it('loads only the requested desktop when multiple iOS anchors are advertised', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      candidates: [nsdCandidate('http://foliole-desktop.local:38641', 'desktop-ios', 'macOS')]
+      candidates: [
+        nsdCandidate('http://192.168.1.43:38641', 'desktop-mac', 'macOS'),
+        nsdCandidate('http://192.168.1.44:38641', 'desktop-windows', 'Windows')
+      ]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
-      if (url.startsWith('http://foliole-desktop.local:38641')) {
-        return desktopResponse({ hostName: 'Mac', peerId: 'desktop-ios', platform: 'macOS' });
-      }
-      throw new TypeError('Failed to fetch');
+      if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Unexpected desktop');
+      return desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-windows', platform: 'Windows' });
     });
 
-    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+    const result = await discoverCompanionDesktop('http://192.168.1.44:38641');
 
-    expect(result.endpointUrl).toBe('http://foliole-desktop.local:38641');
-    expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
+    expect(result.discovery.provider_device_id).toBe('desktop-windows');
+    expect(capacitorMock.plugin.loadDiscoveryCandidates).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledOnce();
   });
 
   it('does not fall back to a remembered endpoint when iOS Bonjour has no anchor', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
-    await expect(discoverCompanionDesktop('http://accepted-mac.local:38641'))
-      .rejects.toThrow('No desktop sync device found');
+    await expect(discoverCompanionDesktops('http://accepted-mac.local:38641'))
+      .resolves.toEqual([]);
     expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
   });
 
@@ -101,7 +103,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
       throw new TypeError('Failed to fetch');
     });
 
-    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+    const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
 
     expect(result.endpointUrl).toBe('http://192.168.1.44:38641');
     expect(result.discovery.provider_device_name).toBe('Foliole Desktop on ZEPHU-PC');
@@ -117,12 +119,12 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
       throw new TypeError('Failed to fetch');
     });
 
-    await expect(discoverCompanionDesktop('http://10.0.2.2:38641'))
-      .rejects.toThrow('No desktop sync device found');
+    await expect(discoverCompanionDesktops('http://10.0.2.2:38641'))
+      .resolves.toEqual([]);
   });
 });
 
-it('keeps ordinary discovery stopped while allowing explicit Leave routing when paused', async () => {
+it('keeps ordinary discovery stopped while allowing exact endpoint routing when paused', async () => {
   capacitorMock.plugin.loadSyncParticipationState.mockResolvedValue({
     lifecycle_active: true, participating: false, sync_enabled: true, sync_paused: true
   });
@@ -137,11 +139,9 @@ it('keeps ordinary discovery stopped while allowing explicit Leave routing when 
   expect(capacitorMock.plugin.loadDiscoveryCandidates).not.toHaveBeenCalled();
   expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
 
-  const result = await discoverCompanionDesktop('http://old:38641', {
-    allowWhileNotParticipating: true
-  });
+  const result = await discoverCompanionDesktop('http://old:38641');
   expect(result.discovery.provider_device_id).toBe('desktop-c');
-  expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
+  expect(capacitorMock.plugin.loadDiscoveryCandidates).not.toHaveBeenCalled();
 });
 
 it('does not let a transient native inactive snapshot veto a foreground discovery caller', async () => {
@@ -155,7 +155,7 @@ it('does not let a transient native inactive snapshot veto a foreground discover
     desktopResponse({ hostName: 'Mac', peerId: 'desktop-mac', platform: 'macOS' })
   );
 
-  const result = await discoverCompanionDesktop('http://old:38641');
+  const [result] = await discoverCompanionDesktops('http://old:38641');
 
   expect(result.discovery.provider_device_id).toBe('desktop-mac');
   expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
@@ -201,7 +201,7 @@ describe('companionWorkspaceDiscovery compatibility', () => {
       return { body: JSON.stringify(body), status: 200 };
     });
 
-    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+    const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
 
     expect(result.compatibility).toMatchObject({
       reason: 'protocol_version_unsupported',
@@ -241,7 +241,7 @@ it('requires full capabilities from public discovery rather than the TXT hint', 
     return { body: JSON.stringify(body), status: 200 };
   });
 
-  const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+  const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
 
   expect(result.compatibility).toMatchObject({
     reason: 'required_capability_missing', status: 'incompatible'

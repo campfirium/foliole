@@ -181,10 +181,9 @@ export async function discoverCompanionDesktops(
 }
 
 export async function discoverCompanionDesktop(
-  preferredEndpointUrl: string,
-  options: CompanionDiscoveryOptions = {}
+  preferredEndpointUrl: string
 ): Promise<CompanionDiscoveryResult> {
-  const results = await discoverCompanionDesktops(preferredEndpointUrl, options);
+  const results = await loadCompanionDiscoveryCandidates([directCandidate(preferredEndpointUrl)]);
   const [firstResult] = results;
   if (!firstResult) {
     throw new Error('No desktop sync device found. Make sure desktop Sync is on and both devices are on the same Wi-Fi.');
