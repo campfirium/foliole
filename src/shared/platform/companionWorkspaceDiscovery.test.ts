@@ -103,7 +103,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
       throw new TypeError('Failed to fetch');
     });
 
-    const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
+    const result = (await discoverCompanionDesktops('http://10.0.2.2:38641'))[0]!;
 
     expect(result.endpointUrl).toBe('http://192.168.1.44:38641');
     expect(result.discovery.provider_device_name).toBe('Foliole Desktop on ZEPHU-PC');
@@ -155,7 +155,7 @@ it('does not let a transient native inactive snapshot veto a foreground discover
     desktopResponse({ hostName: 'Mac', peerId: 'desktop-mac', platform: 'macOS' })
   );
 
-  const [result] = await discoverCompanionDesktops('http://old:38641');
+  const result = (await discoverCompanionDesktops('http://old:38641'))[0]!;
 
   expect(result.discovery.provider_device_id).toBe('desktop-mac');
   expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
@@ -201,7 +201,7 @@ describe('companionWorkspaceDiscovery compatibility', () => {
       return { body: JSON.stringify(body), status: 200 };
     });
 
-    const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
+    const result = (await discoverCompanionDesktops('http://10.0.2.2:38641'))[0]!;
 
     expect(result.compatibility).toMatchObject({
       reason: 'protocol_version_unsupported',
@@ -241,7 +241,7 @@ it('requires full capabilities from public discovery rather than the TXT hint', 
     return { body: JSON.stringify(body), status: 200 };
   });
 
-  const [result] = await discoverCompanionDesktops('http://10.0.2.2:38641');
+  const result = (await discoverCompanionDesktops('http://10.0.2.2:38641'))[0]!;
 
   expect(result.compatibility).toMatchObject({
     reason: 'required_capability_missing', status: 'incompatible'
