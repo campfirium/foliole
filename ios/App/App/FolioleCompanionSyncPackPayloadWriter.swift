@@ -20,13 +20,8 @@ enum FolioleCompanionSyncPackPayloadWriter {
         for state in states {
             guard state.count == 5, let type = state[0] as? String, let objectId = state[1] as? String else { continue }
             let deleted = state[4] as? String
-            var payload = payloads[key(type, objectId)]
+            let payload = deleted == nil ? payloads[key(type, objectId)] : nil
             if deleted == nil && payload == nil { continue }
-            if deleted != nil && type == "attachment" && payload == nil {
-                throw NSError(domain: "FolioleCompanionSyncPackPayloadWriter", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "Attachment tombstone payload is missing."])
-            }
-            if deleted != nil && type != "attachment" { payload = nil }
             try database.insertSyncObject([type, objectId, state[2], payload, state[3], deleted])
         }
     }

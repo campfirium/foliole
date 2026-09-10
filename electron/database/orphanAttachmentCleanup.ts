@@ -1,11 +1,9 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { NodeBodyUnavailableError, resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { hashFile } from '../attachments/canonicalAttachmentPreflightFiles.js';
 import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
@@ -22,10 +20,8 @@ interface AttachmentLinkRow extends DatabaseRow {
 }
 
 interface AttachmentFileRow extends DatabaseRow {
-  attachment_id: string;
-  content_hash: string;
-  mime_type: string;
-  storage_key: string;
+  id: string;
+  original_name: string | null;
 }
 
 interface AttachmentCleanupPlan {
@@ -161,37 +157,37 @@ function listAttachmentFileRows(attachmentIds: string[]) {
     return [];
   }
   return openDatabaseConnection().driver.queryAll<AttachmentFileRow>(
-    `SELECT a.id AS attachment_id, b.content_hash, b.mime_type, b.storage_key
-     FROM attachments a JOIN attachment_blobs b ON b.attachment_id = a.id
-     WHERE a.id IN (${buildInClause(attachmentIds.length)})
-       AND b.content_hash IS NOT NULL AND b.mime_type IS NOT NULL AND b.storage_key IS NOT NULL`,
+    `SELECT id, original_name
+     FROM attachments
+     WHERE id IN (${buildInClause(attachmentIds.length)})`,
     attachmentIds
   );
 }
 
-function deleteAttachmentRows(driver: DatabaseDriver, rows: AttachmentFileRow[]) {
-  if (rows.length === 0) {
+function deleteAttachmentRows(driver: DatabaseDriver, attachmentIds: string[]) {
+  if (attachmentIds.length === 0) {
     return;
   }
   const deleteNodeAttachmentLinks = driver.prepare('DELETE FROM node_attachments WHERE attachment_id = ?');
   const deleteAttachments = driver.prepare('DELETE FROM attachments WHERE id = ?');
   const deletedAt = new Date().toISOString();
-  for (const row of rows) {
-    deletePdfPageTextRowsForAttachment(row.attachment_id, deletedAt);
-    recordAttachmentDeleted(driver, row, deletedAt);
-    deleteNodeAttachmentLinks.run([row.attachment_id]);
-    deleteAttachments.run([row.attachment_id]);
+  for (const attachmentId of attachmentIds) {
+    deletePdfPageTextRowsForAttachment(attachmentId, deletedAt);
+    recordAttachmentDeleted(driver, attachmentId, deletedAt);
+    deleteNodeAttachmentLinks.run([attachmentId]);
+    deleteAttachments.run([attachmentId]);
   }
 }
 
 export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
   const { assetsDir } = resolveRuntimeDataPaths();
   for (const row of rows) {
-    const [filePath] = resolveAttachmentStoragePathCandidates(row.storage_key, null, assetsDir);
-    if (!filePath || path.basename(filePath) !== row.storage_key || !fs.existsSync(filePath)) continue;
-    if (hashFile(filePath) !== row.content_hash) continue;
-    try { fs.rmSync(filePath, { force: true }); } catch {
-      // The persistent tombstone keeps the exact file obligation available for a later retry.
+    for (const filePath of resolveAttachmentStoragePathCandidates(row.id, row.original_name, assetsDir)) {
+      try {
+        fs.rmSync(filePath, { force: true });
+      } catch {
+        // Keep database cleanup successful even if a stale file path is already gone or locked.
+      }
     }
   }
 }
@@ -199,6 +195,6 @@ export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
 export function cleanupOrphanAttachments(driver: DatabaseDriver, plan: AttachmentCleanupPlan) {
   const orphanAttachmentIds = resolveOrphanAttachmentIds(plan);
   const attachmentFiles = listAttachmentFileRows(orphanAttachmentIds);
-  deleteAttachmentRows(driver, attachmentFiles);
+  deleteAttachmentRows(driver, orphanAttachmentIds);
   return attachmentFiles;
 }

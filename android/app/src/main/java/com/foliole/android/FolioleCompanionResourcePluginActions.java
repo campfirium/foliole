@@ -8,18 +8,6 @@ import com.getcapacitor.PluginCall;
 final class FolioleCompanionResourcePluginActions {
     private FolioleCompanionResourcePluginActions() {}
 
-    static JSObject prepareAttachmentRetirement(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionAttachmentRetirementJournal.prepare(context, call);
-    }
-
-    static JSObject finishAttachmentRetirement(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionAttachmentRetirementJournal.finish(context, call);
-    }
-
-    static JSObject finalizeAttachmentRetirement(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionAttachmentRetirementJournal.finalizeJournal(context, call);
-    }
-
     static JSObject downloadAttachmentResourceBatch(Context context, PluginCall call) throws Exception {
         return FolioleCompanionAttachmentResourceBatchStore.downloadResources(
             context, call.getData().optJSONArray(

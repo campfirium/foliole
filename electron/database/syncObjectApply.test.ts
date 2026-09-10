@@ -18,7 +18,6 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -234,20 +233,10 @@ it('applies tombstones to payload table and sync object state', async () => {
 
 it('clears derived PDF text when applying an attachment tombstone', async () => {
   const driver = openDatabaseConnection().driver;
-  const deletedAt = '2026-04-21T17:00:00.000Z';
-  const payload = { attachment_id: 'pdf-1', content_hash: 'a'.repeat(64),
-    mime_type: 'application/pdf', storage_key: 'pdf-1' };
   driver.execute(
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
      VALUES (?, ?, ?, ?, ?)`,
     ['pdf-1', 'paper.pdf', 'application/pdf', 100, '2026-04-21T10:00:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO attachment_blobs (
-       attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ['pdf-1', payload.content_hash, payload.storage_key, 100, payload.mime_type,
-      'remote_known', '2026-04-21T10:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
@@ -256,12 +245,12 @@ it('clears derived PDF text when applying an attachment tombstone', async () => 
   );
 
   await applySyncObjectsAsync([{
-    content_hash: computeSyncContentHash('attachment', { ...payload, deleted_at: deletedAt }),
-    deleted_at: deletedAt,
+    content_hash: 'hash-pdf-delete',
+    deleted_at: '2026-04-21T17:00:00.000Z',
     object_id: 'pdf-1',
     object_type: 'attachment',
-    payload_json: JSON.stringify(payload),
-    updated_at: deletedAt
+    payload_json: null,
+    updated_at: '2026-04-21T17:00:00.000Z'
   }]);
 
   expect(driver.queryOne('SELECT attachment_id FROM pdf_page_text WHERE attachment_id = ?', ['pdf-1'])).toBeUndefined();

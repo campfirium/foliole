@@ -1,18 +1,4 @@
 export interface CompanionAttachmentResourceSyncPlugin {
-  prepareAttachmentRetirement(args: {
-    library_scope: string;
-    tombstones: Array<{
-      attachment_id: string;
-      content_hash: string;
-      mime_type: string;
-      storage_key: string;
-    }>;
-  }): Promise<{ journal_token: string }>;
-  finishAttachmentRetirement(args: {
-    committed: boolean;
-    journal_token: string;
-  }): Promise<Record<string, never>>;
-  finalizeAttachmentRetirement(args: { journal_token: string }): Promise<Record<string, never>>;
   downloadAttachmentResourceBatch(args: {
     resources: Array<{
       attachment_id: string;

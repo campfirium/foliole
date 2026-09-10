@@ -62,34 +62,6 @@ it('packs attachment metadata as a generic sync object', async () => {
   });
 });
 
-it('packs a deleted attachment with its preserved resource identity', async () => {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachment_sync_tombstones VALUES (?, ?, ?, ?, ?, ?)`,
-    ['att-deleted', 'a'.repeat(64), 'legacy-key', 'image/webp',
-      '2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_host_name,
-       updated_at, sync_dirty, deleted_at
-     ) VALUES ('attachment', 'att-deleted', 10, 'portable-hash', 'Mac', ?, 1, ?)`,
-    ['2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z']
-  );
-  const packPath = resolveSyncPackPath('incoming-attachment-tombstone.db');
-
-  await buildDesktopSyncPack({
-    fromPeerId: 'authorization-desktop', fromStateSeq: 9,
-    outputPath: packPath, packId: 'pack-attachment-tombstone'
-  });
-
-  const rows = readPackRows(packPath);
-  const packed = rows.syncObjects[0] as { payload_json: string } | undefined;
-  expect(JSON.parse(packed?.payload_json ?? 'null')).toEqual({
-    attachment_id: 'att-deleted', content_hash: 'a'.repeat(64), mime_type: 'image/webp', storage_key: 'legacy-key'
-  });
-});
-
 it('packs external folder metadata as a generic sync object', async () => {
   insertExternalFolderSyncState();
   const packPath = resolveSyncPackPath('incoming-external-folder.db');

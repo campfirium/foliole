@@ -1,4 +1,3 @@
-import { ATTACHMENT_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './attachmentSyncTombstoneSchemaStatements.js';
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from './syncDeliverySchemaStatements.js';
 
 export const SYNC_SCHEMA_STATEMENTS = [
@@ -24,7 +23,6 @@ export const SYNC_SCHEMA_STATEMENTS = [
     ON sync_object_state (sync_dirty, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_updated
     ON sync_object_state (object_type, updated_at)`,
-  ...ATTACHMENT_SYNC_TOMBSTONE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS sync_change_log (
     change_id TEXT PRIMARY KEY,
     object_type TEXT NOT NULL,

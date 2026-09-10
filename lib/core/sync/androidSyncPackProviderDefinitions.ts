@@ -17,8 +17,6 @@ const payloadPlans = [
     b.mime_type blob__mime_type, b.availability blob__availability, b.source_host_name blob__source_host_name,
     b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at
     FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id` },
-  { objectType: 'attachment', sql: `SELECT attachment_id __object_id, attachment_id,
-    content_hash, storage_key, mime_type FROM source.attachment_sync_tombstones` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
     f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
     s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref

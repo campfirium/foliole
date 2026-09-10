@@ -170,9 +170,7 @@ function readPayloadJson(raw: Record<string, unknown>, deletedAt: string | null)
   if (!Object.hasOwn(raw, 'payload_json')) throw new Error('Invalid sync object payload_json');
   const value = raw.payload_json;
   if (value === null) {
-    if (deletedAt === null || raw.object_type === 'attachment') {
-      throw new Error('Invalid sync object payload_json');
-    }
+    if (deletedAt === null) throw new Error('Invalid sync object payload_json');
     return null;
   }
   if (typeof value !== 'string' || value.trim() === '') throw new Error('Invalid sync object payload_json');

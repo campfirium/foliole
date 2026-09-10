@@ -2,27 +2,6 @@ import Capacitor
 import Foundation
 
 extension FolioleCompanionSyncPlugin {
-    @objc func prepareAttachmentRetirement(_ call: CAPPluginCall) {
-        do {
-            let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-            call.resolve(try FolioleCompanionAttachmentRetirementJournal.prepare(call, directoryName: contract.directoryName))
-        } catch { call.reject("Failed to prepare attachment retirement: \(error.localizedDescription)") }
-    }
-
-    @objc func finishAttachmentRetirement(_ call: CAPPluginCall) {
-        do {
-            try FolioleCompanionAttachmentRetirementJournal.finish(call)
-            call.resolve()
-        } catch { call.reject("Failed to finish attachment retirement: \(error.localizedDescription)") }
-    }
-
-    @objc func finalizeAttachmentRetirement(_ call: CAPPluginCall) {
-        do {
-            try FolioleCompanionAttachmentRetirementJournal.finalize(call)
-            call.resolve()
-        } catch { call.reject("Failed to finalize attachment retirement: \(error.localizedDescription)") }
-    }
-
     @objc func stageAttachmentResourceBatch(_ call: CAPPluginCall) {
         Task {
             do {

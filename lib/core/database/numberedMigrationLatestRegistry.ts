@@ -1,4 +1,3 @@
-import { createAttachmentSyncTombstoneTable } from './numberedMigrationAttachmentSyncTombstones.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
@@ -31,6 +30,5 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 81, migrate: migrateReadwiseApiImport },
   { version: 82, migrate: migrateReadwiseExternalReferences },
   { version: 83, migrate: migrateReadwiseApiReconcile },
-  { version: 84, migrate: migrateReadwiseAutoImportPolicy },
-  { version: 85, migrate: createAttachmentSyncTombstoneTable }
+  { version: 84, migrate: migrateReadwiseAutoImportPolicy }
 ];

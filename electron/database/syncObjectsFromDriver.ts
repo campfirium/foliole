@@ -1,8 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import {
-  ATTACHMENT_TOMBSTONE_PAYLOAD_SQL,
-  SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE
-} from '../../lib/core/sync/syncObjectPayloadSql.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type {
   NativeSyncObjectRecord,
   NativeSyncObjectType,
@@ -53,26 +50,13 @@ function readPayloadJson(driver: DatabaseDriver, type: JsonSyncObjectType, objec
   return driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;
 }
 
-function readDeletedPayloadJson(driver: DatabaseDriver, type: JsonSyncObjectType, objectId: string) {
-  if (type !== 'attachment') return null;
-  return driver.queryOne<{ payload_json: string | null }>(
-    ATTACHMENT_TOMBSTONE_PAYLOAD_SQL, [objectId]
-  )?.payload_json ?? null;
-}
-
 function toRecord(driver: DatabaseDriver, row: SyncObjectStateRow): NativeSyncObjectRecord {
-  const payloadJson = row.deleted_at
-    ? readDeletedPayloadJson(driver, row.object_type, row.object_id)
-    : readPayloadJson(driver, row.object_type, row.object_id);
-  if (row.deleted_at && row.object_type === 'attachment' && payloadJson === null) {
-    throw new Error(`Attachment tombstone identity is missing: ${row.object_id}`);
-  }
   return {
     content_hash: row.content_hash,
     deleted_at: row.deleted_at,
     object_id: row.object_id,
     object_type: row.object_type,
-    payload_json: payloadJson,
+    payload_json: row.deleted_at ? null : readPayloadJson(driver, row.object_type, row.object_id),
     updated_at: row.updated_at
   };
 }
