@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, appFloatingSurfaceClassName } from '../../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { buildFootnotePresentation } from '../model/footnotePresentation';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import { getMarkdownTableCellAnchorClasses } from '../model/markdownTablePlans';
@@ -213,19 +213,19 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
         <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 z-preview-dialog max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
+          className="z-preview-dialog max-w-none"
+          layout="task"
+          style={panelStyle}
         >
-          <AppDialogTitle className="sr-only">{t('desktop.editorPreview.tableTitle')}</AppDialogTitle>
-          <div
-            className={appFloatingSurfaceClassName('panel', 'relative max-h-[88vh] overflow-hidden')}
-            style={panelStyle}
-          >
+          <AppDialogTitle>{t('desktop.editorPreview.tableTitle')}</AppDialogTitle>
+          <AppDialogBody className="relative max-h-[calc(88vh-7rem)] overflow-hidden !p-0">
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-local-overlay h-8 bg-[var(--app-floating-surface-bg)]" />
             {props.table ? renderPreviewHeaderOverlay(props.table, columnCount) : null}
-            <div className="app-scrollbar max-h-[88vh] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
+            <div className="app-scrollbar max-h-[calc(88vh-7rem)] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
               {props.table ? renderPreviewTable(props.table) : null}
             </div>
-          </div>
+          </AppDialogBody>
+          <AppDialogActions><AppDialogClose asChild><AppButton>{t('shared.close')}</AppButton></AppDialogClose></AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

@@ -47,7 +47,7 @@ describe('MarkdownMermaidPreviewDialog', () => {
     expect(dialog.textContent).toContain('gantt');
     expect(dialog.querySelector('[data-md-mermaid-kind="gantt"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /code/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
   });
 
   it('centers non-gantt diagrams in the same preview shell', async () => {

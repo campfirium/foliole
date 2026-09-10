@@ -16,6 +16,8 @@ import {
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
@@ -154,7 +156,7 @@ export function SearchPaletteEnhancementPrompt() {
     <AppDialog open onOpenChange={prompt.handleOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(440px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(440px,calc(100vw-32px))]" layout="task">
           <SearchEnhancementDialogContent
             error={prompt.error}
             isUpdating={prompt.isUpdating}
@@ -190,15 +192,15 @@ function SearchEnhancementRestartContent(props: SearchEnhancementRestartContentP
   return (
     <>
       <AppDialogTitle>{t('desktop.searchEnhancement.status.title')}</AppDialogTitle>
-      <AppDialogDescription className="mt-2">
-        {message}
-      </AppDialogDescription>
-      <div className="mt-5 flex justify-end">
+      <AppDialogBody>
+        <AppDialogDescription>{message}</AppDialogDescription>
+        {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
+      </AppDialogBody>
+      <AppDialogActions>
         <AppButton onClick={props.onDone} variant="default">
           {t('desktop.searchEnhancement.done')}
         </AppButton>
-      </div>
-      {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
+      </AppDialogActions>
     </>
   );
 }
@@ -208,18 +210,18 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
   return (
     <>
       <AppDialogTitle>{t('desktop.searchEnhancement.prompt.title')}</AppDialogTitle>
-      <AppDialogDescription className="mt-2">
-        {t('desktop.searchEnhancement.prompt.description')}
-      </AppDialogDescription>
-      <div className="mt-5 flex justify-end gap-2">
+      <AppDialogBody>
+        <AppDialogDescription>{t('desktop.searchEnhancement.prompt.description')}</AppDialogDescription>
+        {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
+      </AppDialogBody>
+      <AppDialogActions>
         <AppButton onClick={props.onSkip} variant="ghost">
           {t('desktop.searchEnhancement.notNow')}
         </AppButton>
         <AppButton loading={props.isUpdating} loadingLabel={t('desktop.searchEnhancement.turningOn')} onClick={props.onTurnOn} variant="emphasis">
           {t('desktop.searchEnhancement.turnOn')}
         </AppButton>
-      </div>
-      {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}
+      </AppDialogActions>
     </>
   );
 }

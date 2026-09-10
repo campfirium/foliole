@@ -8,6 +8,8 @@ import { useTranslation, type Translate } from '../../shared/localization/Locali
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -24,18 +26,19 @@ const ReadwiseBlockedPreviewDialog = forwardRef<
 >((props, ref) => (
   <AppDialogContent
     aria-describedby={undefined}
-    className="w-[min(560px,calc(100vw-48px))] p-0"
+    className="w-[min(560px,calc(100vw-48px))]"
+    layout="task"
     ref={ref}
   >
-    <div className="space-y-5 px-5 py-5">
-      <AppDialogTitle className="text-base font-semibold">{props.t('desktop.readwise.importDialog.blockedTitle')}</AppDialogTitle>
+    <AppDialogTitle className="text-base font-semibold">{props.t('desktop.readwise.importDialog.blockedTitle')}</AppDialogTitle>
+    <AppDialogBody>
       <p className="text-sm leading-5 text-foreground/70">{props.notice}</p>
-      <div className="flex justify-end">
+    </AppDialogBody>
+    <AppDialogActions>
         <AppButton onClick={props.onCancel} variant="default">
           {props.t('desktop.readwise.importDialog.ok')}
         </AppButton>
-      </div>
-    </div>
+    </AppDialogActions>
   </AppDialogContent>
 ));
 ReadwiseBlockedPreviewDialog.displayName = 'ReadwiseBlockedPreviewDialog';
@@ -56,15 +59,14 @@ const ReadwiseImportPreviewDialog = forwardRef<
 >((props, ref) => (
   <AppDialogContent
     aria-describedby={undefined}
-    className="w-[min(760px,calc(100vw-48px))] p-0"
+    className="w-[min(760px,calc(100vw-48px))]"
+    layout="task"
     ref={ref}
   >
-    <div className="border-b border-border/65 px-5 py-4">
-      <AppDialogTitle className="text-base font-semibold">
+    <AppDialogTitle className="text-base font-semibold">
         {props.isStarting ? props.t('desktop.readwise.importDialog.title') : props.t('desktop.readwise.importDialog.previewTitle')}
-      </AppDialogTitle>
-    </div>
-    <div className="space-y-4 px-5 py-5">
+    </AppDialogTitle>
+    <AppDialogBody className="space-y-4">
       {props.isPreviewing ? (
         <p className="text-sm text-foreground/65">{props.t('desktop.readwise.importDialog.preparing')}</p>
       ) : null}
@@ -75,8 +77,8 @@ const ReadwiseImportPreviewDialog = forwardRef<
         progress={toReadwiseImportProgressView(props.progress)}
       />
       {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
-    </div>
-    <div className="flex items-center justify-end gap-2 border-t border-border/65 px-5 py-4">
+    </AppDialogBody>
+    <AppDialogActions>
       <AppButton
         disabled={props.isCancelling}
         onClick={props.onCancel}
@@ -91,7 +93,7 @@ const ReadwiseImportPreviewDialog = forwardRef<
       >
         {props.isStarting ? props.t('desktop.readwise.importDialog.importing') : props.t('desktop.readwise.importDialog.import')}
       </AppButton>
-    </div>
+    </AppDialogActions>
   </AppDialogContent>
 ));
 ReadwiseImportPreviewDialog.displayName = 'ReadwiseImportPreviewDialog';

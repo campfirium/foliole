@@ -1,5 +1,5 @@
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 export function KeepImportDisableDialog(props: {
   onConfirm: () => void;
@@ -14,27 +14,22 @@ export function KeepImportDisableDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="w-[min(480px,calc(100vw-64px))] p-0"
+          className="w-[min(480px,calc(100vw-64px))]"
+          layout="task"
         >
-          <section className="flex flex-col">
-            <header className="border-b border-border/60 px-6 pb-4 pt-5">
-              <AppDialogTitle className="text-base font-semibold">{t('desktop.keepImport.disable.title')}</AppDialogTitle>
-              <p className="mt-1 text-sm text-foreground/62">{props.sourceLabel}</p>
-            </header>
-            <div className="px-6 py-5">
-              <p className="text-sm text-foreground/70">
-                {t('desktop.keepImport.disable.description')}
-              </p>
-            </div>
-            <footer className="flex items-center justify-end gap-2 border-t border-border/60 px-6 py-4">
+          <AppDialogTitle className="text-base font-semibold">{t('desktop.keepImport.disable.title')}</AppDialogTitle>
+          <AppDialogBody>
+            <p className="text-sm text-foreground/62">{props.sourceLabel}</p>
+            <p className="mt-2 text-sm text-foreground/70">{t('desktop.keepImport.disable.description')}</p>
+          </AppDialogBody>
+          <AppDialogActions>
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
                 {t('desktop.keepImport.disable.cancel')}
               </AppButton>
               <AppButton onClick={props.onConfirm} variant="danger">
                 {t('desktop.keepImport.disable.turnOff')}
               </AppButton>
-            </footer>
-          </section>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

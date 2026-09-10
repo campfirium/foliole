@@ -8,7 +8,7 @@ import {
   type ExternalDocumentImportResult
 } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppErrorState, AppLoadingState } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 
@@ -98,25 +98,20 @@ export function ExternalSearchPreviewDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="flex h-[min(760px,calc(100dvh-48px))] w-[min(980px,calc(100vw-48px))] flex-col overflow-hidden p-0"
+          className="h-[min(760px,calc(100dvh-48px))] w-[min(980px,calc(100vw-48px))]"
+          layout="task"
         >
-          <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-            <div className="min-w-0">
-              <AppDialogTitle className="text-base font-semibold text-foreground">{preview?.fileName ?? t('desktop.externalPreview.title')}</AppDialogTitle>
-              <p className="mt-1 break-all text-sm text-foreground/60">{preview?.relativePath ?? props.absolutePath}</p>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <AppButton disabled={!preview || isImporting} onClick={() => void handleImport()}>
-                {t('desktop.externalPreview.import')}
-              </AppButton>
-              <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
-                {t('desktop.externalPreview.close')}
-              </AppButton>
-            </div>
-          </div>
-          <div className="min-h-0 flex-1">
+          <AppDialogTitle className="text-base font-semibold text-foreground">{preview?.fileName ?? t('desktop.externalPreview.title')}</AppDialogTitle>
+          <AppDialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <p className="mb-3 break-all text-sm text-foreground/60">{preview?.relativePath ?? props.absolutePath}</p>
+            <div className="min-h-0 flex-1 overflow-hidden">
             <ExternalSearchPreviewBody editorAppearanceKey={editorAppearanceKey} error={error} isLoading={isLoading} onRetry={retry} preview={preview} />
-          </div>
+            </div>
+          </AppDialogBody>
+          <AppDialogActions>
+            <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">{t('desktop.externalPreview.close')}</AppButton>
+            <AppButton disabled={!preview || isImporting} onClick={() => void handleImport()}>{t('desktop.externalPreview.import')}</AppButton>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

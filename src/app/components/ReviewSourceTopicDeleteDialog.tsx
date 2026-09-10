@@ -6,6 +6,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogClose,
   AppDialogContent,
   AppDialogDescription,
@@ -38,19 +40,17 @@ export function ReviewSourceTopicDeleteDialog(props: ReviewSourceTopicDeleteDial
     <AppDialog open={props.isOpen} onOpenChange={(open) => (!open ? props.onCancel() : undefined)}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5" onKeyDownCapture={handleKeyDownCapture}>
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task" onKeyDownCapture={handleKeyDownCapture}>
           <AppDialogTitle>{t('desktop.deleteSourceTopic.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
-            {t('desktop.deleteSourceTopic.description', { title })}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody><AppDialogDescription>{t('desktop.deleteSourceTopic.description', { title })}</AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppDialogClose asChild>
               <AppButton variant="ghost">{t('common.cancel')}</AppButton>
             </AppDialogClose>
             <AppButton variant="danger" onClick={props.onConfirm}>
               {t('desktop.deleteSourceTopic.confirm')}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

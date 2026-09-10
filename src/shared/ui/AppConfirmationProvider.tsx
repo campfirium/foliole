@@ -11,6 +11,8 @@ import {
 import { AppButton } from './Button';
 import {
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
@@ -96,31 +98,41 @@ function ActiveAppDialog(props: {
   onClose: (confirmed: boolean) => void;
   onUpdateInputValue: (value: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <AppDialog open={Boolean(props.activeDialog)} onOpenChange={(open) => !open && props.onClose(false)}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{props.activeDialog?.options.title}</AppDialogTitle>
-          <AppDialogBody
-            activeDialog={props.activeDialog}
-            description={props.description}
-            onClose={props.onClose}
-            onUpdateInputValue={props.onUpdateInputValue}
-          />
+          <AppDialogBody>
+            <ActiveDialogBody
+              activeDialog={props.activeDialog}
+              description={props.description}
+              onClose={props.onClose}
+              onUpdateInputValue={props.onUpdateInputValue}
+            />
+          </AppDialogBody>
+          <AppDialogActions>
+            <AppButton onClick={() => props.onClose(false)}>
+              {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
+            </AppButton>
+            <AppButton onClick={() => props.onClose(true)} variant="default">
+              {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
+            </AppButton>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
   );
 }
 
-function AppDialogBody(props: {
+function ActiveDialogBody(props: {
   activeDialog: ActiveDialog | null;
   description: string[];
   onClose: (confirmed: boolean) => void;
   onUpdateInputValue: (value: string) => void;
 }) {
-  const t = useTranslation();
   return (
     <>
       {props.description.length > 0 ? (
@@ -137,14 +149,6 @@ function AppDialogBody(props: {
         onClose={props.onClose}
         onUpdateInputValue={props.onUpdateInputValue}
       />
-      <div className="mt-5 flex justify-end gap-2">
-        <AppButton onClick={() => props.onClose(false)}>
-          {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
-        </AppButton>
-        <AppButton onClick={() => props.onClose(true)} variant="default">
-          {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
-        </AppButton>
-      </div>
     </>
   );
 }

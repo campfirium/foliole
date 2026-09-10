@@ -9,6 +9,8 @@ import { useTranslation, type Translate } from '../../shared/localization/Locali
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogClose,
   AppDialogContent,
   AppDialogDescription,
@@ -131,12 +133,10 @@ function TrashCurrentViewDeleteDialog({
     <AppDialog open={Boolean(deleteSnapshot)} onOpenChange={onOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{t('desktop.nodeList.trash.deleteDialog.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
-            {t('desktop.nodeList.trash.deleteDialog.description', { countLabel })}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody><AppDialogDescription>{t('desktop.nodeList.trash.deleteDialog.description', { countLabel })}</AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppDialogClose asChild>
               <AppButton variant="ghost">{t('desktop.nodeList.trash.deleteDialog.cancel')}</AppButton>
             </AppDialogClose>
@@ -152,7 +152,7 @@ function TrashCurrentViewDeleteDialog({
             >
               {t('desktop.nodeList.trash.deleteDialog.confirm')}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

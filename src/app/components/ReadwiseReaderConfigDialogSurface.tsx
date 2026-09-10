@@ -6,6 +6,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -22,7 +24,7 @@ import { ReadwiseDirectorySection, ReadwiseParserFields } from './ReadwiseReader
 import { ReadwiseReaderSyncRow } from './ReadwiseReaderSyncControls';
 import { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 
-function ReadwiseConfigDialogHeader(props: {
+function ReadwiseConfigDialogIntro(props: {
   canChangeIntegration: boolean;
   integrationEnabled: boolean;
   onChangeIntegration: () => void;
@@ -30,19 +32,16 @@ function ReadwiseConfigDialogHeader(props: {
   const t = useTranslation();
 
   return (
-    <header className="flex items-start justify-between gap-4 border-b border-border/70 px-5 pb-4 pt-5">
+    <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        <AppDialogTitle className="text-base font-semibold">{t('desktop.readwise.import.title')}</AppDialogTitle>
-        <p className="mt-1 text-sm text-foreground/65">
-          {t('desktop.readwise.dialog.description')}
-        </p>
+        <p className="text-sm text-foreground/65">{t('desktop.readwise.dialog.description')}</p>
       </div>
       <ReadwiseIntegrationSwitch
         disabled={!props.canChangeIntegration}
         enabled={props.integrationEnabled}
         onToggle={props.onChangeIntegration}
       />
-    </header>
+    </div>
   );
 }
 
@@ -121,27 +120,29 @@ export function ReadwiseConfigDialogSurface(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="w-[min(1280px,calc(100vw-96px))] overflow-hidden p-0"
+          className="max-h-[min(760px,calc(100vh-96px))] w-[min(1280px,calc(100vw-96px))]"
+          layout="task"
         >
-          <section className="flex max-h-[min(760px,calc(100vh-96px))] min-h-0 flex-col">
-            <ReadwiseConfigDialogHeader
+          <AppDialogTitle className="text-base font-semibold">{t('desktop.readwise.import.title')}</AppDialogTitle>
+          <AppDialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ReadwiseConfigDialogIntro
               canChangeIntegration={props.canChangeIntegration}
               integrationEnabled={props.integrationEnabled}
               onChangeIntegration={props.onChangeIntegration}
             />
-            <ReadwiseConfigDialogBody
+            <div className="mt-4 min-h-0 flex-1 overflow-hidden"><ReadwiseConfigDialogBody
               canPreview={props.canPreview}
               draft={props.draft}
               onChangePolicy={props.onChangePolicy}
               onCheck={props.onCheck}
               policy={props.policy}
-            />
-            <footer className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4">
+            /></div>
+          </AppDialogBody>
+          <AppDialogActions className="justify-between">
               <AppButton onClick={props.onCancel} variant="ghost">
                 {t('desktop.readwise.cancel')}
               </AppButton>
-            </footer>
-          </section>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

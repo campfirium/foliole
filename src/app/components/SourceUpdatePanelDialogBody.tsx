@@ -6,7 +6,7 @@ import { SourceUpdatePanelActionBar } from './SourceUpdatePanelActionBar';
 import { SourceUpdatePanelColumns } from './SourceUpdatePanelColumns';
 import { SourceUpdatePanelHeader } from './SourceUpdatePanelHeader';
 
-interface SourceUpdatePanelDialogBodyProps {
+export interface SourceUpdatePanelDialogBodyProps {
   currentEditor: EditorAdapter | null;
   currentMeasuredHighlights: EditorDiffDecorations | null;
   handleCurrentEditorReady: (adapter: EditorAdapter | null) => void;
@@ -64,21 +64,26 @@ export function SourceUpdatePanelDialogBody(props: SourceUpdatePanelDialogBodyPr
         updatedEditor={props.updatedEditor}
         updatedMeasuredHighlights={props.updatedMeasuredHighlights}
       />
-      <SourceUpdatePanelActionBar
-        comparisonMode={props.panelProps.comparisonMode}
-        manualContent={props.panelProps.manualContent}
-        {...(props.panelProps.onAcceptIncomingUpdate
-          ? { onAcceptIncomingUpdate: props.panelProps.onAcceptIncomingUpdate }
-          : {})}
-        {...(props.panelProps.onDismissIncomingUpdate
-          ? { onDismissIncomingUpdate: props.panelProps.onDismissIncomingUpdate }
-          : {})}
-        {...(props.panelProps.onImportIncomingUpdateAsNew
-          ? { onImportIncomingUpdateAsNew: props.panelProps.onImportIncomingUpdateAsNew }
-          : {})}
-        onManualSaveAsTopic={props.panelProps.onManualSaveAsTopic}
-        onManualSetAsBody={props.panelProps.onManualSetAsBody}
-      />
     </section>
+  );
+}
+
+export function SourceUpdatePanelDialogActions(props: SourceUpdatePanelDialogBodyProps) {
+  return (
+    <SourceUpdatePanelActionBar
+      comparisonMode={props.panelProps.comparisonMode}
+      manualContent={props.panelProps.manualContent}
+      {...(props.panelProps.onAcceptIncomingUpdate
+        ? { onAcceptIncomingUpdate: props.panelProps.onAcceptIncomingUpdate }
+        : {})}
+      {...(props.panelProps.onDismissIncomingUpdate
+        ? { onDismissIncomingUpdate: props.panelProps.onDismissIncomingUpdate }
+        : {})}
+      {...(props.panelProps.onImportIncomingUpdateAsNew
+        ? { onImportIncomingUpdateAsNew: props.panelProps.onImportIncomingUpdateAsNew }
+        : {})}
+      onManualSaveAsTopic={props.panelProps.onManualSaveAsTopic}
+      onManualSetAsBody={props.panelProps.onManualSetAsBody}
+    />
   );
 }

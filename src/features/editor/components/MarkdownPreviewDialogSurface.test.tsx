@@ -47,7 +47,7 @@ describe('Markdown preview dialog surface', () => {
     renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={TABLE_PREVIEW} />);
 
     expectSharedPreviewOverlay();
-    expect(document.body.querySelector('[role="dialog"] .shadow-panel')).toBeInTheDocument();
+    expect(document.body.querySelector('[role="dialog"]')).toHaveClass('shadow-panel');
     expect(hasClassToken('bg-[var(--app-floating-surface-bg)]')).toBe(true);
   });
 });

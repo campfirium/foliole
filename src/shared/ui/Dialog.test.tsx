@@ -43,9 +43,12 @@ it('owns task dialog spacing in the shared pattern', async () => {
   );
 
   const dialog = await screen.findByRole('dialog', { name: 'Task dialog' });
-  expect(dialog.className).toContain('p-dialog-gutter');
-  expect(screen.getByText('Task content').className).toContain('mt-dialog-section-gap');
-  expect(screen.getByRole('button', { name: 'Done' }).parentElement?.className).toContain('mt-dialog-section-gap');
+  expect(dialog.className).toContain('!bg-canvas');
+  expect(dialog.className).toContain('[&>[data-app-dialog-title]]:bg-[var(--app-floating-surface-bg)]');
+  expect(dialog.className).toContain('[&>[data-app-dialog-actions]]:border-t');
+  expect(screen.getByText('Task dialog')).toHaveAttribute('data-app-dialog-title', 'true');
+  expect(screen.getByText('Task content')).toHaveAttribute('data-app-dialog-body', 'true');
+  expect(screen.getByRole('button', { name: 'Done' }).parentElement).toHaveAttribute('data-app-dialog-actions', 'true');
 });
 
 it('keeps initial dialog focus on the surface instead of the first action', async () => {

@@ -1,6 +1,9 @@
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
+  AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
@@ -43,12 +46,10 @@ export function EpubImportReleaseModeDialog() {
     <AppDialog onOpenChange={(open) => (!open ? closeEpubImportReleaseModeDialog(null) : undefined)} open>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(460px,calc(100vw-32px))] p-5">
-          <div className="space-y-1">
-            <AppDialogTitle className="text-base font-semibold">{t('desktop.epubImport.mode.title')}</AppDialogTitle>
+        <AppDialogContent className="w-[min(460px,calc(100vw-32px))]" layout="task">
+          <AppDialogTitle className="text-base font-semibold">{t('desktop.epubImport.mode.title')}</AppDialogTitle>
+          <AppDialogBody className="space-y-3">
             <p className="text-[13px] text-foreground/65">{snapshot.file.fileName}</p>
-          </div>
-          <div className="mt-4 space-y-3">
             <AppDialogDescription className="text-[13px] leading-5 text-foreground/70">
               {t('desktop.epubImport.mode.description')}
             </AppDialogDescription>
@@ -66,7 +67,10 @@ export function EpubImportReleaseModeDialog() {
                 </button>
               ))}
             </div>
-          </div>
+          </AppDialogBody>
+          <AppDialogActions>
+            <AppButton onClick={() => closeEpubImportReleaseModeDialog(null)} variant="ghost">{t('common.cancel')}</AppButton>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

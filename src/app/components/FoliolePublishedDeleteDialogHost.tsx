@@ -12,6 +12,8 @@ import {
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
@@ -78,21 +80,21 @@ export function FoliolePublishedDeleteDialogHost() {
     <AppDialog open={Boolean(pending)} onOpenChange={(open) => { if (!open && !isSubmitting) setPending(null); }}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(440px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(440px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{t('desktop.foliolePublish.delete.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
+          <AppDialogBody><AppDialogDescription>
             {t(pending && pending.sourceKeys.length > 1
               ? 'desktop.foliolePublish.delete.descriptionMany'
               : 'desktop.foliolePublish.delete.description', { count: pending?.sourceKeys.length ?? 0 })}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          </AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppButton disabled={isSubmitting} onClick={() => setPending(null)} variant="ghost">
               {t('common.cancel')}
             </AppButton>
             <AppButton loading={isSubmitting} loadingLabel={t('desktop.foliolePublish.unpublishing')} onClick={() => void deletePublishedTopics()} variant="danger">
               {t('desktop.foliolePublish.delete.confirm')}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

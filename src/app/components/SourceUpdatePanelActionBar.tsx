@@ -111,12 +111,10 @@ export function SourceUpdatePanelActionBar(props: SourceUpdatePanelActionBarProp
   );
   if (props.comparisonMode !== 'manual' && !hasSourceActions) return null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-5 z-local-raised flex justify-center">
-      <div className="pointer-events-auto flex min-h-10 items-center rounded-lg border border-border bg-[var(--app-floating-surface-bg)] px-2 shadow-popover">
-        {props.comparisonMode === 'manual'
-          ? <ManualActions {...props} onAction={(action, run) => void handleAction(action, run)} pendingAction={pendingAction} />
-          : <SourceActions {...props} onAction={(action, run) => void handleAction(action, run)} pendingAction={pendingAction} />}
-      </div>
+    <div className="flex min-h-10 items-center">
+      {props.comparisonMode === 'manual'
+        ? <ManualActions {...props} onAction={(action, run) => void handleAction(action, run)} pendingAction={pendingAction} />
+        : <SourceActions {...props} onAction={(action, run) => void handleAction(action, run)} pendingAction={pendingAction} />}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -72,12 +74,11 @@ export function ReadwiseCleanupDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="w-[min(720px,calc(100vw-48px))] p-0"
+          className="w-[min(720px,calc(100vw-48px))]"
+          layout="task"
         >
-          <div className="border-b border-border/65 px-5 py-4">
-            <AppDialogTitle className="text-base font-semibold">{t('desktop.readwise.cleanup.dialogTitle')}</AppDialogTitle>
-          </div>
-          <div className="space-y-4 px-5 py-5">
+          <AppDialogTitle className="text-base font-semibold">{t('desktop.readwise.cleanup.dialogTitle')}</AppDialogTitle>
+          <AppDialogBody className="space-y-4">
             {props.preview ? <ReadwiseCleanupSummary preview={props.preview} /> : null}
             {props.preview?.entries.length ? (
               <ReadwiseCleanupList entries={props.preview.entries} />
@@ -89,8 +90,8 @@ export function ReadwiseCleanupDialog(props: {
               </p>
             )}
             {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t border-border/65 px-5 py-4">
+          </AppDialogBody>
+          <AppDialogActions>
             <AppButton onClick={props.onCancel} variant="ghost">
               {t('desktop.readwise.cleanup.cancel')}
             </AppButton>
@@ -103,7 +104,7 @@ export function ReadwiseCleanupDialog(props: {
             >
               {t('desktop.readwise.cleanup.dialogAction')}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

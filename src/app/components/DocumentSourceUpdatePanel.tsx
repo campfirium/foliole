@@ -6,6 +6,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { onWindowPriorityEscape } from '../../shared/platform/keyboard';
 import {
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -14,7 +16,7 @@ import {
 
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
-import { SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
+import { SourceUpdatePanelDialogActions, SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
 import { useSourceUpdateDiffModel } from './useSourceUpdateDiffModel';
 import { useSourceUpdatePanelLiveProps } from './useSourceUpdatePanelLiveProps';
 import { useSourceUpdatePanelSnapshots } from './useSourceUpdatePanelSnapshots';
@@ -125,12 +127,16 @@ function SourceUpdatePanelDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="h-[min(900px,calc(100vh-48px))] w-[min(1680px,calc(100vw-48px))] p-0"
+          className="h-[min(900px,calc(100vh-48px))] w-[min(1680px,calc(100vw-48px))]"
+          layout="task"
           onEscapeKeyDown={closePanelFromEscape}
           onKeyDownCapture={closePanelFromEscape}
         >
-          <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
-          <SourceUpdatePanelDialogBody {...props} />
+          <AppDialogTitle>{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
+          <AppDialogBody className="flex min-h-0 flex-1 overflow-hidden !p-0">
+            <SourceUpdatePanelDialogBody {...props} />
+          </AppDialogBody>
+          <AppDialogActions><SourceUpdatePanelDialogActions {...props} /></AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

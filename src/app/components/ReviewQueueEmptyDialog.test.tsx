@@ -18,14 +18,14 @@ it('uses the existing all-clear copy when the review queue is empty', () => {
   expect(surface).toHaveClass('w-[min(300px,100%)]');
   expect(surface).toHaveClass('justify-center');
   expect(surface).toHaveClass('text-center');
-  expect(surface).toHaveClass('bg-shellless-surface');
-  expect(surface.className).not.toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(surface.className).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(surface.className).toContain('border-[var(--app-floating-border-color)]');
   expect(surface.className).not.toContain('shadow-panel');
   expect(Array.from(document.body.querySelectorAll('*')).some((element) => String(element.className).includes('bg-foreground/10'))).toBe(false);
   const title = screen.getByText('All clear for now.');
   expect(title).toHaveClass('text-ui-md');
   expect(title).toHaveClass('font-medium');
-  expect(title).toHaveClass('text-shellless-title');
+  expect(title).toHaveClass('text-foreground/68');
   expect(screen.queryByText('Create or schedule review items, then start Flow again.')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
 });

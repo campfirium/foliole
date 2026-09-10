@@ -11,7 +11,7 @@ import {
   resetFoliolePublishFieldHistoryFromRuntime
 } from '../../shared/platform/foliolePublishRepository';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, requestAppConfirmation } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, requestAppConfirmation } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -106,23 +106,25 @@ export function FoliolePublishDialogHost() {
   };
   return (
     <AppDialog open onOpenChange={(open) => !open && busy === 'idle' && setRequest(null)}>
-      <AppDialogPortal><AppDialogOverlay /><AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6">
+      <AppDialogPortal><AppDialogOverlay /><AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))]" layout="task">
         <AppDialogTitle>{t('desktop.foliolePublish.title')}</AppDialogTitle>
-        <FoliolePublishFields
-          choices={choices}
-          fieldCatalog={request.settings.field_catalog}
-          fields={fields}
-          onChange={setFields}
-          onForget={(key) => void forgetFoliolePublishFieldFromRuntime(key).then((settings) => setRequest({ ...request, settings })).catch((caught) => setError(caught instanceof Error ? caught.message : 'Could not forget this field.'))}
-          onResetHistory={() => void resetFieldHistory({ request, setError, setRequest, t })}
-        />
-        {!configured ? <p className="mt-3 text-sm text-foreground/60">{t('desktop.foliolePublish.hostingRequired')}</p> : null}
-        {error ? <p className="mt-3 text-sm text-destructive" role="alert">{error}</p> : null}
-        <div className="mt-5 flex justify-end gap-2">
+        <AppDialogBody>
+          <FoliolePublishFields
+            choices={choices}
+            fieldCatalog={request.settings.field_catalog}
+            fields={fields}
+            onChange={setFields}
+            onForget={(key) => void forgetFoliolePublishFieldFromRuntime(key).then((settings) => setRequest({ ...request, settings })).catch((caught) => setError(caught instanceof Error ? caught.message : 'Could not forget this field.'))}
+            onResetHistory={() => void resetFieldHistory({ request, setError, setRequest, t })}
+          />
+          {!configured ? <p className="mt-3 text-sm text-foreground/60">{t('desktop.foliolePublish.hostingRequired')}</p> : null}
+          {error ? <p className="mt-3 text-sm text-destructive" role="alert">{error}</p> : null}
+        </AppDialogBody>
+        <AppDialogActions>
           <AppButton disabled={busy !== 'idle'} onClick={() => setRequest(null)} variant="subtle">{t('common.cancel')}</AppButton>
           <AppButton disabled={busy === 'publishing'} loading={busy === 'previewing'} loadingLabel={t('desktop.foliolePublish.previewing')} onClick={() => void run('preview')} variant="subtle">{t('desktop.foliolePublish.preview')}</AppButton>
           <AppButton disabled={!configured || busy === 'previewing'} loading={busy === 'publishing'} loadingLabel={t('desktop.foliolePublish.publishing')} onClick={() => void run('publish')}>{t('desktop.foliolePublish.publish')}</AppButton>
-        </div>
+        </AppDialogActions>
       </AppDialogContent></AppDialogPortal>
     </AppDialog>
   );

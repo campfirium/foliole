@@ -7,6 +7,8 @@ import { publishTopicToWordPress } from '../../shared/platform/wordpressPublishR
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -91,7 +93,7 @@ type WordPressDialogProps = {
   status: NativeWordPressPostStatus;
 };
 
-function WordPressPublishDialogBody(props: WordPressDialogProps & { canPublish: boolean }) {
+function WordPressPublishDialogBody(props: WordPressDialogProps) {
   const t = useTranslation();
   return <>
     <div className="mt-5">
@@ -113,10 +115,6 @@ function WordPressPublishDialogBody(props: WordPressDialogProps & { canPublish: 
     {props.catalog.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.catalog.error}</p> : null}
     {props.details.parseError ? <p className="mt-3 text-sm text-destructive" role="alert">{props.details.parseError}</p> : null}
     {props.action.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.action.error}</p> : null}
-    <div className="mt-5 flex justify-end gap-2">
-      <AppButton disabled={props.action.state !== 'idle'} onClick={props.close} variant="subtle">{t('common.cancel')}</AppButton>
-      <AppButton disabled={!props.canPublish} loading={props.action.state === 'publishing'} loadingLabel={t('desktop.wordpressPublish.publishing')} onClick={props.action.publish}>{t('desktop.wordpressPublish.confirm')}</AppButton>
-    </div>
   </>;
 }
 
@@ -133,9 +131,13 @@ function WordPressPublishDialog(props: WordPressDialogProps) {
     <AppDialog open onOpenChange={(open) => !open && props.action.state === 'idle' && props.close()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onEscapeKeyDown={handleEscapeKeyDown}>
+        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))]" layout="task" onEscapeKeyDown={handleEscapeKeyDown}>
           <AppDialogTitle>{t('desktop.wordpressPublish.dialogTitle')}</AppDialogTitle>
-          <WordPressPublishDialogBody {...props} canPublish={canPublish} />
+          <AppDialogBody><WordPressPublishDialogBody {...props} /></AppDialogBody>
+          <AppDialogActions>
+            <AppButton disabled={props.action.state !== 'idle'} onClick={props.close} variant="subtle">{t('common.cancel')}</AppButton>
+            <AppButton disabled={!canPublish} loading={props.action.state === 'publishing'} loadingLabel={t('desktop.wordpressPublish.publishing')} onClick={props.action.publish}>{t('desktop.wordpressPublish.confirm')}</AppButton>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

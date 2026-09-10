@@ -8,6 +8,8 @@ import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/fol
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogClose,
   AppDialogContent,
   AppDialogDescription,
@@ -147,12 +149,10 @@ function CurrentViewDeleteDialog({
     <AppDialog open={Boolean(deleteSnapshot)} onOpenChange={onOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{t('desktop.currentView.deleteDialog.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
-            {t('desktop.currentView.deleteDialog.description', { countLabel })}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody><AppDialogDescription>{t('desktop.currentView.deleteDialog.description', { countLabel })}</AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppDialogClose asChild>
               <AppButton variant="ghost">{t('desktop.currentView.deleteDialog.cancel')}</AppButton>
             </AppDialogClose>
@@ -167,7 +167,7 @@ function CurrentViewDeleteDialog({
             >
               {t('desktop.currentView.deleteDialog.confirm')}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

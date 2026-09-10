@@ -2,6 +2,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogClose,
   AppDialogContent,
   AppDialogDescription,
@@ -20,12 +22,10 @@ export function ExternalFolderSetupDialog(props: {
     <AppDialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{t('desktop.externalLibrary.setup.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
-            {t('desktop.externalLibrary.setup.description')}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody><AppDialogDescription>{t('desktop.externalLibrary.setup.description')}</AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppDialogClose asChild>
               <AppButton variant="ghost">{t('common.cancel')}</AppButton>
             </AppDialogClose>
@@ -37,7 +37,7 @@ export function ExternalFolderSetupDialog(props: {
                 {t('desktop.externalLibrary.menu.connectFolder')}
               </AppButton>
             ) : null}
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

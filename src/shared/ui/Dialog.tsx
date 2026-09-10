@@ -58,7 +58,15 @@ const AppDialogContent = React.forwardRef<
       className={cn(
         appFloatingSurfaceClassName('panel'),
         'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
-        layout === 'task' && 'p-dialog-gutter',
+        layout === 'task' && [
+          'flex flex-col overflow-hidden !bg-canvas p-0',
+          '[&>[data-app-dialog-title]]:m-0 [&>[data-app-dialog-title]]:flex [&>[data-app-dialog-title]]:min-h-14 [&>[data-app-dialog-title]]:shrink-0 [&>[data-app-dialog-title]]:items-center',
+          '[&>[data-app-dialog-title]]:border-b [&>[data-app-dialog-title]]:border-[var(--app-floating-divider-color)] [&>[data-app-dialog-title]]:bg-[var(--app-floating-surface-bg)] [&>[data-app-dialog-title]]:px-6 [&>[data-app-dialog-title]]:py-3',
+          '[&>[data-app-dialog-body]]:m-0 [&>[data-app-dialog-body]]:min-h-0 [&>[data-app-dialog-body]]:px-6 [&>[data-app-dialog-body]]:py-6',
+          '[&>[data-app-dialog-actions]]:m-0 [&>[data-app-dialog-actions]]:flex [&>[data-app-dialog-actions]]:min-h-14 [&>[data-app-dialog-actions]]:shrink-0',
+          '[&>[data-app-dialog-actions]]:items-center [&>[data-app-dialog-actions]]:justify-end [&>[data-app-dialog-actions]]:gap-2 [&>[data-app-dialog-actions]]:border-t',
+          '[&>[data-app-dialog-actions]]:border-[var(--app-floating-divider-color)] [&>[data-app-dialog-actions]]:bg-canvas [&>[data-app-dialog-actions]]:px-6 [&>[data-app-dialog-actions]]:py-2'
+        ],
         className
       )}
       onOpenAutoFocus={handleOpenAutoFocus}
@@ -75,6 +83,7 @@ const AppDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
+    data-app-dialog-title="true"
     className={cn('text-ui-xl font-semibold text-foreground', className)}
     {...props}
   />
@@ -95,14 +104,14 @@ AppDialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 const AppDialogBody = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('mt-dialog-section-gap min-h-0', className)} {...props} />
+    <div ref={ref} className={cn('mt-dialog-section-gap min-h-0', className)} data-app-dialog-body="true" {...props} />
   )
 );
 AppDialogBody.displayName = 'AppDialogBody';
 
 const AppDialogActions = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('mt-dialog-section-gap flex shrink-0 items-center justify-end gap-2', className)} {...props} />
+    <div ref={ref} className={cn('mt-dialog-section-gap flex shrink-0 items-center justify-end gap-2', className)} data-app-dialog-actions="true" {...props} />
   )
 );
 AppDialogActions.displayName = 'AppDialogActions';

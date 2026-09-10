@@ -123,6 +123,20 @@ describe('DocumentSourceUpdatePanel rendering', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('places manual comparison actions in the shared dialog action band', () => {
+    renderPanel('alpha', 'beta', undefined, {
+      comparisonMode: 'manual',
+      manualContent: 'replacement'
+    });
+
+    const dialog = screen.getByRole('dialog', { name: 'Comparison view' });
+    expect(screen.getByRole('heading', { name: 'Comparison view' })).toHaveAttribute('data-app-dialog-title', 'true');
+    const actionBand = screen.getByRole('button', { name: 'Set as body' }).closest('[data-app-dialog-actions]');
+    expect(actionBand).toBeInTheDocument();
+    expect(actionBand).toContainElement(screen.getByRole('button', { name: 'Save as new Topic' }));
+    expect(dialog.querySelector('.shadow-popover')).not.toBeInTheDocument();
+  });
 });
 
 describe('DocumentSourceUpdatePanel diff hints', () => {

@@ -4,12 +4,14 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
-  appShelllessSurfaceClassName
+  appFloatingStateSurfaceClassName
 } from '../../shared/ui';
 import type { ReviewQueueEmptyDialogContent } from '../hooks/useReviewQueueEmptyDialogState';
 
@@ -38,7 +40,7 @@ export function ReviewQueueEmptyNotice(props: {
       data-testid="review-queue-empty-notice"
       role="status"
     >
-      <div className={appShelllessSurfaceClassName('flex min-h-[52px] w-[min(300px,100%)] items-center justify-center px-[18px] py-[14px] text-center text-ui-md font-medium leading-5 text-shellless-title')}>
+      <div className={appFloatingStateSurfaceClassName('flex min-h-[52px] w-[min(300px,100%)] items-center justify-center px-[18px] py-[14px] text-center text-ui-md font-medium leading-5 text-foreground/68')}>
         {t('desktop.reviewSession.allClear.notice')}
       </div>
     </div>
@@ -63,19 +65,17 @@ export function ReviewQueueEmptyDialog(props: {
     <AppDialog open={props.open} onOpenChange={(open) => (!open ? props.onClose() : undefined)}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
+        <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{title}</AppDialogTitle>
-          <AppDialogDescription className="mt-2">
-            {description}
-          </AppDialogDescription>
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody><AppDialogDescription>{description}</AppDialogDescription></AppDialogBody>
+          <AppDialogActions>
             <AppButton onClick={props.onExitReviewMode} variant="ghost">
               {t('desktop.reviewQueue.emptyDialog.exitReviewMode')}
             </AppButton>
             <AppButton onClick={props.onContinueDemoDay}>
               {t('desktop.reviewQueue.emptyDialog.continueDemoDay', { day: demoDayClearContent.day + 1 })}
             </AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

@@ -84,8 +84,7 @@ export function CustomCopyDialogSurface(props: CustomCopyDialogSurfaceProps) {
         <AppDialogOverlay aria-label={props.t('settings.overlay.aria')} />
         <AppDialogContent
           aria-describedby="custom-copy-description"
-          className="flex h-[min(48rem,calc(100dvh-2rem))] w-[min(64rem,calc(100vw-2rem))] max-w-none flex-col overflow-hidden"
-          layout="task"
+          className="flex h-[min(48rem,calc(100dvh-2rem))] w-[min(64rem,calc(100vw-2rem))] max-w-none flex-col overflow-hidden p-dialog-gutter"
           onEscapeKeyDown={(event) => {
             event.preventDefault();
             props.onOpenChange(false);

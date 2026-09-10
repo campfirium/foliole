@@ -1,7 +1,7 @@
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
 import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
@@ -102,27 +102,22 @@ export function KeepImportPreviewDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="w-[min(860px,calc(100vw-64px))] p-0"
+          className="w-[min(860px,calc(100vw-64px))]"
+          layout="task"
         >
-          <section aria-label={t('desktop.keepImport.preview.aria')} className="flex flex-col">
-            <header className="px-8 pb-2 pt-7">
-              <AppDialogTitle className="text-lg font-normal">{t('desktop.keepImport.preview.title')}</AppDialogTitle>
-              <p className="mt-2 text-sm leading-5 text-foreground/65">
-                {t('desktop.keepImport.preview.description')}
-              </p>
-            </header>
-            <div className="px-8 py-4">
-              <KeepImportPreviewContent preview={props.preview} />
-            </div>
-            <footer className="flex items-center justify-end gap-2 px-8 pb-6 pt-2">
+          <AppDialogTitle className="text-lg font-normal">{t('desktop.keepImport.preview.title')}</AppDialogTitle>
+          <AppDialogBody aria-label={t('desktop.keepImport.preview.aria')}>
+            <p className="mb-4 text-sm leading-5 text-foreground/65">{t('desktop.keepImport.preview.description')}</p>
+            <KeepImportPreviewContent preview={props.preview} />
+          </AppDialogBody>
+          <AppDialogActions>
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">
                 {t('desktop.keepImport.preview.notNow')}
               </AppButton>
               <AppButton disabled={!props.preview} onClick={props.onConfirm} variant="emphasis">
                 {t('desktop.keepImport.preview.enable')}
               </AppButton>
-            </footer>
-          </section>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
