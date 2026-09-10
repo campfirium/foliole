@@ -5,6 +5,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+import { writeRemoteQualityReceipt } from './remote-quality-receipt.mjs';
+import {
+  assertRemoteQualityRepositoryContext,
+  assertRemoteQualitySourceScope,
+  assertRemoteQualitySourceContext,
+  normalizeRemoteQualitySourceRef,
+  parseRemoteBranchSha
+} from './remote-quality-target.mjs';
 
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const ACTIVE_RUN_STATUSES = new Set(['in_progress', 'pending', 'queued', 'requested', 'waiting']);
@@ -13,11 +21,14 @@ const POLL_INTERVAL_MS = 15_000;
 const QUALITY_WORKFLOWS = ['remote-quality.yml', 't7-hosted-quality.yml'];
 
 export function parseRemoteQualityArgs(args) {
-  const result = { scope: '' };
+  const result = { scope: '', sourceRef: 'refs/heads/dev' };
   for (let index = 0; index < args.length; index += 1) {
     const name = args[index];
     if (name === '--scope') {
       result[name.slice(2)] = args[index + 1] ?? '';
+      index += 1;
+    } else if (name === '--source-ref') {
+      result.sourceRef = normalizeRemoteQualitySourceRef(args[index + 1]);
       index += 1;
     } else {
       throw new Error(`Unknown argument: ${name}`);
@@ -26,6 +37,7 @@ export function parseRemoteQualityArgs(args) {
   if (!ALLOWED_SCOPES.has(result.scope)) {
     throw new Error('--scope must be desktop, shared, android, ios, or full');
   }
+  assertRemoteQualitySourceScope(result.sourceRef, result.scope);
   return result;
 }
 
@@ -69,8 +81,19 @@ async function dispatchWorkflow(runner, args, options) {
 
 function parseJobs(value) {
   const parsed = JSON.parse(value);
-  if (!Array.isArray(parsed.jobs)) throw new Error('GitHub jobs response did not contain a jobs array');
-  return parsed.jobs;
+  const pages = Array.isArray(parsed) ? parsed : [parsed];
+  if (pages.some((page) => !Array.isArray(page.jobs))) {
+    throw new Error('GitHub jobs response did not contain a jobs array');
+  }
+  return pages.flatMap((page) => page.jobs);
+}
+
+function parseWorkflowRun(value) {
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('GitHub workflow run response was not an object');
+  }
+  return parsed;
 }
 
 function parseWorkflowRuns(value) {
@@ -79,14 +102,6 @@ function parseWorkflowRuns(value) {
     throw new Error('GitHub workflow runs response did not contain a workflow_runs array');
   }
   return parsed.workflow_runs;
-}
-
-function parseRemoteDevSha(value) {
-  const sha = value.trim();
-  if (!/^[0-9a-f]{40}$/.test(sha)) {
-    throw new Error('Remote dev HEAD did not resolve to a full 40-character lowercase commit SHA');
-  }
-  return sha;
 }
 
 export function findActiveHostedQualityRuns(workflowRuns, branch) {
@@ -129,18 +144,25 @@ export async function monitorRemoteQualityJobs(options) {
   const wait = options.wait ?? ((duration) => new Promise((resolve) => setTimeout(resolve, duration)));
   const emittedFailures = new Set();
   while (true) {
-    const stdout = await requireSuccess(runner, 'gh', [
-      'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-      `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
-    ], { cwd });
-    const jobs = parseJobs(stdout);
+    const [runStdout, jobsStdout] = await Promise.all([
+      requireSuccess(runner, 'gh', [
+        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+        `repos/${repo}/actions/runs/${runId}`
+      ], { cwd }),
+      requireSuccess(runner, 'gh', [
+        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+        '--paginate', '--slurp', `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
+      ], { cwd })
+    ]);
+    const run = parseWorkflowRun(runStdout);
+    const jobs = parseJobs(jobsStdout);
     for (const job of jobs.filter(isFailedJob)) {
       if (emittedFailures.has(job.id)) continue;
       const log = await emitFailedJobLog(runner, repo, job, cwd);
       if (log.code === 0) emittedFailures.add(job.id);
     }
-    if (jobs.length > 0 && jobs.every((job) => job.status === 'completed')) {
-      return { failed: jobs.some(isFailedJob), jobs };
+    if (run.status === 'completed') {
+      return { failed: run.conclusion !== 'success', jobs, run };
     }
     await wait(pollIntervalMs);
   }
@@ -155,14 +177,18 @@ export async function runRemoteQuality(options = {}) {
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
   const branch = await requireSuccess(runner, 'git', ['branch', '--show-current'], { cwd });
-  if (repoInfo.defaultBranchRef.name !== 'dev' || branch !== 'dev') {
-    throw new Error('Remote Quality is a dev-only orchestrator and requires the local dev branch');
-  }
+  const sourceBranch = assertRemoteQualityRepositoryContext({
+    defaultBranch: repoInfo.defaultBranchRef.name, localBranch: branch, sourceRef: args.sourceRef
+  });
   await requireHostedQualityIdle(runner, repoInfo.nameWithOwner, 'dev', cwd);
-  const targetSha = parseRemoteDevSha(await requireSuccess(runner, 'gh', [
+  const targetSha = parseRemoteBranchSha(await requireSuccess(runner, 'gh', [
     'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-    `repos/${repoInfo.nameWithOwner}/git/ref/heads/dev`, '--jq', '.object.sha'
-  ], { cwd }));
+    `repos/${repoInfo.nameWithOwner}/git/ref/heads/${sourceBranch}`, '--jq', '.object.sha'
+  ], { cwd }), sourceBranch);
+  const localHead = sourceBranch === 'sync'
+    ? await requireSuccess(runner, 'git', ['rev-parse', 'HEAD'], { cwd }) : targetSha;
+  assertRemoteQualitySourceContext({ defaultBranch: repoInfo.defaultBranchRef.name,
+    localBranch: branch, localHead, remoteSha: targetSha, sourceRef: args.sourceRef });
 
   const payload = JSON.stringify({
     inputs: { scope: args.scope, target_sha: targetSha },
@@ -187,14 +213,17 @@ export async function runRemoteQuality(options = {}) {
   if (result.failed) {
     throw new Error(`Remote ${args.scope} quality failed: ${dispatch.html_url}`);
   }
-  console.log(`[remote-quality] ${args.scope} quality passed on dev`);
-  return { runId: dispatch.workflow_run_id, scope: args.scope, targetSha, url: dispatch.html_url };
+  return { jobs: result.jobs, runId: dispatch.workflow_run_id, scope: args.scope,
+    sourceRef: args.sourceRef, targetSha, url: dispatch.html_url };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     assertQualityCommandAllowed('runner:remote-quality');
-    await runRemoteQuality();
+    const result = await runRemoteQuality();
+    const receipt = writeRemoteQualityReceipt({ ...result, cwd: process.cwd() });
+    console.log(`[remote-quality] ${result.scope} quality passed for ${result.sourceRef} `
+      + `at ${result.targetSha}${receipt ? ` receipt=${receipt}` : ''}`);
   } catch (error) {
     console.error(`[remote-quality] ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

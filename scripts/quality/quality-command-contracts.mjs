@@ -70,7 +70,7 @@ const CONTRACTS = [
     surface: 'npm'
   })),
   ...HOSTED_RUNNERS.map(([name, target]) => contract(name, 'hosted-only', target)),
-  contract('quality:remote', 'orchestrator', 'dev-only scoped GitHub recheck', {
+  contract('quality:remote', 'orchestrator', 'dev recheck or approved exact-source hosted acceptance', {
     runner: 'runner:remote-quality',
     surface: 'npm'
   }),
