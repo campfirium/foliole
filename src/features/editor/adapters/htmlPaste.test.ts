@@ -11,6 +11,8 @@ const { importClipboardImageAttachment } = vi.hoisted(() => ({
   importClipboardImageAttachment: vi.fn()
 }));
 
+const IMAGE_HASH = 'a'.repeat(64);
+
 vi.mock('../../../shared/platform/attachmentImports', () => ({
   importClipboardImageAttachment
 }));
@@ -78,17 +80,18 @@ function runStructuredClipboardCase() {
 
 function runRawClipboardCase() {
   const view = createPasteView({ from: 1, to: 4 });
+  const markdown = `![Cover](asset://${IMAGE_HASH}.png)`;
 
   expect(
     handleInternalClipboardPaste(
       {
-        getData: (format: string) => (format === FOLIOLE_CLIPBOARD_MIME ? '![Cover](asset://hash-1.png)' : '')
+        getData: (format: string) => (format === FOLIOLE_CLIPBOARD_MIME ? markdown : '')
       },
       view
     )
   ).toBe(true);
 
-  expectInsert(view, { from: 1, insert: '![Cover](asset://hash-1.png)', to: 4 }, 29);
+  expectInsert(view, { from: 1, insert: markdown, to: 4 }, 1 + markdown.length);
 }
 
 function runHtmlMarkdownCase() {
@@ -175,10 +178,10 @@ async function runClipboardImageCase() {
 
   importClipboardImageAttachment.mockResolvedValue({
     status: 'imported',
-    attachment_id: 'hash-1',
+    attachment_id: 'attachment-1',
     attachment_record: 'created',
     created_at: '2026-03-30T00:00:00.000Z',
-    hash: 'hash-1',
+    hash: IMAGE_HASH,
     mime_type: 'image/png',
     original_name: 'clip.png',
     size_bytes: 9,
@@ -199,7 +202,7 @@ async function runClipboardImageCase() {
   expect(dispatch).toHaveBeenNthCalledWith(1, expect.objectContaining({ changes: { from: 0, to: 0, insert: placeholder } }));
   expect(dispatch).toHaveBeenNthCalledWith(
     2,
-    expect.objectContaining({ changes: { from: 0, to: placeholder.length, insert: '![clip](asset://hash-1.png)' } })
+    expect.objectContaining({ changes: { from: 0, to: placeholder.length, insert: `![clip](asset://${IMAGE_HASH}.png)` } })
   );
   randomUUIDSpy.mockRestore();
 }

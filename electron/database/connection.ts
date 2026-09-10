@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { resolveBootstrapLibraryPaths } from '../ipc/libraryPathBootstrap.js';
 import { assertLibraryHomeMigrationCanOpenDatabase } from '../ipc/libraryPathMigrationRuntime.js';
 import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
@@ -11,7 +12,6 @@ import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from '
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
-import { clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');

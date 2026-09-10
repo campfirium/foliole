@@ -6,6 +6,16 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 import { handleInvokeRequest } from './commands.js';
 
+const ATTACHMENT_HASH = 'a'.repeat(64);
+const ATTACHMENT_STORAGE_KEY = `${ATTACHMENT_HASH}.png`;
+
+function imageImportResult(hash: string, createdAt: string, originalName: string, sizeBytes: number) {
+  return {
+    status: 'imported', attachment_id: hash, attachment_record: 'created', created_at: createdAt,
+    hash, mime_type: 'image/png', original_name: originalName, size_bytes: sizeBytes, stored_file: 'created'
+  };
+}
+
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
   runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
@@ -124,60 +134,45 @@ it('routes attachment resource requests through the unified runtime entry', asyn
   await expect(
     handleInvokeRequest({
       command: NATIVE_COMMANDS.resolveAttachmentResource,
-      args: { attachment_id: 'hash-1' }
+      args: {
+        attachment_id: ATTACHMENT_HASH,
+        content_hash: ATTACHMENT_HASH,
+        library_scope: 'library-scope',
+        mime_type: 'image/png',
+        storage_key: ATTACHMENT_STORAGE_KEY
+      }
     })
   ).resolves.toEqual({
     status: 'ready',
     mime_type: 'image/png',
     resource_url: 'file:///tmp/attachment-1.png'
   });
-  expect(resolveAttachmentResource).toHaveBeenCalledWith('hash-1');
+  expect(resolveAttachmentResource).toHaveBeenCalledWith({
+    attachmentId: ATTACHMENT_HASH,
+    availability: 'local',
+    contentHash: ATTACHMENT_HASH,
+    libraryScope: 'library-scope',
+    mimeType: 'image/png',
+    storageKey: ATTACHMENT_STORAGE_KEY
+  });
 });
 
 it('routes local image attachment imports through the unified runtime entry', async () => {
-  importLocalImageAttachment.mockResolvedValue({
-    status: 'imported',
-    attachment_id: 'hash-1',
-    attachment_record: 'created',
-    created_at: '2026-03-29T00:00:00.000Z',
-    hash: 'hash-1',
-    mime_type: 'image/png',
-    original_name: 'cover.png',
-    size_bytes: 12,
-    stored_file: 'created'
-  });
+  const result = imageImportResult('hash-1', '2026-03-29T00:00:00.000Z', 'cover.png', 12);
+  importLocalImageAttachment.mockResolvedValue(result);
 
   await expect(
     handleInvokeRequest({
       command: NATIVE_COMMANDS.importLocalImageAttachment,
       args: { nodeId: 'node-1', sourcePath: '/tmp/cover.png' }
     })
-  ).resolves.toEqual({
-    status: 'imported',
-    attachment_id: 'hash-1',
-    attachment_record: 'created',
-    created_at: '2026-03-29T00:00:00.000Z',
-    hash: 'hash-1',
-    mime_type: 'image/png',
-    original_name: 'cover.png',
-    size_bytes: 12,
-    stored_file: 'created'
-  });
+  ).resolves.toEqual(result);
   expect(importLocalImageAttachment).toHaveBeenCalledWith('node-1', '/tmp/cover.png');
 });
 
 it('routes clipboard image attachment imports through the unified runtime entry', async () => {
-  importClipboardImageAttachment.mockResolvedValue({
-    status: 'imported',
-    attachment_id: 'hash-2',
-    attachment_record: 'created',
-    created_at: '2026-03-30T00:00:00.000Z',
-    hash: 'hash-2',
-    mime_type: 'image/png',
-    original_name: 'pasted-image.png',
-    size_bytes: 24,
-    stored_file: 'created'
-  });
+  const result = imageImportResult('hash-2', '2026-03-30T00:00:00.000Z', 'pasted-image.png', 24);
+  importClipboardImageAttachment.mockResolvedValue(result);
 
   await expect(
     handleInvokeRequest({
@@ -189,17 +184,7 @@ it('routes clipboard image attachment imports through the unified runtime entry'
         originalName: ''
       }
     })
-  ).resolves.toEqual({
-    status: 'imported',
-    attachment_id: 'hash-2',
-    attachment_record: 'created',
-    created_at: '2026-03-30T00:00:00.000Z',
-    hash: 'hash-2',
-    mime_type: 'image/png',
-    original_name: 'pasted-image.png',
-    size_bytes: 24,
-    stored_file: 'created'
-  });
+  ).resolves.toEqual(result);
   expect(importClipboardImageAttachment).toHaveBeenCalledWith({
     bytesBase64: 'Y2xpcGJvYXJk',
     mimeType: 'image/png',
@@ -209,17 +194,8 @@ it('routes clipboard image attachment imports through the unified runtime entry'
 });
 
 it('routes remote image attachment imports through the unified runtime entry', async () => {
-  importRemoteImageAttachment.mockResolvedValue({
-    status: 'imported',
-    attachment_id: 'hash-3',
-    attachment_record: 'created',
-    created_at: '2026-03-30T00:00:00.000Z',
-    hash: 'hash-3',
-    mime_type: 'image/png',
-    original_name: 'cover.png',
-    size_bytes: 24,
-    stored_file: 'created'
-  });
+  const result = imageImportResult('hash-3', '2026-03-30T00:00:00.000Z', 'cover.png', 24);
+  importRemoteImageAttachment.mockResolvedValue(result);
 
   await expect(
     handleInvokeRequest({
@@ -229,17 +205,7 @@ it('routes remote image attachment imports through the unified runtime entry', a
         sourceUrl: 'https://example.com/cover.png'
       }
     })
-  ).resolves.toEqual({
-    status: 'imported',
-    attachment_id: 'hash-3',
-    attachment_record: 'created',
-    created_at: '2026-03-30T00:00:00.000Z',
-    hash: 'hash-3',
-    mime_type: 'image/png',
-    original_name: 'cover.png',
-    size_bytes: 24,
-    stored_file: 'created'
-  });
+  ).resolves.toEqual(result);
   expect(importRemoteImageAttachment).toHaveBeenCalledWith({
     nodeId: 'node-1',
     sourceUrl: 'https://example.com/cover.png'

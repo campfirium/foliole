@@ -2,8 +2,8 @@ import type { WorkspaceExternalSearchSourceKind } from '../core/database/workspa
 import type { NodeKind } from '../core/nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
-import type { AttachmentResourceDescription } from './attachmentResource.js';
 
+import type { AttachmentResourceDescription } from './attachmentResource.js';
 import type { NativeSchedulerCard } from './nativeContract.js';
 import type { NativeNodeOpenStateResult } from './nativeNodeOpenStateContract.js';
 import type { NativeWorkspaceReadingProfile } from './nativeReadingContract.js';

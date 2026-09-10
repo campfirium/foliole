@@ -2,6 +2,10 @@ import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
@@ -14,6 +18,7 @@ vi.mock('../../../shared/platform/bridge', () => ({
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
 beforeEach(() => {
+  registerTestAttachmentResource();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
 });
 
@@ -27,7 +32,7 @@ it('opens the wrapping link when clicking a linked image widget', async () => {
   const host = document.createElement('div');
   document.body.append(host);
   const adapter = new CodeMirrorEditorAdapter(host, {
-    initialContent: '[![Cover](asset://hash-1.png)](https://example.com/post)',
+    initialContent: `[![Cover](${TEST_ATTACHMENT_ASSET_URL})](https://example.com/post)`,
     onOpenExternalLink
   });
 
@@ -51,7 +56,7 @@ it('opens the wrapping link when the linked image has spacing and caption text',
   const host = document.createElement('div');
   document.body.append(host);
   const adapter = new CodeMirrorEditorAdapter(host, {
-    initialContent: '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://example.com/post)',
+    initialContent: `[\n\n![image](${TEST_ATTACHMENT_ASSET_URL})\n\nimage1971×1242 140 KB](https://example.com/post)`,
     onOpenExternalLink
   });
 

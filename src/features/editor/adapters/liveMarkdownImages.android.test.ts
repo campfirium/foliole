@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { registerTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
 
 const capacitorMock = vi.hoisted(() => ({
   convertFileSrc: vi.fn((url: string) => `capacitor://${url}`),
@@ -54,23 +55,24 @@ function createAdapterHostWithMissingResourceSync(
   return { adapter, host };
 }
 
-describe('live markdown image rendering on Android companion', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
-    capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
-      mime_type: 'image/png',
-      resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/android-hash-1',
-      status: 'ready'
-    });
-    databaseMock.query.mockResolvedValue([{
-      mime_type: 'image/png',
-      storage_key: 'attachments/android-hash-1'
-    }]);
+beforeEach(() => {
+  vi.clearAllMocks();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
+  capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
+    mime_type: 'image/png',
+    resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/android-hash-1',
+    status: 'ready'
   });
+  databaseMock.query.mockResolvedValue([{
+    mime_type: 'image/png',
+    storage_key: 'attachments/android-hash-1'
+  }]);
+});
 
+describe('live markdown image rendering on Android companion', () => {
   it('resolves internal attachment images to Android WebView file URLs in native companion', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://android-hash-1.png)');
+    const resource = registerTestAttachmentResource({ attachmentId: 'android-hash-1' });
+    const { adapter, host } = createAdapterHost(`![Cover](${resource.assetUrl})`);
 
     await waitFor(() => {
       expect(host.querySelector('.cm-md-image-element')?.getAttribute('src')).toBe(
@@ -79,14 +81,22 @@ describe('live markdown image rendering on Android companion', () => {
     });
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
       attachment_id: 'android-hash-1',
+      content_hash: resource.description.contentHash,
+      library_scope: 'test-library',
       mime_type: 'image/png',
-      storage_key: 'attachments/android-hash-1'
+      storage_key: resource.description.storageKey
     });
 
     adapter.destroy();
   });
+});
 
+describe('missing Android attachment rendering', () => {
   it('retries Android image rendering after the caller syncs a missing attachment resource', async () => {
+    const resource = registerTestAttachmentResource({
+      attachmentId: 'android-hash-2',
+      contentHash: 'b'.repeat(64)
+    });
     const syncMissing = vi.fn(async () => undefined);
     capacitorMock.plugin.resolveAttachmentResource
       .mockResolvedValueOnce({
@@ -104,7 +114,7 @@ describe('live markdown image rendering on Android companion', () => {
     }]);
 
     const { adapter, host } = createAdapterHostWithMissingResourceSync(
-      '![Cover](asset://android-hash-2.png)',
+      `![Cover](${resource.assetUrl})`,
       syncMissing
     );
 

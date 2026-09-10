@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { registerTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
+
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { collectImageMatches, collectImageMatchesFromTree } from './markdownImageMatches';
 
@@ -148,14 +150,16 @@ describe('markdownImageMatches data url safety', () => {
 
 describe('markdownImageMatches imported social attachments', () => {
   it('collects bracketed alt attachment images from imported social content', () => {
-    expect(collectImageMatches(0, '请教老师，![[作揖]](asset://hash-1.png)  ')).toEqual([
+    const { assetUrl } = registerTestAttachmentResource();
+    const markdown = `请教老师，![[作揖]](${assetUrl})  `;
+    expect(collectImageMatches(0, markdown)).toEqual([
       {
         attachmentId: 'hash-1',
         alt: '作揖',
         display: 'inline',
         from: 5,
-        source: 'asset://hash-1.png',
-        to: 32
+        source: assetUrl,
+        to: markdown.length - 2
       }
     ]);
   });
@@ -185,23 +189,25 @@ describe('markdownImageMatches replacement ranges', () => {
   });
 
   it('keeps the wrapping link href for linked attachment images', () => {
-    const markdown = '[![Cover](asset://hash-1.png)](https://example.com/post)';
+    const { assetUrl } = registerTestAttachmentResource();
+    const markdown = `[![Cover](${assetUrl})](https://example.com/post)`;
 
     expect(collectImageMatches(0, markdown)[0]).toMatchObject({
       attachmentId: 'hash-1',
       linkHref: 'https://example.com/post',
-      source: 'asset://hash-1.png'
+      source: assetUrl
     });
   });
 
   it('keeps the wrapping link href when the image label has spacing and caption text', () => {
-    const markdown = '[\n\n![image](asset://hash-1.png)\n\nimage1971×1242 140 KB](https://example.com/post)';
+    const { assetUrl } = registerTestAttachmentResource();
+    const markdown = `[\n\n![image](${assetUrl})\n\nimage1971×1242 140 KB](https://example.com/post)`;
 
     expect(collectImageMatches(0, markdown)[0]).toMatchObject({
       attachmentId: 'hash-1',
       from: 0,
       linkHref: 'https://example.com/post',
-      source: 'asset://hash-1.png',
+      source: assetUrl,
       to: markdown.length
     });
   });

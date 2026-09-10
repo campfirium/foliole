@@ -91,16 +91,7 @@ function portableBlob(digit: string) {
   return { content_hash: request.contentHash, mime_type: request.mimeType, storage_key: request.storageKey };
 }
 
-function resetAttachmentResourceMocks() {
-  vi.clearAllMocks();
-  capacitorMock.plugin.commitAttachmentResourceBatch.mockReset();
-  capacitorMock.plugin.downloadAttachmentResourceBatch.mockReset();
-  capacitorMock.plugin.syncAttachmentResource.mockReset();
-  capacitorMock.plugin.syncAttachmentResources.mockReset();
-  capacitorMock.lastDownloadedAttachmentIds = [];
-  capacitorMock.plugin.commitAttachmentResourceBatch.mockImplementation(async () => ({
-    synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-  }));
+function resetDownloadMock() {
   capacitorMock.plugin.downloadAttachmentResourceBatch.mockImplementation(async ({ resources }: {
     resources: Array<{ attachment_id: string }>;
   }) => {
@@ -111,6 +102,19 @@ function resetAttachmentResourceMocks() {
       synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
     };
   });
+}
+
+function resetAttachmentResourceMocks() {
+  vi.clearAllMocks();
+  capacitorMock.plugin.commitAttachmentResourceBatch.mockReset();
+  capacitorMock.plugin.downloadAttachmentResourceBatch.mockReset();
+  capacitorMock.plugin.syncAttachmentResource.mockReset();
+  capacitorMock.plugin.syncAttachmentResources.mockReset();
+  capacitorMock.lastDownloadedAttachmentIds = [];
+  capacitorMock.plugin.commitAttachmentResourceBatch.mockImplementation(async () => ({
+    synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+  }));
+  resetDownloadMock();
   capacitorMock.plugin.syncAttachmentResource.mockResolvedValue({ attachment_id: 'att-1', availability: 'cached' });
   capacitorMock.plugin.syncAttachmentResources.mockImplementation(async ({ resources }: {
     resources: Array<{ attachment_id: string }>;
@@ -177,6 +181,10 @@ describe('companion desktop attachment resource manifests', () => {
       iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
     );
   });
+});
+
+describe('companion iOS attachment resource manifests', () => {
+  beforeEach(resetAttachmentResourceMocks);
 
   it('routes iOS attachment downloads through the same native bridge contract', async () => {
     capacitorMock.getPlatform.mockReturnValue('ios');

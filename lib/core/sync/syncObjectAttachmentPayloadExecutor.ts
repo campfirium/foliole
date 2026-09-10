@@ -1,5 +1,6 @@
-import type { DbPort } from './dbPort.js';
 import { isCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
+
+import type { DbPort } from './dbPort.js';
 import { asObject, numberOrNull, text, type JsonObject } from './syncObjectPayloadValues.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 

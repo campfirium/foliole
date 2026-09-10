@@ -8,8 +8,8 @@ import type {
   NativeExportAttachmentImageResult
 } from '../../lib/platform/nativeUtilityContract.js';
 import { electronClipboardAccess } from '../clipboardAccess.js';
-import { findAttachmentRecordById } from '../database/attachments.js';
 import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
+import { findAttachmentRecordById } from '../database/attachments.js';
 
 import { resolveAttachmentFile } from './resourceResolver.js';
 

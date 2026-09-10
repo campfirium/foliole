@@ -54,7 +54,7 @@ it('adds remote identity columns and uniqueness without rewriting historical pat
 
   initializeDatabaseSchema(connection.sqlite);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(84);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(85);
   expect(connection.sqlite.prepare(`SELECT source_locator, source_location, remote_annotations_json
     FROM import_sources WHERE source_fingerprint = 'one'`).get()).toEqual({
     remote_annotations_json: '[]', source_location: 'One.md', source_locator: '/old/one'

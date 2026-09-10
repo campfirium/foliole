@@ -20,8 +20,8 @@ vi.mock('../ipc/paths.js', () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentResource, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 
+import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 import { listNodeAttachments } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';

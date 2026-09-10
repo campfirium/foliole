@@ -3,8 +3,8 @@ import { Document } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { resolveAttachmentResourceDescriptionById } from '../../../../lib/platform/attachmentResourceRegistry';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource

@@ -1,4 +1,10 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+import {
+  createTestAttachmentResource,
+  registerTestAttachmentResource,
+  resetTestAttachmentResources
+} from '../test/attachmentResourceTestSupport';
 
 import { syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -23,14 +29,31 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
+const IMAGE_ATTACHMENT_ID = 'image-attachment-1';
+const IMAGE_CONTENT_HASH = '7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec';
+const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({
+  attachmentId: IMAGE_ATTACHMENT_ID,
+  contentHash: IMAGE_CONTENT_HASH,
+  mimeType: 'image/jpeg'
+});
+
+beforeEach(() => {
+  registerTestAttachmentResource({
+    attachmentId: IMAGE_ATTACHMENT_ID,
+    contentHash: IMAGE_CONTENT_HASH,
+    mimeType: 'image/jpeg'
+  });
+});
+
 afterEach(() => {
+  resetTestAttachmentResources();
   vi.useRealTimers();
 });
 
 it('keeps imported image highlights as image regions when parent image markdown is localized', async () => {
   vi.useFakeTimers();
   const remoteImage = '![](https://tvax2.sinaimg.cn/large/66fd066bgy1hwdjok6tdfj20zk0qoqoq.jpg)';
-  const localImage = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
+  const localImage = `![](${IMAGE_ASSET_URL})`;
   const fixture = createWorkspaceNodeActionsFixture();
   fixture.nodesById['node-1'] = {
     ...fixture.nodesById['node-1']!,
@@ -68,7 +91,7 @@ it('keeps imported image highlights as image regions when parent image markdown 
         locator: { from: 6, originalText: localImage, to: 6 + localImage.length }
       }),
       imageRegions: [{
-        attachmentId: '7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec',
+        attachmentId: IMAGE_ATTACHMENT_ID,
         regions: [{ height: 1, id: 'imported-highlight-image-image-0', width: 1, x: 0, y: 0 }]
       }]
     })
@@ -78,7 +101,7 @@ it('keeps imported image highlights as image regions when parent image markdown 
     [expect.objectContaining({
       id: 'node-image-highlight',
       imageRegions: [expect.objectContaining({
-        attachmentId: '7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec'
+        attachmentId: IMAGE_ATTACHMENT_ID
       })]
     })],
     expect.any(Array)

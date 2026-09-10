@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
+import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -31,6 +32,11 @@ import {
 import { withTransaction } from './transaction.js';
 
 let tempRoot = '';
+const SOFT_IMAGE_ID = 'a'.repeat(64);
+const SOFT_PDF_ID = 'b'.repeat(64);
+const DB_ONLY_IMAGE_ID = 'c'.repeat(64);
+const BLOB_SHARED_IMAGE_ID = 'd'.repeat(64);
+const UNAVAILABLE_IMAGE_ID = 'e'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-attachment-gc-boundary-'));
@@ -67,10 +73,21 @@ async function seedAttachment(args: { attachmentId: string; mimeType: string; no
     sizeBytes: 32,
     createdAt: '2026-04-18T08:00:00.000Z'
   });
+  const extension = args.mimeType === 'application/pdf' ? '.pdf' : '.png';
+  upsertAttachmentBlobManifest({
+    attachmentId: args.attachmentId,
+    availability: 'local',
+    contentHash: args.attachmentId,
+    createdAt: '2026-04-18T08:00:00.000Z',
+    mimeType: args.mimeType,
+    sizeBytes: 32,
+    sourceHostName: null,
+    storageKey: `${args.attachmentId}${extension}`
+  });
   for (const nodeId of args.nodeIds) {
     createNodeAttachmentLink({ nodeId, attachmentId: args.attachmentId, role: args.role });
   }
-  const storagePath = resolveAttachmentStoragePath(args.attachmentId, undefined, args.originalName);
+  const storagePath = resolveAttachmentStoragePath(args.attachmentId, undefined, args.mimeType);
   await fs.mkdir(path.dirname(storagePath), { recursive: true });
   await fs.writeFile(storagePath, `${args.mimeType}:${args.attachmentId}`);
   return storagePath;
@@ -91,10 +108,11 @@ function readCounts(attachmentId: string) {
 }
 
 it('keeps inline image attachments held only by a restorable trashed node', async () => {
-  seedNode('node-delete', '![Cover](asset://hash-soft-image.png)');
-  seedNode('node-trash', 'Text\n\n![Cover](asset://hash-soft-image.png)');
+  const markdown = `![Cover](asset://${SOFT_IMAGE_ID}.png)`;
+  seedNode('node-delete', markdown);
+  seedNode('node-trash', `Text\n\n${markdown}`);
   const filePath = await seedAttachment({
-    attachmentId: 'hash-soft-image',
+    attachmentId: SOFT_IMAGE_ID,
     mimeType: 'image/png',
     nodeIds: ['node-delete', 'node-trash'],
     originalName: 'cover.png',
@@ -104,17 +122,17 @@ it('keeps inline image attachments held only by a restorable trashed node', asyn
   softDeleteNodes({ nodeIds: ['node-trash'], deletedAt: '2026-04-18T08:05:00.000Z' });
   deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-trash'] });
 
-  expect(readCounts('hash-soft-image')).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 0 });
+  expect(readCounts(SOFT_IMAGE_ID)).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 0 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   restoreNodes({ nodeIds: ['node-trash'] });
   expect(openDatabaseConnection().driver.queryOne<{ content: string; deleted_at: string | null }>(
     'SELECT content, deleted_at FROM nodes WHERE id = ?',
     ['node-trash']
-  )).toEqual({ content: 'Text\n\n![Cover](asset://hash-soft-image.png)', deleted_at: null });
+  )).toEqual({ content: `Text\n\n${markdown}`, deleted_at: null });
 
   deleteNodesPermanently({ nodeIds: ['node-trash'], nodeOrder: [] });
-  expect(readCounts('hash-soft-image')).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
+  expect(readCounts(SOFT_IMAGE_ID)).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
@@ -122,7 +140,7 @@ it('keeps mounted pdf attachments held only by a restorable trashed node', async
   seedNode('node-pdf-delete', '# PDF delete');
   seedNode('node-pdf-trash', '# PDF trash');
   const filePath = await seedAttachment({
-    attachmentId: 'hash-soft-pdf',
+    attachmentId: SOFT_PDF_ID,
     mimeType: 'application/pdf',
     nodeIds: ['node-pdf-delete', 'node-pdf-trash'],
     originalName: 'book.pdf',
@@ -130,25 +148,25 @@ it('keeps mounted pdf attachments held only by a restorable trashed node', async
   });
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height) VALUES (?, ?, ?, ?, ?)')
-    .run('hash-soft-pdf', 1, 'Page 1', 800, 1200);
+    .run(SOFT_PDF_ID, 1, 'Page 1', 800, 1200);
 
   softDeleteNodes({ nodeIds: ['node-pdf-trash'], deletedAt: '2026-04-18T08:05:00.000Z' });
   deleteNodesPermanently({ nodeIds: ['node-pdf-delete'], nodeOrder: ['node-pdf-trash'] });
 
-  expect(readCounts('hash-soft-pdf')).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 1 });
+  expect(readCounts(SOFT_PDF_ID)).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 1 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   restoreNodes({ nodeIds: ['node-pdf-trash'] });
   deleteNodesPermanently({ nodeIds: ['node-pdf-trash'], nodeOrder: [] });
 
-  expect(readCounts('hash-soft-pdf')).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
+  expect(readCounts(SOFT_PDF_ID)).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('keeps file deletion outside rollbackable orphan cleanup transactions', async () => {
-  seedNode('node-cleanup', '![Cover](asset://hash-db-only.png)');
+  seedNode('node-cleanup', `![Cover](asset://${DB_ONLY_IMAGE_ID}.png)`);
   const filePath = await seedAttachment({
-    attachmentId: 'hash-db-only',
+    attachmentId: DB_ONLY_IMAGE_ID,
     mimeType: 'image/png',
     nodeIds: ['node-cleanup'],
     originalName: 'cover.png',
@@ -165,7 +183,7 @@ it('keeps file deletion outside rollbackable orphan cleanup transactions', async
     })
   ).toThrow('rollback cleanup');
 
-  expect(readCounts('hash-db-only')).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 0 });
+  expect(readCounts(DB_ONLY_IMAGE_ID)).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 0 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   const filesToDelete = withTransaction(connection.driver, () => {
@@ -173,32 +191,32 @@ it('keeps file deletion outside rollbackable orphan cleanup transactions', async
     return cleanupOrphanAttachments(connection.driver, plan);
   });
 
-  expect(readCounts('hash-db-only')).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
+  expect(readCounts(DB_ONLY_IMAGE_ID)).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
   deleteAttachmentFiles(filesToDelete);
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('keeps an inline attachment referenced by a Blob-only active node', async () => {
-  const markdown = '![Shared](asset://hash-blob-shared.png)';
+  const markdown = `![Shared](asset://${BLOB_SHARED_IMAGE_ID}.png)`;
   seedNode('node-delete', markdown);
   seedNode('node-keep', markdown);
   const filePath = await seedAttachment({
-    attachmentId: 'hash-blob-shared', mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'shared.png', role: 'image'
+    attachmentId: BLOB_SHARED_IMAGE_ID, mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'shared.png', role: 'image'
   });
   openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-keep']);
 
   deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-keep'] });
 
-  expect(readCounts('hash-blob-shared').attachmentRows).toBe(1);
+  expect(readCounts(BLOB_SHARED_IMAGE_ID).attachmentRows).toBe(1);
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 });
 
 it('aborts permanent deletion before mutation when any retained Blob body is unavailable', async () => {
-  seedNode('node-delete', '![Shared](asset://hash-unavailable.png)');
+  seedNode('node-delete', `![Shared](asset://${UNAVAILABLE_IMAGE_ID}.png)`);
   seedNode('node-missing', 'Other body');
   const filePath = await seedAttachment({
-    attachmentId: 'hash-unavailable', mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'missing.png', role: 'image'
+    attachmentId: UNAVAILABLE_IMAGE_ID, mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'missing.png', role: 'image'
   });
   const connection = openDatabaseConnection();
   const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
@@ -210,6 +228,6 @@ it('aborts permanent deletion before mutation when any retained Blob body is una
     .toThrow('node_body_unavailable:node-missing');
   expect(connection.driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', ['node-delete']))
     .toEqual({ id: 'node-delete' });
-  expect(readCounts('hash-unavailable').attachmentRows).toBe(1);
+  expect(readCounts(UNAVAILABLE_IMAGE_ID).attachmentRows).toBe(1);
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 });

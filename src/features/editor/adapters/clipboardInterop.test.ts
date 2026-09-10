@@ -5,6 +5,8 @@ import { createMockEditorView } from '../../../test/codeMirrorEditorViewTestSupp
 import { createClipboardExportFromView, createClipboardExportPayload, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { textAnchorDecorationsFacet } from './liveMarkdownState';
 
+const IMAGE_HASH = 'a'.repeat(64);
+
 function createClipboardView() {
   return createMockEditorView({
     state: {
@@ -24,17 +26,17 @@ function createClipboardView() {
 describe('clipboardInterop', () => {
   it('keeps internal markdown and exports attachment paths for external paste', () => {
     const payload = createClipboardExportPayload(
-      'Before ![Cover](asset://hash-1.png) after',
+      `Before ![Cover](asset://${IMAGE_HASH}.png) after`,
       null,
       '/Users/tester/Documents/Foliole/Assets'
     );
 
     expect(payload).toEqual({
       internalAnchors: [],
-      internalText: 'Before ![Cover](asset://hash-1.png) after',
-      externalText: 'Before ![Cover](file:///Users/tester/Documents/Foliole/Assets/hash-1.png) after',
+      internalText: `Before ![Cover](asset://${IMAGE_HASH}.png) after`,
+      externalText: `Before ![Cover](file:///Users/tester/Documents/Foliole/Assets/${IMAGE_HASH}.png) after`,
       externalHtml:
-        '<p>Before <img alt="Cover" src="file:///Users/tester/Documents/Foliole/Assets/hash-1.png"> after</p>'
+        `<p>Before <img alt="Cover" src="file:///Users/tester/Documents/Foliole/Assets/${IMAGE_HASH}.png"> after</p>`
     });
   });
 

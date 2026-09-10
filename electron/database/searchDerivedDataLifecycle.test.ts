@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 
+import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -36,6 +37,10 @@ import {
 } from './workspaceSearchTestSupport.js';
 
 let tempRoot = '';
+const DELETE_PDF_ID = 'a'.repeat(64);
+const TRANSIENT_PDF_ID = 'b'.repeat(64);
+const SOFT_PDF_ID = 'c'.repeat(64);
+const CHILD_PDF_ID = 'd'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-search-derived-lifecycle-'));
@@ -82,6 +87,16 @@ function upsertSearchNode(input: {
 
 function linkReadyPdf(nodeId: string, attachmentId: string, text = 'pdf lifecycle marker') {
   insertPdfAttachment({ id: attachmentId, originalName: `${attachmentId}.pdf`, status: 'ready' });
+  upsertAttachmentBlobManifest({
+    attachmentId,
+    availability: 'local',
+    contentHash: attachmentId,
+    createdAt: '2026-05-26T00:01:00.000Z',
+    mimeType: 'application/pdf',
+    sizeBytes: 128,
+    sourceHostName: null,
+    storageKey: `${attachmentId}.pdf`
+  });
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
     .run(nodeId, attachmentId, 'reference');
@@ -130,7 +145,7 @@ it('clears node and PDF search rows synchronously before permanently deleting no
     parentNodeId: 'parent-delete',
     title: 'Child'
   });
-  linkReadyPdf('child-delete', 'pdf-delete');
+  linkReadyPdf('child-delete', DELETE_PDF_ID);
   processSearchQueue();
 
   expect(indexedNodeCount(['parent-delete', 'child-delete'])).toEqual({ count: 2 });
@@ -148,7 +163,7 @@ it('clears node and PDF search rows synchronously before permanently deleting no
 
 it('removes stale search rows for soft-deleted and restored nodes when they are permanently deleted', () => {
   upsertSearchNode({ content: 'transient marker', id: 'node-transient', title: 'Transient' });
-  linkReadyPdf('node-transient', 'pdf-transient');
+  linkReadyPdf('node-transient', TRANSIENT_PDF_ID);
   processSearchQueue();
 
   softDeleteNodes({ deletedAt: '2026-05-26T00:02:00.000Z', nodeIds: ['node-transient'] });
@@ -169,21 +184,21 @@ it('removes stale search rows for soft-deleted and restored nodes when they are 
 
 it('keeps PDF page text facts and sync state intact while soft delete only hides search', () => {
   upsertSearchNode({ content: 'transient marker', id: 'node-soft-pdf', title: 'Soft PDF' });
-  linkReadyPdf('node-soft-pdf', 'pdf-soft', 'soft pdf marker');
+  linkReadyPdf('node-soft-pdf', SOFT_PDF_ID, 'soft pdf marker');
   processSearchQueue();
   const beforeState = openDatabaseConnection().sqlite
-    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = 'pdf-soft:1'")
-    .get();
+    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = ?")
+    .get(`${SOFT_PDF_ID}:1`);
 
   softDeleteNodes({ deletedAt: '2026-05-26T00:02:00.000Z', nodeIds: ['node-soft-pdf'] });
   processSearchQueue();
 
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = 'pdf-soft'")
-    .get()).toEqual({ count: 1 });
+    .prepare('SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = ?')
+    .get(SOFT_PDF_ID)).toEqual({ count: 1 });
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = 'pdf-soft:1'")
-    .get()).toEqual(beforeState);
+    .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = ?")
+    .get(`${SOFT_PDF_ID}:1`)).toEqual(beforeState);
   expect(indexedPdfCount(['node-soft-pdf'])).toEqual({ count: 0 });
 });
 
@@ -221,7 +236,7 @@ it('refreshes node and PDF search paths after moving a subtree to a new parent',
   upsertSearchNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' });
   upsertSearchNode({ content: 'article body', id: 'article', parentNodeId: 'folder-a', title: 'Article' });
   upsertSearchNode({ content: 'child body', id: 'child', parentNodeId: 'article', title: 'Child' });
-  linkReadyPdf('child', 'pdf-child', 'child pdf body');
+  linkReadyPdf('child', CHILD_PDF_ID, 'child pdf body');
   processSearchQueue();
 
   moveNodes({

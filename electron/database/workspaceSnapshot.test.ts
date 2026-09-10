@@ -133,9 +133,12 @@ it('includes node attachment references in the workspace snapshot', () => {
 
   expect(snapshot?.nodesById['node-pdf']?.attachments).toEqual([{
     attachmentId: 'pdf-attachment-1',
+    availability: 'unresolved',
+    contentHash: null,
     mimeType: 'application/pdf',
     originalName: 'Paper.pdf',
-    role: 'reference'
+    role: 'reference',
+    storageKey: null
   }]);
 });
 

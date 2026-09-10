@@ -5,8 +5,8 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
-import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 
+import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 import { openDatabaseConnection } from './connection.js';
 import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';

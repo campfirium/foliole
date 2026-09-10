@@ -41,7 +41,8 @@ it('stages native attachment files and commits only their small manifest', async
     stageAttachmentResourceBatch: vi.fn(async () => ({
       failed_attachment_ids: [],
       manifest: [{
-        attachment_id: 'att-1', content_hash: 'b'.repeat(64), size_bytes: 32_600_000, storage_key: 'b'.repeat(64)
+        attachment_id: 'att-1', content_hash: 'b'.repeat(64), mime_type: 'image/png',
+        size_bytes: 32_600_000, storage_key: `${'b'.repeat(64)}.png`
       }]
     }))
   };

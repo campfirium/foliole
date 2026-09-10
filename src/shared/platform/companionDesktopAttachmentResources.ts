@@ -1,5 +1,5 @@
-import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 import { isCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
+import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { createSignedRequestHeaders } from './companion/network/signedRequest';

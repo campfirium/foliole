@@ -8,9 +8,18 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { listNodeAttachments } = vi.hoisted(() => ({
   listNodeAttachments: vi.fn()
 }));
+const { loadAttachmentResourceDescription } = vi.hoisted(() => ({
+  loadAttachmentResourceDescription: vi.fn()
+}));
+
+const PDF_CONTENT_HASH = 'a'.repeat(64);
+const PDF_STORAGE_KEY = `${PDF_CONTENT_HASH}.pdf`;
+const PDF_RESOURCE_URL = `foliole-asset://attachment/${PDF_STORAGE_KEY}` +
+  `?attachment_id=pdf-hash&content_hash=${PDF_CONTENT_HASH}&library_scope=library-scope&mime_type=application%2Fpdf`;
 
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('../database/attachments.js', () => ({ listNodeAttachments }));
+vi.mock('../database/attachmentResourceDescription.js', () => ({ loadAttachmentResourceDescription }));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn(() => ({ readwiseSources: [], sources: [] }))
 }));
@@ -19,6 +28,14 @@ import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  loadAttachmentResourceDescription.mockReturnValue({
+    attachmentId: 'pdf-hash',
+    availability: 'local',
+    contentHash: PDF_CONTENT_HASH,
+    libraryScope: 'library-scope',
+    mimeType: 'application/pdf',
+    storageKey: PDF_STORAGE_KEY
+  });
 });
 
 function mockPdfSource(sourceLocator: string) {
@@ -58,7 +75,7 @@ it('serializes pdf attachment sources through the managed attachment protocol fo
   expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
-      source_locator: 'foliole-asset://attachment/pdf-hash',
+      source_locator: PDF_RESOURCE_URL,
       source_name: 'paper.pdf'
     })
   );
@@ -99,7 +116,7 @@ it('keeps pdf reader sources on the managed attachment copy even when the import
   expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
-      source_locator: 'foliole-asset://attachment/pdf-hash'
+      source_locator: PDF_RESOURCE_URL
     })
   );
 });

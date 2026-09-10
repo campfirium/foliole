@@ -1,5 +1,6 @@
-import type { DbPort } from './dbPort.js';
 import { isCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
+
+import type { DbPort } from './dbPort.js';
 
 const CONTENT_PACK_ALIAS = 'content_batch';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;

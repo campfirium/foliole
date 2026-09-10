@@ -13,7 +13,6 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 import { createBoundedCache } from '../lib/boundedCache';
 
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   FolioleCompanionSync,
   isNativeCompanionAttachmentResourceRuntime

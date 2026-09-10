@@ -1,10 +1,11 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 
-import { createHash } from 'node:crypto';
 
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
+
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 import { readAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
 import { buildAttachmentStorageFileName, resolveAttachmentStorageKeyPath } from './storagePath.js';

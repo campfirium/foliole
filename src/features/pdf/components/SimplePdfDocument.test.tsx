@@ -2,6 +2,11 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
+import {
+  registerTestAttachmentResource,
+  resetTestAttachmentResources,
+  TEST_ATTACHMENT_HASH
+} from '../../../test/attachmentResourceTestSupport';
 
 const resourceMock = vi.hoisted(() => ({
   invalidateAttachmentResourceResolution: vi.fn(),
@@ -51,6 +56,8 @@ import { SimplePdfDocument } from './SimplePdfDocument';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetTestAttachmentResources();
+  registerTestAttachmentResource({ attachmentId: 'pdf-attachment-1', mimeType: 'application/pdf' });
   globalThis.ResizeObserver = class {
     disconnect() {}
     observe() {}
@@ -73,7 +80,7 @@ describe('SimplePdfDocument', () => {
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(document.querySelector('[data-pdf-page="2"]')).toBeInTheDocument();
-    expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledWith('asset://pdf-attachment-1');
+    expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledWith(`asset://${TEST_ATTACHMENT_HASH}.pdf`);
   });
 
   it('offers a lightweight original PDF viewer with explicit zoom controls', async () => {

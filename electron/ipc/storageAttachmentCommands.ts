@@ -1,3 +1,4 @@
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../attachments/attachmentImageActions.js';
 import { importClipboardImageAttachment } from '../attachments/importClipboardImageAttachment.js';
@@ -9,7 +10,6 @@ import {
 } from '../attachments/remoteImageLearnedSources.js';
 import { resolveRemoteImageSourceContext } from '../attachments/remoteImageSourceContext.js';
 import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
-import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { asString } from './commandParsers.js';
 

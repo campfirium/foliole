@@ -1,10 +1,10 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { registerAttachmentResourceDescriptions } from './attachmentResources';
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
-import { registerAttachmentResourceDescriptions } from './attachmentResources';
 import {
   capturePendingNodeOrderAck,
   drainPendingWorkspaceRelearnNode,

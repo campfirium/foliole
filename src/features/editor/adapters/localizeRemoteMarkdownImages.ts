@@ -28,6 +28,19 @@ interface LocalizedRemoteImageImport {
   status: 'imported';
 }
 
+function toLocalizedRemoteImage(result: Awaited<ReturnType<typeof importRemoteImageAttachment>>) {
+  const imported = result?.status === 'imported' ? result as LocalizedRemoteImageImport : null;
+  return imported
+    ? {
+        attachmentId: imported.attachment_id,
+        contentHash: imported.hash,
+        intrinsicSize: imported.intrinsic_size ?? null,
+        mimeType: imported.mime_type,
+        originalName: imported.original_name
+      }
+    : null;
+}
+
 function isRemoteImageUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -157,19 +170,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
   for (const match of matches) {
     if (!resultByUrl.has(match.sourceUrl)) {
       const result = await importRemoteImageAttachment(nodeId, match.sourceUrl);
-      const imported = result?.status === 'imported' ? result as LocalizedRemoteImageImport : null;
-      resultByUrl.set(
-        match.sourceUrl,
-        imported
-          ? {
-              attachmentId: imported.attachment_id,
-              contentHash: imported.hash,
-              intrinsicSize: imported.intrinsic_size ?? null,
-              mimeType: imported.mime_type,
-              originalName: imported.original_name
-            }
-          : null
-      );
+      resultByUrl.set(match.sourceUrl, toLocalizedRemoteImage(result));
     }
 
     const localization = resultByUrl.get(match.sourceUrl);

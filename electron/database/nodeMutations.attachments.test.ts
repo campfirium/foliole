@@ -19,12 +19,15 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
+import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 
 let tempRoot = '';
+const IMAGE_ID = 'a'.repeat(64);
+const PDF_ID = 'b'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-attachment-cleanup-'));
@@ -61,6 +64,17 @@ async function seedAttachment(args: { attachmentId: string; mimeType: string; no
     sizeBytes: 32,
     createdAt: '2026-04-18T08:00:00.000Z'
   });
+  const extension = args.mimeType === 'application/pdf' ? '.pdf' : '.png';
+  upsertAttachmentBlobManifest({
+    attachmentId: args.attachmentId,
+    availability: 'local',
+    contentHash: args.attachmentId,
+    createdAt: '2026-04-18T08:00:00.000Z',
+    mimeType: args.mimeType,
+    sizeBytes: 32,
+    sourceHostName: null,
+    storageKey: `${args.attachmentId}${extension}`
+  });
   for (const nodeId of args.nodeIds) {
     createNodeAttachmentLink({
       nodeId,
@@ -68,7 +82,7 @@ async function seedAttachment(args: { attachmentId: string; mimeType: string; no
       role: args.role
     });
   }
-  const storagePath = resolveAttachmentStoragePath(args.attachmentId, undefined, args.originalName);
+  const storagePath = resolveAttachmentStoragePath(args.attachmentId, undefined, args.mimeType);
   await fs.mkdir(path.dirname(storagePath), { recursive: true });
   await fs.writeFile(storagePath, `${args.mimeType}:${args.attachmentId}`);
   return storagePath;
@@ -92,9 +106,9 @@ function readAttachmentCounts(attachmentId: string) {
 }
 
 it('keeps attachments intact after soft delete even when the deleted node was the last visible use', async () => {
-  seedNode('node-image', '![Cover](asset://hash-image.png)');
+  seedNode('node-image', `![Cover](asset://${IMAGE_ID}.png)`);
   const filePath = await seedAttachment({
-    attachmentId: 'hash-image',
+    attachmentId: IMAGE_ID,
     mimeType: 'image/png',
     nodeIds: ['node-image'],
     originalName: 'cover.png',
@@ -106,7 +120,7 @@ it('keeps attachments intact after soft delete even when the deleted node was th
     deletedAt: '2026-04-18T08:05:00.000Z'
   });
 
-  expect(readAttachmentCounts('hash-image')).toEqual({
+  expect(readAttachmentCounts(IMAGE_ID)).toEqual({
     attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 0,
@@ -116,10 +130,11 @@ it('keeps attachments intact after soft delete even when the deleted node was th
 });
 
 it('keeps shared inline images until the last body reference is permanently deleted', async () => {
-  seedNode('node-a', '![Cover](asset://hash-image.png)');
-  seedNode('node-b', 'Text\n\n![Cover](asset://hash-image.png)');
+  const markdown = `![Cover](asset://${IMAGE_ID}.png)`;
+  seedNode('node-a', markdown);
+  seedNode('node-b', `Text\n\n${markdown}`);
   const filePath = await seedAttachment({
-    attachmentId: 'hash-image',
+    attachmentId: IMAGE_ID,
     mimeType: 'image/png',
     nodeIds: ['node-a', 'node-b'],
     originalName: 'cover.png',
@@ -131,7 +146,7 @@ it('keeps shared inline images until the last body reference is permanently dele
     nodeOrder: ['node-b']
   });
 
-  expect(readAttachmentCounts('hash-image')).toEqual({
+  expect(readAttachmentCounts(IMAGE_ID)).toEqual({
     attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 0,
@@ -144,7 +159,7 @@ it('keeps shared inline images until the last body reference is permanently dele
     nodeOrder: []
   });
 
-  expect(readAttachmentCounts('hash-image')).toEqual({
+  expect(readAttachmentCounts(IMAGE_ID)).toEqual({
     attachmentRows: 0,
     linkRows: 0,
     pdfIndexRows: 0,
@@ -154,7 +169,7 @@ it('keeps shared inline images until the last body reference is permanently dele
     `SELECT deleted_at
      FROM sync_object_state
      WHERE object_type = 'attachment' AND object_id = ?`,
-    ['hash-image']
+    [IMAGE_ID]
   )).toEqual({ deleted_at: expect.any(String) });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
@@ -163,7 +178,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   seedNode('node-pdf-a', '# PDF A');
   seedNode('node-pdf-b', '# PDF B');
   const filePath = await seedAttachment({
-    attachmentId: 'hash-pdf',
+    attachmentId: PDF_ID,
     mimeType: 'application/pdf',
     nodeIds: ['node-pdf-a', 'node-pdf-b'],
     originalName: 'book.pdf',
@@ -171,15 +186,15 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   });
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height) VALUES (?, ?, ?, ?, ?)')
-    .run('hash-pdf', 1, 'Page 1', 800, 1200);
+    .run(PDF_ID, 1, 'Page 1', 800, 1200);
   openDatabaseConnection().sqlite
     .prepare(
       `INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
-      'book.pdf', '', 'Page 1', 'node-pdf-a', 'hash-pdf', '1', '2026-04-18T08:00:00.000Z', '6',
-      'book.pdf', '', 'Page 1', 'node-pdf-b', 'hash-pdf', '1', '2026-04-18T08:00:00.000Z', '6'
+      'book.pdf', '', 'Page 1', 'node-pdf-a', PDF_ID, '1', '2026-04-18T08:00:00.000Z', '6',
+      'book.pdf', '', 'Page 1', 'node-pdf-b', PDF_ID, '1', '2026-04-18T08:00:00.000Z', '6'
     );
 
   deleteNodesPermanently({
@@ -187,7 +202,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
     nodeOrder: ['node-pdf-b']
   });
 
-  expect(readAttachmentCounts('hash-pdf')).toEqual({
+  expect(readAttachmentCounts(PDF_ID)).toEqual({
     attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 1,
@@ -200,7 +215,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
     nodeOrder: []
   });
 
-  expect(readAttachmentCounts('hash-pdf')).toEqual({
+  expect(readAttachmentCounts(PDF_ID)).toEqual({
     attachmentRows: 0,
     linkRows: 0,
     pdfIndexRows: 0,
@@ -210,7 +225,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
     `SELECT deleted_at
      FROM sync_object_state
      WHERE object_type = 'pdf_page_text' AND object_id = ?`,
-    ['hash-pdf:1']
+    [`${PDF_ID}:1`]
   )).toEqual({ deleted_at: expect.any(String) });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });

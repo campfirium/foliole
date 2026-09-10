@@ -125,7 +125,6 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
   try {
     const sourceBytes = fs.readFileSync(sourcePath);
     const hash = createContentHash(sourceBytes);
-    const existingAttachment = findAttachmentRecordById(hash);
     persistAttachmentFile(
       resolveAttachmentStoragePath(hash, undefined, mimeType),
       sourceBytes
@@ -174,7 +173,6 @@ export function importPdfSourceAttachment(nodeId: string, sourcePath: string) {
   if (!sourcePath.trim() || !fs.existsSync(sourcePath)) return null;
   const sourceBytes = fs.readFileSync(sourcePath);
   const hash = createContentHash(sourceBytes);
-  const existingAttachment = findAttachmentRecordById(hash);
   persistAttachmentFile(
     resolveAttachmentStoragePath(hash, undefined, PDF_MIME_TYPE),
     sourceBytes

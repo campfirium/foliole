@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn(() => null) }));
 vi.mock('../../../shared/platform/bridge', () => ({ openExternalUrl: vi.fn() }));
@@ -26,6 +30,7 @@ function mockRect(element: HTMLElement, width: () => number) {
 
 describe('live markdown image resize', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -36,7 +41,7 @@ describe('live markdown image resize', () => {
   it('renders an Obsidian width suffix without exposing it as alt text', () => {
     const host = document.createElement('div');
     document.body.append(host);
-    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '![Cover|268](asset://hash-1.png)' });
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: `![Cover|268](${TEST_ATTACHMENT_ASSET_URL})` });
     const surface = host.querySelector('.cm-md-image-surface-block') as HTMLElement;
 
     expect(surface.style.width).toBe('268px');
@@ -52,7 +57,7 @@ describe('live markdown image resize', () => {
   it('writes the dragged width into markdown and resets it on double click', () => {
     const host = document.createElement('div');
     document.body.append(host);
-    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '![Cover|268](asset://hash-1.png)' });
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: `![Cover|268](${TEST_ATTACHMENT_ASSET_URL})` });
     const widget = host.querySelector('.cm-md-image-widget') as HTMLElement;
     const surface = host.querySelector('.cm-md-image-surface-block') as HTMLElement;
     const handle = host.querySelector('.cm-md-image-resize-handle') as HTMLButtonElement;
@@ -64,11 +69,11 @@ describe('live markdown image resize', () => {
     handle.dispatchEvent(pointer('pointermove', 150));
     handle.dispatchEvent(pointer('pointerup', 150));
 
-    expect(adapter.getContent()).toBe('![Cover|318](asset://hash-1.png)');
+    expect(adapter.getContent()).toBe(`![Cover|318](${TEST_ATTACHMENT_ASSET_URL})`);
     (host.querySelector('.cm-md-image-resize-handle') as HTMLButtonElement).dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true })
     );
-    expect(adapter.getContent()).toBe('![Cover](asset://hash-1.png)');
+    expect(adapter.getContent()).toBe(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
 
     adapter.destroy();
   });

@@ -9,10 +9,9 @@ import {
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
-import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
-import { runCanonicalAttachmentMigration } from '../attachments/canonicalAttachmentMigration.js';
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
-import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
+import { runCanonicalAttachmentMigration } from '../attachments/canonicalAttachmentMigration.js';
+import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
 import {
   closeDatabaseConnection,
@@ -33,6 +32,7 @@ import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
 } from './managedSafetySnapshots.js';
+import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';

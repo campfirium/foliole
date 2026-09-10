@@ -2,6 +2,10 @@ import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
 import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
@@ -110,6 +114,7 @@ async function expectOutlinedRegionRemoved(host: HTMLElement) {
 
 describe('live markdown image rendering basics', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -118,7 +123,7 @@ describe('live markdown image rendering basics', () => {
   });
 
   it('renders internal attachment images through the unified resource entry', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
 
     await expectInternalImageRendered(host);
 
@@ -126,7 +131,7 @@ describe('live markdown image rendering basics', () => {
   });
 
   it('shows an unavailable placeholder when an internal attachment image fails to load', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
     const image = host.querySelector('.cm-md-image-element');
     expect(image).not.toBeNull();
     image!.dispatchEvent(new Event('error'));
@@ -202,6 +207,7 @@ describe('live markdown local document image rendering', () => {
 
 describe('live markdown image rendering interactions', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -211,7 +217,7 @@ describe('live markdown image rendering interactions', () => {
 
   it('dispatches a preview request when the block image preview trigger is clicked', async () => {
     const handlePreview = vi.fn();
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
     host.addEventListener(MARKDOWN_IMAGE_PREVIEW_EVENT, handlePreview as EventListener);
 
     await expectInternalImageRendered(host);
@@ -232,6 +238,7 @@ describe('live markdown image rendering interactions', () => {
 
 describe('live markdown image rendering image cloze presentation', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -240,7 +247,7 @@ describe('live markdown image rendering image cloze presentation', () => {
   });
 
   it('shows outlined image cloze regions immediately after presentation refresh without requiring focus interaction', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
 
     adapter.setNodeId('node-1');
     registerImageClozeEditorPresentation('node-1', createOutlinedPresentation());
@@ -252,7 +259,7 @@ describe('live markdown image rendering image cloze presentation', () => {
   });
 
   it('removes rendered image cloze regions after the presentation is cleared', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
 
     adapter.setNodeId('node-1');
     registerImageClozeEditorPresentation('node-1', createOutlinedPresentation());
@@ -267,7 +274,7 @@ describe('live markdown image rendering image cloze presentation', () => {
   });
 
   it('marks a whole-image highlight presentation with the dedicated image highlight surface state', async () => {
-    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
 
     adapter.setNodeId('node-1');
     registerImageClozeEditorPresentation('node-1', createFullImageHighlightPresentation());

@@ -2,6 +2,10 @@ import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
@@ -22,6 +26,7 @@ function createAdapterHost(initialContent: string) {
 
 describe('live markdown imported article regressions', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -30,18 +35,19 @@ describe('live markdown imported article regressions', () => {
   });
 
   it('renders bracketed alt attachment images from imported social posts', async () => {
-    const { adapter, host } = createAdapterHost('请教老师，![[作揖]](asset://hash-1.png)  ');
+    const { adapter, host } = createAdapterHost(`请教老师，![[作揖]](${TEST_ATTACHMENT_ASSET_URL})  `);
 
     await waitFor(() => {
       expect(host.querySelector('.cm-md-image-element')).toHaveAttribute('src', 'foliole-asset://attachment/hash-1');
     });
-    expect(host.querySelector('.cm-content')?.textContent).not.toContain('asset://hash-1.png');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain(TEST_ATTACHMENT_ASSET_URL);
 
     adapter.destroy();
   });
 
   it('renders empty-alt imported epub asset images without leaking the next heading marker', async () => {
     const attachmentId = '6340868bc6d7748c2c619e607ca13843234783cb1f1a3bc5bafc9c866ee6751d';
+    registerTestAttachmentResource({ attachmentId, contentHash: attachmentId, mimeType: 'image/jpeg' });
     const { adapter, host } = createAdapterHost([
       `![](asset://${attachmentId}.jpg)`,
       '',

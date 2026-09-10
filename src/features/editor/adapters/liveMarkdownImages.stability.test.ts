@@ -2,6 +2,10 @@ import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
@@ -22,6 +26,7 @@ function createAdapterHost(initialContent: string) {
 
 describe('live markdown image widget stability', () => {
   beforeEach(() => {
+    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -30,7 +35,7 @@ describe('live markdown image widget stability', () => {
   });
 
   it('keeps image widget DOM when typing before an unchanged image', async () => {
-    const initialContent = 'Lead\n\n![Cover](asset://hash-1.png)\n\nTail';
+    const initialContent = `Lead\n\n![Cover](${TEST_ATTACHMENT_ASSET_URL})\n\nTail`;
     const { adapter, host } = createAdapterHost(initialContent);
 
     await waitFor(() => {

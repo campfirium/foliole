@@ -3,6 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
+  registerTestAttachmentResource,
+  TEST_ATTACHMENT_ASSET_URL
+} from '../../../test/attachmentResourceTestSupport';
+import {
   registerImageClozeEditorPresentation,
   unregisterImageClozeEditorPresentation
 } from '../../image-cloze/model/imageClozePresentation';
@@ -15,6 +19,7 @@ import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 let adapter: CodeMirrorEditorAdapter | null = null;
 
 beforeEach(() => {
+  registerTestAttachmentResource();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
 });
 
@@ -27,7 +32,7 @@ afterEach(() => {
 });
 
 it('projects an occurrence-bound image excerpt only onto the exact repeated image range', async () => {
-  const imageMarkdown = '![Cover](asset://hash-1.png)';
+  const imageMarkdown = `![Cover](${TEST_ATTACHMENT_ASSET_URL})`;
   const content = `${imageMarkdown}\nBetween\n${imageMarkdown}`;
   const secondFrom = content.lastIndexOf(imageMarkdown);
   const host = document.createElement('div');
