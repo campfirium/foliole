@@ -23,7 +23,7 @@ export function indexReadwiseApiAnnotationGraph(
   }
   for (const note of facts.filter((item) => item.category === 'note')) {
     const highlight = note.parentId ? highlightById.get(note.parentId) : null;
-    const documentId = highlight?.parentId ?? highlight?.documentId ?? null;
+    const documentId = highlight?.parentId ?? note.documentId ?? null;
     if (!documentId) {
       if (note.seenInRun === runStartedAt) throw unresolved(note.remoteId);
       continue;

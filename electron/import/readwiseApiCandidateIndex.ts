@@ -18,6 +18,7 @@ import {
 } from '../database/readwiseApiScopeLedger.js';
 
 import { indexReadwiseApiAnnotationGraph } from './readwiseApiAnnotationGraph.js';
+import { resolveReadwiseApiNoteParents } from './readwiseApiAnnotationParentResolution.js';
 import { resolveReadwiseApiCandidateParent } from './readwiseApiCandidateParent.js';
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import {
@@ -114,10 +115,16 @@ async function assembleCandidates(
   settings: ImportManagerSettings,
   request: ReturnType<typeof createReadwiseApiRequest>
 ) {
+  const run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
+  await resolveReadwiseApiNoteParents({
+    connectionRef,
+    facts: loadReadwiseApiAnnotationLedger(connectionRef),
+    request,
+    runStartedAt: run.roundStartedAt
+  });
   const documents = loadReadwiseApiReaderIndex(connectionRef);
   const byId = new Map(documents.map((item) => [item.id, item]));
   const annotations = loadReadwiseApiAnnotationLedger(connectionRef);
-  const run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
   const graph = indexReadwiseApiAnnotationGraph(annotations, run.roundStartedAt);
   const exportBooks = loadReadwiseApiExportIndex(connectionRef);
   saveReadwiseApiAnnotationContentStates(connectionRef, new Set(exportBooks.flatMap((book) =>
