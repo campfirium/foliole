@@ -63,9 +63,9 @@ export function verifySyncPackAcceptance(
   firstBridge, secondBridge, firstSnapshot, secondSnapshot, rejections = [], observations = {}
 ) {
   const firstPassed = firstBridge.phase === 'applied' && firstBridge.apply?.to_state_seq === 1 &&
-    firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesClosed(firstBridge.roundtrip?.gates);
+    firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesOpen(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
-    secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesClosed(secondBridge.roundtrip?.gates);
+    secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesOpen(secondBridge.roundtrip?.gates);
   const snapshotPassed = firstSnapshot?.capture_versions === 2 && firstSnapshot?.restore_versions === 2 &&
     firstSnapshot?.confirmed_node_delivery_count === 2 && firstSnapshot?.dirty_count === 0 &&
     firstSnapshot?.restore_deleted_at === null && firstSnapshot?.tombstone_count === 0 &&
@@ -90,8 +90,8 @@ export function verifySyncPackAcceptance(
   };
 }
 
-function gatesClosed(gates) {
-  return gates && Object.keys(gates).length === 5 && Object.values(gates).every((value) => value === false);
+function gatesOpen(gates) {
+  return gates && Object.keys(gates).length === 5 && Object.values(gates).every((value) => value === true);
 }
 
 export async function runSyncPackRejections(options) {

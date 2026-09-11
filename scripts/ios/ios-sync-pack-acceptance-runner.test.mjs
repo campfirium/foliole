@@ -17,7 +17,7 @@ it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', (
   }]));
   const gates = Object.fromEntries([
     'existing-highlight-edit', 'quick-capture', 'selection-annotation', 'topic-content-edit', 'trash-restore'
-  ].map((key) => [key, false]));
+  ].map((key) => [key, true]));
   const first = {
     apply: { to_state_seq: 1 }, phase: 'applied',
     roundtrip: { gates, push: { pushedObjectIds: ['node:capture', 'node:restore'] } }
