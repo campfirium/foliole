@@ -30,7 +30,7 @@ export type DiscoveryCandidate = {
   source: 'direct' | 'nsd';
 };
 
-const DISCOVERY_TIMEOUT_MS = 1200;
+const DISCOVERY_TIMEOUT_MS = 3000;
 const DISCOVERY_BATCH_SIZE = 24;
 
 function directCandidate(endpointUrl: string): DiscoveryCandidate {
