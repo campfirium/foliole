@@ -92,6 +92,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncPackNodes.test.ts',
   'src/shared/platform/companionSyncPackApply.test.ts',
   'scripts/ios/ios-contract-assets.test.mjs',
+  'scripts/ios/fri-app-retention.test.mjs',
   'scripts/ios/fri-dev-workflow.test.mjs',
   'scripts/ios/fri-physical-readiness.test.mjs',
   'scripts/ios/fri-two-device-run-proof.test.mjs',
@@ -141,6 +142,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-participation-host-contract.test.mjs',
   'scripts/ios/ios-sync-trigger-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-trigger-host-contract.test.mjs',
+  'scripts/ios/macos-fri-two-device-sync.test.mjs',
+  'scripts/ios/windows-fri-two-device-sync.test.mjs',
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [

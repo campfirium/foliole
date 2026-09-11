@@ -38,8 +38,8 @@ function execute(command, args, options = {}) {
   }
 }
 
-export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot }) {
-  const runnerArgs = [FRI_XCUITEST_RUNNER,
+export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER }) {
+  const runnerArgs = [runnerPath,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
     '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
@@ -70,13 +70,14 @@ export async function runFriDevWorkflow({
   repoRoot = process.cwd(),
   readiness = createFriPhysicalReadinessAdapter(),
   retention = retainFriDevelopmentApps,
+  runnerPath = FRI_XCUITEST_RUNNER,
   run = execute
 }) {
-  if (!fs.existsSync(FRI_XCUITEST_RUNNER)) {
-    throw new Error(`Fixed Fri XCUITest runner is missing: ${FRI_XCUITEST_RUNNER}`);
+  if (!fs.existsSync(runnerPath)) {
+    throw new Error(`Fixed Fri XCUITest runner is missing: ${runnerPath}`);
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot });
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath });
   for (const entry of commands.slice(0, 2)) {
     run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }

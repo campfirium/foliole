@@ -62,6 +62,7 @@ describe('Fri development workflow', () => {
       readiness: async () => { stages.push('readiness'); },
       retention: async () => { stages.push('fri-app-retention'); },
       repoRoot: '/repo',
+      runnerPath: '/bin/sh',
       run: (_command, _args, options) => { stages.push(options.stage); }
     });
     expect(stages).toEqual([
