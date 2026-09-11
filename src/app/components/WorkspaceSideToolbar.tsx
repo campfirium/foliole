@@ -49,7 +49,7 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
         data-active={isSettingsOpen}
         icon={<Settings aria-hidden="true" size={16} strokeWidth={1.75} />}
         label={t('desktop.workspace.settings')}
-        onClick={onOpenSettings}
+        onClick={() => onOpenSettings()}
       />
     </ToolbarActionGroup>
   );

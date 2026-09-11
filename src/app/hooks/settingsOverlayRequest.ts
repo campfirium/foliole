@@ -13,8 +13,9 @@ export function clearSettingsRequest(runtime: AppRuntime) {
 
 export function createOpenSettingsHandler(runtime: AppRuntime) {
   return (category?: SettingsCategoryId, rowId?: SettingsSearchRowId) => {
+    const requestedCategory = typeof category === 'string' ? category : null;
     runtime.setRequestedSettingsDialog(null);
-    runtime.setRequestedSettingsCategory(category ?? null);
+    runtime.setRequestedSettingsCategory(requestedCategory);
     runtime.setRequestedSettingsRowId(rowId ?? null);
     runtime.setIsSettingsOpen(true);
   };
