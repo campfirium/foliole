@@ -67,7 +67,7 @@ it('keeps another Host Readwise config and Source reference independent', () => 
   )!.value)).toMatchObject({
     readwiseAutoImportPolicy: {
       articleWithHighlights: 'external', articleWithoutHighlights: 'off',
-      bookWithHighlights: 'inbox', bookWithoutHighlights: 'external', version: 1
+      version: 3
     }
   });
   expect(driver.queryOne(`SELECT scope, host_name FROM setting_records

@@ -21,6 +21,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { openDatabaseConnection, closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -67,7 +68,11 @@ function saveReadwiseKeepImportSettings(
   },
   importScope: 'all' | 'highlights_only'
 ) {
-  saveImportManagerSettings({
+  const saved = saveImportManagerSettings({
+    readwiseAutoImportPolicy: {
+      ...createDefaultReadwiseAutoImportPolicy(),
+      articleWithoutHighlights: importScope === 'all' ? 'external' : 'off'
+    },
     readwiseReaderConfig: {
       highlightSeparator: '\\n\\n',
       highlightsHeading: '## Highlights',
@@ -90,6 +95,7 @@ function saveReadwiseKeepImportSettings(
       }
     ]
   });
+  return saved.readwiseSources[0]!.id;
 }
 
 function readImportedSourceNames() {
@@ -101,12 +107,12 @@ function readImportedSourceNames() {
 
 it('skips readwise files without highlights by default', async () => {
   const fixture = await seedReadwiseFixtureWithUnhighlightedFile(tempRoot);
-  saveReadwiseKeepImportSettings(fixture, 'highlights_only');
+  const ruleId = saveReadwiseKeepImportSettings(fixture, 'highlights_only');
 
   const preview = await previewKeepImportRule({
     directoryPath: fixture.fullDocumentDir,
     highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
+    ruleId,
     sourceType: 'readwise'
   });
 
@@ -116,21 +122,21 @@ it('skips readwise files without highlights by default', async () => {
   await runKeepImportRule({
     directoryPath: fixture.fullDocumentDir,
     highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
+    ruleId,
     sourceType: 'readwise'
   });
 
   expect(readImportedSourceNames()).toEqual([{ source_name: 'Sample Article.md' }]);
 });
 
-it('imports readwise files without highlights when import all is selected', async () => {
+it('imports readwise files without highlights when the article policy enables them', async () => {
   const fixture = await seedReadwiseFixtureWithUnhighlightedFile(tempRoot);
-  saveReadwiseKeepImportSettings(fixture, 'all');
+  const ruleId = saveReadwiseKeepImportSettings(fixture, 'all');
 
   const preview = await previewKeepImportRule({
     directoryPath: fixture.fullDocumentDir,
     highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
+    ruleId,
     sourceType: 'readwise'
   });
 
@@ -139,9 +145,12 @@ it('imports readwise files without highlights when import all is selected', asyn
   await runKeepImportRule({
     directoryPath: fixture.fullDocumentDir,
     highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-1',
+    ruleId,
     sourceType: 'readwise'
   });
 
-  expect(readImportedSourceNames()).toEqual([{ source_name: 'Sample Article.md' }, { source_name: 'Without Highlights.md' }]);
+  expect(readImportedSourceNames()).toEqual([{ source_name: 'Sample Article.md' }]);
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT relative_path FROM external_documents ORDER BY relative_path ASC')
+    .all()).toEqual([{ relative_path: 'Without Highlights.md' }]);
 });

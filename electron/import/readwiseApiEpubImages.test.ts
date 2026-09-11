@@ -37,6 +37,8 @@ beforeEach(() => {
   }));
   mocks.importImageAttachmentResource.mockImplementation(async (input: { originalName: string }) => ({
     attachment_id: `attachment-${input.originalName}`,
+    hash: 'a'.repeat(64),
+    mime_type: 'image/png',
     original_name: input.originalName,
     status: 'imported'
   }));
@@ -54,9 +56,8 @@ it('localizes the cover and body images while replacing unresolved references', 
     unavailableBodyCount: 1
   });
   expect(prepared?.coverState).toBe('localized');
-  expect(prepared?.rootBody).toContain('asset://attachment-cover.jpg.png');
-  expect(prepared?.rootBody).toContain('asset://attachment-root.png.png');
-  expect(prepared?.sections[0]?.content).toContain('asset://attachment-section.png.png');
+  expect(prepared?.rootBody).toContain(`asset://${'a'.repeat(64)}.png`);
+  expect(prepared?.sections[0]?.content).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(prepared?.sections[0]?.content).toContain('**Image unavailable.**');
   expect(JSON.stringify(prepared)).not.toContain('https://');
   expect(JSON.stringify(prepared)).not.toContain('../images/missing.png');

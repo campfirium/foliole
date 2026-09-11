@@ -43,6 +43,8 @@ beforeEach(() => {
   });
   mocks.importImageAttachmentResource.mockResolvedValue({
     attachment_id: 'attachment-large-image',
+    hash: 'a'.repeat(64),
+    mime_type: 'image/png',
     original_name: 'image.png',
     status: 'ok'
   });
@@ -54,7 +56,7 @@ it('turns localized large inline images into independent blocks', async () => {
   await expect(context.localizeMarkdown('Lead ![](https://cdn.example.com/image.png) trailing')).resolves.toEqual({
     attachmentIds: ['attachment-large-image'],
     degradedMessages: [],
-    text: 'Lead\n\n![](asset://attachment-large-image.png)\n\ntrailing'
+    text: `Lead\n\n![](asset://${'a'.repeat(64)}.png)\n\ntrailing`
   });
 });
 
@@ -77,7 +79,7 @@ it('bypasses the failure cache and retries once for import-time localization', a
 
   const result = await context.localizeMarkdown('![](https://cdn.example.com/image.png)');
 
-  expect(result.text).toContain('asset://attachment-large-image.png');
+  expect(result.text).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(mocks.fetchRemoteImageResource).toHaveBeenNthCalledWith(1,
     'https://cdn.example.com/image.png', { bypassFailureCache: true });
   expect(mocks.fetchRemoteImageResource).toHaveBeenNthCalledWith(2,

@@ -117,7 +117,11 @@ beforeEach(async () => {
     library_home: path.join(mockedAppDataDir, 'library-home'),
     mirror: path.join(mockedAppDataDir, 'mirror')
   });
-  await fs.mkdir(path.join(mockedAppDataDir, 'data'), { recursive: true });
+  await Promise.all([
+    fs.mkdir(path.join(mockedAppDataDir, 'assets'), { recursive: true }),
+    fs.mkdir(path.join(mockedAppDataDir, 'attachments'), { recursive: true }),
+    fs.mkdir(path.join(mockedAppDataDir, 'data'), { recursive: true })
+  ]);
   initializeDatabase();
 });
 

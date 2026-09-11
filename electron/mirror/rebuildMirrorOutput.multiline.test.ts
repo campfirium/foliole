@@ -18,6 +18,11 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [] },
+  nativeTheme: { on: vi.fn(), shouldUseDarkColors: false, themeSource: 'system' },
+  systemPreferences: { getUserDefault: vi.fn(), subscribeNotification: vi.fn() }
+}));
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
