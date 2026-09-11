@@ -47,10 +47,10 @@ it('allows a hosted-speed native discovery response to finish', async () => {
         runtime_instance_id: 'runtime-desktop-local', topology_role: 'anchor'
       }),
       status: 200
-    }), 1500);
+    }), 3500);
   }));
 
   const pending = discoverCompanionDesktops('http://10.0.2.2:38641');
-  await vi.advanceTimersByTimeAsync(1500);
+  await vi.advanceTimersByTimeAsync(3500);
   await expect(pending).resolves.toHaveLength(1);
 });

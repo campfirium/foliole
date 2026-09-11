@@ -1,4 +1,7 @@
-import { IOS_SYNC_PACK_CAPTURE_OBJECT_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
+import {
+  IOS_SYNC_PACK_CANONICAL_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_CAPTURE_OBJECT_ID
+} from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 
 interface PushItem {
   clientOpId?: unknown;
@@ -13,7 +16,10 @@ export function acceptIosAcceptancePush(bodyText: string) {
   return {
     acks: items.map((item, index) => ({
       ...(item.identity.objectType === 'node' && item.identity.objectId !== 'ios-acceptance-restore'
-        ? { canonical_object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID }
+        ? {
+          canonical_object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
+          canonical_version_id: IOS_SYNC_PACK_CANONICAL_CAPTURE_VERSION_ID
+        }
         : {}),
       client_op_id: item.clientOpId,
       identity: item.identity,
