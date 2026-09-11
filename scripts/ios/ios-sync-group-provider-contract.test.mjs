@@ -1,10 +1,15 @@
 // @vitest-environment node
+/* global Buffer */
 import { createHash, createHmac } from 'node:crypto';
 
 import { expect, it } from 'vitest';
 
 import { SYNC_GROUP_JOIN_CONTRACT_VERSION } from '../../lib/platform/syncGroupJoinContract.ts';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.ts';
+import {
+  decryptWorkgroupPayloadNode,
+  encryptWorkgroupPayloadNode
+} from '../../electron/sync/workgroupAeadNode.ts';
 import {
   createCompanionSyncGroupJoinPublicKey,
   decryptCompanionSyncGroupJoinInfo,
@@ -42,6 +47,7 @@ it('uses explicit request acceptance, one-time collection, and joined workgroup 
     expect(info).toMatchObject({ group_id: provider.discovery.group_id });
     expect(provider.discovery.group_tag).toMatch(/^[0-9a-f]{32}$/u);
     expect(provider.authenticate(signedRequest(info.workgroup_key, provider.discovery.group_id))).toBe(true);
+    verifyEncryptedRoundTrip(provider, info.workgroup_key, provider.discovery.group_id);
     expect(observations.accepted_device_id).toBe(createSyncGroupDeviceIdentity({
       device_anchor: ANCHOR, group_id: provider.discovery.group_id,
       library_path: LIBRARY, path_flavor: 'posix'
@@ -52,10 +58,31 @@ it('uses explicit request acceptance, one-time collection, and joined workgroup 
   }
 });
 
-function signedRequest(secret, groupId) {
-  const method = 'GET', path = '/acceptance/signed', nonce = 'nonce-1';
+function verifyEncryptedRoundTrip(provider, secret, groupId) {
+  const method = 'POST', path = '/companion/sync-push', contentType = 'application/json; charset=utf-8';
+  const plaintext = Buffer.from('{"items":[]}');
+  const context = {
+    contentType, direction: 'request', groupTag: provider.discovery.group_tag,
+    method, pathWithQuery: path
+  };
+  const wireBody = JSON.stringify(encryptWorkgroupPayloadNode({ context, groupKey: secret, plaintext }));
+  const request = signedRequest(secret, groupId, { bodyText: wireBody, method, path });
+  expect(provider.authenticate(request, wireBody)).toBe(true);
+  expect(provider.decryptRequest(request, wireBody)).toBe(plaintext.toString('utf8'));
+  const responseBody = Buffer.from('{"acks":[]}');
+  const encrypted = provider.encryptResponse(request, responseBody, contentType);
+  expect(decryptWorkgroupPayloadNode({
+    context: { ...context, direction: 'response' },
+    envelope: JSON.parse(encrypted.toString('utf8')),
+    groupKey: secret
+  })).toEqual(responseBody);
+}
+
+function signedRequest(secret, groupId, options = {}) {
+  const method = options.method ?? 'GET', path = options.path ?? '/acceptance/signed', nonce = 'nonce-1';
   const timestamp = new Date().toISOString();
-  const bodyHash = createHash('sha256').update('').digest('hex');
+  const bodyText = options.bodyText ?? '';
+  const bodyHash = createHash('sha256').update(bodyText).digest('hex');
   const signature = createHmac('sha256', secret)
     .update([method, path, timestamp, nonce, bodyHash].join('\n')).digest('hex');
   return {

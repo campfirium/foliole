@@ -45,6 +45,10 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
   };
   return {
     close: () => undefined,
+    route: async (request: { bodyText: string; method: string; url: string }) => {
+      args.observations.request_urls.push(request.url);
+      return route(request);
+    },
     handle: async (request: { bodyText: string; method: string; url: string }, response: ServerResponse) => {
       args.observations.request_urls.push(request.url);
       const routed = await route(request);

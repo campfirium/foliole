@@ -4,6 +4,11 @@ import type { IncomingMessage } from 'node:http';
 import { verifyCompanionRequestSignature } from '../../electron/sync/companionRequestSignature.ts';
 import { DesktopSyncGroupJoinProvider } from '../../electron/sync/syncGroupJoinProvider.ts';
 import {
+  decryptWorkgroupPayloadNode,
+  encryptWorkgroupPayloadNode
+} from '../../electron/sync/workgroupAeadNode.ts';
+import type { WorkgroupAeadEnvelope } from '../../lib/core/sync/workgroupAead.ts';
+import {
   IOS_HOSTED_PROVIDER_DEVICE_ID,
   IOS_HOSTED_PROVIDER_NAME,
   IOS_HOSTED_SYNC_GROUP_ID
@@ -55,11 +60,12 @@ export function createIosSyncGroupProviderContract(observations: Observations) {
       }
       return acceptance;
     },
-    discovery: {
-      app_version: '0.7.9', group_display_name: GROUP_NAME, group_id: IOS_HOSTED_SYNC_GROUP_ID,
-      group_tag: groupTag, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      provider_device_id: IOS_HOSTED_PROVIDER_DEVICE_ID, provider_device_name: IOS_HOSTED_PROVIDER_NAME,
-      provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId
+    discovery: createProviderDiscovery(groupTag, runtimeInstanceId),
+    decryptRequest(request: IncomingMessage, bodyText: string) {
+      return decryptProviderRequest(request, bodyText, groupTag, workgroupKey);
+    },
+    encryptResponse(request: IncomingMessage, body: Buffer, contentType: string) {
+      return encryptProviderResponse(request, body, contentType, groupTag, workgroupKey);
     },
     authenticate(request: IncomingMessage, bodyText = '') {
       const value = (name: string) => typeof request.headers[name] === 'string' ? request.headers[name] : '';
@@ -74,4 +80,41 @@ export function createIosSyncGroupProviderContract(observations: Observations) {
       return valid;
     }
   };
+}
+
+function createProviderDiscovery(groupTag: string, runtimeInstanceId: string) {
+  return {
+    app_version: '0.7.9', group_display_name: GROUP_NAME, group_id: IOS_HOSTED_SYNC_GROUP_ID,
+    group_tag: groupTag, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    provider_device_id: IOS_HOSTED_PROVIDER_DEVICE_ID, provider_device_name: IOS_HOSTED_PROVIDER_NAME,
+    provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId
+  };
+}
+
+function decryptProviderRequest(
+  request: IncomingMessage, bodyText: string, groupTag: string, workgroupKey: string
+) {
+  if (!bodyText) return '';
+  const envelope = JSON.parse(bodyText) as WorkgroupAeadEnvelope;
+  return decryptWorkgroupPayloadNode({
+    context: {
+      contentType: envelope.content_type, direction: 'request', groupTag,
+      method: request.method ?? 'GET', pathWithQuery: request.url ?? '/'
+    },
+    envelope,
+    groupKey: workgroupKey
+  }).toString('utf8');
+}
+
+function encryptProviderResponse(
+  request: IncomingMessage, body: Buffer, contentType: string, groupTag: string, workgroupKey: string
+) {
+  return Buffer.from(JSON.stringify(encryptWorkgroupPayloadNode({
+    context: {
+      contentType, direction: 'response', groupTag,
+      method: request.method ?? 'GET', pathWithQuery: request.url ?? '/'
+    },
+    groupKey: workgroupKey,
+    plaintext: body
+  })));
 }

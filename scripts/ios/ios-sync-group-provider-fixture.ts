@@ -21,6 +21,11 @@ import {
   hostedRegistrationInput,
   registerHostedProvider
 } from './ios-sync-group-provider-registration.ts';
+import {
+  sendSignedProviderJson,
+  sendSignedProviderResponse
+} from './ios-sync-group-provider-response.ts';
+import { routeIosSyncPackProviderRequest } from './ios-sync-group-provider-sync-pack.ts';
 import { createIosSyncGroupScenarioService } from './ios-sync-group-scenario-service.ts';
 import type { IosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-routes.ts';
 
@@ -68,21 +73,6 @@ async function handleJoinAcceptance(request: IncomingMessage, response: ServerRe
     acceptance ?? { error: 'sync_group_join_not_accepted' });
 }
 
-async function routeSyncPackRequest(
-  request: IncomingMessage,
-  response: ServerResponse,
-  bodyText: string
-) {
-  if (!syncPackService) return false;
-  const handled = await syncPackService.handle({
-    bodyText,
-    method: request.method ?? 'GET',
-    url: request.url ?? '/'
-  }, response);
-  writeObservations();
-  return handled;
-}
-
 async function handleSignedRequest(request: IncomingMessage, response: ServerResponse) {
   if (request.url === '/acceptance/redirect-target') {
     observations.redirect_target_hits += 1;
@@ -90,16 +80,19 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
     sendProviderResponse(response, 200, { reached: true });
     return;
   }
-  const bodyText = request.method === 'POST' ? await readProviderText(request) : '';
-  if (!provider.authenticate(request, bodyText)) {
+  const wireBodyText = request.method === 'POST' ? await readProviderText(request) : '';
+  if (!provider.authenticate(request, wireBodyText)) {
     writeObservations();
     sendProviderResponse(response, 401, { error: 'invalid_signature' });
     return;
   }
+  const bodyText = provider.decryptRequest(request, wireBodyText);
   await prepareLiveServices();
   writeObservations();
   if (await routeScenarioRequest(request, response, bodyText)) return;
-  if (await routeSyncPackRequest(request, response, bodyText)) return;
+  if (await routeIosSyncPackProviderRequest({
+    bodyText, onObserved: writeObservations, provider, request, response, service: syncPackService
+  })) return;
   if (contentResourceFixture) {
     const routed = routeIosContentResourceRequest({
       bodyText,
@@ -110,20 +103,24 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
     });
     if (routed) {
       writeObservations();
-      response.writeHead(routed.status, routed.headers);
-      response.end(routed.body);
+      sendSignedProviderResponse(
+        provider, request, response, routed.status, routed.body,
+        routed.headers['Content-Type'] ?? 'application/octet-stream'
+      );
       return;
     }
   }
   if (request.url === '/acceptance/redirect') {
-    sendProviderResponse(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
+    sendSignedProviderJson(
+      provider, request, response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' }
+    );
     return;
   }
   if (request.url === '/acceptance/error') {
-    sendProviderResponse(response, 503, { error: 'acceptance_failure' });
+    sendSignedProviderJson(provider, request, response, 503, { error: 'acceptance_failure' });
     return;
   }
-  sendProviderResponse(response, 200, { ok: true });
+  sendSignedProviderJson(provider, request, response, 200, { ok: true });
 }
 
 async function prepareLiveServices() {
@@ -149,8 +146,7 @@ async function routeScenarioRequest(
   });
   if (!routed) return false;
   writeObservations();
-  response.writeHead(routed.status ?? 200, { 'Content-Type': routed.contentType });
-  response.end(routed.body);
+  sendSignedProviderResponse(provider, request, response, routed.status ?? 200, routed.body, routed.contentType);
   return true;
 }
 
