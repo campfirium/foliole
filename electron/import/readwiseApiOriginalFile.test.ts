@@ -25,6 +25,10 @@ vi.mock('../database/pdfIndexing.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import {
+  clearAttachmentLibraryPathSnapshot,
+  publishAttachmentLibraryPathSnapshot
+} from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
@@ -38,6 +42,10 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-original-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  publishAttachmentLibraryPathSnapshot({
+    assetsDir: path.join(mockedAppDataDir, 'assets'),
+    libraryScope: 'test-library'
+  });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('desktop-test');
   openDatabaseConnection().driver.execute(
@@ -49,6 +57,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  clearAttachmentLibraryPathSnapshot();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });

@@ -3,7 +3,7 @@ import {
   type ReadwiseRemoteLifecycleState
 } from './readwiseRemoteLifecycle.js';
 
-export const READWISE_API_IMPORT_STATE_VERSION = 3;
+export const READWISE_API_IMPORT_STATE_VERSION = 4;
 
 export type ReadwiseApiOriginalFileState =
   | { attachmentId: string; contentHash: string; mimeType: string; reason: null; sizeBytes: number; status: 'localized' }
@@ -28,7 +28,14 @@ export interface ReadwiseApiDocumentImportState {
   remoteLifecycle: ReadwiseRemoteLifecycleState | null;
   originalFile: ReadwiseApiOriginalFileState | null;
   sourceUpdatedAt: string | null;
+  sourceUpdate?: ReadwiseApiSourceUpdateState | null;
   version: number;
+}
+
+export interface ReadwiseApiSourceUpdateState {
+  contentHash: string;
+  sourceUpdatedAt: string | null;
+  status: 'pending';
 }
 
 export function normalizeReadwiseApiDocumentImportState(value: unknown): ReadwiseApiDocumentImportState {
@@ -43,8 +50,16 @@ export function normalizeReadwiseApiDocumentImportState(value: unknown): Readwis
     originalFile: normalizeOriginalFileState(row.originalFile),
     remoteLifecycle: normalizeReadwiseRemoteLifecycle(row.remoteLifecycle),
     sourceUpdatedAt: text(row.sourceUpdatedAt),
+    sourceUpdate: normalizeSourceUpdate(row.sourceUpdate),
     version: READWISE_API_IMPORT_STATE_VERSION
   };
+}
+
+function normalizeSourceUpdate(value: unknown): ReadwiseApiSourceUpdateState | null {
+  const row = record(value);
+  const contentHash = text(row.contentHash);
+  if (row.status !== 'pending' || !contentHash) return null;
+  return { contentHash, sourceUpdatedAt: text(row.sourceUpdatedAt), status: 'pending' };
 }
 
 function normalizeOriginalFileState(value: unknown): ReadwiseApiOriginalFileState | null {

@@ -7,7 +7,10 @@ import {
   previewReadwiseSourceCutoverInRuntime,
   runReadwiseSourceCutoverInRuntime
 } from '../../shared/platform/import/readwiseSourceCutoverRuntimeRepository';
-import { onReadwiseReaderImportProgress } from '../../shared/platform/runtimeShellEvents';
+import {
+  onReadwiseReaderImportProgress,
+  type ReadwiseReaderImportProgressPayload
+} from '../../shared/platform/runtimeShellEvents';
 import { requestAppConfirmation } from '../../shared/ui';
 
 export interface ReadwiseMigrationState {
@@ -41,16 +44,11 @@ export function useReadwiseSourceMigration(input: {
       try {
         unsubscribe = await onReadwiseReaderImportProgress((progress) => {
           if (progress.phase !== 'indexing' && progress.phase !== 'merging') return;
-          setProgress({
-            completedCount: progress.processedCount,
-            errorReason: null,
-            failed: progress.status === 'failed',
-            phase: progress.phase,
-            totalCount: progress.phase === 'indexing' ? null : progress.totalCount
-          });
+          applyMigrationProgress(setProgress, progress);
         });
       } catch { unsubscribe = null; }
       const output = await runReadwiseSourceCutoverInRuntime();
+      if (output.status === 'completed') await keepCompletedMergeVisible();
       const state = await previewReadwiseSourceCutoverInRuntime();
       const active = state.status === 'migration_in_progress';
       setRequired(active);
@@ -76,6 +74,34 @@ export function useReadwiseSourceMigration(input: {
   useResumeReadwiseMigration(input.committedMode, resumeAttemptedRef, setRequired, setProgress, start);
   const selectApi = () => selectReadwiseApi(input, setRequired, setProgress, start);
   return { ...progress, pending, required, selectApi, start };
+}
+
+function applyMigrationProgress(
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
+  progress: ReadwiseReaderImportProgressPayload
+) {
+  const phase = progress.phase;
+  if (phase !== 'indexing' && phase !== 'merging') return;
+  setProgress((current) => {
+    const nextCount = migrationCompletedCount(progress);
+    return {
+      completedCount: current.phase === phase
+        ? Math.max(current.completedCount, nextCount) : nextCount,
+      errorReason: null,
+      failed: progress.status === 'failed',
+      phase,
+      totalCount: progress.totalCount > 0 ? progress.totalCount : null
+    };
+  });
+}
+
+function keepCompletedMergeVisible() {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, 750));
+}
+
+function migrationCompletedCount(progress: ReadwiseReaderImportProgressPayload) {
+  return progress.phase === 'indexing'
+    ? progress.sourceProcessedCount ?? progress.processedCount : progress.processedCount;
 }
 
 async function selectReadwiseApi(

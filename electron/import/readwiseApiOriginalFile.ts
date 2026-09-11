@@ -52,6 +52,15 @@ export async function persistReadwiseApiOriginalFile(input: {
   state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>;
   title: string;
 }) {
+  await stageReadwiseApiOriginalFile(input);
+  attachReadwiseApiOriginalFile(input.nodeId, input.state);
+}
+
+export async function stageReadwiseApiOriginalFile(input: {
+  bytes: Uint8Array;
+  state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>;
+  title: string;
+}) {
   const originalName = `${safeFileStem(input.title)}.pdf`;
   const existing = findAttachmentRecordById(input.state.attachmentId);
   const storagePath = resolveAttachmentStoragePath(input.state.contentHash, undefined, input.state.mimeType);
@@ -69,9 +78,15 @@ export async function persistReadwiseApiOriginalFile(input: {
     mimeType: input.state.mimeType, sizeBytes: input.state.sizeBytes,
     sourceHostName: null, storageKey: buildAttachmentStorageFileName(input.state.contentHash, input.state.mimeType)
   });
-  createNodeAttachmentLink({ attachmentId: input.state.attachmentId, nodeId: input.nodeId, role: 'reference' });
-  markPdfAttachmentIndexPending(input.state.attachmentId);
-  enqueuePdfAttachmentIndexing(input.state.attachmentId);
+}
+
+export function attachReadwiseApiOriginalFile(
+  nodeId: string,
+  state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>
+) {
+  createNodeAttachmentLink({ attachmentId: state.attachmentId, nodeId, role: 'reference' });
+  markPdfAttachmentIndexPending(state.attachmentId);
+  enqueuePdfAttachmentIndexing(state.attachmentId);
 }
 
 async function downloadOriginalFile(

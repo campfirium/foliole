@@ -6,6 +6,7 @@ import { extractReadwiseSidecarHighlights, normalizeReadwiseText } from '../../l
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { extractReaderLinkIds } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 
@@ -28,18 +29,32 @@ interface SourceArtifact {
 }
 
 export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseIdentityBinding {
+  blockedAnnotationIds?: Set<string>;
   nodeId: string;
 }
 
-export async function prepareReadwiseSourceCutoverIdentity() {
+export async function prepareReadwiseSourceCutoverIdentity(connectionRef: string) {
   const artifacts = [...await loadSourceArtifacts(), ...await loadBookArtifacts()];
+  const candidates = new Map(loadReadwiseApiCandidates(connectionRef).map((candidate) => [
+    candidate.documentId,
+    new Set([...candidate.highlightIds, ...(candidate.noteIds ?? [])])
+  ]));
   return {
     bindingFor(document: PreparedReadwiseApiDocument): ReadwiseSourceCutoverIdentityBinding | null {
-      const remoteHighlights = new Set(document.annotations.map((item) => item.remoteId));
+      const remoteHighlights = candidates.get(document.id)
+        ?? new Set(document.annotations.map((item) => item.remoteId));
       const matches = artifacts.filter((artifact) => artifact.documentIds.has(document.id) ||
         [...remoteHighlights].some((id) => artifact.highlightIds.has(id)));
-      if (matches.length !== 1) return null;
-      return bindingFor(matches[0]!, document);
+      const matchesByNode = new Map<string, SourceArtifact>();
+      for (const artifact of matches) {
+        const current = matchesByNode.get(artifact.latestNodeId);
+        if (!current || (!current.sourceFingerprint && artifact.sourceFingerprint)) {
+          matchesByNode.set(artifact.latestNodeId, artifact);
+        }
+      }
+      if (matchesByNode.size > 1) throw new Error('readwise_source_cutover_identity_conflict');
+      const match = matchesByNode.values().next().value as SourceArtifact | undefined;
+      return match ? bindingFor(match, document) : null;
     }
   };
 }
@@ -49,6 +64,7 @@ async function loadSourceArtifacts() {
     `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, d.root_path,
        json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
      FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
+     JOIN nodes n ON n.id = i.latest_node_id AND n.deleted_at IS NULL
      WHERE d.source_type = 'readwise' AND d.host_name = ?
        AND i.latest_node_id IS NOT NULL AND i.source_location IS NOT NULL
        AND i.remote_document_id IS NULL ORDER BY i.source_fingerprint`,
@@ -83,7 +99,7 @@ async function loadBookArtifacts(): Promise<SourceArtifact[]> {
     const inventory = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {};
     for (const item of Array.isArray(inventory.books) ? inventory.books : []) {
       const book = item && typeof item === 'object' ? item as Record<string, unknown> : {};
-      if (typeof book.generatedNodeId !== 'string') continue;
+      if (typeof book.generatedNodeId !== 'string' || !isActiveNode(book.generatedNodeId)) continue;
       const full = await readText(typeof book.fullDocumentMarkdownPath === 'string' ? book.fullDocumentMarkdownPath : '');
       const raw = await readText(typeof book.highlightMarkdownPath === 'string' ? book.highlightMarkdownPath : '');
       artifacts.push({
@@ -96,6 +112,13 @@ async function loadBookArtifacts(): Promise<SourceArtifact[]> {
     }
   }
   return artifacts;
+}
+
+function isActiveNode(nodeId: string) {
+  return Boolean(openDatabaseConnection().driver.queryOne(
+    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
+    [nodeId]
+  ));
 }
 
 function bindingFor(

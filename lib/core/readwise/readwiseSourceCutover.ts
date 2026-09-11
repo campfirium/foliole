@@ -6,10 +6,17 @@ export const READWISE_SOURCE_CUTOVER_VERSION = 2;
 
 export type ReadwiseSourceCutoverStatus = 'api' | 'migration-in-progress';
 
-export type ReadwiseSourceCutoverClassificationStatus = 'bound' | 'suppressed';
+export type ReadwiseSourceCutoverClassificationStatus =
+  | 'blocked'
+  | 'bound'
+  | 'external'
+  | 'materialized'
+  | 'suppressed'
+  | 'unavailable';
 
 export interface ReadwiseSourceCutoverClassification {
   nodeId: string | null;
+  reason?: string;
   remoteId: string;
   status: ReadwiseSourceCutoverClassificationStatus;
 }
@@ -20,9 +27,12 @@ export interface ReadwisePostCutoverBinding {
 
 export interface ReadwiseSourceCutover {
   annotations: ReadwiseSourceCutoverClassification[];
+  batchId?: string;
   cohortDocumentIds: string[];
+  completionVersion?: number;
   completedAt: string;
   documents: ReadwiseSourceCutoverClassification[];
+  phase?: 'indexing' | 'merging' | null;
   retiredNodeIds: string[];
   sourceHost: string;
   startedAt: string;
@@ -55,9 +65,12 @@ export function normalizeReadwiseSourceCutover(value: unknown): StoredReadwiseSo
   const cohortDocumentIds = uniqueStrings(payload.cohortDocumentIds, 'cohortDocumentIds');
   const state: ReadwiseSourceCutover = {
     annotations: classifications(payload.annotations, 'annotations'),
+    ...(optionalText(payload.batchId) ? { batchId: optionalText(payload.batchId)! } : {}),
     cohortDocumentIds,
+    ...(payload.completionVersion === 2 ? { completionVersion: 2 } : {}),
     completedAt: text(payload.completedAt, 'completedAt'),
     documents,
+    phase: cutoverPhase(payload.phase, payload.status),
     retiredNodeIds: uniqueStrings(payload.retiredNodeIds, 'retiredNodeIds'),
     sourceHost: text(payload.sourceHost, 'sourceHost'),
     startedAt: text(payload.startedAt, 'startedAt'),
@@ -82,9 +95,13 @@ export function readwiseSourceCutoverProgress(state: StoredReadwiseSourceCutover
   const classified = state.documents.filter((item) => cohort.has(item.remoteId));
   return {
     completedCandidateCount: classified.length,
-    migratedCount: classified.filter((item) => item.status === 'bound').length,
+    migratedCount: classified.filter((item) =>
+      item.status === 'bound' || item.status === 'materialized' || item.status === 'external'
+    ).length,
     totalCandidateCount: state.cohortDocumentIds.length,
-    unmatchedCount: classified.filter((item) => item.status === 'suppressed').length
+    unmatchedCount: classified.filter((item) =>
+      item.status === 'blocked' || item.status === 'suppressed' || item.status === 'unavailable'
+    ).length
   };
 }
 
@@ -94,18 +111,8 @@ export function filterPostCutoverReadwiseDocument(
   binding: ReadwisePostCutoverBinding | null = null
 ): PreparedReadwiseApiDocument | null {
   if (!state || state.version === 1 || state.status !== 'api') return document;
-  const documentClass = state.documents.find((item) => item.remoteId === document.id);
-  if (documentClass?.status === 'suppressed') return null;
-  if (!documentClass && !binding && !isReadwiseObjectCreatedAfter(document.createdAt, state.startedAt)) {
-    return null;
-  }
-  const annotations = document.annotations.filter((annotation) => {
-    const classification = state.annotations.find((item) => item.remoteId === annotation.remoteId);
-    if (classification) return classification.status === 'bound';
-    if (binding?.annotationRemoteIds.has(annotation.remoteId)) return true;
-    return isReadwiseObjectCreatedAfter(annotation.createdAt, state.startedAt);
-  });
-  return annotations.length === document.annotations.length ? document : { ...document, annotations };
+  void binding;
+  return document;
 }
 
 export function isReadwiseObjectCreatedAfter(
@@ -143,19 +150,35 @@ function classifications(value: unknown, name: string): ReadwiseSourceCutoverCla
   const result = value.map((item, index): ReadwiseSourceCutoverClassification => {
     const row = record(item, `${name}.${index}`);
     const itemStatus = row.status;
-    if (itemStatus !== 'bound' && itemStatus !== 'suppressed') {
+    if (!isClassificationStatus(itemStatus)) {
       throw new Error(`readwise_source_cutover_invalid:${name}.${index}.status`);
     }
-    const nodeId = itemStatus === 'bound' ? text(row.nodeId, `${name}.${index}.nodeId`) : null;
-    if (itemStatus === 'suppressed' && row.nodeId !== null) {
+    const requiresNode = itemStatus === 'bound' || itemStatus === 'materialized';
+    const allowsNode = requiresNode || itemStatus === 'blocked';
+    const nodeId = row.nodeId === null ? null : text(row.nodeId, `${name}.${index}.nodeId`);
+    if (requiresNode && !nodeId) {
       throw new Error(`readwise_source_cutover_invalid:${name}.${index}.nodeId`);
     }
-    return { nodeId, remoteId: text(row.remoteId, `${name}.${index}.remoteId`), status: itemStatus };
+    if (!allowsNode && nodeId) {
+      throw new Error(`readwise_source_cutover_invalid:${name}.${index}.nodeId`);
+    }
+    const reason = optionalText(row.reason);
+    return {
+      nodeId,
+      ...(reason ? { reason } : {}),
+      remoteId: text(row.remoteId, `${name}.${index}.remoteId`),
+      status: itemStatus
+    };
   });
   if (new Set(result.map((item) => item.remoteId)).size !== result.length) {
     throw new Error(`readwise_source_cutover_duplicate:${name}`);
   }
   return result;
+}
+
+function isClassificationStatus(value: unknown): value is ReadwiseSourceCutoverClassificationStatus {
+  return value === 'blocked' || value === 'bound' || value === 'external'
+    || value === 'materialized' || value === 'suppressed' || value === 'unavailable';
 }
 
 function uniqueStrings(value: unknown, name: string) {
@@ -186,7 +209,17 @@ function status(value: unknown): ReadwiseSourceCutoverStatus {
   return value;
 }
 
+function cutoverPhase(value: unknown, storedStatus: unknown) {
+  if (storedStatus === 'api') return null;
+  if (value === 'indexing' || value === 'merging') return value;
+  return 'indexing' as const;
+}
+
 function text(value: unknown, name: string) {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`readwise_source_cutover_invalid:${name}`);
   return value;
+}
+
+function optionalText(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

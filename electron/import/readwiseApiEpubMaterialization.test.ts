@@ -99,6 +99,25 @@ it('prepares EPUB images only when a book tree is created or explicitly rebuilt'
   })).toBe(true);
 });
 
+it('never treats an existing annotation as an EPUB body during a structure rebuild', () => {
+  const document = epubFixture();
+  const config = createDefaultReadwiseReaderConfig();
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
+  const driver = openDatabaseConnection().driver;
+  const annotationNode = driver.queryOne<{ id: string }>(
+    "SELECT id FROM nodes WHERE id LIKE 'node-readwise-%' AND content = 'Unique second excerpt'"
+  )!;
+
+  materializeReadwiseApiDocument({
+    config, connectionRef: 'connection', destination: 'inbox', document, forceEpubStructure: true
+  });
+
+  const rebuilt = driver.queryOne<{ parent_id: string }>('SELECT parent_id FROM nodes WHERE id = ?', [annotationNode.id])!;
+  expect(rebuilt.parent_id).not.toBe(annotationNode.id);
+  expect(driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [rebuilt.parent_id]))
+    .toEqual({ title: 'Second section' });
+});
+
 it('does not rebuild or revive a persisted structure when remote sections drift', () => {
   const config = createDefaultReadwiseReaderConfig();
   const document = epubFixture();

@@ -5,6 +5,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
+import { localizeReadwiseSourceContent } from './readwiseTopicMergeLocalization.js';
 import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
 
 interface BodyRow extends NodeBodyRow { id: string; title: string }
@@ -32,7 +33,7 @@ export async function applyPristineReadwiseSourceProjection(
     );
     for (const anchor of anchors) {
       tx.execute(
-        'UPDATE nodes SET anchor_link = ?, image_regions = NULL, updated_at = ? WHERE id = ?',
+        'UPDATE nodes SET anchor_link = ?, updated_at = ? WHERE id = ?',
         [strictAnchor(anchor.anchor_link, document.body), now, anchor.id]
       );
     }
@@ -55,6 +56,7 @@ async function sourceProjection(sourceFingerprint: string) {
     kind: mergeSource.readwiseSource.kind,
     readwiseConfig: loadImportManagerSettings().readwiseReaderConfig
   });
+  const localized = await localizeReadwiseSourceContent(prepared.content);
   const row = driver.queryOne<BodyRow>(
     `SELECT n.id, n.title, n.content, n.body_blob_hash, cbd.data body_blob_data FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ? AND n.deleted_at IS NULL`,
@@ -62,7 +64,7 @@ async function sourceProjection(sourceFingerprint: string) {
   );
   return row ? {
     currentContent: requireResolvedNodeBody(row, row.id).content,
-    legacyContent: prepared.content,
+    legacyContent: localized.text,
     nodeId: row.id,
     title: row.title
   } : null;

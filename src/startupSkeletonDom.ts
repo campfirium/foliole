@@ -1,6 +1,6 @@
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from './shared/config/appSettings';
 import { applyMacOsFontSmoothingFromSettings } from './shared/platform/macOsFontSmoothing';
-import { getRuntimeSystemColorMode } from './shared/platform/systemColorMode';
+import { getRuntimeSystemColorMode } from './shared/platform/runtime/systemColorMode';
 
 const REGION_IDS = [
   'titlebar-rail',

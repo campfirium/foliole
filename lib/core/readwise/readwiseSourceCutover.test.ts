@@ -14,12 +14,14 @@ const state: ReadwiseSourceCutover = {
     { nodeId: 'old-highlight', remoteId: 'highlight-old', status: 'bound' },
     { nodeId: null, remoteId: 'highlight-suppressed', status: 'suppressed' }
   ],
-  cohortDocumentIds: ['document-old', 'document-suppressed'],
+  cohortDocumentIds: ['document-old', 'document-external', 'document-suppressed'],
   completedAt: '2026-09-09T01:00:00.000Z',
   documents: [
     { nodeId: 'old-topic', remoteId: 'document-old', status: 'bound' },
+    { nodeId: null, remoteId: 'document-external', status: 'external' },
     { nodeId: null, remoteId: 'document-suppressed', status: 'suppressed' }
   ],
+  phase: null,
   retiredNodeIds: [],
   sourceHost: 'Mac',
   startedAt: '2026-09-09T00:00:00.000Z',
@@ -31,9 +33,9 @@ it('accepts an exact v2 cohort and derives honest progress from its journal', ()
   const normalized = normalizeReadwiseSourceCutover(state);
   expect(normalized).toEqual(state);
   expect(normalized && readwiseSourceCutoverProgress(normalized)).toEqual({
-    completedCandidateCount: 2,
-    migratedCount: 1,
-    totalCandidateCount: 2,
+    completedCandidateCount: 3,
+    migratedCount: 2,
+    totalCandidateCount: 3,
     unmatchedCount: 1
   });
 });
@@ -48,7 +50,7 @@ it('keeps post-cutover old classifications outside the frozen cohort', () => {
   };
   expect(normalizeReadwiseSourceCutover(extended)).toEqual(extended);
   expect(readwiseSourceCutoverProgress(extended)).toMatchObject({
-    completedCandidateCount: 2,
+    completedCandidateCount: 3,
     unmatchedCount: 1
   });
 });
@@ -59,8 +61,16 @@ it('fails closed for unknown versions and incomplete completed cohorts', () => {
   expect(normalizeReadwiseSourceCutover(null)).toBeNull();
 });
 
-it('suppresses pre-cutover copies while allowing new Reader material', () => {
-  expect(filterPostCutoverReadwiseDocument(state, document('document-suppressed', '2026-09-08'))).toBeNull();
+it('keeps the node identity of a blocked annotation tombstone', () => {
+  const blocked = {
+    ...state,
+    annotations: [{ nodeId: 'deleted-highlight', remoteId: 'highlight-deleted', status: 'blocked' as const }]
+  };
+  expect(normalizeReadwiseSourceCutover(blocked)).toMatchObject({ annotations: blocked.annotations });
+});
+
+it('does not use legacy classifications or timestamps as a post-cutover allow-list', () => {
+  expect(filterPostCutoverReadwiseDocument(state, document('document-suppressed', '2026-09-08'))).not.toBeNull();
   const bound = filterPostCutoverReadwiseDocument(state, {
     ...document('document-old', '2026-09-08'),
     annotations: [
@@ -69,15 +79,18 @@ it('suppresses pre-cutover copies while allowing new Reader material', () => {
       annotation('highlight-new', '2026-09-10')
     ]
   });
-  expect(bound?.annotations.map((item) => item.remoteId)).toEqual(['highlight-old', 'highlight-new']);
+  expect(bound?.annotations.map((item) => item.remoteId)).toEqual([
+    'highlight-old', 'highlight-suppressed', 'highlight-new'
+  ]);
   expect(filterPostCutoverReadwiseDocument(state, document('document-new', '2026-09-10'))).not.toBeNull();
-  expect(filterPostCutoverReadwiseDocument(state, document('document-unclassified-old', '2026-09-08'))).toBeNull();
+  expect(filterPostCutoverReadwiseDocument(state, document('document-external', '2026-09-08'))).not.toBeNull();
+  expect(filterPostCutoverReadwiseDocument(state, document('document-unclassified-old', '2026-09-08'))).not.toBeNull();
   expect(filterPostCutoverReadwiseDocument(state, {
     ...document('document-unknown-date', '2026-09-10'), createdAt: null
-  })).toBeNull();
+  })).not.toBeNull();
 });
 
-it('allows an exact stored binding while filtering unclassified old annotations', () => {
+it('keeps every remote annotation when an exact stored binding exists', () => {
   const guarded = filterPostCutoverReadwiseDocument(state, {
     ...document('document-late-old', '2026-09-08'),
     annotations: [
@@ -85,7 +98,9 @@ it('allows an exact stored binding while filtering unclassified old annotations'
       { ...annotation('highlight-unknown', '2026-09-10'), createdAt: null }
     ]
   }, { annotationRemoteIds: new Set(['highlight-exact']) });
-  expect(guarded?.annotations.map((item) => item.remoteId)).toEqual(['highlight-exact']);
+  expect(guarded?.annotations.map((item) => item.remoteId)).toEqual([
+    'highlight-exact', 'highlight-unknown'
+  ]);
 });
 
 function document(id: string, createdAt: string): PreparedReadwiseApiDocument {

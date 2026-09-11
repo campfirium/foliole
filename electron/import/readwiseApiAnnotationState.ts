@@ -1,8 +1,45 @@
+import {
+  stableReadwiseAnnotationNodeId,
+  type PreparedReadwiseApiAnnotation
+} from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import type { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 export function resolveReadwiseApiAnnotationStates(
+  existing: ReturnType<typeof loadReadwiseApiImportSource>,
+  now: string,
+  input?: {
+    annotations: PreparedReadwiseApiAnnotation[];
+    connectionRef: string;
+    resetTracked?: boolean;
+  }
+) {
+  const tracked = input?.resetTracked ? [] : resolveTrackedStates(existing, now);
+  if (!input) return tracked;
+  const trackedIds = new Set(tracked.map((state) => state.remoteId));
+  const tombstones = input.annotations.flatMap((annotation) => {
+    if (trackedIds.has(annotation.remoteId)) return [];
+    const nodeId = stableReadwiseAnnotationNodeId(input.connectionRef, annotation.remoteId);
+    const row = openDatabaseConnection().driver.queryOne<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM nodes WHERE id = ?', [nodeId]
+    );
+    if (!row?.deleted_at) return [];
+    return [{
+      blockedAt: row.deleted_at,
+      contentHash: annotation.contentHash,
+      kind: annotation.kind,
+      nodeId,
+      parentRemoteId: annotation.parentRemoteId,
+      remoteId: annotation.remoteId,
+      remoteStatus: 'present' as const,
+      sourceUpdatedAt: annotation.updatedAt
+    }];
+  });
+  return [...tracked, ...tombstones];
+}
+
+function resolveTrackedStates(
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
   now: string
 ) {

@@ -5,6 +5,7 @@ import { bindReadwiseApiAnnotationParents } from '../database/readwiseApiAnnotat
 import { loadOrCreateReadwiseApiCandidateRun, saveReadwiseApiCandidateCursor } from '../database/readwiseApiCandidateRun.js';
 import { saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import {
+  countReadwiseApiIndexedRecords,
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex,
   loadReadwiseApiReaderIndex,
@@ -35,6 +36,7 @@ import { buildReadwiseApiScopeUrl } from './readwiseApiIndexPlan.js';
 export async function buildReadwiseApiCandidateIndex(input: {
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
+  onProgress?: (processed: number) => void;
   settings: ImportManagerSettings;
 }) {
   const run = loadOrCreateReadwiseApiCandidateRun(
@@ -48,7 +50,7 @@ export async function buildReadwiseApiCandidateIndex(input: {
     run.roundStartedAt
   );
   for (const initial of ledgers) await fetchScope(input, initial, request);
-  await assembleCandidates(input.connectionRef, input.settings, request);
+  await assembleCandidates(input.connectionRef, input.settings, request, input.onProgress);
   saveReadwiseApiCandidateCursor({ connectionRef: input.connectionRef, cursor: null, phase: 'ready' });
 }
 
@@ -86,6 +88,7 @@ async function fetchScope(
       phase: ledger.scope === 'export' ? 'export' : 'reader',
       recordCount: values(payload).length
     });
+    reportIndexProgress(input.connectionRef, input.onProgress);
     const cursor = nextCursor(payload);
     ledger = saveReadwiseApiScopeCursor(input.connectionRef, ledger, cursor);
     if (!cursor) return;
@@ -111,14 +114,13 @@ function savePage(
 }
 
 async function assembleCandidates(
-  connectionRef: string,
-  settings: ImportManagerSettings,
-  request: ReturnType<typeof createReadwiseApiRequest>
+  connectionRef: string, settings: ImportManagerSettings,
+  request: ReturnType<typeof createReadwiseApiRequest>, onProgress?: (processed: number) => void
 ) {
   const run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
   await resolveReadwiseApiNoteParents({
-    connectionRef,
-    facts: loadReadwiseApiAnnotationLedger(connectionRef),
+    connectionRef, facts: loadReadwiseApiAnnotationLedger(connectionRef),
+    onProgress: () => reportIndexProgress(connectionRef, onProgress),
     request,
     runStartedAt: run.roundStartedAt
   });
@@ -149,6 +151,7 @@ async function assembleCandidates(
       parent = await resolveReadwiseApiCandidateParent(connectionRef, parentId, settings, request, run.roundStartedAt);
       if (!parent) continue;
       saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
+      reportIndexProgress(connectionRef, onProgress);
       byId.set(parent.id, parent);
     }
     if (!parent || !isParentCategory(parent.category)) continue;
@@ -169,6 +172,10 @@ async function assembleCandidates(
       parent, destination, hasHighlights, highlightIds, noteIds, matchedImportTag
     )]);
   }
+}
+
+function reportIndexProgress(connectionRef: string, onProgress?: (processed: number) => void) {
+  if (onProgress) onProgress(countReadwiseApiIndexedRecords(connectionRef));
 }
 
 function indexExportMatches(

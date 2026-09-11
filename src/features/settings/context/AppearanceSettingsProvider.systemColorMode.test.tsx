@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { setRuntimeSystemColorMode } from '../../../shared/platform/systemColorMode';
+import { setRuntimeSystemColorMode } from '../../../shared/platform/runtime/systemColorMode';
 
 import { AppearanceSettingsProvider, useAppearanceSettings } from './AppearanceSettingsProvider';
 

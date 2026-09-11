@@ -33,7 +33,11 @@ function migrationPresentation(
     return taskStatus?.cutover.status === 'in_progress'
       ? {
           failed: false,
-          text: `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`
+          text: withProgress(
+            `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
+            migration.completedCount,
+            null
+          )
         }
       : null;
   }
@@ -41,11 +45,29 @@ function migrationPresentation(
     ? t('desktop.readwise.cutover.phase.indexing')
     : t('desktop.readwise.cutover.phase.merging');
   if (!migration.failed) {
-    return { failed: false, text: `${t('desktop.readwise.cutover.status')} · ${phase}` };
+    return {
+      failed: false,
+      text: withProgress(
+        `${t('desktop.readwise.cutover.status')} · ${phase}`,
+        migration.completedCount,
+        migration.totalCount
+      )
+    };
   }
   const failed = migration.phase === 'indexing'
     ? t('desktop.readwise.cutover.phase.indexFailed')
     : t('desktop.readwise.cutover.phase.mergeFailed');
   const reason = readwiseFailureReason(migration.errorReason, t);
-  return { failed: true, text: `${t('desktop.readwise.cutover.status')} · ${failed}${reason ? ` · ${reason}` : ''}` };
+  return {
+    failed: true,
+    text: `${withProgress(
+      `${t('desktop.readwise.cutover.status')} · ${failed}`,
+      migration.completedCount,
+      migration.totalCount
+    )}${reason ? ` · ${reason}` : ''}`
+  };
+}
+
+function withProgress(text: string, completedCount: number, totalCount: number | null) {
+  return `${text} · ${completedCount}${totalCount === null ? '' : ` / ${totalCount}`}`;
 }

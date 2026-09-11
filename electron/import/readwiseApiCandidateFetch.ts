@@ -11,10 +11,13 @@ export async function ensureReadwiseApiCandidateIndex(
   settings: ImportManagerSettings,
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {},
-  purpose: ReadwiseApiScopePurpose = 'api'
+  purpose: ReadwiseApiScopePurpose = 'api',
+  onIndexProgress?: (processed: number) => void
 ) {
   assertReadwiseApiScopeAllowed(purpose);
-  await buildReadwiseApiCandidateIndex({ connectionRef, dependencies, settings });
+  await buildReadwiseApiCandidateIndex({
+    connectionRef, dependencies, ...(onIndexProgress ? { onProgress: onIndexProgress } : {}), settings
+  });
   return loadReadwiseApiCandidates(connectionRef);
 }
 

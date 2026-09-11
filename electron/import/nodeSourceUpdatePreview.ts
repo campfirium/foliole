@@ -11,6 +11,13 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { loadPendingIncomingUpdate } from './incomingUpdates.js';
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
+import {
+  normalizeComparableSourcePreviewContent,
+  normalizeNodeSourcePreviewContent
+} from './nodeSourceUpdatePreviewContent.js';
+import { loadReadwiseApiUpdatePreview } from './readwiseApiSourceUpdatePreview.js';
+
+export { normalizeNodeSourcePreviewContent } from './nodeSourceUpdatePreviewContent.js';
 
 interface SourceNodeRow extends NodeBodyRow {
   content: string;
@@ -51,15 +58,6 @@ function countCurrentHighlights(nodeId: string) {
     )
     .get(nodeId) as { count: number } | undefined;
   return row?.count ?? 0;
-}
-
-function normalizeComparableContent(content: string) {
-  const normalized = content.replace(/\r\n?/g, '\n').trim();
-  return normalized;
-}
-
-export function normalizeNodeSourcePreviewContent(content: string) {
-  return content.replace(/\r\n?/g, '\n');
 }
 
 function loadIncomingUpdatePreview(nodeId: string): NodeSourceUpdatePreview | null {
@@ -167,12 +165,7 @@ function shouldExposeReadwiseUpdate(input: {
   );
 }
 
-export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeSourceUpdatePreview | null> {
-  const incomingPreview = loadIncomingUpdatePreview(nodeId);
-  if (incomingPreview) {
-    return incomingPreview;
-  }
-
+async function loadDirectorySourceUpdatePreview(nodeId: string): Promise<NodeSourceUpdatePreview | null> {
   const sourceDetails = loadNodeSourceDetails(nodeId);
   if (!sourceDetails || sourceDetails.sourceNodeId !== nodeId || !sourceDetails.keepImportItem) {
     return null;
@@ -200,8 +193,8 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
     loadPreparedKeepImportRecord(rule.config, source, checkedAt),
     resolveKeepImportSourceSignature(rule.config, source)
   ]);
-  const comparableCurrentContent = normalizeComparableContent(sourceNode.content);
-  const comparablePreparedContent = normalizeComparableContent(prepared.content);
+  const comparableCurrentContent = normalizeComparableSourcePreviewContent(sourceNode.content);
+  const comparablePreparedContent = normalizeComparableSourcePreviewContent(prepared.content);
   const sourceSignatureChanged = hasSourceSignatureChanged(keepImportItem, sourceSignature);
   const hasUpdate =
     prepared.sourceProfile === 'body_with_highlight_sidecar'
@@ -229,4 +222,16 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
     updated_highlight_count: prepared.matchedHighlights?.length ?? 0,
     updated_content: normalizeNodeSourcePreviewContent(prepared.content)
   };
+}
+
+export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeSourceUpdatePreview | null> {
+  const incomingPreview = loadIncomingUpdatePreview(nodeId);
+  if (incomingPreview) {
+    return incomingPreview;
+  }
+  const readwiseApiPreview = loadReadwiseApiUpdatePreview(nodeId);
+  if (readwiseApiPreview) {
+    return readwiseApiPreview;
+  }
+  return loadDirectorySourceUpdatePreview(nodeId);
 }

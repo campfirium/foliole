@@ -37,6 +37,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 
+import { shouldFetchReadwiseApiCandidateFacts } from './readwiseApiCandidateLifecycle.js';
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
   apiSettings,
@@ -47,6 +48,19 @@ import {
 } from './readwiseApiImportRun.testSupport.js';
 
 let tempRoot = '';
+
+it('reuses local facts when only the writing phase failed', () => {
+  expect(shouldFetchReadwiseApiCandidateFacts({
+    destination: 'inbox', documentId: 'local-ready', exportCategory: null,
+    failure: { attemptCount: 1, failedAt: 'now', reason: 'request_failed', stage: 'writing' },
+    hasHighlights: false, highlightIds: [], readerCategory: 'epub', status: 'failed', title: 'Local'
+  })).toBe(false);
+  expect(shouldFetchReadwiseApiCandidateFacts({
+    destination: 'inbox', documentId: 'remote-needed', exportCategory: null,
+    failure: { attemptCount: 1, failedAt: 'now', reason: 'request_failed', stage: 'fetching' },
+    hasHighlights: false, highlightIds: [], readerCategory: 'epub', status: 'failed', title: 'Remote'
+  })).toBe(true);
+});
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-api-retry-'));

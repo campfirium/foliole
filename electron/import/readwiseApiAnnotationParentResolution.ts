@@ -21,6 +21,7 @@ import {
 export async function resolveReadwiseApiNoteParents(input: {
   connectionRef: string;
   facts: ReadwiseAnnotationLedgerFact[];
+  onProgress?: () => void;
   request: ReturnType<typeof createReadwiseApiRequest>;
   runStartedAt: string;
 }) {
@@ -50,10 +51,12 @@ export async function resolveReadwiseApiNoteParents(input: {
     }
     if (parent.category === 'highlight') {
       saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
+      input.onProgress?.();
       continue;
     }
     if (!isParentCategory(parent.category)) throw identityConflict(parentId);
     saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
+    input.onProgress?.();
     bindReadwiseApiAnnotationParents(input.connectionRef, parent.id, noteIds);
   }
 }

@@ -30,3 +30,7 @@ export async function localizeReadwiseTopicMergeTexts(sourceContent: string, hig
     sourceContent: source.text
   };
 }
+
+export async function localizeReadwiseSourceContent(sourceContent: string) {
+  return new ImageLocalizationContext().localizeMarkdown(sourceContent);
+}

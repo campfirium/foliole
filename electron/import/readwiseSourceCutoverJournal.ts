@@ -1,22 +1,28 @@
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
-import {
-  isReadwiseObjectCreatedAfter,
-  type ReadwiseSourceCutover
-} from '../../lib/core/readwise/readwiseSourceCutover.js';
+import type { ReadwiseSourceCutover } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { completeReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
 import {
-  confirmReadwiseIdentityBindings,
-  type ConfirmedReadwiseIdentityBinding
+  confirmReadwiseIdentityBindings
 } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { prepareReadwiseApiImportRecord } from './readwiseApiMaterialization.js';
+import type { ReadwiseApiMaterializationResult } from './readwiseApiMaterialization.js';
+import {
+  loadReadwiseSourceCutoverBinding,
+  recordReadwiseSourceCutoverClassification
+} from './readwiseSourceCutoverClassification.js';
 import {
   prepareReadwiseSourceCutoverIdentity,
   type ReadwiseSourceCutoverIdentityBinding
 } from './readwiseSourceCutoverIdentity.js';
+import {
+  assertReadwiseSourceCutoverComplete,
+  recordReadwiseUnavailableAnnotationTerminals
+} from './readwiseSourceCutoverTerminal.js';
 import { applyPristineReadwiseSourceProjection } from './readwiseSourceMigrationProjection.js';
 
 export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
@@ -25,6 +31,10 @@ export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
     throw new Error('readwise_source_migration_not_active');
   }
   if (current.version === 2) {
+    if (current.cohortDocumentIds.length === 0 && current.documents.length === 0) {
+      writeReadwiseSourceCutover({ ...current, cohortDocumentIds: documentIds });
+      return;
+    }
     const currentIds = new Set(current.cohortDocumentIds);
     const nextIds = new Set(documentIds);
     if (nextIds.size !== documentIds.length || nextIds.size !== currentIds.size ||
@@ -48,65 +58,58 @@ export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
 export function createReadwiseDocumentMigration(input: {
   bindingFor: (document: PreparedReadwiseApiDocument) => ReadwiseSourceCutoverIdentityBinding | null;
 }, connectionRef: string) {
-  const pending = new Map<string, ReadwiseSourceCutoverIdentityBinding>();
+  const pending = new Map<string, ReadwiseSourceCutoverIdentityBinding | null>();
   return {
     async beforeCommit(document: PreparedReadwiseApiDocument) {
       const existingClassification = requireReadwiseSourceCutoverV2().documents
         .find((item) => item.remoteId === document.id);
       if (existingClassification?.status === 'suppressed') return { skip: true };
-      const existingBinding = loadExistingBinding(connectionRef, document.id);
+      const existingBinding = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
       if (existingClassification?.status === 'bound' && !existingBinding) {
         throw new Error('readwise_source_cutover_binding_missing');
       }
       const binding = existingBinding ?? input.bindingFor(document);
       if (!binding) {
-        recordClassification(document, null);
-        return { skip: true };
+        pending.set(document.id, null);
+        return;
       }
       if (!binding.sourceFingerprint) adoptBookSource(connectionRef, document, binding);
-      if (!loadExistingBinding(connectionRef, document.id)) {
+      if (!loadReadwiseSourceCutoverBinding(connectionRef, document.id)) {
         confirmReadwiseIdentityBindings(connectionRef, [binding]);
       }
       pending.set(document.id, binding);
-      const boundIds = new Set(binding.annotations.map((item) => item.remoteId));
       const replaceExistingBody = await applyPristineReadwiseSourceProjection(
         binding.sourceFingerprint,
         document
       );
       return {
-        document: { ...document, annotations: document.annotations.filter((item) => boundIds.has(item.remoteId)) },
+        document,
         replaceExistingBody
       };
     },
-    afterCommit(document: PreparedReadwiseApiDocument) {
+    afterCommit(document: PreparedReadwiseApiDocument, result: ReadwiseApiMaterializationResult) {
       const binding = pending.get(document.id);
-      if (!binding) throw new Error('readwise_source_cutover_binding_missing');
-      recordClassification(document, binding);
+      if (binding === undefined) throw new Error('readwise_source_cutover_binding_missing');
+      if (result.status === 'blocked') {
+        recordReadwiseSourceCutoverClassification(document, 'blocked', binding);
+      } else if (binding) {
+        const materialized = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
+        if (!materialized) throw new Error('readwise_source_cutover_materialization_missing');
+        recordReadwiseSourceCutoverClassification(document, 'bound', materialized);
+      } else if (result.status === 'external_pending') {
+        recordReadwiseSourceCutoverClassification(document, 'external', null);
+      } else if (result.status === 'skipped') {
+        recordReadwiseSourceCutoverClassification(document, 'unavailable', null);
+      } else if (result.status === 'imported' || result.status === 'degraded') {
+        const materialized = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
+        if (!materialized) throw new Error('readwise_source_cutover_materialization_missing');
+        recordReadwiseSourceCutoverClassification(document, 'materialized', materialized);
+      } else {
+        throw new Error('readwise_source_cutover_materialization_failed');
+      }
       pending.delete(document.id);
     }
   };
-}
-
-function recordClassification(
-  document: PreparedReadwiseApiDocument,
-  binding: ReadwiseSourceCutoverIdentityBinding | null
-) {
-  const current = requireReadwiseSourceCutoverV2();
-  if (current.documents.some((item) => item.remoteId === document.id)) return;
-  const byRemote = new Map(binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
-  writeReadwiseSourceCutover({
-    ...current,
-    annotations: [...current.annotations, ...document.annotations.map((item) => ({
-      nodeId: byRemote.get(item.remoteId) ?? null,
-      remoteId: item.remoteId,
-      status: byRemote.has(item.remoteId) ? 'bound' as const : 'suppressed' as const
-    }))],
-    documents: [...current.documents, {
-      nodeId: binding?.nodeId ?? null,
-      remoteId: document.id,
-      status: binding ? 'bound' : 'suppressed'
-    }]
-  });
 }
 
 function adoptBookSource(
@@ -147,60 +150,45 @@ function adoptBookSource(
   });
 }
 
-function loadExistingBinding(
-  connectionRef: string,
-  documentId: string
-): ReadwiseSourceCutoverIdentityBinding | null {
-  const row = openDatabaseConnection().driver.queryOne<{
-    latest_node_id: string;
-    remote_annotations_json: string;
-    remote_document_id: string;
-    source_fingerprint: string;
-  }>(
-    "SELECT source_fingerprint, latest_node_id, remote_document_id, remote_annotations_json " +
-      "FROM import_sources WHERE remote_provider = 'readwise' AND remote_connection_ref = ? " +
-      'AND remote_document_id = ?',
-    [connectionRef, documentId]
-  );
-  if (!row?.latest_node_id) return null;
-  try {
-    return {
-      annotations: JSON.parse(row.remote_annotations_json) as ConfirmedReadwiseIdentityBinding['annotations'],
-      nodeId: row.latest_node_id,
-      remoteDocumentId: row.remote_document_id,
-      sourceFingerprint: row.source_fingerprint
-    };
-  } catch {
-    return null;
-  }
+export function completeReadwiseSourceCutoverMigration(connectionRef: string) {
+  requireReadwiseSourceCutoverV2();
+  recordReadwiseUnavailableAnnotationTerminals(connectionRef);
+  assertReadwiseSourceCutoverComplete(connectionRef);
+  const completedAt = new Date().toISOString();
+  const latest = requireReadwiseSourceCutoverV2();
+  writeReadwiseSourceCutover({
+    ...latest,
+    completedAt,
+    completionVersion: 2,
+    phase: null,
+    status: 'api'
+  }, completedAt);
+  completeReadwiseApiCandidateRun(connectionRef, 'cutover', completedAt);
 }
 
-export function completeReadwiseSourceCutoverMigration() {
+export function setReadwiseSourceCutoverPhase(phase: 'indexing' | 'merging') {
   const current = requireReadwiseSourceCutoverV2();
-  const completedAt = new Date().toISOString();
-  writeReadwiseSourceCutover({ ...current, completedAt, status: 'api' }, completedAt);
+  if (current.status !== 'migration-in-progress') throw new Error('readwise_source_migration_not_active');
+  writeReadwiseSourceCutover({ ...current, phase });
 }
 
 export async function createPostCutoverReadwiseDocumentPolicy(connectionRef: string) {
   const current = loadReadwiseSourceCutover();
   if (!current || current.version !== 2 || current.status !== 'api') return null;
   const migration = createReadwiseDocumentMigration(
-    await prepareReadwiseSourceCutoverIdentity(),
+    await prepareReadwiseSourceCutoverIdentity(connectionRef),
     connectionRef
   );
   const pending = new Set<string>();
   return {
     async beforeCommit(document: PreparedReadwiseApiDocument) {
-      const state = requireReadwiseSourceCutoverV2();
-      const classified = state.documents.some((item) => item.remoteId === document.id);
-      if (!classified && isReadwiseObjectCreatedAfter(document.createdAt, state.startedAt)) return;
       const options = await migration.beforeCommit(document);
       if (!options?.skip) pending.add(document.id);
       return options;
     },
-    afterCommit(document: PreparedReadwiseApiDocument) {
+    afterCommit(document: PreparedReadwiseApiDocument, result: ReadwiseApiMaterializationResult) {
       if (!pending.delete(document.id)) return;
-      migration.afterCommit(document);
+      migration.afterCommit(document, result);
     }
   };
 }

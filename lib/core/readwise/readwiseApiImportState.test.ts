@@ -23,7 +23,8 @@ it('normalizes synced materialization and intake-blocking state deterministicall
     metadata: { title: 'Title' },
     originalFile: null,
     remoteLifecycle: null,
-    version: 3
+    sourceUpdate: null,
+    version: 4
   });
 });
 

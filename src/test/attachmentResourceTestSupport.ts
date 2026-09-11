@@ -1,9 +1,9 @@
-import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource';
-import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource';
+import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import {
   clearAttachmentResourceDescriptions,
   registerAttachmentResourceDescriptions
-} from '../../lib/platform/attachmentResourceRegistry';
+} from '../../lib/platform/attachmentResourceRegistry.js';
 
 export const TEST_ATTACHMENT_HASH = 'a'.repeat(64);
 export const TEST_ATTACHMENT_STORAGE_KEY = `${TEST_ATTACHMENT_HASH}.png`;

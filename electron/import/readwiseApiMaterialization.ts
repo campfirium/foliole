@@ -16,12 +16,9 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
-import { resolveReadwiseApiAnnotationStates } from './readwiseApiAnnotationState.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
-import {
-  hasPersistedReadwiseApiEpubStructure,
-  materializeReadwiseApiEpub
-} from './readwiseApiEpubMaterialization.js';
+import { prepareReadwiseApiMaterializationState } from './readwiseApiMaterializationState.js';
+import { persistReadwiseApiSourceUpdate } from './readwiseApiSourceUpdate.js';
 
 export interface ReadwiseApiMaterializationResult {
   annotationCount: number;
@@ -29,7 +26,7 @@ export interface ReadwiseApiMaterializationResult {
   status: 'blocked' | 'degraded' | 'external_pending' | 'imported' | 'skipped';
 }
 
-export function materializeReadwiseApiDocument(input: {
+export interface ReadwiseApiMaterializationInput {
   config: ReadwiseReaderConfig;
   connectionRef: string;
   destination: ReadwiseImportDestination;
@@ -40,7 +37,9 @@ export function materializeReadwiseApiDocument(input: {
   preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
   replaceExistingBody?: boolean;
   reimportDeleted?: boolean;
-}): ReadwiseApiMaterializationResult {
+}
+
+export function materializeReadwiseApiDocument(input: ReadwiseApiMaterializationInput): ReadwiseApiMaterializationResult {
   const importedAt = input.importedAt ?? new Date().toISOString();
   const previous = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const existing = input.reimportDeleted && previous?.nodeDeleted ? null : previous;
@@ -72,6 +71,7 @@ export function materializeReadwiseApiDocument(input: {
       metadata: input.document.metadata,
       originalFile: existing?.state.originalFile ?? null,
       remoteLifecycle: existing?.state.remoteLifecycle ?? null,
+      sourceUpdate: existing?.state.sourceUpdate ?? null,
       sourceUpdatedAt: input.document.updatedAt,
       version: READWISE_API_IMPORT_STATE_VERSION
     }, importedAt);
@@ -103,11 +103,16 @@ function materializeAvailableDocument(
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
   importedAt: string
 ): ReadwiseApiMaterializationResult {
-  const annotationStates = input.forceEpubStructure ? [] : resolveReadwiseApiAnnotationStates(existing, importedAt);
-  const newAnnotations = input.document.annotations.filter((annotation) =>
-    !annotationStates.some((state) => state.remoteId === annotation.remoteId)
+  const sourceUpdate = persistReadwiseApiSourceUpdate({
+    currentBody: existing?.body,
+    incomingBody: input.document.body,
+    ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody }),
+    sourceUpdatedAt: input.document.updatedAt,
+    updatedAt: importedAt
+  });
+  const { annotationStates, epubResult, newAnnotations } = prepareReadwiseApiMaterializationState(
+    input, existing, importedAt, sourceUpdate
   );
-  const epubResult = materializeEpubIfStructured(input, existing, importedAt, annotationStates, newAnnotations);
   if (epubResult) return epubResult;
   const prepared = prepareReadwiseApiImportRecord(input, existing, importedAt);
   const materialized = newAnnotations.map((annotation) => ({
@@ -142,36 +147,11 @@ function materializeAvailableDocument(
     metadata: input.document.metadata,
     originalFile: existing?.state.originalFile ?? null,
     remoteLifecycle: existing?.state.remoteLifecycle ?? null,
+    sourceUpdate,
     sourceUpdatedAt: input.document.updatedAt,
     version: READWISE_API_IMPORT_STATE_VERSION
   }, importedAt);
   return { annotationCount: newAnnotations.length, documentId: input.document.id, status: 'imported' };
-}
-
-function materializeEpubIfStructured(
-  input: Parameters<typeof materializeReadwiseApiDocument>[0],
-  existing: ReturnType<typeof loadReadwiseApiImportSource>,
-  importedAt: string,
-  annotationStates: ReadwiseApiAnnotationState[],
-  newAnnotations: PreparedReadwiseApiDocument['annotations']
-) {
-  const canCreate = input.document.category === 'epub' && Boolean(input.document.epubStructure?.sections.length);
-  const alreadyStructured = Boolean(existing?.nodeId)
-    && hasPersistedReadwiseApiEpubStructure(existing?.nodeId ?? '');
-  if (!(canCreate && (!existing || input.forceEpubStructure)) && !alreadyStructured) return null;
-  return materializeReadwiseApiEpub({
-    annotationStates,
-    connectionRef: input.connectionRef,
-    document: input.document,
-    existingSourceFingerprint: existing?.sourceFingerprint ?? (input.reimportDeleted
-      ? loadReadwiseApiImportSource(input.connectionRef, input.document.id)?.sourceFingerprint ?? null : null),
-    importedAt,
-    newAnnotations,
-    previousState: existing?.state ?? null,
-    preparedImages: input.preparedEpubImages,
-    rebuildRoot: Boolean(existing && input.forceEpubStructure),
-    rootNodeId: existing?.nodeId ?? null
-  });
 }
 
 export function prepareReadwiseApiImportRecord(

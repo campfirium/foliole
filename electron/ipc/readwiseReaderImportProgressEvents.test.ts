@@ -36,6 +36,20 @@ it('broadcasts scheduled worker progress to every live renderer', () => {
   expect(destroyed.webContents.send).not.toHaveBeenCalled();
 });
 
+it('broadcasts migration phases when the migration was resumed without a target window', () => {
+  const window = createWindow();
+  getAllWindows.mockReturnValue([window]);
+
+  notifyReadwiseReaderImportProgress({
+    phase: 'merging', processedCount: 234, status: 'running', totalCount: 234
+  });
+
+  expect(window.webContents.send).toHaveBeenCalledWith(
+    'foliole:readwise-reader-import-progress',
+    { phase: 'merging', processedCount: 234, status: 'running', totalCount: 234 }
+  );
+});
+
 it('keeps an explicit manual run scoped to its renderer window', () => {
   const target = createWindow();
   notifyReadwiseReaderImportProgress(PROGRESS, target);

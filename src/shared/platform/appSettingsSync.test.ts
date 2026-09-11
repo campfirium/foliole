@@ -4,7 +4,7 @@ import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import { syncAppSettingsWithRuntime } from './appSettingsSync';
-import { setRuntimeSystemColorMode } from './systemColorMode';
+import { setRuntimeSystemColorMode } from './runtime/systemColorMode';
 
 function createMockElectronApi(invoke: NativeInvoke) {
   return {

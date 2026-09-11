@@ -1,30 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
-import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
+import { createReadwiseApiModeTestSettings } from './ReadwiseSourceModeSection.testSupport';
 
 const runtime = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn(), load: vi.fn() }));
 const cutover = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
 const confirmation = vi.hoisted(() => ({ request: vi.fn() }));
 const navigation = vi.hoisted(() => ({ open: vi.fn() }));
 const schedule = vi.hoisted(() => ({ load: vi.fn() }));
-
-function apiSettings(): ReadwiseApiModeSettings {
-  return {
-    cleanupDisabled: false,
-    config: createDefaultReadwiseReaderConfig(),
-    onChangeFrequency: vi.fn(),
-    onCleanup: vi.fn(),
-    onSync: vi.fn(),
-    syncDisabled: false,
-    syncIsRunning: false,
-    syncStatus: { failedSources: [], message: null, tone: 'normal' as const }
-  };
-}
 
 vi.mock('../../shared/platform/import/readwiseApiConnectionRuntimeRepository', () => ({
   connectReadwiseApiFromClipboardInRuntime: runtime.connect,
@@ -101,7 +87,7 @@ it('opens migration confirmation from API selection without a separate migration
 });
 
 it('keeps the token link in the description and connects without exposing it to the renderer', async () => {
-  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={createReadwiseApiModeTestSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   expect(await screen.findByText('Not connected')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Get Readwise token' })).toHaveClass('underline');
@@ -116,7 +102,7 @@ it('keeps the token link in the description and connects without exposing it to 
 it('does not render a disconnected state before the saved credential is restored', async () => {
   let restore!: (value: { has_credential: boolean; state: 'connected'; verified_at: string }) => void;
   runtime.load.mockReturnValue(new Promise((resolve) => { restore = resolve; }));
-  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={createReadwiseApiModeTestSettings()} committedMode="api" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   expect(screen.queryByText('Not connected')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Connect Readwise' })).not.toBeInTheDocument();
@@ -131,16 +117,15 @@ it('shows indeterminate indexing below the API source selector', async () => {
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   render(<LocalizationProvider><ReadwiseSourceModeSection
-    apiSettings={apiSettings()}
+    apiSettings={createReadwiseApiModeTestSettings()}
     committedMode="api"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  expect(await screen.findByText('Migrating · Indexing')).toBeInTheDocument();
+  expect(await screen.findByText('Migrating · Indexing · 0')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-  expect(screen.getByRole('status')).not.toHaveTextContent(/[0-9%/]/u);
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });
 
@@ -151,14 +136,14 @@ it('restores merging progress and explains a paused migration in place', async (
   });
   cutover.run.mockResolvedValue({ error_reason: 'request_failed', migrated_count: 7, status: 'failed', unmatched_count: 0 });
   render(<LocalizationProvider><ReadwiseSourceModeSection
-    apiSettings={apiSettings()}
+    apiSettings={createReadwiseApiModeTestSettings()}
     committedMode="api"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
-  expect(await screen.findByText('Migrating · Merging failed · Readwise request failed')).toBeInTheDocument();
+  expect(await screen.findByText('Migrating · Merging failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Continue migrating/ })).not.toBeInTheDocument();
 });
@@ -173,7 +158,7 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
     initial_sync: { completed_count: 29, failed_count: 2, lifecycle: null, pending_count: 0, status: 'failed', total_count: 31, unexplained_failure_count: 2 },
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
-  const settings = apiSettings();
+  const settings = createReadwiseApiModeTestSettings();
   settings.syncIsRunning = true;
   settings.syncStatus = { failedSources: [], message: 'Syncing Readwise sources...', tone: 'normal' };
   render(<LocalizationProvider><ReadwiseSourceModeSection
@@ -189,7 +174,7 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Indexing · 0')).toBeInTheDocument();
 });
 
 it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
@@ -207,7 +192,7 @@ it('keeps migration visible while the initial import is incomplete, regardless o
     },
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
-  const settings = apiSettings();
+  const settings = createReadwiseApiModeTestSettings();
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiSettings={settings}
     committedMode="api"
@@ -218,9 +203,8 @@ it('keeps migration visible while the initial import is incomplete, regardless o
   expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
   const migrationStatus = screen.getByRole('status');
-  expect(migrationStatus).toHaveTextContent('Migrating · Indexing');
+  expect(migrationStatus).toHaveTextContent('Migrating · Indexing · 0');
   expect(migrationStatus).not.toHaveTextContent('failed');
-  expect(migrationStatus).not.toHaveTextContent(/[0-9%/]/u);
   expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
   expect(screen.getByRole('radiogroup').parentElement).toContainElement(migrationStatus);
 });
@@ -230,7 +214,7 @@ it('uses the same instruction for a missing or invalid token', async () => {
     connection: { has_credential: false, state: 'disconnected', verified_at: null },
     status: 'token_missing'
   });
-  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={apiSettings()} committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={createReadwiseApiModeTestSettings()} committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();

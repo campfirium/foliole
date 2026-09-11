@@ -1,8 +1,8 @@
 import { applyStartupSkeletonSettings } from '../../startupSkeletonDom';
 
 import { loadRuntimeAppSettingsState } from './appSettingsState';
+import { loadRuntimeSystemColorMode } from './runtime/systemColorMode';
 import { getLocalStorageWhitelist } from './storage';
-import { loadRuntimeSystemColorMode } from './systemColorMode';
 
 function normalizeSettingsPayload(value: unknown) {
   if (!value || typeof value !== 'object') {

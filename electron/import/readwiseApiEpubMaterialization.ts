@@ -9,6 +9,7 @@ import {
 } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import type { ReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import { READWISE_API_IMPORT_STATE_VERSION } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { saveReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
@@ -74,8 +75,9 @@ export function materializeReadwiseApiEpub(input: {
         metadata: input.document.metadata,
         originalFile: input.previousState?.originalFile ?? null,
         remoteLifecycle: input.previousState?.remoteLifecycle ?? null,
+        sourceUpdate: input.previousState?.sourceUpdate ?? null,
         sourceUpdatedAt: input.document.updatedAt,
-        version: 3
+        version: READWISE_API_IMPORT_STATE_VERSION
       },
       updatedAt: input.importedAt
     });
@@ -123,16 +125,22 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
 }
 
 function readBookBodies(rootNodeId: string) {
-  const rows = openDatabaseConnection().driver.queryAll<BodyNode & { child_count: number }>(
+  const rows = openDatabaseConnection().driver.queryAll<BodyNode & { structural_child_count: number }>(
     `WITH RECURSIVE descendants(id, content, body_blob_hash) AS (
        SELECT id, content, body_blob_hash FROM nodes WHERE id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id, child.content, child.body_blob_hash FROM nodes child
        JOIN descendants ON child.parent_id = descendants.id WHERE child.deleted_at IS NULL
      ) SELECT d.id, d.content, d.body_blob_hash, cbd.data body_blob_data,
-       (SELECT COUNT(*) FROM nodes child WHERE child.parent_id = d.id AND child.deleted_at IS NULL) child_count
+       (SELECT COUNT(*) FROM nodes child
+        WHERE child.parent_id = d.id
+          AND child.deleted_at IS NULL
+          AND child.id LIKE 'node-epub-%') structural_child_count
      FROM descendants d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash`, [rootNodeId]
   );
-  return rows.filter((row) => row.child_count === 0 || row.id === rootNodeId)
+  return rows.filter((row) => (
+    row.id === rootNodeId
+    || (row.id.startsWith('node-epub-') && row.structural_child_count === 0)
+  ))
     .map((row) => ({ id: row.id, content: requireResolvedNodeBody(row, row.id).content }));
 }
 

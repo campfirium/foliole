@@ -47,7 +47,6 @@ vi.mock('./importManagerSettings.js', async () => {
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { completeReadwiseApiImportRun } from '../database/readwiseApiImportState.js';
@@ -55,9 +54,8 @@ import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.j
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
-import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
-import { runReadwiseSourceCutover, previewReadwiseSourceCutover } from './readwiseSourceCutover.js';
-import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
+import { runReadwiseSourceCutover } from './readwiseSourceCutover.js';
+import { migrationFetch, seedMigratableSource } from './readwiseSourceCutoverTestSupport.js';
 
 let tempRoot = '';
 
@@ -78,6 +76,11 @@ afterEach(async () => {
 
 it('starts migration from the complete selected candidate scope instead of the ordinary watermark', async () => {
   const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: [], completedAt: '2026-09-09T01:00:00.000Z',
+    documents: [], retiredNodeIds: ['retired-1'], sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z', status: 'migration-in-progress'
+  });
   completeReadwiseApiImportRun({
     connectionRef: remote.connectionRef,
     exportCursor: null,
@@ -87,26 +90,44 @@ it('starts migration from the complete selected candidate scope instead of the o
     roundStartedAt: '2026-09-08T00:00:00.000Z'
   });
   const requests: string[] = [];
+  let mergingStarted = false;
   const baseFetch = migrationFetch();
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    if (mergingStarted) throw new Error('network_called_during_merge');
     requests.push(String(input));
     return baseFetch(input);
   }) as typeof fetch;
-  const send = vi.fn();
+  const send = vi.fn((_: string, payload: {
+    phase?: string; processedCount?: number; totalCount?: number;
+  }) => {
+    if (payload.phase === 'merging') mergingStarted = true;
+  });
 
   await expect(runReadwiseSourceCutover({
     dependencies: { fetchImpl, minIntervalMs: 0 },
     window: { isDestroyed: () => false, webContents: { send } }
   }))
-    .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 1 });
+    .resolves.toMatchObject({ migrated_count: 1, status: 'completed', unmatched_count: 0 });
+  const driver = openDatabaseConnection().driver;
+  const materialized = driver.queryOne<{ latest_node_id: string }>(
+    "SELECT latest_node_id FROM import_sources WHERE remote_provider='readwise' AND remote_document_id='document-1'"
+  );
+  if (!materialized?.latest_node_id) throw new Error('missing materialized document');
+  expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id=?', [materialized.latest_node_id])?.content)
+    .toContain('API body with remembered phrase.');
   expect(send.mock.calls.map(([, payload]) => payload.phase)).toEqual(expect.arrayContaining(['indexing', 'merging']));
+  expect(send.mock.calls.map(([, payload]) => payload).some((payload) =>
+    payload.phase === 'indexing' && (payload.processedCount ?? 0) > 0 && (payload.totalCount ?? 0) > 0
+  )).toBe(true);
+  expect(send.mock.calls.findIndex(([, payload]) => payload.phase === 'indexing'))
+    .toBeLessThan(send.mock.calls.findIndex(([, payload]) => payload.phase === 'merging'));
   const exportRequest = requests.map((input) => new URL(input))
     .find((url) => url.pathname === '/api/v2/export/');
   expect(exportRequest?.searchParams.has('updatedAfter')).toBe(false);
 });
 
 it('reprojects a pristine body atomically while preserving a local cloze', async () => {
-  await seedMigratableSource();
+  await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   const fetchImpl = migrationFetch();
   vi.stubGlobal('fetch', fetchImpl);
@@ -130,6 +151,7 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   );
   expect(JSON.parse(legacyState?.value ?? '{}')).toMatchObject({ status: 'api', version: 1 });
   expect(JSON.parse(journalState?.value ?? '{}')).toMatchObject({
+    completionVersion: 2,
     cohortDocumentIds: ['document-1'],
     documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
     status: 'api',
@@ -143,21 +165,43 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
 }, 20_000);
 
-it('keeps the irreversible migration state after a network failure', async () => {
+it('reopens an old document-only completion and performs the real merge', async () => {
+  await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-
-  await expect(runReadwiseSourceCutover({ dependencies: { minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ status: 'failed' });
-  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
-    completed_count: 0,
-    phase: 'indexing',
-    status: 'migration_in_progress'
+  writeReadwiseSourceCutover({
+    annotations: [],
+    cohortDocumentIds: ['document-1'],
+    completedAt: '2026-09-09T01:00:00.000Z',
+    documents: [{ nodeId: null, remoteId: 'document-1', status: 'suppressed' }],
+    retiredNodeIds: ['topic-1'],
+    sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z',
+    status: 'api'
   });
+
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 }
+  })).resolves.toMatchObject({ status: 'completed' });
+
+  const storedState = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(storedState).toMatchObject({
+    completionVersion: 2,
+    documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
+    retiredNodeIds: [],
+    status: 'api'
+  });
+  expect(storedState.annotations).toContainEqual({
+    nodeId: expect.any(String), remoteId: 'highlight-1', status: 'bound'
+  });
+  expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
+    "SELECT content FROM nodes WHERE id='topic-1'"
+  )?.content).toContain('API body with remembered phrase.');
 });
 
 it('binds an old document first seen after cutover to its exact original Topic', async () => {
-  await seedMigratableSource();
+  await seedMigratableSource(state.sourcePath);
   const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   writeReadwiseSourceCutover({
     annotations: [],
@@ -186,63 +230,3 @@ it('binds an old document first seen after cutover to its exact original Topic',
     nodeId: 'topic-1', remoteId: 'document-1', status: 'bound'
   });
 }, 20_000);
-
-async function seedMigratableSource() {
-  await fs.writeFile(path.join(state.sourcePath, 'Sample.md'), [
-    '# Sample', '## Full Document', 'Legacy body with remembered phrase.',
-    'https://read.readwise.io/read/document-1', '## Highlights',
-    'remembered phrase [...] (https://read.readwise.io/read/highlight-1)'
-  ].join('\n'));
-  const driver = openDatabaseConnection().driver;
-  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
-    VALUES ('topic-1',NULL,'topic','Sample',0,'placeholder',NULL,'old','old'),
-      ('local-cloze','topic-1','cloze','Local',1,'Local answer',
-       '{"id":"local","kind":"cloze","locator":{"from":17,"to":34,"originalText":"remembered phrase"}}','old','old')`);
-  driver.execute(`INSERT INTO desktop_sources (source_ref,source_type,config_ref,host_name,host_platform,
-    root_path,path_flavor,type_settings_json,created_at,updated_at) VALUES
-    ('readwise:local','readwise','articles-local','This Mac',?,?,?,?, 'old','old')`,
-  [process.platform, state.sourcePath, process.platform === 'win32' ? 'windows' : 'posix',
-    JSON.stringify({ highlightPath: state.sourcePath, keepState: 'enabled', kind: 'articles' })]);
-  driver.execute(`INSERT INTO import_sources (source_fingerprint,provider,source_kind,source_name,source_locator,
-    first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location) VALUES
-    ('source-1','desktop_text_file','markdown','Sample.md',?,'old','old','hash','topic-1','readwise:local','Sample.md')`,
-  [path.join(state.sourcePath, 'Sample.md')]);
-  const merge = await resolveReadwiseTopicMergeSource('topic-1');
-  if (!merge) throw new Error('missing merge source');
-  const prepared = await readwiseKeepAdapter.loadPreparedRecord(merge.descriptor, {
-    highlightDirectoryPath: merge.readwiseSource.highlightPath,
-    highlightPolicy: 'reference_only',
-    importedAt: 'old',
-    kind: merge.readwiseSource.kind,
-    readwiseConfig: createDefaultReadwiseReaderConfig()
-  });
-  driver.execute("UPDATE nodes SET content=? WHERE id='topic-1'", [prepared.content]);
-}
-
-function migrationFetch() {
-  return vi.fn(async (input: string | URL | Request) => {
-    const url = new URL(String(input));
-    if (url.pathname === '/api/v2/export/') {
-      return Response.json({ nextPageCursor: null, results: [{
-        external_id: 'document-1', highlights: [{ external_id: 'highlight-1', text: 'remembered phrase' }],
-        source: 'reader'
-      }] });
-    }
-    if (url.searchParams.get('category') === 'highlight') {
-      return Response.json({ nextPageCursor: null, results: [
-        { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
-      ] });
-    }
-    if (url.searchParams.has('category')) {
-      return Response.json({ nextPageCursor: null, results: [] });
-    }
-    const id = url.searchParams.get('id');
-    if (id) {
-      return Response.json({ results: [{
-        category: 'article', id,
-        html_content: '<p>API body with remembered phrase.</p>', title: 'Sample', parent_id: null
-      }] });
-    }
-    return Response.json({ nextPageCursor: null, results: [] });
-  });
-}

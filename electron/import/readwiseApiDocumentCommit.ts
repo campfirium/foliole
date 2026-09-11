@@ -1,6 +1,6 @@
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { stableReadwiseAnnotationNodeId, stableReadwiseEpubNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import {
@@ -9,11 +9,11 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
 import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import {
+  attachReadwiseApiOriginalFile,
   persistReadwiseApiOriginalFile,
   prepareReadwiseApiOriginalFile
 } from './readwiseApiOriginalFile.js';
@@ -25,21 +25,28 @@ interface ReadwiseApiDocumentCommitInput {
   dependencies?: ReadwiseApiFetchDependencies;
   destination: Exclude<ReadwiseImportDestination, 'off'>;
   document: PreparedReadwiseApiDocument;
+  preparedResources?: ReadwiseApiPreparedResources;
   replaceExistingBody?: boolean;
   reimportDeleted?: boolean;
 }
 
+export interface ReadwiseApiPreparedResources {
+  epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;
+  forceEpubStructure?: boolean;
+  originalFile: Awaited<ReturnType<typeof prepareReadwiseApiOriginalFile>> | null;
+}
+
 export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommitInput) {
   const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
-  if (!guardedDocument) {
-    return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
-  }
+  if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
   input = { ...input, document: guardedDocument };
   const isOriginalFile = input.document.category === 'pdf';
   const previousOriginalFile = input.reimportDeleted && existingBefore?.nodeDeleted
     ? null : existingBefore?.state.originalFile;
   const destination = existingBefore ? 'inbox' : input.destination;
-  const prepared = isOriginalFile && destination === 'inbox' && previousOriginalFile?.status !== 'localized'
+  const prepared = input.preparedResources
+    ? input.preparedResources.originalFile
+    : isOriginalFile && destination === 'inbox' && previousOriginalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
       category: 'pdf',
       ...(input.dependencies ? { dependencies: input.dependencies } : {}),
@@ -48,18 +55,22 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   const document = isOriginalFile && destination === 'inbox'
     ? withOriginalFileStatus(input.document, prepared?.state ?? previousOriginalFile ?? null)
     : input.document;
-  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
+  const preparedEpubImages = input.preparedResources
+    ? input.preparedResources.epubImages
+    : await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
     destination,
     document,
     forceEpubStructure: Boolean(input.reimportDeleted && existingBefore?.nodeDeleted)
-  });
+    });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
     config: input.config, connectionRef: input.connectionRef, destination, document, preparedEpubImages,
+    ...(input.preparedResources?.forceEpubStructure ? { forceEpubStructure: true } : {}),
     ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
-    ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody })
+    ...(input.replaceExistingBody === undefined && !input.preparedResources?.forceEpubStructure
+      ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || input.preparedResources?.forceEpubStructure) })
   });
   if (!isOriginalFile || result.status !== 'imported') return result;
 
@@ -79,6 +90,8 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     } catch {
       finalState = unavailableState(Boolean(input.document.body.trim()), 'original_file_storage_failed');
     }
+  } else if (prepared.state.status === 'localized' && existing?.nodeId) {
+    attachReadwiseApiOriginalFile(existing.nodeId, prepared.state);
   }
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
@@ -90,15 +103,7 @@ function guardPostCutoverDocument(connectionRef: string, document: PreparedReadw
     annotationRemoteIds: new Set(existingBefore.annotations.map((item) => item.remoteId))
   } : null;
   const cutover = loadReadwiseSourceCutover();
-  let guardedDocument = filterPostCutoverReadwiseDocument(cutover, document, binding);
-  if (cutover?.version === 2 && guardedDocument) {
-    const retired = new Set(cutover.retiredNodeIds);
-    const structureNodes = buildReadwiseApiEpubBookNodes(document.epubStructure?.sections ?? []);
-    if ((existingBefore?.nodeId && retired.has(existingBefore.nodeId)) || structureNodes.some((node) =>
-      retired.has(stableReadwiseEpubNodeId(connectionRef, document.id, node.key)))) guardedDocument = null;
-    else guardedDocument = { ...guardedDocument, annotations: guardedDocument.annotations.filter((annotation) =>
-      !retired.has(stableReadwiseAnnotationNodeId(connectionRef, annotation.remoteId))) };
-  }
+  const guardedDocument = filterPostCutoverReadwiseDocument(cutover, document, binding);
   return { existingBefore, guardedDocument };
 }
 

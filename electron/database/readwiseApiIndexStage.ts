@@ -111,6 +111,14 @@ export function loadReadwiseApiAnnotationLedger(connectionRef: string) {
   return loadKind<ReadwiseAnnotationLedgerFact>(connectionRef, ANNOTATION_LEDGER_KIND);
 }
 
+export function countReadwiseApiIndexedRecords(connectionRef: string) {
+  return openDatabaseConnection().driver.queryOne<{ count: number }>(
+    `SELECT COUNT(DISTINCT remote_id) count FROM readwise_api_import_stage
+     WHERE connection_ref = ? AND record_kind IN (?, ?)`,
+    [connectionRef, INDEX_READER_KIND, INDEX_EXPORT_KIND]
+  )?.count ?? 0;
+}
+
 export function loadReadwiseApiAnnotationLedgerDocuments(
   connectionRef: string,
   documentId: string

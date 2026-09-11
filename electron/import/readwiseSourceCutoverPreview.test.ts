@@ -70,7 +70,7 @@ it('does not inspect relay directories before the user confirms migration', asyn
 it('restores the merging phase from an unfinished durable cohort', async () => {
   writeReadwiseSourceCutover({
     annotations: [], cohortDocumentIds: ['document-1'], completedAt: '2026-09-09T01:00:00.000Z',
-    documents: [], retiredNodeIds: [], sourceHost: 'This Mac',
+    documents: [], phase: 'merging', retiredNodeIds: [], sourceHost: 'This Mac',
     startedAt: '2026-09-09T00:00:00.000Z', status: 'migration-in-progress'
   });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
@@ -85,7 +85,7 @@ it('restores a reset migration as indexing until its Readwise index exists', asy
     startedAt: '2026-09-11T01:00:00.000Z', status: 'migration-in-progress'
   });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
-    completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: 0
+    completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: null
   });
 });
 

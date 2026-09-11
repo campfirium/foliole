@@ -40,14 +40,16 @@ async function drainSearchIndexInvalidations() {
     return;
   }
   running = true;
+  let shouldContinue = false;
   try {
     const result = processSearchIndexInvalidations(openDatabaseConnection().driver, BATCH_LIMIT);
-    if (result.processed >= BATCH_LIMIT) {
-      scheduleSearchIndexInvalidationProcessing();
-    }
+    shouldContinue = result.processed >= BATCH_LIMIT;
   } catch (error) {
     appendMainProcessDiagnosticLog('search_index_invalidation_processing_failed', { error });
   } finally {
     running = false;
+  }
+  if (shouldContinue) {
+    scheduleSearchIndexInvalidationProcessing();
   }
 }

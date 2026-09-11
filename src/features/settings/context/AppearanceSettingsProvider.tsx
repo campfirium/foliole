@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
-import { subscribeRuntimeSystemColorMode } from '../../../shared/platform/systemColorMode';
+import { subscribeRuntimeSystemColorMode } from '../../../shared/platform/runtime/systemColorMode';
 import { applySelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
 import {
   applyAppearanceSettings,

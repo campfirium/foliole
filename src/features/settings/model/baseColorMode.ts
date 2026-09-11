@@ -1,5 +1,5 @@
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
-import { getRuntimeSystemColorMode } from '../../../shared/platform/systemColorMode';
+import { getRuntimeSystemColorMode } from '../../../shared/platform/runtime/systemColorMode';
 
 const BASE_COLOR_OPTIONS = ['light', 'dark', 'system'] as const;
 export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];

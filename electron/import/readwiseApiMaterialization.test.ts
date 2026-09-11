@@ -32,6 +32,7 @@ import {
 } from '../database/readwiseManagedExternalDocuments.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { loadReadwiseApiSourceUpdate } from './readwiseApiSourceUpdate.js';
 
 let tempRoot = '';
 
@@ -78,6 +79,10 @@ it('preserves the local body and materializes distinct remote annotation identit
   );
   expect(body?.body).toContain('Local edit');
   expect(body?.body).not.toContain('Replaced remote body');
+  expect(loadReadwiseApiSourceUpdate(source.latest_node_id)).toEqual({
+    content: '# Replaced remote body',
+    sourceUpdatedAt: '2026-09-07T00:00:00.000Z'
+  });
   expect(driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) count FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [source.latest_node_id]
   )).toEqual({ count: 2 });
@@ -136,6 +141,30 @@ it('keeps a deleted annotation child blocked while appending a different remote 
   );
   const annotations = JSON.parse(state?.remote_import_state_json ?? '{}').annotations;
   expect(annotations.find((item: { remoteId: string }) => item.remoteId === 'highlight-1').blockedAt).toBeTruthy();
+});
+
+it('adopts an untracked deterministic annotation tombstone without attempting to insert it again', () => {
+  const config = createDefaultReadwiseReaderConfig();
+  const driver = openDatabaseConnection().driver;
+  const childId = stableReadwiseAnnotationNodeId('connection', 'highlight-1');
+  driver.execute(
+    `INSERT INTO nodes (id,parent_id,kind,title,content,created_at,updated_at,deleted_at)
+     VALUES (?,NULL,'topic','Deleted','Excerpt','2026-09-06T00:00:00.000Z',
+       '2026-09-07T02:00:00.000Z','2026-09-07T02:00:00.000Z')`,
+    [childId]
+  );
+
+  expect(materializeReadwiseApiDocument({
+    config, connectionRef: 'connection', destination: 'inbox',
+    document: documentFixture([{ content: 'Excerpt', remoteId: 'highlight-1' }])
+  })).toMatchObject({ annotationCount: 0, status: 'imported' });
+  expect(driver.queryOne<{ deleted_at: string | null }>('SELECT deleted_at FROM nodes WHERE id = ?', [childId]))
+    .toEqual({ deleted_at: '2026-09-07T02:00:00.000Z' });
+  const state = driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'document-1'"
+  );
+  const annotations = JSON.parse(state?.remote_import_state_json ?? '{}').annotations;
+  expect(annotations).toEqual([expect.objectContaining({ blockedAt: expect.any(String), remoteId: 'highlight-1' })]);
 });
 
 it('records unavailable bodies without creating an empty Topic', () => {

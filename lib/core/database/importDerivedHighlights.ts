@@ -95,41 +95,63 @@ export function insertImportedHighlightNodes(input: {
   const insertedNodeIds: string[] = [];
 
   input.highlights.forEach((highlight) => {
-    const nodeId = highlight.nodeId ?? `node-${randomUUID()}`;
-    const imageRegions = toImportedImageRegions(input.driver, input.parentContent, highlight);
-    insertedNodeIds.push(nodeId);
-    if ('kind' in highlight && highlight.kind === 'cloze') {
-      const promptContent = createImportedClozePrompt(input.parentContent, highlight);
-      const title = deriveImportedHighlightTitle(promptContent);
-      insertClozeNode.run([
-        nodeId,
-        input.parentNodeId,
-        title,
-        promptContent,
-        resolveNodeOpeningText(promptContent, title),
-        highlight.content,
-        toImportedAnchorLink(highlight),
-        imageRegions,
-        input.importedAt,
-        input.importedAt
-      ]);
-    } else {
-      const title = deriveImportedHighlightTitle(highlight.content);
-      insertNode.run([
-        nodeId,
-        input.parentNodeId,
-        title,
-        highlight.content,
-        resolveNodeOpeningText(highlight.content, title),
-        toImportedAnchorLink(highlight),
-        imageRegions,
-        input.importedAt,
-        input.importedAt
-      ]);
-    }
+    const nodeId = insertImportedHighlight(input, highlight, insertNode, insertClozeNode);
+    if (nodeId) insertedNodeIds.push(nodeId);
   });
 
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);
 
-  return input.highlights.length;
+  return insertedNodeIds.length;
+}
+
+function insertImportedHighlight(
+  input: Parameters<typeof insertImportedHighlightNodes>[0],
+  highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord,
+  insertNode: ReturnType<DatabaseDriver['prepare']>,
+  insertClozeNode: ReturnType<DatabaseDriver['prepare']>
+) {
+  const nodeId = highlight.nodeId ?? `node-${randomUUID()}`;
+  const imageRegions = toImportedImageRegions(input.driver, input.parentContent, highlight);
+  const existing = highlight.nodeId ? reuseImportedHighlightNode({
+    anchorLink: toImportedAnchorLink(highlight), driver: input.driver, imageRegions,
+    importedAt: input.importedAt, nodeId, parentNodeId: input.parentNodeId
+  }) : 'missing';
+  if (existing === 'blocked') return null;
+  if (existing === 'reused') return nodeId;
+  if ('kind' in highlight && highlight.kind === 'cloze') {
+    const promptContent = createImportedClozePrompt(input.parentContent, highlight);
+    const title = deriveImportedHighlightTitle(promptContent);
+    insertClozeNode.run([
+      nodeId, input.parentNodeId, title, promptContent, resolveNodeOpeningText(promptContent, title),
+      highlight.content, toImportedAnchorLink(highlight), imageRegions, input.importedAt, input.importedAt
+    ]);
+  } else {
+    const title = deriveImportedHighlightTitle(highlight.content);
+    insertNode.run([
+      nodeId, input.parentNodeId, title, highlight.content, resolveNodeOpeningText(highlight.content, title),
+      toImportedAnchorLink(highlight), imageRegions, input.importedAt, input.importedAt
+    ]);
+  }
+  return nodeId;
+}
+
+function reuseImportedHighlightNode(input: {
+  anchorLink: string | null;
+  driver: DatabaseDriver;
+  imageRegions: string | null;
+  importedAt: string;
+  nodeId: string;
+  parentNodeId: string;
+}): 'blocked' | 'missing' | 'reused' {
+  const row = input.driver.queryOne<{ deleted_at: string | null }>(
+    'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
+  );
+  if (!row) return 'missing';
+  if (row.deleted_at && row.deleted_at !== input.importedAt) return 'blocked';
+  input.driver.execute(
+    `UPDATE nodes SET parent_id = ?, anchor_link = ?, image_regions = ?, deleted_at = NULL, updated_at = ?
+     WHERE id = ?`,
+    [input.parentNodeId, input.anchorLink, input.imageRegions, input.importedAt, input.nodeId]
+  );
+  return 'reused';
 }

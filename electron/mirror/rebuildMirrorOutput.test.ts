@@ -30,7 +30,7 @@ vi.mock('electron', () => ({
 import {
   registerTestAttachmentResource,
   resetTestAttachmentResources
-} from '../../src/test/attachmentResourceTestSupport';
+} from '../../src/test/attachmentResourceTestSupport.js';
 import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
