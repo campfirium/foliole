@@ -10,6 +10,7 @@ test('persists one API import tag and exposes no manual import controls', async 
   desktopApp,
   desktopWindow
 }, testInfo) => {
+  // SKIP: acceptance is limited to macOS Hidden Native | 2026-09-12 | revive: the plan requires another host or visible native acceptance
   test.skip(
     process.platform !== 'darwin' || process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN !== '1',
     'T178-22 acceptance is macOS Hidden Native only.'

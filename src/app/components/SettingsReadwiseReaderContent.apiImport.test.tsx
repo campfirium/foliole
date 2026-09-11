@@ -62,6 +62,9 @@ it('keeps sync and cleanup alongside automatic import', async () => {
   expect(screen.queryByRole('searchbox', { name: 'Search by title or author' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Preview import' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Connect Readwise' })).toBeInTheDocument();
+  for (const name of ['Connect Readwise', 'Sync', 'Clean up...']) {
+    expect(screen.getByRole('button', { name })).toHaveClass('w-36', 'min-h-8');
+  }
   expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
 });
 

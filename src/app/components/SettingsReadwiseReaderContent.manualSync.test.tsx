@@ -75,6 +75,13 @@ it('keeps manual Readwise sync status compact while running', async () => {
   expect(rehydrate).toHaveBeenCalledTimes(1);
 });
 
+it('uses the shared fixed action size for folder sync and cleanup', () => {
+  renderManualSyncHarness(vi.fn());
+
+  expect(screen.getByRole('button', { name: 'Sync' })).toHaveClass('w-36', 'min-h-8');
+  expect(screen.getByRole('button', { name: 'Clean up...' })).toHaveClass('w-36', 'min-h-8');
+});
+
 it('shows failed Readwise source details after manual sync', async () => {
   const onRunSync: RunSync = async () => ({
     completed_at: '2026-05-11T00:01:00.000Z',

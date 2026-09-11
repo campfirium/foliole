@@ -8,6 +8,7 @@ import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseRead
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
+  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
@@ -52,7 +53,7 @@ export function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => 
   return (
     <SettingsRow description={t('desktop.readwise.cleanup.description')} title={t('desktop.readwise.cleanup.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppButton disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="danger">
+        <AppButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="danger">
           {t('desktop.readwise.cleanup.action')}
         </AppButton>
       </SettingsControlSlot>

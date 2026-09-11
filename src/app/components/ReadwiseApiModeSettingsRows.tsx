@@ -10,7 +10,7 @@ import {
   loadReadwiseApiConnectionFromRuntime
 } from '../../shared/platform/import/readwiseApiConnectionRuntimeRepository';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
-import { AppButton, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../shared/ui';
+import { AppButton, SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../shared/ui';
 
 import { readwiseApiTaskPresentation } from './ReadwiseApiTaskStatus';
 import { ReadwiseCommonRows } from './ReadwiseFolderSettingsSections';
@@ -114,6 +114,7 @@ function ReadwiseApiConnectionRow(props: {
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <span className="text-sm text-foreground/60">{t(statusKey(state.connection.state))}</span>
           <AppButton
+            className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME}
             disabled={state.pending}
             loading={state.pending}
             loadingLabel={actionLabel}

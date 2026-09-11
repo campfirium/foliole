@@ -7,6 +7,7 @@ import type {
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
+  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -72,7 +73,7 @@ export function ReadwiseReaderSyncRow(props: {
           onChange={(value) => props.onChange('syncFrequency', value)}
           value={props.config.syncFrequency}
         />
-        <AppButton disabled={props.disabled} loading={Boolean(props.isSyncing)} loadingLabel={props.loadingLabel ?? t('desktop.readwise.sync.running')} onClick={props.onSync} size="sm" variant="default">
+        <AppButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.disabled} loading={Boolean(props.isSyncing)} loadingLabel={props.loadingLabel ?? t('desktop.readwise.sync.running')} onClick={props.onSync} size="sm" variant="default">
           {props.actionLabel ?? t('desktop.readwise.sync.action')}
         </AppButton>
       </SettingsControlSlot>
