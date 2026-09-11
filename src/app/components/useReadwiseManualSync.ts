@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { NativeReadwiseImportRunResult } from '../../../lib/platform/nativeImportContract';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { refreshWorkspaceAfterReadwiseImport } from '../hooks/readwiseWorkspaceRefresh';
 
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
@@ -30,8 +31,6 @@ const EMPTY_STATUS: ReadwiseManualSyncStatus = {
   tone: 'normal'
 };
 
-const SYNC_PROGRESS_MESSAGE = 'Syncing Readwise sources...';
-
 function toManualFailedSources(result: NativeReadwiseImportRunResult) {
   return (result.failed_sources ?? []).map((source) => ({
     reason: source.reason,
@@ -40,56 +39,47 @@ function toManualFailedSources(result: NativeReadwiseImportRunResult) {
   }));
 }
 
-function formatSyncResult(result: NativeReadwiseImportRunResult | null): ReadwiseManualSyncStatus {
+function formatSyncResult(result: NativeReadwiseImportRunResult | null, t: Translate): ReadwiseManualSyncStatus {
   if (!result) {
     return {
       failedSources: [],
-      message: 'Sync is only available in the desktop app.',
+      message: t('desktop.readwise.sync.unavailable'),
       tone: 'error'
     };
   }
   if (result.failed_count > 0 || result.status === 'failed') {
     return {
       failedSources: toManualFailedSources(result),
-      message: `Sync finished with ${result.failed_count} failed source${
-        result.failed_count === 1 ? '' : 's'
-      }.`,
+      message: t('desktop.readwise.sync.failedSources'),
       tone: 'error'
     };
   }
   if (typeof result.imported_count === 'number' && result.imported_count === 0) {
     return {
       failedSources: [],
-      message: 'No new or changed Readwise sources.',
+      message: t('desktop.readwise.sync.noChanges'),
       tone: 'normal'
     };
   }
   if (typeof result.imported_count === 'number') {
     return {
       failedSources: [],
-      message: `Synced ${result.imported_count} Readwise source topic${
-        result.imported_count === 1 ? '' : 's'
-      }.`,
+      message: t('desktop.readwise.sync.completed'),
       tone: 'normal'
     };
   }
   return {
     failedSources: [],
-    message: `Synced ${result.source_count} Readwise source${
-      result.source_count === 1 ? '' : 's'
-    }.`,
+    message: t('desktop.readwise.sync.completed'),
     tone: 'normal'
   };
-}
-
-function resolveErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Readwise sync failed.';
 }
 
 export function useReadwiseManualSync(input: {
   draft: ReadwiseSetupDraft;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
 }) {
+  const t = useTranslation();
   const [isSyncing, setIsSyncing] = useState(false);
   const [status, setStatus] = useState<ReadwiseManualSyncStatus>(EMPTY_STATUS);
 
@@ -105,17 +95,17 @@ export function useReadwiseManualSync(input: {
     setIsSyncing(true);
     setStatus({
       failedSources: [],
-      message: SYNC_PROGRESS_MESSAGE,
+      message: t('desktop.readwise.sync.progress'),
       tone: 'normal'
     });
     try {
       const result = await input.onRunSync(payload);
       await refreshWorkspaceAfterReadwiseImport(result);
-      setStatus(formatSyncResult(result));
-    } catch (error) {
+      setStatus(formatSyncResult(result, t));
+    } catch {
       setStatus({
         failedSources: [],
-        message: resolveErrorMessage(error),
+        message: t('desktop.readwise.sync.failed'),
         tone: 'error'
       });
     } finally {

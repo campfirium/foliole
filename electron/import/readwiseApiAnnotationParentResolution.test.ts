@@ -84,6 +84,21 @@ it('rejects a declared parent that is neither a highlight nor an article', async
   }))).rejects.toThrow('readwise_api_annotation_parent_identity_conflict:wrong-parent');
 });
 
+it('keeps a successfully missing note parent as an explicit unavailable fact', async () => {
+  const urls: URL[] = [];
+  const fetch = scopedFetch(urls, { note: [note('note-1', 'missing-parent')] });
+
+  await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', fetch)).resolves.toEqual([]);
+  expect(ledger('note-1')).toMatchObject({
+    documentId: null, parentId: 'missing-parent', resolution: 'parent-and-content-unavailable'
+  });
+  expect(ids(urls, 'missing-parent')).toHaveLength(1);
+
+  urls.length = 0;
+  await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', fetch)).resolves.toEqual([]);
+  expect(ids(urls, 'missing-parent')).toHaveLength(0);
+});
+
 function scopedFetch(urls: URL[], values: {
   article?: unknown[]; ids?: Record<string, unknown[]>; note?: unknown[];
 }) {

@@ -23,6 +23,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import {
   completeReadwiseApiCandidateRun,
+  isReadwiseApiMigrationPending,
   loadOrCreateReadwiseApiCandidateRun,
   loadReadwiseApiCandidateRun
 } from './readwiseApiCandidateRun.js';
@@ -114,8 +115,10 @@ it('persists retryable candidate failure facts without resetting completed candi
 it('carries the migration index boundary into the first sync and every later sync', () => {
   const policy = createDefaultReadwiseAutoImportPolicy();
   loadOrCreateReadwiseApiCandidateRun('connection', policy, '2026-09-10T00:00:00.000Z');
+  expect(isReadwiseApiMigrationPending('connection')).toBe(true);
 
   completeReadwiseApiCandidateRun('connection', 'cutover', '2026-09-10T01:00:00.000Z');
+  expect(isReadwiseApiMigrationPending('connection')).toBe(false);
 
   expect(loadReadwiseApiCompletedThrough('connection')).toBeNull();
   expect(loadReadwiseApiCandidateRun('connection')).toMatchObject({

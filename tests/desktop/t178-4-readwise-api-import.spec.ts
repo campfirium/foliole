@@ -35,7 +35,7 @@ async function installApiFixture(electronApp: ElectronApplication) {
       return Response.json({ nextPageCursor: null, results: [
         article('article-1', 'Body with quoted passage'),
         { category: 'highlight', id: 'highlight-1', parent_id: 'article-1' },
-        { category: 'note', id: 'note-1', parent_id: 'highlight-1' },
+        { category: 'note', id: 'note-1', parent_id: 'article-1' },
         article('article-2', 'Second body')
       ] });
     };

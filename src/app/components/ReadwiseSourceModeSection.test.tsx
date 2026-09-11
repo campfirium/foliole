@@ -163,12 +163,12 @@ it('restores merging progress and explains a paused migration in place', async (
   expect(screen.queryByRole('button', { name: /Continue migrating/ })).not.toBeInTheDocument();
 });
 
-it('shows manual sync progress beneath the single sync action', async () => {
+it('keeps migration indexing separate from the ordinary sync action', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 31, error_reason: null, phase: null, status: 'already_completed', topic_count: 31, total_count: 31
   });
   schedule.load.mockResolvedValue({
-    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'in_progress', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
     initial_sync: { completed_count: 29, failed_count: 2, lifecycle: null, pending_count: 0, status: 'failed', total_count: 31, unexplained_failure_count: 2 },
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
@@ -183,28 +183,29 @@ it('shows manual sync progress beneath the single sync action', async () => {
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toHaveAttribute('aria-busy', 'true');
+  expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
   expect(screen.queryByText(/Migration:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
-  expect(screen.getByText('Syncing Readwise sources...')).toBeInTheDocument();
-  expect(screen.queryByText(/Migrating to API mode/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
+  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
 });
 
-it('projects a sync failure beneath the source selector and keeps the same retry action', async () => {
+it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
   schedule.load.mockResolvedValue({
-    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'in_progress', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
-    initial_sync: { completed_count: 31, failed_count: 0, lifecycle: null, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
-    routine_sync: {
-      last_result: null,
+    initial_sync: {
+      completed_count: 0, failed_count: 0, pending_count: 0, status: 'failed', total_count: null,
+      unexplained_failure_count: 0,
       lifecycle: {
-        error_reason: 'rate_limited', finished_at: '2026-09-11T00:00:02.000Z', kind: 'routine',
+        error_reason: 'rate_limited', finished_at: '2026-09-11T00:00:02.000Z', kind: 'initial',
         progress: null, queued_at: '2026-09-11T00:00:00.000Z', run_id: 'failed-run',
         stage: 'fetching', started_at: '2026-09-11T00:00:01.000Z', status: 'failed', trigger: 'manual'
-      },
-      next_run_at: null
-    }
+      }
+    },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   const settings = apiSettings();
   render(<LocalizationProvider><ReadwiseSourceModeSection
@@ -214,9 +215,14 @@ it('projects a sync failure beneath the source selector and keeps the same retry
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled();
-  expect(screen.getByRole('status')).toHaveTextContent('Indexing failed · Readwise rate limit reached');
-  expect(screen.getByRole('status')).not.toHaveTextContent(/[0-9%/]/u);
+  expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
+  const migrationStatus = screen.getByRole('status');
+  expect(migrationStatus).toHaveTextContent('Migrating · Indexing');
+  expect(migrationStatus).not.toHaveTextContent('failed');
+  expect(migrationStatus).not.toHaveTextContent(/[0-9%/]/u);
+  expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
+  expect(screen.getByRole('radiogroup').parentElement).toContainElement(migrationStatus);
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {

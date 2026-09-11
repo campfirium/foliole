@@ -1,6 +1,7 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { markReadwiseApiArticleParentUnavailable } from '../database/readwiseApiAnnotationLedger.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import {
@@ -16,7 +17,8 @@ export async function resolveReadwiseApiCandidateParent(
   connectionRef: string,
   id: string,
   settings: ImportManagerSettings,
-  request: ReturnType<typeof createReadwiseApiRequest>
+  request: ReturnType<typeof createReadwiseApiRequest>,
+  runStartedAt: string
 ) {
   const existing = existingParent(connectionRef, id);
   if (existing) return existing;
@@ -24,7 +26,11 @@ export async function resolveReadwiseApiCandidateParent(
     resolveReadwiseAutoImportDestination(settings.readwiseAutoImportPolicy, category, true) !== 'off'
   );
   const first = await fetchExact(id, allHighlightedEnabled, request);
-  if (!first || !isReaderParentCategory(first.category)) return first;
+  if (!first) {
+    markReadwiseApiArticleParentUnavailable(connectionRef, id, runStartedAt);
+    return null;
+  }
+  if (!isReaderParentCategory(first.category)) throw identityConflict(id);
   const destination = resolveReadwiseAutoImportDestination(
     settings.readwiseAutoImportPolicy, first.category, true
   );
@@ -57,7 +63,14 @@ async function fetchExact(
   url.searchParams.set('id', id);
   if (withHtmlContent) url.searchParams.set('withHtmlContent', 'true');
   const payload = await request(url);
-  return values(payload).map(normalizeReaderDocument).find((item) => item?.id === id) ?? null;
+  const documents = values(payload).map(normalizeReaderDocument).filter((item) => item !== null);
+  const exact = documents.find((item) => item.id === id) ?? null;
+  if (!exact && documents.length) throw identityConflict(id);
+  return exact;
+}
+
+function identityConflict(id: string) {
+  return new Error(`readwise_api_parent_identity_conflict:${id}`);
 }
 
 function isReaderParentCategory(value: unknown): value is ReaderParentCategory {

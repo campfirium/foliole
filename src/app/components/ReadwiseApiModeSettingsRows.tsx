@@ -17,6 +17,11 @@ import { ReadwiseCommonRows } from './ReadwiseFolderSettingsSections';
 import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
 
 const READWISE_TOKEN_URL = 'https://readwise.io/access_token';
+const IDLE_SYNC_STATUS: ReadwiseManualSyncStatus = {
+  failedSources: [],
+  message: null,
+  tone: 'normal'
+};
 
 export interface ReadwiseApiModeSettings {
   cleanupDisabled: boolean;
@@ -136,6 +141,7 @@ export function ReadwiseApiModeSettingsRows(props: {
 }) {
   const t = useTranslation();
   const task = readwiseApiTaskPresentation(props.taskStatus, t);
+  const migrationActive = props.migrationActive;
   return (
     <>
       <ReadwiseApiConnectionRow
@@ -143,16 +149,16 @@ export function ReadwiseApiModeSettingsRows(props: {
         onConnected={props.onConnected}
       />
       <ReadwiseCommonRows
-        cleanupDisabled={props.settings.cleanupDisabled || props.migrationActive}
+        cleanupDisabled={props.settings.cleanupDisabled || migrationActive}
         config={props.settings.config}
         onChange={(_field, value) => props.settings.onChangeFrequency(value as ReadwiseSyncFrequency)}
         onCleanup={props.settings.onCleanup}
         onSync={props.settings.onSync}
         syncActionLabel={task.actionLabel}
-        syncDisabled={props.settings.syncDisabled || props.migrationActive || task.running}
-        syncIsRunning={props.settings.syncIsRunning || task.running}
+        syncDisabled={props.settings.syncDisabled || migrationActive || task.running}
+        syncIsRunning={!migrationActive && (props.settings.syncIsRunning || task.running)}
         syncLoadingLabel={task.loadingLabel}
-        syncStatus={props.settings.syncStatus}
+        syncStatus={migrationActive ? IDLE_SYNC_STATUS : props.settings.syncStatus}
       />
     </>
   );

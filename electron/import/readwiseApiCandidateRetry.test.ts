@@ -35,6 +35,7 @@ vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'SECRET'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
@@ -130,25 +131,48 @@ it('honors Retry-After without refetching an already completed candidate', async
   expect(importedReadwiseApiCount()).toBe(2);
 });
 
-it('fails the index after one unresolved exact parent lookup', async () => {
+it('records one missing article parent without retrying it on an unchanged run', async () => {
+  let firstRun = true;
+  let parentAvailable = false;
   let parentRequests = 0;
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) return response([exportBook('gone', 'hg', 'articles')]);
     if (url.searchParams.get('category') === 'highlight') {
-      return response([{ category: 'highlight', id: 'hg', parent_id: 'gone' }]);
+      return response(firstRun ? [{ category: 'highlight', id: 'hg', parent_id: 'gone' }] : []);
     }
     if (url.searchParams.get('category') === 'note') return response([]);
     if (url.searchParams.get('id') === 'gone') {
       parentRequests += 1;
-      return response([]);
+      return response(parentAvailable ? [readerDocument('gone', 'article')] : []);
     }
     throw new Error(`unexpected request: ${url}`);
   }) as typeof fetch;
 
   await expect(runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
-  })).rejects.toThrow('readwise_api_parent_unresolved:gone');
+  })).resolves.toMatchObject({ committed_count: 0, status: 'completed' });
+  expect(parentRequests).toBe(1);
+  expect(loadReadwiseApiAnnotationLedger('connection')).toEqual([
+    expect.objectContaining({
+      documentId: 'gone', remoteId: 'hg', resolution: 'article-parent-unavailable'
+    })
+  ]);
+
+  firstRun = false;
+  await expect(runReadwiseApiImport({
+    dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
+  })).resolves.toMatchObject({ committed_count: 0, status: 'completed' });
   expect(parentRequests).toBe(1);
   expect(importedReadwiseApiCount()).toBe(0);
+
+  firstRun = true;
+  parentAvailable = true;
+  await expect(runReadwiseApiImport({
+    dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
+  })).resolves.toMatchObject({ committed_count: 1, status: 'completed' });
+  expect(parentRequests).toBe(2);
+  expect(loadReadwiseApiAnnotationLedger('connection')).toEqual([
+    expect.objectContaining({ documentId: 'gone', remoteId: 'hg', resolution: 'resolved' })
+  ]);
 });

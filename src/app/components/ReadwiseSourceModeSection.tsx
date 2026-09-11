@@ -26,7 +26,6 @@ export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps)
     t
   });
   const taskStatus = useReadwiseApiTaskStatus(props.apiSettings?.syncIsRunning ?? false);
-
   async function chooseMode(mode: ReadwiseSourceMode) {
     if (mode !== 'api' || committedMode === 'api') {
       props.onChange(mode);
@@ -37,11 +36,16 @@ export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps)
   }
 
   const migrating = committedMode !== 'api' && props.mode === 'api';
+  const migrationActive = migrating || migration.required
+    || taskStatus?.cutover.status === 'in_progress';
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.source.title')}>
       <SettingsSegmentedRow
         ariaLabel={t('desktop.readwise.source.mode.aria')}
         controlAlignment="description"
+        controlFooter={props.mode === 'api' ? (
+          <ReadwiseMigrationProgress migration={migration} taskStatus={taskStatus} />
+        ) : null}
         description={(
           <>
             {t('desktop.readwise.source.mode.description')}
@@ -58,14 +62,13 @@ export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps)
         ]}
         value={props.mode}
       />
-      {props.mode === 'api' ? <ReadwiseMigrationProgress migration={migration} schedule={taskStatus} /> : null}
       {props.mode === 'api' && props.apiSettings ? (
         <ReadwiseApiModeSettingsRows
-          migrationActive={migrating || migration.required}
+          migrationActive={migrationActive}
           migrationMode={migrating}
           onConnected={() => {
             props.onConnected?.();
-            if (migrating || migration.required) void migration.start();
+            if (migrationActive) void migration.start();
           }}
           settings={props.apiSettings}
           taskStatus={taskStatus}

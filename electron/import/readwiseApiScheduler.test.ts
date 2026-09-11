@@ -63,6 +63,7 @@ function createHarness() {
     loadCompletedThrough: vi.fn(() => completedThrough),
     loadCutover: vi.fn(() => CUTOVER),
     loadHostAssignment: vi.fn(() => ({ ...HOST_ASSIGNMENT, is_active: active })),
+    loadMigrationPending: vi.fn(() => false),
     loadScheduleState: vi.fn(() => ({
       connectionRef, initialProgress, lastResult, lifecycle, nextRunAt: null, version: 2 as const
     })),

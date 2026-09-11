@@ -1,24 +1,24 @@
 import type { NativeReadwiseApiScheduleStatus } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { AppSpinner } from '../../shared/ui';
 
-import { readwiseApiPhasePresentation, readwiseFailureReason } from './ReadwiseApiTaskStatus';
+import { readwiseFailureReason } from './ReadwiseApiTaskStatus';
 import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
 
 export function ReadwiseMigrationProgress(props: {
   migration: ReadwiseMigrationState;
-  schedule: NativeReadwiseApiScheduleStatus | null;
+  taskStatus: NativeReadwiseApiScheduleStatus | null;
 }) {
   const t = useTranslation();
-  const presentation = migrationPresentation(props.migration, t)
-    ?? readwiseApiPhasePresentation(props.schedule, t);
+  const presentation = migrationPresentation(props.migration, props.taskStatus, t);
   if (!presentation) return null;
   return (
     <div
       aria-live="polite"
-      className={`flex items-center gap-2 px-settings-panel-x pb-settings-panel-y text-ui-md ${presentation.failed ? 'text-error' : 'text-foreground'}`}
+      className={`flex items-center gap-2 text-ui-md ${presentation.failed ? 'text-error' : 'text-foreground'}`}
       role="status"
     >
-      {!presentation.failed ? <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-current opacity-45" /> : null}
+      <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
       <span>{presentation.text}</span>
     </div>
   );
@@ -26,9 +26,17 @@ export function ReadwiseMigrationProgress(props: {
 
 function migrationPresentation(
   migration: ReadwiseMigrationState,
+  taskStatus: NativeReadwiseApiScheduleStatus | null,
   t: ReturnType<typeof useTranslation>
 ) {
-  if (!migration.phase) return null;
+  if (!migration.phase) {
+    return taskStatus?.cutover.status === 'in_progress'
+      ? {
+          failed: false,
+          text: `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`
+        }
+      : null;
+  }
   const phase = migration.phase === 'indexing'
     ? t('desktop.readwise.cutover.phase.indexing')
     : t('desktop.readwise.cutover.phase.merging');

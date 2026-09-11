@@ -13,6 +13,8 @@ export interface ReadwiseAnnotationLedgerFact {
   category: 'highlight' | 'note';
   contentStatus: 'available' | 'unavailable' | 'unknown';
   documentId: string | null;
+  resolution?: 'resolved' | 'parent-and-content-unavailable' | 'article-parent-unavailable';
+  resolutionRun?: string;
   parentId: string | null;
   remoteId: string;
   seenInRun: string;
@@ -50,6 +52,8 @@ export function saveReadwiseApiReaderIndexPage(
           category: document.category,
           contentStatus: previous?.contentStatus ?? 'unknown',
           documentId: previous?.documentId ?? null,
+          ...(previous?.resolution ? { resolution: previous.resolution } : {}),
+          ...(previous?.resolutionRun ? { resolutionRun: previous.resolutionRun } : {}),
           parentId: document.parentId,
           remoteId: document.id,
           seenInRun,
@@ -91,25 +95,6 @@ export function saveReadwiseApiExportIndexPage(connectionRef: string, books: Exp
       upsert.run([connectionRef, INDEX_EXPORT_KIND, book.externalId, JSON.stringify(
         previous ? mergeExportBook(previous, book) : book
       )]);
-    }
-  });
-}
-
-export function bindReadwiseApiAnnotationParents(
-  connectionRef: string,
-  documentId: string,
-  annotationIds: readonly string[]
-) {
-  const driver = openDatabaseConnection().driver;
-  driver.transaction((tx) => {
-    const update = tx.prepare(
-      `UPDATE readwise_api_import_stage SET payload_json = ?
-       WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`
-    );
-    for (const remoteId of annotationIds) {
-      const current = loadAnnotationLedgerFact(connectionRef, remoteId);
-      if (current) update.run([JSON.stringify({ ...current, documentId }),
-        connectionRef, ANNOTATION_LEDGER_KIND, remoteId]);
     }
   });
 }

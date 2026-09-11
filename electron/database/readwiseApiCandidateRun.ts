@@ -83,6 +83,10 @@ export function loadReadwiseApiCandidateRun(connectionRef: string) {
   return row && isCandidatePhase(row.phase) ? toRun(row) : null;
 }
 
+export function isReadwiseApiMigrationPending(connectionRef: string) {
+  return loadReadwiseApiCandidateRun(connectionRef)?.queryUpdatedAfter === null;
+}
+
 export function deleteReadwiseApiCandidateRun(connectionRef: string) {
   openDatabaseConnection().driver.execute(
     'DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]

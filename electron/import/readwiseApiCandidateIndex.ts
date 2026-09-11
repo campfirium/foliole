@@ -1,10 +1,10 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { bindReadwiseApiAnnotationParents } from '../database/readwiseApiAnnotationLedger.js';
 import { loadOrCreateReadwiseApiCandidateRun, saveReadwiseApiCandidateCursor } from '../database/readwiseApiCandidateRun.js';
 import { saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import {
-  bindReadwiseApiAnnotationParents,
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex,
   loadReadwiseApiReaderIndex,
@@ -146,8 +146,8 @@ async function assembleCandidates(
     ])];
     const hasHighlights = graph.highlightedParents.has(parentId);
     if (!parent && (hasHighlights || exportIdsByParent.has(parentId))) {
-      parent = await resolveReadwiseApiCandidateParent(connectionRef, parentId, settings, request);
-      if (!parent) throw new Error(`readwise_api_parent_unresolved:${parentId}`);
+      parent = await resolveReadwiseApiCandidateParent(connectionRef, parentId, settings, request, run.roundStartedAt);
+      if (!parent) continue;
       saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
       byId.set(parent.id, parent);
     }
@@ -175,7 +175,8 @@ function indexExportMatches(
   annotations: ReturnType<typeof loadReadwiseApiAnnotationLedger>,
   exportBooks: ReturnType<typeof loadReadwiseApiExportIndex>
 ) {
-  const highlightParentById = new Map(annotations.filter((item) => item.category === 'highlight')
+  const highlightParentById = new Map(annotations.filter((item) =>
+    item.category === 'highlight' && item.resolution !== 'article-parent-unavailable')
     .map((item) => [item.remoteId, item.parentId]));
   return new Map(exportBooks.flatMap((book) => {
     const matched = book.highlightExternalIds.filter((id) => highlightParentById.has(id));

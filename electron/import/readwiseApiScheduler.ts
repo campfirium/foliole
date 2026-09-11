@@ -1,5 +1,6 @@
 import type { ReadwiseSyncFrequency } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { NativeReadwiseApiScheduleStatus } from '../../lib/platform/nativeReadwiseApiImportContract.js';
+import { isReadwiseApiMigrationPending } from '../database/readwiseApiCandidateRun.js';
 import { loadReadwiseApiCandidateProgress } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
@@ -34,6 +35,7 @@ interface SchedulerDependencies {
   loadCandidateProgress: typeof loadReadwiseApiCandidateProgress;
   loadCutover: typeof loadReadwiseSourceCutover;
   loadHostAssignment: typeof loadReadwiseHostAssignment;
+  loadMigrationPending: typeof isReadwiseApiMigrationPending;
   loadScheduleState: typeof loadReadwiseApiScheduleState;
   loadSettings: typeof loadImportManagerSettings;
   loadSource: typeof loadReadwiseRemoteSource;
@@ -131,6 +133,7 @@ function buildScheduleStatus(dependencies: SchedulerDependencies): NativeReadwis
     initialProgress: state?.initialProgress ?? null,
     lastResult: state?.lastResult ?? null,
     lifecycle: state?.lifecycle ?? null,
+    migrationPending: connectionRef ? dependencies.loadMigrationPending(connectionRef) : false,
     nextRunAt: state?.nextRunAt ?? null,
     workerOwned: connectionRef ? dependencies.trackedRunActive(connectionRef) : false
   });
@@ -176,6 +179,7 @@ const scheduler = createReadwiseApiScheduler({
   loadCompletedThrough: loadReadwiseApiCompletedThrough,
   loadCutover: loadReadwiseSourceCutover,
   loadHostAssignment: loadReadwiseHostAssignment,
+  loadMigrationPending: isReadwiseApiMigrationPending,
   loadScheduleState: loadReadwiseApiScheduleState,
   loadSettings: loadImportManagerSettings,
   loadSource: loadReadwiseRemoteSource,

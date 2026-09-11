@@ -11,6 +11,7 @@ export function indexReadwiseApiAnnotationGraph(
   const noteIdsByParent = new Map<string, string[]>();
   const affectedParents = new Set<string>();
   for (const highlight of highlights) {
+    if (isUnavailableInCurrentObservation(highlight)) continue;
     if (!highlight.parentId) {
       if (highlight.seenInRun === runStartedAt) throw unresolved(highlight.remoteId);
       continue;
@@ -23,12 +24,18 @@ export function indexReadwiseApiAnnotationGraph(
   }
   for (const note of facts.filter((item) => item.category === 'note')) {
     const highlight = note.parentId ? highlightById.get(note.parentId) : null;
+    const recoveringArticle = highlight?.resolution === 'article-parent-unavailable'
+      && !isUnavailableInCurrentObservation(highlight);
+    if (note.resolution === 'article-parent-unavailable' && !recoveringArticle) continue;
     const documentId = highlight?.parentId ?? note.documentId ?? null;
     if (!documentId) {
+      if (note.resolution === 'parent-and-content-unavailable') continue;
       if (note.seenInRun === runStartedAt) throw unresolved(note.remoteId);
       continue;
     }
-    if (note.seenInRun === runStartedAt) append(noteIdsByParent, documentId, note.remoteId);
+    if (note.seenInRun === runStartedAt || recoveringArticle) {
+      append(noteIdsByParent, documentId, note.remoteId);
+    }
     if (note.seenInRun === runStartedAt) affectedParents.add(documentId);
   }
   return {
@@ -38,6 +45,11 @@ export function indexReadwiseApiAnnotationGraph(
     highlightIdsByParent,
     noteIdsByParent
   };
+}
+
+function isUnavailableInCurrentObservation(fact: ReadwiseAnnotationLedgerFact) {
+  return fact.resolution === 'article-parent-unavailable'
+    && fact.seenInRun === fact.resolutionRun;
 }
 
 function append(target: Map<string, string[]>, key: string, value: string) {

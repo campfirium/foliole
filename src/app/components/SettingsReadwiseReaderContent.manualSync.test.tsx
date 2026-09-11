@@ -15,9 +15,10 @@ import {
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 import type { ReadwiseSetupPayload } from './useReadwiseSetupController';
 
-const { inspectReadwiseReaderSetup, onReadwiseReaderImportProgress } = vi.hoisted(() => ({
+const { inspectReadwiseReaderSetup, onReadwiseReaderImportProgress, onWorkspaceContentChanged } = vi.hoisted(() => ({
   inspectReadwiseReaderSetup: vi.fn(),
-  onReadwiseReaderImportProgress: vi.fn()
+  onReadwiseReaderImportProgress: vi.fn(),
+  onWorkspaceContentChanged: vi.fn()
 }));
 
 vi.mock('./readwiseReaderSetupInspection', () => ({
@@ -25,12 +26,16 @@ vi.mock('./readwiseReaderSetupInspection', () => ({
 }));
 
 vi.mock('../../shared/platform/runtimeShellEvents', () => ({
-  onReadwiseReaderImportProgress
+  onReadwiseReaderImportProgress,
+  onWorkspaceContentChanged
 }));
 
 beforeEach(() => {
   inspectReadwiseReaderSetup.mockReset();
   onReadwiseReaderImportProgress.mockReset();
+  onReadwiseReaderImportProgress.mockResolvedValue(null);
+  onWorkspaceContentChanged.mockReset();
+  onWorkspaceContentChanged.mockResolvedValue(null);
   vi.restoreAllMocks();
 });
 
@@ -60,12 +65,12 @@ it('keeps manual Readwise sync status compact while running', async () => {
     expect(screen.getByRole('button', { name: 'Syncing...' })).toHaveAttribute('aria-busy', 'true');
   });
   expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
-  expect(onReadwiseReaderImportProgress).not.toHaveBeenCalled();
+  expect(onReadwiseReaderImportProgress).toHaveBeenCalled();
   expect(screen.getByRole('status')).not.toHaveTextContent(/pending|Sample source topic|\d+\/\d+/u);
 
   runResult.resolve(createReadwiseImportRunResult());
   await waitFor(() => {
-    expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
+    expect(screen.getByText('Readwise sync completed.')).toBeInTheDocument();
   });
   expect(rehydrate).toHaveBeenCalledTimes(1);
 });
@@ -92,7 +97,7 @@ it('shows failed Readwise source details after manual sync', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Sync finished with 1 failed source.')).toBeInTheDocument();
+    expect(screen.getByText('Some Readwise sources could not be synced.')).toBeInTheDocument();
   });
   expect(
     screen.getByText('/Readwise/Full Document Contents/Tweets: permission denied')

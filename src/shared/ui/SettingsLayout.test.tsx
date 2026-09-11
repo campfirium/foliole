@@ -80,6 +80,22 @@ it('can align a segmented control with the row description', () => {
   expect(screen.getByRole('radiogroup').closest('[data-settings-control-slot]')?.className).toContain('mt-5');
 });
 
+it('places segmented control feedback directly below the control', () => {
+  render(
+    <SettingsSegmentedRow
+      controlFooter={<span>Working</span>}
+      description="Second line"
+      label="First line"
+      onChange={() => undefined}
+      options={[{ label: 'Choice', value: 'choice' }]}
+      value="choice"
+    />
+  );
+
+  const control = screen.getByRole('radiogroup');
+  expect(control.parentElement).toContainElement(screen.getByText('Working'));
+});
+
 it('keeps compact settings control helpers on shared token chrome', () => {
   expect(settingsCompactFieldClassName('w-20')).toContain('bg-settings-control');
   expect(settingsCompactFieldClassName()).toContain('focus-visible:ring-ring');
