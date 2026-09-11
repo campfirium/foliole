@@ -163,7 +163,7 @@ it('restores merging progress and explains a paused migration in place', async (
   expect(screen.queryByRole('button', { name: /Continue migrating/ })).not.toBeInTheDocument();
 });
 
-it('hides completed and failed task summaries behind the single sync action', async () => {
+it('shows manual sync progress beneath the single sync action', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 31, error_reason: null, phase: null, status: 'already_completed', topic_count: 31, total_count: 31
   });
@@ -174,7 +174,8 @@ it('hides completed and failed task summaries behind the single sync action', as
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   const settings = apiSettings();
-  settings.syncStatus = { failedSources: [], message: 'Synced 29 Readwise source topics.', tone: 'normal' };
+  settings.syncIsRunning = true;
+  settings.syncStatus = { failedSources: [], message: 'Syncing Readwise sources...', tone: 'normal' };
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiSettings={settings}
     committedMode="api"
@@ -182,11 +183,11 @@ it('hides completed and failed task summaries behind the single sync action', as
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled();
+  expect(await screen.findByRole('button', { name: 'Sync' })).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText(/Migration:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
-  expect(screen.queryByText('Synced 29 Readwise source topics.')).not.toBeInTheDocument();
+  expect(screen.getByText('Syncing Readwise sources...')).toBeInTheDocument();
   expect(screen.queryByText(/Migrating to API mode/)).not.toBeInTheDocument();
 });
 

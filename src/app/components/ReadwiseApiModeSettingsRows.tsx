@@ -150,9 +150,9 @@ export function ReadwiseApiModeSettingsRows(props: {
         onSync={props.settings.onSync}
         syncActionLabel={task.actionLabel}
         syncDisabled={props.settings.syncDisabled || props.migrationActive || task.running}
-        syncIsRunning={task.running}
+        syncIsRunning={props.settings.syncIsRunning || task.running}
         syncLoadingLabel={task.loadingLabel}
-        syncStatus={{ failedSources: [], message: null, tone: 'normal' }}
+        syncStatus={props.settings.syncStatus}
       />
     </>
   );
