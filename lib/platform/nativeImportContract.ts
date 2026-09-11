@@ -33,7 +33,7 @@ export interface NativeReadwiseImportRunProgressEvent {
   indexPendingCount?: number;
   indexProcessedCount?: number;
   indexTotalCount?: number;
-  phase?: 'fetching' | 'indexing' | 'scanning' | 'writing' | 'source_completed';
+  phase?: 'fetching' | 'indexing' | 'merging' | 'scanning' | 'writing' | 'source_completed';
   processedCount: number;
   sourceProcessedCount?: number;
   sourceTotalCount?: number;

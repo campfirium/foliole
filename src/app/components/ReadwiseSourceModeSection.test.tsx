@@ -52,9 +52,9 @@ beforeEach(() => {
     status: 'connected'
   });
   cutover.preview.mockResolvedValue({
-    completed_count: 0, status: 'ready', topic_count: 12, total_count: null
+    completed_count: 0, error_reason: null, phase: null, status: 'ready', topic_count: 12, total_count: null
   });
-  cutover.run.mockResolvedValue({ migrated_count: 10, status: 'completed', unmatched_count: 2 });
+  cutover.run.mockResolvedValue({ error_reason: null, migrated_count: 10, status: 'completed', unmatched_count: 2 });
   confirmation.request.mockResolvedValue(true);
   schedule.load.mockResolvedValue({
     cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
@@ -124,9 +124,10 @@ it('does not render a disconnected state before the saved credential is restored
   expect(await screen.findByText('Connected')).toBeInTheDocument();
 });
 
-it('shows the migration status in the API connection row while migration is pending', async () => {
+it('shows indeterminate indexing below the API source selector', async () => {
+  runtime.load.mockResolvedValue({ has_credential: true, state: 'connected', verified_at: 'now' });
   cutover.preview.mockResolvedValue({
-    completed_count: 0, status: 'migration_in_progress', topic_count: 12, total_count: 31
+    completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress', topic_count: 12, total_count: null
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   render(<LocalizationProvider><ReadwiseSourceModeSection
@@ -137,16 +138,18 @@ it('shows the migration status in the API connection row while migration is pend
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  const migration = await screen.findByRole('button', { name: 'Migrating to API mode 0%' });
-  expect(migration).toHaveAttribute('aria-busy', 'true');
+  expect(await screen.findByText('Migrating · Indexing')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).not.toHaveTextContent(/[0-9%/]/u);
+  expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });
 
-it('offers to continue migration when the migration is paused', async () => {
+it('restores merging progress and explains a paused migration in place', async () => {
+  runtime.load.mockResolvedValue({ has_credential: true, state: 'connected', verified_at: 'now' });
   cutover.preview.mockResolvedValue({
-    completed_count: 7, status: 'migration_in_progress', topic_count: 12, total_count: 31
+    completed_count: 7, error_reason: 'request_failed', phase: 'merging', status: 'migration_in_progress', topic_count: 12, total_count: 31
   });
-  cutover.run.mockResolvedValue({ migrated_count: 7, status: 'failed', unmatched_count: 0 });
+  cutover.run.mockResolvedValue({ error_reason: 'request_failed', migrated_count: 7, status: 'failed', unmatched_count: 0 });
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiSettings={apiSettings()}
     committedMode="api"
@@ -155,13 +158,14 @@ it('offers to continue migration when the migration is paused', async () => {
   /></LocalizationProvider>);
 
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
-  const migration = await screen.findByRole('button', { name: 'Continue migrating to API mode 22%' });
-  expect(migration).not.toHaveAttribute('aria-busy', 'true');
+  expect(await screen.findByText('Migrating · Merging failed · Readwise request failed')).toBeInTheDocument();
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Continue migrating/ })).not.toBeInTheDocument();
 });
 
 it('hides completed and failed task summaries behind the single sync action', async () => {
   cutover.preview.mockResolvedValue({
-    completed_count: 31, status: 'already_completed', topic_count: 31, total_count: 31
+    completed_count: 31, error_reason: null, phase: null, status: 'already_completed', topic_count: 31, total_count: 31
   });
   schedule.load.mockResolvedValue({
     cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
@@ -186,9 +190,22 @@ it('hides completed and failed task summaries behind the single sync action', as
   expect(screen.queryByText(/Migrating to API mode/)).not.toBeInTheDocument();
 });
 
-it('keeps the existing failure message beside the same sync action', async () => {
+it('projects a sync failure beneath the source selector and keeps the same retry action', async () => {
+  schedule.load.mockResolvedValue({
+    cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
+    eligibility: 'ready',
+    initial_sync: { completed_count: 31, failed_count: 0, lifecycle: null, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
+    routine_sync: {
+      last_result: null,
+      lifecycle: {
+        error_reason: 'rate_limited', finished_at: '2026-09-11T00:00:02.000Z', kind: 'routine',
+        progress: null, queued_at: '2026-09-11T00:00:00.000Z', run_id: 'failed-run',
+        stage: 'fetching', started_at: '2026-09-11T00:00:01.000Z', status: 'failed', trigger: 'manual'
+      },
+      next_run_at: null
+    }
+  });
   const settings = apiSettings();
-  settings.syncStatus = { failedSources: [], message: 'Readwise sync failed.', tone: 'error' };
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiSettings={settings}
     committedMode="api"
@@ -197,7 +214,8 @@ it('keeps the existing failure message beside the same sync action', async () =>
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled();
-  expect(screen.getByRole('status')).toHaveTextContent('Readwise sync failed.');
+  expect(screen.getByRole('status')).toHaveTextContent('Indexing failed · Readwise rate limit reached');
+  expect(screen.getByRole('status')).not.toHaveTextContent(/[0-9%/]/u);
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {

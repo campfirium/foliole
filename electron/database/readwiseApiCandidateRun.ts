@@ -13,7 +13,8 @@ import {
 } from './readwiseApiCandidateStage.js';
 import {
   completeReadwiseApiImportRun,
-  loadReadwiseApiCompletedThrough
+  loadReadwiseApiCompletedThrough,
+  readwiseApiOverlapBoundary
 } from './readwiseApiImportState.js';
 import { nextReadwiseApiRoundStartedAt } from './readwiseApiScopeLedger.js';
 
@@ -88,17 +89,25 @@ export function deleteReadwiseApiCandidateRun(connectionRef: string) {
   );
 }
 
-export function completeReadwiseApiCandidateRun(connectionRef: string) {
+export function completeReadwiseApiCandidateRun(
+  connectionRef: string,
+  completion: 'cutover' | 'sync' = 'sync',
+  now = new Date().toISOString()
+) {
   const run = requireRun(connectionRef);
-  completeReadwiseApiImportRun({
-    connectionRef,
-    exportCursor: null,
-    phase: 'ready',
-    queryUpdatedAfter: run.queryUpdatedAfter,
-    readerCursor: null,
-    roundStartedAt: run.roundStartedAt
-  });
-  clearReadwiseApiCandidateStage(connectionRef);
+  if (completion === 'sync') {
+    completeReadwiseApiImportRun({
+      connectionRef,
+      exportCursor: null,
+      phase: 'ready',
+      queryUpdatedAfter: run.queryUpdatedAfter,
+      readerCursor: null,
+      roundStartedAt: run.roundStartedAt
+    }, now);
+    clearReadwiseApiCandidateStage(connectionRef);
+  } else {
+    rollCandidateRunForward(connectionRef, readwiseApiOverlapBoundary(run.roundStartedAt), now);
+  }
 }
 
 export function candidateScopeSignature(policy: ReadwiseAutoImportPolicy) {
@@ -134,6 +143,19 @@ function startCandidateRun(connectionRef: string, queryUpdatedAfter: string | nu
        WHERE connection_ref = ? AND record_kind NOT IN (?, 'candidate-scope-v3', 'readwise-annotation-ledger-v3')`,
       [connectionRef, MANIFEST_KIND]
     );
+    insertCandidateRun(tx, connectionRef, queryUpdatedAfter, now);
+  });
+}
+
+function rollCandidateRunForward(connectionRef: string, queryUpdatedAfter: string, now: string) {
+  const driver = openDatabaseConnection().driver;
+  driver.transaction((tx) => {
+    tx.execute(
+      `DELETE FROM readwise_api_import_stage
+       WHERE connection_ref = ? AND record_kind NOT IN (?, 'candidate-scope-v3', 'readwise-annotation-ledger-v3')`,
+      [connectionRef, MANIFEST_KIND]
+    );
+    tx.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]);
     insertCandidateRun(tx, connectionRef, queryUpdatedAfter, now);
   });
 }

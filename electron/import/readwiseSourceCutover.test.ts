@@ -92,9 +92,14 @@ it('starts migration from the complete selected candidate scope instead of the o
     requests.push(String(input));
     return baseFetch(input);
   }) as typeof fetch;
+  const send = vi.fn();
 
-  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl, minIntervalMs: 0 },
+    window: { isDestroyed: () => false, webContents: { send } }
+  }))
     .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 1 });
+  expect(send.mock.calls.map(([, payload]) => payload.phase)).toEqual(expect.arrayContaining(['indexing', 'merging']));
   const exportRequest = requests.map((input) => new URL(input))
     .find((url) => url.pathname === '/api/v2/export/');
   expect(exportRequest?.searchParams.has('updatedAfter')).toBe(false);
@@ -146,6 +151,7 @@ it('keeps the irreversible migration state after a network failure', async () =>
     .resolves.toMatchObject({ status: 'failed' });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     completed_count: 0,
+    phase: 'indexing',
     status: 'migration_in_progress'
   });
 });

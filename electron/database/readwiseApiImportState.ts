@@ -120,7 +120,7 @@ export function completeReadwiseApiImportRun(run: ReadwiseApiImportRunState, now
   const driver = openDatabaseConnection().driver;
   driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [run.connectionRef]);
   saveJsonSetting(CURSOR_STATE_KEY, {
-    completedThrough: overlapBoundary(run.roundStartedAt),
+    completedThrough: readwiseApiOverlapBoundary(run.roundStartedAt),
     connectionRef: run.connectionRef,
     updatedAt: now,
     version: 1
@@ -193,7 +193,7 @@ function parseJson(value: string) {
   try { return JSON.parse(value); } catch { return null; }
 }
 
-function overlapBoundary(timestamp: string) {
+export function readwiseApiOverlapBoundary(timestamp: string) {
   const value = Date.parse(timestamp);
   return Number.isFinite(value) ? new Date(value - 60_000).toISOString() : timestamp;
 }

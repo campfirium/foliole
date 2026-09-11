@@ -5,6 +5,7 @@ import type {
 } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { restartReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
+import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover, writeLegacyReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
@@ -37,6 +38,8 @@ export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSour
     const progress = readwiseSourceCutoverProgress(current);
     return {
       completed_count: progress.completedCandidateCount,
+      error_reason: firstCandidateFailureReason(),
+      phase: current.status === 'api' ? null : isIndexingState(current) ? 'indexing' : 'merging',
       status: current.status === 'api' ? 'already_completed' : 'migration_in_progress',
       topic_count: countCurrentHostTopics(current.sourceHost),
       total_count: progress.totalCandidateCount
@@ -45,6 +48,8 @@ export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSour
   const assignment = loadReadwiseHostAssignment();
   return {
     completed_count: 0,
+    error_reason: null,
+    phase: null,
     status: assignment.is_active ? 'ready' : 'not_active_host',
     topic_count: countCurrentHostTopics(assignment.current_host_name),
     total_count: null
@@ -84,32 +89,50 @@ async function runNow(
       loadImportManagerSettings().readwiseAutoImportPolicy,
       startedAt
     );
+    publishProgress(input.window, 0, 0, 'indexing');
   }
   try {
-    const identity = await prepareReadwiseSourceCutoverIdentity();
-    const migration = createReadwiseDocumentMigration(identity, source.connectionRef);
-    const output = await runReadwiseApiCandidatePipeline({
-      assertEligible: () => assertMigrationEligible(source.connectionRef),
-      afterCommit: migration.afterCommit,
-      beforeCommit: migration.beforeCommit,
-      connectionRef: source.connectionRef,
-      dependencies: input.dependencies ?? {},
-      onCandidateIndex: promoteReadwiseSourceCutoverCohort,
-      onProgress: (completed, total) => publishProgress(input.window, completed, total),
-      purpose: 'cutover',
-      settings: loadImportManagerSettings()
-    });
+    const output = await runCutoverPipeline(source.connectionRef, input);
     const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
     if (output.remainingCount > 0) {
-      return result('failed', progress.migratedCount, progress.unmatchedCount);
+      return result('failed', progress.migratedCount, progress.unmatchedCount, firstCandidateFailureReason());
     }
     completeReadwiseSourceCutoverMigration();
     const completed = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
     return result('completed', completed.migratedCount, completed.unmatchedCount);
   } catch (error) {
     console.error('[readwise-cutover] migration paused', error);
-    return result('failed');
+    return result('failed', 0, 0, safeFailureReason(error));
   }
+}
+
+async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourceCutoverInput) {
+  const identity = await prepareReadwiseSourceCutoverIdentity();
+  const migration = createReadwiseDocumentMigration(identity, connectionRef);
+  return runReadwiseApiCandidatePipeline({
+    assertEligible: () => assertMigrationEligible(connectionRef),
+    afterCommit: migration.afterCommit,
+    beforeCommit: migration.beforeCommit,
+    connectionRef,
+    dependencies: input.dependencies ?? {},
+    onCandidateIndex: (documentIds) => {
+      promoteReadwiseSourceCutoverCohort(documentIds);
+      const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
+      publishProgress(input.window, progress.completedCandidateCount, progress.totalCandidateCount ?? 0, 'merging');
+    },
+    onProgress: (completed, total) => publishProgress(input.window, completed, total, 'merging'),
+    purpose: 'cutover',
+    settings: loadImportManagerSettings()
+  });
+}
+
+function isIndexingState(state: NonNullable<ReturnType<typeof loadReadwiseSourceCutover>>) {
+  return state.version === 1 || isFreshRerunState(state);
+}
+
+function isFreshRerunState(state: NonNullable<ReturnType<typeof loadReadwiseSourceCutover>>) {
+  return state.version === 2 && state.status === 'migration-in-progress' &&
+    state.cohortDocumentIds.length === 0 && state.documents.length === 0;
 }
 
 function beginLegacyMigration(sourceHost: string, startedAt: string) {
@@ -148,14 +171,33 @@ function countCurrentHostTopics(hostName: string) {
   )?.count ?? 0;
 }
 
+function firstCandidateFailureReason() {
+  const connectionRef = loadReadwiseRemoteSource()?.connectionRef;
+  if (!connectionRef) return null;
+  return loadReadwiseApiCandidates(connectionRef)
+    .find((candidate) => candidate.status === 'failed')?.failure?.reason ?? null;
+}
+
+function safeFailureReason(error: unknown) {
+  if (!(error instanceof Error)) return 'request_failed';
+  if (error.message.startsWith('readwise_api_rate_limited:')) return 'rate_limited';
+  const reasons = [
+    'readwise_api_reconnect_required',
+    'readwise_execution_connection_changed',
+    'readwise_execution_eligibility_lost'
+  ];
+  return reasons.includes(error.message) ? error.message : 'request_failed';
+}
+
 function publishProgress(
   window: ReadwiseImportProgressWindow | null | undefined,
   completed: number,
-  total: number
+  total: number,
+  phase: 'indexing' | 'merging'
 ) {
   if (!window || window.isDestroyed()) return;
   window.webContents.send(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, {
-    phase: 'writing',
+    phase,
     processedCount: completed,
     status: 'running',
     totalCount: total
@@ -165,7 +207,8 @@ function publishProgress(
 function result(
   status: NativeReadwiseSourceCutoverResult['status'],
   migratedCount = 0,
-  unmatchedCount = 0
+  unmatchedCount = 0,
+  errorReason: string | null = null
 ): NativeReadwiseSourceCutoverResult {
-  return { migrated_count: migratedCount, status, unmatched_count: unmatchedCount };
+  return { error_reason: errorReason, migrated_count: migratedCount, status, unmatched_count: unmatchedCount };
 }

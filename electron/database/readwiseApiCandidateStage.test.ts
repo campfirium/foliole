@@ -21,13 +21,18 @@ import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/rea
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
-import { loadOrCreateReadwiseApiCandidateRun } from './readwiseApiCandidateRun.js';
+import {
+  completeReadwiseApiCandidateRun,
+  loadOrCreateReadwiseApiCandidateRun,
+  loadReadwiseApiCandidateRun
+} from './readwiseApiCandidateRun.js';
 import {
   loadReadwiseApiCandidateProgress,
   loadReadwiseApiCandidates,
   saveReadwiseApiCandidates,
   setReadwiseApiCandidateStatus
 } from './readwiseApiCandidateStage.js';
+import { loadReadwiseApiCompletedThrough } from './readwiseApiImportState.js';
 
 let tempRoot = '';
 
@@ -104,6 +109,28 @@ it('persists retryable candidate failure facts without resetting completed candi
 
   setReadwiseApiCandidateStatus('connection', 'failed', 'completed', null);
   expect(loadReadwiseApiCandidateProgress('connection')).toMatchObject({ completedCount: 2, failedCount: 0 });
+});
+
+it('carries the migration index boundary into the first sync and every later sync', () => {
+  const policy = createDefaultReadwiseAutoImportPolicy();
+  loadOrCreateReadwiseApiCandidateRun('connection', policy, '2026-09-10T00:00:00.000Z');
+
+  completeReadwiseApiCandidateRun('connection', 'cutover', '2026-09-10T01:00:00.000Z');
+
+  expect(loadReadwiseApiCompletedThrough('connection')).toBeNull();
+  expect(loadReadwiseApiCandidateRun('connection')).toMatchObject({
+    queryUpdatedAfter: '2026-09-09T23:59:00.000Z',
+    roundStartedAt: '2026-09-10T01:00:00.000Z'
+  });
+
+  completeReadwiseApiCandidateRun('connection', 'sync', '2026-09-10T01:30:00.000Z');
+  expect(loadReadwiseApiCompletedThrough('connection')).toBe('2026-09-10T00:59:00.000Z');
+  expect(loadOrCreateReadwiseApiCandidateRun(
+    'connection', policy, '2026-09-10T02:00:00.000Z'
+  )).toMatchObject({
+    queryUpdatedAfter: '2026-09-10T00:59:00.000Z',
+    roundStartedAt: '2026-09-10T02:00:00.000Z'
+  });
 });
 
 function candidate(documentId: string, readerCategory: 'article' | 'epub', highlightCount: number) {

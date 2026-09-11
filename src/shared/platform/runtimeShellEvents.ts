@@ -97,6 +97,7 @@ function isValidReadwiseProgressPhase(phase: ReadwiseReaderImportProgressPayload
   return phase === undefined ||
     phase === 'fetching' ||
     phase === 'indexing' ||
+    phase === 'merging' ||
     phase === 'scanning' ||
     phase === 'writing' ||
     phase === 'source_completed';

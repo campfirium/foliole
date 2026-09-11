@@ -3,6 +3,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { SettingsSection, SettingsSegmentedRow } from '../../shared/ui';
 
 import { ReadwiseApiModeSettingsRows, type ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
+import { useReadwiseApiTaskStatus } from './ReadwiseApiTaskStatus';
+import { ReadwiseMigrationProgress } from './ReadwiseMigrationProgress';
 import { useReadwiseSourceMigration } from './useReadwiseSourceMigration';
 
 interface ReadwiseSourceModeSectionProps {
@@ -23,6 +25,7 @@ export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps)
     onSelectApi: () => props.onChange('api'),
     t
   });
+  const taskStatus = useReadwiseApiTaskStatus(props.apiSettings?.syncIsRunning ?? false);
 
   async function chooseMode(mode: ReadwiseSourceMode) {
     if (mode !== 'api' || committedMode === 'api') {
@@ -55,17 +58,17 @@ export function ReadwiseSourceModeSection(props: ReadwiseSourceModeSectionProps)
         ]}
         value={props.mode}
       />
+      {props.mode === 'api' ? <ReadwiseMigrationProgress migration={migration} schedule={taskStatus} /> : null}
       {props.mode === 'api' && props.apiSettings ? (
         <ReadwiseApiModeSettingsRows
-          migrationActive={migration.required}
+          migrationActive={migrating || migration.required}
           migrationMode={migrating}
-          migrationPending={migration.pending}
           onConnected={() => {
             props.onConnected?.();
             if (migrating || migration.required) void migration.start();
           }}
-          migrationPercent={migration.percent}
           settings={props.apiSettings}
+          taskStatus={taskStatus}
         />
       ) : null}
     </SettingsSection>

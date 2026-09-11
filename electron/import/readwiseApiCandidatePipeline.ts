@@ -72,7 +72,9 @@ export async function runReadwiseApiCandidatePipeline(input: {
   const finalCandidates = loadReadwiseApiCandidates(input.connectionRef);
   const failedCount = finalCandidates.filter((candidate) => candidate.status === 'failed').length;
   const remainingCount = finalCandidates.filter((candidate) => candidate.status !== 'completed').length;
-  if (remainingCount === 0) completeReadwiseApiCandidateRun(input.connectionRef);
+  if (remainingCount === 0) {
+    completeReadwiseApiCandidateRun(input.connectionRef, input.purpose === 'cutover' ? 'cutover' : 'sync');
+  }
   return { ...stats, failedCount, remainingCount, totalCount: total };
 }
 

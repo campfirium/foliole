@@ -9,12 +9,12 @@ export async function previewReadwiseSourceCutoverInRuntime(): Promise<NativeRea
   const invoke = getRuntimeInvoke();
   return invoke
     ? invoke(NATIVE_COMMANDS.previewReadwiseSourceCutover)
-    : { completed_count: 0, status: 'not_active_host', topic_count: 0, total_count: null };
+    : { completed_count: 0, error_reason: null, phase: null, status: 'not_active_host', topic_count: 0, total_count: null };
 }
 
 export async function runReadwiseSourceCutoverInRuntime(): Promise<NativeReadwiseSourceCutoverResult> {
   const invoke = getRuntimeInvoke();
   return invoke
     ? invoke(NATIVE_COMMANDS.runReadwiseSourceCutover)
-    : { migrated_count: 0, status: 'failed', unmatched_count: 0 };
+    : { error_reason: 'request_failed', migrated_count: 0, status: 'failed', unmatched_count: 0 };
 }

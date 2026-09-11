@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { ReadwiseReaderConfig, ReadwiseSyncFrequency } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseApiConnection, NativeReadwiseApiConnectionResult } from '../../../lib/platform/nativeReadwiseApiConnectionContract';
+import type { NativeReadwiseApiScheduleStatus } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
   connectReadwiseApiFromClipboardInRuntime,
@@ -11,7 +12,7 @@ import {
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppButton, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../shared/ui';
 
-import { readwiseApiTaskPresentation, useReadwiseApiTaskStatus } from './ReadwiseApiTaskStatus';
+import { readwiseApiTaskPresentation } from './ReadwiseApiTaskStatus';
 import { ReadwiseCommonRows } from './ReadwiseFolderSettingsSections';
 import type { ReadwiseManualSyncStatus } from './useReadwiseManualSync';
 
@@ -83,11 +84,7 @@ function useReadwiseApiConnection(t: Translate, onConnected: () => void) {
 
 function ReadwiseApiConnectionRow(props: {
   migration: boolean;
-  migrationActive: boolean;
-  migrationRunning: boolean;
-  migrationPercent: number | null;
   onConnected: () => void;
-  onResume: () => void;
 }) {
   const t = useTranslation();
   const state = useReadwiseApiConnection(t, props.onConnected);
@@ -100,6 +97,9 @@ function ReadwiseApiConnectionRow(props: {
     );
   }
   const connected = state.connection?.state === 'connected';
+  const actionLabel = connected
+    ? t('desktop.readwise.api.connection.disconnect')
+    : t('desktop.readwise.api.connection.connect');
   return (
     <>
       <SettingsRow
@@ -110,19 +110,15 @@ function ReadwiseApiConnectionRow(props: {
           <span className="text-sm text-foreground/60">{t(statusKey(state.connection.state))}</span>
           <AppButton
             disabled={state.pending}
-            loading={props.migrationActive && props.migrationRunning}
-            loadingLabel={t('desktop.readwise.cutover.running', { count: props.migrationPercent ?? 0 })}
-            onClick={() => props.migrationActive
-              ? props.onResume()
-              : void state.run(connected ? disconnectReadwiseApiInRuntime : () => connectReadwiseApiFromClipboardInRuntime('continue', props.migration ? 'migration' : 'normal'))}
+            loading={state.pending}
+            loadingLabel={actionLabel}
+            onClick={() => void state.run(connected
+              ? disconnectReadwiseApiInRuntime
+              : () => connectReadwiseApiFromClipboardInRuntime('continue', props.migration ? 'migration' : 'normal'))}
             size="sm"
             variant={connected ? 'default' : 'emphasis'}
           >
-            {props.migrationActive
-              ? t('desktop.readwise.cutover.continue', { count: props.migrationPercent ?? 0 })
-              : state.pending ? t('desktop.readwise.api.connection.working')
-                : connected ? t('desktop.readwise.api.connection.disconnect')
-                  : t('desktop.readwise.api.connection.connect')}
+            {actionLabel}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
@@ -134,23 +130,17 @@ function ReadwiseApiConnectionRow(props: {
 export function ReadwiseApiModeSettingsRows(props: {
   migrationActive: boolean;
   migrationMode: boolean;
-  migrationPending: boolean;
-  migrationPercent: number;
   onConnected: () => void;
   settings: ReadwiseApiModeSettings;
+  taskStatus: NativeReadwiseApiScheduleStatus | null;
 }) {
   const t = useTranslation();
-  const taskStatus = useReadwiseApiTaskStatus(props.settings.syncIsRunning);
-  const task = readwiseApiTaskPresentation(taskStatus, t);
+  const task = readwiseApiTaskPresentation(props.taskStatus, t);
   return (
     <>
       <ReadwiseApiConnectionRow
         migration={props.migrationMode || props.migrationActive}
-        migrationActive={props.migrationActive}
-        migrationPercent={props.migrationPercent}
-        migrationRunning={props.migrationPending}
         onConnected={props.onConnected}
-        onResume={props.onConnected}
       />
       <ReadwiseCommonRows
         cleanupDisabled={props.settings.cleanupDisabled || props.migrationActive}
@@ -162,9 +152,7 @@ export function ReadwiseApiModeSettingsRows(props: {
         syncDisabled={props.settings.syncDisabled || props.migrationActive || task.running}
         syncIsRunning={task.running}
         syncLoadingLabel={task.loadingLabel}
-        syncStatus={props.settings.syncStatus.tone === 'error'
-          ? props.settings.syncStatus
-          : { failedSources: [], message: null, tone: 'normal' }}
+        syncStatus={{ failedSources: [], message: null, tone: 'normal' }}
       />
     </>
   );

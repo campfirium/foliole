@@ -57,13 +57,35 @@ it('counts only active Topics imported by this Host', async () => {
     ('other','desktop_text_file','markdown','Other.md','Other.md','old','old','hash','other-topic','readwise:other','Other.md')`);
 
   await expect(previewReadwiseSourceCutover()).resolves.toEqual({
-    completed_count: 0, status: 'ready', topic_count: 1, total_count: null
+    completed_count: 0, error_reason: null, phase: null, status: 'ready', topic_count: 1, total_count: null
   });
 });
 
 it('does not inspect relay directories before the user confirms migration', async () => {
   await expect(previewReadwiseSourceCutover()).resolves.toEqual({
-    completed_count: 0, status: 'ready', topic_count: 0, total_count: null
+    completed_count: 0, error_reason: null, phase: null, status: 'ready', topic_count: 0, total_count: null
+  });
+});
+
+it('restores the merging phase from an unfinished durable cohort', async () => {
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: ['document-1'], completedAt: '2026-09-09T01:00:00.000Z',
+    documents: [], retiredNodeIds: [], sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z', status: 'migration-in-progress'
+  });
+  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
+    completed_count: 0, phase: 'merging', status: 'migration_in_progress', total_count: 1
+  });
+});
+
+it('restores a reset migration as indexing until its Readwise index exists', async () => {
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
+    documents: [], retiredNodeIds: ['retired-1'], sourceHost: 'This Mac',
+    startedAt: '2026-09-11T01:00:00.000Z', status: 'migration-in-progress'
+  });
+  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
+    completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: 0
   });
 });
 

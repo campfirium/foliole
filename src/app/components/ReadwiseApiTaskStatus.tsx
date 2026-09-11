@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import type {
-  NativeReadwiseApiScheduleStatus,
-  NativeReadwiseApiTaskProgress
+  NativeReadwiseApiRunLifecycle,
+  NativeReadwiseApiScheduleStatus
 } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { loadReadwiseApiScheduleStatusInRuntime } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
@@ -36,9 +36,28 @@ export function readwiseApiTaskPresentation(status: NativeReadwiseApiScheduleSta
   const lifecycle = activeLifecycle(status);
   return {
     actionLabel: t('desktop.readwise.sync.action'),
-    loadingLabel: runningLabel(lifecycle?.progress ?? null, t),
+    loadingLabel: t('desktop.readwise.sync.action'),
     running: Boolean(lifecycle)
   };
+}
+
+export function readwiseApiPhasePresentation(
+  status: NativeReadwiseApiScheduleStatus | null,
+  t: Translate
+) {
+  const lifecycle = currentLifecycle(status);
+  if (!lifecycle || lifecycle.status === 'completed' || lifecycle.status === 'queued'
+    || lifecycle.stage === 'eligibility') return null;
+  const phaseKey = lifecycle.stage === 'fetching'
+    ? 'desktop.readwise.api.tasks.indexing'
+    : 'desktop.readwise.api.tasks.syncing';
+  const phase = t(phaseKey);
+  if (lifecycle.status !== 'failed') return { failed: false, text: phase };
+  const failedKey = lifecycle.stage === 'fetching'
+    ? 'desktop.readwise.api.tasks.indexFailed'
+    : 'desktop.readwise.api.tasks.syncFailed';
+  const reason = readwiseFailureReason(lifecycle.error_reason, t);
+  return { failed: true, text: reason ? `${t(failedKey)} · ${reason}` : t(failedKey) };
 }
 
 function activeLifecycle(status: NativeReadwiseApiScheduleStatus | null) {
@@ -48,13 +67,17 @@ function activeLifecycle(status: NativeReadwiseApiScheduleStatus | null) {
   return routine?.status === 'running' ? routine : null;
 }
 
-function runningLabel(
-  progress: NativeReadwiseApiTaskProgress | null,
-  t: Translate
-) {
-  if (!progress || progress.total_count === null) return t('desktop.readwise.api.tasks.running');
-  return t('desktop.readwise.api.tasks.runningProgress', {
-    completed: progress.completed_count,
-    total: progress.total_count
-  });
+function currentLifecycle(status: NativeReadwiseApiScheduleStatus | null): NativeReadwiseApiRunLifecycle | null {
+  return status?.initial_sync.lifecycle ?? status?.routine_sync.lifecycle ?? null;
+}
+
+export function readwiseFailureReason(reason: string | null, t: Translate) {
+  const key = {
+    rate_limited: 'desktop.readwise.api.failure.rateLimited',
+    readwise_api_reconnect_required: 'desktop.readwise.api.failure.reconnectRequired',
+    readwise_execution_connection_changed: 'desktop.readwise.api.failure.connectionChanged',
+    readwise_execution_eligibility_lost: 'desktop.readwise.api.failure.notEligible',
+    request_failed: 'desktop.readwise.api.failure.requestFailed'
+  }[reason ?? ''] as Parameters<Translate>[0] | undefined;
+  return key ? t(key) : null;
 }

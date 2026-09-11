@@ -36,7 +36,7 @@ it('keeps sync and cleanup alongside automatic import', async () => {
     routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
   });
   modeRuntime.preview.mockResolvedValue({
-    completed_count: 0, status: 'ready', topic_count: 4, total_count: null
+    completed_count: 0, error_reason: null, phase: null, status: 'ready', topic_count: 4, total_count: null
   });
   modeRuntime.confirm.mockResolvedValue(true);
   render(
