@@ -13,6 +13,14 @@ import {
 export function WorkspaceThemeModeAction(props: { onRunRailAction?: (commandId: string) => void }) {
   const t = useTranslation();
   const appearance = useContext(AppearanceSettingsContext);
+  const mode = appearance?.baseColorMode ?? 'system';
+  const modeLabel = mode === 'system'
+    ? t('desktop.workspace.appearanceMode.systemCurrent', {
+      resolved: appearance?.resolvedBaseColorMode === 'dark'
+        ? t('settings.appearance.colorMode.dark')
+        : t('settings.appearance.colorMode.light')
+    })
+    : t(`settings.appearance.colorMode.${mode}`);
 
   function runThemeToggle() {
     if (props.onRunRailAction) {
@@ -27,7 +35,7 @@ export function WorkspaceThemeModeAction(props: { onRunRailAction?: (commandId: 
       <WorkspaceRailTooltipButton
         className={`size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`}
         icon={<WorkspaceAppearanceModeIcon showSelectedMode={appearance?.isBaseColorModeSelectionActive ?? false} />}
-        label={t('settings.rail.item.appearanceMode')}
+        label={t('desktop.workspace.appearanceMode.current', { mode: modeLabel })}
         onClick={runThemeToggle}
       />
     </div>

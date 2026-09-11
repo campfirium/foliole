@@ -110,6 +110,10 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
     args: undefined;
     result: Record<string, string>;
   };
+  [NATIVE_COMMANDS.loadSystemColorMode]: {
+    args: undefined;
+    result: 'dark' | 'light';
+  };
   [NATIVE_COMMANDS.saveAppSettingsState]: {
     args: { settings: Record<string, string> };
     result: null;

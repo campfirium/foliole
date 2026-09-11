@@ -92,6 +92,7 @@ export interface ElectronAPI {
     handler: (payload: ReadwiseReaderImportProgressPayload) => void
   ) => () => void;
   onSearchIndexRebuildStatus?: (handler: (payload: SearchIndexRebuildStatusPayload) => void) => () => void;
+  onSystemColorModeChanged?: (handler: (mode: 'dark' | 'light') => void) => () => void;
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onSyncGroupJoinRequestsChanged?: (handler: () => void) => () => void;

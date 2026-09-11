@@ -7,6 +7,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-tests-appdata';
+const { applyNativeBaseColorMode } = vi.hoisted(() => ({ applyNativeBaseColorMode: vi.fn() }));
+
+vi.mock('../nativeAppearance.js', () => ({ applyNativeBaseColorMode }));
 
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
@@ -34,6 +37,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-storage-test-'));
   mockedAppDataDir = path.join(tempRoot, 'config', 'Foliole');
+  applyNativeBaseColorMode.mockClear();
   initializeDatabase();
 });
 
@@ -71,6 +75,24 @@ it('persists app settings state into sqlite settings table', async () => {
     .prepare('SELECT key, value FROM settings WHERE key = ?')
     .get('app_settings') as { key: string; value: string } | undefined;
   expect(row?.key).toBe('app_settings');
+});
+
+it('keeps the Electron native theme source aligned with the saved base color mode', async () => {
+  await saveAppSettingsState({ 'foliole-base-color': 'dark' });
+  expect(applyNativeBaseColorMode).toHaveBeenLastCalledWith('dark');
+
+  await saveAppSettingsState({ 'foliole-base-color': 'system' });
+  expect(applyNativeBaseColorMode).toHaveBeenLastCalledWith('system');
+});
+
+it('restores the Electron native theme source while loading app settings', async () => {
+  await saveAppSettingsState({ 'foliole-base-color': 'light' });
+  applyNativeBaseColorMode.mockClear();
+
+  await expect(loadAppSettingsState()).resolves.toMatchObject({
+    'foliole-base-color': 'light'
+  });
+  expect(applyNativeBaseColorMode).toHaveBeenCalledWith('light');
 });
 
 it('merges app settings saves without dropping runtime-only keys', async () => {

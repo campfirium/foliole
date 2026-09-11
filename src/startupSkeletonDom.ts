@@ -1,5 +1,6 @@
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from './shared/config/appSettings';
 import { applyMacOsFontSmoothingFromSettings } from './shared/platform/macOsFontSmoothing';
+import { getRuntimeSystemColorMode } from './shared/platform/systemColorMode';
 
 const REGION_IDS = [
   'titlebar-rail',
@@ -38,6 +39,10 @@ function readBaseColor(settings: Record<string, string>) {
 function resolveMode(settings: Record<string, string>) {
   const baseColor = readBaseColor(settings);
   if (baseColor === 'dark') return 'dark';
+  if (baseColor === 'system') {
+    const runtimeMode = getRuntimeSystemColorMode();
+    if (runtimeMode) return runtimeMode;
+  }
   if (baseColor === 'system' && typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
     return 'dark';
   }

@@ -3,13 +3,14 @@ import { fileURLToPath } from 'node:url';
 
 import { app } from 'electron';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
+import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../src/shared/config/appSettings.js';
 import {
   getLocalStorageAppSettingsKeys,
   getRuntimeAppSettingsKeys
 } from '../../src/shared/config/appSettingsClassification.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
+import { applyNativeBaseColorMode } from '../nativeAppearance.js';
 import { writeStartupRendererHtml } from '../startupRendererPreparation.js';
 
 const APP_SETTINGS_KEY = 'app_settings';
@@ -54,8 +55,18 @@ function normalizeAppSettingsPayload(payload: unknown): Record<string, string> {
   return normalized;
 }
 
+function syncNativeThemeSource(settings: Record<string, string>) {
+  const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
+  const mode = baseColor === 'dark' || baseColor === 'light' || baseColor === 'system'
+    ? baseColor
+    : DEFAULT_BASE_COLOR_MODE;
+  applyNativeBaseColorMode(mode);
+}
+
 export async function loadAppSettingsState(): Promise<Record<string, string>> {
-  return normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY));
+  const settings = normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY));
+  syncNativeThemeSource(settings);
+  return settings;
 }
 
 export function hasStartupRendererSettingChange(
@@ -83,6 +94,7 @@ export async function saveAppSettingsState(settings: Record<string, unknown>): P
     ...incomingSettings
   };
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
+  syncNativeThemeSource(nextSettings);
   if (!hasStartupRendererSettingChange(previousSettings, nextSettings)) {
     return;
   }

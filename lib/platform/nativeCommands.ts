@@ -161,6 +161,7 @@ export const NATIVE_COMMANDS = {
   applySyncNodes: 'apply_sync_nodes',
   recordSyncNodeConflicts: 'record_sync_node_conflicts',
   loadAppSettingsState: 'load_app_settings_state',
+  loadSystemColorMode: 'load_system_color_mode',
   saveAppSettingsState: 'save_app_settings_state',
   loadSystemEntryDisplayNames: 'load_system_entry_display_names',
   saveSystemEntryDisplayNames: 'save_system_entry_display_names',

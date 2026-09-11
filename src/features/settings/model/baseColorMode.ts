@@ -1,4 +1,5 @@
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
+import { getRuntimeSystemColorMode } from '../../../shared/platform/systemColorMode';
 
 const BASE_COLOR_OPTIONS = ['light', 'dark', 'system'] as const;
 export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];
@@ -12,6 +13,8 @@ export function resolveBaseColorMode(value: BaseColorMode): ResolvedBaseColorMod
   if (value !== 'system') {
     return value;
   }
+  const runtimeMode = getRuntimeSystemColorMode();
+  if (runtimeMode) return runtimeMode;
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return 'light';
   }

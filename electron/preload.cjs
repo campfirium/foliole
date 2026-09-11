@@ -13,6 +13,7 @@ const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 const IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-reader-import-progress';
 const IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL = 'foliole:search-index-rebuild-status';
+const IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL = 'foliole:system-color-mode-changed';
 const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
@@ -27,7 +28,7 @@ const SUBSCRIBABLE_CHANNELS = new Set([
   IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, IPC_MENU_EVENT_CHANNEL, IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, IPC_WINDOW_RESIZED_EVENT_CHANNEL, IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
   IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL, IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL,
-  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL
+  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL
 ]);
 
 const desktopDebugProbeEnabled = process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1'
@@ -196,6 +197,10 @@ function subscribe(channel, handler) {
       });
       return;
     }
+    if (channel === IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL) {
+      if (payload === 'dark' || payload === 'light') handler(payload);
+      return;
+    }
     handler();
   };
 
@@ -215,6 +220,7 @@ const electronApi = {
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
   onReadwiseReaderImportProgress: (handler) => subscribe(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, handler),
   onSearchIndexRebuildStatus: (handler) => subscribe(IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, handler),
+  onSystemColorModeChanged: (handler) => subscribe(IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onSyncGroupJoinRequestsChanged: (handler) => subscribe(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL, handler),

@@ -2,6 +2,7 @@ import { applyStartupSkeletonSettings } from '../../startupSkeletonDom';
 
 import { loadRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
+import { loadRuntimeSystemColorMode } from './systemColorMode';
 
 function normalizeSettingsPayload(value: unknown) {
   if (!value || typeof value !== 'object') {
@@ -47,7 +48,10 @@ function readWhitelistedLocalSettings() {
 export async function syncAppSettingsWithRuntime() {
   const localSnapshot = readWhitelistedLocalSettings();
   applyStartupSkeletonSettings(localSnapshot);
-  const runtimeSnapshot = await loadRuntimeAppSettingsState();
+  const [runtimeSnapshot] = await Promise.all([
+    loadRuntimeAppSettingsState(),
+    loadRuntimeSystemColorMode()
+  ]);
   if (!runtimeSnapshot) {
     return;
   }

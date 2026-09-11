@@ -40,6 +40,7 @@ import {
 import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
 import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
+import { loadSystemColorMode } from '../nativeAppearance.js';
 import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
@@ -111,6 +112,7 @@ async function handleLibraryPathUpdateCommand(args: Record<string, unknown>) {
 async function handleAppSettingsCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
   if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
+  if (command === NATIVE_COMMANDS.loadSystemColorMode) return loadSystemColorMode();
   if (command === NATIVE_COMMANDS.loadSystemEntryDisplayNames) return loadSystemEntryDisplayNames();
   if (command === NATIVE_COMMANDS.saveSystemEntryDisplayNames)
     return saveSystemEntryDisplayNames(args.payload);

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
+import { subscribeRuntimeSystemColorMode } from '../../../shared/platform/systemColorMode';
 import { applySelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
 import {
   applyAppearanceSettings,
@@ -136,9 +137,12 @@ function useResolvedBaseColorEffect(state: ReturnType<typeof useAppearanceStateV
       state.setResolvedBaseColorModeState(resolveBaseColorMode(state.baseColorModeState));
     };
     updateResolvedMode();
-    if (state.baseColorModeState !== 'system' || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (state.baseColorModeState !== 'system') {
       return undefined;
     }
+    const unsubscribe = subscribeRuntimeSystemColorMode(updateResolvedMode);
+    if (unsubscribe) return unsubscribe;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     mediaQuery.addEventListener('change', updateResolvedMode);
     return () => mediaQuery.removeEventListener('change', updateResolvedMode);

@@ -94,7 +94,9 @@ it('runs the shared appearance mode command from the customizable rail action', 
     </AppearanceSettingsProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance Mode' }));
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Appearance mode: Follow system (currently Light)'
+  }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
 });

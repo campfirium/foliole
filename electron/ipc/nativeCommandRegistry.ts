@@ -171,6 +171,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.applySyncNodes, route: 'storage', capability: 'syncMutation' },
   { command: NATIVE_COMMANDS.recordSyncNodeConflicts, route: 'storage', capability: 'syncMutation' },
   { command: NATIVE_COMMANDS.loadAppSettingsState, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadSystemColorMode, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveAppSettingsState, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadSystemEntryDisplayNames, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveSystemEntryDisplayNames, route: 'storage', capability: 'settingsMutation' },

@@ -13,6 +13,7 @@ export const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-b
 export const IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-reader-import-progress';
 export const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 export const IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL = 'foliole:search-index-rebuild-status';
+export const IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL = 'foliole:system-color-mode-changed';
 export const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 export const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
