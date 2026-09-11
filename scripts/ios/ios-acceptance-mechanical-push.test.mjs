@@ -2,7 +2,6 @@
 import { expect, it } from 'vitest';
 
 import {
-  IOS_SYNC_PACK_CANONICAL_CAPTURE_VERSION_ID,
   IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
   IOS_SYNC_PACK_CAPTURE_VERSION_ID,
   IOS_SYNC_PACK_RESTORE_VERSION_ID
@@ -20,7 +19,7 @@ it('acknowledges fixed node versions and canonicalizes only the runtime capture 
   expect(result.acks).toEqual([
     expect.objectContaining({
       canonical_object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
-      canonical_version_id: IOS_SYNC_PACK_CANONICAL_CAPTURE_VERSION_ID,
+      canonical_version_id: IOS_SYNC_PACK_CAPTURE_VERSION_ID,
       identity: expect.objectContaining({ objectId: captureId }),
       version_id: IOS_SYNC_PACK_CAPTURE_VERSION_ID
     }),
