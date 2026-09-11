@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
+import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionResourceSchemaStatements';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -64,15 +65,9 @@ function nodeVersion(): NativeSyncNodeRecord {
 
 function installSchema(database: Database.Database) {
   database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
+  database.exec(ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(`
-    CREATE TABLE content_blobs (
-      hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT NOT NULL,
-      compression TEXT NOT NULL, original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,
-      original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL, availability TEXT NOT NULL,
-      created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT
-    );
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
     CREATE TABLE search_index_invalidations (
       id INTEGER PRIMARY KEY AUTOINCREMENT, invalidation_type TEXT NOT NULL, target_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,

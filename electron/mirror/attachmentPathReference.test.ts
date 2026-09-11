@@ -26,6 +26,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { resolveMirrorAttachmentPath } from './attachmentPathReference.js';
 
 let tempRoot = '';
+const CONTENT_HASH = 'a'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-mirror-attachment-path-'));
@@ -41,16 +42,16 @@ afterEach(async () => {
 
 it('points mirror attachment references at the shared library asset path without creating a mirror attachment tree', async () => {
   createAttachmentRecord({
-    id: 'hash-1',
+    id: CONTENT_HASH,
     originalName: 'cover.png',
     mimeType: 'image/png',
     sizeBytes: 12,
     createdAt: '2026-03-30T00:00:00.000Z'
   });
 
-  const firstPath = resolveMirrorAttachmentPath('hash-1');
-  const secondPath = resolveMirrorAttachmentPath('hash-1');
-  const expectedPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'hash-1.png');
+  const firstPath = resolveMirrorAttachmentPath(CONTENT_HASH);
+  const secondPath = resolveMirrorAttachmentPath(CONTENT_HASH);
+  const expectedPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${CONTENT_HASH}.png`);
   const mirrorAssetsDir = path.join(mockedDocumentsDir, 'Foliole', 'Mirror', 'Assets');
 
   expect(firstPath).toBe(expectedPath);

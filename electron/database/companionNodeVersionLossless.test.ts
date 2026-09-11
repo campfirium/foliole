@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.js';
+import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.js';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.js';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -137,15 +138,9 @@ function createTargetDatabase() {
   const database = new Database(':memory:');
   targetDatabases.push(database);
   database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
+  database.exec(ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(`
-    CREATE TABLE content_blobs (
-      hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT NOT NULL,
-      compression TEXT NOT NULL, original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,
-      original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL, availability TEXT NOT NULL,
-      created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT
-    );
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
     INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
       VALUES ('attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-07-11T00:00:00.000Z');
   `);

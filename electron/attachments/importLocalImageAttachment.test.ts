@@ -128,7 +128,7 @@ it('imports a local png into the app attachment directory and links it to the no
   });
 
   await expect(
-    fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'cover.png'))
+    fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
   expect(findAttachmentBlobManifestById(hashBytes(imageBytes))).toEqual({

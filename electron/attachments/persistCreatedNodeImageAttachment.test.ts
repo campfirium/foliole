@@ -54,7 +54,7 @@ it('atomically persists the node through the canonical owner and links the norma
   expect(listNodeAttachments('excerpt-1')).toEqual([
     expect.objectContaining({ attachmentId: hash, nodeId: 'excerpt-1', role: 'image' })
   ]);
-  await expect(fs.stat(resolveAttachmentStoragePath(hash, undefined, 'excerpt.png'))).resolves.toBeTruthy();
+  await expect(fs.stat(resolveAttachmentStoragePath(hash, undefined, 'image/png'))).resolves.toBeTruthy();
 });
 
 it('removes a newly written CAS file when the database transaction fails', async () => {
@@ -63,5 +63,5 @@ it('removes a newly written CAS file when the database transaction fails', async
     bytes: png, expectedHash: hash, mimeType: 'image/png', nodeId: 'excerpt-2', originalName: 'excerpt.png',
     persistNode: () => { throw new Error('write failed'); }
   })).rejects.toThrow('write failed');
-  await expect(fs.stat(resolveAttachmentStoragePath(hash, undefined, 'excerpt.png'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.stat(resolveAttachmentStoragePath(hash, undefined, 'image/png'))).rejects.toMatchObject({ code: 'ENOENT' });
 });

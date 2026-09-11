@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const attachmentMock = vi.hoisted(() => ({
   findAttachmentBlobManifestById: vi.fn(),
+  loadAttachmentResourceDescription: vi.fn(),
   resolveAttachmentFile: vi.fn()
 }));
 
@@ -14,6 +15,9 @@ vi.mock('../database/attachmentBlobs.js', () => ({
 }));
 vi.mock('../attachments/resourceResolver.js', () => ({
   resolveAttachmentFile: attachmentMock.resolveAttachmentFile
+}));
+vi.mock('../database/attachmentResourceDescription.js', () => ({
+  loadAttachmentResourceDescription: attachmentMock.loadAttachmentResourceDescription
 }));
 
 import { loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
@@ -35,6 +39,7 @@ it('loads attachment bytes when the manifest hash matches the requested hash', a
   const filePath = path.join(tempRoot, 'att-1.bin');
   await fs.writeFile(filePath, body);
   attachmentMock.findAttachmentBlobManifestById.mockReturnValue({ contentHash });
+  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash });
   attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: 'application/octet-stream', status: 'ready' });
 
   await expect(loadCompanionAttachmentResource('att-1', contentHash)).resolves.toEqual({

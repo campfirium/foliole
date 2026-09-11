@@ -19,6 +19,10 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import {
+  registerTestAttachmentResource,
+  resetTestAttachmentResources
+} from '../../src/test/attachmentResourceTestSupport';
 import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -40,6 +44,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  resetTestAttachmentResources();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -128,8 +133,9 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
 });
 
 it('exports attachment markdown links as absolute asset paths', async () => {
+  const resource = registerTestAttachmentResource({ attachmentId: 'a'.repeat(64) });
   createAttachmentRecord({
-    id: 'hash-1',
+    id: resource.description.attachmentId,
     originalName: 'cover.png',
     mimeType: 'image/png',
     sizeBytes: 12,
@@ -142,7 +148,7 @@ it('exports attachment markdown links as absolute asset paths', async () => {
     title: 'Asset Topic',
     isTitleManual: true,
     hideTitleHeading: false,
-    content: '![Cover](asset://hash-1.png)\n\n[Attachment](<asset://hash-1.png>)',
+    content: `![Cover](${resource.assetUrl})\n\n[Attachment](<${resource.assetUrl}>)`,
     reveal: null,
     anchorLink: null,
     position: 0,
@@ -159,11 +165,11 @@ it('exports attachment markdown links as absolute asset paths', async () => {
 
   const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Asset Topic.md');
   const output = await fs.readFile(outputPath, 'utf8');
-  const expectedPath = path.join(tempRoot, 'Library', 'Assets', 'hash-1.png');
+  const expectedPath = path.join(tempRoot, 'Library', 'Assets', resource.description.storageKey);
 
   expect(output).toContain(`![Cover](${expectedPath})`);
   expect(output).toContain(`[Attachment](<${expectedPath}>)`);
-  expect(output).not.toContain('asset://hash-1');
+  expect(output).not.toContain(resource.assetUrl);
 });
 
 

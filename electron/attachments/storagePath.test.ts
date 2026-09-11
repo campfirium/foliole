@@ -4,21 +4,23 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { resolveAttachmentStoragePathCandidates } from './storagePath.js';
+import { resolveAttachmentStorageKeyPath, resolveAttachmentStoragePathCandidates } from './storagePath.js';
+
+const CONTENT_HASH = 'a'.repeat(64);
 
 it('resolves canonical and legacy attachment paths inside the assets directory', () => {
   const assetsDir = path.resolve('/tmp', 'foliole-assets');
 
-  expect(resolveAttachmentStoragePathCandidates('hash-1', 'cover.png', assetsDir)).toEqual([
-    path.join(assetsDir, 'hash-1.png'),
-    path.join(assetsDir, 'hash-1')
+  expect(resolveAttachmentStoragePathCandidates(CONTENT_HASH, 'image/png', assetsDir)).toEqual([
+    path.join(assetsDir, `${CONTENT_HASH}.png`),
+    path.join(assetsDir, CONTENT_HASH)
   ]);
 });
 
-it('rejects attachment ids that escape the assets directory', () => {
+it('rejects noncanonical storage keys before resolving an asset path', () => {
   const assetsDir = path.resolve('/tmp', 'foliole-assets');
 
   expect(() => {
-    resolveAttachmentStoragePathCandidates('../outside', 'cover.png', assetsDir);
-  }).toThrow(/escapes assets directory/i);
+    resolveAttachmentStorageKeyPath(assetsDir, '../outside.png');
+  }).toThrow(/not canonical/i);
 });

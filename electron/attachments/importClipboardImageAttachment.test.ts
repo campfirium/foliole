@@ -97,6 +97,6 @@ it('imports pasted clipboard image bytes into attachments and links them to the 
   const [nodeAttachment] = listNodeAttachments('node-1');
   expect(nodeAttachment?.attachment.originalName).toBe('pasted-image.png');
   await expect(
-    fs.readFile(resolveAttachmentStoragePath(hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'pasted-image.png'))
+    fs.readFile(resolveAttachmentStoragePath(hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);
 });

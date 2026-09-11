@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  registerTestAttachmentResource,
+  resetTestAttachmentResources
+} from '../test/attachmentResourceTestSupport';
 
 import {
   getSelectionCommandPayload,
   getSelectionCommandPayloadForContentRanges
 } from './contextCommands';
+
+afterEach(resetTestAttachmentResources);
 
 function createAdapter(content: string, selections: Array<{ from: number; to: number }>) {
   return {
@@ -183,9 +190,10 @@ describe('getSelectionCommandPayload', () => {
   it('merges touching ranges into one continuous payload entry', runMergesTouchingRangesCase);
 
   it('collects selected attachment images as full-image regions', () => {
-    const content = 'Before\n\n![Cover](asset://hash-1.png)\n\nAfter';
+    const resource = registerTestAttachmentResource();
+    const content = `Before\n\n![Cover](${resource.assetUrl})\n\nAfter`;
     const from = content.indexOf('![Cover]');
-    const to = from + '![Cover](asset://hash-1.png)'.length;
+    const to = from + `![Cover](${resource.assetUrl})`.length;
 
     const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [{ from, to }]);
 
