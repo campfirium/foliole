@@ -10,11 +10,13 @@ let mockedAppDataDir = '/tmp/foliole-local-image-import-inbox-tests';
 let mockedDocumentsDir = '/tmp/foliole-local-image-import-inbox-documents';
 
 vi.mock('electron', () => ({
+  nativeTheme: { on: vi.fn(), shouldUseDarkColors: false, themeSource: 'system' },
   shell: {
     trashItem: vi.fn(async (filePath: string) => {
       await fs.rm(filePath, { force: true, recursive: true });
     })
-  }
+  },
+  systemPreferences: { subscribeNotification: vi.fn() }
 }));
 
 vi.mock('../ipc/paths.js', () => ({

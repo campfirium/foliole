@@ -199,5 +199,5 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
   expect(screen.queryByRole('dialog', { name: 'Readwise import preview' })).not.toBeInTheDocument();
   expect(onPreviewSync).not.toHaveBeenCalled();
   expect(onSave).not.toHaveBeenCalled();
-  expect(screen.getByText('Synced 1 Readwise source topic.')).toBeInTheDocument();
+  expect(screen.getByText('Readwise sync completed.')).toBeInTheDocument();
 });

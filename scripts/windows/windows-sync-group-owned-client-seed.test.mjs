@@ -28,8 +28,9 @@ function seededFacts(factId) {
 it('creates C material through product commands before inspecting the pre-join database', async () => {
   const evidenceRoot = path.join(process.cwd(), '.tmp', `windows-c-seed-${Date.now()}`);
   const events = [];
-  const app = { close: async () => { events.push('closed'); },
-    process: () => ({ exitCode: null, pid: 41, signalCode: null }) };
+  const child = { exitCode: null, pid: 41, signalCode: null };
+  const app = { close: async () => { events.push('closed'); child.exitCode = 0; },
+    process: () => child };
   const invoke = async (_page, command, args) => {
     events.push(command);
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
