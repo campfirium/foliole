@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   isHostedElectronTransferFailure,
+  isHostedNodeHeadersTransferFailure,
   resolveNpmInvocation,
   runHostedNpmCi
 } from './hosted-npm-ci.mjs';
@@ -13,6 +14,11 @@ const ELECTRON_FETCH_FAILURE = [
   'npm error command sh -c node install.js',
   'npm error RequestError: fetch failed',
   '    at @electron/get/dist/cjs/GotDownloader.js'
+].join('\n');
+const NODE_HEADERS_FETCH_FAILURE = [
+  'npm error gyp info using node-gyp@12.3.0',
+  'npm error gyp http GET https://nodejs.org/download/release/v22.23.2/node-v22.23.2-headers.tar.gz',
+  'npm error gyp ERR! stack Error: read ECONNRESET'
 ].join('\n');
 
 function result(status, stderr = '', extras = {}) {
@@ -70,6 +76,17 @@ describe('hosted npm ci recovery', () => {
     expect(state.log.mock.calls.flat()).toContain('[hosted-npm-ci] attempt 2/2 start');
   });
 
+  it('retries one exact node-gyp headers transfer failure after one backoff', async () => {
+    const state = await execute([result(1, NODE_HEADERS_FETCH_FAILURE), result(0)]);
+    expect(state.runAttempt).toHaveBeenCalledTimes(2);
+    expect(state.sleep).toHaveBeenCalledExactlyOnceWith(5_000);
+    expect(state.final).toMatchObject({
+      attempts: 2,
+      firstFailureClassification: 'node-headers-transient-transfer',
+      status: 0
+    });
+  });
+
   it.each([
     ['lockfile mismatch', 'npm error npm ci can only install with an existing package-lock.json'],
     ['dependency resolution', 'npm error code ERESOLVE\nnpm error unable to resolve dependency tree'],
@@ -112,5 +129,11 @@ describe('hosted npm ci recovery', () => {
     expect(isHostedElectronTransferFailure(ELECTRON_FETCH_FAILURE, { env: HOSTED_ENV })).toBe(true);
     expect(isHostedElectronTransferFailure(ELECTRON_FETCH_FAILURE, { env: {} })).toBe(false);
     expect(isHostedElectronTransferFailure('npm error fetch failed', { env: HOSTED_ENV })).toBe(false);
+  });
+
+  it('requires hosted node-gyp header source and transient transport evidence', () => {
+    expect(isHostedNodeHeadersTransferFailure(NODE_HEADERS_FETCH_FAILURE, { env: HOSTED_ENV })).toBe(true);
+    expect(isHostedNodeHeadersTransferFailure(NODE_HEADERS_FETCH_FAILURE, { env: {} })).toBe(false);
+    expect(isHostedNodeHeadersTransferFailure('npm error read ECONNRESET', { env: HOSTED_ENV })).toBe(false);
   });
 });

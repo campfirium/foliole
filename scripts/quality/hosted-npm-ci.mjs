@@ -11,6 +11,9 @@ const ELECTRON_INSTALL_SOURCE = [
   /node_modules[\\/]electron[\\/](?:install\.js|dist[\\/])/iu,
   /node_modules[\\/]electron[\s\S]{0,300}?\bnode\s+install\.js/iu
 ];
+const NODE_HEADERS_INSTALL_SOURCE = [
+  /\bnode-gyp\b[\s\S]{0,1000}?nodejs\.org[\\/]download[\\/]release[\\/][^\s]+-headers\.tar\.gz/iu
+];
 const TRANSIENT_TRANSFER_FAILURE = [
   /\bfetch failed\b/iu,
   /\b(?:ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENETUNREACH|ECONNREFUSED)\b/u,
@@ -23,6 +26,13 @@ export function isHostedElectronTransferFailure(output, options = {}) {
   if (!isGithubHosted(options.env ?? process.env)) return false;
   if ((options.args ?? []).includes('--ignore-scripts')) return false;
   return ELECTRON_INSTALL_SOURCE.some((pattern) => pattern.test(output)) &&
+    TRANSIENT_TRANSFER_FAILURE.some((pattern) => pattern.test(output));
+}
+
+export function isHostedNodeHeadersTransferFailure(output, options = {}) {
+  if (!isGithubHosted(options.env ?? process.env)) return false;
+  if ((options.args ?? []).includes('--ignore-scripts')) return false;
+  return NODE_HEADERS_INSTALL_SOURCE.some((pattern) => pattern.test(output)) &&
     TRANSIENT_TRANSFER_FAILURE.some((pattern) => pattern.test(output));
 }
 
@@ -46,12 +56,17 @@ export async function runHostedNpmCi(options = {}) {
     }
 
     const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    const failureClassification = isHostedElectronTransferFailure(output, { args, env })
+      ? 'electron-transient-transfer'
+      : isHostedNodeHeadersTransferFailure(output, { args, env })
+        ? 'node-headers-transient-transfer'
+        : null;
     const retryable = attempt === 1 && !result.signal && Number.isInteger(result.status) &&
-      isHostedElectronTransferFailure(output, { args, env });
+      failureClassification !== null;
     if (!retryable) {
       return { ...result, attemptResults, attempts: attempt, firstFailureClassification };
     }
-    firstFailureClassification = 'electron-transient-transfer';
+    firstFailureClassification = failureClassification;
     log(`[hosted-npm-ci] retry classification=${firstFailureClassification} backoff_ms=${RETRY_DELAY_MS}`);
     await sleep(RETRY_DELAY_MS);
   }
