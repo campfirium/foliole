@@ -12,16 +12,14 @@ import {
   waitForElectronDevCondition,
   writeElectronDevClientState
 } from '../desktop/electron-dev-control-state.mjs';
-import { createElectronRuntimeWatcher } from '../desktop/electron-dev-runtime-watch.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
 import { maintainBeforeProduction } from '../diagnostics/local-artifact-cache-production.mjs';
-import { requestMacosElectronRuntimeRestart, requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
+import { requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
 import {
   MACOS_DAILY_LIBRARY_HOME,
-  resolveMacosElectronDevPaths,
-  resolveMacosElectronWatchTargets
+  resolveMacosElectronDevPaths
 } from './macos-electron-dev-paths.mjs';
 import {
   createMacosElectronDevLogger,
@@ -62,7 +60,6 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
   let clientState = null;
   let fullRestartInFlight = false;
   let restartShell = false;
-  let runtimeWatcher = null;
   let stopping = false;
   const persistClientState = async (patch = {}) => {
     clientState = { ...clientState, ...patch };
@@ -71,8 +68,6 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
 
   const stop = async () => {
     stopping = true;
-    runtimeWatcher?.close();
-    runtimeWatcher = null;
     if (active?.child && active.child.exitCode === null && active.child.signalCode === null) {
       await requestMacosElectronShellExit({ paths, reason: 'macOS daily debug stop' });
       await active.closed;
@@ -104,8 +99,6 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
     await persistClientState({
       lastControl: { action: 'full-restart', id: controlId, status: 'restarting' }
     });
-    runtimeWatcher?.close();
-    runtimeWatcher = null;
     logger.event('full_restart_shell_rebuild');
     await requestMacosElectronShellExit({ paths, reason: 'macOS daily debug full restart' });
   };
@@ -149,18 +142,7 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
         });
       }
       fullRestartInFlight = false;
-      runtimeWatcher = createElectronRuntimeWatcher({
-        log: (event, error) => logger.event(event, error instanceof Error ? error.message : ''),
-        onCompile: compile,
-        onRestart: () => fullRestartInFlight || stopping
-          ? Promise.resolve()
-          : requestMacosElectronRuntimeRestart({ paths, reason: 'Electron compile inputs changed' }),
-        onWatchError: () => { void stop(); },
-        targets: resolveMacosElectronWatchTargets(paths)
-      });
       const result = await active.closed;
-      runtimeWatcher?.close();
-      runtimeWatcher = null;
       if (restartShell && !stopping) {
         restartShell = false;
         skipCompile = true;
@@ -173,7 +155,6 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
     return 0;
   } finally {
     process.off('SIGHUP', onSighup);
-    runtimeWatcher?.close();
     await removeElectronDevClientState(paths);
     await rm(paths.shellRequestFile, { force: true });
     await logger.close();

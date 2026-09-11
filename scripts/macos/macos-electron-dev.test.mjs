@@ -15,8 +15,7 @@ import {
   MACOS_DAILY_DEBUG_ROOT,
   MACOS_DAILY_LIBRARY_HOME,
   MACOS_RESET_PREVIEW_ROOT,
-  resolveMacosElectronDevPaths,
-  resolveMacosElectronWatchTargets
+  resolveMacosElectronDevPaths
 } from './macos-electron-dev-paths.mjs';
 
 describe('macOS Electron dev entry', () => {
@@ -68,12 +67,9 @@ describe('macOS Electron dev entry', () => {
       .toThrow('--library-home requires a path');
   });
 
-  it('watches main, IPC, and preload compile inputs', () => {
-    const paths = resolveMacosElectronDevPaths('/repo/foliole');
-    const [electronTarget] = resolveMacosElectronWatchTargets(paths);
-
-    expect(electronTarget.matches('ipc/menu.ts')).toBe(true);
-    expect(electronTarget.matches('preload.cjs')).toBe(true);
-    expect(electronTarget.matches('README.md')).toBe(false);
+  it('keeps daily DEV runtime changes behind explicit controls', () => {
+    const source = fs.readFileSync('scripts/macos/macos-electron-dev-supervisor.mjs', 'utf8');
+    expect(source).not.toContain('createElectronRuntimeWatcher');
+    expect(source).not.toContain('Electron compile inputs changed');
   });
 });

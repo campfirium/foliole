@@ -22,24 +22,3 @@ export function resolveMacosElectronDevPaths(cwd = process.cwd()) {
     shellRequestFile: path.join(dailyRoot, '.foliole-dev-shell-restart-request.json')
   };
 }
-
-export function resolveMacosElectronWatchTargets(paths) {
-  const sourceExtension = /\.(?:cjs|json|mjs|ts)$/u;
-  return [
-    {
-      matches: (fileName) => sourceExtension.test(fileName),
-      path: path.join(paths.appRoot, 'electron'),
-      recursive: true
-    },
-    {
-      matches: (fileName) => /\.ts$/u.test(fileName),
-      path: path.join(paths.appRoot, 'lib'),
-      recursive: true
-    },
-    {
-      matches: (fileName) => fileName === 'foliole-agent-routes.mjs',
-      path: path.join(paths.appRoot, 'scripts', 'agent-control'),
-      recursive: false
-    }
-  ];
-}
