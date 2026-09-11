@@ -53,7 +53,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(deviceIdentityScenario).not.toContain('localStorage');
     expect(contentResourceScenario).toContain('pullMissingAttachmentResources(endpoint)');
     expect(contentResourceScenario).toContain('searchCompanionFullText(TOKENS.topic)');
-    expect(contentResourceScenario).toContain('resolveRuntimeAttachmentResource(`asset://${IDS.valid}.pdf`)');
+    expect(contentResourceScenario).toContain('resolveRuntimeAttachmentResource(`asset://${VALID_RESOURCE_KEY}`)');
     expect(stateWritebackScenario).toContain('saveCompanionSyncNodeReadingRecord({');
     expect(stateWritebackScenario).toContain('saveCompanionSyncNodeReviewRecord({');
     expect(stateWritebackScenario).toContain('syncCompanionObjectsFromDesktop(endpoint, { includeResources: false })');

@@ -51,7 +51,7 @@ beforeEach(() => {
     pdf: token.includes('pdf') ? [{ attachment_id: 'ios-acceptance-valid-attachment' }] : [],
     topics: token.includes('topic') ? [{ nodeId: 'ios-content-topic' }] : []
   }));
-  mocks.resolveResource.mockImplementation(async (url: string) => url.includes('valid')
+  mocks.resolveResource.mockImplementation(async (url: string) => url.endsWith('.pdf')
     ? { mime_type: 'application/pdf', resource_url: 'capacitor://local.pdf', status: 'ready' }
     : { resource_url: null, status: 'missing_file' });
 });

@@ -28,6 +28,7 @@ const TOKENS = {
   pdf: 'pdf-cobalt-token',
   topic: 'topic-amber-token'
 } as const;
+const VALID_RESOURCE_KEY = '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d.pdf';
 
 async function applyStructure(endpoint: string, peer: { sourceHostName: string; sourcePeerId: string }) {
   await applyCompanionDesktopSyncPack({
@@ -48,7 +49,7 @@ async function loadReadEvidence() {
     searchCompanionFullText(TOKENS.topic),
     searchCompanionFullText(TOKENS.pdf),
     searchCompanionFullText(TOKENS.external),
-    resolveRuntimeAttachmentResource(`asset://${IDS.valid}.pdf`),
+    resolveRuntimeAttachmentResource(`asset://${VALID_RESOURCE_KEY}`),
     resolveRuntimeAttachmentResource(`asset://${IDS.corrupt}.png`),
     resolveRuntimeAttachmentResource(`asset://${IDS.failed}.png`),
     resolveRuntimeAttachmentResource(`asset://${IDS.missing}.png`)
