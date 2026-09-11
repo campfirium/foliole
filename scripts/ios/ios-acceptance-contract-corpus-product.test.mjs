@@ -12,6 +12,7 @@ import {
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 import { IOS_HOSTED_PROVIDER_DEVICE_ID } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.ts';
 import { IOS_ACCEPTANCE_DESKTOP_PEER_ID } from './ios-acceptance-contract-corpus.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
@@ -56,6 +57,12 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
     from_peer_id: IOS_HOSTED_PROVIDER_DEVICE_ID, to_peer_id: PEER_ID, to_state_seq: 10
   });
   expect(content.nodes).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'ios-content-topic' })]));
+  for (const row of content.syncObjects.filter(({ object_type }) => object_type === 'attachment')) {
+    const payload = JSON.parse(row.payload_json);
+    expect(payload.blob.storage_key).toBe(buildCanonicalAttachmentStorageKey(
+      payload.blob.content_hash, payload.blob.mime_type
+    ));
+  }
   expect(stateInitial.manifest).toMatchObject({
     from_peer_id: IOS_HOSTED_PROVIDER_DEVICE_ID,
     from_state_seq: 0,
