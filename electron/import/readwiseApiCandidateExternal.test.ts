@@ -55,7 +55,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('retires an unadopted External document after no-highlight intake is turned off without redownloading it', async () => {
+it('preserves an existing External document when its incremental scope is turned off', async () => {
   const externalSettings = settings('external');
   const firstFetch = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
@@ -74,13 +74,13 @@ it('retires an unadopted External document after no-highlight intake is turned o
 
   const secondFetch = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
-    expect(url.pathname).toContain('/v2/export/');
+    expect(url.searchParams.get('category')).not.toBe('article');
     return response([]);
   }) as typeof fetch;
   await previewReadwiseApiImport(settings('off'), { fetchImpl: secondFetch, minIntervalMs: 0 });
 
-  expect(secondFetch).toHaveBeenCalledTimes(1);
-  expect(loadReadwiseApiExternalDocumentState('connection', 'plain')?.is_present).toBe(0);
+  expect(secondFetch).toHaveBeenCalledTimes(3);
+  expect(loadReadwiseApiExternalDocumentState('connection', 'plain')?.is_present).toBe(1);
 });
 
 function settings(destination: 'external' | 'off') {

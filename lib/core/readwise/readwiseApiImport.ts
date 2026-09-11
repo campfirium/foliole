@@ -55,11 +55,12 @@ export function prepareReadwiseApiDocuments(
   exportBooks: ExportBookContract[]
 ): PreparedReadwiseApiDocument[] {
   const byId = new Map(documents.map((document) => [document.id, document]));
-  const exportedHighlights = indexExportedHighlights(exportBooks);
+  const { conflicts, index: exportedHighlights } = indexExportedHighlights(exportBooks);
   const annotationsByDocument = new Map<string, PreparedReadwiseApiAnnotation[]>();
   const unmatchedByDocument = new Map<string, number>();
   for (const document of documents) {
     if (document.category !== 'highlight' && document.category !== 'note') continue;
+    if (conflicts.has(document.id)) throw new Error('readwise_api_annotation_identity_conflict');
     const ancestor = resolveReaderBodyAncestor(document.id, byId);
     const exported = document.category === 'highlight'
       ? exportedHighlights.get(document.id)
@@ -151,7 +152,7 @@ function indexExportedHighlights(exportBooks: ExportBookContract[]) {
     }
   }
   for (const id of conflicts) index.delete(id);
-  return index;
+  return { conflicts, index };
 }
 
 export function stableReadwiseAnnotationNodeId(connectionRef: string, remoteId: string) {

@@ -7,13 +7,17 @@ import {
 } from '../import/readwiseApiCandidateTypes.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { clearReadwiseApiCandidateStage } from './readwiseApiCandidateStage.js';
+import {
+  clearReadwiseApiCandidateStage,
+  saveReadwiseApiCandidateManifest
+} from './readwiseApiCandidateStage.js';
 import {
   completeReadwiseApiImportRun,
   loadReadwiseApiCompletedThrough
 } from './readwiseApiImportState.js';
+import { nextReadwiseApiRoundStartedAt } from './readwiseApiScopeLedger.js';
 
-const MANIFEST_KIND = 'candidate-manifest-v2';
+const MANIFEST_KIND = 'candidate-manifest-v3';
 const MANIFEST_ID = 'manifest';
 
 export function loadOrCreateReadwiseApiCandidateRun(
@@ -27,10 +31,9 @@ export function loadOrCreateReadwiseApiCandidateRun(
   if (!current || current.pipelineVersion !== READWISE_API_PIPELINE_VERSION
     || (row && !isCandidatePhase(row.phase))) {
     resetCandidateRun(connectionRef, signature, null, now);
-  } else if (!row && current.scopeSignature !== signature) {
-    resetCandidateRun(connectionRef, signature, null, now);
   } else if (!row) {
     startCandidateRun(connectionRef, loadReadwiseApiCompletedThrough(connectionRef), now);
+    saveReadwiseApiCandidateManifest(connectionRef, signature);
   }
   return requireRun(connectionRef);
 }
@@ -128,7 +131,7 @@ function startCandidateRun(connectionRef: string, queryUpdatedAfter: string | nu
   driver.transaction((tx) => {
     tx.execute(
       `DELETE FROM readwise_api_import_stage
-       WHERE connection_ref = ? AND record_kind != ?`,
+       WHERE connection_ref = ? AND record_kind NOT IN (?, 'candidate-scope-v3', 'readwise-annotation-ledger-v3')`,
       [connectionRef, MANIFEST_KIND]
     );
     insertCandidateRun(tx, connectionRef, queryUpdatedAfter, now);
@@ -141,11 +144,12 @@ function insertCandidateRun(
   queryUpdatedAfter: string | null,
   now: string
 ) {
+  const roundStartedAt = nextReadwiseApiRoundStartedAt(connectionRef, now);
   driver.execute(
     `INSERT INTO readwise_api_import_runs (
       connection_ref, query_updated_after, round_started_at, reader_cursor, export_cursor, phase, updated_at
     ) VALUES (?, ?, ?, NULL, NULL, ?, ?)`,
-    [connectionRef, queryUpdatedAfter, now, encodePhase('export'), now]
+    [connectionRef, queryUpdatedAfter, roundStartedAt, encodePhase('export'), now]
   );
 }
 

@@ -63,36 +63,34 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('does not scan Reader when content without highlights is off', async () => {
+it('queries only annotation scopes when every no-highlight category is off', async () => {
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) return response([exportBook('book', 'highlight', 'books')]);
-    if (url.searchParams.get('id') === 'book') return response([readerDocument('book', 'epub')]);
-    if (url.searchParams.get('id') === 'highlight') {
+    if (url.searchParams.get('category') === 'highlight') {
       return response([{ category: 'highlight', id: 'highlight', parent_id: 'book' }]);
     }
+    if (url.searchParams.get('category') === 'note') return response([]);
+    if (url.searchParams.get('id') === 'book') return response([readerDocument('book', 'epub')]);
     throw new Error(`unexpected Reader request: ${url}`);
   });
   const fetchImpl = fetchMock as typeof fetch;
 
   const preview = await previewReadwiseApiImport(apiSettings('off'), { fetchImpl, minIntervalMs: 0 });
   expect(preview).toMatchObject({ total_count: 1, with_highlights_count: 1, without_highlights_count: 0 });
-  expect(fetchMock.mock.calls.map(([input]) => String(input)).filter(
-    (value) => new URL(value).searchParams.has('category')
-  )).toHaveLength(0);
+  expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).searchParams.get('category'))
+    .filter(Boolean)).toEqual(['highlight', 'note']);
 
   const result = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   });
   expect(result).toMatchObject({ committed_count: 1, remaining_count: 0, status: 'completed' });
   expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(expect.arrayContaining([
-    expect.stringContaining('id=book'),
-    expect.stringContaining('id=highlight')
+    expect.stringContaining('id=book')
   ]));
 });
 
-it('prioritizes books by Reader category instead of the v2 export category', async () => {
-  const exactOrder: string[] = [];
+it('uses V3 parent categories and obtains each highlighted parent body once', async () => {
   const parentRequestOrder: string[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
@@ -102,24 +100,23 @@ it('prioritizes books by Reader category instead of the v2 export category', asy
         exportBook('book', 'book-highlight', 'books')
       ]);
     }
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([
+        { category: 'highlight', id: 'article-highlight', parent_id: 'article' },
+        { category: 'highlight', id: 'book-highlight', parent_id: 'book' }
+      ]);
+    }
+    if (url.searchParams.get('category') === 'note') return response([]);
     const id = url.searchParams.get('id') ?? '';
     if (id && !id.endsWith('highlight')) {
       parentRequestOrder.push(`${id}:${url.searchParams.has('withHtmlContent') ? 'body' : 'metadata'}`);
-    }
-    if (url.searchParams.has('withHtmlContent') || id.endsWith('highlight')) exactOrder.push(id);
-    if (id.endsWith('highlight')) {
-      return response([{ category: 'highlight', id, parent_id: id.startsWith('book') ? 'book' : 'article' }]);
     }
     return response([readerDocument(id, id === 'article' ? 'epub' : 'article')]);
   }) as typeof fetch;
 
   await runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off') });
 
-  expect(exactOrder.slice(0, 2)).toEqual(['article', 'article-highlight']);
-  expect(exactOrder).toContain('book');
-  expect(parentRequestOrder.slice(0, 3)).toEqual([
-    'article:metadata', 'book:metadata', 'article:body'
-  ]);
+  expect(parentRequestOrder).toEqual(['article:body', 'book:body']);
 });
 
 it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
@@ -146,10 +143,13 @@ it('processes more than 50 parent candidates without an artificial pause', async
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) return response(books);
-    const id = url.searchParams.get('id') ?? '';
-    if (id.startsWith('h-')) {
-      return response([{ category: 'highlight', id, parent_id: `doc-${id.slice(2)}` }]);
+    if (url.searchParams.get('category') === 'highlight') {
+      return response(books.map((_, index) => ({
+        category: 'highlight', id: `h-${index}`, parent_id: `doc-${index}`
+      })));
     }
+    if (url.searchParams.get('category') === 'note') return response([]);
+    const id = url.searchParams.get('id') ?? '';
     return response([readerDocument(id, 'article')]);
   }) as typeof fetch;
 
@@ -161,59 +161,54 @@ it('processes more than 50 parent candidates without an artificial pause', async
   expect(importedReadwiseApiCount()).toBe(51);
 });
 
-it('indexes enabled no-highlight categories without downloading bodies, then deduplicates exact parents', async () => {
+it('indexes enabled no-highlight categories with bodies and deduplicates highlighted parents', async () => {
   const urls: URL[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     urls.push(url);
     if (url.pathname.includes('/v2/export/')) return response([exportBook('shared', 'highlight', 'articles')]);
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([{ category: 'highlight', id: 'highlight', parent_id: 'shared' }]);
+    }
     if (url.searchParams.has('category')) {
       return response(url.searchParams.get('category') === 'article'
         ? [readerDocument('shared', 'article', false), readerDocument('plain', 'article', false)]
         : []);
-    }
-    if (url.searchParams.get('id') === 'highlight') {
-      return response([{ category: 'highlight', id: 'highlight', parent_id: 'shared' }]);
     }
     return response([readerDocument(url.searchParams.get('id') ?? '', 'article')]);
   }) as typeof fetch;
 
   const preview = await previewReadwiseApiImport(apiSettings('inbox'), { fetchImpl, minIntervalMs: 0 });
   expect(preview).toMatchObject({ total_count: 2, with_highlights_count: 1, without_highlights_count: 1 });
-  expect(urls.filter((url) => url.searchParams.has('category'))).toHaveLength(7);
-  expect(urls.filter((url) => url.searchParams.has('category')).every(
-    (url) => !url.searchParams.has('withHtmlContent')
+  expect(urls.filter((url) => url.searchParams.has('category'))).toHaveLength(9);
+  expect(urls.filter((url) => ['article', 'email', 'epub', 'pdf', 'rss', 'tweet', 'video']
+    .includes(url.searchParams.get('category') ?? '')).every(
+    (url) => url.searchParams.get('withHtmlContent') === 'true'
   )).toBe(true);
 });
 
-it('commits the first complete document while the producer waits for the next body', async () => {
-  let releaseSecond: (() => void) | undefined;
-  let secondStarted: (() => void) | undefined;
-  const started = new Promise<void>((resolve) => { secondStarted = resolve; });
-  const blocked = new Promise<void>((resolve) => { releaseSecond = resolve; });
+it('does not request annotation documents individually after indexing them', async () => {
+  const exactIds: string[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) {
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
+    if (url.searchParams.get('category') === 'highlight') return response([
+      { category: 'highlight', id: 'ha', parent_id: 'a' },
+      { category: 'highlight', id: 'hb', parent_id: 'b' }
+    ]);
+    if (url.searchParams.get('category') === 'note') return response([]);
     const id = url.searchParams.get('id') ?? '';
-    if (id === 'b' && url.searchParams.has('withHtmlContent')) {
-      secondStarted?.();
-      await blocked;
-    }
-    if (id === 'ha' || id === 'hb') {
-      return response([{ category: 'highlight', id, parent_id: id === 'ha' ? 'a' : 'b' }]);
-    }
+    if (id) exactIds.push(id);
     return response([readerDocument(id, 'article')]);
   }) as typeof fetch;
 
-  const running = runReadwiseApiImport({
+  const result = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   });
-  await started;
-  await vi.waitFor(() => expect(importedReadwiseApiCount()).toBe(1));
-  releaseSecond?.();
-  await expect(running).resolves.toMatchObject({ committed_count: 2, status: 'completed' });
+  expect(result).toMatchObject({ committed_count: 2, status: 'completed' });
+  expect(exactIds).toEqual(['a', 'b']);
 });
 
 it('invalidates old raw staging before restoring a cursor', async () => {
@@ -240,7 +235,7 @@ it('invalidates old raw staging before restoring a cursor', async () => {
   )).toEqual({ count: 0 });
   expect(driver.queryOne<{ phase: string }>(
     `SELECT phase FROM readwise_api_import_runs WHERE connection_ref = 'connection'`
-  )?.phase).toBe('candidate-v2:ready');
+  )?.phase).toBe('candidate-v3:ready');
   await expect(runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   })).resolves.toMatchObject({ committed_count: 0, remaining_count: 0, status: 'completed' });

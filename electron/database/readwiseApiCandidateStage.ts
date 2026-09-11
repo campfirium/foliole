@@ -1,16 +1,34 @@
 import type { ExportBookContract, ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
-import type {
-  CandidateStatus,
-  ReadwiseApiCandidate,
-  ReadwiseApiCandidateFailure
+import {
+  READWISE_API_PIPELINE_VERSION,
+  type CandidateStatus,
+  type ReadwiseApiCandidate,
+  type ReadwiseApiCandidateFailure,
+  type ReadwiseApiCandidateManifest
 } from '../import/readwiseApiCandidateTypes.js';
 
 import { openDatabaseConnection } from './connection.js';
+import {
+  clearReadwiseApiTransientIndex,
+  loadReadwiseApiAnnotationLedgerDocuments,
+  loadReadwiseApiExportIndex,
+  loadReadwiseApiReaderIndex
+} from './readwiseApiIndexStage.js';
+import { finalizeReadwiseApiScopeLedgers } from './readwiseApiScopeLedger.js';
 
-const CANDIDATE_KIND = 'candidate-v2';
-const EXPORT_KIND = 'candidate-export-v2';
-const READER_KIND = 'candidate-reader-v2';
+const CANDIDATE_KIND = 'candidate-v3';
+
+export function saveReadwiseApiCandidateManifest(connectionRef: string, scopeSignature: string) {
+  openDatabaseConnection().driver.execute(
+    `UPDATE readwise_api_import_stage SET payload_json = ?
+     WHERE connection_ref = ? AND record_kind = 'candidate-manifest-v3' AND remote_id = 'manifest'`,
+    [JSON.stringify({
+      pipelineVersion: READWISE_API_PIPELINE_VERSION,
+      scopeSignature
+    } satisfies ReadwiseApiCandidateManifest), connectionRef]
+  );
+}
 
 export function saveReadwiseApiCandidates(connectionRef: string, candidates: ReadwiseApiCandidate[]) {
   const driver = openDatabaseConnection().driver;
@@ -33,7 +51,8 @@ export function saveReadwiseApiCandidates(connectionRef: string, candidates: Rea
 }
 
 export function saveReadwiseApiCandidateExportPage(connectionRef: string, books: ExportBookContract[]) {
-  saveStageRecords(connectionRef, EXPORT_KIND, books.flatMap((book) => book.externalId ? [[book.externalId, book] as const] : []));
+  saveStageRecords(connectionRef, 'candidate-export-v3', books.flatMap((book) =>
+    book.externalId ? [[book.externalId, book] as const] : []));
 }
 
 export function saveReadwiseApiCandidateFacts(
@@ -49,7 +68,8 @@ export function saveReadwiseApiCandidateFacts(
        DO UPDATE SET payload_json = excluded.payload_json`
     );
     for (const document of documents) {
-      upsert.run([connectionRef, READER_KIND, document.id, JSON.stringify({ ...document, rawSourceUrl: null })]);
+      upsert.run([connectionRef, 'candidate-reader-v3', document.id,
+        JSON.stringify({ ...document, rawSourceUrl: null })]);
     }
     updateStatus(tx, connectionRef, documentId, 'ready');
   });
@@ -83,20 +103,14 @@ export function loadReadwiseApiCandidateProgress(connectionRef: string) {
 export function loadPreparedReadwiseApiCandidate(connectionRef: string, documentId: string) {
   const candidate = loadReadwiseApiCandidate(documentId, connectionRef);
   if (!candidate) return null;
-  const driver = openDatabaseConnection().driver;
-  const ids = [documentId, ...candidate.highlightIds];
-  const placeholders = ids.map(() => '?').join(', ');
-  const readers = driver.queryAll<{ payload_json: string }>(
-    `SELECT payload_json FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind = ? AND remote_id IN (${placeholders})`,
-    [connectionRef, READER_KIND, ...ids]
-  ).flatMap((row) => parseJson<ReaderDocumentContract>(row.payload_json));
-  const exportRow = driver.queryOne<{ payload_json: string }>(
-    `SELECT payload_json FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`,
-    [connectionRef, EXPORT_KIND, documentId]
-  );
-  const books = exportRow ? parseJson<ExportBookContract>(exportRow.payload_json) : [];
+  const ids = new Set([documentId, ...candidate.highlightIds, ...(candidate.noteIds ?? [])]);
+  const indexed = loadReadwiseApiReaderIndex(connectionRef).filter((item) => ids.has(item.id));
+  const byId = new Map(indexed.map((item) => [item.id, item]));
+  for (const item of loadReadwiseApiAnnotationLedgerDocuments(connectionRef, documentId)) {
+    if (ids.has(item.id) && !byId.has(item.id)) byId.set(item.id, item);
+  }
+  const readers = [...byId.values()];
+  const books = loadReadwiseApiExportIndex(connectionRef).filter((item) => item.externalId === documentId);
   return prepareReadwiseApiDocuments(readers, books)[0] ?? null;
 }
 
@@ -110,9 +124,11 @@ export function setReadwiseApiCandidateStatus(
 }
 
 export function clearReadwiseApiCandidateStage(connectionRef: string) {
+  finalizeReadwiseApiScopeLedgers(connectionRef);
+  clearReadwiseApiTransientIndex(connectionRef);
   openDatabaseConnection().driver.execute(
     `DELETE FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind != 'candidate-manifest-v2'`, [connectionRef]
+     WHERE connection_ref = ? AND record_kind = ?`, [connectionRef, CANDIDATE_KIND]
   );
 }
 
@@ -170,6 +186,8 @@ function mergeCandidate(previous: ReadwiseApiCandidate, next: ReadwiseApiCandida
       ...next,
       ...(previous.failure ? { failure: previous.failure } : {}),
       readerCategory: previous.readerCategory,
+      noteIds: unique([...(previous.noteIds ?? []), ...(next.noteIds ?? [])]),
+      highlightIds: unique([...previous.highlightIds, ...next.highlightIds]),
       matchedImportTag: previous.matchedImportTag === true || next.matchedImportTag === true,
       status: previous.status,
       title: previous.title
@@ -177,10 +195,16 @@ function mergeCandidate(previous: ReadwiseApiCandidate, next: ReadwiseApiCandida
   }
   return {
     ...previous,
+    highlightIds: unique([...previous.highlightIds, ...next.highlightIds]),
+    noteIds: unique([...(previous.noteIds ?? []), ...(next.noteIds ?? [])]),
     matchedImportTag: previous.matchedImportTag === true || next.matchedImportTag === true,
     readerCategory: next.readerCategory ?? previous.readerCategory,
     title: next.title ?? previous.title
   };
+}
+
+function unique(values: string[]) {
+  return [...new Set(values)];
 }
 
 function compareCandidates(left: ReadwiseApiCandidate, right: ReadwiseApiCandidate) {

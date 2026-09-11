@@ -35,7 +35,6 @@ vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'SECRET'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
-import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
@@ -60,7 +59,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('continues after one document fails and retries only unfinished candidates', async () => {
+it('resumes a failed parent fetch without refetching completed scopes', async () => {
   let fail = true;
   const requestedParents: string[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
@@ -68,6 +67,11 @@ it('continues after one document fails and retries only unfinished candidates', 
     if (url.pathname.includes('/v2/export/')) {
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
+    if (url.searchParams.get('category') === 'highlight') return response([
+      { category: 'highlight', id: 'ha', parent_id: 'a' },
+      { category: 'highlight', id: 'hb', parent_id: 'b' }
+    ]);
+    if (url.searchParams.get('category') === 'note') return response([]);
     const id = url.searchParams.get('id') ?? '';
     if ((id === 'a' || id === 'b') && url.searchParams.has('withHtmlContent')) {
       requestedParents.push(id);
@@ -75,29 +79,21 @@ it('continues after one document fails and retries only unfinished candidates', 
     if (id === 'a' && fail && url.searchParams.has('withHtmlContent')) {
       return new Response('{}', { status: 500 });
     }
-    if (id === 'ha' || id === 'hb') {
-      return response([{ category: 'highlight', id, parent_id: id === 'ha' ? 'a' : 'b' }]);
-    }
     return response([readerDocument(id, 'article')]);
   }) as typeof fetch;
 
-  const first = await runReadwiseApiImport({
+  await expect(runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
-  });
-  expect(first).toMatchObject({ committed_count: 1, remaining_count: 1, status: 'failed' });
-  expect(importedReadwiseApiCount()).toBe(1);
-  expect(loadReadwiseApiCandidates('connection')).toEqual(expect.arrayContaining([
-    expect.objectContaining({ documentId: 'a', failure: expect.objectContaining({ attemptCount: 1, stage: 'fetching' }), status: 'failed' }),
-    expect.objectContaining({ documentId: 'b', status: 'completed' })
-  ]));
+  })).rejects.toThrow('readwise_api_http_500');
+  expect(importedReadwiseApiCount()).toBe(0);
 
   fail = false;
   requestedParents.length = 0;
   const second = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   });
-  expect(second).toMatchObject({ committed_count: 1, remaining_count: 0, status: 'completed' });
-  expect(requestedParents).toEqual(['a']);
+  expect(second).toMatchObject({ committed_count: 2, remaining_count: 0, status: 'completed' });
+  expect(requestedParents).toEqual(['a', 'b']);
   expect(importedReadwiseApiCount()).toBe(2);
 });
 
@@ -109,6 +105,11 @@ it('honors Retry-After without refetching an already completed candidate', async
     if (url.pathname.includes('/v2/export/')) {
       return response([exportBook('a', 'ha', 'books'), exportBook('b', 'hb', 'articles')]);
     }
+    if (url.searchParams.get('category') === 'highlight') return response([
+      { category: 'highlight', id: 'ha', parent_id: 'a' },
+      { category: 'highlight', id: 'hb', parent_id: 'b' }
+    ]);
+    if (url.searchParams.get('category') === 'note') return response([]);
     const id = url.searchParams.get('id') ?? '';
     if ((id === 'a' || id === 'b') && url.searchParams.has('withHtmlContent')) {
       requestedParents.push(id);
@@ -116,9 +117,6 @@ it('honors Retry-After without refetching an already completed candidate', async
     if (id === 'b' && limited && url.searchParams.has('withHtmlContent')) {
       limited = false;
       return new Response('{}', { headers: { 'Retry-After': '1' }, status: 429 });
-    }
-    if (id === 'ha' || id === 'hb') {
-      return response([{ category: 'highlight', id, parent_id: id === 'ha' ? 'a' : 'b' }]);
     }
     return response([readerDocument(id, 'article')]);
   }) as typeof fetch;
@@ -132,14 +130,15 @@ it('honors Retry-After without refetching an already completed candidate', async
   expect(importedReadwiseApiCount()).toBe(2);
 });
 
-it('keeps a candidate failed after three exact parent lookups return empty', async () => {
+it('fails the index after one unresolved exact parent lookup', async () => {
   let parentRequests = 0;
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname.includes('/v2/export/')) return response([exportBook('gone', 'hg', 'articles')]);
-    if (url.searchParams.get('id') === 'gone' && !url.searchParams.has('withHtmlContent')) {
-      return response([readerDocument('gone', 'article', false)]);
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([{ category: 'highlight', id: 'hg', parent_id: 'gone' }]);
     }
+    if (url.searchParams.get('category') === 'note') return response([]);
     if (url.searchParams.get('id') === 'gone') {
       parentRequests += 1;
       return response([]);
@@ -147,17 +146,9 @@ it('keeps a candidate failed after three exact parent lookups return empty', asy
     throw new Error(`unexpected request: ${url}`);
   }) as typeof fetch;
 
-  const result = await runReadwiseApiImport({
+  await expect(runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
-  });
-
-  expect(result).toMatchObject({
-    committed_count: 0,
-    failed_count: 1,
-    remaining_count: 1,
-    skipped_count: 0,
-    status: 'failed'
-  });
-  expect(parentRequests).toBe(3);
+  })).rejects.toThrow('readwise_api_parent_unresolved:gone');
+  expect(parentRequests).toBe(1);
   expect(importedReadwiseApiCount()).toBe(0);
 });

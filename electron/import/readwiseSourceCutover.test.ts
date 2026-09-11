@@ -133,9 +133,9 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
-  expect(documentRequests).toHaveLength(2);
-  expect(documentRequests.map((url) => url.searchParams.get('withHtmlContent'))).toEqual([null, 'true']);
-  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(1);
+  expect(documentRequests).toHaveLength(1);
+  expect(documentRequests[0]?.searchParams.get('withHtmlContent')).toBe('true');
+  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
 }, 20_000);
 
 it('keeps the irreversible migration state after a network failure', async () => {
@@ -222,17 +222,21 @@ function migrationFetch() {
         source: 'reader'
       }] });
     }
+    if (url.searchParams.get('category') === 'highlight') {
+      return Response.json({ nextPageCursor: null, results: [
+        { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
+      ] });
+    }
+    if (url.searchParams.has('category')) {
+      return Response.json({ nextPageCursor: null, results: [] });
+    }
     const id = url.searchParams.get('id');
     if (id) {
       return Response.json({ results: [{
-        category: id === 'highlight-1' ? 'highlight' : 'article', id,
-        ...(id === 'document-1' ? { html_content: '<p>API body with remembered phrase.</p>', title: 'Sample' } : {}),
-        parent_id: id === 'highlight-1' ? 'document-1' : null
+        category: 'article', id,
+        html_content: '<p>API body with remembered phrase.</p>', title: 'Sample', parent_id: null
       }] });
     }
-    return Response.json({ nextPageCursor: null, results: [
-      { category: 'article', html_content: '<p>API body with remembered phrase.</p>', id: 'document-1', title: 'Sample' },
-      { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
-    ] });
+    return Response.json({ nextPageCursor: null, results: [] });
   });
 }

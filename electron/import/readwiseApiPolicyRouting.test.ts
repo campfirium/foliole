@@ -65,6 +65,10 @@ it('does not download a body or highlights when metadata resolves to an Off cell
     if (url.pathname.includes('/v2/export/')) {
       return response([exportBook('off-article', 'off-highlight', 'books')]);
     }
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([{ category: 'highlight', id: 'off-highlight', parent_id: 'off-article' }]);
+    }
+    if (url.searchParams.get('category') === 'note') return response([]);
     if (url.searchParams.get('id') === 'off-article') {
       return response([readerDocument('off-article', 'article', false)]);
     }
@@ -93,6 +97,7 @@ it('pages only the enabled plain-document categories and preserves their exact c
     if (url.pathname.includes('/v2/export/')) return response([]);
     const category = url.searchParams.get('category');
     if (!category) throw new Error(`unexpected exact request: ${url}`);
+    if (category === 'highlight' || category === 'note') return response([]);
     categories.push(category);
     return response([readerDocument(`plain-${category}`, category, false)]);
   }) as typeof fetch;
@@ -111,7 +116,7 @@ it('pages only the enabled plain-document categories and preserves their exact c
 
   const preview = await previewReadwiseApiImport(settings, { fetchImpl, minIntervalMs: 0 });
 
-  expect(categories).toEqual(['article', 'email', 'pdf', 'epub', 'tweet']);
+  expect(categories).toEqual(['article', 'email', 'epub', 'pdf', 'tweet']);
   expect(preview).toMatchObject({ external_count: 2, inbox_count: 3, total_count: 5 });
   expect(preview.entries.map((entry) => entry.source_kind).sort()).toEqual(
     ['article', 'email', 'epub', 'pdf', 'tweet']
@@ -129,9 +134,15 @@ it('routes all seven highlighted parent categories without treating annotations 
       return response([...parentCategories].map(([documentId]) =>
         exportBook(documentId, `${documentId}-highlight`, 'articles')));
     }
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([...parentCategories].map(([documentId]) => ({
+        category: 'highlight', id: `${documentId}-highlight`, parent_id: documentId
+      })));
+    }
+    if (url.searchParams.get('category') === 'note') return response([]);
     const id = url.searchParams.get('id') ?? '';
     const category = parentCategories.get(id);
-    return category ? response([readerDocument(id, category, false)]) : response([]);
+    return category ? response([readerDocument(id, category, url.searchParams.has('withHtmlContent'))]) : response([]);
   }) as typeof fetch;
   const base = apiSettings('off');
   const settings = {
@@ -160,10 +171,13 @@ it('treats a note attached through a stable highlight parent as annotated conten
         highlights: [{ external_id: 'email-highlight', note: 'Only note', text: '' }]
       }]);
     }
-    const id = url.searchParams.get('id');
-    if (id === 'email-highlight') {
-      return response([{ category: 'highlight', id, parent_id: 'email-doc' }]);
+    if (url.searchParams.get('category') === 'highlight') {
+      return response([{ category: 'highlight', id: 'email-highlight', parent_id: 'email-doc' }]);
     }
+    if (url.searchParams.get('category') === 'note') {
+      return response([{ category: 'note', id: 'email-note', parent_id: 'email-highlight' }]);
+    }
+    const id = url.searchParams.get('id');
     if (id === 'email-doc') return response([readerDocument(id, 'email')]);
     throw new Error(`unexpected note request: ${url}`);
   }) as typeof fetch;

@@ -43,6 +43,22 @@ it('rejects a highlight whose Export book and Reader ancestry disagree', () => {
   });
 });
 
+it('fails closed when one Export highlight identity names two parent documents', () => {
+  const documents = [
+    { category: 'article', html_content: '<p>Body</p>', id: 'doc' },
+    { category: 'highlight', id: 'highlight', parent_id: 'doc' }
+  ].map(normalizeReaderDocument).filter((item) => item !== null);
+  const exported = ['doc', 'other-doc'].map((external_id) => normalizeExportBook({
+    external_id,
+    highlights: [{ external_id: 'highlight', text: 'Body' }],
+    source: 'reader',
+    user_book_id: external_id
+  })!);
+
+  expect(() => prepareReadwiseApiDocuments(documents, exported))
+    .toThrow('readwise_api_annotation_identity_conflict');
+});
+
 it('fails closed instead of producing a metadata-only topic', () => {
   const document = normalizeReaderDocument({ category: 'video', id: 'video', title: 'Metadata only' })!;
   expect(prepareReadwiseApiDocuments([document], [])[0]).toMatchObject({
