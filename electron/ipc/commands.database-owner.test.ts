@@ -50,8 +50,6 @@ it('queues storage commands behind the active database owner', async () => {
 it.each([
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
-  NATIVE_COMMANDS.importReadwiseManualSource,
-  NATIVE_COMMANDS.prepareReadwiseManualSearch,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,
   NATIVE_COMMANDS.runReadwiseSourceCutover,
   NATIVE_COMMANDS.syncCompanionNow
@@ -66,11 +64,11 @@ it.each([
 
 it('lets ordinary storage work finish while a Readwise network command is waiting', async () => {
   let finishNetwork!: (value: string) => void;
-  handleStorageCommand.mockImplementation((command: string) => command === NATIVE_COMMANDS.prepareReadwiseManualSearch
+  handleStorageCommand.mockImplementation((command: string) => command === NATIVE_COMMANDS.previewReadwiseIdentityBindings
     ? new Promise((resolve) => { finishNetwork = resolve; })
     : Promise.resolve('workspace'));
 
-  const network = handleInvokeRequest({ command: NATIVE_COMMANDS.prepareReadwiseManualSearch });
+  const network = handleInvokeRequest({ command: NATIVE_COMMANDS.previewReadwiseIdentityBindings });
   await Promise.resolve();
   await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.loadWorkspaceListSnapshot }))
     .resolves.toBe('workspace');

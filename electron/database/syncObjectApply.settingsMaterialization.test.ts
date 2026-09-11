@@ -95,6 +95,28 @@ it('materializes an accepted workspace setting and preserves it after database r
   expect(loadJsonSetting('app_settings')).toEqual({ theme: 'dark' });
 });
 
+it('materializes the Readwise import tag without turning it into Host state', async () => {
+  const record = settingRecord({
+    contentHash: 'remote-readwise-policy',
+    formFactor: 'desktop',
+    hostName: '*',
+    key: 'import_manager_settings',
+    platform: 'windows',
+    scope: 'user_space',
+    updatedAt: '2026-09-11T00:00:00.000Z',
+    valueJson: JSON.stringify({
+      readwiseAutoImportPolicy: { importTag: 'favorite', version: 3 },
+      version: 5
+    })
+  });
+
+  await expect(applySyncObjectsAsync([record])).resolves.toHaveLength(1);
+  expect(loadJsonSetting('import_manager_settings')).toMatchObject({
+    readwiseAutoImportPolicy: { importTag: 'favorite', version: 3 }
+  });
+  expect(loadJsonSetting('readwise_import_settings')).toBeNull();
+});
+
 it('materializes a tombstone as projection deletion and consumers recover defaults', async () => {
   saveJsonSetting('review_scheduler_settings', { desiredRetention: 0.9 }, '2026-07-10T00:01:00.000Z');
   const tombstone = settingRecord({

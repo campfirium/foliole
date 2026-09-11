@@ -14,7 +14,6 @@ import {
   SettingsSection
 } from '../../shared/ui';
 
-import { ReadwiseManualImportSection } from './ReadwiseManualImportSection';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -31,6 +30,7 @@ type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
 
 export function ReadwiseBehaviorSection(props: {
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
+  onChangeImportTag: (value: string) => void;
   policy: ReadwiseAutoImportPolicy;
   sourceMode: 'api' | 'folder';
 }) {
@@ -39,6 +39,7 @@ export function ReadwiseBehaviorSection(props: {
     <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
       <ReadwiseReaderImportBehavior
         onChange={props.onChange}
+        onChangeImportTag={props.onChangeImportTag}
         policy={props.policy}
         sourceMode={props.sourceMode}
       />
@@ -156,10 +157,10 @@ export function ReadwiseFolderSettingsSections(props: {
       </SettingsSection>
       <ReadwiseBehaviorSection
         onChange={props.onChangePolicy}
+        onChangeImportTag={() => undefined}
         policy={props.policy}
         sourceMode="folder"
       />
-      <ReadwiseManualImportSection />
       <ReadwiseImportSettingsSection draft={props.draft} />
     </div>
   );

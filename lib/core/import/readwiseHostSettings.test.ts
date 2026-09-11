@@ -7,11 +7,11 @@ it('migrates legacy Host settings to folder mode without borrowing API readiness
     readwiseRootPath: '/Readwise',
     version: 1
   })).toMatchObject({
-    autoImportPolicyVersion: 2,
+    autoImportPolicyVersion: 3,
     apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
     readwiseRootPath: '/Readwise',
     readwiseSourceMode: 'folder',
-    version: 4
+    version: 5
   });
 });
 
@@ -27,7 +27,7 @@ it('preserves explicit API mode and redacted credential metadata', () => {
   })).toMatchObject({
     apiConnection: { state: 'connected' },
     readwiseSourceMode: 'api',
-    version: 4
+    version: 5
   });
 });
 
@@ -37,6 +37,6 @@ it('preserves an explicit disabled source mode', () => {
 });
 
 it('rejects a future settings version instead of downgrading it', () => {
-  expect(() => normalizeReadwiseHostSettings({ version: 5 }))
+  expect(() => normalizeReadwiseHostSettings({ version: 6 }))
     .toThrow('readwise_host_settings_version_unsupported');
 });

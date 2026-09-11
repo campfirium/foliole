@@ -86,9 +86,9 @@ it('switches policy and Host gate before retiring only terminal candidate stagin
     articleWithHighlights: 'external', articleWithoutHighlights: 'off',
     emailWithHighlights: 'inbox', emailWithoutHighlights: 'off',
     epubWithHighlights: 'off', epubWithoutHighlights: 'external',
-    pdfWithHighlights: 'inbox', pdfWithoutHighlights: 'inbox', version: 2
+    importTag: '', pdfWithHighlights: 'inbox', pdfWithoutHighlights: 'inbox', version: 3
   });
-  expect(host).toMatchObject({ autoImportPolicyVersion: 2, version: 4 });
+  expect(host).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
   expect(connection.driver.queryOne('SELECT 1 FROM readwise_api_import_stage')).toBeUndefined();
   expect(connection.driver.queryOne('SELECT 1 FROM readwise_api_import_runs')).toBeUndefined();
   expect(connection.driver.queryOne<{ value: string }>(

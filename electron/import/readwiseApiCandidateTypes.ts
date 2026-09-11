@@ -23,6 +23,7 @@ export interface ReadwiseApiCandidate {
   failure?: ReadwiseApiCandidateFailure;
   hasHighlights: boolean;
   highlightIds: string[];
+  matchedImportTag?: boolean;
   readerCategory: ReaderParentCategory | null;
   status: CandidateStatus;
   title: string | null;

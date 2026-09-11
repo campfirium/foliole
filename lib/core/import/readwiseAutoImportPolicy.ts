@@ -1,4 +1,4 @@
-export const READWISE_AUTO_IMPORT_POLICY_VERSION = 2;
+export const READWISE_AUTO_IMPORT_POLICY_VERSION = 3;
 
 export const READWISE_AUTO_IMPORT_CATEGORIES = [
   'article', 'email', 'rss', 'pdf', 'epub', 'video', 'tweet'
@@ -11,7 +11,10 @@ export type ReadwiseAutoImportPolicyField =
 export type ReadwiseAutoImportPolicy = Record<
   ReadwiseAutoImportPolicyField,
   ReadwiseImportDestination
-> & { version: typeof READWISE_AUTO_IMPORT_POLICY_VERSION };
+> & {
+  importTag: string;
+  version: typeof READWISE_AUTO_IMPORT_POLICY_VERSION;
+};
 
 function normalizeDestination(value: unknown, fallback: ReadwiseImportDestination) {
   return value === 'external' || value === 'inbox' || value === 'off' ? value : fallback;
@@ -26,6 +29,7 @@ export function createDefaultReadwiseAutoImportPolicy(): ReadwiseAutoImportPolic
     epubWithHighlights: 'inbox', epubWithoutHighlights: 'inbox',
     videoWithHighlights: 'inbox', videoWithoutHighlights: 'off',
     tweetWithHighlights: 'inbox', tweetWithoutHighlights: 'off',
+    importTag: '',
     version: READWISE_AUTO_IMPORT_POLICY_VERSION
   };
 }
@@ -46,11 +50,18 @@ export function normalizeReadwiseAutoImportPolicy(value: unknown): ReadwiseAutoI
       epubWithoutHighlights: normalizeDestination(payload.bookWithoutHighlights, defaults.epubWithoutHighlights)
     };
   }
-  const normalized = Object.fromEntries(Object.keys(defaults).flatMap((field) =>
-    field === 'version' ? [] : [[field, normalizeDestination(
-      payload[field], defaults[field as ReadwiseAutoImportPolicyField]
-    )]])) as Partial<ReadwiseAutoImportPolicy>;
-  return { ...defaults, ...normalized, version: READWISE_AUTO_IMPORT_POLICY_VERSION };
+  const fields = READWISE_AUTO_IMPORT_CATEGORIES.flatMap((category) => [
+    `${category}WithHighlights`, `${category}WithoutHighlights`
+  ] as ReadwiseAutoImportPolicyField[]);
+  const normalized = Object.fromEntries(fields.map((field) => [
+    field, normalizeDestination(payload[field], defaults[field])
+  ])) as Partial<ReadwiseAutoImportPolicy>;
+  return {
+    ...defaults,
+    ...normalized,
+    importTag: typeof payload.importTag === 'string' ? payload.importTag.trim() : '',
+    version: READWISE_AUTO_IMPORT_POLICY_VERSION
+  };
 }
 
 export function migrateLegacyReadwiseAutoImportPolicy(value: unknown): ReadwiseAutoImportPolicy {
@@ -68,13 +79,16 @@ export function migrateLegacyReadwiseAutoImportPolicy(value: unknown): ReadwiseA
 export function resolveReadwiseAutoImportDestination(
   policy: ReadwiseAutoImportPolicy,
   category: ReadwiseAutoImportCategory,
-  hasHighlights: boolean
+  hasHighlights: boolean,
+  matchedImportTag = false
 ) {
-  const suffix = hasHighlights ? 'WithHighlights' : 'WithoutHighlights';
+  const suffix = hasHighlights || matchedImportTag ? 'WithHighlights' : 'WithoutHighlights';
   return policy[`${category}${suffix}`];
 }
 
-export function enabledReadwiseWithoutHighlightCategories(policy: ReadwiseAutoImportPolicy) {
+export function enabledReadwiseReaderCategories(policy: ReadwiseAutoImportPolicy) {
+  const hasImportTag = policy.importTag.trim().length > 0;
   return READWISE_AUTO_IMPORT_CATEGORIES.filter((category) =>
-    resolveReadwiseAutoImportDestination(policy, category, false) !== 'off');
+    resolveReadwiseAutoImportDestination(policy, category, false) !== 'off'
+    || (hasImportTag && resolveReadwiseAutoImportDestination(policy, category, true) !== 'off'));
 }

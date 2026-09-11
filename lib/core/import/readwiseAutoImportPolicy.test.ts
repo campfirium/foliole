@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createDefaultReadwiseAutoImportPolicy,
+  enabledReadwiseReaderCategories,
   READWISE_AUTO_IMPORT_CATEGORIES,
   migrateLegacyReadwiseAutoImportPolicy,
   normalizeReadwiseAutoImportPolicy,
@@ -21,13 +22,14 @@ describe('Readwise automatic import policy', () => {
       emailWithoutHighlights: 'off',
       epubWithHighlights: 'inbox',
       epubWithoutHighlights: 'inbox',
+      importTag: '',
       pdfWithHighlights: 'inbox',
       pdfWithoutHighlights: 'inbox',
       rssWithHighlights: 'inbox',
       rssWithoutHighlights: 'off',
       tweetWithHighlights: 'inbox',
       tweetWithoutHighlights: 'off',
-      version: 2,
+      version: 3,
       videoWithHighlights: 'inbox',
       videoWithoutHighlights: 'off'
     });
@@ -51,6 +53,18 @@ describe('Readwise automatic import policy', () => {
     }
     expect(checked).toBe(42);
   });
+
+  it('scans highlighted destinations when one import tag is configured', () => {
+    const defaults = createDefaultReadwiseAutoImportPolicy();
+    expect(enabledReadwiseReaderCategories(defaults)).toEqual(['pdf', 'epub']);
+    expect(enabledReadwiseReaderCategories({ ...defaults, importTag: 'favorite' }))
+      .toEqual(READWISE_AUTO_IMPORT_CATEGORIES);
+    expect(enabledReadwiseReaderCategories({
+      ...defaults,
+      articleWithHighlights: 'off',
+      importTag: 'favorite'
+    })).not.toContain('article');
+  });
 });
 
 describe('Readwise automatic import policy migration', () => {
@@ -63,7 +77,8 @@ describe('Readwise automatic import policy migration', () => {
       articleWithoutHighlights: 'inbox',
       epubWithHighlights: 'inbox',
       epubWithoutHighlights: 'inbox',
-      version: 2
+      importTag: '',
+      version: 3
     });
   });
 
@@ -74,12 +89,25 @@ describe('Readwise automatic import policy migration', () => {
     })).toMatchObject({
       articleWithHighlights: 'external', articleWithoutHighlights: 'inbox',
       emailWithHighlights: 'inbox', emailWithoutHighlights: 'off',
-      epubWithHighlights: 'off', epubWithoutHighlights: 'external', version: 2
+      epubWithHighlights: 'off', epubWithoutHighlights: 'external', importTag: '', version: 3
     });
   });
 
+  it('trims one optional tag and routes tag-only documents through the highlighted cell', () => {
+    const policy = normalizeReadwiseAutoImportPolicy({
+      ...createDefaultReadwiseAutoImportPolicy(),
+      articleWithHighlights: 'external',
+      articleWithoutHighlights: 'off',
+      importTag: '  favorite  '
+    });
+
+    expect(policy.importTag).toBe('favorite');
+    expect(resolveReadwiseAutoImportDestination(policy, 'article', false, true)).toBe('external');
+    expect(resolveReadwiseAutoImportDestination(policy, 'article', false, false)).toBe('off');
+  });
+
   it('fails closed on a future policy version', () => {
-    expect(() => normalizeReadwiseAutoImportPolicy({ version: 3 }))
+    expect(() => normalizeReadwiseAutoImportPolicy({ version: 4 }))
       .toThrow('readwise_auto_import_policy_version_unsupported');
   });
 });

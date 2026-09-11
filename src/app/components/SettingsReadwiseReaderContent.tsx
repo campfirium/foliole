@@ -24,7 +24,6 @@ import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
 import { ReadwiseBehaviorSection, ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
-import { ReadwiseManualImportSection } from './ReadwiseManualImportSection';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
 import { useReadwiseCleanup } from './useReadwiseCleanup';
@@ -51,7 +50,7 @@ interface SettingsReadwiseReaderContentProps {
   onChangeSourceMode?: (mode: ReadwiseSourceMode) => void;
   onChangePolicy?: (
     field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
-    value: ReadwiseImportDestination
+    value: ReadwiseImportDestination | string
   ) => void;
   policy?: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
@@ -72,7 +71,6 @@ function ReadwiseSelectedModeContent(props: {
   settings: SettingsReadwiseReaderContentProps;
   setup: ReturnType<typeof useReadwiseSetupController>;
   sourceMode: ReadwiseSourceMode;
-  searchRevision: number;
 }) {
   if (props.sourceMode === 'off') return null;
   if (props.sourceMode === 'api') {
@@ -80,10 +78,10 @@ function ReadwiseSelectedModeContent(props: {
       <>
         <ReadwiseBehaviorSection
           onChange={props.settings.onChangePolicy ?? (() => undefined)}
+          onChangeImportTag={(value) => props.settings.onChangePolicy?.('importTag', value)}
           policy={props.settings.policy ?? createDefaultReadwiseAutoImportPolicy()}
           sourceMode="api"
         />
-        <ReadwiseManualImportSection key={`${props.settings.readwiseSourceMode}:${props.searchRevision}`} />
       </>
     );
   }
@@ -127,7 +125,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
   const setup = useReadwiseSetupController(props);
   const committedMode = props.readwiseSourceMode ?? 'folder';
   const [sourceMode, setSourceMode] = useState(committedMode);
-  const [searchRevision, setSearchRevision] = useState(0);
   useEffect(() => setSourceMode(committedMode), [committedMode]);
   const cleanup = useReadwiseCleanup({
     onCleanupComplete: () => saveDisabledReadwiseSetup(props, setup.draft),
@@ -150,7 +147,7 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         apiSettings={apiSettings}
         mode={sourceMode}
         onChange={setSourceMode}
-        onConnected={() => setSearchRevision((value) => value + 1)}
+        onConnected={() => undefined}
         {...(props.onChangeSourceMode ? { onCommitMode: props.onChangeSourceMode } : {})}
       />
       <ReadwiseSelectedModeContent
@@ -158,7 +155,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         settings={props}
         setup={setup}
         sourceMode={sourceMode}
-        searchRevision={searchRevision}
       />
       <ReadwiseSyncPreviewDialog
         error={setup.syncError}

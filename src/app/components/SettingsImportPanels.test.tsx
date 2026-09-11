@@ -58,7 +58,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
   expect(screen.getByText('Clean up imports')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Automatic import' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Manual import' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
   expect(screen.getByRole('radiogroup', { name: 'Articles with highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('radiogroup', { name: 'Articles without highlights destination' })).toBeInTheDocument();

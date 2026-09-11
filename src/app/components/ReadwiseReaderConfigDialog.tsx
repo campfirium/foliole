@@ -1,6 +1,7 @@
 import {
   createDefaultReadwiseAutoImportPolicy,
   type ReadwiseAutoImportPolicy,
+  type ReadwiseAutoImportPolicyField,
   type ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import {
@@ -18,7 +19,7 @@ interface ReadwiseReaderConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChangePolicy?: (
-    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    field: ReadwiseAutoImportPolicyField,
     value: ReadwiseImportDestination
   ) => void;
   onPreview: (input: {

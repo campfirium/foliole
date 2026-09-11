@@ -170,12 +170,14 @@ function mergeCandidate(previous: ReadwiseApiCandidate, next: ReadwiseApiCandida
       ...next,
       ...(previous.failure ? { failure: previous.failure } : {}),
       readerCategory: previous.readerCategory,
+      matchedImportTag: previous.matchedImportTag === true || next.matchedImportTag === true,
       status: previous.status,
       title: previous.title
     };
   }
   return {
     ...previous,
+    matchedImportTag: previous.matchedImportTag === true || next.matchedImportTag === true,
     readerCategory: next.readerCategory ?? previous.readerCategory,
     title: next.title ?? previous.title
   };
@@ -189,7 +191,7 @@ function compareCandidates(left: ReadwiseApiCandidate, right: ReadwiseApiCandida
 
 function parseCandidate(value: string): ReadwiseApiCandidate | null {
   const parsed = parseJson<ReadwiseApiCandidate>(value)[0];
-  return parsed?.documentId ? parsed : null;
+  return parsed?.documentId ? { ...parsed, matchedImportTag: parsed.matchedImportTag === true } : null;
 }
 
 function parseJson<T>(value: string): T[] {

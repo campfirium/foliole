@@ -1,6 +1,6 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import {
-  enabledReadwiseWithoutHighlightCategories,
+  enabledReadwiseReaderCategories,
   resolveReadwiseAutoImportDestination
 } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
@@ -18,6 +18,7 @@ import {
 } from '../database/readwiseApiCandidateStage.js';
 import { hideReadwiseApiExternalDocumentsExcept } from '../database/readwiseApiExternalDocuments.js';
 
+import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import {
   READER_PARENT_CATEGORIES,
   type ReadwiseApiCandidate,
@@ -71,7 +72,7 @@ export async function ensureReadwiseApiCandidateIndex(
         run = advanceReadwiseApiCandidateRun(
           connectionRef,
           run.phase,
-          enabledReadwiseWithoutHighlightCategories(settings.readwiseAutoImportPolicy)
+          enabledReadwiseReaderCategories(settings.readwiseAutoImportPolicy)
         );
       }
     }
@@ -141,6 +142,7 @@ function exportCandidate(
     exportCategory: book.category,
     hasHighlights: true,
     highlightIds,
+    matchedImportTag: false,
     readerCategory: parent.category as ReaderParentCategory,
     status: 'pending',
     title: null
@@ -151,10 +153,15 @@ function readerCandidate(
   document: NonNullable<ReturnType<typeof normalizeReaderDocument>>,
   settings: ImportManagerSettings
 ): ReadwiseApiCandidate[] {
+  const matchedImportTag = matchesReadwiseDocumentImportTag(
+    document.tags,
+    settings.readwiseAutoImportPolicy.importTag
+  );
   const destination = resolveReadwiseAutoImportDestination(
     settings.readwiseAutoImportPolicy,
     document.category as ReaderParentCategory,
-    false
+    false,
+    matchedImportTag
   );
   if (destination === 'off') return [];
   return [{
@@ -163,6 +170,7 @@ function readerCandidate(
     exportCategory: null,
     hasHighlights: false,
     highlightIds: [],
+    matchedImportTag,
     readerCategory: document.category as ReaderParentCategory,
     status: 'pending',
     title: document.title

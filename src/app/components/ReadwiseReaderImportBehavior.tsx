@@ -7,7 +7,13 @@ import type {
   ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { SettingsChoiceMatrix, SettingsSegmentedControl } from '../../shared/ui';
+import {
+  AppInput,
+  SettingsChoiceMatrix,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSegmentedControl
+} from '../../shared/ui';
 
 type PolicyField = ReadwiseAutoImportPolicyField;
 
@@ -28,6 +34,7 @@ const FOLDER_ROWS = [
 
 export function ReadwiseReaderImportBehavior(props: {
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
+  onChangeImportTag: (value: string) => void;
   policy: ReadwiseAutoImportPolicy;
   sourceMode: 'api' | 'folder';
 }) {
@@ -65,7 +72,7 @@ export function ReadwiseReaderImportBehavior(props: {
   const rows = props.sourceMode === 'api'
     ? API_ROWS.map(([category, label]) => row(category, label))
     : FOLDER_ROWS.map(([category, label, ariaCategory]) => row(category, label, ariaCategory));
-  return (
+  return <>
     <SettingsChoiceMatrix
       ariaLabel={t('desktop.readwise.section.behavior.aria')}
       columns={[
@@ -74,5 +81,28 @@ export function ReadwiseReaderImportBehavior(props: {
       ]}
       rows={rows}
     />
+    {props.sourceMode === 'api' ? <ReadwiseImportTagRow {...props} /> : null}
+  </>;
+}
+
+function ReadwiseImportTagRow(props: {
+  onChangeImportTag: (value: string) => void;
+  policy: ReadwiseAutoImportPolicy;
+}) {
+  const t = useTranslation();
+  return (
+    <SettingsRow
+      description={t('desktop.readwise.behavior.importTag.description')}
+      title={t('desktop.readwise.behavior.importTag.title')}
+    >
+      <SettingsControlSlot>
+        <AppInput
+          aria-label={t('desktop.readwise.behavior.importTag.aria')}
+          onChange={(event) => props.onChangeImportTag(event.target.value)}
+          placeholder={t('desktop.readwise.behavior.importTag.placeholder')}
+          value={props.policy.importTag}
+        />
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }

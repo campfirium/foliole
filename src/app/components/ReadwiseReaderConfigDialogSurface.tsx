@@ -1,5 +1,6 @@
 import type {
   ReadwiseAutoImportPolicy,
+  ReadwiseAutoImportPolicyField,
   ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -49,7 +50,7 @@ function ReadwiseConfigDialogBody(props: {
   canPreview: boolean;
   draft: ReturnType<typeof useReadwiseSetupDraft>;
   onChangePolicy: (
-    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    field: ReadwiseAutoImportPolicyField,
     value: ReadwiseImportDestination
   ) => void;
   onCheck: () => void;
@@ -78,6 +79,7 @@ function ReadwiseConfigDialogBody(props: {
         <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
           <ReadwiseReaderImportBehavior
             onChange={props.onChangePolicy}
+            onChangeImportTag={() => undefined}
             policy={props.policy}
             sourceMode="folder"
           />
@@ -107,7 +109,7 @@ export function ReadwiseConfigDialogSurface(props: {
   onCancel: () => void;
   onChangeIntegration: () => void;
   onChangePolicy: (
-    field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
+    field: ReadwiseAutoImportPolicyField,
     value: ReadwiseImportDestination
   ) => void;
   onCheck: () => void;

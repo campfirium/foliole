@@ -42,7 +42,7 @@ function prepareV82() {
 it('adds restart-safe remote reconciliation state', () => {
   const connection = prepareV82();
   initializeDatabaseSchema(connection.sqlite);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(85);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
   expect(connection.sqlite.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'readwise_api_reconcile_%' ORDER BY name"
   ).all()).toEqual([

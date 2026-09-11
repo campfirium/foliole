@@ -1,4 +1,8 @@
 export const EN_DESKTOP_READWISE_POLICY_TRANSLATIONS = {
+  'desktop.readwise.behavior.importTag.title': 'Import tag',
+  'desktop.readwise.behavior.importTag.description': 'Documents with this Reader tag use their category\'s With highlights destination.',
+  'desktop.readwise.behavior.importTag.aria': 'Reader document import tag',
+  'desktop.readwise.behavior.importTag.placeholder': 'Optional Reader tag',
   'desktop.readwise.behavior.email.title': 'Emails',
   'desktop.readwise.behavior.email.withHighlights.aria': 'Emails with highlights destination',
   'desktop.readwise.behavior.email.withoutHighlights.aria': 'Emails without highlights destination',

@@ -43,10 +43,12 @@ it('keeps the folder policy on article and book rows backed by article and EPUB 
   const group = screen.getByRole('radiogroup', { name: 'Books without highlights destination' });
   fireEvent.click(within(group).getByRole('radio', { name: 'External document library' }));
   expect(onChangePolicy).toHaveBeenCalledWith('epubWithoutHighlights', 'external');
+  expect(screen.queryByRole('textbox', { name: 'Reader document import tag' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
 });
 
 it('shows fourteen exact defaults across the seven API parent categories', async () => {
-  renderPolicy('api');
+  const onChangePolicy = renderPolicy('api');
   await waitFor(() => expect(screen.getByRole('radiogroup', {
     name: 'EPUBs without highlights destination'
   })).toBeInTheDocument());
@@ -64,4 +66,9 @@ it('shows fourteen exact defaults across the seven API parent categories', async
   expect(screen.queryByRole('radiogroup', {
     name: 'Books without highlights destination'
   })).not.toBeInTheDocument();
+  const input = screen.getByRole('textbox', { name: 'Reader document import tag' });
+  expect(input).toHaveValue('');
+  fireEvent.change(input, { target: { value: 'favorite' } });
+  expect(onChangePolicy).toHaveBeenCalledWith('importTag', 'favorite');
+  expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
 });

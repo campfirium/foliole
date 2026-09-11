@@ -1,6 +1,10 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_READWISE_POLICY_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.readwise.behavior.importTag.title': '导入标签',
+  'desktop.readwise.behavior.importTag.description': '带有此 Reader 文档标签的来源使用其类别的“含高亮”去向。',
+  'desktop.readwise.behavior.importTag.aria': 'Reader 文档导入标签',
+  'desktop.readwise.behavior.importTag.placeholder': '可选 Reader 标签',
   'desktop.readwise.behavior.email.title': '邮件',
   'desktop.readwise.behavior.email.withHighlights.aria': '含高亮邮件的目标',
   'desktop.readwise.behavior.email.withoutHighlights.aria': '无高亮邮件的目标',

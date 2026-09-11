@@ -115,7 +115,7 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
     },
     handleChangeReadwiseAutoImportPolicy(
       field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
-      value: ReadwiseImportDestination
+      value: ReadwiseImportDestination | string
     ) {
       setSettings((current) => ({
         ...current,

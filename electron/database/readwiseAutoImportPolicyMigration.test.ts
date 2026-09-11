@@ -86,18 +86,19 @@ it('atomically migrates the legacy article grid to seven categories', () => {
     pdfWithHighlights: 'inbox', pdfWithoutHighlights: 'inbox',
     rssWithHighlights: 'inbox', rssWithoutHighlights: 'off',
     tweetWithHighlights: 'inbox', tweetWithoutHighlights: 'off',
-    version: 2,
+    importTag: '',
+    version: 3,
     videoWithHighlights: 'inbox', videoWithoutHighlights: 'off'
   });
   expect(global).not.toHaveProperty('readwiseReaderConfig');
-  expect(host).toMatchObject({ autoImportPolicyVersion: 2, version: 4 });
+  expect(host).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
   expect(host.readwiseReaderConfig).not.toHaveProperty('withHighlightsDestination');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(85);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
   expect(connection.driver.queryAll<{ sync_dirty: number }>(
     "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'setting'"
   ).every((row) => row.sync_dirty === 1)).toBe(true);
   expect(() => connection.driver.execute(
-    "UPDATE settings SET value = '{\"version\":3}' WHERE key = 'readwise_import_settings'"
+    "UPDATE settings SET value = '{\"version\":4}' WHERE key = 'readwise_import_settings'"
   )).toThrow('readwise_host_settings_version_unsupported');
 });
 
