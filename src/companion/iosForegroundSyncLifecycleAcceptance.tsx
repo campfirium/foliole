@@ -15,12 +15,26 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
   const workspaceSync = useCompanionWorkspaceSync(bootstrap);
 
   useEffect(() => {
-    if (readyPosted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
-      !workspaceSync.syncGroupJoined || workspaceSync.state.last_synced_at === null || workspaceSync.status !== 'idle') return;
-    readyPosted.current = true;
-    postReady(workspaceSync);
+    if (readyPosted.current) return;
+    if (workspaceSync.isWorkspaceSyncStateReady && workspaceSync.state.endpoint_url &&
+        workspaceSync.syncGroupJoined && workspaceSync.state.last_synced_at !== null && workspaceSync.status === 'idle') {
+      readyPosted.current = true;
+      postReady(workspaceSync);
+      return;
+    }
+    postProgress('shell-state', {
+      endpoint_ready: Boolean(workspaceSync.state.endpoint_url),
+      participation_hydrated: workspaceSync.syncParticipation.hydrated,
+      state_ready: workspaceSync.isWorkspaceSyncStateReady,
+      sync_enabled: workspaceSync.syncParticipation.sync_enabled,
+      sync_group_joined: workspaceSync.syncGroupJoined,
+      sync_paused: workspaceSync.syncParticipation.sync_paused,
+      sync_status: workspaceSync.status
+    });
   }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.syncGroupJoined,
-    workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at, workspaceSync.status]);
+    workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at, workspaceSync.status,
+    workspaceSync.syncParticipation.hydrated, workspaceSync.syncParticipation.sync_enabled,
+    workspaceSync.syncParticipation.sync_paused]);
 
   return null;
 }
@@ -35,6 +49,10 @@ function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) 
     sync_status: workspaceSync.status,
     status: 'passed'
   });
+}
+
+function postProgress(stage: string, details: Record<string, unknown> = {}) {
+  postResult({ ...details, error: null, phase: 'paired', scenario: 'foreground-sync-lifecycle', stage, status: 'passed' });
 }
 
 async function prepareAcceptanceGroup(bootstrap: NativeCompanionBootstrapState) {
@@ -69,8 +87,11 @@ async function installLifecycleEvidence() {
 export async function runIosForegroundSyncLifecycleAcceptance(rootElement: HTMLElement) {
   try {
     const bootstrap = await loadCompanionBootstrapState();
+    postProgress('bootstrap-loaded');
     await prepareAcceptanceGroup(bootstrap);
+    postProgress('group-prepared');
     await installLifecycleEvidence();
+    postProgress('listeners-installed');
     ReactDOM.createRoot(rootElement).render(<ForegroundSyncLifecycleShell bootstrap={bootstrap} />);
   } catch (error) {
     postResult({
