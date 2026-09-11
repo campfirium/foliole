@@ -7,7 +7,11 @@ import static org.junit.Assert.assertTrue;
 import java.net.InetAddress;
 import java.net.Inet6Address;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
@@ -58,5 +62,51 @@ public class FolioleCompanionNsdDiscoveryTest {
                 "192.168.0.11,host.local,10.0.0.4,010.0.0.5,300.1.1.1"
                     .getBytes(StandardCharsets.UTF_8)
             ));
+    }
+
+    @Test
+    public void projectsThePreparedTopologyRoleFromTheSharedHostFixture() throws Exception {
+        String roleTxtKey = jsonStringField(readUtf8(sharedFixturePath()), "role_txt_key");
+        String bridgeRoleTxtKey = jsonStringField(readUtf8(bridgeContractPath()), "topologyRole");
+
+        assertEquals(roleTxtKey, bridgeRoleTxtKey);
+        assertTrue(FolioleCompanionNsdProtocolTxt.contractKeys().contains("topologyRole"));
+    }
+
+    private static String jsonStringField(String json, String fieldName) {
+        Matcher matcher = Pattern.compile(
+            "\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"([^\\\"]+)\\\""
+        ).matcher(json);
+        if (!matcher.find()) throw new IllegalStateException("json_string_field_missing: " + fieldName);
+        return matcher.group(1);
+    }
+
+    private static Path sharedFixturePath() {
+        Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        return firstExistingPath(
+            root.resolve("lib/platform/fixtures/sync-anchor-topology-v5.json"),
+            root.resolve("../lib/platform/fixtures/sync-anchor-topology-v5.json").normalize(),
+            root.resolve("../../lib/platform/fixtures/sync-anchor-topology-v5.json").normalize()
+        );
+    }
+
+    private static Path bridgeContractPath() {
+        Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        return firstExistingPath(
+            root.resolve("android/app/src/main/assets/companion-bridge-contract-definitions.json"),
+            root.resolve("app/src/main/assets/companion-bridge-contract-definitions.json"),
+            root.resolve("src/main/assets/companion-bridge-contract-definitions.json")
+        );
+    }
+
+    private static Path firstExistingPath(Path... candidates) {
+        for (Path candidate : candidates) {
+            if (Files.exists(candidate)) return candidate;
+        }
+        throw new IllegalStateException("fixture_path_missing: " + Arrays.toString(candidates));
+    }
+
+    private static String readUtf8(Path path) throws Exception {
+        return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }
 }

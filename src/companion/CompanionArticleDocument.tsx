@@ -43,6 +43,7 @@ export function CompanionArticleDocument(props: {
       style={{ '--document-content-inline-padding': '0px' } as CSSProperties}
     >
       <MarkdownEditor
+        ariaLabel="Topic body"
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"
         hideScrollbar

@@ -32,7 +32,7 @@ final class FolioleCompanionNsdAdvertisement {
         ));
         info.setPort(port);
         put(info, "app_version", config.getString("app_version"));
-        put(info, "facts_revision", config.getString("facts_revision"));
+        put(info, "topology_role", config.getString("topology_role"));
         put(info, "group_id", config.getJSONObject("sync_group").getString("group_id"));
         put(info, "group_tag", config.getString("group_tag"));
         put(info, "group_display_name", config.getJSONObject("sync_group").getString("display_name"));
@@ -95,8 +95,7 @@ final class FolioleCompanionNsdAdvertisement {
         String displayName = config.getJSONObject("sync_group").getString("display_name");
         String runtime = config.getString("runtime_instance_id").replaceAll("[^A-Za-z0-9]", "");
         String runtimeSuffix = runtime.isEmpty() ? "runtime" : runtime.substring(0, Math.min(8, runtime.length()));
-        String revision = Integer.toUnsignedString(config.getString("facts_revision").hashCode(), 36);
-        String suffix = runtimeSuffix + "-" + revision;
+        String suffix = runtimeSuffix;
         int displayLimit = Math.max(1, 62 - suffix.length());
         return displayName.substring(0, Math.min(displayName.length(), displayLimit)) + "-" + suffix;
     }

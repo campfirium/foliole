@@ -6,14 +6,15 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
-import { runCompanionSyncOptionalMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
-  applyCompanionSyncNodeVersions,
+  applyCompanionLocalNodeVersions,
   applyCompanionSyncNodeVersionsWithinWriterTask,
   saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
-import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { createCompanionUuid } from '../shared/platform/companionUuid';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import {
   createSelectionAnnotatedHighlightContent,
@@ -59,7 +60,7 @@ function createNode(args: {
     content: args.content,
     createdAt: args.timestamp,
     hideTitleHeading: false,
-    id: `node-${crypto.randomUUID()}`,
+    id: `node-${createCompanionUuid()}`,
     imageRegions: args.payload.imageRegions ?? null,
     isTitleManual: false,
     kind: args.kind,
@@ -115,14 +116,14 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
 }
 
 export async function persistCompanionSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
-  if (isAvailableNativeAndroidCompanionRuntime()) {
-    return persistAndroidSelectionAnnotation(args);
+  if (isAvailableNativeCompanionRuntime()) {
+    return persistNativeSelectionAnnotation(args);
   }
   const draft = await buildAnnotationDraft(args);
   if (!draft) {
     return null;
   }
-  await applyCompanionSyncNodeVersions([draft.nodeVersion]);
+  await applyCompanionLocalNodeVersions([draft.nodeVersion]);
   if (draft.review) {
     await saveCompanionSyncNodeReviewRecord({ nodeId: draft.node.id, review: draft.review });
   }
@@ -132,12 +133,12 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
   };
 }
 
-async function persistAndroidSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
-  return runCompanionSyncOptionalMutationTask(async () => {
+async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
+  return runCompanionOptionalHighValueMutationTask(async () => {
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
     if (!draft) return null;
-    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion]);
+    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion], undefined, 'local_mutation');
     if (draft.review) {
       await saveCompanionSyncNodeReviewRecordWithinWriterTask({ nodeId: draft.node.id, review: draft.review });
     }
@@ -158,7 +159,7 @@ async function persistExistingHighlightNode(args: {
   const node = args.update(args.node, new Date().toISOString());
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
-  await applyCompanionSyncNodeVersions([nodeVersion]);
+  await applyCompanionLocalNodeVersions([nodeVersion]);
   return {
     nodeId: versionedNode.id,
     snapshot: {

@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   ensureMacosDeviceSyncGroup,
+  readMacosSyncTriggerResult,
   sanitizeMacosSyncGroupOverview,
   waitForMacosAutomaticRun,
   waitForMacosDeviceRequest
@@ -16,14 +17,24 @@ const overview = (overrides = {}) => ({
     group_id: 'group-1' }, sync_paused: false, ...overrides
 });
 
-it('uses a product apply event when a new automatic run is not yet durable', async () => {
-  const waitForEvent = vi.fn(async () => undefined);
+it('waits past an earlier product event until the new automatic run is durable', async () => {
   const loadSyncTriggerResult = vi.fn()
     .mockResolvedValueOnce({ reason: 'automatic', run_id: 'old', status: 'completed' })
+    .mockResolvedValueOnce({ reason: 'automatic', run_id: 'old', status: 'completed' })
     .mockResolvedValue({ reason: 'automatic', run_id: 'new', status: 'completed' });
-  await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult, waitForEvent }, 'old'))
+  await expect(waitForMacosAutomaticRun({ loadSyncTriggerResult }, 'old'))
     .resolves.toMatchObject({ run_id: 'new' });
-  expect(waitForEvent).toHaveBeenCalledWith('onWorkspaceSyncApplied', { timeoutMs: 90_000 });
+  expect(loadSyncTriggerResult).toHaveBeenCalledTimes(3);
+});
+
+it('retries a direct trigger-result read during the active sync transaction', async () => {
+  const action = vi.fn()
+    .mockRejectedValueOnce(new Error('sqlite connection is owned by another asynchronous transaction'))
+    .mockResolvedValue({ reason: 'automatic', run_id: 'ready', status: 'completed' });
+  await expect(readMacosSyncTriggerResult(action, {
+    wait: async () => undefined
+  })).resolves.toMatchObject({ run_id: 'ready' });
+  expect(action).toHaveBeenCalledTimes(2);
 });
 
 it('sanitizes only Device/request facts from the active Sync Group overview', () => {
@@ -42,10 +53,16 @@ it('creates, resumes, or enables the single Device group without a legacy select
   const resume = vi.fn(async () => 'resumed');
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
     load: async () => overview({ sync_group: null }) })).resolves.toBe('created');
+  const resumed = overview({ sync_paused: false });
+  const enabled = overview();
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
-    load: async () => overview({ sync_paused: true }) })).resolves.toBe('resumed');
+    load: vi.fn().mockResolvedValueOnce(overview({ sync_paused: true }))
+      .mockResolvedValueOnce(resumed) })).resolves.toBe(resumed);
   await expect(ensureMacosDeviceSyncGroup({ create, enable, resume,
-    load: async () => overview() })).resolves.toBe('enabled');
+    load: vi.fn().mockResolvedValueOnce(overview()).mockResolvedValueOnce(enabled) }))
+    .resolves.toBe(enabled);
+  expect(resume).toHaveBeenCalledOnce();
+  expect(enable).toHaveBeenCalledOnce();
 });
 
 it('binds acceptance to the fixed A5 Device request id', async () => {

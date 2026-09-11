@@ -16,6 +16,7 @@ import {
 import {
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
+import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
@@ -38,17 +39,26 @@ export interface LanWorkspaceSyncServerStatus {
   pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
+  topology_role: 'anchor' | 'member' | 'observing';
+  topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
+}
+
+function topologyStatus() {
+  const topology = loadDesktopAnchorTopologyState();
+  return { topology_role: topology.role, topology_status: topology.status };
 }
 
 let activeJoinRequestHandler: (() => void) | null = null;
 let activeServer: http.Server | null = null;
+let activeStart: Promise<LanWorkspaceSyncServerStatus> | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
   last_error: null,
   active_device_count: 0,
   pending_join_request_count: 0,
   port: null,
-  state: 'stopped'
+  state: 'stopped',
+  ...topologyStatus()
 };
 
 function resolveLatestGroupStatus() {
@@ -105,13 +115,17 @@ async function listenOnSyncPort(server: http.Server, port: number) {
   });
 }
 
-function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
+function buildRunningStatus(
+  port: number,
+  groupStatus: ReturnType<typeof resolveLatestGroupStatus>
+): LanWorkspaceSyncServerStatus {
   return {
     advertised_urls: collectLanWorkspaceSyncUrls(port),
     last_error: null,
-    ...resolveLatestGroupStatus(),
+    ...groupStatus,
     port,
-    state: 'running'
+    state: 'running',
+    ...topologyStatus()
   };
 }
 
@@ -145,10 +159,10 @@ function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
 }
 
-export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
-  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
+  const groupStatus = resolveLatestGroupStatus();
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
@@ -163,7 +177,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
     logDesktopDnsSdDiagnostic('http_listener_ready', { port });
     await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning, port });
     activeServer = server;
-    activeStatus = buildRunningStatus(port);
+    activeStatus = buildRunningStatus(port, groupStatus);
     logRunningStatus();
     return activeStatus;
   } catch (error) {
@@ -175,15 +189,28 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
       active_device_count: 0,
       pending_join_request_count: 0,
       port: null,
-      state: 'failed'
+      state: 'failed',
+      ...topologyStatus()
     };
     console.error('[companion-sync] lan workspace sync server failed', error);
     return activeStatus;
   }
 }
 
+export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
+  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+  if (activeStart) return activeStart;
+  const start = startLanWorkspaceSyncServer(args);
+  activeStart = start;
+  void start.finally(() => {
+    if (activeStart === start) activeStart = null;
+  }).catch(() => undefined);
+  return start;
+}
+
 export async function stopLanWorkspaceSyncServer() {
   stopDesktopSyncGroupAutoSync();
+  await activeStart?.catch(() => undefined);
   if (!activeServer) {
     activeStatus = {
       advertised_urls: [],
@@ -191,7 +218,8 @@ export async function stopLanWorkspaceSyncServer() {
       active_device_count: 0,
       pending_join_request_count: 0,
       port: null,
-      state: 'stopped'
+      state: 'stopped',
+      ...topologyStatus()
     };
     return activeStatus;
   }
@@ -214,11 +242,12 @@ export async function stopLanWorkspaceSyncServer() {
     active_device_count: 0,
     pending_join_request_count: 0,
     port: null,
-    state: 'stopped'
+    state: 'stopped',
+    ...topologyStatus()
   };
   return activeStatus;
 }
 
 export function getLanWorkspaceSyncServerStatus() {
-  return refreshLanWorkspaceSyncServerJoinRequestStatus();
+  return { ...refreshLanWorkspaceSyncServerJoinRequestStatus(), ...topologyStatus() };
 }

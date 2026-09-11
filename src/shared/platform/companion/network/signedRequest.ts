@@ -1,7 +1,7 @@
 import { createCompanionUuid } from '../../companionUuid';
 import {
   FolioleCompanionSync,
-  isAvailableNativeAndroidCompanionRuntime,
+  isAvailableNativeCompanionRuntime,
   isNativeCompanionNetworkRuntime
 } from '../../companionWorkspaceRuntimeRepository';
 import { ensureCompanionSyncGroupDataOwner } from '../sync/syncGroupProviderDataOwner';
@@ -72,14 +72,14 @@ export async function prepareNativeCompanionWorkgroupRequest(args: {
   bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
 }) {
   const prepared = await prepareNativeCompanionWorkgroupRequestIfPresent(args);
-  if (!prepared) throw new Error('android_workgroup_request_required');
+  if (!prepared) throw new Error('native_workgroup_request_required');
   return prepared;
 }
 
 export async function prepareNativeCompanionWorkgroupRequestIfPresent(args: {
   bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
 }) {
-  if (!isAvailableNativeAndroidCompanionRuntime()) return null;
+  if (!isAvailableNativeCompanionRuntime()) return null;
   const group = await loadCompanionSyncGroup();
   if (!group) return null;
   const nonce = createCompanionUuid();

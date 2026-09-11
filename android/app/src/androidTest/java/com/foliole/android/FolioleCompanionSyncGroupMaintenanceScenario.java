@@ -27,6 +27,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject togglePause(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
+        click(instrumentation, webView, "companion-sync-group-open");
         return clickEnabled(instrumentation, webView, "companion-sync-pause-toggle");
     }
 

@@ -19,6 +19,9 @@ import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
+import {
+  readSyncGroupControllerState, waitForSyncGroupAutomaticRun
+} from '../desktop/sync-group-controller-read.mjs';
 
 async function invoke(page, command, args) {
   return page.evaluate(async ({ commandName, commandArgs }) => {
@@ -40,6 +43,10 @@ function loadSyncTriggerResult(app) {
   });
 }
 
+export function readMacosSyncTriggerResult(action, options) {
+  return readSyncGroupControllerState(action, options);
+}
+
 export function sanitizeMacosSyncGroupOverview(overview) {
   return {
     currentDevice: overview.current_device ?? null,
@@ -57,7 +64,9 @@ export function sanitizeMacosSyncGroupOverview(overview) {
 export async function ensureMacosDeviceSyncGroup(actions) {
   const overview = await actions.load();
   if (!overview.sync_group) return actions.create();
-  return overview.sync_paused === true ? actions.resume() : actions.enable();
+  if (overview.sync_paused === true) await actions.resume();
+  else await actions.enable();
+  return actions.load();
 }
 
 function launchOptions(repoRoot, env, session, libraryHome, runtime, rendererUrl) {
@@ -126,7 +135,7 @@ export async function openMacosSyncGroupDesktopSession({
       load: actions.load,
       loadDnsSdIdentityPreflight: (groupId) => loadDesktopDnsSdIdentityPreflight(app, groupId),
       loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
-      loadSyncTriggerResult: () => loadSyncTriggerResult(app),
+      loadSyncTriggerResult: () => readMacosSyncTriggerResult(() => loadSyncTriggerResult(app)),
       processId: app.process().pid,
       invoke: (command, args) => invoke(page, command, args),
       waitForEvent: (eventName, options) => waitForDesktopProductEvent(page, eventName, options),
@@ -141,22 +150,10 @@ export async function openMacosSyncGroupDesktopSession({
   }
 }
 
-function completedAutomaticRun(result, previousRunId) {
-  return result?.run_id !== previousRunId && result?.reason === 'automatic'
-    && result?.status === 'completed';
-}
-
 export async function waitForMacosAutomaticRun(session, previousRunId, {
   timeoutMs = 90_000
 } = {}) {
-  const current = await session.loadSyncTriggerResult();
-  if (completedAutomaticRun(current, previousRunId)) return current;
-  await session.waitForEvent('onWorkspaceSyncApplied', { timeoutMs });
-  const result = await session.loadSyncTriggerResult();
-  if (!completedAutomaticRun(result, previousRunId)) {
-    throw new Error(`Mac automatic sync did not complete: ${JSON.stringify(result)}`);
-  }
-  return result;
+  return waitForSyncGroupAutomaticRun(session.loadSyncTriggerResult, previousRunId, { timeoutMs });
 }
 
 export async function waitForMacosDeviceRequest(session, expectedDeviceName, {

@@ -23,6 +23,33 @@ type Peer = {
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
+export const DESKTOP_SYNC_GROUP_STRUCTURE_TIMEOUT_MS = 30_000;
+
+export async function fetchDesktopSyncGroupPackBody(args: {
+  headers: Record<string, string>;
+  groupId: string;
+  pathWithQuery: string;
+  timeoutMs?: number;
+  url: string;
+}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    args.timeoutMs ?? DESKTOP_SYNC_GROUP_STRUCTURE_TIMEOUT_MS
+  );
+  try {
+    const response = await fetch(args.url, { headers: args.headers, signal: controller.signal });
+    return await readDesktopWorkgroupResponse({
+      contentType: 'application/zip', groupId: args.groupId,
+      method: 'GET', pathWithQuery: args.pathWithQuery, response
+    });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('sync_group_structure_pack_timeout', { cause: error });
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 export async function collectSyncPackAppliedEvent(port: DbPort, result: ApplyResult) {
   if (!result.applied) return { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
@@ -45,14 +72,13 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   const pathWithQuery = `/companion/sync-pack?after_state_seq=${args.after}`;
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(args.peer.group_id));
   if (!key) throw new Error('sync_group_workgroup_key_missing');
-  const response = await fetch(`${args.peer.endpoint_url}${pathWithQuery}`, {
+  const body = await fetchDesktopSyncGroupPackBody({
+    groupId: args.peer.group_id,
     headers: args.createHeaders({ groupId: args.peer.group_id,
       localDeviceId: args.peer.local_device_id,
-      method: 'GET', pathWithQuery, secret: key.group_key })
-  });
-  const body = await readDesktopWorkgroupResponse({
-    contentType: 'application/zip', groupId: args.peer.group_id,
-    method: 'GET', pathWithQuery, response
+      method: 'GET', pathWithQuery, secret: key.group_key }),
+    pathWithQuery,
+    url: `${args.peer.endpoint_url}${pathWithQuery}`
   });
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
   try {

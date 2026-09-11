@@ -6,13 +6,22 @@ const useCompanionWorkspaceSync = vi.fn();
 const syncGroupStore = vi.hoisted(() => ({
   loadCompanionSyncGroup: vi.fn(async () => null)
 }));
+const syncParticipation = vi.hoisted(() => ({
+  lifecycle_active: true,
+  participating: true,
+  sync_enabled: true,
+  sync_paused: false
+}));
 const syncGroupProvider = vi.hoisted(() => ({
+  getCompanionSyncParticipationSnapshot: vi.fn(() => syncParticipation),
   loadCompanionSyncGroupProviderState: vi.fn(async () => ({
     pending_requests: [],
     sync_enabled: true,
     sync_paused: false
   })),
+  loadCompanionSyncParticipationState: vi.fn(async () => syncParticipation),
   reconcileCompanionSyncGroupProvider: vi.fn(async () => undefined),
+  subscribeCompanionSyncParticipation: vi.fn(() => () => undefined),
   setCompanionSyncEnabled: vi.fn(async () => undefined),
   setCompanionSyncPaused: vi.fn(async () => undefined)
 }));
@@ -50,6 +59,7 @@ function mockCompanionWorkspaceSync(runtimeKind: 'android-capacitor' | 'ios-capa
       runtime_kind: runtimeKind
     },
     isWorkspaceSyncStateReady: true,
+    syncParticipation: { participating: true },
     syncGroupDiscoveries: [],
     pendingJoinRequest: null,
     joinStatus: 'idle',
@@ -188,7 +198,7 @@ describe('CompanionApp ready hosts', () => {
     expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
     await vi.waitFor(() => expect(syncGroupStore.loadCompanionSyncGroup).toHaveBeenCalled());
-    await vi.waitFor(() => expect(syncGroupProvider.loadCompanionSyncGroupProviderState).toHaveBeenCalled());
+    await vi.waitFor(() => expect(syncGroupProvider.loadCompanionSyncParticipationState).toHaveBeenCalled());
     expect(syncGroupProvider.reconcileCompanionSyncGroupProvider).not.toHaveBeenCalled();
     expect(useCompanionWorkspaceSync).toHaveBeenCalledWith(expect.objectContaining({ runtime_kind: 'ios-capacitor' }));
   });

@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const nativeMock = vi.hoisted(() => ({
   addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
-  androidAvailable: true,
+  nativeAvailable: true,
   resolveSyncGroupDataRequest: vi.fn(),
   signCompanionSyncRequest: vi.fn()
 }));
@@ -11,7 +11,7 @@ const groupMock = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: () => 'nonce-1' }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: nativeMock,
-  isAvailableNativeAndroidCompanionRuntime: () => nativeMock.androidAvailable,
+  isAvailableNativeCompanionRuntime: () => nativeMock.nativeAvailable,
   isNativeCompanionNetworkRuntime: () => true
 }));
 vi.mock('../sync/syncGroupStore', () => ({
@@ -25,7 +25,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  nativeMock.androidAvailable = true;
+  nativeMock.nativeAvailable = true;
   groupMock.load.mockResolvedValue({
     created_at: '2026-08-09T00:00:00.000Z',
     devices: [{
@@ -44,8 +44,8 @@ beforeEach(() => {
   });
 });
 
-it('skips optional Android workgroup wrapping on iOS', async () => {
-  nativeMock.androidAvailable = false;
+it('skips optional workgroup wrapping outside native runtimes', async () => {
+  nativeMock.nativeAvailable = false;
 
   const { prepareNativeCompanionWorkgroupRequestIfPresent } = await import('./signedRequest');
   await expect(prepareNativeCompanionWorkgroupRequestIfPresent({

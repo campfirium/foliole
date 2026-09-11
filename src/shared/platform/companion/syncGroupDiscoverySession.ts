@@ -1,7 +1,42 @@
 import type { SyncGroupDiscoverySnapshot } from '../../../../lib/platform/syncGroupDiscoveryContract';
+import {
+  evaluateSyncProtocolVersionHint,
+  parseSyncProtocolTxt
+} from '../../../../lib/platform/syncProtocolContract';
 import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery';
 import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
+
+function isDesktopProvider(platform: string) {
+  return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
+}
+
+function isMobileAdvertisement(candidate: CompanionNativeDiscoveryEvent['candidates'][number]) {
+  const platform = candidate.protocol_txt?.provider_platform ?? '';
+  return ['android-capacitor', 'ios-capacitor'].includes(platform);
+}
+
+function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDiscoverySnapshot {
+  const incompatible = event.candidates.some((candidate) =>
+    !isMobileAdvertisement(candidate)
+    && evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
+  const status = incompatible ? 'incompatible' : 'waiting_anchor';
+  return { candidates: [], change: event.change,
+    error_code: incompatible ? 'incompatible' : null, status };
+}
+
+function uniqueSyncGroups<T extends {
+  discovery: { group_id: string; group_tag: string; provider_platform: string };
+}>(candidates: T[]) {
+  const groups = new Map<string, T>();
+  for (const candidate of candidates) {
+    const identity = `${candidate.discovery.group_id}:${candidate.discovery.group_tag}`;
+    const current = groups.get(identity);
+    if (!current || (!isDesktopProvider(current.discovery.provider_platform)
+      && isDesktopProvider(candidate.discovery.provider_platform))) groups.set(identity, candidate);
+  }
+  return [...groups.values()];
+}
 
 export async function startCompanionSyncGroupDiscoverySession(
   onSnapshot: (snapshot: SyncGroupDiscoverySnapshot) => void
@@ -17,13 +52,18 @@ export async function startCompanionSyncGroupDiscoverySession(
       onSnapshot({ candidates: [], change: event.change, error_code: event.error_code, status: event.status });
       return;
     }
-    const candidates = await loadCompanionDiscoveryCandidates(event.candidates.map((candidate) => ({
+    const desktopAdvertisements = event.candidates.filter((candidate) =>
+      !isMobileAdvertisement(candidate) && candidate.protocol_txt?.topology_role === 'anchor');
+    if (desktopAdvertisements.length === 0) return void onSnapshot(searchingSnapshot(event));
+    const candidates = await loadCompanionDiscoveryCandidates(desktopAdvertisements.map((candidate) => ({
       endpointUrl: candidate.endpoint_url,
       protocolTxt: candidate.protocol_txt ?? null,
       source: candidate.source
     })));
     if (!active) return;
-    const compatible = candidates.filter((candidate) => candidate.compatibility.status === 'compatible');
+    const compatible = uniqueSyncGroups(
+      candidates.filter((candidate) => candidate.compatibility.status === 'compatible')
+    );
     const status = compatible.length > 0
       ? 'results'
       : candidates.length > 0 ? 'incompatible' : 'connection_failed';

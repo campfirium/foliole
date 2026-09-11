@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import { bootReport } from './boot.js';
 import { parseReviewGradeArgs, parseReviewPreviewArgs } from './commandParserReview.js';
@@ -14,7 +15,9 @@ export async function handleReviewCommand(request: InvokeRequest) {
     return null;
   }
   if (request.command === NATIVE_COMMANDS.reviewGrade) {
-    return reviewGrade(parseReviewGradeArgs(args));
+    const result = reviewGrade(parseReviewGradeArgs(args));
+    void requestDesktopHighValueSync();
+    return result;
   }
   if (request.command === NATIVE_COMMANDS.reviewPreview) {
     return reviewPreview(parseReviewPreviewArgs(args));

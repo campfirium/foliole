@@ -109,6 +109,7 @@ async function resolveAdditiveObject(
   if (!applied.appliedIds.includes(canonicalId)) throw new Error('sync_derived_object_not_applied');
   result.acks.push({
     canonicalObjectId: canonicalId,
+    canonicalVersionId: derived.version_id!,
     clientOpId: entry.item.clientOpId,
     identity: entry.item.identity,
     status: 'accepted',

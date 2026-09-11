@@ -7,29 +7,45 @@ function nowStamp(now) {
   return now().toISOString();
 }
 
-export async function createDesktopSyncConflictSeed({ evidenceRoot, now = () => new Date(),
-  session }) {
+export async function createDesktopSyncConflictSeed({ evidenceRoot, existingHighlight = false,
+  now = () => new Date(), session }) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', {
     includePdfOpenings: false
   });
   const stamp = nowStamp(now);
   const token = `t152-conflict-${stamp.replace(/\D/gu, '')}`;
-  const nodeId = `multi-device-sync-conflict-${stamp.replace(/\D/gu, '')}`;
-  const payload = { activeNodeId: nodeId, anchorLink: null,
-    content: `${token}\n\nCloze target alpha.\n\n${NOTE_TEXT}.`, createdAt: stamp,
-    isTitleManual: false, kind: 'topic', nodeId,
-    nodeOrder: [...snapshot.nodeOrder, nodeId], parentNodeId: 'special-inbox',
+  const topicNodeId = `multi-device-sync-conflict-${stamp.replace(/\D/gu, '')}`;
+  const nodeId = existingHighlight ? `${topicNodeId}-highlight` : topicNodeId;
+  const content = `${token}\n\nCloze target alpha.\n\n${NOTE_TEXT}.`;
+  const payload = { activeNodeId: topicNodeId, anchorLink: null, content, createdAt: stamp,
+    isTitleManual: false, kind: 'topic', nodeId: topicNodeId,
+    nodeOrder: [...snapshot.nodeOrder, topicNodeId], parentNodeId: 'special-inbox',
     position: snapshot.nodeOrder.length, reveal: null,
     title: `T152 conflict ${token}`, updatedAt: stamp };
   const result = await session.invoke('create_topic', payload);
-  if (!result?.createdNodeIds?.includes(nodeId)) {
+  if (!result?.createdNodeIds?.includes(topicNodeId)) {
     throw new Error('Desktop product command did not persist the conflict seed.');
+  }
+  if (existingHighlight) {
+    const from = content.indexOf(NOTE_TEXT);
+    const child = await session.invoke('create_topic', {
+      activeNodeId: nodeId,
+      anchorLink: { id: nodeId, kind: 'highlight', locator: {
+        from, originalText: NOTE_TEXT, to: from + NOTE_TEXT.length
+      } },
+      content: NOTE_TEXT, createdAt: stamp, isTitleManual: false, kind: 'topic', nodeId,
+      nodeOrder: [...snapshot.nodeOrder, topicNodeId, nodeId], parentNodeId: topicNodeId,
+      position: snapshot.nodeOrder.length + 1, reveal: null, title: NOTE_TEXT, updatedAt: stamp
+    });
+    if (!child?.createdNodeIds?.includes(nodeId)) {
+      throw new Error('Desktop product command did not persist the conflict highlight.');
+    }
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const receiptPath = path.join(evidenceRoot, 'conflict-seed-receipt.json');
   fs.writeFileSync(receiptPath, `${JSON.stringify({ nodeId, resultStatus: 'success', token,
-    updatedAt: stamp }, null, 2)}\n`, 'utf8');
-  return { nodeId, receiptPath, token };
+    topicNodeId, updatedAt: stamp }, null, 2)}\n`, 'utf8');
+  return { nodeId, receiptPath, token, topicNodeId };
 }
 
 export async function forkDesktopSyncConflict({ label, nodeId, session }) {
@@ -49,9 +65,47 @@ export async function forkDesktopSyncConflict({ label, nodeId, session }) {
 }
 
 export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
-  const conflicts = await session.invoke('load_sync_node_conflicts', { objectIds: [nodeId] });
+  const conflicts = typeof session.waitForState === 'function'
+    ? await session.waitForState({ command: 'load_sync_node_conflicts',
+      commandArgs: { objectIds: [nodeId] },
+      condition: { count: 1, kind: 'sync-conflict-count' },
+      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 })
+    : await session.invoke('load_sync_node_conflicts', { objectIds: [nodeId] });
   if (!Array.isArray(conflicts) || conflicts.length === 0) {
     throw new Error('The product did not expose the concurrent business conflict.');
   }
   return { conflictCount: conflicts.length, nodeId, silentOverwrite: false, visible: true };
+}
+
+export async function loadConvergedDesktopSyncForks({ desktopLabel = 'macos', nodeId, session }) {
+  const fragments = ['Fri conflict fork', `Desktop fork ${desktopLabel}`];
+  const document = await session.waitForState({
+    command: 'load_node_document',
+    commandArgs: { nodeId },
+    condition: { fragments, kind: 'node-content-includes', nodeId },
+    eventName: 'onWorkspaceSyncApplied',
+    timeoutMs: 2 * 60_000
+  });
+  if (!fragments.every((fragment) => String(document?.content).includes(fragment))) {
+    throw new Error('The product did not retain both concurrent content forks.');
+  }
+  return { conflictCount: 0, nodeId, resolution: 'merged-content',
+    silentOverwrite: false, visible: true };
+}
+
+export async function loadVisibleDesktopSyncConflictCopy({ nodeId, session }) {
+  const snapshot = await session.invoke('load_workspace_list_snapshot', {
+    includePdfOpenings: false
+  });
+  const copyIds = Object.keys(snapshot?.nodesById ?? {}).filter((id) => (
+    id.startsWith(`${nodeId}~`)
+  ));
+  const documents = await Promise.all(copyIds.map((copyId) => (
+    session.invoke('load_node_document', { nodeId: copyId })
+  )));
+  const copies = documents.filter((document) => String(document?.content).includes('A5 note'));
+  if (copies.length === 0) {
+    throw new Error('The product did not expose the concurrent A5 conflict copy.');
+  }
+  return { conflictCount: copies.length, nodeId, silentOverwrite: false, visible: true };
 }

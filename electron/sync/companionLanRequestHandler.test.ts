@@ -167,7 +167,9 @@ function createHandler() {
       active_device_count: 1,
       pending_join_request_count: 0,
       port: 38641,
-      state: 'running'
+      state: 'running',
+      topology_role: 'anchor',
+      topology_status: 'ready'
     })
   });
 }

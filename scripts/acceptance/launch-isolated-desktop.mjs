@@ -66,6 +66,7 @@ export async function runIsolatedDesktop(argv = process.argv.slice(2)) {
   try {
     session = await launchDesktopSession({ appRoot: config.repoRoot, env: {
       ...process.env,
+      FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: config.stateRoot,
       FOLIOLE_REMOTE_DEBUGGING_PORT: String(config.cdpPort)
     } });

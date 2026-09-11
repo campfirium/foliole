@@ -56,9 +56,18 @@ final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
 
-    init(bundle: Bundle = .main) throws {
-        bridge = try Self.load("companion-bridge-contract-definitions", bundle: bundle)
-        sync = try Self.load("companion-sync-protocol-definitions", bundle: bundle)
+    init(bundle: Bundle? = nil) throws {
+        let contractBundle = bundle ?? Self.defaultBundle
+        bridge = try Self.load("companion-bridge-contract-definitions", bundle: contractBundle)
+        sync = try Self.load("companion-sync-protocol-definitions", bundle: contractBundle)
+    }
+
+    private static var defaultBundle: Bundle {
+        #if SWIFT_PACKAGE
+        return .module
+        #else
+        return .main
+        #endif
     }
 
     func transferRequestKey(_ key: String) throws -> String {

@@ -3,13 +3,76 @@ import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
+import {
+  removeA5AcceptanceApplication
+} from './macos-a5-acceptance-package-cleanup.mjs';
+
+it('accepts a nonzero MIUI uninstall result only after the package is absent', async () => {
+  const options = [];
+  const calls = [];
+  const execute = async (_command, args, executionOptions) => {
+    calls.push(args);
+    options.push(executionOptions);
+    return args[2] === 'uninstall'
+    ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
+    : { code: 0, output: '' };
+  };
+  await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
+    .resolves.toBeUndefined();
+  expect(options).toHaveLength(8);
+  expect(options).toEqual(expect.arrayContaining([
+    expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
+  ]));
+  expect(calls[0]).toEqual(['-s', 'a5', 'shell', 'am', 'force-stop',
+    'com.foliole.android.acceptance.test']);
+});
+
+it('rejects a failed uninstall while the acceptance package remains installed', async () => {
+  const execute = async (_command, args) => args.includes('uninstall')
+    ? { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' }
+    : { code: 0, output: 'package:/data/app/base.apk' };
+  await expect(removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' }))
+    .rejects.toThrow('cleanup failed');
+});
+
+it('uses the user package manager when MIUI rejects the ordinary uninstall', async () => {
+  const calls = [];
+  const execute = async (_command, args) => {
+    calls.push(args);
+    if (args[2] === 'uninstall') return { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' };
+    if (args.includes('--user') && args.includes('uninstall')) return { code: 0, output: 'Success' };
+    return { code: 0, output: '' };
+  };
+  await removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' });
+  expect(calls.at(-1)).toEqual(['-s', 'a5', 'shell', 'pm', 'uninstall', '--user', '0',
+    'com.foliole.android.acceptance']);
+});
+
+it('accepts the package manager proof that a package is absent for user zero', async () => {
+  const execute = async (_command, args) => {
+    if (args[2] === 'uninstall') return { code: 1, output: 'Failure [DELETE_FAILED_INTERNAL_ERROR]' };
+    if (args.includes('--user') && args.includes('uninstall')) {
+      return { code: 1, output: 'Failure [not installed for 0]' };
+    }
+    return { code: 0, output: '' };
+  };
+  await expect(removeA5AcceptanceApplication({
+    execute, paths: { adb: 'adb' }, serial: 'a5'
+  })).resolves.toBeUndefined();
+});
 
 it('materializes both isolated Android and hidden Mac runtimes inside the frozen capsule', () => {
   const source = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-sync-group-entry.mjs', 'utf8'
   );
+  const cleanup = fs.readFileSync(
+    'scripts/android/macos-a5-acceptance-package-cleanup.mjs', 'utf8'
+  );
   const buildSource = fs.readFileSync('scripts/android/a5-two-device-build.mjs', 'utf8');
   const joinEvidence = fs.readFileSync('scripts/android/a5-two-device-join-evidence.mjs', 'utf8');
+  const restartSource = fs.readFileSync(
+    'scripts/android/macos-a5-single-principal-macos-restart.mjs', 'utf8'
+  );
   expect(source).toContain('buildA5TwoDeviceAcceptance(args)');
   expect(buildSource).toContain("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID");
   expect(buildSource).toContain('macosAcceptanceEnv(args.env)');
@@ -28,6 +91,11 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain("action: 'activate-participation'");
   expect(source).toContain("action: 'create-journey-fact'");
   expect(source).toContain('observeA5JourneyFacts(args, buildIdentity, env');
+  expect(source).toContain('assertMacosAnchorReady(await session.load())');
+  expect(source).toContain('await observeMacosAnchorAfterElection(session)');
+  expect(source).not.toContain('waitForMacosAutomaticRun');
+  expect(restartSource).toContain('observeMacosAnchorAfterElection(restartedSession)');
+  expect(restartSource).not.toContain('waitForMacosAutomaticRun');
   expect(source).toContain('createDesktopSyncGroupJourneyFact');
   expect(source).toContain("'desktop-initial-fact'");
   expect(source).toContain("'initial-union'");
@@ -42,7 +110,9 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
-  expect(source).toContain("'uninstall', ACCEPTANCE_APP_ID");
+  expect(cleanup).toContain('`${ACCEPTANCE_APP_ID}.test`');
+  expect(cleanup).toContain("'uninstall', packageId");
+  expect(source.match(/await removeA5AcceptanceApplication\(args\)/gu)).toHaveLength(2);
   expect(source).not.toContain("protectData('backup'");
   expect(source).not.toContain('deviceBackupRoot');
 });
@@ -75,6 +145,8 @@ it('can join an already-running external group without coupling join to a journe
   expect(source).toContain('getString("expectedEndpoint", "")');
   expect(source).toContain('assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag)');
   expect(source).toContain('acceptance_group_endpoint_identity_mismatch');
+  expect(source).toContain('"data-sync-group-id"');
+  expect(source).not.toContain('"data-sync-endpoint"');
 });
 
 it('binds A5 convergence to only the exact facts created by the current attempt', () => {
@@ -98,17 +170,24 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('long stageDeadline()');
   expect(source).not.toContain('long requestDeadline');
   expect(source).not.toContain('"companion-sync-now", deadline');
-  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(8);
+  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(9);
   expect(source).toContain('stage=settings-open');
   expect(source).toContain('"companion-sync-discover"');
   expect(source).toContain('expectedGroupId');
   expect(source).toContain('expectedGroupTag');
   expect(source).toContain('acceptance_group_identity_not_unique');
+  expect(source).toContain('acceptance_group_identity_not_found');
+  expect(source).toContain('while (System.nanoTime() < deadline)');
+  expect(source).toContain('Thread.sleep(500)');
+  expect(source).toContain('stage=provider-unreachable');
+  expect(source).not.toContain('matches.size() != 1');
   expect(source).toContain('clickUniqueVisibleMatchingAttribute');
   expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
+  expect(source).toContain('stage=initial-sync-completed');
+  expect(source).toContain('FolioleCompanionSyncNowAction.waitUntilEnabled');
 });
 
 it('enters Browse through the visible bottom tab from Settings', () => {

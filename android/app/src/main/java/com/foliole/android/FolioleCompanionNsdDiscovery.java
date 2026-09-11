@@ -7,7 +7,6 @@ import android.net.wifi.WifiManager;
 
 import com.getcapacitor.JSObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -214,24 +213,12 @@ public final class FolioleCompanionNsdDiscovery {
             byte[] value = serviceInfo.getAttributes().get("runtime_instance_id");
             if (value == null) return false;
             return FolioleCompanionSyncGroupProvider.runtimeInstanceId().equals(
-                new String(value, StandardCharsets.UTF_8)
+                new String(value, java.nio.charset.StandardCharsets.UTF_8)
             );
         }
 
         private JSObject readProtocolTxt(NsdServiceInfo serviceInfo) throws Exception {
-            JSObject result = new JSObject();
-            copyTxtAttribute(serviceInfo, result, "maxSupportedVersion");
-            copyTxtAttribute(serviceInfo, result, "minSupportedVersion");
-            copyTxtAttribute(serviceInfo, result, "version");
-            return result;
-        }
-
-        private void copyTxtAttribute(NsdServiceInfo serviceInfo, JSObject result, String contractKey) throws Exception {
-            String txtKey = FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtKey(context, contractKey);
-            byte[] value = serviceInfo.getAttributes().get(txtKey);
-            if (value != null) {
-                result.put(txtKey, new String(value, StandardCharsets.UTF_8));
-            }
+            return FolioleCompanionNsdProtocolTxt.read(context, serviceInfo.getAttributes());
         }
     }
 }

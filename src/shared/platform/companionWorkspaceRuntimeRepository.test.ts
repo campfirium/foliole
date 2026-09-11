@@ -53,7 +53,7 @@ function expectIosRuntimeBoundary() {
 
   expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   expect(isAvailableNativeCompanionRuntime()).toBe(true);
-  expectNodeMutationSurfaces(false);
+  expectNodeMutationSurfaces(true);
   expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
   expect(isNativeCompanionContentBlobRuntime()).toBe(true);
   expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
@@ -138,5 +138,5 @@ describe('companion workspace runtime boundary', () => {
     }));
   });
 
-  it('exposes iOS storage capabilities while keeping Android-only operations unavailable', expectIosRuntimeBoundary);
+  it('exposes iOS storage and shared node mutation capabilities', expectIosRuntimeBoundary);
 });

@@ -21,7 +21,7 @@ export interface CompanionNativeDiscoveryEvent extends CompanionDiscoveryCandida
   status: 'searching' | 'results' | 'permission_required' | 'unavailable' | 'stopped';
 }
 
-export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
+export interface CompanionSyncGroupProviderState {
   pending_requests: Array<{
     device_name: string;
     platform: string;
@@ -86,7 +86,6 @@ export interface CompanionWorkspaceSyncPlugin
     app_version: string;
     device_id: string;
     device_name: string;
-    facts_revision: string;
     platform: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
   }): Promise<CompanionSyncGroupProviderState>;

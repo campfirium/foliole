@@ -37,7 +37,8 @@ it('keeps the Bonjour service declaration in the final iOS application plist', (
 it('handles the iOS Local Network system card before waiting for a Device candidate', () => {
   const physicalTest = [
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift',
-    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift'
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift',
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupMutationUITestSupport.swift'
   ].map(read).join('\n');
   const appDelegate = read('ios/App/App/AppDelegate.swift');
 
@@ -45,6 +46,7 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).not.toContain('addUIInterruptionMonitor');
   expect(physicalTest).not.toContain('alert.buttons[$0].tap()');
   expect(physicalTest).toContain('waitForLocalNetworkDecision(allow: true)');
+  expect(physicalTest).toContain('decision.tap()');
   expect(physicalTest).toContain('NSPredicate(format: "exists == false")');
   expect(physicalTest).toContain('Fri-local-network-allow');
   expect(physicalTest).toContain('testPreparesLocalNetworkPermission()');
@@ -57,14 +59,59 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   expect(physicalTest).toContain('FOLIOLE_T152_TWO_DEVICE');
   expect(physicalTest).toContain('waitForJourneyFactCount("A", count: 2');
   expect(physicalTest).toContain('[foliole-fri] t152-conflict-fork-ready');
+  expect(physicalTest).toContain('testForksTwoDeviceConflict()');
+  expect(physicalTest).toContain('testPullsTwoDeviceConflictAfterProviderConverges()');
+  expect(physicalTest).toContain('testVerifiesTwoDeviceConflictAfterProviderConverges()');
   expect(physicalTest).toContain('"Pause Sync"');
   expect(physicalTest).toContain('"Resume Sync"');
-  expect(physicalTest).toContain('"Issues to resolve"');
+  expect(physicalTest).toContain('verifyConvergedConflictForks(in: app)');
+  expect(physicalTest).toContain('FOLIOLE_T152_DESKTOP_FORK_LABEL');
+  expect(physicalTest).toContain('"Desktop fork \\(twoDeviceDesktopForkLabel)"');
   expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now"');
+  expect(physicalTest).toContain('tapEnabledButton(named: "Sync Now", in: app, timeout: 120)\n'
+    + '        waitForSyncNowCompletion(in: app)\n        openBrowse(in: app)');
   expect(physicalTest).toContain('isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C", "D"]');
   expect(physicalTest).toContain('"Leave Sync Group"');
   expect(physicalTest).toContain('["Allow", "允许"]');
+  expect(physicalTest).toContain('localNetworkAllow.waitForExistence(timeout: 1)');
+  expect(physicalTest).not.toContain('localNetworkAllow.tap(); return');
   expect(physicalTest).toContain('"--foliole-physical-acceptance"');
+  expect(physicalTest).toContain('testShowsRequestedSyncGroupDevices()');
+  expect(physicalTest).toContain('testCapturesRequestedFact()');
+  expect(physicalTest).toContain('testWaitsForRequestedFact()');
+  expect(physicalTest).toContain('testWaitsForRequestedTopicText()');
+  expect(physicalTest).toContain('testAppendsToRequestedTopic()');
+  expect(physicalTest).toContain('testCreatesAndEditsRequestedHighlight()');
+  expect(physicalTest).toContain('testRestoresRequestedTopicFromTrash()');
+  expect(physicalTest).toContain('testPausesAutomaticSync()');
+  expect(physicalTest).toContain('testPullsRequestedFactWithSyncNow()');
+  expect(physicalTest).toContain('testResumesAutomaticSync()');
+  expect(physicalTest).toContain('testRestoresGroupAndRequestedFactAfterRelaunch()');
+  expect(physicalTest).toContain('testStopsForForegroundCatchUp()');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_DEVICE_NAMES');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_FACT_TITLE');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TOPIC_PREFIX');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_APPEND_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_EXPECTED_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SELECTION_TEXT');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_ANNOTATION_NOTE');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_TRASH_TITLE');
+  expect(physicalTest).toContain('FOLIOLE_PHYSICAL_SYNC_GROUP_ID');
+  expect(physicalTest).toContain('Join \\(groupId)');
+  expect(physicalTest).toContain('app.wait(for: .notRunning');
+  expect(physicalTest).not.toMatch(/coordinate\s*:/u);
   expect(appDelegate).toContain('arguments.contains("--foliole-physical-acceptance")');
   expect(appDelegate).toContain('application.isIdleTimerDisabled = true');
+});
+
+it('keeps the Mac provider available until the Fri consumer completes', () => {
+  const provider = read('scripts/ios/fri-sync-group-provider.mjs');
+
+  expect(provider).toContain('const signal = await waitForRelease();');
+  expect(provider).toContain('await observeMacosAnchorAfterElection(session);');
+  expect(provider).not.toContain('waitForMacosAutomaticRun');
+  expect(provider).toContain("FOLIOLE_T173_STANDALONE_PROVIDER === '1'");
+  expect(provider).toContain("for (const device of ['A', 'B', 'C'])");
+  expect(provider).toContain('standalone || twoDevice ? 2 : 4');
+  expect(provider).not.toContain("twoDevice ? 'consumer_complete' : await waitForRelease()");
 });

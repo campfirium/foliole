@@ -2,7 +2,7 @@ import Foundation
 import Network
 
 final class FolioleCompanionSyncGroupJoinServer {
-    private let discovery: [String: Any]
+    private var discovery: [String: Any]
     private let dataBridge: FolioleCompanionSyncGroupDataRequesting?
     private let listener: NWListener
     private let provider: FolioleCompanionSyncGroupJoinProvider
@@ -10,6 +10,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     private let queue = DispatchQueue(label: "com.foliole.ios.sync-group-provider")
     private let stateChanged: () -> Void
     private(set) var port: UInt16?
+    let runtimeInstanceId: String
 
     init(
         discovery: [String: Any], provider: FolioleCompanionSyncGroupJoinProvider,
@@ -21,15 +22,9 @@ final class FolioleCompanionSyncGroupJoinServer {
         self.dataBridge = dataBridge
         snapshots = dataBridge.map(FolioleCompanionSyncGroupSnapshot.init)
         self.stateChanged = stateChanged
+        runtimeInstanceId = discovery["runtime_instance_id"] as? String ?? ""
         listener = try NWListener(using: .tcp, on: .any)
-        let txt = discovery.reduce(into: [String: String]()) { result, entry in
-            if let value = entry.value as? String { result[entry.key] = value }
-            else if let value = entry.value as? Int { result[entry.key] = String(value) }
-        }
-        listener.service = NWListener.Service(
-            name: Self.serviceName(discovery), type: "_foliole-sync._tcp", domain: "local.",
-            txtRecord: NWTXTRecord(txt)
-        )
+        listener.service = FolioleCompanionSyncGroupAdvertisement.service(discovery)
     }
 
     func start() throws -> UInt16 {
@@ -56,6 +51,13 @@ final class FolioleCompanionSyncGroupJoinServer {
     }
 
     func stop() { listener.cancel(); snapshots?.close() }
+
+    func updateDiscovery(_ value: [String: Any]) {
+        queue.sync {
+            discovery = value
+            listener.service = FolioleCompanionSyncGroupAdvertisement.service(value)
+        }
+    }
 
     private func receive(_ connection: NWConnection, _ accumulated: Data) {
         connection.start(queue: queue)
@@ -181,7 +183,7 @@ final class FolioleCompanionSyncGroupJoinServer {
             "min_supported_version": discovery["protocol_min_version"] as Any,
             "max_supported_version": discovery["protocol_max_version"] as Any,
             "capabilities": discovery["protocol_capabilities"] as Any]
-        for key in ["facts_revision", "protocol_version", "protocol_min_version",
+        for key in ["protocol_version", "protocol_min_version",
                     "protocol_max_version", "protocol_capabilities"] { result.removeValue(forKey: key) }
         return result
     }
@@ -197,12 +199,6 @@ final class FolioleCompanionSyncGroupJoinServer {
     private func send(_ connection: NWConnection, _ status: Int, _ value: [String: Any]) throws {
         let response = try FolioleCompanionHttpMessage.response(status: status, value: value)
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
-    }
-
-    private static func serviceName(_ discovery: [String: Any]) -> String {
-        let name = discovery["group_display_name"] as? String ?? "Foliole"
-        let runtime = (discovery["runtime_instance_id"] as? String ?? "runtime").prefix(8)
-        return String("\(name)-\(runtime)".prefix(63))
     }
 
     private static func requiredDiscovery(_ value: [String: Any], _ key: String) throws -> String {

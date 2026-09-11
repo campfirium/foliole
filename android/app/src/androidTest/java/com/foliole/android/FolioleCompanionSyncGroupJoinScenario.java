@@ -13,8 +13,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupJoinScenario {
@@ -45,14 +43,14 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-settings-sync", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=sync-open");
-            String expectedEndpoint = expectedEndpoint(instrumentation);
+            String expectedGroupId = expectedGroupId(instrumentation);
             FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-discover", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=discovery-requested");
             FolioleCompanionWebViewSemanticAdapter.clickUniqueVisibleMatchingAttribute(
-                instrumentation, webView, "companion-sync-group-join", "data-sync-endpoint",
-                expectedEndpoint, stageDeadline());
+                instrumentation, webView, "companion-sync-group-join", "data-sync-group-id",
+                expectedGroupId, stageDeadline());
             Log.i(LOG_TAG, "stage=device-visible");
             Log.i(LOG_TAG, "stage=device-requested");
             String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
@@ -72,6 +70,10 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=joined");
+            FolioleCompanionSyncNowAction.waitUntilEnabled(
+                instrumentation, webView, TimeUnit.MINUTES.toMillis(2)
+            );
+            Log.i(LOG_TAG, "stage=initial-sync-completed");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
             waitForFocus(activity, 30_000);
@@ -100,7 +102,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
         return System.nanoTime() + TimeUnit.SECONDS.toNanos(STAGE_TIMEOUT_SECONDS);
     }
 
-    private static String expectedEndpoint(Instrumentation instrumentation) throws Exception {
+    private static String expectedGroupId(Instrumentation instrumentation) throws Exception {
         String groupId = InstrumentationRegistry.getArguments().getString("expectedGroupId", "");
         String groupTag = InstrumentationRegistry.getArguments().getString("expectedGroupTag", "");
         String preferredEndpoint = InstrumentationRegistry.getArguments()
@@ -111,30 +113,35 @@ final class FolioleCompanionSyncGroupJoinScenario {
         Context context = instrumentation.getTargetContext();
         if (!preferredEndpoint.isEmpty()) {
             assertEndpointIdentity(context, preferredEndpoint, groupId, groupTag);
-            return preferredEndpoint;
+            return groupId;
         }
-        List<String> matches = new ArrayList<>();
-        int mismatches = 0;
-        for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
-            String endpointKey = FolioleCompanionHostBridgeContractDefinitions
-                .networkEndpointUrlCandidateKey(context);
-            String endpoint = candidate.optString(endpointKey);
-            JSObject response = FolioleCompanionDesktopHttpClient.request(context,
-                endpoint + "/companion/discovery", "GET", new JSONObject(), null);
-            String bodyKey = FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context);
-            JSONObject discovery = new JSONObject(response.getString(bodyKey));
-            boolean idMatches = groupId.equals(discovery.optString("group_id"));
-            boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
-            if (idMatches && tagMatches) matches.add(endpoint);
-            else if (idMatches || tagMatches) mismatches += 1;
+        long deadline = stageDeadline();
+        while (System.nanoTime() < deadline) {
+            for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
+                String endpointKey = FolioleCompanionHostBridgeContractDefinitions
+                    .networkEndpointUrlCandidateKey(context);
+                String endpoint = candidate.optString(endpointKey);
+                try {
+                    JSObject response = FolioleCompanionDesktopHttpClient.request(context,
+                        endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+                    String bodyKey = FolioleCompanionHostBridgeContractDefinitions
+                        .networkBodyResponseKey(context);
+                    JSONObject discovery = new JSONObject(response.getString(bodyKey));
+                    boolean idMatches = groupId.equals(discovery.optString("group_id"));
+                    boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
+                    if (idMatches && tagMatches) return groupId;
+                    if (idMatches || tagMatches) {
+                        throw new IllegalStateException("acceptance_group_identity_not_unique");
+                    }
+                } catch (IllegalStateException identityMismatch) {
+                    throw identityMismatch;
+                } catch (Exception unreachableProvider) {
+                    Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
+                }
+            }
+            Thread.sleep(500);
         }
-        if (mismatches > 0) {
-            throw new IllegalStateException("acceptance_group_identity_not_unique");
-        }
-        if (matches.size() != 1) {
-            throw new IllegalStateException("acceptance_group_identity_not_unique");
-        }
-        return matches.get(0);
+        throw new IllegalStateException("acceptance_group_identity_not_found");
     }
 
     private static void assertEndpointIdentity(

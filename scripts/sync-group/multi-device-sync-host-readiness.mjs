@@ -15,11 +15,11 @@ import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
 import { WINDOWS_DEV_REPO_ROOT_POSIX } from '../windows/windows-dev-paths.mjs';
 import { MACOS_ACCEPTANCE_SYNC_PORT } from './multi-device-sync-macos-channel.mjs';
 import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { windowsSyncGroupTargetRef } from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
 const exec = promisify(execFile);
-const ACCEPTANCE_APP = 'com.foliole.android.acceptance';
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = `${WINDOWS_DEV_REPO_ROOT_POSIX}/scripts/windows/windows-multi-device-sync-readiness.mjs`;
 
@@ -114,15 +114,8 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
         assertA5RuntimeState(power, policy);
         const route = await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'ip', 'route'], { env });
         assertA5LanRoute(route, networkInterfaces());
-        const packages = await execute(paths.adb,
-          ['-s', A5_SERIAL, 'shell', 'pm', 'list', 'packages', ACCEPTANCE_APP], { env });
-        if (packages.includes(ACCEPTANCE_APP)) throw Object.assign(
-          new Error('A5 acceptance package from another run is still installed.'), {
-            missingFact: 'android_acceptance_package_present',
-            lastSuccessfulAction: 'fixed_a5_lan_ready'
-          });
         return { facts: ['fixed_a5_ready', 'fixed_a5_lease_ready', 'fixed_a5_unlocked',
-          'fixed_a5_lan_ready', 'android_acceptance_isolated'] };
+          'fixed_a5_lan_ready', 'android_acceptance_profile_available'] };
       } finally { await execute(paths.adb, ['kill-server'], { env }).catch(() => undefined); }
     },
     'windows-c': async () => {
@@ -177,7 +170,7 @@ export function createMutationReadinessAdapters(options) {
       || (host === 'windows-c' && (receipt.windowsReceipt?.sourceRef !== current.sourceRef
         || receipt.windowsReceipt?.revision !== current.revision
         || receipt.windowsReceipt?.treeDigest !== current.treeDigest
-        || receipt.windowsReceipt?.targetRef !== 'refs/heads/dev'))
+        || receipt.windowsReceipt?.targetRef !== windowsSyncGroupTargetRef(current.sourceRef)))
       || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
           !== receipt.androidApkSha256)));

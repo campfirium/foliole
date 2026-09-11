@@ -1,8 +1,10 @@
 package com.foliole.android;
 
 import android.app.Instrumentation;
+import android.database.sqlite.SQLiteReadOnlyDatabaseException;
 import android.webkit.WebView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
@@ -23,12 +25,11 @@ final class FolioleCompanionSyncNowAction {
         JSONObject started = waitUntilStarted(
             instrumentation, webView, before.optString("runId"), 30_000
         );
-        JSONObject terminal = waitUntilTerminal(
-            instrumentation, webView, started.getString("runId"), TERMINAL_TIMEOUT_MS
-        );
+        JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
+        waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
-            .put("actionRunId", started.getString("runId"))
+            .put("actionRunId", terminal.getString("runId"))
             .put("terminalRunId", terminal.getString("terminalRunId"))
             .put("terminalResult", terminal.getString("terminalResult"))
             .put("errorText", terminal.optString("errorText"));
@@ -50,13 +51,17 @@ final class FolioleCompanionSyncNowAction {
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 
-    private static void waitUntilEnabled(
+    static void waitUntilEnabled(
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
             JSONObject state = readState(instrumentation, webView);
-            if (state.optBoolean("found") && !state.optBoolean("disabled")) return;
+            if (state.optBoolean("found") && !state.optBoolean("disabled")) {
+                Thread.sleep(500);
+                JSONObject stable = readState(instrumentation, webView);
+                if (stable.optBoolean("found") && !stable.optBoolean("disabled")) return;
+            }
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for public Sync Now.");
@@ -79,17 +84,40 @@ final class FolioleCompanionSyncNowAction {
     }
 
     private static JSONObject waitUntilTerminal(
-        Instrumentation instrumentation, WebView webView, String runId, long timeoutMs
+        Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
             latest = readState(instrumentation, webView);
-            if (runId.equals(latest.optString("runId"))
-                && "terminal".equals(latest.optString("status"))
+            String runId = latest.optString("runId");
+            if (!runId.isEmpty() && "terminal".equals(latest.optString("status"))
                 && runId.equals(latest.optString("terminalRunId"))) return latest;
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest);
+    }
+
+    private static void waitUntilProjected(
+        Instrumentation instrumentation, String runId
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
+        SQLiteReadOnlyDatabaseException lastReadConflict = null;
+        while (System.nanoTime() < deadline) {
+            try {
+                JSONArray events = FolioleAcceptanceSyncEventProjection.read(
+                    instrumentation.getTargetContext()
+                ).getJSONArray("events");
+                for (int index = 0; index < events.length(); index += 1) {
+                    if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
+                }
+            } catch (SQLiteReadOnlyDatabaseException error) {
+                lastReadConflict = error;
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException(
+            "Timed out waiting for projected Sync Now run: " + runId, lastReadConflict
+        );
     }
 }

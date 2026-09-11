@@ -193,7 +193,6 @@ describe('companion sync run owner', () => {
     await syncStarted;
     const manualSync = actions.pullFromDesktop('http://10.0.2.2:38641');
     expect(setManualSyncAction.mock.calls.map(([action]) => action.status)).toEqual(['starting', 'running']);
-    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(syncResult());
     releaseSync();
 
     await autoSync;
@@ -201,8 +200,11 @@ describe('companion sync run owner', () => {
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
     expect(countRunEvents()).toBe(2);
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
-    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
-    expect(new Set(lifecycle.map(({ runId }) => runId)).size).toBe(1);
+    expect(lifecycle.map(({ status }) => status)).toEqual([
+      'starting', 'running', 'running', 'terminal'
+    ]);
+    const automaticRunId = persistedEvents.find((event) => event.kind === 'run_finished')?.run_id;
+    expect(lifecycle.at(-1)?.runId).toBe(automaticRunId);
     expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });
 });
@@ -231,6 +233,7 @@ describe('companion manual sync target selection', () => {
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
     expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
     expect(new Set(lifecycle.map(({ runId }) => runId)).size).toBe(1);
+    expect(persistedEvents[0]?.run_id).toBe(lifecycle.at(-1)?.runId);
     expect(lifecycle.at(-1)?.started).toBe(true);
     expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });

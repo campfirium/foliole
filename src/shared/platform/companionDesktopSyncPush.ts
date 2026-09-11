@@ -32,6 +32,7 @@ export interface CompanionDesktopSyncPushResult {
 interface DesktopSyncPushResponse {
   acks: Array<{
     canonical_object_id?: string;
+    canonical_version_id?: string;
     client_op_id: string;
     conflict_reason?: string;
     identity: SyncPushAck['identity'];
@@ -69,6 +70,7 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
   }
   return {
     ...(raw.canonical_object_id !== undefined ? { canonicalObjectId: raw.canonical_object_id } : {}),
+    ...(raw.canonical_version_id !== undefined ? { canonicalVersionId: raw.canonical_version_id } : {}),
     clientOpId: raw.client_op_id,
     ...(raw.conflict_reason !== undefined ? { conflictReason: raw.conflict_reason } : {}),
     identity: raw.identity,
@@ -100,15 +102,11 @@ async function collectLocalPushItems(peerId: string) {
     .map((row) => statePushAdapters[row.object_type as keyof typeof statePushAdapters]?.buildPushPayload(row))
     .filter((item) => item !== undefined)
     .filter((item) => item.base.kind !== 'blocked');
-  const pushableReviewNodeIds = new Set(stateItems
-    .filter((item) => item.identity.objectType === 'node_review')
-    .map((item) => item.identity.objectId));
   return {
     items: [
       ...nodeItems,
       ...stateItems,
       ...reviewLog
-        .filter((row) => pushableReviewNodeIds.has(row.node_id))
         .map((row) => reviewLogSyncAdapter.buildPushPayload(row))
     ],
     nodeVersions

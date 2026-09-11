@@ -213,8 +213,13 @@
         "source": "source"
       },
       "protocolTxtKeys": {
+        "deviceId": "device_id",
+        "groupId": "group_id",
+        "groupTag": "group_tag",
         "maxSupportedVersion": "protocol_max_version",
         "minSupportedVersion": "protocol_min_version",
+        "providerPlatform": "provider_platform",
+        "topologyRole": "topology_role",
         "version": "protocol_version"
       },
       "requestKeys": {
@@ -230,11 +235,7 @@
     },
     "syncGroupProvider": {
       "dataRequestEvent": "syncGroupDataRequest",
-      "serviceHintEvent": "syncGroupServiceHint",
       "stateChangedEvent": "syncGroupProviderStateChanged",
-      "serviceHintKeys": {
-        "endpointUrl": "endpoint_url"
-      },
       "dataRequestKeys": {
         "operation": "operation",
         "payload": "payload",
@@ -250,7 +251,6 @@
         "databasePath": "database_path",
         "deviceId": "device_id",
         "deviceName": "device_name",
-        "factsRevision": "facts_revision",
         "group": "sync_group",
         "platform": "platform",
         "requestId": "request_id"

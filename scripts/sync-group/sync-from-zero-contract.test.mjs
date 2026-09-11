@@ -45,7 +45,7 @@ it('reads the desktop receive cursor from the stable state stream', () => {
   );
   expect(inspector).toContain("stream_name === 'state'");
   for (const source of [inspector, androidEvidence]) {
-    expect(source).toContain('SELECT authorization_id, stream_name, cursor_value');
-    expect(source).not.toContain('SELECT peer_id, stream_name, cursor_value');
+    expect(source).toContain('SELECT peer_id, stream_name, cursor_value');
+    expect(source).not.toContain('SELECT authorization_id, stream_name, cursor_value');
   }
 });

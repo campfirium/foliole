@@ -7,6 +7,7 @@ import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContr
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { runCompanionHighValueMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from './companionWorkspaceRuntimeRepository';
@@ -44,15 +45,28 @@ export async function applyCompanionSyncNodeVersions(
   return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager));
 }
 
-export async function applyCompanionSyncNodeVersionsWithinWriterTask(
+export async function applyCompanionLocalNodeVersions(
   nodes: NativeSyncNodeRecord[],
   manager?: CompanionSqliteConnectionManager
 ) {
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
+  return runCompanionHighValueMutationTask(() => (
+    applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager, 'local_mutation')
+  ));
+}
+
+export async function applyCompanionSyncNodeVersionsWithinWriterTask(
+  nodes: NativeSyncNodeRecord[],
+  manager?: CompanionSqliteConnectionManager,
+  operation: SyncNodeApplyOperation = 'remote_sync'
+) {
+  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
   if (usesSharedOwner() && !manager) {
-    return getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncNodeVersionsWithDbPort(db, nodes));
+    return getIosCompanionDatabaseOwner().runWriter((db) => (
+      applyCompanionSyncNodeVersionsWithDbPort(db, nodes, operation)
+    ));
   }
-  return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager);
+  return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, operation);
 }
 
 function usesSharedOwner() {
@@ -67,7 +81,7 @@ export async function applyCompanionTrashRestoreNodeVersions(
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) {
     return [];
   }
-  return runCompanionSyncWriterTask(() => {
+  return runCompanionHighValueMutationTask(() => {
     if (usesSharedOwner() && !manager) {
       return getIosCompanionDatabaseOwner().runWriter((db) => (
         applyCompanionSyncNodeVersionsWithDbPort(db, nodes, 'local_restore')

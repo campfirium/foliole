@@ -1,22 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-function createSyncState(endpointUrl: string | null) {
-  return {
-    endpoint_url: endpointUrl,
-    last_synced_at: endpointUrl ? '2026-04-22T12:00:00.000Z' : null,
-    remembered_targets: endpointUrl ? [endpointUrl] : [],
-    sync_events: [],
-    sync_onboarding_status: 'completed' as const,
-    workspace_snapshot: null
-  };
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
-}
+import { createSyncState } from './useCompanionWorkspaceAutoSync.testSupport';
 
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
@@ -29,16 +14,8 @@ async function renderAutoSyncHook(
     isAvailableNativeCompanionRuntime: () => isNativeRuntime,
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
+  const backgroundHandlers: Array<() => void> = [];
   const foregroundHandlers: Array<() => void> = [];
-  const serviceHintHandlers: Array<(hint: { endpoint_url: string }) => void> = [];
-  vi.doMock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-    subscribeCompanionSyncGroupServiceHint: vi.fn(async (
-      handler: (hint: { endpoint_url: string }) => void
-    ) => {
-      if (isNativeRuntime) serviceHintHandlers.push(handler);
-      return vi.fn();
-    })
-  }));
   const setStatus = vi.fn();
   const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
     foregroundHandlers.push(handler);
@@ -46,7 +23,10 @@ async function renderAutoSyncHook(
   });
   vi.doMock('../shared/platform/appLifecycle', () => ({
     readNativeAppActiveState: vi.fn(async () => true),
-    subscribeNativeAppBackground: vi.fn(async () => vi.fn()),
+    subscribeNativeAppBackground: vi.fn(async (handler: () => void) => {
+      backgroundHandlers.push(handler);
+      return vi.fn();
+    }),
     subscribeNativeAppForeground
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
@@ -54,7 +34,7 @@ async function renderAutoSyncHook(
     useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
     { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
-  return { foregroundHandlers, hook, serviceHintHandlers, setStatus, subscribeNativeAppForeground,
+  return { backgroundHandlers, foregroundHandlers, hook, setStatus, subscribeNativeAppForeground,
     tryForegroundAutoSync };
 }
 
@@ -151,7 +131,7 @@ async function expectBacklogKeepsVisibleSyncingUntilContinuationCompletes() {
   expect(setStatus).toHaveBeenLastCalledWith('idle');
 }
 
-async function expectSkippedPassDoesNotRetry() {
+async function expectSkippedPassWaitsForFreshness() {
   vi.useFakeTimers();
   vi.spyOn(Date, 'now').mockReturnValue(1_000);
   const tryForegroundAutoSync = vi.fn(async () => 'skipped' as const);
@@ -164,7 +144,7 @@ async function expectSkippedPassDoesNotRetry() {
     await vi.advanceTimersByTimeAsync(60_000);
   });
 
-  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
 }
 
 async function expectWaitsForNativePairing() {
@@ -263,43 +243,6 @@ describe('useForegroundAutoSync triggers', () => {
   it('waits for native pairing before syncing a saved endpoint', expectWaitsForNativePairing);
 });
 
-describe('useForegroundAutoSync service hints', () => {
-  beforeEach(() => {
-    resetAutoSyncTestModules();
-  });
-
-  it('runs again when a foreground DNS-SD service fact changes', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const { serviceHintHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
-    await act(async () => Promise.resolve());
-
-    await act(async () => serviceHintHandlers[0]?.({ endpoint_url: 'http://192.168.0.11:38641' }));
-
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
-    expect(tryForegroundAutoSync).toHaveBeenLastCalledWith(expect.objectContaining({
-      state: expect.objectContaining({ endpoint_url: 'http://192.168.0.11:38641' })
-    }));
-  });
-
-  it('keeps one service hint that arrives during an active peer sync', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const first = deferred<'completed'>();
-    const tryForegroundAutoSync = vi.fn()
-      .mockReturnValueOnce(first.promise)
-      .mockResolvedValue('completed');
-    const { serviceHintHandlers } = await renderAutoSyncHook(
-      true, 'http://10.0.2.2:38641', tryForegroundAutoSync
-    );
-    await act(async () => Promise.resolve());
-
-    await act(async () => serviceHintHandlers[0]?.({ endpoint_url: 'http://192.168.0.11:38641' }));
-    expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
-    await act(async () => first.resolve('completed'));
-
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
-  });
-});
-
 describe('useForegroundAutoSync retry cadence', () => {
   beforeEach(() => {
     resetAutoSyncTestModules();
@@ -313,5 +256,5 @@ describe('useForegroundAutoSync retry cadence', () => {
 
   it('keeps backlog continuation visibly syncing until the retry completes', expectBacklogKeepsVisibleSyncingUntilContinuationCompletes);
 
-  it('does not keep retrying a skipped pass with idle visible backlog', expectSkippedPassDoesNotRetry);
+  it('waits for the one-minute freshness request after a skipped pass', expectSkippedPassWaitsForFreshness);
 });

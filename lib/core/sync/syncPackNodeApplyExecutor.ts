@@ -24,6 +24,7 @@ import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js'
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
+  applySyncPackNodeOpenStatesWithDbPort,
   applySyncPackNodeTextAlternativesWithDbPort,
   applySyncPackSettingObjectsWithDbPort
 } from './syncPackSyncObjectsExecutor.js';
@@ -168,6 +169,7 @@ async function applySyncPackSurfaceInTransaction(
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
   await applySyncPackMetadataObjectsWithDbPort(port, options);
+  await applySyncPackNodeOpenStatesWithDbPort(port, options);
   await applySyncPackNodeTextAlternativesWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
@@ -227,6 +229,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'watched_folder',
   'node_reading',
   'node_review',
+  'node_open_state',
   'node_text_alternative',
   'attachment',
   'pdf_page_text',

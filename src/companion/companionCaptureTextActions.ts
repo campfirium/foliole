@@ -3,7 +3,8 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
+import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
+import { createCompanionUuid } from '../shared/platform/companionUuid';
 
 import {
   toCompanionNativeNodeVersion
@@ -38,7 +39,7 @@ function createCaptureNode(content: string, timestamp: string): WorkspaceNodeSna
     content,
     createdAt: timestamp,
     hideTitleHeading: false,
-    id: `node-${crypto.randomUUID()}`,
+    id: `node-${createCompanionUuid()}`,
     isTitleManual: false,
     kind: 'topic',
     openingText: null,
@@ -74,7 +75,7 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
 
 export async function persistCompanionCapturedText(args: PersistCompanionCapturedTextArgs) {
   const draft = await buildCaptureTextDraft(args);
-  await applyCompanionSyncNodeVersions([draft.nodeVersion]);
+  await applyCompanionLocalNodeVersions([draft.nodeVersion]);
   return {
     nodeId: draft.node.id,
     snapshot: draft.snapshot

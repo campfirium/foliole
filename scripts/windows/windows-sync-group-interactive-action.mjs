@@ -53,6 +53,7 @@ export async function runWindowsSyncGroupInteractiveEnvelope(options, {
   });
   const request = {
     action: options.action, buildIdentity: options.buildIdentity,
+    ...(options.candidateBoundary ? { candidateBoundary: options.candidateBoundary } : {}),
     createdAt: new Date().toISOString(), evidenceRoot: options.evidenceRoot,
     nonce: randomUUID(), schemaVersion: 1,
     ...(options.expectedGroupId ? { expectedGroupId: options.expectedGroupId } : {}),

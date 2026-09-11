@@ -71,12 +71,25 @@ export async function applySyncPackNodeTextAlternativesWithDbPort(
   return records.length;
 }
 
+export async function applySyncPackNodeOpenStatesWithDbPort(
+  port: DbPort,
+  options: SyncPackSyncObjectsOptions
+) {
+  const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
+    .filter((record) => record.object_type === 'node_open_state');
+  for (const record of records) await applySyncObjectPayloadWithDbPort(port, record);
+  return records.length;
+}
+
 function buildSyncPackSyncObjectsQuery(options: SyncPackSyncObjectsOptions) {
   const alias = options.incomingAlias ?? 'inc';
   return `SELECT object_type, object_id, content_hash, payload_json, updated_at, deleted_at ` +
     `FROM ${alias}.sync_objects incoming ` +
     `WHERE EXISTS (` +
-    `SELECT 1 FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias })} state ` +
+    `SELECT 1 FROM ${buildSyncPackApplyableRowsSql({
+      incomingAlias: alias,
+      sourcePeerId: options.sourcePeerId
+    })} state ` +
     `WHERE state.object_type = incoming.object_type AND state.object_id = incoming.object_id` +
     `) ORDER BY updated_at ASC, object_type ASC, object_id ASC`;
 }

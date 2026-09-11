@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
+import { macosA5GradleEnv, macosA5Paths } from '../android/macos-a5-dev.mjs';
 import {
   runMacosA5SyncGroupApproval, startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
@@ -15,10 +15,7 @@ import {
   waitForAndroidSyncFromZeroDataset, waitForAndroidSyncFromZeroProofSnapshot
 } from './multi-device-sync-from-zero-evidence.mjs';
 import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
-import {
-  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
-  openMacosAcceptanceTransport
-} from './multi-device-sync-macos-channel.mjs';
+import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
@@ -29,14 +26,6 @@ import {
 
 function productFailure(host, missingFact, message) {
   return Object.assign(new Error(message), { failureOwner: 'product', host, missingFact });
-}
-
-async function checked(execute, command, args, options, missingFact) {
-  const result = await execute(command, args, options);
-  if (result.code === 0) return result;
-  throw Object.assign(new Error(`${missingFact} failed`), {
-    failureOwner: 'controller', host: 'android-b', missingFact, result
-  });
 }
 
 function windowsEvidence(output, repoRoot) {
@@ -80,17 +69,13 @@ function windowsProgressCapture(reportActivity) {
 async function syncDatasetToAndroid(context) {
   await stopMacosA5SyncGroupApprovalProvider(context);
   context.reportProgress('b-provider-stopped');
-  await openMacosAcceptanceTransport(context.runTransport);
-  context.transportOpen = true;
-  context.reportProgress('b-transport-ready');
   await startMacosA5SyncGroupApprovalProvider({
     ...context, onProviderStopped: async () => {}, onReady: async () => {}
   });
+  context.reportProgress('b-anchor-sync-ready');
   const snapshot = await waitForAndroidSyncFromZeroDataset(
     context.paths, context.reportActivity, context.reportProgress
   );
-  await closeMacosAcceptanceTransport(context.runTransport);
-  context.transportOpen = false;
   await stopMacosA5SyncGroupApprovalProvider(context);
   return snapshot;
 }
@@ -138,9 +123,7 @@ function createContext(options) {
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(options.repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     options.runId, 'sync-from-zero');
-  const runTransport = (args, stage) => checked(options.execute, paths.adb,
-    ['-s', A5_SERIAL, ...args], { env, timeoutMs: 30_000 }, stage);
-  return { ...options, env, evidenceRoot, owned, paths, runTransport, transportOpen: false };
+  return { ...options, env, evidenceRoot, owned, paths };
 }
 
 export async function proveSyncFromZero(options) {
@@ -192,7 +175,6 @@ export async function proveSyncFromZero(options) {
     }, null, 2)}\n`, 'utf8');
     return { evidenceRef };
   } finally {
-    if (context.transportOpen) await closeMacosAcceptanceTransport(context.runTransport).catch(() => undefined);
     await session?.close().catch(() => undefined);
   }
 }

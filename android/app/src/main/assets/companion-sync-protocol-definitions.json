@@ -3,6 +3,8 @@
     "capabilities": [
       "author-host-snapshots-v1",
       "canonical-attachment-storage-key-v1",
+      "complete-member-data-plane",
+      "desktop-soft-anchor-v1",
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
       "group-key-routing-v1",

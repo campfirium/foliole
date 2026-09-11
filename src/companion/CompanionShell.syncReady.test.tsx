@@ -26,6 +26,7 @@ function mockWorkspaceSync(isWorkspaceSyncStateReady: boolean) {
   useCompanionWorkspaceSync.mockReturnValue({
     error: null,
     isWorkspaceSyncStateReady,
+    syncParticipation: { participating: true },
     pairingState: { is_paired: true },
     pullFromDesktop: vi.fn(),
     state: {

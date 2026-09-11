@@ -8,6 +8,24 @@ export const WINDOWS_SYNC_GROUP_ACTIONS = [
   'single-principal-sync-group', 'two-device-sync-provider'
 ];
 
+const SYNC_GROUP_RESULTS = [
+  ['desktopDnsSdAdvertiseAcceptance', 'desktop-dnssd-advertise-acceptance', 'manifestPath'],
+  ['desktopDnsSdFindAcceptance', 'desktop-dnssd-find-acceptance', 'manifestPath'],
+  ['desktopDnsSdFindDiagnostic', 'desktop-dnssd-find-diagnostic', 'manifestPath'],
+  ['desktopDnsSdRoutePrepare', 'desktop-dnssd-route-prepare', 'manifestPath'],
+  ['desktopDnsSdRouteProvider', 'desktop-dnssd-route-provider', 'manifestPath'],
+  ['desktopDnsSdRouteControllerSelfcheck', 'desktop-dnssd-route-selfcheck', 'manifestPath'],
+  ['multiDeviceSyncALeave', 'multi-device-sync-a-leave', 'manifestPath'],
+  ['multiDeviceSyncARejoin', 'multi-device-sync-a-rejoin', 'manifestPath'],
+  ['multiDeviceSyncC', 'multi-device-sync-c', 'manifestPath'],
+  ['multiDeviceSyncCandidate', 'multi-device-sync-candidate', 'manifestPath'],
+  ['multiDeviceSyncFromZero', 'multi-device-sync-from-zero', 'manifestPath'],
+  ['multiDeviceSyncParticipation', 'multi-device-sync-participation', 'manifestPath'],
+  ['singlePrincipalSyncGroup', 'single-principal-sync-group', 'manifestPath'],
+  ['twoDeviceSyncProvider', 'two-device-sync-provider', 'manifestPath'],
+  ['defaultSyncJourney', 'default-sync-journey', 'manifestPath']
+];
+
 export function isWindowsSyncGroupAction(action) {
   return WINDOWS_SYNC_GROUP_ACTIONS.includes(action);
 }
@@ -35,25 +53,13 @@ export function attachSyncGroupResult(summary, result) {
   }
 }
 
+export function syncGroupResultManifestPath(summary, action) {
+  const route = SYNC_GROUP_RESULTS.find(([, routeAction]) => routeAction === action);
+  return route ? summary?.[route[0]]?.[route[2]] : undefined;
+}
+
 export function printSyncGroupResult(stream, summary) {
-  const values = [
-    ['desktopDnsSdAdvertiseAcceptance', 'desktop-dnssd-advertise-acceptance', 'manifestPath'],
-    ['desktopDnsSdFindAcceptance', 'desktop-dnssd-find-acceptance', 'manifestPath'],
-    ['desktopDnsSdFindDiagnostic', 'desktop-dnssd-find-diagnostic', 'manifestPath'],
-    ['desktopDnsSdRoutePrepare', 'desktop-dnssd-route-prepare', 'manifestPath'],
-    ['desktopDnsSdRouteProvider', 'desktop-dnssd-route-provider', 'manifestPath'],
-    ['desktopDnsSdRouteControllerSelfcheck', 'desktop-dnssd-route-selfcheck', 'manifestPath'],
-    ['multiDeviceSyncALeave', 'multi-device-sync-a-leave', 'manifestPath'],
-    ['multiDeviceSyncARejoin', 'multi-device-sync-a-rejoin', 'manifestPath'],
-    ['multiDeviceSyncC', 'multi-device-sync-c', 'manifestPath'],
-    ['multiDeviceSyncCandidate', 'multi-device-sync-candidate', 'manifestPath'],
-    ['multiDeviceSyncFromZero', 'multi-device-sync-from-zero', 'manifestPath'],
-    ['multiDeviceSyncParticipation', 'multi-device-sync-participation', 'manifestPath'],
-    ['singlePrincipalSyncGroup', 'single-principal-sync-group', 'manifestPath'],
-    ['twoDeviceSyncProvider', 'two-device-sync-provider', 'manifestPath'],
-    ['defaultSyncJourney', 'default-sync-journey', 'manifestPath']
-  ];
-  for (const [key, action, field] of values) {
+  for (const [key, action, field] of SYNC_GROUP_RESULTS) {
     if (summary[key]) stream(`[windows-dev-action] ${action} identity=${summary.runId} manifest=${summary[key][field]}`);
   }
 }

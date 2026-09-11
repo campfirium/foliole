@@ -57,6 +57,17 @@ it('activates persisted Sync participation through visible product controls', as
   expect(scenario).toContain('item.optBoolean("disabled") != expectedEnabled');
 });
 
+it('opens Sync Group details before using the participation pause control', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
+  const method = source.slice(source.indexOf('static JSONObject togglePause'),
+    source.indexOf('static JSONObject syncNow'));
+  expect(method.indexOf('"companion-sync-group-open"'))
+    .toBeLessThan(method.indexOf('"companion-sync-pause-toggle"'));
+});
+
 it('binds ordinary sync to the visible public Sync Now product action', () => {
   const runner = fs.readFileSync('scripts/sync-group/a5-sync-group-action.mjs', 'utf8');
   const test = fs.readFileSync(
@@ -84,6 +95,11 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('put("actionStarted", true)');
   expect(action).toContain('put("syncRequested", true)');
   expect(action).toContain('put("terminalRunId", terminal.getString("terminalRunId"))');
+  expect(action).toContain('waitUntilProjected(instrumentation, terminal.getString("terminalRunId"))');
+  expect(action).toContain('FolioleAcceptanceSyncEventProjection.read(');
+  expect(action).toContain('catch (SQLiteReadOnlyDatabaseException error)');
+  expect(action).toContain('lastReadConflict');
+  expect(action).toContain('JSONObject stable = readState(instrumentation, webView)');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
 

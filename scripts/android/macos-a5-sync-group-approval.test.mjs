@@ -87,6 +87,9 @@ it('waits for the accepted Device request to leave the provider queue', () => {
   expect(approval).toContain('pendingRequestId()');
   expect(approval).toContain('getString("request_id")');
   expect(approval).toContain('waitForAcceptedRequestToLeavePending(requestId, deadline)');
+  expect(approval).toContain('waitForProviderRequest()');
+  expect(approval).toContain('"running".equals(latest.optString("state"))');
+  expect(approval).not.toContain('advertisement_state');
   expect(approval).not.toContain('authorization');
 });
 

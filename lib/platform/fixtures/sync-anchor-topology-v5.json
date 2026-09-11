@@ -1,0 +1,36 @@
+{
+  "join_contract_version": 1,
+  "production_protocol_version": 5,
+  "prepared_protocol_version": 5,
+  "role_txt_key": "topology_role",
+  "host_cases": [
+    {
+      "id": "desktop-anchor",
+      "provider_kind": "desktop",
+      "txt_role": "anchor",
+      "http_role": "anchor",
+      "accepted_as_anchor": true
+    },
+    {
+      "id": "desktop-member",
+      "provider_kind": "desktop",
+      "txt_role": "member",
+      "http_role": "member",
+      "accepted_as_anchor": false
+    },
+    {
+      "id": "role-mismatch",
+      "provider_kind": "desktop",
+      "txt_role": "anchor",
+      "http_role": "member",
+      "accepted_as_anchor": false
+    },
+    {
+      "id": "mobile-anchor-claim",
+      "provider_kind": "mobile",
+      "txt_role": "anchor",
+      "http_role": "anchor",
+      "accepted_as_anchor": false
+    }
+  ]
+}

@@ -35,7 +35,8 @@ describe('iOS hosted provider OS DNS-SD registration', () => {
       device_id: discovery.provider_device_id,
       group_id: discovery.group_id,
       group_tag: discovery.group_tag,
-      protocol_version: '4',
+      protocol_version: '5',
+      topology_role: 'member',
       runtime_instance_id: discovery.runtime_instance_id
     });
     registration.cancel();

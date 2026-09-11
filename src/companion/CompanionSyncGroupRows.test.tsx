@@ -17,6 +17,13 @@ vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
   subscribeCompanionSyncGroupProviderState: providerMocks.subscribe
 }));
 
+vi.mock('./useCompanionSyncParticipation', () => ({
+  useCompanionSyncParticipation: () => ({
+    hydrated: true,
+    lifecycle_active: true, participating: true, sync_enabled: true, sync_paused: false
+  })
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   const state = {

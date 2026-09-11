@@ -4,7 +4,7 @@ function git(repoRoot, args, execute = execFileSync) {
   return execute('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
 }
 
-function assertCommittedDev(candidate) {
+function assertCommittedCandidate(candidate) {
   if (!/^[0-9a-f]{40}$/u.test(candidate.revision)) {
     throw new Error('Formal A5 acceptance requires a full Git revision.');
   }
@@ -26,12 +26,12 @@ export function parseMacosA5Invocation(argv) {
 
 export function beginFormalA5Candidate(repoRoot, execute) {
   const revision = git(repoRoot, [
-    'rev-parse', '--verify', 'refs/heads/dev^{commit}'
+    'rev-parse', '--verify', 'HEAD^{commit}'
   ], execute);
   const candidate = {
     revision,
     tree: git(repoRoot, ['rev-parse', '--verify', `${revision}^{tree}`], execute)
   };
-  assertCommittedDev(candidate);
+  assertCommittedCandidate(candidate);
   return candidate;
 }

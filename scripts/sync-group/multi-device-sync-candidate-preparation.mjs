@@ -5,15 +5,22 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
+import { removeA5AcceptanceApplication } from '../android/macos-a5-acceptance-package-cleanup.mjs';
 import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
+import {
+  MULTI_DEVICE_ANDROID_APP_ID, multiDeviceAndroidEnv
+} from './multi-device-sync-android-profile.mjs';
+import {
+  windowsSyncGroupCommand, windowsSyncGroupTargetRef
+} from './multi-device-sync-windows-command.mjs';
 
 /* global process */
 
 const exec = promisify(execFile);
 
-function run(command, args, repoRoot, timeout = 20 * 60_000, signal) {
+function run(command, args, repoRoot, timeout = 20 * 60_000, signal, options = {}) {
   return exec(command, args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
-    signal, timeout });
+    signal, timeout, ...options });
 }
 
 async function prepareMacos(execute, repoRoot, progress, signal) {
@@ -29,24 +36,34 @@ async function prepareMacos(execute, repoRoot, progress, signal) {
 async function prepareAndroid(execute, paths, repoRoot, progress, signal, assertFrozen) {
   progress('candidate-android-started');
   await execute(process.execPath, ['scripts/android/macos-a5-dev.mjs', 'build'],
-    repoRoot, 12 * 60_000, signal);
+    repoRoot, 12 * 60_000, signal, { env: multiDeviceAndroidEnv() });
   progress('candidate-android-built');
   assertFrozen();
+  const cleanupExecute = async (command, args, options = {}) => {
+    try {
+      const result = await execute(command, args, repoRoot, options.timeoutMs, signal);
+      return { code: 0, output: `${result.stdout || ''}${result.stderr || ''}`, ...result };
+    } catch (error) {
+      return { code: Number.isInteger(error.code) ? error.code : 1,
+        output: `${error.stdout || ''}${error.stderr || ''}` };
+    }
+  };
+  await removeA5AcceptanceApplication({ execute: cleanupExecute, paths, serial: A5_SERIAL });
   await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], repoRoot,
     5 * 60_000, signal);
   progress('candidate-android-installed');
   await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop',
-    'com.foliole.android'], repoRoot, 10_000, signal);
+    MULTI_DEVICE_ANDROID_APP_ID], repoRoot, 10_000, signal);
   await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android/.MainActivity'], repoRoot, 20_000, signal);
+    `${MULTI_DEVICE_ANDROID_APP_ID}/com.foliole.android.MainActivity`], repoRoot, 20_000, signal);
   progress('candidate-android-launched');
 }
 
 async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   progress('candidate-windows-started');
+  const command = windowsSyncGroupCommand('multi-device-sync-candidate', candidate.sourceRef);
   const result = await execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-candidate',
-      '--source-ref', candidate.sourceRef], repoRoot,
+    command, repoRoot,
     18 * 60_000, signal);
   const line = result.stdout.split(/\r?\n/u).find((value) =>
     value.startsWith('[windows-dev-control] candidate-receipt='));
@@ -54,7 +71,7 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   if (!receipt || receipt.sourceRef !== candidate.sourceRef
       || receipt.revision !== candidate.revision
       || receipt.treeDigest !== candidate.treeDigest
-      || receipt.targetRef !== 'refs/heads/dev') {
+      || receipt.targetRef !== windowsSyncGroupTargetRef(candidate.sourceRef)) {
     throw Object.assign(new Error('Windows candidate did not report the frozen boundary.'), {
       failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
     });

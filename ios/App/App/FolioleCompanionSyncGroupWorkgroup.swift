@@ -19,7 +19,7 @@ enum FolioleCompanionSyncGroupWorkgroup {
         let signature = try header(request, "x-signature")
         let timestamp = try header(request, "x-timestamp")
         guard try header(request, "x-sync-group-id") == groupId,
-              let date = ISO8601DateFormatter().date(from: timestamp),
+              let date = requestDate(timestamp),
               abs(date.timeIntervalSinceNow) <= clockWindow else { throw invalid("expired_or_missing_headers") }
         let digest = SHA256.hash(data: request.bodyData).hex
         let canonical = [request.method, request.path, timestamp, nonce, digest].joined(separator: "\n")
@@ -40,6 +40,35 @@ enum FolioleCompanionSyncGroupWorkgroup {
             request.body, key: workgroupKey, groupTag: groupTag, method: request.method,
             path: request.path, direction: "request", contentType: "application/json; charset=utf-8"
         )
+    }
+
+    static func encryptClientRequest(
+        _ body: Data, groupTag: String, workgroupKey: String,
+        method: String, path: String, contentType: String
+    ) throws -> Data {
+        let envelope = try encrypt(
+            body, key: workgroupKey, groupTag: groupTag, method: method,
+            path: path, direction: "request", contentType: contentType
+        )
+        return try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys])
+    }
+
+    static func decryptClientResponse(
+        _ body: Data, groupTag: String, workgroupKey: String,
+        method: String, path: String, contentType: String
+    ) throws -> Data {
+        guard let envelope = try JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+            throw invalid("workgroup_aead_envelope_invalid")
+        }
+        let plaintext = try decrypt(
+            envelope, key: workgroupKey, groupTag: groupTag, method: method,
+            path: path, direction: "response", contentType: contentType
+        )
+        guard let timestamp = envelope["timestamp_ms"], let nonce = envelope["nonce"] as? String else {
+            throw invalid("workgroup_aead_envelope_invalid")
+        }
+        try consumeNonce("response:\(groupTag):\(timestamp):\(nonce)")
+        return plaintext
     }
 
     static func response(
@@ -101,6 +130,12 @@ enum FolioleCompanionSyncGroupWorkgroup {
     private static func header(_ request: FolioleCompanionHttpMessage, _ name: String) throws -> String {
         guard let value = request.header(name), !value.isEmpty else { throw invalid("missing_headers") }
         return value
+    }
+
+    private static func requestDate(_ timestamp: String) -> Date? {
+        let browserFormatter = ISO8601DateFormatter()
+        browserFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return browserFormatter.date(from: timestamp) ?? ISO8601DateFormatter().date(from: timestamp)
     }
 
     private static func consumeNonce(_ identity: String) throws {

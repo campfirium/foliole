@@ -14,6 +14,9 @@ import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
+const TOOLBAR_HEIGHT = 44;
+const TOUCH_NATIVE_MENU_CLEARANCE = 64;
+const VIEWPORT_EDGE_GAP = 8;
 
 export type CompanionSelectionClientPoint = { clientX: number; clientY: number };
 
@@ -43,11 +46,19 @@ function resolveToolbarPosition(fallback: CompanionSelectionClientPoint) {
     : { left: fallback.clientX, top: fallback.clientY, bottom: fallback.clientY };
   const toolbarWidth = 168;
   const notePanelWidth = 256;
-  const top = anchor.top > 56 ? anchor.top - 48 : anchor.bottom + 10;
+  const prefersBelowSelection = navigator.maxTouchPoints > 0;
+  const touchBelow = anchor.bottom + TOUCH_NATIVE_MENU_CLEARANCE;
+  const touchAbove = anchor.top - TOUCH_NATIVE_MENU_CLEARANCE - TOOLBAR_HEIGHT;
+  const touchTop = touchBelow + TOOLBAR_HEIGHT + VIEWPORT_EDGE_GAP <= window.innerHeight
+    ? touchBelow
+    : Math.max(VIEWPORT_EDGE_GAP, touchAbove);
+  const top = prefersBelowSelection
+    ? touchTop
+    : anchor.top > 56 ? anchor.top - 48 : anchor.bottom + 10;
   return {
     left: Math.max(8, Math.min(anchor.left - toolbarWidth / 2, window.innerWidth - toolbarWidth - 8)),
     noteLeft: Math.max(8, Math.min(anchor.left - notePanelWidth / 2, window.innerWidth - notePanelWidth - 8)),
-    noteTop: Math.max(8, anchor.bottom + 8),
+    noteTop: Math.max(8, prefersBelowSelection ? top + 48 : anchor.bottom + 8),
     top: Math.max(8, top)
   };
 }

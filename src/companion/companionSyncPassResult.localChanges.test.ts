@@ -52,10 +52,24 @@ describe('describeCompanionSyncPassResult local changes', () => {
   it('keeps resource backlog visible when push conflicts need review', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushConflictCount: 1,
+      pushIssueCount: null,
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
       message: '1 device change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
+      outcome: 'skipped',
+      result: 'waiting',
+      status: 'skipped'
+    });
+  });
+
+  it('uses the final issue count after pull resolves an earlier push conflict', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      localDirtyCount: 1,
+      pushConflictCount: 1,
+      pushIssueCount: 0
+    }))).toEqual({
+      message: 'Device changes are still waiting to sync.',
       outcome: 'skipped',
       result: 'waiting',
       status: 'skipped'

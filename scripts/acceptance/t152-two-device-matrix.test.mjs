@@ -146,7 +146,7 @@ it('keeps the formal path free of external discovery and product containers', ()
   expect(files).not.toMatch(/bonjour-service|new Bonjour|\bdns-sd\b|com\.foliole\.ios['"]/u);
   expect(files).not.toMatch(/protectData\('backup'|deviceBackupRoot/u);
   expect(files).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
-  expect(files).toContain('friAcceptanceBundle()');
-  expect(files).toContain('freshT152: true');
+  expect(files).toContain('friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID)');
+  expect(files).toContain("FOLIOLE_ACCEPTANCE_TASK_ID: 't152'");
   expect(androidBuild).toContain('FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID');
 });

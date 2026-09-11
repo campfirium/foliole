@@ -6,6 +6,7 @@ import {
   type SyncNodeAnchorRepairRecord,
   type SyncNodeAnchorUnmappedRecord
 } from './syncNodeAnchorRepair.js';
+import type { SyncNodeApplyOperation } from './syncNodeApplyRules.js';
 import {
   buildAttachmentExistsQuery,
   buildNodeAttachmentDelete,
@@ -54,7 +55,8 @@ async function upsertRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
   preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>,
-  nodeExists: boolean
+  nodeExists: boolean,
+  syncDirty: number
 ) {
   const content = record.snapshot.content ?? '';
   const preparedHash = preparedTextBodyHashes.get(record);
@@ -64,8 +66,8 @@ async function upsertRemoteNode(
   const bodyBlobHash = record.snapshot.body_blob_hash
     ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, preparedHash!);
   const statement = nodeExists
-    ? buildRemoteNodeUpdate(record, bodyBlobHash)
-    : buildRemoteNodeUpsert(record, bodyBlobHash);
+    ? buildRemoteNodeUpdate(record, bodyBlobHash, syncDirty)
+    : buildRemoteNodeUpsert(record, bodyBlobHash, syncDirty);
   await port.run(statement.sql, statement.params);
 }
 
@@ -90,9 +92,10 @@ async function applyRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
   preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>,
-  nodeExists: boolean
+  nodeExists: boolean,
+  syncDirty: number
 ) {
-  await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists);
+  await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists, syncDirty);
   await upsertRemoteVersion(port, record);
   await replaceNodeOrder(port, record);
   await replaceNodeAttachmentLinks(port, record);
@@ -101,6 +104,7 @@ async function applyRemoteNode(
 export async function applyAcceptedRemoteNode(input: {
   invalidatedAt: string;
   localNode: LocalSyncNodeSearchInvalidationState | null;
+  operation?: SyncNodeApplyOperation;
   options: AcceptedRemoteNodeOptions;
   preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>;
   record: NativeSyncNodeRecord;
@@ -108,7 +112,27 @@ export async function applyAcceptedRemoteNode(input: {
   result: AcceptedRemoteNodeResult;
   tx: DbPort;
 }) {
-  await applyRemoteNode(input.tx, input.record, input.preparedTextBodyHashes, input.localNode !== null);
+  const localMutation = input.operation === 'local_mutation' || input.operation === 'local_restore';
+  const previousState = localMutation
+    ? await queryOne<{ base_content_hash: string | null; content_hash: string; sync_dirty: number }>(
+      input.tx,
+      `SELECT base_content_hash, content_hash, sync_dirty FROM sync_object_state
+       WHERE object_type = 'node' AND object_id = ?`,
+      [input.record.object_id]
+    )
+    : null;
+  const baseContentHash = previousState
+    ? (previousState.sync_dirty === 1
+      ? previousState.base_content_hash ?? previousState.content_hash
+      : previousState.content_hash)
+    : null;
+  await applyRemoteNode(
+    input.tx,
+    input.record,
+    input.preparedTextBodyHashes,
+    input.localNode !== null,
+    0
+  );
   if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,
@@ -121,7 +145,10 @@ export async function applyAcceptedRemoteNode(input: {
     input.result.anchorRepairRecords.push(...repairResult.repaired);
     input.result.unmappedAnchorRecords.push(...repairResult.unmapped);
   }
-  await upsertAppliedNodeSyncState(input.tx, input.record);
+  await upsertAppliedNodeSyncState(input.tx, input.record, {
+    baseContentHash,
+    syncDirty: localMutation ? 1 : 0
+  });
   if (input.options.enqueueSearchInvalidations !== false) {
     await enqueueAppliedNodeSearchInvalidations(input.tx, input.localNode, input.record, input.invalidatedAt);
   }

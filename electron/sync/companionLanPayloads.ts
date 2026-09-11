@@ -5,6 +5,7 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
+import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -63,6 +64,7 @@ export function buildDiscoveryPayload(appVersion: string) {
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     provider_device_id: local.device_identity_key,
     provider_device_name: local.device_name,
-    provider_platform: resolveDesktopPlatformLabel()
+    provider_platform: resolveDesktopPlatformLabel(),
+    topology_role: loadDesktopAnchorTopologyState().role
   };
 }

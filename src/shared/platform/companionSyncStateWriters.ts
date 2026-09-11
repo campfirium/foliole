@@ -12,7 +12,10 @@ import {
   saveIosReview,
   saveIosSetting
 } from './companion/runtime/iosCompanionActiveDatabaseWrites';
-import { runCompanionSyncMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
+import {
+  runCompanionHighValueMutationTask,
+  runCompanionSyncMutationTask
+} from './companion/sync/mutation/companionSyncMutationRevision';
 import {
   getNativeCompanionSettingWritePlatform,
   isNativeCompanionOpenStateWriteRuntime,
@@ -72,7 +75,7 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
   if (!isNativeCompanionReadingWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncMutationTask(() => saveIosReading({
+  return runCompanionHighValueMutationTask(() => saveIosReading({
     node_id: args.nodeId,
     reading_json: JSON.stringify(toReadingPayload(args.reading))
   }));
@@ -84,7 +87,7 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   reviewLog?: NativeSyncReviewLogDraft;
 }) {
   if (!isNativeCompanionReviewWriteRuntime()) return null;
-  return runCompanionSyncMutationTask(() => saveCompanionSyncNodeReviewRecordWithinWriterTask(args));
+  return runCompanionHighValueMutationTask(() => saveCompanionSyncNodeReviewRecordWithinWriterTask(args));
 }
 
 export async function saveCompanionSyncNodeReviewRecordWithinWriterTask(args: {

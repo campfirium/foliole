@@ -59,6 +59,8 @@ export interface TryForegroundAutoSyncArgs {
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
+  onRunIdentified?(runId: string, mode: 'joined' | 'owned'): void;
+  runId?: string;
   state: NativeCompanionWorkspaceSyncState;
   triggerReason?: SyncTriggerReason;
 }
@@ -175,7 +177,16 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return 'skipped';
-  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl);
+  let targets;
+  try {
+    targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
+      allowWhileNotParticipating: args.triggerReason === 'manual'
+    });
+  } catch (error) {
+    args.setError(error instanceof Error ? error.message : 'discovery_waiting_anchor');
+    args.setStatus('idle');
+    return 'failed';
+  }
   const outcomes: ForegroundAutoSyncOutcome[] = [];
   try {
     for (const target of targets) {

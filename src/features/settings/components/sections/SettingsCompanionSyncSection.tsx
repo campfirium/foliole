@@ -110,6 +110,8 @@ export function SettingsCompanionSyncSection() {
         onReject={(id) => void state.rejectRequest(id)}
         joinRequests={state.overview.join_requests}
         joinRequest={state.overview.join_request ?? null}
+        topologyRole={state.overview.server_status.topology_role}
+        topologyStatus={state.overview.server_status.topology_status}
         syncPaused={state.overview.sync_paused}
       />
       {state.error ? (

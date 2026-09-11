@@ -27,7 +27,10 @@ function fixture() {
 }
 
 it('runs the Windows C Electron journey in the bounded interactive user task', async () => {
-  const options = { action: 'multi-device-sync-c', buildIdentity: 'candidate-1',
+  const candidateBoundary = { branch: 'sync', clean: true, committed: true,
+    revision: 'a'.repeat(40), sourceRef: 'refs/heads/sync',
+    sourceRoot: 'D:\\C\\foliole-sync', treeDigest: 'b'.repeat(40) };
+  const options = { action: 'multi-device-sync-c', buildIdentity: 'candidate-1', candidateBoundary,
     execute: vi.fn(async () => ({ code: 0 })), ...fixture() };
   const installTask = vi.fn(async () => undefined);
   const actionResult = { multiDeviceSyncC: { manifestPath: 'receipt.json' }, output: '' };
@@ -46,7 +49,8 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
     expect.objectContaining({ resultTimeoutMs: 20 * 60_000, startTimeoutMs: 30_000 }));
   expect(waitForWorkerExit).toHaveBeenCalledWith(1234);
   const request = readJson(syncGroupInteractivePaths(options.paths.repoRoot).request);
-  expect(request).toMatchObject({ action: options.action, evidenceRoot: options.evidenceRoot, schemaVersion: 1 });
+  expect(request).toMatchObject({ action: options.action, candidateBoundary,
+    evidenceRoot: options.evidenceRoot, schemaVersion: 1 });
   expect(fs.existsSync(interactive.providerRelease)).toBe(false);
 });
 
@@ -104,6 +108,16 @@ it('accepts only registered actions and evidence inside the action-owned root', 
     factId: 'two-device-sync', milestone: 'automatic-converged'
   }, 'two-device-sync-provider')).toEqual({
     factId: 'two-device-sync', milestone: 'automatic-converged'
+  });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'two-device-sync', milestone: 'conflict-fork-ready'
+  }, 'two-device-sync-provider')).toEqual({
+    factId: 'two-device-sync', milestone: 'conflict-fork-ready'
+  });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'two-device-sync', milestone: 'conflict-sync-resumed'
+  }, 'two-device-sync-provider')).toEqual({
+    factId: 'two-device-sync', milestone: 'conflict-sync-resumed'
   });
   expect(validateSyncGroupInteractiveProgress({
     factId: 'single-principal-sync-group', milestone: 'restarted'

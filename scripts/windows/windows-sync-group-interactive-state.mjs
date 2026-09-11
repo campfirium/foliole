@@ -4,6 +4,7 @@ import {
   interactiveStatePaths, readJson, writeJsonAtomic
 } from './windows-client-native-interactive-state.mjs';
 import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-contract.mjs';
+import { assertT173CandidateBoundary } from './t173-windows-candidate-contract.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
   'desktop-dnssd-advertise-acceptance', 'desktop-dnssd-find-acceptance',
@@ -46,6 +47,10 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
       && /^[0-9a-f]{32}$/u.test(request.expectedGroupTag ?? '')
     : request.expectedGroupId === undefined && request.expectedGroupTag === undefined;
   if (!expectedAllowed) throw new Error('invalid Sync Group interactive request');
+  if (request.candidateBoundary !== undefined) {
+    try { assertT173CandidateBoundary(request.candidateBoundary); }
+    catch { throw new Error('invalid Sync Group interactive request'); }
+  }
   return { ...request, evidenceRoot };
 }
 
@@ -76,7 +81,8 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
     return { factId: progress.factId, milestone: progress.milestone };
   }
   if (action === 'two-device-sync-provider'
-      && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged', 'restarted']
+      && ['provider-ready', 'request-pending', 'accepted', 'automatic-converged',
+        'conflict-fork-ready', 'conflict-sync-resumed', 'restarted']
         .includes(progress?.milestone)
       && progress.factId === 'two-device-sync') {
     if (progress.milestone === 'provider-ready'

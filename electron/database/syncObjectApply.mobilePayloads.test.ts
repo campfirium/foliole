@@ -113,3 +113,40 @@ it('does not let an initial review payload overwrite an already reviewed card', 
     ['node-1']
   )).toEqual({ due: '2026-04-25T08:10:00.000Z', reps: 4 });
 });
+
+it('supersedes an older same-host text alternative before applying its replacement', async () => {
+  insertNode('node-1');
+  const alternative = (id: string, version: string, updatedAt: string) => ({
+    content_hash: `hash-${id}`,
+    deleted_at: null,
+    object_id: id,
+    object_type: 'node_text_alternative' as const,
+    payload_json: JSON.stringify({
+      alternative_id: id,
+      body_text: `Body ${version}`,
+      created_at: updatedAt,
+      node_id: 'node-1',
+      source_host_name: 'desktop-resolution',
+      source_version_id: version,
+      status: 'available',
+      updated_at: updatedAt
+    }),
+    updated_at: updatedAt
+  });
+
+  await expect(applySyncObjectsAsync([
+    alternative('alternative-old', 'version-old', '2026-04-22T08:10:00.000Z'),
+    alternative('alternative-new', 'version-new', '2026-04-22T08:11:00.000Z')
+  ])).resolves.toEqual([
+    'node_text_alternative:alternative-old',
+    'node_text_alternative:alternative-new'
+  ]);
+
+  expect(openDatabaseConnection().driver.queryAll<{ alternative_id: string; status: string }>(
+    `SELECT alternative_id, status FROM node_text_alternatives
+     WHERE node_id = 'node-1' ORDER BY alternative_id`
+  )).toEqual([
+    { alternative_id: 'alternative-new', status: 'available' },
+    { alternative_id: 'alternative-old', status: 'superseded' }
+  ]);
+});

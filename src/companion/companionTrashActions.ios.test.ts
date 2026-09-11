@@ -56,7 +56,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('persists and pushes an iOS trash restore while keeping its interaction hidden', async () => {
+it('persists and pushes an available iOS trash restore', async () => {
   database = new Database(':memory:');
   installCompanionNodeSchema(database);
   seedTrashedNode(database);
@@ -73,7 +73,7 @@ it('persists and pushes an iOS trash restore while keeping its interaction hidde
   expect(result).not.toBeNull();
   expect(result?.snapshot.nodesById['topic-trash']?.deletedAt).toBeNull();
   expect(result?.snapshot.trashedNodeIds).toEqual([]);
-  expect(supportsCompanionNodeMutationSurface('trash-restore')).toBe(false);
+  expect(supportsCompanionNodeMutationSurface('trash-restore')).toBe(true);
   expect(database.prepare(
     'SELECT current_version_id, deleted_at, sync_dirty FROM nodes WHERE id = ?'
   ).get('topic-trash')).toEqual({

@@ -1,5 +1,4 @@
 /* global process */
-
 import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -19,17 +18,23 @@ import {
   captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog
 } from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
+import { waitForWindowsDatabaseFile } from './windows-sync-group-database-readiness.mjs';
+import {
+  invokeWindowsSyncGroupCommand, waitForJoinedGroup
+} from './windows-sync-group-join-completion.mjs';
 
-export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
-  return page.evaluate(async ({ command, args }) => {
-    if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
-    return globalThis.electronAPI.invoke(command, args);
-  }, { args, command });
-}
+export { invokeWindowsSyncGroupCommand, waitForJoinedGroup };
 
 export function windowsSyncGroupClientPaths(paths) {
   const root = path.join(windowsAcceptanceRoot(paths), 'client');
   return { libraryHome: path.join(root, 'library'), userData: path.join(root, 'user-data') };
+}
+
+export async function waitForWindowsClientDatabase(paths, {
+  exists = fs.existsSync, pause = delay, timeoutMs = 30_000
+} = {}) {
+  const databasePath = path.join(windowsSyncGroupClientPaths(paths).libraryHome, 'Data', 'foliole.db');
+  return waitForWindowsDatabaseFile(databasePath, { exists, pause, timeoutMs });
 }
 
 function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
@@ -58,6 +63,7 @@ export async function openWindowsSyncGroupSession(
   await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
     timeout: 90_000
   });
+  await waitForWindowsClientDatabase(paths);
   return { app, page, ...progress };
 }
 
@@ -72,19 +78,6 @@ export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () 
     await delay(1_000);
   }
   throw new Error('Timed out discovering a compatible Sync Group.');
-}
-
-export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const overview = await invokeWindowsSyncGroupCommand(page, 'load_sync_group_overview');
-    if (overview.sync_group?.group_id === expectedGroupId
-        && overview.sync_group.devices.some((device) =>
-          device.device_identity_key === overview.sync_group.local_device_identity_key
-          && device.state === 'active')) return overview;
-    await delay(1_000);
-  }
-  throw new Error('Timed out waiting for ordinary Sync Group synchronization.');
 }
 
 async function waitForOrdinarySyncFacts(
@@ -125,7 +118,11 @@ export async function inspectWindowsSyncGroupDatabase(execute, paths, databasePa
     cwd: paths.repoRoot, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     timeoutCode: 'sync_group_inspect_timeout', timeoutMs: 30_000, windowsHide: true
   });
-  if (result.code !== 0) throw new Error('Windows C database inspection failed.');
+  if (result.code !== 0) {
+    const detail = `${result.stderr ?? ''}${result.stdout ?? ''}`.trim()
+      .split(/\r?\n/u).slice(-12).join(' | ');
+    throw new Error(`Windows C database inspection failed: ${detail || `exit_${result.code}`}`);
+  }
   return JSON.parse(result.stdout.trim());
 }
 

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
@@ -59,6 +60,7 @@ async function connect(endpoint) {
 
 export function isDesktopWorkspaceUrl(value) {
   return /^file:\/\/\/.*\/dist\/desktop\/index\.html(?:[?#].*)?$/u.test(value)
+    || /^file:\/\/\/.*\/\.tmp\/artifacts\/client-control-runtime\/[^/]+\/state\/user-data\/runtime-renderer-index\.html(?:[?#].*)?$/u.test(value)
     || /^http:\/\/127\.0\.0\.1:\d+\/(?:[?#].*)?$/u.test(value);
 }
 
@@ -112,19 +114,25 @@ async function formGroup(owner, joiner) {
   return ownerGroup;
 }
 
-function exactNode(snapshot, expected) {
+export function exactSnapshotNode(snapshot, expected) {
   const node = snapshot.nodesById[expected.nodeId];
-  return { content: node?.content, nodeId: node?.nodeId,
-    title: node?.title, updatedAt: node?.updatedAt };
+  return { bodyBlobHash: node?.bodyBlobHash, nodeId: node?.id ?? node?.nodeId,
+    title: node?.title };
+}
+
+export function expectedSnapshotNode(expected) {
+  return { bodyBlobHash: createHash('sha256').update(expected.content).digest('hex'),
+    nodeId: expected.nodeId, title: expected.title };
 }
 
 async function observeNode(page, expected) {
+  const projected = expectedSnapshotNode(expected);
   const snapshot = await waitForDesktopProductState(page, {
     command: 'load_workspace_list_snapshot', commandArgs: { includePdfOpenings: false },
-    condition: { kind: 'exact-node', ...expected }, eventName: 'onWorkspaceSyncApplied',
+    condition: { kind: 'exact-node', ...projected }, eventName: 'onWorkspaceSyncApplied',
     timeoutMs: 90_000
   });
-  if (JSON.stringify(exactNode(snapshot, expected)) !== JSON.stringify(expected)) {
+  if (JSON.stringify(exactSnapshotNode(snapshot, expected)) !== JSON.stringify(projected)) {
     throw new Error(`Exact topic did not converge: ${expected.nodeId}`);
   }
 }

@@ -20,7 +20,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView);
-        waitForProviderAdvertisement();
+        waitForProviderRequest();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
@@ -40,7 +40,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             WebView webView = activity.findViewById(R.id.webview);
             long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
             openSyncSettings(instrumentation, webView);
-            waitForProviderAdvertisement();
+            waitForProviderRequest();
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-approve", deadline
             );
@@ -72,19 +72,18 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         );
     }
 
-    private static void waitForProviderAdvertisement() throws Exception {
+    private static void waitForProviderRequest() throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
             latest = FolioleCompanionSyncGroupProvider.state();
-            String state = latest.optString("advertisement_state");
-            if ("registered".equals(state)) return;
-            if ("failed".equals(state)) {
-                throw new IllegalStateException("Provider advertisement failed: " + latest);
-            }
+            JSONArray pending = latest.optJSONArray("pending_requests");
+            int port = latest.optInt("port", 0);
+            if ("running".equals(latest.optString("state")) && port > 0
+                && pending != null && pending.length() == 1) return;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Provider advertisement unavailable: " + latest);
+        throw new IllegalStateException("Provider request unavailable: " + latest);
     }
 
     private static String pendingRequestId() throws Exception {

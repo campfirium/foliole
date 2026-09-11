@@ -24,14 +24,14 @@ vi.mock('./syncGroupRuntimeInstance.js', () => ({
 }));
 
 import {
-  refreshCompanionMdnsAdvertisement,
   startCompanionMdnsAdvertisement,
-  stopCompanionMdnsAdvertisement
+  stopCompanionMdnsAdvertisement,
+  updateCompanionMdnsAdvertisementRole
 } from './companionMdnsAdvertisement.js';
 
 const input = {
   appVersion: '0.1.0-test', deviceId: 'desktop-local', groupDisplayName: 'V',
-  groupId: 'group-1', groupTag: 'tag-1', port: 38683
+  groupId: 'group-1', groupTag: 'tag-1', port: 38683, role: 'observing' as const
 };
 
 beforeEach(() => {
@@ -51,11 +51,12 @@ describe('desktop OS DNS-SD advertisement', () => {
 
     expect(runtime.register).toHaveBeenCalledOnce();
     expect(runtime.register).toHaveBeenCalledWith({
-      domain: 'local.', name: expect.stringMatching(/^V-runtimed-r[0-9a-z]+$/u),
+      domain: 'local.', name: 'V-runtimed-observing',
       port: 38683, type: '_foliole-sync._tcp',
       txt: { app_version: '0.1.0-test', device_id: 'desktop-local',
-        facts_revision: expect.any(String), group_id: 'group-1', group_tag: 'tag-1',
+        group_id: 'group-1', group_tag: 'tag-1', provider_platform: process.platform,
         ipv4_addresses: '192.168.0.11', runtime_instance_id: 'runtime-desktop-v',
+        topology_role: 'observing',
         ...serializeSyncProtocolTxt() }
     });
   });
@@ -71,34 +72,30 @@ describe('desktop OS DNS-SD advertisement', () => {
     expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 
-  it('withdraws the old registration before publishing refreshed facts', async () => {
+  it('withdraws the old registration only when the topology role changes', async () => {
     const ready = startCompanionMdnsAdvertisement(input);
     runtime.callbacks[0]?.({ kind: 'registered', service: {} });
     await ready;
-    const refreshed = refreshCompanionMdnsAdvertisement();
+    const refreshed = updateCompanionMdnsAdvertisementRole('anchor');
     await vi.waitFor(() => expect(runtime.register).toHaveBeenCalledTimes(2));
     runtime.callbacks[1]?.({ kind: 'registered', service: {} });
     await refreshed;
 
-    const names = runtime.register.mock.calls.map(([entry]) => (entry as { name: string }).name);
-    expect(names[1]).not.toBe(names[0]);
+    expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
+      name: 'V-runtimed-anchor',
+      txt: expect.objectContaining({ topology_role: 'anchor' })
+    });
     expect(runtime.cancel).toHaveBeenCalledOnce();
   });
 
-  it('waits for startup registration before superseding it with refreshed facts', async () => {
+  it('does not rebuild the provider when the topology role is unchanged', async () => {
     const ready = startCompanionMdnsAdvertisement(input);
-    const refreshed = refreshCompanionMdnsAdvertisement();
-
-    await Promise.resolve();
-    expect(runtime.register).toHaveBeenCalledOnce();
-    expect(runtime.cancel).not.toHaveBeenCalled();
     runtime.callbacks[0]?.({ kind: 'registered', service: {} });
     await ready;
-    await vi.waitFor(() => expect(runtime.register).toHaveBeenCalledTimes(2));
-    runtime.callbacks[1]?.({ kind: 'registered', service: {} });
-    await refreshed;
+    await updateCompanionMdnsAdvertisementRole('observing');
 
-    expect(runtime.cancel).toHaveBeenCalledOnce();
+    expect(runtime.register).toHaveBeenCalledOnce();
+    expect(runtime.cancel).not.toHaveBeenCalled();
   });
 
   it('cancels exactly the active system registration when stopped', async () => {

@@ -4,7 +4,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
-import { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
+import {
+  applyCompanionLocalNodeVersions,
+  applyCompanionSyncNodeVersions
+} from './companionSyncNodeVersions';
 import {
   createFakeCapacitorConnection,
   installCompanionNodeSchema
@@ -28,7 +31,7 @@ afterEach(() => {
   database = null;
 });
 
-it('persists an iOS node version through the shared core while keeping mutation UI gated', async () => {
+it('persists an iOS node version through the shared core with mutation UI available', async () => {
   database = new Database(':memory:');
   installCompanionNodeSchema(database);
   const connection = createConnection(database);
@@ -41,7 +44,7 @@ it('persists an iOS node version through the shared core while keeping mutation 
   await expect(applyCompanionSyncNodeVersions([iosNodeVersion()], manager as never))
     .resolves.toEqual(['ios-node-1']);
 
-  expect(supportsCompanionNodeMutationSurface('quick-capture')).toBe(false);
+  expect(supportsCompanionNodeMutationSurface('quick-capture')).toBe(true);
   expect(manager.createConnection).toHaveBeenCalledWith(
     'foliole-companion',
     false,
@@ -56,6 +59,75 @@ it('persists an iOS node version through the shared core while keeping mutation 
     title: 'iOS prepared node'
   });
 });
+
+it('tracks a local iOS version as pending without blocking its converged descendant', async () => {
+  database = new Database(':memory:');
+  installCompanionNodeSchema(database);
+  const connection = createConnection(database);
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+  const remote = iosNodeVersion();
+  await applyCompanionSyncNodeVersions([remote], manager as never);
+  const local = {
+    ...remote,
+    content_hash: 'ios-local-hash',
+    parent_version_id: remote.version_id,
+    snapshot: {
+      ...remote.snapshot,
+      content: 'Locally edited body',
+      updated_at: '2026-07-21T00:01:00.000Z'
+    },
+    updated_at: '2026-07-21T00:01:00.000Z',
+    version_created_at: '2026-07-21T00:01:00.000Z',
+    version_id: 'ios-device#2'
+  } satisfies NativeSyncNodeRecord;
+
+  await expect(applyCompanionLocalNodeVersions([local], manager as never))
+    .resolves.toEqual(['ios-node-1']);
+
+  expect(database.prepare(
+    'SELECT current_version_id, sync_dirty FROM nodes WHERE id = ?'
+  ).get('ios-node-1')).toEqual({ current_version_id: 'ios-device#2', sync_dirty: 0 });
+  expect(database.prepare(
+    `SELECT base_content_hash, content_hash, sync_dirty FROM sync_object_state
+     WHERE object_type = 'node' AND object_id = ?`
+  ).get('ios-node-1')).toEqual({
+    base_content_hash: 'ios-node-hash',
+    content_hash: 'ios-local-hash',
+    sync_dirty: 1
+  });
+
+  await expect(applyCompanionSyncNodeVersions([desktopResolution(local, remote)], manager as never))
+    .resolves.toEqual(['ios-node-1']);
+  expect(database.prepare(
+    'SELECT content, current_version_id FROM nodes WHERE id = ?'
+  ).get('ios-node-1')).toEqual({
+    content: 'Locally edited body\nDesktop edit',
+    current_version_id: 'desktop#resolution'
+  });
+});
+
+function desktopResolution(
+  local: NativeSyncNodeRecord,
+  remote: NativeSyncNodeRecord
+): NativeSyncNodeRecord {
+  const updatedAt = '2026-07-21T00:02:00.000Z';
+  return {
+    ...local,
+    ancestor_version_ids: [remote.version_id!, local.version_id!],
+    content_hash: 'desktop-resolution-hash',
+    host_name: 'desktop-resolution',
+    parent_version_id: local.version_id,
+    parent_version_ids: [local.version_id!],
+    snapshot: { ...local.snapshot, content: 'Locally edited body\nDesktop edit', updated_at: updatedAt },
+    updated_at: updatedAt,
+    version_created_at: updatedAt,
+    version_id: 'desktop#resolution'
+  };
+}
 
 function iosNodeVersion(): NativeSyncNodeRecord {
   return {

@@ -30,17 +30,19 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(inspector).toContain('activeHosts');
   expect(inspector).not.toContain("key IN ('device_id', 'desktop_device_id')");
   expect(inspector).toContain(
-    'localAuthorizationFingerprint: identity.localMemberAuthorizationFingerprint'
+    'localAuthorizationFingerprint: identityFingerprint(local?.local_device_identity_key)'
   );
   expect(inspector).toContain('userNodeCount');
-  expect(inspector).toContain("members.state = 'left'");
+  expect(inspector).toContain("FROM sync_group_devices WHERE state = 'left'");
+  expect(inspector).not.toContain('FROM sync_group_member_departures');
+  expect(inspector).not.toContain('FROM sync_group_members');
   expect(remote).toContain('initial=${JSON.stringify(initialFacts)}');
   expect(remote).toContain("ELECTRON_RUN_AS_NODE: '1'");
   expect(remote).not.toContain("from 'better-sqlite3'");
   expect(inspector).toContain("from 'better-sqlite3'");
   expect(inspector).toContain('readonly: true');
-  expect(inspector).toContain('SELECT authorization_id, stream_name, cursor_value');
-  expect(inspector).not.toContain('SELECT peer_id, stream_name, cursor_value');
+  expect(inspector).toContain('SELECT peer_id, stream_name, cursor_value');
+  expect(inspector).not.toContain('SELECT authorization_id, stream_name, cursor_value');
   expect(remote).toContain('suspendWindowsNativeClient');
   expect(remote).toContain('restoreWindowsNativeClient');
   expect(remote).toContain('else primaryError = cleanupError;');

@@ -15,7 +15,7 @@ export function loadSyncPackNodeVersionRows(
   const ordered: SyncPackNodeVersionRow[] = [];
   const visited = new Map<string, string>();
   for (const node of [...nodes].sort((left, right) => left.id.localeCompare(right.id))) {
-    loadCurrentVersion(driver, node.id, node.current_version_id, visited, ordered);
+    loadVersionLineage(driver, node.id, node.current_version_id, visited, ordered, true);
   }
   return ordered;
 }
@@ -43,12 +43,13 @@ export function loadSyncPackNodeVersionParentRows(
   });
 }
 
-function loadCurrentVersion(
+function loadVersionLineage(
   driver: DatabaseDriver,
   objectId: string,
   versionId: string | null,
   visited: Map<string, string>,
-  ordered: SyncPackNodeVersionRow[]
+  ordered: SyncPackNodeVersionRow[],
+  required = false
 ) {
   if (versionId === null) return;
   const visitedObjectId = visited.get(versionId);
@@ -61,11 +62,27 @@ function loadCurrentVersion(
      FROM node_sync_versions WHERE version_id = ?`,
     [versionId]
   );
-  if (!row) throw new Error(`sync_pack_node_version_missing:${versionId}`);
+  if (!row) {
+    if (required) throw new Error(`sync_pack_node_version_missing:${versionId}`);
+    return;
+  }
   if (row.object_id !== objectId) {
     throw new Error(`sync_pack_node_version_cross_object:${versionId}`);
   }
   assertValidNodeVersionSnapshot(row);
   visited.set(versionId, objectId);
+  for (const parentVersionId of loadParentVersionIds(driver, row)) {
+    loadVersionLineage(driver, objectId, parentVersionId, visited, ordered);
+  }
   ordered.push(row);
+}
+
+function loadParentVersionIds(driver: DatabaseDriver, row: SyncPackNodeVersionRow) {
+  const rows = driver.queryAll<{ parent_version_id: string }>(
+    `SELECT parent_version_id FROM node_sync_version_parents
+     WHERE version_id = ? ORDER BY ordinal ASC`,
+    [row.version_id]
+  );
+  if (rows.length > 0) return rows.map((parent) => parent.parent_version_id);
+  return row.parent_version_id ? [row.parent_version_id] : [];
 }

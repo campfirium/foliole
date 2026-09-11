@@ -59,3 +59,47 @@ it('reports an old bridge as incompatible without a timed fallback', async () =>
   expect(snapshots).toEqual([expect.objectContaining({ status: 'incompatible' })]);
   expect(runtime.load).not.toHaveBeenCalled();
 });
+
+it('shows that a mobile-only group is waiting for a desktop anchor', async () => {
+  const subscription: { listener?: (event: CompanionNativeDiscoveryEvent) => void } = {};
+  runtime.addListener.mockImplementation(async (_name, next) => {
+    subscription.listener = next;
+    return { remove: runtime.remove };
+  });
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  await startCompanionSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot));
+
+  subscription.listener?.({ candidates: [{
+    endpoint_url: 'http://iphone:38641', source: 'nsd',
+    protocol_txt: { provider_platform: 'ios-capacitor' }
+  }], change: 'found', error_code: null, status: 'results' });
+
+  expect(snapshots.at(-1)).toEqual(expect.objectContaining({ candidates: [], status: 'waiting_anchor' }));
+  expect(runtime.load).not.toHaveBeenCalled();
+});
+
+it('publishes one join result when several members advertise the same Sync Group', async () => {
+  runtime.start.mockResolvedValue({ candidates: [
+    { endpoint_url: 'http://android:38643', protocol_txt: {
+      provider_platform: 'android-capacitor' }, source: 'nsd' },
+    { endpoint_url: 'http://windows:38641', protocol_txt: {
+      provider_platform: 'windows', topology_role: 'anchor' }, source: 'nsd' }
+  ], change: 'found', error_code: null, status: 'results' });
+  runtime.load.mockResolvedValue([
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://android:38643', discovery: {
+      group_display_name: 'Studio', group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'android', provider_device_name: 'A5', provider_platform: 'android-capacitor'
+    } },
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://windows:38641', discovery: {
+      group_display_name: 'Studio', group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'windows', provider_device_name: 'V', provider_platform: 'windows'
+    } }
+  ]);
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+
+  await startCompanionSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot));
+
+  expect(snapshots.at(-1)?.candidates).toEqual([
+    expect.objectContaining({ endpoint_url: 'http://windows:38641', group_id: 'group-1' })
+  ]);
+});

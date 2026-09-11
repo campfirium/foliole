@@ -5,6 +5,7 @@ import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 
 const markdownEditorMock = vi.hoisted(() => ({
   props: null as null | {
+    ariaLabel?: string;
     onBlurCapture?: () => void;
     onChange: (content: string) => void;
     hideTitleHeading?: boolean;
@@ -79,6 +80,8 @@ describe('ReadableArticleDocument editing', () => {
   it('flushes explicitly editable content on blur through the save handler', () => {
     const onSaveContent = vi.fn(async () => undefined);
     renderReadableArticleDocument({ allowContentEditing: true, onSaveContent });
+
+    expect(markdownEditorMock.props?.ariaLabel).toBe('Topic body');
 
     fireEvent.change(screen.getByLabelText('Topic body'), { target: { value: 'Edited body' } });
     expect(onSaveContent).not.toHaveBeenCalled();

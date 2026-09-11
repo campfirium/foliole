@@ -88,6 +88,41 @@ it('maps the fixed device port to an explicit isolated macOS listener', async ()
     '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
 });
 
+it('can exercise public Sync Now through the discovered LAN anchor without adb reverse', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const mechanics = vi.fn(async () => ({ evidencePath: '/evidence/raw.json', stdout: [
+    'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed"}',
+    'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+    'INSTRUMENTATION_CODE: -1'
+  ].join('\n') }));
+  await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity: 'lan-anchor',
+    env: {}, evidenceRoot: root, execute: vi.fn(), mechanics,
+    paths: {}, serial: '87a33a4b', transportRequired: false });
+  expect(mechanics).toHaveBeenCalledWith(expect.objectContaining({ needsTransport: false }));
+});
+
+it('quotes journey counts across the adb shell boundary', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'instrumentation',
+    stdout: [
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"journeyFactsObserved":true}',
+      'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+      'INSTRUMENTATION_CODE: -1'
+    ].join('\n')
+  } : successfulAdbResult(args));
+  await runMacosA5SyncGroupMaintenance({
+    action: 'observe-journey-facts', buildIdentity: 'quoted-counts', env: {}, evidenceRoot: root,
+    execute, expectedJourneyCounts: { A: 1, B: 1, C: 1 },
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
+  });
+  const instrument = execute.mock.calls.find(([, args]) => args.includes('instrument'))?.[1];
+  expect(instrument).toContain('\'{"A":1,"B":1,"C":1}\'');
+});
+
 it('accepts an already absent owned reverse listener before the single bind', async () => {
   const root = createTestRoot();
   roots.push(root);
@@ -126,6 +161,27 @@ it('returns an abnormal instrumentation exit as raw controller failure', async (
   })).rejects.toMatchObject({
     executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
     missingFact: 'android_instrumentation_terminal'
+  });
+});
+
+it('rejects a failed Android test even when am instrument exits zero', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const stdout = [
+    'INSTRUMENTATION_STATUS_CODE: -2', 'FAILURES!!!', 'Tests run: 1, Failures: 1',
+    'INSTRUMENTATION_CODE: -1'
+  ].join('\n');
+  const execute = vi.fn(async (_command, args) => args.includes('instrument')
+    ? { code: 0, output: stdout, stdout }
+    : successfulAdbResult(args));
+
+  await expect(runMacosA5SyncGroupMaintenance({
+    action: 'leave-sync-group', buildIdentity: 'build-test-failed', env: {}, evidenceRoot: root,
+    execute, paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
+    serial: '87a33a4b'
+  })).rejects.toMatchObject({
+    executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
+    missingFact: 'android_instrumentation_test_success'
   });
 });
 

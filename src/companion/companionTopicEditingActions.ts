@@ -2,7 +2,7 @@ import { remapStoredTextAnchorLink } from '../../lib/core/database/storedAnchorL
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
-import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
+import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import {
@@ -110,7 +110,7 @@ export async function persistCompanionTopicContent(args: PersistCompanionTopicCo
     snapshot: args.snapshot,
     timestamp
   });
-  await applyCompanionSyncNodeVersions([parentVersioned.nodeVersion, ...remappedChildren.versions]);
+  await applyCompanionLocalNodeVersions([parentVersioned.nodeVersion, ...remappedChildren.versions]);
   return {
     nodeId: parentVersioned.node.id,
     snapshot: {

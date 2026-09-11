@@ -1,6 +1,6 @@
 import { BrowserWindow, type BrowserWindow as ElectronBrowserWindow } from 'electron';
 
-import { refreshCompanionMdnsAdvertisement } from '../sync/companionMdnsAdvertisement.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import {
   IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL,
@@ -11,8 +11,11 @@ const WORKSPACE_CONTENT_CHANGED_PAYLOAD: WorkspaceContentChangedEvent = {
   scope: 'workspace'
 };
 
-export function notifyWorkspaceContentChanged(excludedWindow: ElectronBrowserWindow | null = null) {
-  refreshCompanionMdnsAdvertisement();
+export function notifyWorkspaceContentChanged(
+  excludedWindow: ElectronBrowserWindow | null = null,
+  options: { requestSync?: boolean } = {}
+) {
+  if (options.requestSync !== false) void requestDesktopHighValueSync();
   const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
   for (const window of windows) {
     if (window === excludedWindow || window.isDestroyed()) {

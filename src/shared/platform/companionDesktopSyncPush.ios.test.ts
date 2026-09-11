@@ -138,3 +138,21 @@ it('pushes iOS state through the macOS shared protocol', async () => {
   );
   expect(storeMock.savePushAcks).toHaveBeenCalledTimes(1);
 });
+
+it('pushes review backlog after its node review state was already accepted', async () => {
+  storeMock.loadStateChanges.mockResolvedValueOnce([]);
+  httpMock.post.mockResolvedValueOnce({ acks: [{
+    client_op_id: 'review_log:op-1',
+    identity: { objectId: 'op-1', objectType: 'review_log', scope: 'workspace' },
+    status: 'accepted'
+  }] });
+  const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
+
+  await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toMatchObject({
+    pushedReviewOpIds: ['op-1'], pushError: null
+  });
+  expect(httpMock.post).toHaveBeenCalledWith(
+    'http://desktop.local', '/companion/sync-push',
+    { items: [expect.objectContaining({ clientOpId: 'review_log:op-1' })] }
+  );
+});

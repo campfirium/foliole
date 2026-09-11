@@ -107,6 +107,10 @@ it('creates one multi-parent resolution for non-overlapping text edits', async (
     `SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ? ORDER BY ordinal`,
     [node!.current_version_id]
   )).toEqual([{ parent_version_id: 'android#branch' }, { parent_version_id: 'desktop#local' }]);
+  expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; sync_dirty: number }>(
+    `SELECT current_version_id, sync_dirty FROM sync_object_state
+     WHERE object_type = 'node' AND object_id = 'topic-1'`
+  )).toEqual({ current_version_id: node?.current_version_id, sync_dirty: 1 });
 });
 
 it('keeps one simple alternative when overlapping text edits cannot merge', async () => {

@@ -62,6 +62,12 @@ async function foregroundInstrumentationTarget(execute, paths, serial, appId, op
   });
 }
 
+function instrumentationReportedFailure(stdout) {
+  return /^INSTRUMENTATION_STATUS_CODE: -2$/mu.test(stdout)
+    || /^FAILURES!!!$/mu.test(stdout)
+    || /^INSTRUMENTATION_RESULT: shortMsg=/mu.test(stdout);
+}
+
 export async function runMacosA5InstrumentationMechanics({
   appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
   expectedGroupId, expectedGroupTag, instrumentationArgs = [],
@@ -173,6 +179,12 @@ export async function runMacosA5InstrumentationMechanics({
     if (!releaseAfterObservation && !/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) {
       throw executionFailure('Instrumentation did not finish normally.', {
         missingFact: 'android_instrumentation_terminal', result: instrumentation,
+        stage: 'instrumentation'
+      });
+    }
+    if (instrumentationReportedFailure(instrumentation.stdout)) {
+      throw executionFailure('Instrumentation reported a test failure.', {
+        missingFact: 'android_instrumentation_test_success', result: instrumentation,
         stage: 'instrumentation'
       });
     }

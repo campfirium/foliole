@@ -12,7 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class FolioleCompanionSyncGroupServer {
-    private static final int SYNC_PORT = 38641;
+    private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;
     private final Context context;
     private final JSONObject config;
     private final FolioleCompanionSyncGroupDataBridge dataBridge;
@@ -20,14 +20,15 @@ final class FolioleCompanionSyncGroupServer {
     private final FolioleCompanionJoinRequestProvider joins;
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
+    private final Runnable stateChanged;
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
         Context context, JSONObject config, FolioleCompanionJoinRequestProvider joins,
-        FolioleCompanionSyncGroupDataBridge dataBridge
+        FolioleCompanionSyncGroupDataBridge dataBridge, Runnable stateChanged
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config;
-        this.joins = joins; this.dataBridge = dataBridge;
+        this.joins = joins; this.dataBridge = dataBridge; this.stateChanged = stateChanged;
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
@@ -86,12 +87,13 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_device_id", config.getString("device_id"))
             .put("provider_device_name", config.getString("device_name"))
             .put("provider_platform", config.getString("platform"))
+            .put("topology_role", config.getString("topology_role"))
             .put("runtime_instance_id", config.getString("runtime_instance_id")));
     }
 
     private void createJoin(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         JSONObject result = joins.receive(new JSONObject(request.bodyText()), System.currentTimeMillis());
-        FolioleCompanionSyncGroupProvider.state();
+        stateChanged.run();
         FolioleCompanionHttpResponse.json(output, 202, result);
     }
 

@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.foliole.android"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures {
+        buildConfig true
+    }
     compileOptions {
         coreLibraryDesugaringEnabled true
     }
@@ -11,6 +14,8 @@ android {
     }
     defaultConfig {
         applicationId System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.foliole.android"
+        buildConfigField "int", "FOLIOLE_COMPANION_SYNC_PORT",
+            System.getenv("FOLIOLE_ANDROID_COMPANION_SYNC_PORT") ?: "38641"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

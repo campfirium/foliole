@@ -16,8 +16,9 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertBidirectionalConvergence, factObservation
 } from './sync-scenario-predicate.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 export async function runABConvergenceJourney(actions) {
   let session;
@@ -109,23 +110,23 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
 }
 
 async function syncAndroidFact({ env, evidenceRoot, execute, factId, paths, runId, session }) {
-  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-sync'), execute,
     installMain: false, observeWhileTransportOpen: () => waitForDesktopFact(session, factId),
-    paths, serial: A5_SERIAL });
+    paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 
 async function syncDesktopFact({ env, evidenceRoot, execute, factId, paths, runId }) {
-  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'a-sync'), execute,
     installMain: false, observeWhileTransportOpen: () => waitForAndroidJourneyFact(paths, factId),
-    paths, serial: A5_SERIAL });
+    paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
-  const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
     paths, serial: A5_SERIAL });
   const manifest = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'));

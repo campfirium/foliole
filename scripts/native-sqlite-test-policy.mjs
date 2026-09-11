@@ -40,6 +40,7 @@ const controlledElectronSqliteTests = [
   'electron/database/readwiseExternalReferenceCompanionMigration.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
+  'electron/database/syncPackAcceptedSettingAtomicity.test.ts',
   'electron/database/syncDeliveryMigration.test.ts',
   'electron/database/syncDeviceCopyPreparation.test.ts',
   'electron/database/syncPackGroupRows.test.ts',
@@ -80,6 +81,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncReviewLogApply.test.ts',
   'src/shared/platform/companionSyncGroupStore.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
+  'src/shared/platform/companion/sync/syncGroupStore.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 

@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +12,8 @@ import {
   FRI_DEV_APP_ID,
   FRI_DEV_BUNDLE_SUFFIX,
   FRI_DEV_TEST,
-  FRI_XCUITEST_RUNNER
+  FRI_XCUITEST_RUNNER,
+  runFriDevWorkflow
 } from './fri-dev-workflow.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -51,6 +53,22 @@ describe('Fri development workflow', () => {
     expect(commands[2].args).not.toContain('--allow-wireless');
     expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
     expect(commands[3].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
+  });
+
+  it('finishes offline preparation before requiring the current unlock', async () => {
+    const stages = [];
+    await runFriDevWorkflow({
+      evidenceRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'fri-dev-workflow-')),
+      readiness: async () => { stages.push('readiness'); },
+      retention: async () => { stages.push('fri-app-retention'); },
+      repoRoot: '/repo',
+      run: (_command, _args, options) => { stages.push(options.stage); }
+    });
+    expect(stages).toEqual([
+      'companion-build', 'capacitor-ios-sync', 'readiness',
+      'fri-app-retention',
+      'fri-dev-xcuitest-build', 'fri-dev-xcuitest-run'
+    ]);
   });
 
   it('uses an isolated persistent app and delegates bounded retention before testing', () => {

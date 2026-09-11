@@ -5,7 +5,7 @@ import {
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import { qualifyPreparedCompanionAnchorCandidate } from './companion/preparedAnchorDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
@@ -30,7 +30,6 @@ export type DiscoveryCandidate = {
   source: 'direct' | 'nsd';
 };
 
-const DEV_REVERSE_ENDPOINT = 'http://127.0.0.1:38641';
 const DISCOVERY_TIMEOUT_MS = 1200;
 const DISCOVERY_BATCH_SIZE = 24;
 
@@ -64,22 +63,20 @@ async function loadNativeDiscoveryCandidates(
   }
   if (!options.allowWhileNotParticipating) {
     const participation = await FolioleCompanionSync.loadSyncParticipationState().catch(() => null);
-    if (participation?.participating !== true) return [];
+    if (participation?.sync_enabled !== true || participation.sync_paused) return [];
   }
-  const runtime = getCompanionRuntimeCapability();
-  const direct = runtime.kind === 'android-native'
-    ? [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)]
-    : [];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const native = (payload.candidates ?? []).map((candidate) => ({
-      endpointUrl: candidate.endpoint_url,
-      protocolTxt: candidate.protocol_txt ?? null,
-      source: candidate.source
-    }));
-    return uniqueCandidates([...direct, ...native]);
+    const native = (payload.candidates ?? [])
+      .filter((candidate) => !isMobileProvider(candidate.protocol_txt))
+      .map((candidate) => ({
+        endpointUrl: candidate.endpoint_url,
+        protocolTxt: candidate.protocol_txt ?? null,
+        source: candidate.source
+      }));
+    return uniqueCandidates(native);
   } catch {
-    return uniqueCandidates(direct);
+    return [];
   }
 }
 
@@ -95,7 +92,17 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
       status: 'incompatible'
     } satisfies SyncProtocolCompatibilityResult;
   }
-  return compatibility;
+  const qualification = qualifyPreparedCompanionAnchorCandidate({
+    endpoint_url: candidate.endpointUrl,
+    http: discovery as unknown as Record<string, unknown>,
+    protocol_txt: candidate.protocolTxt ?? {}
+  });
+  return qualification.eligible ? compatibility : {
+    missing_capabilities: [],
+    negotiated_version: null,
+    reason: 'protocol_advertisement_mismatch',
+    status: 'incompatible'
+  } satisfies SyncProtocolCompatibilityResult;
 }
 
 async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise<CompanionDiscoveryResult | null> {
@@ -133,8 +140,23 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
   if (!isNativeCompanionNetworkRuntime()) {
     return await fetch(url, { signal });
   }
-  const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });
+  const payload = await abortableNativeDiscoveryRequest(url, signal);
   return new Response(payload.body, { status: payload.status });
+}
+
+function abortableNativeDiscoveryRequest(url: string, signal: AbortSignal) {
+  return new Promise<Awaited<ReturnType<typeof FolioleCompanionSync.desktopHttpRequest>>>((resolve, reject) => {
+    const abort = () => reject(new DOMException('Discovery request timed out.', 'AbortError'));
+    if (signal.aborted) return abort();
+    signal.addEventListener('abort', abort, { once: true });
+    void FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url })
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+function isMobileProvider(protocolTxt: Record<string, string> | null | undefined) {
+  return ['android-capacitor', 'ios-capacitor'].includes(protocolTxt?.provider_platform ?? '');
 }
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
@@ -148,11 +170,6 @@ function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: Comp
   const key = getDiscoveryKey(result);
   const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
   if (existingIndex < 0) return void results.push(result);
-  if (providerRank(result) < providerRank(results[existingIndex]!)) results[existingIndex] = result;
-}
-
-function providerRank(result: CompanionDiscoveryResult) {
-  return result.discovery.provider_platform === 'android-capacitor' ? 1 : 0;
 }
 
 export async function discoverCompanionDesktops(
@@ -164,10 +181,9 @@ export async function discoverCompanionDesktops(
 }
 
 export async function discoverCompanionDesktop(
-  preferredEndpointUrl: string,
-  options: CompanionDiscoveryOptions = {}
+  preferredEndpointUrl: string
 ): Promise<CompanionDiscoveryResult> {
-  const results = await discoverCompanionDesktops(preferredEndpointUrl, options);
+  const results = await loadCompanionDiscoveryCandidates([directCandidate(preferredEndpointUrl)]);
   const [firstResult] = results;
   if (!firstResult) {
     throw new Error('No desktop sync device found. Make sure desktop Sync is on and both devices are on the same Wi-Fi.');

@@ -8,12 +8,13 @@ import {
   closeWindowsSyncGroupSession, terminateWindowsProcessTree
 } from './windows-sync-group-session-close.mjs';
 
-function fixture(close = vi.fn(async () => {})) {
+function fixture(close) {
   const child = Object.assign(new EventEmitter(), {
     exitCode: null, pid: 4321, signalCode: null
   });
+  const closeAction = close ?? vi.fn(async () => { child.exitCode = 0; });
   const terminateTree = vi.fn(async () => {});
-  return { child, session: { app: { close, process: () => child } }, terminateTree };
+  return { child, session: { app: { close: closeAction, process: () => child } }, terminateTree };
 }
 
 it('allows a normal session to close gracefully', async () => {
@@ -40,6 +41,14 @@ it('bounds a graceful close that never settles', async () => {
   }))
     .resolves.toEqual({ forced: true });
   expect(current.terminateTree).toHaveBeenCalledWith(current.child, 1);
+});
+
+it('terminates a process tree when Electron close returns before process exit', async () => {
+  const current = fixture(vi.fn(async () => {}));
+  await expect(closeWindowsSyncGroupSession(current.session, {
+    terminateTree: current.terminateTree, timeoutMs: 10
+  })).resolves.toEqual({ forced: true });
+  expect(current.terminateTree).toHaveBeenCalledWith(current.child, 10);
 });
 
 it('terminates only the resolved Electron PID tree', async () => {

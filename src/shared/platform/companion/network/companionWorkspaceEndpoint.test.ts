@@ -28,6 +28,7 @@ const group = {
   local_device_identity_key: 'device-local', devices: [
     device('device-local', 'Local', 'android-capacitor'),
     device('device-mac', 'Mac', 'darwin'),
+    device('device-mobile', 'Phone', 'android-capacitor'),
     { ...device('device-left', 'Left', 'win32'), state: 'left' as const }
   ]
 };
@@ -57,43 +58,38 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   }]);
 });
 
-it('uses the verified preferred endpoint before scanning for one remote Device', async () => {
-  runtime.loadCandidates.mockResolvedValueOnce([{
-    compatibility: { status: 'compatible' }, endpointUrl: 'http://accepted:38641',
-    discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
+it('does not route companion sync through a discovered mobile Device', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mobile' }
   }]);
 
-  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://accepted:38641', groupId: 'group-1'
-  }]);
-  expect(runtime.discover).not.toHaveBeenCalled();
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://phone:38641'))
+    .rejects.toThrow('discovery_waiting_anchor');
 });
 
-it('falls back to discovery when the preferred endpoint no longer identifies the remote Device', async () => {
-  runtime.loadCandidates.mockResolvedValueOnce([{
-    compatibility: { status: 'compatible' }, endpointUrl: 'http://accepted:38641',
-    discovery: { group_id: 'group-1', provider_device_id: 'device-other' }
-  }]);
-
-  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
-  }]);
-  expect(runtime.discover).toHaveBeenCalledOnce();
-});
-
-it('uses the accepted group-bound endpoint to bootstrap the first Sync Pack', async () => {
+it('waits for an advertised desktop anchor before the first Sync Pack', async () => {
   runtime.loadGroup.mockResolvedValue({ ...group, devices: [group.devices[0]] });
 
-  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
-    endpointUrl: 'http://accepted:38641', groupId: 'group-1'
-  }]);
-  expect(runtime.discover).not.toHaveBeenCalled();
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641'))
+    .rejects.toThrow('discovery_waiting_anchor');
 });
 
 it('does not fall back to the accepted endpoint after remote Device inventory exists', async () => {
   runtime.discover.mockResolvedValue([]);
 
-  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([]);
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641'))
+    .rejects.toThrow('discovery_waiting_anchor');
+});
+
+it('surfaces a same-group incompatible desktop instead of waiting indefinitely', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'incompatible' }, endpointUrl: 'http://mac:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641'))
+    .rejects.toThrow('discovery_incompatible');
 });
 
 it('rejects a target from another Sync Group', async () => {

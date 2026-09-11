@@ -96,13 +96,17 @@ export async function waitForDesktopProductState(page, {
       }
       if (condition.kind === 'exact-node') {
         const node = value?.nodesById?.[condition.nodeId];
-        return node?.nodeId === condition.nodeId
+        return (node?.id ?? node?.nodeId) === condition.nodeId
           && node?.title === condition.title
-          && node?.content === condition.content
-          && node?.updatedAt === condition.updatedAt;
+          && node?.bodyBlobHash === condition.bodyBlobHash
+          && (condition.updatedAt === undefined || node?.updatedAt === condition.updatedAt);
       }
       if (condition.kind === 'sync-conflict-count') {
         return Array.isArray(value) && value.length >= condition.count;
+      }
+      if (condition.kind === 'node-content-includes') {
+        return value?.nodeId === condition.nodeId
+          && condition.fragments.every((fragment) => String(value?.content).includes(fragment));
       }
       throw new Error(`Unsupported desktop product condition: ${condition.kind}`);
     };

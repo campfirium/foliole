@@ -50,6 +50,7 @@ function ToolbarButton(props: {
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (event.button !== 2) runPressAction();
       }}
       onPointerUp={(event) => {
         event.preventDefault();
@@ -81,6 +82,7 @@ function CompanionSelectionNotePanel(props: {
   return (
     <div className={cn(appFloatingSurfaceClassName('popover'), 'mt-2 w-64 rounded-md p-2')} style={{ left: props.left, position: 'absolute', top: props.top }}>
       <textarea
+        autoFocus
         className={cn(
           'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
           appInputFocusVisibleClassName

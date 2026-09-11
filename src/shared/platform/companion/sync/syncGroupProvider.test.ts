@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
-  await reconcileCompanionSyncGroupProvider(bootstrap, group, '4:2026-08-12T00:00:00.000Z');
+  await reconcileCompanionSyncGroupProvider(bootstrap, group);
   expect(runtime.start).toHaveBeenCalledWith(expect.objectContaining({
     app_version: '0.7.5', device_id: 'device-a5', device_name: 'A5 2'
   }));
@@ -69,13 +69,7 @@ it('lands an active Android member on the native provider bridge with its persis
     expect.not.objectContaining({ workgroup_key: expect.anything() })
   );
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
-});
-
-it('lands the native service hint event on the shared subscription', async () => {
-  const listener = vi.fn();
-  const { subscribeCompanionSyncGroupServiceHint } = await import('./syncGroupProvider');
-  await subscribeCompanionSyncGroupServiceHint(listener);
-  expect(runtime.listen).toHaveBeenCalledWith('syncGroupServiceHint', listener);
+  expect(runtime.start).toHaveBeenCalledWith(expect.not.objectContaining({ facts_revision: expect.anything() }));
 });
 
 it('lands provider request changes on the public approval subscription', async () => {
@@ -87,6 +81,12 @@ it('lands provider request changes on the public approval subscription', async (
 
 it('stops the native provider when there is no local group membership', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, null);
+  expect(runtime.stop).toHaveBeenCalledOnce();
+  expect(runtime.start).not.toHaveBeenCalled();
+});
+
+it('stops the native provider while automatic sync participation is paused', async () => {
+  await reconcileCompanionSyncGroupProvider(bootstrap, group, false);
   expect(runtime.stop).toHaveBeenCalledOnce();
   expect(runtime.start).not.toHaveBeenCalled();
 });

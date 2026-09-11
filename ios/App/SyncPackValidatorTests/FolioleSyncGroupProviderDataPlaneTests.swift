@@ -14,6 +14,21 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
     }
 
+    func testCompleteMemberCapabilityIsActiveInProductionV5() throws {
+        let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
+        let production = definitions.value["protocol"] as? [String: Any]
+        let prepared = definitions.preparedMemberDataPlane
+        let preparedProtocol = prepared["protocol"] as? [String: Any]
+        let productionCapabilities = production?["capabilities"] as? [String] ?? []
+        let preparedCapabilities = preparedProtocol?["capabilities"] as? [String] ?? []
+
+        XCTAssertEqual(production?["version"] as? Int, 5)
+        XCTAssertTrue(productionCapabilities.contains("complete-member-data-plane"))
+        XCTAssertEqual(preparedProtocol?["version"] as? Int, 5)
+        XCTAssertTrue(preparedCapabilities.contains("complete-member-data-plane"))
+        XCTAssertEqual(Set(prepared["resourceKinds"] as? [String] ?? []), ["attachment", "content_blob"])
+    }
+
     func testAuthenticatedProviderRequestRejectsReplay() throws {
         let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         let timestamp = ISO8601DateFormatter().string(from: Date())
@@ -35,6 +50,29 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         XCTAssertThrowsError(try FolioleCompanionSyncGroupWorkgroup.authenticate(
             request, groupId: "group-a", workgroupKey: key, dataBridge: bridge
         ))
+    }
+
+    func testAuthenticatedProviderRequestAcceptsDesktopFractionalTimestamp() throws {
+        let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = formatter.string(from: Date())
+        let nonce = UUID().uuidString.lowercased()
+        let body = Data()
+        let path = "/companion/sync-pack?after_state_seq=0"
+        let canonical = ["GET", path, timestamp, nonce,
+            SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()].joined(separator: "\n")
+        let signature = HMAC<SHA256>.authenticationCode(
+            for: Data(canonical.utf8), using: SymmetricKey(data: Data(key.utf8))
+        ).map { String(format: "%02x", $0) }.joined()
+        let request = FolioleCompanionHttpMessage(body: [:], bodyData: body, headers: [
+            "x-device-id": "device-b", "x-nonce": nonce, "x-signature": signature,
+            "x-sync-group-id": "group-a", "x-timestamp": timestamp
+        ], method: "GET", path: path)
+
+        XCTAssertEqual(try FolioleCompanionSyncGroupWorkgroup.authenticate(
+            request, groupId: "group-a", workgroupKey: key, dataBridge: ActiveDeviceBridge()
+        ), "device-b")
     }
 
     func testProviderArchiveUsesConsumerCompatibleZlibAndZip() throws {

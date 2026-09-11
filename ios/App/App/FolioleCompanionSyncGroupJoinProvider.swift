@@ -113,7 +113,16 @@ final class FolioleCompanionSyncGroupJoinService {
     func install(
         groupInfo: [String: Any], discovery: [String: Any],
         dataBridge: FolioleCompanionSyncGroupDataRequesting? = nil, stateChanged: @escaping () -> Void
-    ) throws {
+    ) throws -> String {
+        if let runtimeId = lock.withLock({ () -> String? in
+            guard let provider, let server,
+                  provider.groupId == groupInfo["group_id"] as? String,
+                  provider.workgroupKey == groupInfo["workgroup_key"] as? String else { return nil }
+            var updatedDiscovery = discovery
+            updatedDiscovery["runtime_instance_id"] = server.runtimeInstanceId
+            server.updateDiscovery(updatedDiscovery)
+            return server.runtimeInstanceId
+        }) { return runtimeId }
         let next = try FolioleCompanionSyncGroupJoinProvider(groupInfo: groupInfo)
         let nextServer = try FolioleCompanionSyncGroupJoinServer(
             discovery: discovery, provider: next, dataBridge: dataBridge, stateChanged: stateChanged
@@ -125,6 +134,7 @@ final class FolioleCompanionSyncGroupJoinService {
             provider = next
             server = nextServer
         }
+        return nextServer.runtimeInstanceId
     }
 
     func clearForRestart() {

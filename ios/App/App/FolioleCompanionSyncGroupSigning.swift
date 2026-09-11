@@ -1,13 +1,5 @@
 import Capacitor
-import CryptoKit
 import Foundation
-
-enum FolioleCompanionSyncGroupSecurity {
-    static func groupTag(_ workgroupKey: String) throws -> String {
-        let digest = SHA256.hash(data: try Base64URL.decode(workgroupKey))
-        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
-    }
-}
 
 extension FolioleCompanionSyncPlugin {
     @objc func signCompanionSyncRequest(_ call: CAPPluginCall) {
@@ -33,15 +25,12 @@ extension FolioleCompanionSyncPlugin {
             throw NSError(domain: "FolioleCompanionSyncGroupSigning", code: 2,
                           userInfo: [NSLocalizedDescriptionKey: "sync_group_current_credential_missing"])
         }
-        let method = try value("method").uppercased(), path = try value("pathWithQuery")
-        let timestamp = try value("timestamp"), nonce = try value("nonce"), bodyHash = try value("bodyHash")
-        let canonical = [method, path, timestamp, nonce, bodyHash].joined(separator: "\n")
-        let signature = HMAC<SHA256>.authenticationCode(
-            for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
+        return try FolioleCompanionSignedClientRequests.prepare(
+            body: call.getString(contract.signatureRequestKeys["body"]!),
+            bodyHash: try value("bodyHash"), endpointUrl: try value("endpointUrl"), groupId: groupId,
+            method: try value("method").uppercased(), nonce: try value("nonce"),
+            path: try value("pathWithQuery"), timestamp: try value("timestamp"),
+            deviceId: deviceId, workgroupKey: workgroupKey
         )
-        return ["headers": [contract.signatureHeaderKeys["deviceId"]!: deviceId,
-            contract.signatureHeaderKeys["nonce"]!: nonce,
-            contract.signatureHeaderKeys["signature"]!: Data(signature).map { String(format: "%02x", $0) }.joined(),
-            contract.signatureHeaderKeys["timestamp"]!: timestamp]]
     }
 }

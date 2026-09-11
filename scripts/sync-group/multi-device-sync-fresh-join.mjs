@@ -5,10 +5,13 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import {
   runMacosA5InstrumentationMechanics
 } from '../android/macos-a5-sync-group-maintenance-action.mjs';
+import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
+import { inspectDepartedHistory } from '../android/android-departed-history-inspection.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
+import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -18,9 +21,12 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertFreshJoinInitialConvergence, factObservation
 } from './sync-scenario-predicate.mjs';
+import {
+  MULTI_DEVICE_ANDROID_APP_ID, MULTI_DEVICE_ANDROID_CLASS_PREFIX
+} from './multi-device-sync-android-profile.mjs';
 
-const APP_ID = 'com.foliole.android';
-const JOIN_TEST = `${APP_ID}.FolioleCompanionSyncGroupJoinTest`;
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
+const JOIN_TEST = `${MULTI_DEVICE_ANDROID_CLASS_PREFIX}.FolioleCompanionSyncGroupJoinTest`;
 
 async function checked(execute, command, args, options, stage) {
   const result = await execute(command, args, options);
@@ -34,11 +40,35 @@ async function createInitialFact({ evidenceRoot, session }) {
     evidenceRoot: path.join(evidenceRoot, 'initial-fact'), session });
 }
 
+function inspectA5Group(paths) {
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID,
+    includeAttachments: false, includeEvents: false, serial: A5_SERIAL, tables: [],
+    databaseInspector: inspectDepartedHistory });
+}
+
+export async function prepareA5ForFreshJoin({ buildIdentity, env, evidenceRoot, execute, paths,
+  inspect = inspectA5Group, leave = runMacosA5SyncGroupMaintenance }) {
+  const before = await inspect(paths);
+  const previousGroupId = before.database?.inspection?.syncGroupId ?? null;
+  if (!previousGroupId) return { leftExistingGroup: false, previousGroupId };
+  await leave({ action: 'leave-sync-group', appId: APP_ID, buildIdentity, env,
+    evidenceRoot: path.join(evidenceRoot, 'existing-group-leave'), execute, installMain: false,
+    paths, serial: A5_SERIAL });
+  const after = await inspect(paths);
+  if (after.database?.inspection?.syncGroupId) {
+    throw Object.assign(new Error('A5 remained bound to its previous Sync Group.'), {
+      failureOwner: 'product', host: 'android-b', missingFact: 'a5_previous_group_departure'
+    });
+  }
+  return { leftExistingGroup: true, previousGroupId };
+}
+
 async function restartAndroid(execute, paths, env) {
   await checked(execute, paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID],
     { env, timeoutMs: 30_000 }, 'android_restart_stop');
   await checked(execute, paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n',
-    `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }, 'android_restart_start');
+    `${APP_ID}/${MULTI_DEVICE_ANDROID_CLASS_PREFIX}.MainActivity`],
+  { env, timeoutMs: 60_000 }, 'android_restart_start');
 }
 
 export async function performFreshJoinSequence({
@@ -56,9 +86,10 @@ export async function performFreshJoinSequence({
 async function runFreshJoinInitialSync({
   buildIdentity, env, evidenceRoot, execute, observe, paths
 }) {
-  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: APP_ID,
+    buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
-    observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
+    observeWhileTransportOpen: observe, paths, serial: A5_SERIAL, transportRequired: false });
   return result.observation;
 }
 
@@ -70,9 +101,10 @@ function validateJoin({ evidencePath, stdout }) {
   });
 }
 
-async function joinA5({ buildIdentity, env, evidenceRoot, execute, paths, session }) {
-  return runMacosA5InstrumentationMechanics({ buildIdentity, env,
+async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity, paths, session }) {
+  return runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'device-join'), execute, installMain: false,
+    expectedGroupId: groupIdentity.group_id, expectedGroupTag: groupIdentity.group_tag,
     observeConcurrently: true, paths, serial: A5_SERIAL, testClass: JOIN_TEST,
     validateInstrumentation: validateJoin,
     observeWhileTransportOpen: async (options) => {
@@ -99,12 +131,15 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
   });
   const session = await openMacosSyncGroupDesktopSession(sessionOptions);
   await session.enable();
+  await prepareA5ForFreshJoin({ buildIdentity: runId, env, evidenceRoot, execute, paths });
+  await observeMacosAnchorAfterElection(session);
+  const providerOverview = await session.load();
   let journey;
   try { journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, session }),
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
-        paths, session });
+        groupIdentity: providerOverview.sync_group, paths, session });
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },

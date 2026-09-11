@@ -1,12 +1,12 @@
 import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 
 export async function runAOfflineAdmissionPrelude({
-  cancelSiblings = () => {}, closeTransport, createFact, openSession, openTransport,
-  reportProgress = () => {}, runApproval, startWindows, waitForFact
+  cancelSiblings = () => {}, createFact, openSession, reportProgress = () => {},
+  runApproval, startWindows, waitForFact,
+  waitForListener = async (_session, listener) => listener
 }) {
   const session = await openSession();
   let closed = false;
-  let transportOpen = false;
   const close = async () => {
     if (closed) return;
     closed = true; await session.close();
@@ -15,7 +15,7 @@ export async function runAOfflineAdmissionPrelude({
   let windowsStarted;
   const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
   try {
-    const listener = await session.enable();
+    const listener = await waitForListener(session, await session.enable());
     if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
       throw Object.assign(new Error('MacOS A product sync listener did not become ready.'), {
         failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
@@ -27,14 +27,11 @@ export async function runAOfflineAdmissionPrelude({
     const approvalWork = runApproval({
       onProviderStopped: async () => {
         reportProgress('b-provider-stopped');
-        await openTransport();
-        transportOpen = true; reportProgress('b-transport-ready');
       },
       onReady: async () => {
+        reportProgress('b-anchor-sync-ready');
         await waitForFact(fact.factId);
         reportProgress('b-fact-received');
-        await closeTransport();
-        transportOpen = false;
         await close();
         reportProgress('a-offline');
         windowsWork = startWindows(); reportProgress('c-join-started'); windowsStarted();
@@ -56,7 +53,6 @@ export async function runAOfflineAdmissionPrelude({
     ], cancelSiblings, ['windows-c-join']);
     return { approval: settled['android-b-approval'], fact, windows: settled['windows-c-join'] };
   } finally {
-    if (transportOpen) await closeTransport().catch(() => undefined);
     await close().catch(() => undefined);
   }
 }

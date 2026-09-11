@@ -98,7 +98,7 @@ it('records fixed sync port availability in macOS readiness', async () => {
   await expect(adapters['macos-a']()).resolves.toMatchObject({
     facts: expect.arrayContaining(['macos_sync_port_ready'])
   });
-  expect(ports).toEqual([38642]);
+  expect(ports).toEqual([38643]);
 });
 
 it('does not require a Windows candidate receipt for an A/B-only target', async () => {
@@ -142,5 +142,25 @@ it('rejects a mismatched Windows candidate receipt before product mutation', asy
   await expect(adapters['windows-c']()).rejects.toMatchObject({
     lastSuccessfulAction: 'windows-c_environment_ready',
     missingFact: 'windows-c_candidate_mismatch'
+  });
+});
+
+it('accepts a task-owned sync candidate receipt before product mutation', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
+  const runId = 'run-windows-sync';
+  const receiptRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId);
+  fs.mkdirSync(receiptRoot, { recursive: true });
+  const candidateBoundary = { branch: 'sync', revision: 'a'.repeat(40),
+    sourceRef: 'refs/heads/sync', treeDigest: 'b'.repeat(40) };
+  fs.writeFileSync(path.join(receiptRoot, 'candidate-preparation.json'), JSON.stringify({
+    candidateBoundary, preparedHosts: ['windows-c'], resultStatus: 'success', runId,
+    windowsReceipt: { ...candidateBoundary, targetRef: 'refs/heads/sync' }
+  }));
+  const execute = async (command) => command === 'ssh'
+    ? '[multi-device-sync-readiness] status=ready\n' : '';
+  const adapters = createMutationReadinessAdapters({ execute, repoRoot,
+    candidateProvider: async () => candidateBoundary, requiredHosts: ['windows-c'], runId });
+  await expect(adapters['windows-c']()).resolves.toMatchObject({
+    facts: expect.arrayContaining(['windows-c_candidate_bound'])
   });
 });

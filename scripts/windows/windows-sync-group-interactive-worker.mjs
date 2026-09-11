@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { WINDOWS_NATIVE_CLIENT_WORKER_ENV } from './windows-client-native-interactive-state.mjs';
-import { runWindowsSyncGroupDeviceAction } from './windows-sync-group-device-actions.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
+import {
+  assertT173RuntimeIdentity, measureT173RuntimeIdentity
+} from './t173-windows-candidate-contract.mjs';
 import {
   readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveRequest,
   validateSyncGroupInteractiveProgress, WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV,
@@ -33,6 +35,11 @@ async function main() {
   let completed;
   try {
     const runtimePaths = windowsDevPaths({ repoRoot });
+    const candidateRuntimeIdentity = request.candidateBoundary
+      ? assertT173RuntimeIdentity(request.candidateBoundary,
+        measureT173RuntimeIdentity({ gitPath: runtimePaths.gitPath, repoRoot }))
+      : undefined;
+    const { runWindowsSyncGroupDeviceAction } = await import('./windows-sync-group-device-actions.mjs');
     const actionResult = await runWindowsSyncGroupDeviceAction({
       action: request.action, buildIdentity: request.buildIdentity,
       evidenceRoot: request.evidenceRoot, execute: executeBounded,
@@ -40,7 +47,7 @@ async function main() {
       paths: runtimePaths, reportProgress,
       selfcheckMode: request.selfcheckMode
     });
-    completed = { actionResult, exitCode: 0, nonce: request.nonce, workerPid: process.pid,
+    completed = { actionResult, candidateRuntimeIdentity, exitCode: 0, nonce: request.nonce, workerPid: process.pid,
       progress, schemaVersion: 1, state: 'completed' };
   } catch (error) {
     completed = { error: error instanceof Error ? error.message : String(error), exitCode: 1,

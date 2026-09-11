@@ -25,6 +25,7 @@ export interface CompanionSyncPushPayload {
 
 interface CompanionSyncPushAck {
   canonicalObjectId?: string;
+  canonicalVersionId?: string;
   clientOpId: string;
   conflictReason?: string;
   desktopBase?: SyncBaseReference;

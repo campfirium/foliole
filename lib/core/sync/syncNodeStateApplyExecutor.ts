@@ -2,7 +2,17 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 
-export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyncNodeRecord) {
+export interface AppliedNodeSyncStateOptions {
+  baseContentHash?: string | null;
+  syncDirty?: number;
+}
+
+export async function upsertAppliedNodeSyncState(
+  port: DbPort,
+  record: NativeSyncNodeRecord,
+  options: AppliedNodeSyncStateOptions = {}
+) {
+  const syncDirty = options.syncDirty ?? 0;
   return await port.run(
     `INSERT INTO sync_object_state (
        object_type,
@@ -10,6 +20,7 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
        state_seq,
        current_version_id,
        content_hash,
+       base_content_hash,
        last_modified_by_host_name,
        updated_at,
        deleted_at,
@@ -23,12 +34,14 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
        ?,
        ?,
        ?,
-       0
+       ?,
+       ?
      )
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq,
        current_version_id = excluded.current_version_id,
        content_hash = excluded.content_hash,
+       base_content_hash = excluded.base_content_hash,
        last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at,
        deleted_at = excluded.deleted_at,
@@ -43,9 +56,11 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
       record.object_id,
       record.version_id,
       record.content_hash ?? '',
+      options.baseContentHash ?? null,
       record.host_name,
       record.updated_at,
-      record.snapshot.deleted_at
+      record.snapshot.deleted_at,
+      syncDirty
     ]
   );
 }

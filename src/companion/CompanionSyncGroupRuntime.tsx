@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
@@ -25,11 +25,18 @@ export function CompanionSyncGroupRuntime(props: {
   const { bootstrapState, workspaceSync } = props;
   const [group, setGroup] = useState<SyncGroupPayload | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const providerGroupRef = useRef<SyncGroupPayload | null>(null);
   const mutationRevision = useSyncExternalStore(
     subscribeCompanionSyncMutationRevision,
     getCompanionSyncMutationRevision,
     getCompanionSyncMutationRevision
   );
+  const providerIdentity = group
+    ? `${group.group_id}:${group.local_device_identity_key}`
+    : 'none';
+  if (providerIdentity !== (providerGroupRef.current
+    ? `${providerGroupRef.current.group_id}:${providerGroupRef.current.local_device_identity_key}`
+    : 'none')) providerGroupRef.current = group;
 
   useEffect(() => {
     if (!isNativeCompanionSyncGroupStoreRuntime()) return;
@@ -45,14 +52,13 @@ export function CompanionSyncGroupRuntime(props: {
 
   useEffect(() => {
     if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
-    const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
     void reconcileCompanionSyncGroupProvider(
-      bootstrapState, group, factsRevision
+      bootstrapState, providerGroupRef.current,
+      workspaceSync.syncParticipation.participating
     ).catch((error) => {
       console.error('[companion-sync-group] provider reconciliation failed', error);
     });
-  }, [bootstrapState, group, loaded, mutationRevision,
-    workspaceSync.state.last_synced_at]);
+  }, [bootstrapState, loaded, providerIdentity, workspaceSync.syncParticipation.participating]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>

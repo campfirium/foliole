@@ -55,7 +55,9 @@ it('keeps the selection note textarea keyboard focus visible', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
 
-  expectInputFocusVisible(screen.getByPlaceholderText('Add annotation...'));
+  const editor = screen.getByPlaceholderText('Add annotation...');
+  expectInputFocusVisible(editor);
+  expect(editor).toHaveFocus();
 });
 
 it('keeps the companion search input on the shared focus-visible class', () => {
@@ -66,4 +68,3 @@ it('keeps the companion search input on the shared focus-visible class', () => {
   expectInputFocusVisible(search);
   expect(search.className).toContain('focus-visible:border-border-strong');
 });
-

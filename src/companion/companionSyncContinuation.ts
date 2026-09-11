@@ -17,9 +17,7 @@ function hasResourceBacklog(result: CompanionDesktopSyncResult) {
 function hasWaitingLocalChanges(result: CompanionDesktopSyncResult) {
   return (
     !result.pushError &&
-    result.pushConflictCount === 0 &&
-    result.pushRejectedCount === 0 &&
-    (result.pushIssueCount ?? 0) === 0 &&
+    (result.pushIssueCount ?? (result.pushConflictCount + result.pushRejectedCount)) === 0 &&
     ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0)
   );
 }

@@ -17,7 +17,7 @@ const SPECS = Object.freeze({
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
   'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
-  'read-sync-events': ['projectsSyncEventsForAcceptance', 'syncEventsProjected', false, false],
+  'read-sync-events': ['projectsSyncEventsForAcceptance', 'syncEventsProjected', false, true],
   'sync-now': ['syncsNowThroughProduct', 'terminalRunId', true, false]
 });
 
@@ -64,20 +64,22 @@ function validateProductResult(receipt, expected, evidenceRef) {
 export async function runMacosA5SyncGroupMaintenance({
   action, appId, buildIdentity, env, evidenceRoot, execute, installMain = true,
   conflictToken, expectedJourneyCounts, mechanics = runMacosA5InstrumentationMechanics,
-  observeWhileTransportOpen, paths, serial
+  observeWhileTransportOpen, paths, serial, transportRequired
 }) {
   const spec = SPECS[action];
   if (!spec) throw proofFailure('Unsupported sync group action', {
     missingFact: 'scenario_action_binding'
   });
-  const [method, expected, needsTransport, restartApp, releaseAfterObservation = false] = spec;
+  const [method, expected, defaultNeedsTransport, restartApp,
+    releaseAfterObservation = false] = spec;
+  const needsTransport = transportRequired ?? defaultNeedsTransport;
   const className = action === 'read-sync-events'
     ? 'FolioleAcceptanceSyncEventProjectionTest' : action === 'observe-journey-facts'
       ? 'FolioleAcceptanceJourneyFactsTest' : action === 'fork-conflict'
         ? 'FolioleAcceptanceConflictForkTest' : 'FolioleCompanionSyncGroupMaintenanceTest';
   const testClass = `${APP_ID}.${className}#${method}`;
   const instrumentationArgs = action === 'observe-journey-facts'
-    ? ['-e', 'expectedJourneyCounts', JSON.stringify(expectedJourneyCounts ?? {})]
+    ? ['-e', 'expectedJourneyCounts', `'${JSON.stringify(expectedJourneyCounts ?? {})}'`]
     : action === 'fork-conflict' ? ['-e', 'conflictToken', conflictToken ?? ''] : [];
   const raw = await mechanics({ appId, buildIdentity, env, evidenceRoot, execute, installMain,
     instrumentationArgs, needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,

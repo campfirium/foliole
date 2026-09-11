@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
-import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
+import { CompanionSyncGroupList } from './CompanionSyncDeviceList';
 import type { CompanionSyncGroupDiscovery } from './companionSyncGroupJoinModel';
 
 function SearchingDiscoveryContent(props: {
@@ -34,26 +34,26 @@ function SearchingDiscoveryContent(props: {
   );
 }
 
-function FoundDevicesDiscoveryContent(props: {
-  devices: CompanionSyncGroupDiscovery[];
+function FoundGroupsDiscoveryContent(props: {
+  groups: CompanionSyncGroupDiscovery[];
   disabled: boolean;
   isConnecting: boolean;
   onJoin(endpointUrl: string): void;
 }) {
   const t = useTranslation();
-  const deviceCount = props.devices.length;
-  const unit = t(deviceCount === 1 ? 'companion.sync.discovery.device' : 'companion.sync.discovery.devices');
+  const groupCount = props.groups.length;
+  const unit = t(groupCount === 1 ? 'companion.sync.discovery.group' : 'companion.sync.discovery.groups');
   return (
     <>
       <h2 className="text-xl font-semibold leading-tight text-foreground">
-        {t('companion.sync.discovery.found', { count: deviceCount, unit })}
+        {t('companion.sync.discovery.found', { count: groupCount, unit })}
       </h2>
       <p className="mt-3 text-sm leading-6 text-accent">
         {t('companion.sync.discovery.foundDescription')}
       </p>
       <div className="mt-5">
-        <CompanionSyncDeviceList
-          devices={props.devices}
+        <CompanionSyncGroupList
+          groups={props.groups}
           disabled={props.disabled}
           isConnecting={props.isConnecting}
           onJoin={props.onJoin}
@@ -65,22 +65,22 @@ function FoundDevicesDiscoveryContent(props: {
 }
 
 export function CompanionSyncDiscoveryDialog(props: {
-  devices: CompanionSyncGroupDiscovery[];
+  groups: CompanionSyncGroupDiscovery[];
   disabled: boolean;
   isConnecting: boolean;
   isSearching: boolean;
   onJoin(endpointUrl: string): void;
   onRefresh(): void;
 }) {
-  const isOpen = props.isSearching || props.devices.length > 0;
+  const isOpen = props.isSearching || props.groups.length > 0;
   if (!isOpen) return null;
   return (
     <section className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-      {props.isSearching && props.devices.length === 0 ? (
+      {props.isSearching && props.groups.length === 0 ? (
         <SearchingDiscoveryContent onRefresh={props.onRefresh} />
       ) : (
-        <FoundDevicesDiscoveryContent
-          devices={props.devices}
+        <FoundGroupsDiscoveryContent
+          groups={props.groups}
           disabled={props.disabled}
           isConnecting={props.isConnecting}
           onJoin={props.onJoin}

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { serializePreparedAnchorTxt } from '../../lib/platform/syncAnchorTopologyContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 const runtime = vi.hoisted(() => ({
   onError: null as null | ((error: Error) => void),
   onService: null as null | ((event: Record<string, unknown>) => void),
@@ -34,7 +37,8 @@ describe('desktop Sync Group discovery', () => {
     const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
       group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
       provider_device_id: 'device-a', provider_device_name: 'Android B',
-      provider_platform: 'android-capacitor', runtime_instance_id: 'runtime-android-b'
+      provider_platform: 'android-capacitor', runtime_instance_id: 'runtime-android-b',
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, topology_role: 'member'
     })));
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
     runtime.onService?.({ kind: 'found', service: {
@@ -52,7 +56,8 @@ describe('desktop Sync Group discovery', () => {
         group_display_name: 'Daily Group',
         group_id: 'group-1',
         group_tag: 'tag-1',
-        device_id: 'device-a'
+        device_id: 'device-a', provider_platform: 'android-capacitor',
+        ...serializePreparedAnchorTxt('member')
       }, type: '_foliole-sync._tcp'
     } });
     await vi.advanceTimersByTimeAsync(1_800);
@@ -70,28 +75,28 @@ describe('desktop Sync Group discovery', () => {
   });
 });
 
-describe('desktop Sync Group route fallback', () => {
-  it('finds a provider through an advertised LAN address after a link-local route fails', async () => {
+describe('desktop Sync Group bounded route selection', () => {
+  it('does not probe a second advertised address after the resolved route fails', async () => {
     vi.useFakeTimers();
     const fetchDiscovery = vi.fn(async (url: string | URL | Request) => {
       if (String(url).includes('169.254.161.89')) throw new Error('unreachable route');
       return new Response(JSON.stringify({
         group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
         provider_device_id: 'device-a', provider_device_name: 'Desktop A',
-        provider_platform: 'darwin', runtime_instance_id: 'runtime-desktop-a'
+        provider_platform: 'darwin', runtime_instance_id: 'runtime-desktop-a',
+        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, topology_role: 'anchor'
       }));
     });
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
     runtime.onService?.({ kind: 'found', service: { addresses: ['169.254.161.89'],
       domain: 'local.', fqdn: 'desktop-a', host: 'desktop-a.local.', interfaceIndex: 1,
       name: 'Desktop A', port: 38641, type: '_foliole-sync._tcp',
-      txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1',
+      txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
+        ...serializePreparedAnchorTxt('anchor'),
         ipv4_addresses: '192.168.0.10,169.254.161.89' } } });
     await vi.advanceTimersByTimeAsync(1_800);
 
-    await expect(discovery).resolves.toEqual([expect.objectContaining({
-      endpoint_url: 'http://192.168.0.10:38641', provider_device_id: 'device-a'
-    })]);
+    await expect(discovery).resolves.toEqual([]);
   });
 });
 
@@ -105,19 +110,23 @@ describe('desktop Sync Group provider selection', () => {
         provider_device_id: desktop ? 'device-a' : 'device-b',
         provider_device_name: desktop ? 'Desktop A' : 'Android B',
         provider_platform: desktop ? 'darwin' : 'android-capacitor',
-        runtime_instance_id: desktop ? 'runtime-desktop-a' : 'runtime-android-b'
+        runtime_instance_id: desktop ? 'runtime-desktop-a' : 'runtime-android-b',
+        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+        topology_role: desktop ? 'anchor' : 'member'
       }));
     });
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
     runtime.onService?.({ kind: 'found', service: { addresses: ['192.168.0.12', '198.18.0.1'],
       domain: 'local.', fqdn: 'desktop-a', host: 'desktop-a.local.', interfaceIndex: 1,
       name: 'Desktop A', port: 38641, type: '_foliole-sync._tcp', txt: {
-        device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1'
+        device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
+        ...serializePreparedAnchorTxt('anchor')
       } } });
     runtime.onService?.({ kind: 'found', service: { addresses: ['192.168.0.13'],
       domain: 'local.', fqdn: 'android-b', host: 'android-b.local.', interfaceIndex: 1,
       name: 'Android B', port: 37819, type: '_foliole-sync._tcp', txt: {
-        device_id: 'device-b', group_id: 'group-1', group_tag: 'tag-1'
+        device_id: 'device-b', group_id: 'group-1', group_tag: 'tag-1',
+        provider_platform: 'android-capacitor', ...serializePreparedAnchorTxt('member')
       } } });
     await vi.advanceTimersByTimeAsync(1_800);
 

@@ -44,4 +44,13 @@ describe('iOS Sync Group host contract', () => {
     );
     expect(discovery).toContain('service.resolve(withTimeout: 3.0)');
   });
+
+  it('does not run a business-revision discovery monitor after joining', () => {
+    const provider = read('ios/App/App/FolioleCompanionSyncGroupProviderPlugin.swift');
+    const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
+
+    expect(plugin).not.toContain('FolioleCompanionBonjourServiceMonitor');
+    expect(provider).not.toContain('facts_revision');
+    expect(provider).not.toContain('syncGroupServiceHint');
+  });
 });

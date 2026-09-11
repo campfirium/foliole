@@ -3,25 +3,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { captureA5SyncRun } from './a5-sync-event-proof.mjs';
+import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs';
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
 import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
 import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession,
-  waitForMacosAutomaticRun, waitForMacosDeviceRequest
+  waitForMacosDeviceRequest
 } from './macos-sync-group-desktop-session.mjs';
+import {
+  assertMacosAnchorReady, observeMacosAnchorAfterElection
+} from './macos-a5-anchor-observation.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflictCopy
 } from '../desktop/sync-group-conflict-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
+import {
+  ACCEPTANCE_APP_ID, removeA5AcceptanceApplication
+} from './macos-a5-acceptance-package-cleanup.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
 
@@ -70,6 +75,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     return runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env, evidenceRoot });
   }
   args.markMutationBoundary?.();
+  await removeA5AcceptanceApplication(args);
   const macosLibrary = path.join(sharedRoot, 'macos-library');
   if (process.env.FOLIOLE_T152_CELL_ID && fs.existsSync(macosLibrary)) {
     throw new Error('The T152 Mac task library locator was already used.');
@@ -81,7 +87,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
-      evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session
+      evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), existingHighlight: true, session
     });
     const providerOverview = assertMacosAcceptanceSyncGroupServer(await session.enable());
     args.checked(args.paths.adb, [
@@ -104,7 +110,6 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
-    const macosBeforeAutomatic = await session.loadSyncTriggerResult();
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
@@ -112,9 +117,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     const factReceipt = JSON.parse(fs.readFileSync(androidFact.manifestPath, 'utf8')).receipt;
     await waitForMacFact(session);
-    const macosAutomaticBeforeRestart = await waitForMacosAutomaticRun(
-      session, macosBeforeAutomatic?.run_id
-    );
+    const macosTopologyBeforeRestart = assertMacosAnchorReady(await session.load());
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
     await waitForMacFact(session);
@@ -137,18 +140,18 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'a5-resume-after-conflict'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial });
     await session.invoke('resume_companion_sync');
-    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+    await observeMacosAnchorAfterElection(session);
+    const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
+      action: 'sync-now', appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
       execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
-    const a5ManualBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') }, 'manual');
+    const a5ManualBeforeRestart = await captureA5ActionRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') },
+    a5ManualBeforeRestartAction.manifestPath);
     const macosManualBeforeRestart = await session.invoke('sync_companion_now');
-    const conflicts = await session.waitForState({ command: 'load_sync_node_conflicts',
-      commandArgs: { objectIds: [conflictSeed.nodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
-    const conflict = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
-      silentOverwrite: false, visible: true };
+    const conflict = await loadVisibleDesktopSyncConflictCopy({
+      nodeId: conflictSeed.nodeId, session
+    });
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
     ]);
@@ -157,12 +160,13 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
     [a5Initial.run, a5AutomaticBeforeRestart.run]);
-    await runMacosA5SyncGroupMaintenance({ action: 'sync-now', appId: ACCEPTANCE_APP_ID,
+    const a5ManualAfterRestartAction = await runMacosA5SyncGroupMaintenance({
+      action: 'sync-now', appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-after-restart'),
       execute: args.execute, installMain: false, paths: args.paths, serial: args.serial });
-    const a5ManualAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'manual-after-restart-run') }, 'manual',
-    [a5ManualBeforeRestart.run]);
+    const a5ManualAfterRestart = await captureA5ActionRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'manual-after-restart-run') },
+    a5ManualAfterRestartAction.manifestPath);
     const macosRestart = await verifyMacosA5Restart({ env,
       expectedGroupId: result.observation.groupId, openSession,
       repoRoot: args.paths.buildRoot, session, sharedRoot });
@@ -175,12 +179,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       idempotent: true, journeyOrigins: Object.keys(journeyFacts.counts), macosRestarted: true,
       observation: result.observation,
       conflict,
+      topology: { macosAfterRestart: macosRestart.topology,
+        macosBeforeRestart: macosTopologyBeforeRestart },
       runs: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
-        automaticAfterRestart: macosRestart.automaticRun,
-        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        automaticAfterRestart: null,
+        automaticBeforeRestart: null,
         manualAfterRestart: macosRestart.manualRun,
         manualBeforeRestart: macosManualBeforeRestart } },
       resultStatus: 'success', sharedRoot
@@ -195,14 +201,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
-        automaticAfterRestart: macosRestart.automaticRun,
-        automaticBeforeRestart: macosAutomaticBeforeRestart,
+        automaticAfterRestart: null,
+        automaticBeforeRestart: null,
         manualAfterRestart: macosRestart.manualRun,
         manualBeforeRestart: macosManualBeforeRestart } } };
     process.stdout.write(result.output);
   } finally {
     await session.close().catch(() => undefined);
-    args.checked(args.paths.adb, ['-s', args.serial, 'uninstall', ACCEPTANCE_APP_ID]);
+    await removeA5AcceptanceApplication(args);
   }
   if (process.env.FOLIOLE_T152_CELL_ID) {
     writeMacosA5CellReceipt({ buildIdentity, evidenceRoot, input: cellProofInput,

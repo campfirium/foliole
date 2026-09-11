@@ -51,8 +51,16 @@ describe('iOS app identity host contract', () => {
       'scripts/ios/windows-fri-two-device-sync.mjs']) {
       const source = read(script);
       expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
-      expect(source).toContain('retainFriDevelopmentApps');
-      expect(source).toContain('freshT152: true');
+      expect(source).toContain('FOLIOLE_ACCEPTANCE_TASK_ID');
+      expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
     }
+  });
+
+  it('reuses the prepared Fri build for every two-device test batch', () => {
+    const macos = read('scripts/ios/macos-fri-two-device-sync.mjs');
+    const windows = read('scripts/ios/windows-fri-two-device-sync.mjs');
+    expect(macos.match(/'--test-without-building'/gu)).toHaveLength(7);
+    expect(windows.match(/'--test-without-building'/gu)).toHaveLength(3);
+    expect(windows).toContain("sourceRef: 'refs/heads/sync'");
   });
 });

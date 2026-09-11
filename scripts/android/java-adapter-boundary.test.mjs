@@ -36,6 +36,12 @@ function bootstrapStateSource() {
   return fs.readFileSync(path.join(JAVA_ROOT, 'FolioleCompanionBootstrapState.java'), 'utf8');
 }
 
+function discoverySessionSource() {
+  return fs.readFileSync(
+    path.join(JAVA_ROOT, 'FolioleCompanionNsdDiscoverySession.java'), 'utf8'
+  );
+}
+
 describe('Android Java adapter boundary', () => {
   it('documents a concrete host responsibility for every classification bucket', () => {
     expect(classificationEntries().map(({ kind, responsibility }) => ({
@@ -70,6 +76,12 @@ describe('Android Java adapter boundary', () => {
 
   it('preserves the nullable database path until the shared SQLite owner opens it', () => {
     expect(bootstrapStateSource()).toContain('databasePath == null ? JSONObject.NULL : databasePath');
+  });
+
+  it('projects the complete protocol TXT contract during continuous discovery', () => {
+    const source = discoverySessionSource();
+    expect(source).toContain('FolioleCompanionNsdProtocolTxt.read(');
+    expect(source).not.toContain('new String[] {"maxSupportedVersion"');
   });
 
   it('reloads bundled companion assets only when the packaged index signature changes', () => {

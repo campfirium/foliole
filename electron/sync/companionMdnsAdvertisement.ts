@@ -6,6 +6,7 @@ import {
   type DesktopDnsSdHandle
 } from '@foliole/desktop-dnssd';
 
+import type { DesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
@@ -22,7 +23,6 @@ type ActiveAdvertisement = {
 };
 
 let activeAdvertisement: ActiveAdvertisement | null = null;
-let factsRevision = 0;
 let lifecycleRevision = 0;
 let refreshQueue = Promise.resolve();
 
@@ -34,6 +34,7 @@ export interface CompanionMdnsAdvertisementInput {
   groupDisplayName: string;
   groupId: string;
   groupTag: string;
+  role: DesktopAnchorRole;
 }
 
 function runtimeSuffix(runtimeInstanceId: string) {
@@ -47,9 +48,9 @@ export function resolveCompanionMdnsIpv4Addresses(interfaces = os.networkInterfa
 }
 
 export function resolveCompanionMdnsServiceName(
-  groupDisplayName: string, runtimeInstanceId: string, revision: number
+  groupDisplayName: string, runtimeInstanceId: string, role: DesktopAnchorRole
 ) {
-  const suffix = `${runtimeSuffix(runtimeInstanceId)}-r${revision.toString(36)}`;
+  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${role}`;
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -68,7 +69,7 @@ function registrationError(event: Extract<DesktopDnsSdEvent, { kind: 'error' }>)
 function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: number) {
   const runtimeId = loadSyncGroupRuntimeInstanceId();
   const addresses = resolveCompanionMdnsIpv4Addresses();
-  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, factsRevision);
+  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, input.role);
   logDesktopDnsSdDiagnostic('register_started', {
     addresses, lifecycle, name, port: input.port, type: SERVICE.type
   });
@@ -85,10 +86,12 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
       name,
       port: input.port,
       txt: { app_version: input.appVersion, device_id: input.deviceId,
-        facts_revision: String(factsRevision), group_id: input.groupId,
+        group_id: input.groupId,
         group_tag: input.groupTag,
         ipv4_addresses: addresses.join(','),
-        runtime_instance_id: runtimeId, ...serializeSyncProtocolTxt() }
+        provider_platform: process.platform,
+        runtime_instance_id: runtimeId, topology_role: input.role,
+        ...serializeSyncProtocolTxt() }
     }, (event) => {
       if (lifecycle !== lifecycleRevision) return;
       logDesktopDnsSdDiagnostic('register_native_event', {
@@ -117,16 +120,15 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
   });
 }
 
-export function refreshCompanionMdnsAdvertisement() {
-  factsRevision += 1;
+export function updateCompanionMdnsAdvertisementRole(role: DesktopAnchorRole) {
   const targetLifecycle = activeAdvertisement?.lifecycle;
   refreshQueue = refreshQueue.then(() => {
     if (targetLifecycle === undefined
         || activeAdvertisement?.lifecycle !== targetLifecycle) return;
     const input = activeAdvertisement?.input;
-    if (!input) return;
+    if (!input || input.role === role) return;
     stopCompanionMdnsAdvertisement();
-    return beginAdvertisement(input, lifecycleRevision);
+    return beginAdvertisement({ ...input, role }, lifecycleRevision);
   });
   const refreshed = refreshQueue;
   refreshQueue = refreshed.catch(() => undefined);

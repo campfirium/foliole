@@ -18,9 +18,9 @@ extension FolioleCompanionSyncPlugin {
                 "workgroup_key": workgroupKey
             ]
             let contract = try self.contract()
+            let runtimeId = UUID().uuidString.lowercased()
             let discovery: [String: Any] = [
                 "app_version": try self.requiredString(call, ["appVersion": "app_version"], "appVersion"),
-                "facts_revision": try self.requiredString(call, ["factsRevision": "facts_revision"], "factsRevision"),
                 "group_display_name": try self.required(group, "display_name"),
                 "group_id": try self.required(group, "group_id"),
                 "group_tag": try FolioleCompanionSyncGroupSecurity.groupTag(workgroupKey),
@@ -31,9 +31,10 @@ extension FolioleCompanionSyncPlugin {
                 "provider_device_id": try self.requiredString(call, ["deviceId": "device_id"], "deviceId"),
                 "provider_device_name": try self.requiredString(call, ["deviceName": "device_name"], "deviceName"),
                 "provider_platform": try self.requiredString(call, ["platform": "platform"], "platform"),
-                "runtime_instance_id": UUID().uuidString.lowercased()
+                "runtime_instance_id": runtimeId,
+                "topology_role": "member"
             ]
-            try FolioleCompanionSyncGroupJoinService.shared.install(
+            _ = try FolioleCompanionSyncGroupJoinService.shared.install(
                 groupInfo: info, discovery: discovery, dataBridge: self.groupData,
                 stateChanged: { [weak self] in self?.publishProviderState() }
             )

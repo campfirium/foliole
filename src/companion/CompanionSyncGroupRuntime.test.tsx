@@ -32,7 +32,9 @@ it('reports a cold-start provider reconciliation failure', async () => {
   render(<CompanionSyncGroupRuntime bootstrapState={{
     booted_at: '2026-08-27T00:00:00.000Z', database_path: '/data/foliole.db',
     database_ready: true, device_id: 'device-a5', runtime_kind: 'android-capacitor'
-  }} workspaceSync={{ state: { last_synced_at: null } } as never}>ready</CompanionSyncGroupRuntime>);
+  }} workspaceSync={{
+    state: { last_synced_at: null }, syncParticipation: { participating: true }
+  } as never}>ready</CompanionSyncGroupRuntime>);
 
   await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
     '[companion-sync-group] provider reconciliation failed', error

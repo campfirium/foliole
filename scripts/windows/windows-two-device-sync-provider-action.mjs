@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadConvergedDesktopSyncForks
 } from '../desktop/sync-group-conflict-action.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
@@ -11,9 +11,7 @@ import {
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
-import {
-  waitForDesktopProductEvent, waitForDesktopProductState
-} from '../acceptance/desktop-product-event.mjs';
+import { waitForDesktopProductState } from '../acceptance/desktop-product-event.mjs';
 
 /* global process */
 
@@ -56,15 +54,10 @@ async function loadSyncTriggerResult(app) {
   });
 }
 
-async function waitForAutomaticSync(session, previousRunId, timeoutMs = 3 * 60_000) {
-  let result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  await waitForDesktopProductEvent(session.page, 'onWorkspaceSyncApplied', { timeoutMs });
-  result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
+function journeyFactCounts(snapshot) {
+  const titles = Object.values(snapshot?.nodesById ?? {}).map((node) => String(node.title));
+  return Object.fromEntries(['A', 'B'].map((origin) => [origin,
+    titles.filter((title) => title.startsWith(`Multi-device sync ${origin} fact`)).length]));
 }
 
 export async function runWindowsTwoDeviceSyncProvider(options) {
@@ -78,8 +71,7 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
   let groupTag;
   let creatorFact;
   let automaticFact;
-  let automaticResult;
-  let manualBeforeRestart;
+  let receivedBeforeRestart;
   let conflictProof;
   let conflictSeed;
   let acceptedRequestId;
@@ -115,13 +107,14 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
       throw new Error('Windows did not persist the joining Device.');
     }
     report(options.reportProgress, 'accepted');
-    const beforeAutomatic = await loadSyncTriggerResult(session.app);
     automaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(options.evidenceRoot, 'automatic-fact'), session: {
         invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
       } });
-    await waitForOrigins(session.page, ['A', 'B'], { B: 2 });
-    automaticResult = await waitForAutomaticSync(session, beforeAutomatic?.run_id);
+    receivedBeforeRestart = await waitForOrigins(session.page, ['A', 'B'], { B: 2 });
+    if (await loadSyncTriggerResult(session.app) !== null) {
+      throw new Error('Windows anchor incorrectly ran member synchronization.');
+    }
     report(options.reportProgress, 'automatic-converged');
     await invokeWindowsSyncGroupCommand(session.page, 'pause_companion_sync');
     await forkDesktopSyncConflict({ label: 'windows', nodeId: conflictSeed.nodeId,
@@ -132,33 +125,33 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
     await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
       repoRoot: options.paths.repoRoot });
     await invokeWindowsSyncGroupCommand(session.page, 'resume_companion_sync');
-    manualBeforeRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
-    const conflicts = await waitForDesktopProductState(session.page, {
-      command: 'load_sync_node_conflicts', commandArgs: { objectIds: [conflictSeed.nodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000
+    report(options.reportProgress, 'conflict-sync-resumed');
+    conflictProof = await loadConvergedDesktopSyncForks({ desktopLabel: 'windows',
+      nodeId: conflictSeed.nodeId, session: { waitForState: (args) => (
+        waitForDesktopProductState(session.page, args)
+      ) }
     });
-    conflictProof = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
-      silentOverwrite: false, visible: true };
   } finally {
     await closeWindowsSyncGroupSession(session);
   }
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restarted;
-  let manualAfterRestart;
+  let receivedAfterRestart;
   try {
     restarted = await waitForOverview(session.page,
       (value) => value.sync_group?.group_id === groupId
         && value.sync_group.devices.length === 2, groupId);
-    const beforeRepeat = await waitForOrigins(session.page, ['A', 'B']);
-    const restartedAutomatic = await waitForAutomaticSync(session, automaticResult?.run_id);
-    manualAfterRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
-    const afterRepeat = await waitForOrigins(session.page, ['A', 'B']);
-    if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
-      throw new Error('Repeated Windows provider sync was not idempotent.');
+    receivedAfterRestart = await waitForOrigins(session.page, ['A', 'B'], { B: 2 });
+    if (await loadSyncTriggerResult(session.app) !== null) {
+      throw new Error('Restarted Windows anchor incorrectly ran member synchronization.');
+    }
+    if (Object.keys(receivedAfterRestart.nodesById).length
+        !== Object.keys(receivedBeforeRestart.nodesById).length) {
+      throw new Error('Windows anchor restart did not preserve the received union idempotently.');
     }
     report(options.reportProgress, 'restarted');
-    automaticResult = { afterRestart: restartedAutomatic, beforeRestart: automaticResult };
+    await waitForWindowsSyncGroupProviderRelease({ action: ACTION,
+      repoRoot: options.paths.repoRoot });
   } finally {
     await closeWindowsSyncGroupSession(session);
   }
@@ -167,13 +160,14 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
     buildIdentity: options.buildIdentity, completedAt: new Date().toISOString(),
     creatorFactId: creatorFact.factId, deviceCount: restarted.sync_group.devices.length,
     automaticFactId: automaticFact.factId, groupId, groupTag, idempotent: true,
-    automaticRunIds: { afterRestart: automaticResult.afterRestart.run_id,
-      beforeRestart: automaticResult.beforeRestart.run_id },
+    anchorDoesNotPollMembers: true,
     localDeviceIdentityKey: restarted.sync_group.local_device_identity_key,
     libraryLocator: client.libraryHome, freshWorkspace: true,
-    runs: { automaticAfterRestart: automaticResult.afterRestart,
-      automaticBeforeRestart: automaticResult.beforeRestart,
-      manualAfterRestart, manualBeforeRestart },
+    receivedJourneyFacts: {
+      afterRestart: journeyFactCounts(receivedAfterRestart),
+      beforeRestart: journeyFactCounts(receivedBeforeRestart)
+    },
+    runs: {},
     journeyOrigins: ['A', 'B'],
     conflict: conflictProof,
     resultStatus: 'success', schemaVersion: 1

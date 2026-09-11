@@ -66,11 +66,12 @@ final class FolioleCompanionJoinRequest {
     }
 
     private static void validateDevice(JSONObject device) throws Exception {
-        if (!"posix".equals(required(device, "path_flavor"))) {
+        String flavor = required(device, "path_flavor");
+        if (!"posix".equals(flavor) && !"windows".equals(flavor)) {
             throw new IllegalArgumentException("library_path_flavor_invalid");
         }
         String path = required(device, "canonical_library_path");
-        if (!isCanonicalPosixPath(path)) {
+        if (!("posix".equals(flavor) ? isCanonicalPosixPath(path) : isCanonicalWindowsPath(path))) {
             throw new IllegalArgumentException("library_path_not_canonical");
         }
         if (!UUID_V4.matcher(required(device, "device_anchor")).matches()) {
@@ -105,6 +106,25 @@ final class FolioleCompanionJoinRequest {
     private static boolean isCanonicalPosixPath(String value) {
         if (!value.startsWith("/") || (value.length() > 1 && value.endsWith("/"))) return false;
         String[] segments = value.substring(1).split("/", -1);
+        for (String segment : segments) {
+            if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) return false;
+        }
+        return true;
+    }
+
+    private static boolean isCanonicalWindowsPath(String value) {
+        if (value.indexOf('/') >= 0 || value.startsWith("\\\\?\\")) return false;
+        if (value.matches("^[a-z]:\\\\.*$") && value.equals(value.toLowerCase(Locale.ROOT))) {
+            return canonicalSegments(value.substring(3), 0);
+        }
+        if (!value.startsWith("\\\\")) return false;
+        return canonicalSegments(value.substring(2), 2);
+    }
+
+    private static boolean canonicalSegments(String value, int minimum) {
+        if (value.isEmpty()) return minimum == 0;
+        String[] segments = value.split("\\\\", -1);
+        if (segments.length < minimum) return false;
         for (String segment : segments) {
             if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) return false;
         }

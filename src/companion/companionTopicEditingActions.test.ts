@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['topic-1'])
+  applyCompanionLocalNodeVersions: vi.fn(async () => ['topic-1'])
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 function readAppliedVersions() {
-  const call = syncObjectsMock.applyCompanionSyncNodeVersions.mock.calls[0] as [NativeSyncNodeRecord[]] | undefined;
+  const call = syncObjectsMock.applyCompanionLocalNodeVersions.mock.calls[0] as [NativeSyncNodeRecord[]] | undefined;
   return call?.[0] ?? [];
 }
 
@@ -72,7 +72,7 @@ describe('companion topic content persistence', () => {
       currentVersionId: 'ver_00000000-0000-4000-8000-000000000001',
       updatedAt: expect.any(String)
     });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'topic-1',
         parent_version_id: 'desktop#topic-v1',
@@ -96,7 +96,7 @@ describe('companion topic content persistence', () => {
     });
 
     expect(result?.snapshot.nodesById['topic-1']?.currentVersionId).toBe('desktop#topic-v1');
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 
   it('rejects synced topic edits that do not have a base version id', async () => {
@@ -109,7 +109,7 @@ describe('companion topic content persistence', () => {
       snapshot: createSnapshot(createNode({ currentVersionId: null }))
     })).rejects.toThrow('Topic edit requires a synced base version.');
 
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 });
 
@@ -205,7 +205,7 @@ describe('companion topic editing action guards', () => {
       nodeId: 'topic-1',
       snapshot: { ...createSnapshot(), trashedNodeIds: ['topic-1'] }
     })).resolves.toBeNull();
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
   });
 
   it('uses lifecycle facts instead of stale legacy trash projection', async () => {

@@ -62,10 +62,12 @@ final class FolioleCompanionSyncGroupJoinRequest {
     }
 
     private static func validateDevice(_ device: [String: Any]) throws {
-        guard try required(device, "path_flavor") == "posix" else {
+        let flavor = try required(device, "path_flavor")
+        guard flavor == "posix" || flavor == "windows" else {
             throw invalid("library_path_flavor_invalid")
         }
-        guard canonicalPosixPath(try required(device, "canonical_library_path")) else {
+        let path = try required(device, "canonical_library_path")
+        guard flavor == "posix" ? canonicalPosixPath(path) : canonicalWindowsPath(path) else {
             throw invalid("library_path_not_canonical")
         }
         guard try required(device, "device_anchor").range(of: uuidV4, options: .regularExpression) != nil else {
@@ -87,6 +89,25 @@ final class FolioleCompanionSyncGroupJoinRequest {
         guard value.first == "/", value == "/" || value.last != "/" else { return false }
         return value == "/" || value.dropFirst().split(separator: "/", omittingEmptySubsequences: false)
             .allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
+    private static func canonicalWindowsPath(_ value: String) -> Bool {
+        guard !value.contains("/"), !value.hasPrefix("\\\\?\\") else { return false }
+        let characters = Array(value)
+        if characters.count >= 3, characters[0].isLowercase,
+           characters[1] == ":", characters[2] == "\\", value.lowercased() == value {
+            return canonicalSegments(String(characters.dropFirst(3)), minimum: 0)
+        }
+        guard value.hasPrefix("\\\\") else { return false }
+        return canonicalSegments(String(value.dropFirst(2)), minimum: 2)
+    }
+
+    private static func canonicalSegments(_ value: String, minimum: Int) -> Bool {
+        if value.isEmpty { return minimum == 0 }
+        let segments = value.split(separator: "\\", omittingEmptySubsequences: false)
+        return segments.count >= minimum && segments.allSatisfy {
+            !$0.isEmpty && $0 != "." && $0 != ".."
+        }
     }
 
     static func required(_ value: [String: Any], _ key: String) throws -> String {

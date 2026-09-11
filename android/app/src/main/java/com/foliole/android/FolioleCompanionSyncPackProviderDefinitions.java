@@ -22,6 +22,7 @@ final class FolioleCompanionSyncPackProviderDefinitions {
     int payloadCopyIndex() throws Exception { return value.getInt("payloadCopyIndex"); }
     JSONArray payloadPlans() throws Exception { return value.getJSONArray("payloadPlans"); }
     JSONArray packSchema() throws Exception { return value.getJSONArray("packSchema"); }
+    JSONObject preparedMemberDataPlane() throws Exception { return value.getJSONObject("preparedMemberDataPlane"); }
     JSONObject protocol() throws Exception { return value.getJSONObject("protocol"); }
     int schemaVersion() throws Exception { return value.getInt("schemaVersion"); }
     int stateCopyIndex() throws Exception { return value.getInt("stateCopyIndex"); }

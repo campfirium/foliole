@@ -89,14 +89,13 @@ function renderExistingToolbar(note?: string) {
   return { onAddExistingHighlightNote, onClose, onDeleteExistingHighlight };
 }
 
-it('closes a highlight only after its permanent write completes', async () => {
+it('starts a highlight before pointer release and closes only after its permanent write completes', async () => {
   let resolveApply: () => void = () => undefined;
   const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = () => resolve(); }));
   const { onClose } = renderToolbar(onApply);
 
   const button = screen.getByRole('button', { name: 'Highlight' });
-  expect(fireEvent.pointerDown(button)).toBe(false);
-  fireEvent.pointerUp(button);
+  expect(fireEvent.pointerDown(button, { button: 0, pointerType: 'touch' })).toBe(false);
 
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
   expect(onClose).not.toHaveBeenCalled();

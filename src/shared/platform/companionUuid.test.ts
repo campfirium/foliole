@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createCompanionUuid } from './companionUuid';
 
 describe('createCompanionUuid', () => {
-  it('falls back to getRandomValues when old Android WebView lacks randomUUID', () => {
+  it('falls back to getRandomValues when a mobile WebView lacks randomUUID', () => {
     const originalRandomUUID = crypto.randomUUID;
     Object.defineProperty(crypto, 'randomUUID', {
       configurable: true,

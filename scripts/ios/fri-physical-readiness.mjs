@@ -33,15 +33,15 @@ export function createFriPhysicalReadinessAdapter({ execute = bounded } = {}) {
     ]) if (!pattern.test(details)) throw blocked('Fixed Fri is not ready.', fact, 'fri_details_read');
     const lock = await execute('xcrun', ['devicectl', 'device', 'info', 'lockState',
       '--device', FRI_COREDEVICE_ID]);
-    if (!/unlockedSinceBoot: true/u.test(lock)) {
-      throw blocked('Fri has not been unlocked since boot.', 'fri_unlock_required', 'fri_details_ready');
+    if (!/passcodeRequired: false/u.test(lock)) {
+      throw blocked('Fri is currently locked.', 'fri_current_unlock_required', 'fri_details_ready');
     }
     const devices = await execute('xcrun', ['xctrace', 'list', 'devices']);
     if (!devices.includes(FRI_UDID)) {
       throw blocked('Xcode does not expose fixed Fri.', 'fri_xcode_destination_missing', 'fri_lock_ready');
     }
     return { facts: ['fri_paired', 'fri_developer_mode_ready', 'fri_wired',
-      'fri_unlocked_since_boot', 'fri_xcode_destination_ready'] };
+      'fri_currently_unlocked', 'fri_xcode_destination_ready'] };
   };
 }
 

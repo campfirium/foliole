@@ -69,18 +69,23 @@ export async function runFriDevWorkflow({
   evidenceRoot,
   repoRoot = process.cwd(),
   readiness = createFriPhysicalReadinessAdapter(),
+  retention = retainFriDevelopmentApps,
   run = execute
 }) {
   if (!fs.existsSync(FRI_XCUITEST_RUNNER)) {
     throw new Error(`Fixed Fri XCUITest runner is missing: ${FRI_XCUITEST_RUNNER}`);
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot });
+  for (const entry of commands.slice(0, 2)) {
+    run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
+  }
   await readiness();
-  await retainFriDevelopmentApps({
+  await retention({
     evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
     run
   });
-  for (const entry of buildFriDevWorkflowCommands({ evidenceRoot, repoRoot })) {
+  for (const entry of commands.slice(2)) {
     await run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
   return { evidenceRoot, testIdentifier: FRI_DEV_TEST };

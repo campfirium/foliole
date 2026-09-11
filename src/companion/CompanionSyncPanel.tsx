@@ -52,6 +52,7 @@ function formatSyncPanelError(message: string, t: Translate) {
   if (message === 'discovery_permission_required') return t('companion.sync.discovery.permissionRequired');
   if (message === 'discovery_unavailable') return t('companion.sync.discovery.unavailable');
   if (message === 'discovery_incompatible') return t('companion.sync.discovery.incompatible');
+  if (message === 'discovery_waiting_anchor') return t('companion.sync.discovery.waitingAnchor');
   if (message === 'discovery_connection_failed') return t('companion.sync.discovery.connectionFailed');
   if (message.includes('sync_participation_inactive')) return t('companion.sync.participation.inactive');
   if (message.includes('sync_group_join_request_not_found')) return t('companion.sync.discovery.error.joinExpired');
@@ -102,7 +103,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           <CompanionHandoffReminderSettingsPanel page={props.page} settings={props.handoffReminderSettings}
             onChange={props.onChangeHandoffReminderSettings} onOpenPage={props.onOpenSettingsPage} />
         ) : null}
-        <CompanionSyncDiscoveryDialog devices={props.syncGroup || props.joinRequest ? [] : props.discoveries}
+        <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
           onJoin={(url) => void props.onRequestJoin(url).catch(() => undefined)}
           onRefresh={() => void props.onDiscover()} />

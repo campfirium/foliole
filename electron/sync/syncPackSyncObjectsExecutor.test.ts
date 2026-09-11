@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
+  applySyncPackNodeOpenStatesWithDbPort,
   applySyncPackSettingObjectsWithDbPort,
   isConsumableSyncPackSyncObject,
   loadSyncPackSyncObjectsWithDbPort
@@ -26,6 +27,27 @@ it('loads applyable sync object records from the attached pack', async () => {
   ]);
   expect(port.query).toHaveBeenCalledWith(expect.stringContaining('FROM incoming.sync_objects incoming'));
   expect(port.query).toHaveBeenCalledWith(expect.stringContaining('ORDER BY updated_at ASC, object_type ASC, object_id ASC'));
+});
+
+it('applies node open state from a structure pack payload', async () => {
+  const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));
+  const port = {
+    query: vi.fn(async () => [{
+      content_hash: 'open-hash', deleted_at: null, object_id: 'node-1',
+      object_type: 'node_open_state', payload_json: JSON.stringify({
+        last_opened_at: '2026-09-07T08:00:00.000Z', node_id: 'node-1'
+      }), updated_at: '2026-09-07T08:00:00.000Z'
+    }]),
+    run
+  } as unknown as DbPort;
+
+  await expect(applySyncPackNodeOpenStatesWithDbPort(port, {
+    incomingAlias: 'incoming', sourcePeerId: 'source-peer'
+  })).resolves.toBe(1);
+  expect(run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO node_open_state'), [
+    'node-1', '2026-09-07T08:00:00.000Z'
+  ]);
+  expect(port.query).toHaveBeenCalledWith(expect.stringContaining("receipt.peer_id = 'source-peer'"));
 });
 
 it('filters view state records to the current Host', () => {

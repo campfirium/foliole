@@ -32,10 +32,11 @@ const mocks = vi.hoisted(() => ({
   requestJson: vi.fn(async (url: string, init?: { body: string }) => {
     void init;
     return url.endsWith('/join-requests')
-      ? { expires_at: '2026-08-27T00:02:00.000Z', request_id: 'request-1' }
-      : { encrypted_group_info: {}, expires_at: '2026-08-27T00:02:00.000Z', request_id: 'request-1' };
+      ? { expires_at: '2099-08-27T00:02:00.000Z', request_id: 'request-1' }
+      : { encrypted_group_info: {}, expires_at: '2099-08-27T00:02:00.000Z', request_id: 'request-1' };
   }),
   route: vi.fn((value) => value),
+  removeRoute: vi.fn(),
   savePending: vi.fn(),
   state: { candidates: [] as typeof CANDIDATE[], pending: null as null | Record<string, unknown> }
 }));
@@ -65,7 +66,10 @@ vi.mock('./desktopSyncGroupJoinState.js', () => ({
   loadDesktopSyncGroupJoinState: () => mocks.state,
   saveDesktopSyncGroupPendingJoin: mocks.savePending
 }));
-vi.mock('./desktopSyncGroupRoutes.js', () => ({ saveDesktopSyncGroupRoute: mocks.route }));
+vi.mock('./desktopSyncGroupRoutes.js', () => ({
+  removeDesktopSyncGroupRoute: mocks.removeRoute,
+  saveDesktopSyncGroupRoute: mocks.route
+}));
 
 import {
   completeDesktopSyncGroupJoin,
@@ -101,7 +105,7 @@ it('requests a Device-scoped join without retired library or authorization metad
 it('activates the provider Device route and initial coordinator after acceptance', async () => {
   mocks.state.pending = {
     candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
-    request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2026-08-27T00:02:00.000Z',
+    request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
   mocks.existingGroup = JOINED_GROUP;
@@ -111,7 +115,35 @@ it('activates the provider Device route and initial coordinator after acceptance
   expect(mocks.route).toHaveBeenCalledWith({
     endpoint_url: CANDIDATE.endpoint_url, group_id: 'group-1',
     local_device_id: DEVICE.identity_key, peer_device_id: CANDIDATE.provider_device_id,
-    peer_device_name: CANDIDATE.provider_device_name, peer_platform: CANDIDATE.provider_platform
+    peer_device_name: CANDIDATE.provider_device_name, peer_platform: CANDIDATE.provider_platform,
+    route_kind: 'anchor'
   });
   expect(mocks.coordinator).toHaveBeenCalledWith('initial', expect.any(Object));
+});
+
+it('drops the one-time mobile guide route after initial convergence', async () => {
+  const mobile = { ...CANDIDATE, provider_platform: 'android-capacitor' };
+  mocks.state.pending = {
+    candidate: mobile, key: { privateKey: 'private', publicKey: 'public' },
+    request: { endpoint_url: mobile.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
+      group_id: 'group-1', request_id: 'request-1', status: 'pending' }
+  };
+  mocks.existingGroup = JOINED_GROUP;
+
+  await completeDesktopSyncGroupJoin();
+
+  expect(mocks.route).toHaveBeenCalledWith(expect.objectContaining({ route_kind: 'mobile_guide' }));
+  expect(mocks.removeRoute).toHaveBeenCalledWith(mobile.provider_device_id);
+});
+
+it('clears an expired request without contacting or migrating its endpoint', async () => {
+  mocks.state.pending = {
+    candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
+    request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2020-08-27T00:02:00.000Z',
+      group_id: 'group-1', request_id: 'request-1', status: 'pending' }
+  };
+
+  await expect(completeDesktopSyncGroupJoin()).rejects.toThrow('sync_group_join_request_expired');
+  expect(mocks.savePending).toHaveBeenCalledWith(null);
+  expect(mocks.requestJson).not.toHaveBeenCalled();
 });
