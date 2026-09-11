@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 
 import { shell } from 'electron';
@@ -15,6 +16,7 @@ import type {
   NativeLibraryPaths,
   NativeUpdateLibraryPathSettingArgs
 } from '../../lib/platform/nativeUtilityContract.js';
+import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 
@@ -170,6 +172,13 @@ function assertSafeLibraryPathLayout(paths: NativeLibraryPaths) {
   ]);
 }
 
+function publishAttachmentPaths(paths: NativeLibraryPaths) {
+  publishAttachmentLibraryPathSnapshot({
+    assetsDir: paths.assets_dir,
+    libraryScope: createHash('sha256').update(paths.database_path).digest('hex')
+  });
+}
+
 export async function loadLibraryPathSettings(): Promise<NativeLibraryPaths> {
   return toNativeLibraryPaths(await loadStoredLibraryPathOverrides());
 }
@@ -220,6 +229,7 @@ export async function updateLibraryPathSetting(
         saveCurrentLibraryHome(nextPaths.library_home);
       }
       ensureLibraryPathLayout(nextPaths);
+      publishAttachmentPaths(nextPaths);
       return nextPaths;
     } finally {
       endLibraryHomeMigration();
@@ -228,5 +238,6 @@ export async function updateLibraryPathSetting(
   await applyMigration();
   saveStoredLibraryPathOverrides(nextOverrides);
   ensureLibraryPathLayout(nextPaths);
+  publishAttachmentPaths(nextPaths);
   return nextPaths;
 }
