@@ -24,6 +24,20 @@ it('creates a canonical branch head without rewriting shared version history', a
   ]);
 });
 
+it('moves a preserved source version onto the canonical object', async () => {
+  const port = new RecordingPort();
+
+  await rekeyNodeObject(
+    port, 'highlight-1', 'highlight-1~canonical', 'android#1', 'android#1'
+  );
+
+  expect(port.runs.some(([sql, params]) => sql.startsWith('UPDATE node_sync_versions SET')
+    && params[0] === 'highlight-1~canonical'
+    && params[1] === JSON.stringify({ id: 'highlight-1~canonical', title: 'Selection' })
+    && params[2] === 'android#1')).toBe(true);
+  expect(port.runs.some(([sql]) => sql.startsWith('INSERT INTO node_sync_versions ('))).toBe(false);
+});
+
 class RecordingPort implements DbPort {
   readonly runs: Array<[string, DbParams]> = [];
 

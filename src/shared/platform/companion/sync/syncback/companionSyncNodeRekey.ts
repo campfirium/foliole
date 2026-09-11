@@ -71,6 +71,14 @@ async function createCanonicalVersion(port: DbPort, input: {
   }>(`SELECT host_name, created_at, content_hash, body_text, snapshot_json
       FROM node_sync_versions WHERE version_id = ? LIMIT 1`, [input.sourceVersionId]);
   if (!source?.snapshot_json) throw new Error('canonical_node_source_version_missing');
+  const snapshot = withCanonicalSnapshotId(source.snapshot_json, input.canonicalId);
+  if (input.canonicalVersionId === input.sourceVersionId) {
+    await port.run(
+      'UPDATE node_sync_versions SET object_id = ?, snapshot_json = ? WHERE version_id = ?',
+      [input.canonicalId, snapshot, input.sourceVersionId]
+    );
+    return;
+  }
   await port.run(
     `INSERT INTO node_sync_versions (
        version_id, object_id, parent_version_id, host_name, created_at,
@@ -78,8 +86,7 @@ async function createCanonicalVersion(port: DbPort, input: {
      ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
      ON CONFLICT(version_id) DO NOTHING`,
     [input.canonicalVersionId, input.canonicalId, source.host_name, source.created_at,
-      source.content_hash, source.body_text,
-      withCanonicalSnapshotId(source.snapshot_json, input.canonicalId)]
+      source.content_hash, source.body_text, snapshot]
   );
 }
 
