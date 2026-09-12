@@ -35,9 +35,8 @@ async function inspectAttachment(desktopApp: ElectronApplication, nodeId: string
 }
 
 async function openImageNode(page: Page, nodeId: string) {
-  await page.evaluate(async (targetNodeId) => {
-    await globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId);
-  }, nodeId);
+  await expect.poll(() => page.evaluate(async (targetNodeId) =>
+    globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false, nodeId)).toBe(true);
   const image = page.locator('.cm-md-image-element-block');
   await expect(image).toHaveCount(1);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
