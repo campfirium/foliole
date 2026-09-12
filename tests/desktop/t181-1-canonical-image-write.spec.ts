@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import type { ElectronApplication, Page, TestInfo } from '@playwright/test';
+import type { ElectronApplication, TestInfo } from '@playwright/test';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
@@ -34,18 +34,35 @@ async function inspectAttachment(desktopApp: ElectronApplication, nodeId: string
   }, nodeId);
 }
 
-async function openImageNode(page: Page) {
-  const topic = page.getByRole('treeitem', { exact: true, name: 'Canonical image write' });
-  await expect(topic).toBeVisible();
-  await topic.click();
-  const image = page.getByRole('main').getByRole('img', { name: 'Misleading extension' });
-  await expect(image).toHaveCount(1);
-  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+async function inspectRestartReadability(
+  desktopApp: ElectronApplication,
+  input: { contentHash: string; storageKey: string; storagePath: string }
+) {
+  return desktopApp.evaluate(({ nativeImage }, payload) => {
+    const moduleApi = process.getBuiltinModule('module');
+    const pathApi = process.getBuiltinModule('path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
+    const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const resolver = require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js'));
+    const paths = require(pathApi.join(process.cwd(), 'dist/electron/attachments/attachmentLibraryPathSnapshot.js'));
+    const libraryScope = paths.readAttachmentLibraryPathSnapshot()?.libraryScope;
+    if (!libraryScope) throw new Error('attachment library scope unavailable after restart');
+    const resolution = resolver.resolveAttachmentResource({
+      attachmentId: payload.contentHash,
+      contentHash: payload.contentHash,
+      libraryScope,
+      mimeType: 'image/png',
+      storageKey: payload.storageKey
+    });
+    const decoded = nativeImage.createFromPath(payload.storagePath);
+    return { decodedSize: decoded.getSize(), imageEmpty: decoded.isEmpty(), resolution };
+  }, input);
 }
 
 async function writeEvidence(input: {
   attachment: unknown;
   content: string;
+  readback: unknown;
   sourcePath: string;
   storagePath: string;
   testInfo: TestInfo;
@@ -101,10 +118,14 @@ test('imports misleading image extension to one canonical key across relaunch', 
     await expectWorkspaceShell(secondSession.firstWindow);
     const content = (await loadNodeDocument(secondSession.firstWindow, nodeId))?.content ?? '';
     expect(content).toBe(firstContent);
-    await openImageNode(secondSession.firstWindow);
+    const readback = await inspectRestartReadability(secondSession.electronApp, {
+      contentHash, storageKey, storagePath
+    });
+    expect(readback).toMatchObject({ imageEmpty: false, resolution: { status: 'ready' } });
+    expect(readback.decodedSize.width).toBeGreaterThan(0);
     await writeEvidence({
       attachment: await inspectAttachment(secondSession.electronApp, nodeId),
-      content, sourcePath, storagePath, testInfo
+      content, readback, sourcePath, storagePath, testInfo
     });
   } finally {
     await secondSession?.close();
