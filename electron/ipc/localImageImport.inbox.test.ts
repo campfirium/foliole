@@ -148,7 +148,7 @@ it('returns an explicit failed result for corrupted supported image files in man
   expect(result).toEqual(expect.objectContaining({ consumed_count: 0, discovered_count: 1, failed_count: 1, imported_count: 0 }));
   expect(result.entries[0]).toEqual(
     expect.objectContaining({
-      failure_reason: 'The image file is invalid or corrupted.',
+      failure_reason: 'The image file is invalid, unsupported, or too large.',
       result_status: 'failed',
       source_name: 'broken.png'
     })

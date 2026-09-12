@@ -13,7 +13,10 @@ import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
 
 const IMAGE_ATTACHMENT_ID = 'hash-1';
-const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
+const {
+  assetUrl: IMAGE_ASSET_URL,
+  description: { contentHash: IMAGE_CONTENT_HASH }
+} = createTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
 const IMAGE_MARKDOWN = `![Cover](${IMAGE_ASSET_URL})`;
 const IMAGE_FROM = 7;
 const IMAGE_TO = IMAGE_FROM + IMAGE_MARKDOWN.length;
@@ -138,7 +141,7 @@ it('toggles highlight for a standalone image block from the reading position', (
     expect.objectContaining({
       imageRegions: [
         {
-          attachmentId: IMAGE_ATTACHMENT_ID,
+          attachmentId: IMAGE_CONTENT_HASH,
           regions: [expect.objectContaining({ height: 1, width: 1, x: 0, y: 0 })]
         }
       ],

@@ -7,6 +7,10 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-import-readwise-markdown-images-tests';
+const PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+yZB8AAAAASUVORK5CYII=',
+  'base64'
+);
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -53,7 +57,7 @@ it('keeps imported sidecar highlight locators aligned after local image rewrite'
   const sourceRoot = await fs.mkdtemp(path.join(tempRoot, 'markdown-highlight-images-'));
   const imagePath = path.join(sourceRoot, 'cover.png');
   const sourceMarkdownPath = path.join(sourceRoot, 'readwise.md');
-  await fs.writeFile(imagePath, Buffer.from('cover-image'));
+  await fs.writeFile(imagePath, PNG_BYTES);
   await fs.writeFile(
     sourceMarkdownPath,
     ['![Cover](cover.png)', '', '大罗SEO target sentence.', '', '![Remote](https://example.com/remote.png)'].join('\n')

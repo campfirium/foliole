@@ -16,7 +16,10 @@ vi.mock('../../shared/platform/attachmentImageActions', () => ({
 }));
 
 const IMAGE_ATTACHMENT_ID = 'hash-1';
-const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
+const {
+  assetUrl: IMAGE_ASSET_URL,
+  description: { contentHash: IMAGE_CONTENT_HASH }
+} = createTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
 const IMAGE_MARKDOWN = `![Cover](${IMAGE_ASSET_URL})`;
 
 function createImageTarget(from = '3', to = String(IMAGE_MARKDOWN.length - 1)) {
@@ -126,7 +129,7 @@ it('opens image commands with a highlightable payload when the target is an atta
   expect(result.current.contextMenu?.payload).toMatchObject({
     imageRegions: [
       {
-        attachmentId: IMAGE_ATTACHMENT_ID,
+        attachmentId: IMAGE_CONTENT_HASH,
         regions: [expect.objectContaining({ height: 1, width: 1, x: 0, y: 0 })]
       }
     ],
@@ -178,7 +181,7 @@ it('creates a highlight from an image context menu target', () => {
     }),
     [
       {
-        attachmentId: IMAGE_ATTACHMENT_ID,
+        attachmentId: IMAGE_CONTENT_HASH,
         regions: [expect.objectContaining({ height: 1, width: 1, x: 0, y: 0 })]
       }
     ]

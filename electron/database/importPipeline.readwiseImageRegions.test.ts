@@ -7,6 +7,10 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-import-readwise-image-regions-tests';
+const PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+yZB8AAAAASUVORK5CYII=',
+  'base64'
+);
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -53,7 +57,7 @@ it('projects a localized image-only highlight into a full-image region', async (
   const highlightDir = path.join(readwiseRoot, 'Articles');
   await fs.mkdir(fullDir, { recursive: true });
   await fs.mkdir(highlightDir, { recursive: true });
-  await fs.writeFile(path.join(fullDir, 'cover.png'), Buffer.from('cover-image'));
+  await fs.writeFile(path.join(fullDir, 'cover.png'), PNG_BYTES);
   await fs.writeFile(path.join(fullDir, 'image.md'), '# Image\n\n![Cover](cover.png)\n', 'utf8');
   await fs.writeFile(
     path.join(highlightDir, 'image.md'),

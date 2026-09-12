@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
   registerTestAttachmentResource,
-  TEST_ATTACHMENT_ASSET_URL
+  TEST_ATTACHMENT_ASSET_URL,
+  TEST_ATTACHMENT_HASH
 } from '../../../test/attachmentResourceTestSupport';
 import {
   registerImageClozeEditorPresentation,
@@ -47,7 +48,7 @@ it('projects an occurrence-bound image excerpt only onto the exact repeated imag
     onOpenNode,
     outlinedRegionIds: ['excerpt-region'],
     regions: [{
-      attachmentId: 'hash-1', height: 0.2, id: 'excerpt-region',
+      attachmentId: TEST_ATTACHMENT_HASH, height: 0.2, id: 'excerpt-region',
       imageRange: { from: secondFrom, to: secondFrom + imageMarkdown.length },
       openNodeId: 'excerpt-1', width: 0.3, x: 0.1, y: 0.2
     }]

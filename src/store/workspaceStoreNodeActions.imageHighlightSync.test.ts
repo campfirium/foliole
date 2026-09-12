@@ -91,7 +91,7 @@ it('keeps imported image highlights as image regions when parent image markdown 
         locator: { from: 6, originalText: localImage, to: 6 + localImage.length }
       }),
       imageRegions: [{
-        attachmentId: IMAGE_ATTACHMENT_ID,
+        attachmentId: IMAGE_CONTENT_HASH,
         regions: [{ height: 1, id: 'imported-highlight-image-image-0', width: 1, x: 0, y: 0 }]
       }]
     })
@@ -101,7 +101,7 @@ it('keeps imported image highlights as image regions when parent image markdown 
     [expect.objectContaining({
       id: 'node-image-highlight',
       imageRegions: [expect.objectContaining({
-        attachmentId: IMAGE_ATTACHMENT_ID
+        attachmentId: IMAGE_CONTENT_HASH
       })]
     })],
     expect.any(Array)
