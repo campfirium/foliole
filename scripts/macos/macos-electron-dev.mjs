@@ -19,8 +19,13 @@ import { runMacosElectronDev } from './electron-dev-preview.mjs';
 import { runMacosElectronDevSupervisor } from './macos-electron-dev-supervisor.mjs';
 
 export const MACOS_ELECTRON_DEV_ACTIONS = new Set([
-  'full-restart', 'logs', 'reset', 'reset-preview', 'restart', 'start', 'status', 'stop'
+  'full-restart', 'logs', 'open', 'reset', 'reset-preview', 'restart', 'start', 'status', 'stop'
 ]);
+
+export function resolveMacosElectronDevOpenMode(snapshot) {
+  if (snapshot.running) return 'restart';
+  return snapshot.supervisorAlive ? 'recover' : 'start';
+}
 
 export function resolveMacosElectronDevAction(argv = process.argv) {
   const action = argv[2] ?? 'status';
@@ -48,6 +53,24 @@ export async function runMacosElectronDevAction(action, options = {}) {
   if (action === 'logs') {
     console.log(await readMacosElectronDevLogs(paths));
     return 0;
+  }
+  if (action === 'open') {
+    const mode = resolveMacosElectronDevOpenMode(readElectronDevSnapshot(paths));
+    if (mode === 'restart') {
+      const snapshot = await requestMacosElectronRuntimeRestart({ paths });
+      console.log(`[macos-electron-dev] status: OPENED mode=refreshed session=${snapshot.ready.appReady.session}`);
+      return 0;
+    }
+    if (mode === 'recover') {
+      console.error(await readMacosElectronDevLogs(paths));
+      await stopMacosElectronDev({ paths });
+    }
+    const libraryHome = options.libraryHome ?? resolveMacosElectronDevLibraryHome(
+      options.argv ?? process.argv.slice(3),
+      paths.appRoot
+    );
+    console.log(`[macos-electron-dev] status: OPENING mode=${mode}`);
+    return runMacosElectronDevSupervisor({ ...options, libraryHome, paths });
   }
   if (action === 'stop') {
     const stopped = await stopMacosElectronDev({ paths });

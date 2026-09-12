@@ -6,7 +6,10 @@ import process from 'node:process';
 
 import { describe, expect, it } from 'vitest';
 
-import { resolveMacosElectronDevAction } from './macos-electron-dev.mjs';
+import {
+  resolveMacosElectronDevAction,
+  resolveMacosElectronDevOpenMode
+} from './macos-electron-dev.mjs';
 import {
   createMacosDailyEnvironment,
   resolveMacosElectronDevLibraryHome
@@ -29,10 +32,18 @@ describe('macOS Electron dev entry', () => {
   });
 
   it('accepts the complete explicit control surface', () => {
-    for (const action of ['start', 'status', 'stop', 'restart', 'full-restart', 'logs', 'reset', 'reset-preview']) {
+    for (const action of [
+      'start', 'status', 'stop', 'restart', 'full-restart', 'logs', 'open', 'reset', 'reset-preview'
+    ]) {
       expect(resolveMacosElectronDevAction(['node', 'entry', action])).toBe(action);
     }
     expect(() => resolveMacosElectronDevAction(['node', 'entry', 'publish'])).toThrow('unsupported');
+  });
+
+  it('opens through the existing runtime lifecycle instead of creating a second protocol', () => {
+    expect(resolveMacosElectronDevOpenMode({ running: true, supervisorAlive: true })).toBe('restart');
+    expect(resolveMacosElectronDevOpenMode({ running: false, supervisorAlive: true })).toBe('recover');
+    expect(resolveMacosElectronDevOpenMode({ running: false, supervisorAlive: false })).toBe('start');
   });
 
   it('maintains repository-local storage before starting daily production', () => {
