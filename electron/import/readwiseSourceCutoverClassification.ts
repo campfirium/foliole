@@ -71,6 +71,7 @@ export function loadReadwiseSourceCutoverBinding(
     return {
       annotations: JSON.parse(row.remote_annotations_json) as ConfirmedReadwiseIdentityBinding['annotations'],
       blockedAnnotationIds: new Set(state.annotations.filter((item) => item.blockedAt).map((item) => item.remoteId)),
+      legacyAnnotations: [],
       nodeId: row.latest_node_id,
       remoteDocumentId: row.remote_document_id,
       sourceFingerprint: row.source_fingerprint

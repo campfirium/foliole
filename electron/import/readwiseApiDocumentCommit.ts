@@ -25,6 +25,7 @@ interface ReadwiseApiDocumentCommitInput {
   dependencies?: ReadwiseApiFetchDependencies;
   destination: Exclude<ReadwiseImportDestination, 'off'>;
   document: PreparedReadwiseApiDocument;
+  forceEpubStructure?: boolean;
   preparedResources?: ReadwiseApiPreparedResources;
   replaceExistingBody?: boolean;
   reimportDeleted?: boolean;
@@ -43,34 +44,35 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   const isOriginalFile = input.document.category === 'pdf';
   const previousOriginalFile = input.reimportDeleted && existingBefore?.nodeDeleted
     ? null : existingBefore?.state.originalFile;
-  const destination = existingBefore ? 'inbox' : input.destination;
+  const materializesLocally = Boolean(existingBefore) || input.destination === 'inbox';
   const prepared = input.preparedResources
     ? input.preparedResources.originalFile
-    : isOriginalFile && destination === 'inbox' && previousOriginalFile?.status !== 'localized'
+    : isOriginalFile && materializesLocally && previousOriginalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
       category: 'pdf',
       ...(input.dependencies ? { dependencies: input.dependencies } : {}),
       documentId: input.document.id, hasHtmlBody: Boolean(input.document.body.trim())
     }) : null;
-  const document = isOriginalFile && destination === 'inbox'
+  const document = isOriginalFile && materializesLocally
     ? withOriginalFileStatus(input.document, prepared?.state ?? previousOriginalFile ?? null)
     : input.document;
-  const preparedEpubImages = input.preparedResources
+  const forceEpubStructure = Boolean(input.forceEpubStructure || input.preparedResources?.forceEpubStructure);
+  const preparedEpubImages = input.preparedResources?.epubImages && !input.forceEpubStructure
     ? input.preparedResources.epubImages
     : await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
-    destination,
+    destination: input.destination,
     document,
-    forceEpubStructure: Boolean(input.reimportDeleted && existingBefore?.nodeDeleted)
+    forceEpubStructure: Boolean(forceEpubStructure || (input.reimportDeleted && existingBefore?.nodeDeleted))
     });
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, destination, document, preparedEpubImages,
-    ...(input.preparedResources?.forceEpubStructure ? { forceEpubStructure: true } : {}),
+    config: input.config, connectionRef: input.connectionRef, destination: input.destination, document, preparedEpubImages,
+    ...(forceEpubStructure ? { forceEpubStructure: true } : {}),
     ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
-    ...(input.replaceExistingBody === undefined && !input.preparedResources?.forceEpubStructure
-      ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || input.preparedResources?.forceEpubStructure) })
+    ...(input.replaceExistingBody === undefined && !forceEpubStructure
+      ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || forceEpubStructure) })
   });
   if (!isOriginalFile || result.status !== 'imported') return result;
 

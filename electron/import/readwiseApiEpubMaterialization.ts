@@ -19,6 +19,7 @@ import {
   buildReadwiseApiEpubBookNodes,
   persistReadwiseApiEpubBookNodes
 } from './readwiseApiEpubBookTree.js';
+import { placeReadwiseApiEpubHighlight } from './readwiseApiEpubHighlightPlacement.js';
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
@@ -28,9 +29,10 @@ interface BodyNode extends NodeBodyRow {
 
 export function hasPersistedReadwiseApiEpubStructure(rootNodeId: string) {
   return Boolean(openDatabaseConnection().driver.queryOne(
-    `WITH RECURSIVE descendants(id) AS (
-       SELECT id FROM nodes WHERE parent_id = ?
+     `WITH RECURSIVE descendants(id) AS (
+       SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
+       WHERE child.deleted_at IS NULL
      ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%' LIMIT 1`, [rootNodeId]
   ));
 }
@@ -87,7 +89,7 @@ export function materializeReadwiseApiEpub(input: {
 
 function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0]) {
   const structure = input.document.epubStructure;
-  if (!structure?.sections.length) throw new Error('readwise_epub_structure_missing');
+  if (!structure) throw new Error('readwise_epub_structure_missing');
   const projectedStructure = input.preparedImages ?? {
     degradedReason: structure.degradedReason,
     rootAttachmentIds: [],
@@ -97,7 +99,10 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
   const preparedRoot = buildPreparedImportRecord({
     filePath: remoteLocator(input.document.id), kind: 'html', sourceName: `${input.document.title}.html`
   }, {
-    content: buildRootContent(input.document, projectedStructure.rootBody),
+    content: buildRootContent(
+      input.document,
+      structure.sections.length ? projectedStructure.rootBody : input.document.body
+    ),
     degradedReason: appendReason(structure.degradedReason, projectedStructure.degradedReason),
     highlightPolicy: 'reference_only',
     hideTitleHeadingOverride: false,
@@ -125,21 +130,17 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
 }
 
 function readBookBodies(rootNodeId: string) {
-  const rows = openDatabaseConnection().driver.queryAll<BodyNode & { structural_child_count: number }>(
+  const rows = openDatabaseConnection().driver.queryAll<BodyNode>(
     `WITH RECURSIVE descendants(id, content, body_blob_hash) AS (
        SELECT id, content, body_blob_hash FROM nodes WHERE id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id, child.content, child.body_blob_hash FROM nodes child
        JOIN descendants ON child.parent_id = descendants.id WHERE child.deleted_at IS NULL
-     ) SELECT d.id, d.content, d.body_blob_hash, cbd.data body_blob_data,
-       (SELECT COUNT(*) FROM nodes child
-        WHERE child.parent_id = d.id
-          AND child.deleted_at IS NULL
-          AND child.id LIKE 'node-epub-%') structural_child_count
+     ) SELECT d.id, d.content, d.body_blob_hash, cbd.data body_blob_data
      FROM descendants d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash`, [rootNodeId]
   );
   return rows.filter((row) => (
     row.id === rootNodeId
-    || (row.id.startsWith('node-epub-') && row.structural_child_count === 0)
+    || row.id.startsWith('node-epub-')
   ))
     .map((row) => ({ id: row.id, content: requireResolvedNodeBody(row, row.id).content }));
 }
@@ -154,13 +155,10 @@ function placeAnnotations(
   const grouped = new Map<string, PreparedImportHighlightRecord[]>();
   for (const annotation of annotations) {
     const prepared = toHighlight(connectionRef, annotation);
-    const matches = annotation.locatorText ? bodies.filter((body) =>
-      applyImportedHighlightAnchors({ content: body.content, highlights: [prepared] }).highlights.length === 1
-    ) : [];
-    const parentId = matches.length === 1 ? matches[0]!.id : rootNodeId;
-    const values = grouped.get(parentId) ?? [];
-    values.push(matches.length === 1 ? prepared : { ...prepared, locatorText: null });
-    grouped.set(parentId, values);
+    const placement = placeReadwiseApiEpubHighlight({ bodies, highlight: prepared, rootNodeId });
+    const values = grouped.get(placement.parentId) ?? [];
+    values.push(placement.highlight);
+    grouped.set(placement.parentId, values);
   }
   for (const [parentId, highlights] of grouped) {
     const body = bodies.find((item) => item.id === parentId)?.content ?? '';

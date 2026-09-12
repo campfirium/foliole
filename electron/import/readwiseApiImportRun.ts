@@ -23,7 +23,6 @@ import {
 import { assertReadwiseApiScopeAllowed } from './readwiseApiScopeGate.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
-import { createPostCutoverReadwiseDocumentPolicy } from './readwiseSourceCutoverJournal.js';
 
 interface ActiveApiImport {
   controller: AbortController;
@@ -97,14 +96,9 @@ async function runNow(
   const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';
   beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual', kind);
   try {
-    const cutoverPolicy = await createPostCutoverReadwiseDocumentPolicy(connectionRef);
     updateReadwiseApiTrackedRunStage('fetching');
     const result = await runReadwiseApiCandidatePipeline({
       assertEligible: () => assertEligible(signal, connectionRef),
-      ...(cutoverPolicy ? {
-        afterCommit: cutoverPolicy.afterCommit,
-        beforeCommit: cutoverPolicy.beforeCommit
-      } : {}),
       connectionRef,
       dependencies: {
         ...input?.dependencies,

@@ -53,9 +53,11 @@ import { completeReadwiseApiImportRun } from '../database/readwiseApiImportState
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import { runReadwiseSourceCutover } from './readwiseSourceCutover.js';
-import { migrationFetch, seedMigratableSource } from './readwiseSourceCutoverTestSupport.js';
+import {
+  migrationFetch,
+  seedMigratableSource
+} from './readwiseSourceCutoverTestSupport.js';
 
 let tempRoot = '';
 
@@ -163,70 +165,4 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   expect(documentRequests).toHaveLength(1);
   expect(documentRequests[0]?.searchParams.get('withHtmlContent')).toBe('true');
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
-}, 20_000);
-
-it('reopens an old document-only completion and performs the real merge', async () => {
-  await seedMigratableSource(state.sourcePath);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  writeReadwiseSourceCutover({
-    annotations: [],
-    cohortDocumentIds: ['document-1'],
-    completedAt: '2026-09-09T01:00:00.000Z',
-    documents: [{ nodeId: null, remoteId: 'document-1', status: 'suppressed' }],
-    retiredNodeIds: ['topic-1'],
-    sourceHost: 'This Mac',
-    startedAt: '2026-09-09T00:00:00.000Z',
-    status: 'api'
-  });
-
-  await expect(runReadwiseSourceCutover({
-    dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 }
-  })).resolves.toMatchObject({ status: 'completed' });
-
-  const storedState = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
-    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
-  )?.value ?? '{}');
-  expect(storedState).toMatchObject({
-    completionVersion: 2,
-    documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
-    retiredNodeIds: [],
-    status: 'api'
-  });
-  expect(storedState.annotations).toContainEqual({
-    nodeId: expect.any(String), remoteId: 'highlight-1', status: 'bound'
-  });
-  expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    "SELECT content FROM nodes WHERE id='topic-1'"
-  )?.content).toContain('API body with remembered phrase.');
-});
-
-it('binds an old document first seen after cutover to its exact original Topic', async () => {
-  await seedMigratableSource(state.sourcePath);
-  const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  writeReadwiseSourceCutover({
-    annotations: [],
-    cohortDocumentIds: [],
-    completedAt: '2026-09-09T01:00:00.000Z',
-    documents: [],
-    retiredNodeIds: [],
-    sourceHost: 'This Mac',
-    startedAt: '2026-09-09T00:00:00.000Z',
-    status: 'api'
-  }, '2026-09-09T01:00:00.000Z');
-  const fetchImpl = migrationFetch();
-
-  await expect(runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ status: 'completed' });
-  const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ latest_node_id: string }>(
-    "SELECT latest_node_id FROM import_sources WHERE remote_connection_ref=? AND remote_document_id='document-1'",
-    [remote.connectionRef]
-  )?.latest_node_id).toBe('topic-1');
-  const journal = JSON.parse(driver.queryOne<{ value: string }>(
-    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
-  )?.value ?? '{}') as { cohortDocumentIds: string[]; documents: unknown[] };
-  expect(journal.cohortDocumentIds).toEqual([]);
-  expect(journal.documents).toContainEqual({
-    nodeId: 'topic-1', remoteId: 'document-1', status: 'bound'
-  });
 }, 20_000);

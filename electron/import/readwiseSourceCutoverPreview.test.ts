@@ -24,6 +24,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { previewReadwiseSourceCutover } from './readwiseSourceCutover.js';
@@ -35,6 +36,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
 });
 
 afterEach(async () => {
@@ -86,6 +88,18 @@ it('restores a reset migration as indexing until its Readwise index exists', asy
   });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: null
+  });
+});
+
+it('reports an accepted API completion without reopening migration', async () => {
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
+    completionVersion: 2, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
+    startedAt: '2026-09-11T00:00:00.000Z', status: 'api'
+  });
+
+  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
+    phase: null, status: 'already_completed'
   });
 });
 

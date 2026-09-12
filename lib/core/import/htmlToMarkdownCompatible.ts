@@ -179,8 +179,9 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, 
     const footnoteReference = renderInlineFootnoteReference(node, footnoteDefinitions);
     if (footnoteReference) return footnoteReference;
     const href = sanitizeMarkdownUrl(getAttribute(node, 'href'));
-    const label = normalizeInline(inline) || href || 'link';
-    return href ? `[${label}](${href})` : label;
+    const label = normalizeInline(inline);
+    if (!href) return label;
+    return `[${label || href}](${href})`;
   }
   const superscriptFootnote = renderInlineSuperscriptFootnote(node);
   if (superscriptFootnote) return superscriptFootnote;

@@ -35,6 +35,7 @@ export type ReadwiseApiCandidatePipelineInput = {
   afterCommit?: ReadwiseApiCandidateAfterCommit;
   beforeCommit?: (document: PreparedReadwiseApiDocument) => Promise<{
     document?: PreparedReadwiseApiDocument;
+    forceEpubStructure?: boolean;
     replaceExistingBody?: boolean;
     skip?: boolean;
   } | void>;
@@ -137,6 +138,7 @@ async function consumeCandidate(
       dependencies: input.dependencies,
       destination: candidate.destination,
       document: commitOptions?.document ?? document,
+      ...(commitOptions?.forceEpubStructure ? { forceEpubStructure: true } : {}),
       ...(preparedResources ? { preparedResources } : {}),
       ...(commitOptions?.replaceExistingBody === undefined
         ? {} : { replaceExistingBody: commitOptions.replaceExistingBody })

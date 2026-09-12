@@ -1,11 +1,10 @@
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
-import { restoreNodes } from '../database/nodeMutations.js';
 import {
   loadOrCreateReadwiseApiCandidateRun,
   restartReadwiseApiCandidateRun
 } from '../database/readwiseApiCandidateRun.js';
 import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
-import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 export function restartIncompleteReadwiseSourceCutover(input: {
   connectionRef: string;
@@ -15,9 +14,6 @@ export function restartIncompleteReadwiseSourceCutover(input: {
 }) {
   const restartedAt = new Date().toISOString();
   const frozenCandidates = loadReadwiseApiCandidates(input.connectionRef);
-  const previous = loadReadwiseSourceCutover();
-  const invalidRetiredNodeIds = previous?.version === 2 ? previous.retiredNodeIds : [];
-  if (invalidRetiredNodeIds.length > 0) restoreNodes({ nodeIds: invalidRetiredNodeIds });
   const state = writeReadwiseSourceCutover({
     annotations: [],
     batchId: `${input.connectionRef}:${input.startedAt}`,

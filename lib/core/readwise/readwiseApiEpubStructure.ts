@@ -7,14 +7,24 @@ import {
   formatHtmlConversionDegradedReason
 } from '../import/htmlToMarkdownCompatible.js';
 
+import {
+  projectReadwiseApiEpubMarkers,
+  type ReadwiseApiEpubCandidateAudit
+} from './readwiseApiEpubStructureProjection.js';
+
 type HtmlNode = DefaultTreeAdapterTypes.Node;
 type HtmlElement = DefaultTreeAdapterTypes.Element;
 
 interface LocatedMarker {
   attributeValue: string;
+  blockLevel: boolean;
+  classSignature: string;
+  depth: number;
   headingLevel: number | null;
+  insideNavigation: boolean;
   path: string;
   startOffset: number;
+  tagName: string;
   textOffset: number;
   title: string | null;
 }
@@ -23,12 +33,17 @@ export interface PreparedReadwiseApiEpubSection {
   content: string;
   headingLevel: number | null;
   markerKey: string;
+  naturalLevel?: number;
   title: string;
 }
 
 export interface PreparedReadwiseApiEpubStructure {
+  candidates?: ReadwiseApiEpubCandidateAudit[];
   degradedReason: string | null;
   imageCount: number;
+  legacyRootBody?: string;
+  legacySections?: Array<{ content: string; markerKey: string }>;
+  legacyMarkerKeys?: string[];
   markerCount: number;
   rootBody: string;
   sections: PreparedReadwiseApiEpubSection[];
@@ -43,22 +58,30 @@ export function prepareReadwiseApiEpubStructure(html: string): PreparedReadwiseA
   const converted = convertHtmlToMarkdownCompatible(injected);
   const parts = splitAtTokens(converted.content, markers.length, tokenPrefix);
   if (!parts) return missingMarkers(collected.imageCount);
-  const sections = markers.flatMap((marker, index): PreparedReadwiseApiEpubSection[] => {
-    const content = parts[index + 1]?.trim() ?? '';
-    if (!content) return [];
-    return [{
-      content,
-      headingLevel: marker.headingLevel,
-      markerKey: sha256(`${marker.attributeValue}\u001f${marker.path}`).slice(0, 24),
-      title: marker.title ?? readableMarkdownTitle(content) ?? `Untitled section ${index + 1}`
-    }];
-  });
+  const markerInputs = markers.map((marker, index) => ({
+    blockLevel: marker.blockLevel,
+    classSignature: marker.classSignature,
+    content: parts[index + 1]?.trim() ?? '',
+    depth: marker.depth,
+    headingLevel: marker.headingLevel,
+    insideNavigation: marker.insideNavigation,
+    markerKey: markerKey(marker),
+    tagName: marker.tagName,
+    title: marker.title
+  }));
+  const projected = projectReadwiseApiEpubMarkers({ markers: markerInputs, rootBody: parts[0] ?? '' });
+  const sections = projected.sections;
   if (sections.length === 0) return missingMarkers(collected.imageCount);
   return {
+    candidates: projected.candidates,
     degradedReason: formatHtmlConversionDegradedReason(converted.warnings),
     imageCount: collected.imageCount,
+    legacyRootBody: parts[0]?.trim() ?? '',
+    legacySections: markerInputs.filter((marker) => marker.content)
+      .map((marker) => ({ content: marker.content, markerKey: marker.markerKey })),
+    legacyMarkerKeys: markerInputs.filter((marker) => marker.content).map((marker) => marker.markerKey),
     markerCount: markers.length,
-    rootBody: parts[0]?.trim() ?? '',
+    rootBody: projected.rootBody,
     sections
   };
 }
@@ -68,7 +91,7 @@ function collectDocumentFacts(html: string) {
   const markers: LocatedMarker[] = [];
   let imageCount = 0;
   let textOffset = 0;
-  const visit = (node: HtmlNode, path: string) => {
+  const visit = (node: HtmlNode, path: string, depth: number, insideNavigation: boolean) => {
     if (node.nodeName === '#text') {
       textOffset += 'value' in node ? node.value.length : 0;
       return;
@@ -82,17 +105,23 @@ function collectDocumentFacts(html: string) {
       if (attribute && typeof startOffset === 'number') {
         markers.push({
           attributeValue: attribute.value.trim(),
+          blockLevel: BLOCK_TAGS.has(node.tagName),
+          classSignature: node.attrs.find((item) => item.name === 'class')?.value.trim() ?? '',
+          depth,
           headingLevel: /^h[1-6]$/u.test(node.tagName) ? Number(node.tagName.slice(1)) : null,
+          insideNavigation,
           path,
           startOffset,
+          tagName: node.tagName,
           textOffset,
           title: readableElementTitle(node)
         });
       }
+      insideNavigation ||= node.tagName === 'nav';
     }
-    node.childNodes.forEach((child, index) => visit(child, `${path}.${index}`));
+    node.childNodes.forEach((child, index) => visit(child, `${path}.${index}`, depth + 1, insideNavigation));
   };
-  visit(document, '0');
+  visit(document, '0', 0, false);
   return { imageCount, markers };
 }
 
@@ -143,20 +172,29 @@ function collectText(node: HtmlNode): string {
   return 'childNodes' in node ? node.childNodes.map(collectText).join(' ') : '';
 }
 
-function readableMarkdownTitle(content: string) {
-  const line = content.split('\n').map((item) => item.trim()).find(Boolean);
-  return line?.replace(/^#{1,6}\s+/u, '').replace(/[*_`~]/gu, '').trim().slice(0, 120) || null;
+function markerKey(marker: LocatedMarker) {
+  return sha256(`${marker.attributeValue}\u001f${marker.path}`).slice(0, 24);
 }
 
 function missingMarkers(imageCount = 0): PreparedReadwiseApiEpubStructure {
   return {
+    candidates: [],
     degradedReason: 'Reader EPUB table of contents markers were unavailable; imported as a single Topic.',
     imageCount,
+    legacyRootBody: '',
+    legacySections: [],
+    legacyMarkerKeys: [],
     markerCount: 0,
     rootBody: '',
     sections: []
   };
 }
+
+const BLOCK_TAGS = new Set([
+  'address', 'article', 'aside', 'blockquote', 'dd', 'div', 'dl', 'dt', 'figcaption', 'figure',
+  'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'nav',
+  'ol', 'p', 'pre', 'section', 'table', 'ul'
+]);
 
 function sha256(value: string) {
   return createHash('sha256').update(value).digest('hex');

@@ -1,68 +1,29 @@
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
-  stableReadwiseEpubNodeId,
-  type PreparedReadwiseApiDocument
-} from '../../lib/core/readwise/readwiseApiImport.js';
+  buildReadwiseApiEpubBookNodes,
+  type ReadwiseApiEpubBookNode
+} from '../../lib/core/readwise/readwiseApiEpubBookTree.js';
+import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 
-interface BookNode {
-  attachmentIds: string[];
-  content: string;
-  key: string;
-  parentKey: string | null;
-  title: string;
-}
-
-export function buildReadwiseApiEpubBookNodes(
-  sections: Array<NonNullable<PreparedReadwiseApiDocument['epubStructure']>['sections'][number] & {
-    attachmentIds?: string[];
-  }>
-) {
-  const parents: Array<string | null> = [];
-  const stack: Array<{ key: string; level: number }> = [];
-  for (const section of sections) {
-    if (section.headingLevel === null) {
-      stack.length = 0;
-      parents.push(null);
-      continue;
-    }
-    while (stack.length && stack[stack.length - 1]!.level >= section.headingLevel) stack.pop();
-    parents.push(stack.at(-1)?.key ?? null);
-    stack.push({ key: section.markerKey, level: section.headingLevel });
-  }
-  const parentKeys = new Set(parents.filter((key): key is string => Boolean(key)));
-  return sections.flatMap((section, index): BookNode[] => {
-    const parentKey = parents[index] ?? null;
-    if (!parentKeys.has(section.markerKey)) {
-      return [{ attachmentIds: section.attachmentIds ?? [], content: section.content, key: section.markerKey, parentKey, title: section.title }];
-    }
-    return [
-      { attachmentIds: [], content: `**${section.title}**`, key: section.markerKey, parentKey, title: section.title },
-      {
-        attachmentIds: section.attachmentIds ?? [],
-        content: section.content,
-        key: `${section.markerKey}:chapter-body`,
-        parentKey: section.markerKey,
-        title: stripChapterPrefix(section.title) || section.title
-      }
-    ];
-  });
-}
+export { buildReadwiseApiEpubBookNodes };
 
 export function persistReadwiseApiEpubBookNodes(input: {
   connectionRef: string;
   documentId: string;
   importedAt: string;
-  nodes: BookNode[];
+  nodes: ReadwiseApiEpubBookNode[];
   rootNodeId: string;
 }) {
+  const driver = openDatabaseConnection().driver;
   const nodeIds = new Map<string, string>();
   input.nodes.forEach((node, index) => {
     const nodeId = stableReadwiseEpubNodeId(input.connectionRef, input.documentId, node.key);
     nodeIds.set(node.key, nodeId);
-    upsertNodeSnapshot(openDatabaseConnection().driver, {
+    upsertNodeSnapshot(driver, {
       anchorLink: null,
       content: node.content,
       createdAt: orderedTimestamp(input.importedAt, index),
@@ -78,13 +39,39 @@ export function persistReadwiseApiEpubBookNodes(input: {
     });
     replaceReadwiseApiEpubImageLinks(nodeId, node.attachmentIds);
   });
+  retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);
 }
 
-function stripChapterPrefix(title: string) {
-  return title
-    .replace(/^\s*第\s*[零〇一二两三四五六七八九十百千万\d]+\s*[章节回部卷篇]\s*[:：、.\-)]?\s*/u, '')
-    .replace(/^\s*chapter\s+(?:\d+|[ivxlcdm]+)\s*[:：.\-)]?\s*/iu, '')
-    .trim();
+function retireObsoleteBookNodes(
+  driver: ReturnType<typeof openDatabaseConnection>['driver'],
+  rootNodeId: string,
+  retainedNodeIds: ReadonlySet<string>,
+  deletedAt: string
+) {
+  const generated = driver.queryAll<{ id: string }>(
+    `WITH RECURSIVE descendants(id) AS (
+       SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
+       UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
+       WHERE child.deleted_at IS NULL
+     ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%'`, [rootNodeId]
+  );
+  const obsoleteIds = generated.map((row) => row.id).filter((nodeId) => !retainedNodeIds.has(nodeId));
+  if (obsoleteIds.length === 0) return;
+  const marks = obsoleteIds.map(() => '?').join(', ');
+  const movedChildIds = driver.queryAll<{ id: string }>(
+    `SELECT id FROM nodes WHERE parent_id IN (${marks}) AND deleted_at IS NULL
+     AND id NOT IN (${marks})`, [...obsoleteIds, ...obsoleteIds]
+  ).map((row) => row.id);
+  driver.execute(
+    `UPDATE nodes SET parent_id = ?, updated_at = ?, sync_dirty = 1
+     WHERE parent_id IN (${marks}) AND deleted_at IS NULL AND id NOT IN (${marks})`,
+    [rootNodeId, deletedAt, ...obsoleteIds, ...obsoleteIds]
+  );
+  driver.execute(
+    `UPDATE nodes SET deleted_at = ?, updated_at = ?, sync_dirty = 1
+     WHERE id IN (${marks}) AND deleted_at IS NULL`, [deletedAt, deletedAt, ...obsoleteIds]
+  );
+  enqueueWorkspaceSearchInvalidationForNodeIds(driver, [...obsoleteIds, ...movedChildIds]);
 }
 
 function orderedTimestamp(timestamp: string, index: number) {

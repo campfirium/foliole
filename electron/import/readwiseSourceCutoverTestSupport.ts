@@ -11,9 +11,8 @@ import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
 
 export async function seedMigratableSource(sourcePath: string) {
   await fs.writeFile(path.join(sourcePath, 'Sample.md'), [
-    '# Sample', '## Full Document', 'Legacy body with remembered phrase.',
-    'https://read.readwise.io/read/document-1', '## Highlights',
-    'remembered phrase [...] (https://read.readwise.io/read/highlight-1)'
+    '# Sample', '## Full Document', 'Legacy body with remembered phrase.', '## Highlights',
+    '- remembered phrase ([View Highlight](https://read.readwise.io/read/highlight-1))'
   ].join('\n'));
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
@@ -64,12 +63,78 @@ export function migrationFetch() {
       return Response.json({ results: [{
         category: 'article',
         created_at: '2026-09-10T00:00:00.000Z',
-        html_content: '<p>API body with remembered phrase.</p>',
+        html_content: '<p>API body with remembered phrase. It also contains new phrase.</p>',
         id,
         parent_id: null,
         title: 'Sample'
       }] });
     }
     return Response.json({ nextPageCursor: null, results: [] });
+  });
+}
+
+export function migrationFetchWithoutHighlightBody() {
+  const fetchImpl = migrationFetch();
+  return vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname !== '/api/v2/export/') return fetchImpl(input);
+    return Response.json({ nextPageCursor: null, results: [{
+      external_id: 'document-1', highlights: [{ external_id: 'highlight-1', text: '' }], source: 'reader'
+    }] });
+  });
+}
+
+export function epubMigrationFetch() {
+  return vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/api/v2/export/') {
+      return Response.json({ nextPageCursor: null, results: [{
+        external_id: 'document-1', highlights: [
+          { external_id: 'highlight-1', text: 'remembered phrase' }
+        ], source: 'reader'
+      }] });
+    }
+    if (url.searchParams.get('category') === 'highlight') {
+      return Response.json({ nextPageCursor: null, results: [
+        { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
+      ] });
+    }
+    if (url.searchParams.has('category')) return Response.json({ nextPageCursor: null, results: [] });
+    return Response.json({ results: [{
+      category: 'epub',
+      html_content: [
+        '<p>Cover matter</p>',
+        '<h1 data-rw-epub-toc="chapter-1">Chapter 1</h1>',
+        '<p>API body with remembered phrase.</p>',
+        '<h1 data-rw-epub-toc="chapter-2">Chapter 2</h1>',
+        '<p>Second chapter body.</p>'
+      ].join(''),
+      id: 'document-1', parent_id: null, title: 'Sample'
+    }] });
+  });
+}
+
+export function incrementalHighlightFetch() {
+  return vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/api/v2/export/') {
+      return Response.json({ nextPageCursor: null, results: [{
+        external_id: 'document-1', source: 'reader', highlights: [
+          { external_id: 'highlight-1', text: 'remembered phrase' },
+          { external_id: 'highlight-2', text: 'new phrase' }
+        ]
+      }] });
+    }
+    if (url.searchParams.get('category') === 'highlight') {
+      return Response.json({ nextPageCursor: null, results: [
+        { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' },
+        { category: 'highlight', id: 'highlight-2', parent_id: 'document-1' }
+      ] });
+    }
+    if (url.searchParams.has('category')) return Response.json({ nextPageCursor: null, results: [] });
+    return Response.json({ results: [{
+      category: 'article', html_content: '<p>Changed API body with remembered phrase and new phrase.</p>',
+      id: 'document-1', parent_id: null, title: 'Sample', updated_at: '2026-09-12T00:00:00.000Z'
+    }] });
   });
 }

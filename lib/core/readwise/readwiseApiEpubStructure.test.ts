@@ -28,7 +28,7 @@ it('builds ordered heading sections while leaving unmarked headings in their bod
   expect(structure.rootBody).toBe('Preface\n\n![](cover.jpg)');
 });
 
-it('keeps non-heading markers flat and deduplicates nested markers at the same text position', () => {
+it('keeps block markers and rejects nested duplicate markers at the same position', () => {
   const structure = prepareReadwiseApiEpubStructure(`
     <div data-rw-epub-toc="outer"><h1 data-rw-epub-toc="inner">Readable title</h1><p>First</p></div>
     <p data-rw-epub-toc="second">Second unit</p>
@@ -37,18 +37,61 @@ it('keeps non-heading markers flat and deduplicates nested markers at the same t
   expect(structure.markerCount).toBe(2);
   expect(structure.sections).toMatchObject([
     { headingLevel: 1, title: 'Readable title' },
-    { headingLevel: null, title: 'Second unit' }
+    { headingLevel: 1, title: 'Second unit' }
   ]);
+  expect(structure.sections[0]?.content).toContain('First');
 });
 
-it('keeps one useful marker without adding a level and drops an empty terminal marker', () => {
+it('normalizes h2 plus h4 to two natural levels', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <h2 data-rw-epub-toc="chapter">Chapter</h2><p>Intro</p>
+    <h4 data-rw-epub-toc="section">Section</h4><p>Body</p>
+  `);
+
+  expect(structure.sections.map((section) => section.naturalLevel)).toEqual([1, 2]);
+});
+
+it('keeps inline footnote markers inside the current structural body', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <h1 data-rw-epub-toc="chapter">Chapter</h1><p>Body<a data-rw-epub-toc="note">[1]</a>tail.</p>
+  `);
+
+  expect(structure.sections).toHaveLength(1);
+  expect(structure.sections[0]?.content).toContain('[1]tail.');
+  expect(structure.candidates?.at(-1)).toMatchObject({ accepted: false, reason: 'rejected-inline-marker' });
+});
+
+it('uses repeated block signatures and DOM depth to recover three natural levels', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <h1 data-rw-epub-toc="volume-1">Volume 1</h1>
+    <div class="chapter" data-rw-epub-toc="chapter-1">Chapter 1</div>
+    <div><div class="section" data-rw-epub-toc="section-1">Section 1</div></div>
+    <div class="chapter" data-rw-epub-toc="chapter-2">Chapter 2</div>
+    <div><div class="section" data-rw-epub-toc="section-2">Section 2</div></div>
+    <h1 data-rw-epub-toc="volume-2">Volume 2</h1>
+  `);
+
+  expect(structure.sections.map((section) => section.naturalLevel)).toEqual([1, 2, 3, 2, 3, 1]);
+});
+
+it('rejects table-of-contents links inside navigation instead of duplicating their targets', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <nav><p data-rw-epub-toc="copy">Chapter link</p></nav>
+    <h1 data-rw-epub-toc="target">Chapter</h1><p>Body</p>
+  `);
+
+  expect(structure.sections).toHaveLength(1);
+  expect(structure.candidates?.[0]).toMatchObject({ accepted: false, reason: 'rejected-navigation-copy' });
+});
+
+it('skips empty ordinary toc markers instead of creating blank sections', () => {
   const structure = prepareReadwiseApiEpubStructure(
-    '<div data-rw-epub-toc="one">Only readable unit</div><div data-rw-epub-toc="empty"></div>'
+    '<div data-rw-epub-toc="empty"></div>'
   );
 
-  expect(structure.markerCount).toBe(2);
-  expect(structure.sections).toHaveLength(1);
-  expect(structure.sections[0]).toMatchObject({ headingLevel: null, title: 'Only readable unit' });
+  expect(structure.markerCount).toBe(0);
+  expect(structure.sections).toEqual([]);
+  expect(structure.degradedReason).toContain('markers were unavailable');
 });
 
 it('reports missing toc markers and leaves structure materialization disabled', () => {

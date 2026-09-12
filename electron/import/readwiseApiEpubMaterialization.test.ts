@@ -42,12 +42,12 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('creates a chapter container, chapter body, sections, and globally unique annotation placement once', () => {
+it('creates one body topic per marked heading and places annotations across every level', () => {
   const document = epubFixture();
   const config = createDefaultReadwiseReaderConfig();
 
   expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document }))
-    .toMatchObject({ annotationCount: 2, status: 'imported' });
+    .toMatchObject({ annotationCount: 3, status: 'imported' });
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
@@ -61,7 +61,12 @@ it('creates a chapter container, chapter body, sections, and globally unique ann
   );
   const chapter = descendants.find((node) => node.title === 'Chapter 6: Shape')!;
   expect(descendants.filter((node) => node.parent_id === chapter.id).map((node) => node.title))
-    .toEqual(expect.arrayContaining(['Shape', 'First section', 'Second section']));
+    .toEqual(expect.arrayContaining(['First section', 'Second section']));
+  expect(descendants.filter((node) => node.parent_id === chapter.id).map((node) => node.title))
+    .not.toContain('Shape');
+  expect(chapter.content).toContain('Intro');
+  const intro = descendants.find((node) => node.id.includes('readwise') && node.content === 'Intro')!;
+  expect(intro.parent_id).toBe(chapter.id);
   const unique = descendants.find((node) => node.id.includes('readwise') && node.content === 'Unique second excerpt')!;
   const section = descendants.find((node) => node.title === 'Second section')!;
   expect(unique.parent_id).toBe(section.id);
@@ -71,10 +76,10 @@ it('creates a chapter container, chapter body, sections, and globally unique ann
   materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
-  )).toEqual({ count: 4 });
+  )).toEqual({ count: 3 });
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-readwise-%' AND deleted_at IS NULL"
-  )).toEqual({ count: 2 });
+  )).toEqual({ count: 3 });
 });
 
 it('prepares EPUB images only when a book tree is created or explicitly rebuilt', () => {
@@ -156,9 +161,31 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
     config, connectionRef: 'connection', destination: 'inbox', document: structured, forceEpubStructure: true
   });
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
-    .toEqual({ count: 4 });
+    .toEqual({ count: 3 });
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
     .toContain('Front matter');
+});
+
+it('retires obsolete generated topics when an explicit rebuild has no marked headings', () => {
+  const config = createDefaultReadwiseReaderConfig();
+  const document = { ...epubFixture(), annotations: [] };
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
+  const flat = {
+    ...document,
+    body: 'Ordinary EPUB body',
+    epubStructure: { ...document.epubStructure!, markerCount: 0, rootBody: '', sections: [] }
+  };
+
+  materializeReadwiseApiDocument({
+    config, connectionRef: 'connection', destination: 'inbox', document: flat, forceEpubStructure: true
+  });
+
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
+  )).toEqual({ count: 0 });
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
+    .toContain('Ordinary EPUB body');
 });
 
 it('routes the current-source re-import command from a flat API EPUB to staged Reader HTML', async () => {
@@ -187,7 +214,11 @@ it('routes the current-source re-import command from a flat API EPUB to staged R
 
 function epubFixture(): PreparedReadwiseApiDocument {
   return {
-    annotations: [annotation('unique', 'Unique second excerpt'), annotation('ambiguous', 'Repeated excerpt')],
+    annotations: [
+      annotation('intro', 'Intro'),
+      annotation('unique', 'Unique second excerpt'),
+      annotation('ambiguous', 'Repeated excerpt')
+    ],
     body: '# Chapter 6: Shape\n\nIntro\n\n## First section\n\nRepeated excerpt\n\n## Second section\n\nRepeated excerpt\n\nUnique second excerpt',
     category: 'epub',
     coverImageUrl: null,

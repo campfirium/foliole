@@ -48,6 +48,7 @@ afterEach(async () => {
 it('records a deleted document and its annotations as blocked tombstones', () => {
   recordReadwiseSourceCutoverClassification(document(), 'blocked', {
     annotations: [],
+    legacyAnnotations: [],
     nodeId: 'deleted-document-node',
     remoteDocumentId: 'document-1',
     sourceFingerprint: 'source-1'

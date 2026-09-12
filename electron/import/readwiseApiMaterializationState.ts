@@ -41,7 +41,7 @@ function materializeEpubIfStructured(
   newAnnotations: PreparedReadwiseApiDocument['annotations'],
   sourceUpdate: ReturnType<typeof persistReadwiseApiSourceUpdate>
 ): ReadwiseApiMaterializationResult | null {
-  const canCreate = input.document.category === 'epub' && Boolean(input.document.epubStructure?.sections.length);
+  const canCreate = input.document.category === 'epub' && Boolean(input.document.epubStructure);
   const alreadyStructured = Boolean(existing?.nodeId)
     && hasPersistedReadwiseApiEpubStructure(existing?.nodeId ?? '');
   if (!(canCreate && (!existing || input.forceEpubStructure)) && !alreadyStructured) return null;

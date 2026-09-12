@@ -9,6 +9,7 @@ import {
 import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { hasPersistedReadwiseApiEpubStructure } from './readwiseApiEpubMaterialization.js';
 import { prepareReadwiseApiImportRecord } from './readwiseApiMaterialization.js';
 import type { ReadwiseApiMaterializationResult } from './readwiseApiMaterialization.js';
 import {
@@ -16,14 +17,16 @@ import {
   recordReadwiseSourceCutoverClassification
 } from './readwiseSourceCutoverClassification.js';
 import {
-  prepareReadwiseSourceCutoverIdentity,
   type ReadwiseSourceCutoverIdentityBinding
 } from './readwiseSourceCutoverIdentity.js';
 import {
   assertReadwiseSourceCutoverComplete,
   recordReadwiseUnavailableAnnotationTerminals
 } from './readwiseSourceCutoverTerminal.js';
-import { applyPristineReadwiseSourceProjection } from './readwiseSourceMigrationProjection.js';
+import {
+  applyReadwiseSourceProjection,
+  mergeLegacyReadwiseAnnotations
+} from './readwiseSourceMigrationProjection.js';
 
 export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
   const current = loadReadwiseSourceCutover();
@@ -57,35 +60,11 @@ export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
 
 export function createReadwiseDocumentMigration(input: {
   bindingFor: (document: PreparedReadwiseApiDocument) => ReadwiseSourceCutoverIdentityBinding | null;
-}, connectionRef: string) {
+}, connectionRef: string, options: { forceSourceProjection?: boolean } = {}) {
   const pending = new Map<string, ReadwiseSourceCutoverIdentityBinding | null>();
   return {
     async beforeCommit(document: PreparedReadwiseApiDocument) {
-      const existingClassification = requireReadwiseSourceCutoverV2().documents
-        .find((item) => item.remoteId === document.id);
-      if (existingClassification?.status === 'suppressed') return { skip: true };
-      const existingBinding = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
-      if (existingClassification?.status === 'bound' && !existingBinding) {
-        throw new Error('readwise_source_cutover_binding_missing');
-      }
-      const binding = existingBinding ?? input.bindingFor(document);
-      if (!binding) {
-        pending.set(document.id, null);
-        return;
-      }
-      if (!binding.sourceFingerprint) adoptBookSource(connectionRef, document, binding);
-      if (!loadReadwiseSourceCutoverBinding(connectionRef, document.id)) {
-        confirmReadwiseIdentityBindings(connectionRef, [binding]);
-      }
-      pending.set(document.id, binding);
-      const replaceExistingBody = await applyPristineReadwiseSourceProjection(
-        binding.sourceFingerprint,
-        document
-      );
-      return {
-        document,
-        replaceExistingBody
-      };
+      return prepareReadwiseDocumentCommit(document, input, connectionRef, options, pending);
     },
     afterCommit(document: PreparedReadwiseApiDocument, result: ReadwiseApiMaterializationResult) {
       const binding = pending.get(document.id);
@@ -110,6 +89,49 @@ export function createReadwiseDocumentMigration(input: {
       pending.delete(document.id);
     }
   };
+}
+
+function prepareReadwiseDocumentCommit(
+  document: PreparedReadwiseApiDocument,
+  input: { bindingFor: (value: PreparedReadwiseApiDocument) => ReadwiseSourceCutoverIdentityBinding | null },
+  connectionRef: string,
+  options: { forceSourceProjection?: boolean },
+  pending: Map<string, ReadwiseSourceCutoverIdentityBinding | null>
+) {
+  const classification = requireReadwiseSourceCutoverV2().documents.find((item) => item.remoteId === document.id);
+  if (classification?.status === 'suppressed') return { skip: true };
+  const existing = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
+  if (classification?.status === 'bound' && !existing) throw new Error('readwise_source_cutover_binding_missing');
+  const discovered = input.bindingFor(document);
+  if (existing && discovered && existing.nodeId !== discovered.nodeId) {
+    throw new Error('readwise_source_cutover_binding_conflict');
+  }
+  const binding = existing ? {
+    ...existing,
+    legacyAnnotations: discovered?.legacyAnnotations ?? []
+  } : discovered;
+  pending.set(document.id, binding);
+  if (!binding) return;
+  if (!binding.sourceFingerprint) adoptBookSource(connectionRef, document, binding);
+  if (!existing) confirmReadwiseIdentityBindings(connectionRef, [binding]);
+  if (!options.forceSourceProjection) {
+    if (!existing) return;
+    applyReadwiseSourceProjection(existing.nodeId, document);
+    return { document, replaceExistingBody: true };
+  }
+  const projectedDocument = mergeLegacyReadwiseAnnotations(document, binding.legacyAnnotations);
+  applyReadwiseSourceProjection(binding.nodeId, projectedDocument);
+  return {
+    document: projectedDocument,
+    ...(shouldBuildBoundEpub(binding.nodeId, projectedDocument) ? { forceEpubStructure: true } : {}),
+    replaceExistingBody: true
+  };
+}
+
+function shouldBuildBoundEpub(nodeId: string, document: PreparedReadwiseApiDocument) {
+  return document.category === 'epub'
+    && Boolean(document.epubStructure?.sections.length)
+    && !hasPersistedReadwiseApiEpubStructure(nodeId);
 }
 
 function adoptBookSource(
@@ -170,27 +192,6 @@ export function setReadwiseSourceCutoverPhase(phase: 'indexing' | 'merging') {
   const current = requireReadwiseSourceCutoverV2();
   if (current.status !== 'migration-in-progress') throw new Error('readwise_source_migration_not_active');
   writeReadwiseSourceCutover({ ...current, phase });
-}
-
-export async function createPostCutoverReadwiseDocumentPolicy(connectionRef: string) {
-  const current = loadReadwiseSourceCutover();
-  if (!current || current.version !== 2 || current.status !== 'api') return null;
-  const migration = createReadwiseDocumentMigration(
-    await prepareReadwiseSourceCutoverIdentity(connectionRef),
-    connectionRef
-  );
-  const pending = new Set<string>();
-  return {
-    async beforeCommit(document: PreparedReadwiseApiDocument) {
-      const options = await migration.beforeCommit(document);
-      if (!options?.skip) pending.add(document.id);
-      return options;
-    },
-    afterCommit(document: PreparedReadwiseApiDocument, result: ReadwiseApiMaterializationResult) {
-      if (!pending.delete(document.id)) return;
-      migration.afterCommit(document, result);
-    }
-  };
 }
 
 export function requireReadwiseSourceCutoverV2(): ReadwiseSourceCutover {

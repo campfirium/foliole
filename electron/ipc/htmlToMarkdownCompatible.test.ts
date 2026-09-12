@@ -71,6 +71,10 @@ describe('convertHtmlToMarkdownCompatible', () => {
 
 });
 
+it('does not invent link text for empty anchors without a destination', () => {
+  expect(convertHtmlToMarkdownCompatible('<p>Before<a></a>After</p>').content).toBe('BeforeAfter');
+});
+
 describe('convertHtmlToMarkdownCompatible URL hygiene', () => {
   it('drops unsafe link and image URL protocols while keeping readable text', () => {
     const result = convertHtmlToMarkdownCompatible(`

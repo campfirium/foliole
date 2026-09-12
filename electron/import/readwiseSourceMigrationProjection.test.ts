@@ -51,7 +51,10 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
-import { applyPristineReadwiseSourceProjection } from './readwiseSourceMigrationProjection.js';
+import {
+  applyReadwiseSourceProjection,
+  mergeLegacyReadwiseAnnotations
+} from './readwiseSourceMigrationProjection.js';
 import { localizeReadwiseSourceContent } from './readwiseTopicMergeLocalization.js';
 import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
 
@@ -76,20 +79,54 @@ afterEach(async () => {
 it('reprojects content whose only drift is deterministic remote image localization', async () => {
   await seedLocalizedSource();
 
-  await expect(applyPristineReadwiseSourceProjection('source-1', apiDocument()))
-    .resolves.toBe(true);
+  expect(applyReadwiseSourceProjection('topic-1', apiDocument())).toBe(true);
   expect(readTopicContent()).toBe('API body');
 });
 
-it('preserves a genuinely edited body', async () => {
+it('replaces a genuinely edited body during the explicit source cutover', async () => {
   await seedLocalizedSource();
   openDatabaseConnection().driver.execute(
     "UPDATE nodes SET content='My local edit' WHERE id='topic-1'"
   );
 
-  await expect(applyPristineReadwiseSourceProjection('source-1', apiDocument()))
-    .resolves.toBe(false);
-  expect(readTopicContent()).toBe('My local edit');
+  expect(applyReadwiseSourceProjection('topic-1', apiDocument())).toBe(true);
+  expect(readTopicContent()).toBe('API body');
+});
+
+it('keeps a structured EPUB root page instead of projecting the flat full book into it', async () => {
+  await seedLocalizedSource();
+  const document = apiDocument();
+  document.body = 'Flat full EPUB body';
+  document.category = 'epub';
+  document.metadata.category = 'epub';
+  document.epubStructure = {
+    degradedReason: null,
+    imageCount: 0,
+    markerCount: 1,
+    rootBody: 'Front matter',
+    sections: [{ content: '# Chapter\n\nChapter body', headingLevel: 1, markerKey: 'chapter', title: 'Chapter' }]
+  };
+  const before = readTopicContent();
+
+  expect(applyReadwiseSourceProjection('topic-1', document)).toBe(false);
+  expect(readTopicContent()).toBe(before);
+  expect(readTopicContent()).not.toContain('Flat full EPUB body');
+});
+
+it('keeps API card content while using the same-id local text to locate it in the API body', () => {
+  const document = apiDocument();
+  document.annotations = [{
+    content: '记住的短语', contentHash: 'api-hash', kind: 'highlight', locatorText: '记住的短语',
+    parentRemoteId: 'document-1', remoteId: 'highlight-1', updatedAt: null
+  }];
+  const merged = mergeLegacyReadwiseAnnotations(document, [{
+    content: '記住的短語', contentHash: 'legacy-hash', kind: 'highlight', locatorText: '記住的短語',
+    parentRemoteId: 'document-1', remoteId: 'highlight-1', updatedAt: null
+  }]);
+
+  expect(merged.annotations).toEqual([expect.objectContaining({
+    content: '记住的短语', contentHash: 'api-hash', locatorText: '記住的短語', remoteId: 'highlight-1'
+  })]);
 });
 
 async function seedLocalizedSource() {

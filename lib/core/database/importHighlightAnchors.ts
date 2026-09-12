@@ -1,3 +1,4 @@
+import { findChineseVariantHighlightRange } from '../import/chineseVariantFuzzyMatch.js';
 import { createContextExcerptLocator, type ContextExcerptLocator } from '../import/contextExcerptLocator.js';
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { collectBoundaryFragments } from '../import/controlledContextText.js';
@@ -92,9 +93,15 @@ export function applyImportedHighlightAnchors(input: {
     if (classifyImportedBodyCandidate(content, highlightText).status === 'ambiguous') {
       return;
     }
-    const range = collectAnchorExcerptCandidates(locator, highlight)
+    const exactRange = collectAnchorExcerptCandidates(locator, highlight)
       .map((excerpt) => findUniqueAvailableImportedBodyOccurrence(content, excerpt, occupiedRanges))
       .find((candidate) => candidate !== null);
+    const fuzzyRange = exactRange ? null : findChineseVariantHighlightRange(
+      locator,
+      highlight.locatorText ?? highlightText
+    );
+    const range = exactRange ?? (fuzzyRange && !occupiedRanges.some((item) =>
+      fuzzyRange.from < item.to && fuzzyRange.to > item.from) ? fuzzyRange : null);
     if (!range) {
       return;
     }

@@ -18,7 +18,6 @@ import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 import { prepareReadwiseApiMaterializationState } from './readwiseApiMaterializationState.js';
-import { persistReadwiseApiSourceUpdate } from './readwiseApiSourceUpdate.js';
 
 export interface ReadwiseApiMaterializationResult {
   annotationCount: number;
@@ -43,7 +42,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
   const importedAt = input.importedAt ?? new Date().toISOString();
   const previous = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const existing = input.reimportDeleted && previous?.nodeDeleted ? null : previous;
-  const destination = input.forceInbox || existing ? 'inbox' : input.destination;
+  const materializesLocally = Boolean(input.forceInbox || existing || input.destination === 'inbox');
   if (existing?.nodeDeleted) {
     saveState(input, existing.sourceFingerprint, existing.annotations, {
       ...existing.state,
@@ -51,14 +50,14 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
     }, importedAt);
     return result(input.document.id, 'blocked');
   }
-  if (destination === 'external') {
+  if (!materializesLocally && input.destination === 'external') {
     if (!input.document.body.trim()) return result(input.document.id, 'degraded');
     upsertReadwiseApiExternalDocument({
       connectionRef: input.connectionRef, document: input.document, indexedAt: importedAt
     });
     return result(input.document.id, 'external_pending');
   }
-  if (destination === 'off') {
+  if (!materializesLocally && input.destination === 'off') {
     hideReadwiseApiExternalDocument(input.connectionRef, input.document.id, importedAt);
     return result(input.document.id, 'skipped');
   }
@@ -92,10 +91,11 @@ export function shouldPrepareReadwiseApiEpubImages(input: {
   forceEpubStructure?: boolean;
   forceInbox?: boolean;
 }) {
-  if (input.document.category !== 'epub' || !input.document.epubStructure?.sections.length) return false;
+  if (input.document.category !== 'epub' || !input.document.epubStructure) return false;
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  const destination = input.forceInbox || existing ? 'inbox' : input.destination;
-  return destination === 'inbox' && (!existing || Boolean(input.forceEpubStructure));
+  const materializesLocally = Boolean(input.forceInbox || existing || input.destination === 'inbox');
+  return materializesLocally && Boolean(input.document.epubStructure.sections.length)
+    && (!existing || Boolean(input.forceEpubStructure));
 }
 
 function materializeAvailableDocument(
@@ -103,15 +103,8 @@ function materializeAvailableDocument(
   existing: ReturnType<typeof loadReadwiseApiImportSource>,
   importedAt: string
 ): ReadwiseApiMaterializationResult {
-  const sourceUpdate = persistReadwiseApiSourceUpdate({
-    currentBody: existing?.body,
-    incomingBody: input.document.body,
-    ...(input.replaceExistingBody === undefined ? {} : { replaceExistingBody: input.replaceExistingBody }),
-    sourceUpdatedAt: input.document.updatedAt,
-    updatedAt: importedAt
-  });
   const { annotationStates, epubResult, newAnnotations } = prepareReadwiseApiMaterializationState(
-    input, existing, importedAt, sourceUpdate
+    input, existing, importedAt, null
   );
   if (epubResult) return epubResult;
   const prepared = prepareReadwiseApiImportRecord(input, existing, importedAt);
@@ -147,7 +140,7 @@ function materializeAvailableDocument(
     metadata: input.document.metadata,
     originalFile: existing?.state.originalFile ?? null,
     remoteLifecycle: existing?.state.remoteLifecycle ?? null,
-    sourceUpdate,
+    sourceUpdate: null,
     sourceUpdatedAt: input.document.updatedAt,
     version: READWISE_API_IMPORT_STATE_VERSION
   }, importedAt);

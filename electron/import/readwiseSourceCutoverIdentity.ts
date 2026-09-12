@@ -1,12 +1,15 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { formatHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { extractReadwiseSidecarHighlights, normalizeReadwiseText } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { extractReaderLinkIds } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
+import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 
@@ -16,6 +19,7 @@ interface SourceRow extends DatabaseRow {
   highlight_path: string;
   latest_node_id: string;
   root_path: string;
+  remote_document_id: string | null;
   source_fingerprint: string;
   source_location: string;
 }
@@ -30,17 +34,18 @@ interface SourceArtifact {
 
 export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseIdentityBinding {
   blockedAnnotationIds?: Set<string>;
+  legacyAnnotations: PreparedReadwiseApiDocument['annotations'];
   nodeId: string;
 }
 
 export async function prepareReadwiseSourceCutoverIdentity(connectionRef: string) {
   const artifacts = [...await loadSourceArtifacts(), ...await loadBookArtifacts()];
-  const candidates = new Map(loadReadwiseApiCandidates(connectionRef).map((candidate) => [
-    candidate.documentId,
-    new Set([...candidate.highlightIds, ...(candidate.noteIds ?? [])])
-  ]));
   return {
     bindingFor(document: PreparedReadwiseApiDocument): ReadwiseSourceCutoverIdentityBinding | null {
+      const candidates = new Map(loadReadwiseApiCandidates(connectionRef).map((candidate) => [
+        candidate.documentId,
+        new Set([...candidate.highlightIds, ...(candidate.noteIds ?? [])])
+      ]));
       const remoteHighlights = candidates.get(document.id)
         ?? new Set(document.annotations.map((item) => item.remoteId));
       const matches = artifacts.filter((artifact) => artifact.documentIds.has(document.id) ||
@@ -54,20 +59,20 @@ export async function prepareReadwiseSourceCutoverIdentity(connectionRef: string
       }
       if (matchesByNode.size > 1) throw new Error('readwise_source_cutover_identity_conflict');
       const match = matchesByNode.values().next().value as SourceArtifact | undefined;
-      return match ? bindingFor(match, document) : null;
+      return match ? bindingFor(match, document, loadReadwiseApiAnnotationLedger(connectionRef)) : null;
     }
   };
 }
 
 async function loadSourceArtifacts() {
   const rows = openDatabaseConnection().driver.queryAll<SourceRow>(
-    `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, d.root_path,
+    `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, i.remote_document_id, d.root_path,
        json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
      FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
      JOIN nodes n ON n.id = i.latest_node_id AND n.deleted_at IS NULL
      WHERE d.source_type = 'readwise' AND d.host_name = ?
        AND i.latest_node_id IS NOT NULL AND i.source_location IS NOT NULL
-       AND i.remote_document_id IS NULL ORDER BY i.source_fingerprint`,
+     ORDER BY i.source_fingerprint`,
     [loadReadwiseHostAssignment().current_host_name]
   );
   return Promise.all(rows.map(async (source): Promise<SourceArtifact> => {
@@ -76,7 +81,8 @@ async function loadSourceArtifacts() {
     const raw = relative && source.highlight_path
       ? await readText(path.resolve(source.highlight_path, relative)) : '';
     return {
-      documentIds: new Set(extractReaderLinkIds(full)),
+      documentIds: new Set([...extractReaderLinkIds(full), ...(source.remote_document_id
+        ? [source.remote_document_id] : [])]),
       highlightIds: new Set(extractReaderLinkIds(raw)),
       latestNodeId: source.latest_node_id,
       raw,
@@ -102,8 +108,13 @@ async function loadBookArtifacts(): Promise<SourceArtifact[]> {
       if (typeof book.generatedNodeId !== 'string' || !isActiveNode(book.generatedNodeId)) continue;
       const full = await readText(typeof book.fullDocumentMarkdownPath === 'string' ? book.fullDocumentMarkdownPath : '');
       const raw = await readText(typeof book.highlightMarkdownPath === 'string' ? book.highlightMarkdownPath : '');
+      const remote = openDatabaseConnection().driver.queryOne<{ remote_document_id: string }>(
+        `SELECT remote_document_id FROM import_sources WHERE latest_node_id = ?
+         AND remote_provider = 'readwise' AND remote_document_id IS NOT NULL`,
+        [book.generatedNodeId]
+      );
       artifacts.push({
-        documentIds: new Set(extractReaderLinkIds(full)),
+        documentIds: new Set([...extractReaderLinkIds(full), ...(remote ? [remote.remote_document_id] : [])]),
         highlightIds: new Set(extractReaderLinkIds(raw)),
         latestNodeId: book.generatedNodeId,
         raw,
@@ -123,7 +134,8 @@ function isActiveNode(nodeId: string) {
 
 function bindingFor(
   artifact: SourceArtifact,
-  document: PreparedReadwiseApiDocument
+  document: PreparedReadwiseApiDocument,
+  annotationFacts: ReturnType<typeof loadReadwiseApiAnnotationLedger>
 ): ReadwiseSourceCutoverIdentityBinding {
   const ids = extractReaderLinkIds(artifact.raw);
   const highlights = extractReadwiseSidecarHighlights(
@@ -139,6 +151,27 @@ function bindingFor(
     : [];
   return {
     annotations,
+    legacyAnnotations: highlights.length === ids.length ? highlights.flatMap((highlight, index) => {
+      const remoteId = ids[index];
+      const remote = remoteId ? document.annotations.find((item) => item.remoteId === remoteId) : null;
+      const fact = remoteId ? annotationFacts.find((item) => item.remoteId === remoteId) : null;
+      const confirmedFallback = fact?.category === 'highlight'
+        && (fact.documentId === document.id || fact.parentId === document.id);
+      if (!remoteId || (!remote && !confirmedFallback)) return [];
+      const content = formatHighlightCardContent({
+        ...(highlight.note === undefined ? {} : { note: highlight.note }),
+        text: highlight.text
+      });
+      return [{
+        content,
+        contentHash: createHash('sha256').update(content).digest('hex'),
+        kind: 'highlight' as const,
+        locatorText: highlight.text,
+        parentRemoteId: document.id,
+        remoteId,
+        updatedAt: remote?.updatedAt ?? fact?.updatedAt ?? null
+      }];
+    }) : [],
     nodeId: artifact.latestNodeId,
     remoteDocumentId: document.id,
     sourceFingerprint: artifact.sourceFingerprint ?? ''
@@ -152,17 +185,33 @@ function resolveAnnotation(
 ) {
   if (!remote) return [];
   const children = openDatabaseConnection().driver.queryAll<{
-    content: string; created_at: string; id: string; is_title_manual: number; updated_at: string;
+    anchor_link: string | null; content: string; created_at: string; id: string;
+    is_title_manual: number; title: string; updated_at: string;
   }>(`WITH RECURSIVE tree(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE n.deleted_at IS NULL
-     ) SELECT n.id, n.content, n.is_title_manual, n.created_at, n.updated_at FROM nodes n JOIN tree t ON t.id=n.id`,
+     ) SELECT n.id, n.title, n.content, n.anchor_link, n.is_title_manual, n.created_at, n.updated_at
+       FROM nodes n JOIN tree t ON t.id=n.id`,
   [nodeId]);
   const matches = children.filter((child) => child.is_title_manual === 0 && child.created_at === child.updated_at
-    && normalizeReadwiseText(child.content) === normalizeReadwiseText(text));
+    && normalizeReadwiseText(resolveLegacyHighlightText(child)) === normalizeReadwiseText(text));
   return matches.length === 1
     ? [{ kind: remote.kind, nodeId: matches[0]!.id, remoteId: remote.remoteId }]
     : [];
+}
+
+function resolveLegacyHighlightText(child: { anchor_link: string | null; content: string; title: string }) {
+  if (child.anchor_link) {
+    try {
+      const parsed = JSON.parse(child.anchor_link) as { locator?: { originalText?: unknown } };
+      if (typeof parsed.locator?.originalText === 'string' && parsed.locator.originalText.trim()) {
+        return parsed.locator.originalText;
+      }
+    } catch {
+      // Fall through to legacy node fields when the stored anchor is malformed.
+    }
+  }
+  return child.content.trim() ? child.content : child.title;
 }
 
 function safeRelative(value: string) {

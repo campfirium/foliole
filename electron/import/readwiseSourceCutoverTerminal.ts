@@ -1,3 +1,4 @@
+import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiCandidates, loadPreparedReadwiseApiCandidate } from '../database/readwiseApiCandidateStage.js';
 import {
   loadReadwiseApiAnnotationLedger,
@@ -47,14 +48,8 @@ export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
     || current.annotations.some((item) => item.status === 'suppressed')) {
     throw new Error('readwise_source_cutover_legacy_suppression_present');
   }
-}
-
-export function isReadwiseSourceCutoverActuallyComplete(connectionRef: string) {
-  try {
-    assertReadwiseSourceCutoverComplete(connectionRef);
-    return true;
-  } catch {
-    return false;
+  if (countPendingReadwiseSourceBodies(connectionRef) > 0) {
+    throw new Error('readwise_source_cutover_pending_bodies');
   }
 }
 
@@ -95,6 +90,15 @@ function unavailableAnnotationFacts(connectionRef: string) {
     }
   }
   return uniqueFacts(result);
+}
+
+export function countPendingReadwiseSourceBodies(connectionRef: string) {
+  return openDatabaseConnection().driver.queryOne<{ count: number }>(
+    `SELECT COUNT(*) count FROM import_sources
+     WHERE remote_provider = 'readwise' AND remote_connection_ref = ?
+       AND json_extract(remote_import_state_json, '$.sourceUpdate.status') = 'pending'`,
+    [connectionRef]
+  )?.count ?? 0;
 }
 
 function uniqueFacts(values: Array<{ reason: string; remoteId: string }>) {

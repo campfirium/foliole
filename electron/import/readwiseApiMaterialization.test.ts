@@ -32,7 +32,6 @@ import {
 } from '../database/readwiseManagedExternalDocuments.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
-import { loadReadwiseApiSourceUpdate } from './readwiseApiSourceUpdate.js';
 
 let tempRoot = '';
 
@@ -79,10 +78,10 @@ it('preserves the local body and materializes distinct remote annotation identit
   );
   expect(body?.body).toContain('Local edit');
   expect(body?.body).not.toContain('Replaced remote body');
-  expect(loadReadwiseApiSourceUpdate(source.latest_node_id)).toEqual({
-    content: '# Replaced remote body',
-    sourceUpdatedAt: '2026-09-07T00:00:00.000Z'
-  });
+  const importState = driver.queryOne<{ remote_import_state_json: string }>(
+    'SELECT remote_import_state_json FROM import_sources WHERE latest_node_id = ?', [source.latest_node_id]
+  );
+  expect(JSON.parse(importState?.remote_import_state_json ?? '{}').sourceUpdate).toBeNull();
   expect(driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) count FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [source.latest_node_id]
   )).toEqual({ count: 2 });

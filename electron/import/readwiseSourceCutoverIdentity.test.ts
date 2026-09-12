@@ -51,18 +51,26 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('uses the frozen V3 parent identity even when V2 has no annotation body', async () => {
+it('uses the bound legacy sidecar when V2 has no annotation body', async () => {
   await fs.writeFile(path.join(state.sourcePath, 'Sample.md'),
-    '# Sample\n\n[View Highlight](https://read.readwise.io/read/highlight-v3)');
+    '# Sample\n\n## Highlights\n- Legacy highlight ([View Highlight](https://read.readwise.io/read/highlight-v3))');
   seedLegacySource();
+  openDatabaseConnection().driver.execute(
+    `UPDATE import_sources SET remote_provider='readwise', remote_connection_ref='connection',
+       remote_document_id='document-1' WHERE source_fingerprint='source-1'`
+  );
   saveReadwiseApiCandidates('connection', [{
     destination: 'inbox', documentId: 'document-1', exportCategory: null,
     hasHighlights: true, highlightIds: ['highlight-v3'], noteIds: [],
     readerCategory: 'article', status: 'ready', title: 'Sample'
   }]);
+  seedUnavailableAnnotationLedger();
 
   const identity = await prepareReadwiseSourceCutoverIdentity('connection');
   expect(identity.bindingFor(document())).toMatchObject({
+    legacyAnnotations: [{
+      content: 'Legacy highlight', kind: 'highlight', parentRemoteId: 'document-1', remoteId: 'highlight-v3'
+    }],
     nodeId: 'topic-1', remoteDocumentId: 'document-1', sourceFingerprint: 'source-1'
   });
 });
@@ -76,6 +84,29 @@ it('treats duplicate identity artifacts for the same active Topic as one match',
 
   const identity = await prepareReadwiseSourceCutoverIdentity('connection');
   expect(identity.bindingFor(document())).toMatchObject({ nodeId: 'topic-1' });
+});
+
+it('binds a legacy EPUB highlight whose source text is stored in its anchor', async () => {
+  await fs.writeFile(path.join(state.sourcePath, 'Sample.md'),
+    '# Sample\n\n## Highlights\n- Legacy highlight ([View Highlight](https://read.readwise.io/read/highlight-v3))');
+  seedLegacySource();
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
+    VALUES ('highlight-local','topic-1','topic','Legacy highlight',0,'',?,'old','old')`, [JSON.stringify({
+    id: 'imported-highlight-local', kind: 'highlight',
+    locator: { from: 0, originalText: 'Legacy highlight', to: 16 }
+  })]);
+  saveCandidate();
+  const prepared = document();
+  prepared.annotations = [{
+    content: 'Legacy highlight', contentHash: 'hash', kind: 'highlight', locatorText: 'Legacy highlight',
+    parentRemoteId: 'document-1', remoteId: 'highlight-v3', updatedAt: '2026-09-08T00:00:00.000Z'
+  }];
+
+  const identity = await prepareReadwiseSourceCutoverIdentity('connection');
+  expect(identity.bindingFor(prepared)).toMatchObject({
+    annotations: [{ kind: 'highlight', nodeId: 'highlight-local', remoteId: 'highlight-v3' }]
+  });
 });
 
 it('ignores stale identity artifacts whose Topic no longer exists', async () => {
@@ -99,6 +130,18 @@ function saveCandidate() {
     hasHighlights: true, highlightIds: ['highlight-v3'], noteIds: [],
     readerCategory: 'article', status: 'ready', title: 'Sample'
   }]);
+}
+
+function seedUnavailableAnnotationLedger() {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO readwise_api_import_stage (connection_ref,record_kind,remote_id,payload_json)
+     VALUES ('connection','readwise-annotation-ledger-v3','highlight-v3',?)`,
+    [JSON.stringify({
+      category: 'highlight', contentStatus: 'unavailable', documentId: 'document-1',
+      parentId: 'document-1', remoteId: 'highlight-v3', resolution: 'resolved',
+      seenInRun: 'run', updatedAt: '2026-09-08T00:00:00.000Z'
+    })]
+  );
 }
 
 function seedBookInventory(nodeId: string, markdownPath: string) {

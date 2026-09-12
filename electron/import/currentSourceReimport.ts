@@ -36,7 +36,7 @@ async function reimportReadwiseApiEpubSource(
   const staged = loadStagedReadwiseApiContracts(source.remote_connection_ref);
   const document = prepareReadwiseApiDocuments(staged.readerDocuments, staged.exportBooks)
     .find((candidate) => candidate.id === source.remote_document_id);
-  if (document?.category !== 'epub' || !document.epubStructure?.sections.length) {
+  if (document?.category !== 'epub' || !document.epubStructure) {
     return {
       detail: 'Refresh the Readwise preview before re-importing this EPUB.',
       node_id: nodeId,
