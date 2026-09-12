@@ -136,10 +136,6 @@ it('routes attachment resource requests through the unified runtime entry', asyn
     handleInvokeRequest({
       command: NATIVE_COMMANDS.resolveAttachmentResource,
       args: {
-        attachment_id: ATTACHMENT_HASH,
-        content_hash: ATTACHMENT_HASH,
-        library_scope: 'library-scope',
-        mime_type: 'image/png',
         storage_key: ATTACHMENT_STORAGE_KEY
       }
     })
@@ -148,14 +144,7 @@ it('routes attachment resource requests through the unified runtime entry', asyn
     mime_type: 'image/png',
     resource_url: 'file:///tmp/attachment-1.png'
   });
-  expect(resolveAttachmentResource).toHaveBeenCalledWith({
-    attachmentId: ATTACHMENT_HASH,
-    availability: 'local',
-    contentHash: ATTACHMENT_HASH,
-    libraryScope: 'library-scope',
-    mimeType: 'image/png',
-    storageKey: ATTACHMENT_STORAGE_KEY
-  });
+  expect(resolveAttachmentResource).toHaveBeenCalledWith(ATTACHMENT_STORAGE_KEY);
 });
 
 it('routes local image attachment imports through the unified runtime entry', async () => {

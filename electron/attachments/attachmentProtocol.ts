@@ -7,12 +7,12 @@ export { ATTACHMENT_PROTOCOL_SCHEME } from './attachmentAssetUrl.js';
 
 export function registerAttachmentProtocol() {
   protocol.handle(ATTACHMENT_PROTOCOL_SCHEME, async (request) => {
-    const description = parseAttachmentAssetUrl(request.url);
-    if (!description) {
+    const resource = parseAttachmentAssetUrl(request.url);
+    if (!resource) {
       return new Response(null, { status: 400 });
     }
 
-    const resolved = resolveAttachmentFile(description);
+    const resolved = resolveAttachmentFile(resource.storageKey);
     if (resolved.status !== 'ready') {
       return new Response(null, { status: 404 });
     }

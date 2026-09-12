@@ -2,6 +2,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createMarkdownImageElement } from './liveMarkdownImageElement';
 
+const ATTACHMENT_SOURCE = `foliole-asset://attachment/${'a'.repeat(64)}.png`;
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -10,11 +12,11 @@ it('loads stable attachment images with anonymous CORS before assigning the sour
   const image = createMarkdownImageElement({
     alt: 'Excerpt source',
     display: 'block',
-    source: 'foliole-asset://attachment/hash-1'
+    source: ATTACHMENT_SOURCE
   });
 
   expect(image.crossOrigin).toBe('anonymous');
-  expect(image.src).toBe('foliole-asset://attachment/hash-1');
+  expect(image.src).toBe(ATTACHMENT_SOURCE);
 });
 
 it('retries a transient local attachment failure before reporting it unavailable', () => {
@@ -24,7 +26,7 @@ it('retries a transient local attachment failure before reporting it unavailable
     alt: 'Excerpt source',
     display: 'block',
     onError,
-    source: 'foliole-asset://attachment/hash-1'
+    source: ATTACHMENT_SOURCE
   });
 
   image.dispatchEvent(new Event('error'));

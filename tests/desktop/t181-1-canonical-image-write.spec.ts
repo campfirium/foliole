@@ -44,16 +44,7 @@ async function inspectRestartReadability(
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const resolver = require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js'));
-    const paths = require(pathApi.join(process.cwd(), 'dist/electron/attachments/attachmentLibraryPathSnapshot.js'));
-    const libraryScope = paths.readAttachmentLibraryPathSnapshot()?.libraryScope;
-    if (!libraryScope) throw new Error('attachment library scope unavailable after restart');
-    const resolution = resolver.resolveAttachmentResource({
-      attachmentId: payload.contentHash,
-      contentHash: payload.contentHash,
-      libraryScope,
-      mimeType: 'image/png',
-      storageKey: payload.storageKey
-    });
+    const resolution = resolver.resolveAttachmentResource(payload.storageKey);
     const decoded = nativeImage.createFromPath(payload.storagePath);
     return { decodedSize: decoded.getSize(), imageEmpty: decoded.isEmpty(), resolution };
   }, input);

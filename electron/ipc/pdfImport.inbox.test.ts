@@ -98,7 +98,7 @@ function readPdfOpenDetails(nodeId: string) {
 
 function resolvePdfAttachmentAssetUrl(attachmentId: string) {
   const description = loadAttachmentResourceDescription(attachmentId)!;
-  const resolved = resolveAttachmentFile(description);
+  const resolved = resolveAttachmentFile(description.storageKey);
   expect(resolved.status).toBe('ready');
   return buildAttachmentAssetUrl(description);
 }

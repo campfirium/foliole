@@ -56,7 +56,7 @@ function useAttachmentPdfSource(
           setState('missing');
           return;
         }
-        invalidateAttachmentResourceResolution(attachmentId);
+        if (description) invalidateAttachmentResourceResolution(description.storageKey);
         await resolvePdfSource();
         return;
       }

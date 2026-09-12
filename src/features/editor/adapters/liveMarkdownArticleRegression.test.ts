@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
-  TEST_ATTACHMENT_ASSET_URL
+  TEST_ATTACHMENT_ASSET_URL,
+  TEST_ATTACHMENT_STORAGE_KEY
 } from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
@@ -26,7 +26,6 @@ function createAdapterHost(initialContent: string) {
 
 describe('live markdown imported article regressions', () => {
   beforeEach(() => {
-    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -38,7 +37,9 @@ describe('live markdown imported article regressions', () => {
     const { adapter, host } = createAdapterHost(`请教老师，![[作揖]](${TEST_ATTACHMENT_ASSET_URL})  `);
 
     await waitFor(() => {
-      expect(host.querySelector('.cm-md-image-element')).toHaveAttribute('src', 'foliole-asset://attachment/hash-1');
+      expect(host.querySelector('.cm-md-image-element')).toHaveAttribute(
+        'src', `foliole-asset://attachment/${TEST_ATTACHMENT_STORAGE_KEY}`
+      );
     });
     expect(host.querySelector('.cm-content')?.textContent).not.toContain(TEST_ATTACHMENT_ASSET_URL);
 
@@ -47,7 +48,6 @@ describe('live markdown imported article regressions', () => {
 
   it('renders empty-alt imported epub asset images without leaking the next heading marker', async () => {
     const attachmentId = '6340868bc6d7748c2c619e607ca13843234783cb1f1a3bc5bafc9c866ee6751d';
-    registerTestAttachmentResource({ attachmentId, contentHash: attachmentId, mimeType: 'image/jpeg' });
     const { adapter, host } = createAdapterHost([
       `![](asset://${attachmentId}.jpg)`,
       '',
@@ -59,7 +59,9 @@ describe('live markdown imported article regressions', () => {
     ].join('\n'));
 
     await waitFor(() => {
-      expect(host.querySelector('.cm-md-image-element')).toHaveAttribute('src', `foliole-asset://attachment/${attachmentId}`);
+      expect(host.querySelector('.cm-md-image-element')).toHaveAttribute(
+        'src', `foliole-asset://attachment/${attachmentId}.jpg`
+      );
     });
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('asset://');
     expect(host.querySelector('.cm-line-h2 .cm-md-heading-syntax-hidden')?.textContent).toBe('## ');

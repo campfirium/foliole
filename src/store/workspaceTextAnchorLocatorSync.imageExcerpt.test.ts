@@ -1,25 +1,15 @@
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
-import {
-  createTestAttachmentResource,
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
-} from '../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../test/attachmentResourceTestSupport';
 
 import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLocatorSync';
 
 const IMAGE_ATTACHMENT_ID = 'hash-1';
-const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
+const { assetUrl: IMAGE_ASSET_URL, description: IMAGE_RESOURCE } = createTestAttachmentResource({
+  attachmentId: IMAGE_ATTACHMENT_ID
+});
 const image = `![Cover](${IMAGE_ASSET_URL})`;
-
-beforeEach(() => {
-  registerTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
-});
-
-afterEach(() => {
-  resetTestAttachmentResources();
-});
 
 function createChild(kind: 'highlight' | 'image-excerpt', imageRegions: NonNullable<Node['imageRegions']> | null): Node {
   return {
@@ -62,7 +52,7 @@ it('relocates an image excerpt locator while preserving every local image-region
 
 it('continues deriving a full-image region for an ordinary image highlight', () => {
   expect(syncChild(createChild('highlight', null))?.imageRegions).toEqual([{
-    attachmentId: IMAGE_ATTACHMENT_ID,
+    attachmentId: IMAGE_RESOURCE.contentHash,
     regions: [{ height: 1, id: 'highlight-1-image-0', width: 1, x: 0, y: 0 }]
   }]);
 });

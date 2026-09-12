@@ -14,8 +14,7 @@ const { loadAttachmentResourceDescription } = vi.hoisted(() => ({
 
 const PDF_CONTENT_HASH = 'a'.repeat(64);
 const PDF_STORAGE_KEY = `${PDF_CONTENT_HASH}.pdf`;
-const PDF_RESOURCE_URL = `foliole-asset://attachment/${PDF_STORAGE_KEY}` +
-  `?attachment_id=pdf-hash&content_hash=${PDF_CONTENT_HASH}&library_scope=library-scope&mime_type=application%2Fpdf`;
+const PDF_RESOURCE_URL = `foliole-asset://attachment/${PDF_STORAGE_KEY}`;
 
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('../database/attachments.js', () => ({ listNodeAttachments }));

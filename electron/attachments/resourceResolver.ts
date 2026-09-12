@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 
-
+import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
@@ -25,16 +24,6 @@ export type ResolvedAttachmentFile =
       status: 'not_found';
     };
 
-const verifiedFileIdentities = new Set<string>();
-const MAX_VERIFIED_FILE_IDENTITIES = 512;
-
-function rememberVerifiedIdentity(identity: string) {
-  verifiedFileIdentities.add(identity);
-  if (verifiedFileIdentities.size <= MAX_VERIFIED_FILE_IDENTITIES) return;
-  const oldest = verifiedFileIdentities.values().next().value;
-  if (oldest) verifiedFileIdentities.delete(oldest);
-}
-
 export function resolveAttachmentStoragePath(
   contentHash: string,
   assetsDir = resolveAttachmentAssetsDir(),
@@ -49,32 +38,28 @@ function resolveAttachmentAssetsDir() {
   return snapshot.assetsDir;
 }
 
-export function resolveAttachmentFile(
-  description: Pick<AttachmentResourceDescription, 'contentHash' | 'libraryScope' | 'mimeType' | 'storageKey'>,
-  assetsDir?: string
-): ResolvedAttachmentFile {
+export function resolveAttachmentFile(storageKey: string, assetsDir?: string): ResolvedAttachmentFile {
   const snapshot = readAttachmentLibraryPathSnapshot();
-  if (!assetsDir && (!snapshot || snapshot.libraryScope !== description.libraryScope)) return { status: 'not_found' };
+  if (!assetsDir && !snapshot) return { status: 'not_found' };
   const resolvedAssetsDir = assetsDir ?? snapshot!.assetsDir;
-  const parsed = parseCanonicalAttachmentStorageKey(description.storageKey);
-  if (!parsed || parsed.contentHash !== description.contentHash || parsed.mimeType !== description.mimeType) {
-    return { status: 'not_found' };
-  }
-  const canonicalPath = resolveAttachmentStorageKeyPath(resolvedAssetsDir, description.storageKey);
+  const parsed = parseCanonicalAttachmentStorageKey(storageKey);
+  if (!parsed) return { status: 'not_found' };
+  const canonicalPath = resolveAttachmentStorageKeyPath(resolvedAssetsDir, storageKey);
   let bytes: Buffer;
   try {
+    const linkStat = fs.lstatSync(canonicalPath);
+    if (linkStat.isSymbolicLink() || !linkStat.isFile()) {
+      return { status: 'missing_file', mimeType: parsed.mimeType };
+    }
     const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0);
     const descriptor = fs.openSync(canonicalPath, flags);
     try {
       const stat = fs.fstatSync(descriptor);
-      if (!stat.isFile()) return { status: 'missing_file', mimeType: description.mimeType };
+      if (!stat.isFile()) return { status: 'missing_file', mimeType: parsed.mimeType };
       bytes = fs.readFileSync(descriptor);
-      const identity = `${description.libraryScope}:${description.storageKey}:${description.contentHash}:${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}`;
-      if (!verifiedFileIdentities.has(identity)) {
-        if (createHash('sha256').update(bytes).digest('hex') !== description.contentHash) {
-          return { status: 'missing_file', mimeType: description.mimeType };
-        }
-        rememberVerifiedIdentity(identity);
+      if (createHash('sha256').update(bytes).digest('hex') !== parsed.contentHash ||
+          classifyAttachmentBytes(bytes) !== parsed.mimeType) {
+        return { status: 'missing_file', mimeType: parsed.mimeType };
       }
     } finally {
       fs.closeSync(descriptor);
@@ -83,29 +68,22 @@ export function resolveAttachmentFile(
     console.warn('[native] attachment resource file missing', {
       area: 'native',
       action: 'resolve_attachment_resource',
-      storage_key: description.storageKey,
+      storage_key: storageKey,
       expected_path: canonicalPath,
       fallback: 'return_missing_file'
     });
-    return { status: 'missing_file', mimeType: description.mimeType };
+    return { status: 'missing_file', mimeType: parsed.mimeType };
   }
   return {
     bytes,
     status: 'ready',
     filePath: canonicalPath,
-    mimeType: description.mimeType
+    mimeType: parsed.mimeType
   };
 }
 
-export function resetAttachmentFileVerificationCacheForTest() {
-  verifiedFileIdentities.clear();
-}
-
-export function resolveAttachmentResource(
-  description: AttachmentResourceDescription,
-  assetsDir?: string
-): NativeAttachmentResourceResolution {
-  const resolved = resolveAttachmentFile(description, assetsDir);
+export function resolveAttachmentResource(storageKey: string, assetsDir?: string): NativeAttachmentResourceResolution {
+  const resolved = resolveAttachmentFile(storageKey, assetsDir);
   if (resolved.status === 'not_found') {
     return {
       status: 'not_found',
@@ -122,6 +100,6 @@ export function resolveAttachmentResource(
   return {
     status: 'ready',
     mime_type: resolved.mimeType,
-    resource_url: buildAttachmentAssetUrl(description)
+    resource_url: buildAttachmentAssetUrl(storageKey)
   };
 }

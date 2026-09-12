@@ -124,7 +124,7 @@ describe('SimplePdfDocument', () => {
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(syncMissing).toHaveBeenCalledWith('pdf-attachment-1');
-    expect(resourceMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('pdf-attachment-1');
+    expect(resourceMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith(`${TEST_ATTACHMENT_HASH}.pdf`);
     expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
   });
 });

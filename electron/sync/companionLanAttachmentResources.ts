@@ -45,7 +45,7 @@ export async function loadCompanionAttachmentResource(
 
   const description = loadAttachmentResourceDescription(normalizedAttachmentId);
   if (!description) return errorResult('not_found', 404);
-  const resolved = resolveAttachmentFile(description);
+  const resolved = resolveAttachmentFile(description.storageKey);
   if (resolved.status === 'not_found') {
     return errorResult('not_found', 404);
   }

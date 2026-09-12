@@ -7,7 +7,6 @@ import {
   clearAttachmentResourceDescriptions,
   listAttachmentResourceDescriptions,
   registerAttachmentResourceDescriptions,
-  resolveAttachmentResourceDescription
 } from '../../../lib/platform/attachmentResourceRegistry';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
@@ -42,11 +41,9 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
   const storageKey = parseAssetMarkdownUrl(resourceUrl);
   const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
   if (!storageKey || !parsed) return null;
-  const description = resolveAttachmentResourceDescription(storageKey);
-  if (!description) return null;
 
   if (isNativeCompanionAttachmentResourceRuntime()) {
-    return resolveNativeAttachmentResource(description);
+    return resolveNativeAttachmentResource(parsed);
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -60,13 +57,7 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
     return cached;
   }
 
-  const resolutionPromise = runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, {
-    attachment_id: description.attachmentId,
-    content_hash: description.contentHash,
-    library_scope: description.libraryScope,
-    mime_type: description.mimeType,
-    storage_key: description.storageKey
-  })
+  const resolutionPromise = runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, { storage_key: storageKey })
     .then((result) => {
       if (!isAttachmentResourceResolution(result)) {
         logRuntimeWarning('native attachment resource payload invalid', {
@@ -99,7 +90,9 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
   return resolutionPromise;
 }
 
-async function resolveNativeAttachmentResource(description: AttachmentResourceDescription) {
+async function resolveNativeAttachmentResource(
+  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>
+) {
   const cached = attachmentResourceResolutionCache.get(description.storageKey);
   if (cached) {
     updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
@@ -125,11 +118,12 @@ async function resolveNativeAttachmentResource(description: AttachmentResourceDe
   return resolutionPromise;
 }
 
-async function resolveNativeAttachmentResourceUncached(description: AttachmentResourceDescription) {
+async function resolveNativeAttachmentResourceUncached(
+  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>
+) {
   return FolioleCompanionSync.resolveAttachmentResource({
-    attachment_id: description.attachmentId,
+    attachment_id: description.contentHash,
     content_hash: description.contentHash,
-    library_scope: description.libraryScope,
     mime_type: description.mimeType,
     storage_key: description.storageKey
   });
@@ -137,16 +131,16 @@ async function resolveNativeAttachmentResourceUncached(description: AttachmentRe
 
 function normalizeNativeAttachmentResolution(
   result: unknown,
-  attachmentId: string
+  storageKey: string
 ): NativeAttachmentResourceResolution | null {
   if (!isAttachmentResourceResolution(result)) {
     logRuntimeWarning('native companion attachment resource payload invalid', {
       area: 'bridge',
       action: 'resolve_attachment_resource',
-      attachment_id: attachmentId,
+      storage_key: storageKey,
       fallback: 'return_null'
     });
-    attachmentResourceResolutionCache.delete(attachmentId);
+    attachmentResourceResolutionCache.delete(storageKey);
     return null;
   }
   if (result.status !== 'ready') {
@@ -164,9 +158,14 @@ export function readAttachmentResourceCacheStats() {
   };
 }
 
-export function invalidateAttachmentResourceResolution(attachmentId: string) {
+export function invalidateAttachmentResourceResolution(resourceIdentity: string) {
+  const directStorageKey = parseAssetMarkdownUrl(resourceIdentity) ??
+    parseCanonicalAttachmentStorageKey(resourceIdentity)?.storageKey;
+  if (directStorageKey) attachmentResourceResolutionCache.delete(directStorageKey);
   for (const description of listAttachmentResourceDescriptions()) {
-    if (description.attachmentId === attachmentId) attachmentResourceResolutionCache.delete(description.storageKey);
+    if (description.attachmentId === resourceIdentity) {
+      attachmentResourceResolutionCache.delete(description.storageKey);
+    }
   }
 }
 

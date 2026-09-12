@@ -1,16 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import {
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
-} from '../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../test/attachmentResourceTestSupport';
 
 import {
   getSelectionCommandPayload,
   getSelectionCommandPayloadForContentRanges
 } from './contextCommands';
-
-afterEach(resetTestAttachmentResources);
 
 function createAdapter(content: string, selections: Array<{ from: number; to: number }>) {
   return {
@@ -190,7 +185,7 @@ describe('getSelectionCommandPayload', () => {
   it('merges touching ranges into one continuous payload entry', runMergesTouchingRangesCase);
 
   it('collects selected attachment images as full-image regions', () => {
-    const resource = registerTestAttachmentResource();
+    const resource = createTestAttachmentResource();
     const content = `Before\n\n![Cover](${resource.assetUrl})\n\nAfter`;
     const from = content.indexOf('![Cover]');
     const to = from + `![Cover](${resource.assetUrl})`.length;
@@ -199,7 +194,7 @@ describe('getSelectionCommandPayload', () => {
 
     expect(payload?.imageRegions).toEqual([
       {
-        attachmentId: 'hash-1',
+        attachmentId: resource.description.contentHash,
         regions: [{ height: 1, id: expect.stringContaining('-image-0'), width: 1, x: 0, y: 0 }]
       }
     ]);

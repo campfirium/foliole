@@ -1,3 +1,4 @@
+import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { EXT_DOC_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/extDocImageProtocolUrl';
 import { isSafeMarkdownDataImageUrl } from '../../../../lib/platform/markdownImageDataUrl';
 
@@ -33,8 +34,8 @@ function isInlineBrowserImageSource(value: string) {
   }
 }
 
-function buildAttachmentProtocolUrl(attachmentId: string) {
-  return `foliole-asset://attachment/${encodeURIComponent(attachmentId)}`;
+function buildAttachmentProtocolUrl(storageKey: string) {
+  return `foliole-asset://attachment/${encodeURIComponent(storageKey)}`;
 }
 
 export function buildMarkdownImageRenderPlan(imageMatch: MarkdownImageMatch): MarkdownImageRenderPlan {
@@ -60,7 +61,8 @@ export function buildMarkdownImageRenderPlan(imageMatch: MarkdownImageMatch): Ma
     };
   }
 
-  if (!imageMatch.attachmentId) {
+  const storageKey = parseAssetMarkdownUrl(imageMatch.source);
+  if (!storageKey || !imageMatch.attachmentId) {
     return {
       attachmentProtocolSrc: null,
       browserImageSrc: null,
@@ -72,11 +74,11 @@ export function buildMarkdownImageRenderPlan(imageMatch: MarkdownImageMatch): Ma
   }
 
   return {
-    attachmentProtocolSrc: buildAttachmentProtocolUrl(imageMatch.attachmentId),
+    attachmentProtocolSrc: buildAttachmentProtocolUrl(storageKey),
     browserImageSrc: null,
     display: imageMatch.display,
     fallbackStatus: null,
-    imageSrc: buildAttachmentProtocolUrl(imageMatch.attachmentId),
+    imageSrc: buildAttachmentProtocolUrl(storageKey),
     isRemote: false
   };
 }

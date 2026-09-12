@@ -27,6 +27,8 @@ afterEach(() => {
 });
 
 it('resolves iOS attachment images through the shared native resource capability', async () => {
+  const hash = 'a'.repeat(64);
+  const source = `asset://${hash}.png`;
   attachmentMock.resolve.mockResolvedValue({
     mime_type: 'image/png',
     resource_url: 'capacitor://localhost/_capacitor_file_/attachments/hash-ios',
@@ -35,10 +37,10 @@ it('resolves iOS attachment images through the shared native resource capability
 
   const widget = createMarkdownImageWidgetDom({
     alt: 'iOS attachment',
-    attachmentId: 'hash-ios',
+    attachmentId: hash,
     display: 'block',
     from: 0,
-    source: 'asset://hash-ios.png',
+    source,
     to: 31
   });
   document.body.append(widget);
@@ -49,5 +51,5 @@ it('resolves iOS attachment images through the shared native resource capability
       'capacitor://localhost/_capacitor_file_/attachments/hash-ios'
     );
   });
-  expect(attachmentMock.resolve).toHaveBeenCalledWith('asset://hash-ios.png');
+  expect(attachmentMock.resolve).toHaveBeenCalledWith(source);
 });

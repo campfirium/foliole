@@ -1,5 +1,5 @@
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { resolveAttachmentIdByStorageKey } from '../../lib/platform/attachmentResourceRegistry.js';
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { resolveMirrorAttachmentPath } from './attachmentPathReference.js';
 
@@ -22,7 +22,7 @@ export function rewriteMirrorMarkdownAttachmentPaths(content: string) {
   return content.replace(MARKDOWN_LINK_PATTERN, (match, prefix, rawDestination, suffix) => {
     const wrapped = unwrapMarkdownDestination(rawDestination);
     const storageKey = parseAssetMarkdownUrl(wrapped.value);
-    const attachmentId = storageKey ? resolveAttachmentIdByStorageKey(storageKey) : null;
+    const attachmentId = storageKey ? parseCanonicalAttachmentStorageKey(storageKey)?.contentHash ?? null : null;
     if (!attachmentId) {
       return match;
     }

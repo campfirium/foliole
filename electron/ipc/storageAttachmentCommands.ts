@@ -82,19 +82,10 @@ export function handleStorageAttachmentCommand(
 
   if (command === NATIVE_COMMANDS.resolveAttachmentResource) {
     const storageKey = asString(args.storage_key, 'storage_key');
-    const parsed = parseCanonicalAttachmentStorageKey(storageKey);
-    if (!parsed || parsed.contentHash !== asString(args.content_hash, 'content_hash') ||
-        parsed.mimeType !== asString(args.mime_type, 'mime_type')) {
+    if (!parseCanonicalAttachmentStorageKey(storageKey)) {
       throw new Error('invalid argument: attachment resource description');
     }
-    return resolveAttachmentResource({
-      attachmentId: asString(args.attachment_id, 'attachment_id'),
-      availability: 'local',
-      contentHash: parsed.contentHash,
-      libraryScope: asString(args.library_scope, 'library_scope'),
-      mimeType: parsed.mimeType,
-      storageKey
-    });
+    return resolveAttachmentResource(storageKey);
   }
 
   if (command === NATIVE_COMMANDS.copyAttachmentImageToClipboard) {

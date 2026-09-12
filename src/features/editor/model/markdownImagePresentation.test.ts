@@ -102,21 +102,22 @@ describe('markdownImagePresentation unsafe browser sources', () => {
 
 describe('markdownImagePresentation attachments', () => {
   it('builds internal attachment image render state', () => {
+    const hash = 'a'.repeat(64);
     expect(
       buildMarkdownImageRenderPlan({
-        attachmentId: 'hash-1',
+        attachmentId: hash,
         alt: 'Cover',
         display: 'block',
         from: 0,
-        source: 'asset://hash-1.png',
+        source: `asset://${hash}.png`,
         to: 10
       })
     ).toEqual({
-      attachmentProtocolSrc: 'foliole-asset://attachment/hash-1',
+      attachmentProtocolSrc: `foliole-asset://attachment/${hash}.png`,
       browserImageSrc: null,
       display: 'block',
       fallbackStatus: null,
-      imageSrc: 'foliole-asset://attachment/hash-1',
+      imageSrc: `foliole-asset://attachment/${hash}.png`,
       isRemote: false
     });
   });

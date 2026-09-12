@@ -2,7 +2,7 @@ import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
-import { registerTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
 
 const capacitorMock = vi.hoisted(() => ({
   convertFileSrc: vi.fn((url: string) => `capacitor://${url}`),
@@ -71,7 +71,7 @@ beforeEach(() => {
 
 describe('live markdown image rendering on Android companion', () => {
   it('resolves internal attachment images to Android WebView file URLs in native companion', async () => {
-    const resource = registerTestAttachmentResource({ attachmentId: 'android-hash-1' });
+    const resource = createTestAttachmentResource({ attachmentId: 'android-hash-1' });
     const { adapter, host } = createAdapterHost(`![Cover](${resource.assetUrl})`);
 
     await waitFor(() => {
@@ -80,9 +80,8 @@ describe('live markdown image rendering on Android companion', () => {
       );
     });
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-      attachment_id: 'android-hash-1',
+      attachment_id: resource.description.contentHash,
       content_hash: resource.description.contentHash,
-      library_scope: 'test-library',
       mime_type: 'image/png',
       storage_key: resource.description.storageKey
     });
@@ -93,7 +92,7 @@ describe('live markdown image rendering on Android companion', () => {
 
 describe('missing Android attachment rendering', () => {
   it('retries Android image rendering after the caller syncs a missing attachment resource', async () => {
-    const resource = registerTestAttachmentResource({
+    const resource = createTestAttachmentResource({
       attachmentId: 'android-hash-2',
       contentHash: 'b'.repeat(64)
     });
@@ -123,7 +122,7 @@ describe('missing Android attachment rendering', () => {
         'capacitor://file:///data/user/0/com.foliole.android/files/attachments/android-hash-2'
       );
     });
-    expect(syncMissing).toHaveBeenCalledWith('android-hash-2');
+    expect(syncMissing).toHaveBeenCalledWith(resource.description.contentHash);
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledTimes(2);
 
     adapter.destroy();

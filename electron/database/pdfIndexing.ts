@@ -127,7 +127,7 @@ function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: numbe
 async function extractPdfPageText(attachmentId: string) {
   const description = loadAttachmentResourceDescription(attachmentId);
   if (!description) throw new Error('PDF attachment description is not available.');
-  const resolved = resolveAttachmentFile(description);
+  const resolved = resolveAttachmentFile(description.storageKey);
   if (resolved.status !== 'ready') {
     throw new Error('PDF attachment file is not available.');
   }

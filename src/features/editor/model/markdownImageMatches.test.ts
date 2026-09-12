@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { registerTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../../../test/attachmentResourceTestSupport';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { collectImageMatches, collectImageMatchesFromTree } from './markdownImageMatches';
@@ -150,11 +150,11 @@ describe('markdownImageMatches data url safety', () => {
 
 describe('markdownImageMatches imported social attachments', () => {
   it('collects bracketed alt attachment images from imported social content', () => {
-    const { assetUrl } = registerTestAttachmentResource();
+    const { assetUrl, description } = createTestAttachmentResource();
     const markdown = `请教老师，![[作揖]](${assetUrl})  `;
     expect(collectImageMatches(0, markdown)).toEqual([
       {
-        attachmentId: 'hash-1',
+        attachmentId: description.contentHash,
         alt: '作揖',
         display: 'inline',
         from: 5,
@@ -189,22 +189,22 @@ describe('markdownImageMatches replacement ranges', () => {
   });
 
   it('keeps the wrapping link href for linked attachment images', () => {
-    const { assetUrl } = registerTestAttachmentResource();
+    const { assetUrl, description } = createTestAttachmentResource();
     const markdown = `[![Cover](${assetUrl})](https://example.com/post)`;
 
     expect(collectImageMatches(0, markdown)[0]).toMatchObject({
-      attachmentId: 'hash-1',
+      attachmentId: description.contentHash,
       linkHref: 'https://example.com/post',
       source: assetUrl
     });
   });
 
   it('keeps the wrapping link href when the image label has spacing and caption text', () => {
-    const { assetUrl } = registerTestAttachmentResource();
+    const { assetUrl, description } = createTestAttachmentResource();
     const markdown = `[\n\n![image](${assetUrl})\n\nimage1971×1242 140 KB](https://example.com/post)`;
 
     expect(collectImageMatches(0, markdown)[0]).toMatchObject({
-      attachmentId: 'hash-1',
+      attachmentId: description.contentHash,
       from: 0,
       linkHref: 'https://example.com/post',
       source: assetUrl,

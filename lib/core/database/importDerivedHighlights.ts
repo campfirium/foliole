@@ -4,7 +4,6 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { projectImageOnlyMarkdownLabel } from '../import/markdownImageLabel.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
-import { resolveAttachmentIdFromDriver } from './attachmentResourceLookup.js';
 import type { DatabaseDriver } from './driver.js';
 import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
@@ -53,7 +52,6 @@ function createImportedClozePrompt(parentContent: string, highlight: AnchoredImp
 }
 
 function toImportedImageRegions(
-  driver: DatabaseDriver,
   parentContent: string,
   highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord
 ) {
@@ -63,8 +61,7 @@ function toImportedImageRegions(
   const regions = deriveImportedHighlightImageRegions({
     anchorId: highlight.anchorId,
     content: parentContent,
-    locators: [{ from: highlight.from, to: highlight.to }],
-    resolveAttachmentId: (storageKey) => resolveAttachmentIdFromDriver(driver, storageKey)
+    locators: [{ from: highlight.from, to: highlight.to }]
   });
   return regions ? JSON.stringify(regions) : null;
 }
@@ -111,7 +108,7 @@ function insertImportedHighlight(
   insertClozeNode: ReturnType<DatabaseDriver['prepare']>
 ) {
   const nodeId = highlight.nodeId ?? `node-${randomUUID()}`;
-  const imageRegions = toImportedImageRegions(input.driver, input.parentContent, highlight);
+  const imageRegions = toImportedImageRegions(input.parentContent, highlight);
   const existing = highlight.nodeId ? reuseImportedHighlightNode({
     anchorLink: toImportedAnchorLink(highlight), driver: input.driver, imageRegions,
     importedAt: input.importedAt, nodeId, parentNodeId: input.parentNodeId

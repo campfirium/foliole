@@ -63,18 +63,12 @@ function remapLocators(input: {
 function toImageRegions(
   anchorId: unknown,
   content: string,
-  locators: TextAnchorLocator[],
-  resolveAttachmentId?: (storageKey: string) => string | null
+  locators: TextAnchorLocator[]
 ) {
   if (typeof anchorId !== 'string' || anchorId.trim().length === 0) {
     return null;
   }
-  return deriveMarkdownImageTextAnchorRegions({
-    anchorId,
-    content,
-    locators,
-    ...(resolveAttachmentId ? { resolveAttachmentId } : {})
-  }) as StoredImageRegionGroup[] | null;
+  return deriveMarkdownImageTextAnchorRegions({ anchorId, content, locators }) as StoredImageRegionGroup[] | null;
 }
 
 export function remapStoredTextAnchorLink(input: {
@@ -82,7 +76,6 @@ export function remapStoredTextAnchorLink(input: {
   imageRegions?: StoredImageRegionGroup[] | null;
   nextContent: string;
   previousContent: string;
-  resolveAttachmentId?: (storageKey: string) => string | null;
 }): StoredAnchorLinkRemapResult | null {
   const locators = readTextLocators(input.anchorLink.locator);
   if (locators.length === 0) {
@@ -100,7 +93,7 @@ export function remapStoredTextAnchorLink(input: {
     },
     imageRegions: input.anchorLink.kind === 'image-excerpt'
       ? input.imageRegions ?? null
-      : toImageRegions(input.anchorLink.id, input.nextContent, nextLocators, input.resolveAttachmentId)
+      : toImageRegions(input.anchorLink.id, input.nextContent, nextLocators)
   };
 }
 
@@ -108,7 +101,6 @@ export function remapRawStoredAnchorLink(input: {
   imageRegions?: string | null;
   nextContent: string;
   previousContent: string;
-  resolveAttachmentId?: (storageKey: string) => string | null;
   value: string;
 }): RawStoredAnchorLinkRemapResult {
   const parsed = parseStoredAnchorLink(input.value);
@@ -131,7 +123,7 @@ export function remapRawStoredAnchorLink(input: {
   raw.locator = createLocatorValue(nextLocators);
   const imageRegions = raw.kind === 'image-excerpt'
     ? input.imageRegions ?? null
-    : toImageRegions(raw.id, input.nextContent, nextLocators, input.resolveAttachmentId);
+    : toImageRegions(raw.id, input.nextContent, nextLocators);
   return {
     imageRegions: typeof imageRegions === 'string'
       ? imageRegions

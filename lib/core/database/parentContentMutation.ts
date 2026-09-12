@@ -1,4 +1,3 @@
-import { resolveAttachmentIdFromDriver } from './attachmentResourceLookup.js';
 import type { DatabaseDriver } from './driver.js';
 import { writeNodeBody } from './nodeBodyMutation.js';
 import { requireResolvedNodeBody } from './nodeBodyResolution.js';
@@ -56,7 +55,6 @@ function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
 }
 
 function remapRawAnchorLink(
-  driver: DatabaseDriver,
   value: string,
   imageRegions: string | null,
   previousContent: string,
@@ -66,7 +64,6 @@ function remapRawAnchorLink(
     imageRegions,
     nextContent,
     previousContent,
-    resolveAttachmentId: (storageKey) => resolveAttachmentIdFromDriver(driver, storageKey),
     value
   });
 }
@@ -115,7 +112,6 @@ export function applyParentContentChange(input: {
       return;
     }
     const remapped = remapRawAnchorLink(
-      input.driver,
       row.anchor_link,
       row.image_regions,
       previousContent,

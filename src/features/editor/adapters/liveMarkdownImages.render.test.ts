@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
-  TEST_ATTACHMENT_ASSET_URL
+  TEST_ATTACHMENT_ASSET_URL,
+  TEST_ATTACHMENT_HASH,
+  TEST_ATTACHMENT_STORAGE_KEY
 } from '../../../test/attachmentResourceTestSupport';
 import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
@@ -24,10 +25,10 @@ async function expectInternalImageRendered(host: HTMLElement) {
   await waitFor(() => {
     const image = host.querySelector('.cm-md-image-element');
     expect(image).not.toBeNull();
-    expect(image?.getAttribute('src')).toBe('foliole-asset://attachment/hash-1');
+    expect(image?.getAttribute('src')).toBe(`foliole-asset://attachment/${TEST_ATTACHMENT_STORAGE_KEY}`);
   });
   const widget = host.querySelector('.cm-md-image-widget');
-  expect(widget).toHaveAttribute('data-md-image-attachment-id', 'hash-1');
+  expect(widget).toHaveAttribute('data-md-image-attachment-id', TEST_ATTACHMENT_HASH);
   expect(widget).toHaveAttribute('data-md-image-from');
   expect(widget).toHaveAttribute('data-md-image-to');
   expect(host.querySelector('.cm-md-image-cloze-overlay')).not.toBeNull();
@@ -68,7 +69,7 @@ function createOutlinedPresentation() {
     outlinedRegionIds: ['region-1'],
     regions: [
       {
-        attachmentId: 'hash-1',
+        attachmentId: TEST_ATTACHMENT_HASH,
         height: 0.2,
         id: 'region-1',
         width: 0.3,
@@ -87,7 +88,7 @@ function createFullImageHighlightPresentation() {
     outlinedRegionIds: ['region-full'],
     regions: [
       {
-        attachmentId: 'hash-1',
+        attachmentId: TEST_ATTACHMENT_HASH,
         height: 1,
         id: 'region-full',
         width: 1,
@@ -114,7 +115,6 @@ async function expectOutlinedRegionRemoved(host: HTMLElement) {
 
 describe('live markdown image rendering basics', () => {
   beforeEach(() => {
-    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -182,6 +182,20 @@ describe('live markdown image rendering basics', () => {
 
 });
 
+describe('missing desktop attachment rendering', () => {
+  it('does not request companion resource sync', () => {
+    const syncMissing = vi.fn();
+    const widget = createMarkdownImageWidgetDom({
+      alt: 'Missing', attachmentId: TEST_ATTACHMENT_HASH, display: 'block', from: 0,
+      source: TEST_ATTACHMENT_ASSET_URL, to: TEST_ATTACHMENT_ASSET_URL.length
+    }, null, syncMissing);
+    const image = widget.querySelector('.cm-md-image-element');
+    image?.dispatchEvent(new Event('error'));
+    image?.dispatchEvent(new Event('error'));
+    expect(syncMissing).not.toHaveBeenCalled();
+  });
+});
+
 describe('live markdown local document image rendering', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -207,7 +221,6 @@ describe('live markdown local document image rendering', () => {
 
 describe('live markdown image rendering interactions', () => {
   beforeEach(() => {
-    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -228,7 +241,7 @@ describe('live markdown image rendering interactions', () => {
     expect(((handlePreview.mock.calls[0]?.[0] as CustomEvent | undefined)?.detail ?? null)).toEqual({
       alt: 'Cover',
       presentation: null,
-      src: 'foliole-asset://attachment/hash-1'
+      src: `foliole-asset://attachment/${TEST_ATTACHMENT_STORAGE_KEY}`
     });
 
     adapter.destroy();
@@ -238,7 +251,6 @@ describe('live markdown image rendering interactions', () => {
 
 describe('live markdown image rendering image cloze presentation', () => {
   beforeEach(() => {
-    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 

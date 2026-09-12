@@ -1,5 +1,5 @@
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { resolveAttachmentIdByStorageKey } from '../../../../lib/platform/attachmentResourceRegistry';
+import { parseCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { parseMarkdownImageLabelSize } from './markdownImageSize';
@@ -221,7 +221,7 @@ export function collectImageMatchesFromTree(
       const start = from + match.start;
       matches.push({
         attachmentId: isInternalImageSource(source)
-          ? resolveAttachmentIdByStorageKey(parseAssetMarkdownUrl(source) ?? '')
+          ? parseCanonicalAttachmentStorageKey(parseAssetMarkdownUrl(source) ?? '')?.contentHash ?? null
           : null,
         alt: label.alt,
         display: resolveImageDisplay(text, match.start, match.fullMatch),

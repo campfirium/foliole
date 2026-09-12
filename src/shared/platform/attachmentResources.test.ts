@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 it('resolves native Android attachment file URLs through Capacitor', async () => {
-  const resource = registerTestAttachmentResource({ attachmentId: 'att-android-1' });
+  const resource = createTestAttachmentResource({ attachmentId: 'att-android-1' });
   capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
     mime_type: 'image/png',
     resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/hash-1',
@@ -65,9 +65,8 @@ it('resolves native Android attachment file URLs through Capacitor', async () =>
   });
 
   expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-    attachment_id: 'att-android-1',
+    attachment_id: resource.description.contentHash,
     content_hash: resource.description.contentHash,
-    library_scope: 'test-library',
     mime_type: 'image/png',
     storage_key: resource.description.storageKey
   });
@@ -142,10 +141,6 @@ it('bounds desktop attachment resource resolution cache entries', async () => {
 
   expect(invokeMock).toHaveBeenCalledTimes(1);
   expect(invokeMock).toHaveBeenCalledWith(NATIVE_COMMANDS.resolveAttachmentResource, {
-    attachment_id: 'att-desktop-0',
-    content_hash: first.description.contentHash,
-    library_scope: 'test-library',
-    mime_type: 'image/png',
     storage_key: first.description.storageKey
   });
 });
@@ -171,8 +166,8 @@ it('resolves native iOS attachment file URLs through Capacitor', async () => {
     status: 'ready'
   });
   expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-    attachment_id: 'att-ios', content_hash: resource.description.contentHash,
-    library_scope: 'test-library', mime_type: 'application/pdf', storage_key: resource.description.storageKey
+    attachment_id: resource.description.contentHash, content_hash: resource.description.contentHash,
+    mime_type: 'application/pdf', storage_key: resource.description.storageKey
   });
   expect(invoke).not.toHaveBeenCalled();
 });

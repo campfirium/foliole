@@ -133,7 +133,7 @@ function appendResolvedNativeAttachmentImage(
           requestMeasure?.();
           return;
         }
-        invalidateAttachmentResourceResolution(imageMatch.attachmentId);
+        invalidateAttachmentResourceResolution(imageMatch.source);
         await resolveImage();
         return;
       }

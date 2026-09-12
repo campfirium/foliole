@@ -6,7 +6,6 @@ export function deriveImportedHighlightImageRegions(input: {
   anchorId: string;
   content: string;
   locators: Array<{ from: number; to: number }>;
-  resolveAttachmentId?: (storageKey: string) => string | null;
 }) {
   return deriveMarkdownImageTextAnchorRegions(input) as StoredImageRegionGroup[] | null;
 }

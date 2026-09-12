@@ -173,7 +173,7 @@ it('matches readwise highlights before remote image localization and remaps afte
   expect(remappedLocator?.originalText).toContain(`![Avatar](asset://${storageKey})`);
   expect(imageRegions).toEqual([
     {
-      attachmentId: 'attachment-avatar',
+      attachmentId: contentHash,
       regions: [
         {
           height: 1,

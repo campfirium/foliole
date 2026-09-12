@@ -50,7 +50,7 @@ it('serves attachment resources with mime and cache headers but no page CSP', as
 
   const response = await handler({ headers: new Headers(), url: buildAttachmentAssetUrl(description) });
 
-  expect(resolveAttachmentFile).toHaveBeenCalledWith(description);
+  expect(resolveAttachmentFile).toHaveBeenCalledWith(description.storageKey);
   expect(response.status).toBe(200);
   expect(response.headers.get('access-control-allow-origin')).toBe('*');
   expect(response.headers.get('content-type')).toBe('image/png');
@@ -87,4 +87,29 @@ it('returns not found when the attachment file cannot be resolved', async () => 
   const response = await handler({ headers: new Headers(), url: buildAttachmentAssetUrl(description) });
 
   expect(response.status).toBe(404);
+});
+
+it('ignores unknown query fields without changing the resource identity', async () => {
+  resolveAttachmentFile.mockReturnValue({
+    status: 'ready', bytes: Buffer.from('bytes'), filePath: '/tmp/attachment-hash', mimeType: 'image/png'
+  });
+  registerAttachmentProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  const response = await handler({
+    headers: new Headers(),
+    url: `${buildAttachmentAssetUrl(description)}?retry=1&future=value`
+  });
+  expect(resolveAttachmentFile).toHaveBeenCalledWith(description.storageKey);
+  expect(response.status).toBe(200);
+});
+
+it('fails closed for non-canonical paths', async () => {
+  registerAttachmentProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  const response = await handler({
+    headers: new Headers(),
+    url: `foliole-asset://attachment/../${description.storageKey}`
+  });
+  expect(resolveAttachmentFile).not.toHaveBeenCalled();
+  expect(response.status).toBe(400);
 });
