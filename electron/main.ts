@@ -150,7 +150,11 @@ async function createMainWindow(
   );
   const window = new BrowserWindow(options);
   installMainWindowContentSecurityPolicy(window.webContents.session, { isPackaged: app.isPackaged });
-  bindMainWindowNavigationGuard(window, startupAppearance?.displayScalePercent ?? 100);
+  bindMainWindowNavigationGuard(
+    window,
+    startupAppearance?.displayScalePercent ?? 100,
+    runtimeDiagnostics.rendererUrl
+  );
   bindMainWindowWebviewAttachGuard(window);
   await appendBootEvent('browser_window_created', {
     bounds: window.getBounds(),

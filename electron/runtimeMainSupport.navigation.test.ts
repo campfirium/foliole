@@ -73,3 +73,34 @@ it('allows the main process to load the initial local renderer before blocking l
   expect(startupNavigationEvent.preventDefault).not.toHaveBeenCalled();
   expect(laterNavigationEvent.preventDefault).toHaveBeenCalledTimes(1);
 });
+
+it('allows only the configured dev renderer during the initial web navigation', () => {
+  type WillNavigateHandler = (event: { preventDefault: () => void }, url: string) => void;
+  const willNavigateHandlers: WillNavigateHandler[] = [];
+  const webContents = {
+    getURL: vi.fn(() => 'http://127.0.0.1:24600/'),
+    on: vi.fn((eventName: string, handler: WillNavigateHandler) => {
+      if (eventName === 'will-navigate') {
+        willNavigateHandlers.push(handler);
+      }
+    }),
+    setZoomFactor: vi.fn(),
+    setWindowOpenHandler: vi.fn()
+  };
+  const window = {
+    isDestroyed: vi.fn(() => false),
+    on: vi.fn(),
+    once: vi.fn(),
+    setTitle: vi.fn(),
+    webContents
+  };
+
+  bindMainWindowNavigationGuard(window as never, 100, 'http://127.0.0.1:24600/');
+  const devNavigationEvent = { preventDefault: vi.fn() };
+  willNavigateHandlers[0]?.(devNavigationEvent, 'http://127.0.0.1:24600/?startupView=library-setup');
+  const externalNavigationEvent = { preventDefault: vi.fn() };
+  willNavigateHandlers[0]?.(externalNavigationEvent, 'https://example.com/');
+
+  expect(devNavigationEvent.preventDefault).not.toHaveBeenCalled();
+  expect(externalNavigationEvent.preventDefault).toHaveBeenCalledTimes(1);
+});

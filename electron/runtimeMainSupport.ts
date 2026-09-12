@@ -106,14 +106,19 @@ export function bindEmbeddedLinkPanelContents(contents: WebContents) {
 
 export function bindMainWindowNavigationGuard(
   window: import('electron').BrowserWindow,
-  displayScalePercent = 100
+  displayScalePercent = 100,
+  initialRendererUrl?: string
 ) {
   const applyDisplayScale = () => {
     if (!window.isDestroyed()) window.webContents.setZoomFactor(displayScalePercent / 100);
   };
   applyDisplayScale();
   window.webContents.on('will-navigate', (event, url) => {
-    if (isInitialMainWindowRendererNavigation(window.webContents.getURL(), url)) {
+    if (isInitialMainWindowRendererNavigation(
+      window.webContents.getURL(),
+      url,
+      initialRendererUrl
+    )) {
       return;
     }
     event.preventDefault();
@@ -141,13 +146,21 @@ export function bindMainWindowNavigationGuard(
   window.webContents.on('did-finish-load', applyDisplayScale);
 }
 
-function isInitialMainWindowRendererNavigation(currentUrl: string, targetUrl: string) {
-  if (currentUrl) {
-    return false;
-  }
+function isInitialMainWindowRendererNavigation(
+  currentUrl: string,
+  targetUrl: string,
+  initialRendererUrl?: string
+) {
   try {
     const parsedUrl = new URL(targetUrl);
-    return parsedUrl.protocol === 'file:' || parsedUrl.protocol === 'data:';
+    if (initialRendererUrl) {
+      const configuredUrl = new URL(initialRendererUrl);
+      if (parsedUrl.origin === configuredUrl.origin
+        && parsedUrl.pathname === configuredUrl.pathname) {
+        return true;
+      }
+    }
+    return !currentUrl && (parsedUrl.protocol === 'file:' || parsedUrl.protocol === 'data:');
   } catch {
     return false;
   }
