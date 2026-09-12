@@ -7,6 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t182-1');
+const ORIGINAL_FILE_PATH = path.resolve('tests/desktop/fixtures/pdf-user-journey.pdf');
 const ORDINARY_IDS = ['t182-ordinary-one', 't182-ordinary-two'];
 const PLACEHOLDER_CONTENT = [
   '# T182 Readwise Topic', '',
@@ -24,7 +25,6 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
   const readwiseRoot = path.join(stateRoot, 'Readwise');
   const primaryPath = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
   const highlightPath = path.join(readwiseRoot, 'Articles');
-  const originalPath = path.resolve('tests/desktop/fixtures/pdf-user-journey.pdf');
   const sourceName = 'T182 Readwise Topic.md';
   await app.evaluate(async (_electron, fixture) => {
     const moduleApi = process.getBuiltinModule('module');
@@ -34,6 +34,7 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const fingerprint = require(pathApi.join(process.cwd(), 'dist/lib/core/import/fingerprint.js'));
     const pipeline = require(pathApi.join(process.cwd(), 'dist/electron/database/importPipeline.js'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const locations = require(pathApi.join(process.cwd(), 'dist/electron/database/desktopSources.js'));
     const settings = require(pathApi.join(process.cwd(), 'dist/electron/import/importManagerSettings.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
@@ -45,25 +46,28 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
     const content = fixture.content;
     await fsApi.promises.writeFile(sourcePath, content, 'utf8');
     await fsApi.promises.writeFile(highlightFile, '# T182 Readwise Topic\n\n## Highlights\n- Govern database reads.', 'utf8');
-    const prepared = fingerprint.createPreparedDesktopTextImport({
-      content, fileName: fixture.sourceName, filePath: sourcePath,
-      importedAt: '2026-09-12T00:00:00.000Z', kind: 'markdown',
-      sourceIdentity: 'readwise/articles/t182-topic', sourceLocator: sourcePath
+    const imported = await connection.runWithDatabaseConnectionOwner(() => {
+      const prepared = fingerprint.createPreparedDesktopTextImport({
+        content, fileName: fixture.sourceName, filePath: sourcePath,
+        importedAt: '2026-09-12T00:00:00.000Z', kind: 'markdown',
+        sourceIdentity: 'readwise/articles/t182-topic', sourceLocator: sourcePath
+      });
+      const result = pipeline.runPreparedImport(prepared);
+      locations.recordDesktopImportLocation({
+        configRef: 't182-articles', location: fixture.sourceName,
+        sourceFingerprint: prepared.sourceFingerprint, sourceType: 'readwise',
+        updatedAt: '2026-09-12T00:00:00.000Z'
+      });
+      settings.saveImportManagerSettings({
+        ...settings.loadImportManagerSettings(),
+        readwiseReaderConfig: { enabled: true, highlightsHeading: '## Highlights', importScope: 'full_document', validatedAt: null },
+        readwiseRootPath: fixture.readwiseRoot,
+        readwiseSources: [{ highlightMode: 'split', highlightPath: fixture.highlightPath, id: 't182-articles',
+          keepPreview: null, keepState: 'enabled', kind: 'articles', primaryPath: fixture.primaryPath }]
+      });
+      host.activateReadwiseOnThisHost();
+      return result;
     });
-    const imported = pipeline.runPreparedImport(prepared);
-    locations.recordDesktopImportLocation({
-      configRef: 't182-articles', location: fixture.sourceName,
-      sourceFingerprint: prepared.sourceFingerprint, sourceType: 'readwise',
-      updatedAt: '2026-09-12T00:00:00.000Z'
-    });
-    settings.saveImportManagerSettings({
-      ...settings.loadImportManagerSettings(),
-      readwiseReaderConfig: { enabled: true, highlightsHeading: '## Highlights', importScope: 'full_document', validatedAt: null },
-      readwiseRootPath: fixture.readwiseRoot,
-      readwiseSources: [{ highlightMode: 'split', highlightPath: fixture.highlightPath, id: 't182-articles',
-        keepPreview: null, keepState: 'enabled', kind: 'articles', primaryPath: fixture.primaryPath }]
-    });
-    host.activateReadwiseOnThisHost();
     const originalReaddir = fsApi.promises.readdir.bind(fsApi.promises);
     globalThis.__t182ReadwiseGate = { dialogCount: 0, readwiseDirectoryReadCount: 0 };
     fsApi.promises.readdir = async (...args) => {
@@ -75,7 +79,7 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
       return { canceled: false, filePaths: [fixture.originalPath] };
     };
     return imported.nodeId;
-  }, { content: PLACEHOLDER_CONTENT, highlightPath, originalPath, primaryPath, readwiseRoot, sourceName });
+  }, { content: PLACEHOLDER_CONTENT, highlightPath, originalPath: ORIGINAL_FILE_PATH, primaryPath, readwiseRoot, sourceName });
 }
 
 async function openNode(page: Page, nodeId: string) {
