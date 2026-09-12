@@ -22,10 +22,12 @@ export function prepareReadwiseApiMaterializationState(
   const annotationStates = resolveReadwiseApiAnnotationStates(existing, importedAt, {
     annotations: input.document.annotations,
     connectionRef: input.connectionRef,
-    resetTracked: Boolean(input.forceEpubStructure)
+    resetTracked: Boolean(input.forceEpubStructure && !input.preserveTrackedAnnotations)
   });
   const existingIds = new Set(annotationStates.map((state) => state.remoteId));
-  const newAnnotations = input.document.annotations.filter((annotation) => !existingIds.has(annotation.remoteId));
+  const newAnnotations = input.relocateAllAnnotations
+    ? input.document.annotations
+    : input.document.annotations.filter((annotation) => !existingIds.has(annotation.remoteId));
   return {
     annotationStates,
     epubResult: materializeEpubIfStructured(input, existing, importedAt, annotationStates, newAnnotations, sourceUpdate),
@@ -55,6 +57,7 @@ function materializeEpubIfStructured(
     newAnnotations,
     previousState: existing ? { ...existing.state, sourceUpdate } : null,
     preparedImages: input.preparedEpubImages,
+    relocationPolicy: input.relocationPolicy ?? 'first',
     rebuildRoot: Boolean(existing && input.forceEpubStructure),
     rootNodeId: existing?.nodeId ?? null
   });

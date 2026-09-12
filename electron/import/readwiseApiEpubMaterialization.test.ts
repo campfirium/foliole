@@ -47,7 +47,7 @@ it('creates one body topic per marked heading and places annotations across ever
   const config = createDefaultReadwiseReaderConfig();
 
   expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document }))
-    .toMatchObject({ annotationCount: 3, status: 'imported' });
+    .toMatchObject({ annotationCount: 4, status: 'imported' });
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
@@ -67,20 +67,60 @@ it('creates one body topic per marked heading and places annotations across ever
   expect(chapter.content).toContain('Intro');
   const intro = descendants.find((node) => node.id.includes('readwise') && node.content === 'Intro')!;
   expect(intro.parent_id).toBe(chapter.id);
+  const front = descendants.find((node) => node.id.includes('readwise') && node.content === 'Front matter')!;
+  expect(front.parent_id).toBe(source.latest_node_id);
   const unique = descendants.find((node) => node.id.includes('readwise') && node.content === 'Unique second excerpt')!;
   const section = descendants.find((node) => node.title === 'Second section')!;
   expect(unique.parent_id).toBe(section.id);
   const ambiguous = descendants.find((node) => node.id.includes('readwise') && node.content === 'Repeated excerpt')!;
   const firstSection = descendants.find((node) => node.title === 'First section')!;
   expect(ambiguous.parent_id).toBe(firstSection.id);
+  expect(driver.queryOne<{ anchor_link: string | null }>('SELECT anchor_link FROM nodes WHERE id = ?', [ambiguous.id])?.anchor_link)
+    .not.toBeNull();
 
   materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
   )).toEqual({ count: 3 });
   expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-readwise-%' AND deleted_at IS NULL"
-  )).toEqual({ count: 3 });
+    "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-readwise-%' AND id NOT LIKE 'node-readwise-unlocated-%' AND deleted_at IS NULL"
+  )).toEqual({ count: 4 });
+});
+
+it('keeps original EPUB authority through forced API structure re-imports', () => {
+  const config = createDefaultReadwiseReaderConfig();
+  const document = { ...epubFixture(), annotations: [] };
+  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
+  const driver = openDatabaseConnection().driver;
+  const source = driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'epub-1'"
+  )!;
+  const state = { ...JSON.parse(source.remote_import_state_json), bodyAuthority: 'original_epub' };
+  driver.execute(
+    "UPDATE import_sources SET remote_import_state_json = ? WHERE remote_document_id = 'epub-1'",
+    [JSON.stringify(state)]
+  );
+  const replacement = {
+    ...document,
+    epubStructure: {
+      ...document.epubStructure!,
+      rootBody: 'Reader replacement',
+      sections: [{ content: '# Replaced', headingLevel: 1, markerKey: 'replaced', title: 'Replaced' }]
+    }
+  };
+
+  expect(shouldPrepareReadwiseApiEpubImages({
+    config, connectionRef: 'connection', destination: 'inbox', document: replacement, forceEpubStructure: true
+  })).toBe(false);
+  materializeReadwiseApiDocument({
+    config, connectionRef: 'connection', destination: 'inbox', document: replacement,
+    forceEpubStructure: true, replaceExistingBody: true
+  });
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM nodes WHERE title = 'Replaced' AND deleted_at IS NULL"
+  )).toEqual({ count: 0 });
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
+    .not.toContain('Reader replacement');
 });
 
 it('prepares EPUB images only when a book tree is created or explicitly rebuilt', () => {
@@ -216,6 +256,7 @@ it('routes the current-source re-import command from a flat API EPUB to staged R
 function epubFixture(): PreparedReadwiseApiDocument {
   return {
     annotations: [
+      annotation('front', 'Front matter'),
       annotation('intro', 'Intro'),
       annotation('unique', 'Unique second excerpt'),
       annotation('ambiguous', 'Repeated excerpt')
@@ -231,7 +272,7 @@ function epubFixture(): PreparedReadwiseApiDocument {
       rootBody: 'Front matter',
       sections: [
         { content: '# Chapter 6: Shape\n\nIntro', headingLevel: 1, markerKey: 'chapter', title: 'Chapter 6: Shape' },
-        { content: '## First section\n\nRepeated excerpt', headingLevel: 2, markerKey: 'first', title: 'First section' },
+        { content: '## First section\n\nRepeated excerpt\n\nRepeated excerpt', headingLevel: 2, markerKey: 'first', title: 'First section' },
         { content: '## Second section\n\nRepeated excerpt\n\nUnique second excerpt', headingLevel: 2, markerKey: 'second', title: 'Second section' }
       ]
     },

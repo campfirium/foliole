@@ -35,8 +35,21 @@ export interface NativeReadwiseBookDownloadResult {
 export interface NativeReadwiseBookEpubProgressEvent {
   detail: string;
   node_id: string;
-  phase: 'importing_epub' | 'placing_highlights' | 'completed' | 'failed';
+  operation_id?: string;
+  phase: 'getting_original' | 'downloading_epub' | 'reading_epub' | 'getting_highlights' |
+    'locating_highlights' | 'saving' | 'importing_epub' | 'placing_highlights' | 'completed' | 'failed';
   progress: number;
+}
+
+export interface NativeReadwiseOriginalEpubActionState {
+  node_id: string;
+  status: 'completed' | 'not_applicable' | 'ready' | 'reconnect_required' | 'running' | 'source_inactive';
+}
+
+export interface NativeReadwiseOriginalEpubResult {
+  error_code?: string | null;
+  node_id: string;
+  status: 'already_completed' | 'completed' | 'failed' | 'not_applicable' | 'source_inactive';
 }
 
 interface NativeReadwiseBookEpubLoadResultBase {

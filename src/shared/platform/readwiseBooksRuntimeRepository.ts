@@ -90,7 +90,13 @@ function isReadwiseBookEpubProgressEvent(value: unknown): value is NativeReadwis
     typeof payload.detail === 'string' &&
     typeof payload.node_id === 'string' &&
     typeof payload.progress === 'number' &&
-    (payload.phase === 'importing_epub' ||
+    (payload.phase === 'getting_original' ||
+      payload.phase === 'downloading_epub' ||
+      payload.phase === 'reading_epub' ||
+      payload.phase === 'getting_highlights' ||
+      payload.phase === 'locating_highlights' ||
+      payload.phase === 'saving' ||
+      payload.phase === 'importing_epub' ||
       payload.phase === 'placing_highlights' ||
       payload.phase === 'completed' ||
       payload.phase === 'failed')

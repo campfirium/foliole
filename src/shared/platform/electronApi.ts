@@ -86,7 +86,7 @@ export interface ElectronAPI {
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onNativeKeyboardInput?: (handler: (payload: NativeKeyboardInputPayload) => void) => () => void;
   onReadwiseBookEpubProgress?: (
-    handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
+    handler: (payload: { detail: string; nodeId: string; operationId?: string; phase: string; progress: number }) => void
   ) => () => void;
   onReadwiseReaderImportProgress?: (
     handler: (payload: ReadwiseReaderImportProgressPayload) => void

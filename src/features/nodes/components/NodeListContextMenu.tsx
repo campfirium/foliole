@@ -9,6 +9,7 @@ export interface NodeListContextMenuProps {
   isTrashMenu: boolean;
   left: number;
   onClose: () => void;
+  readwiseOriginalEpubTargetId?: string | null;
   onCreateCommand: (commandId: string) => void;
   onCreateTopicFromClipboard?: () => void;
   onAddToVirtualFolder?: () => void;

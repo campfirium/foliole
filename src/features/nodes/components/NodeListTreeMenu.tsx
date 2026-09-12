@@ -203,6 +203,7 @@ function buildNodeListContextMenuProps(
     onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     ...buildNodeListActionHandlers(props, menuState),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
+    readwiseOriginalEpubTargetId: menuState.showNodeImportActions ? menuState.primaryTargetId : null,
     onRestoreNode: () => (
       menuState.contextTargets.forEach((id) => props.restoreNode(id)),
       props.contextMenu.closeContextMenu()

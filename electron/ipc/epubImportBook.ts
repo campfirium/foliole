@@ -188,7 +188,11 @@ function buildSpineChapterNodes(input: {
 }
 
 export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<RawEpubBook> {
-  const entries = readEpubArchiveEntries(await fs.readFile(source.filePath));
+  return readRawEpubBookBytes(await fs.readFile(source.filePath), source.sourceName);
+}
+
+export function readRawEpubBookBytes(bytes: Uint8Array, sourceName: string): RawEpubBook {
+  const entries = readEpubArchiveEntries(bytes);
   const mimetype = entries.get('mimetype');
   if (!mimetype || decodeText(mimetype).trim() !== 'application/epub+zip') {
     throw new Error('EPUB import failed: missing or invalid mimetype entry');
@@ -203,7 +207,7 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
   if (spine.length === 0) {
     throw new Error('EPUB import failed: package document does not declare any spine chapters');
   }
-  const title = readBookTitle(opfXml, source.sourceName);
+  const title = readBookTitle(opfXml, sourceName);
   const toc = readEpubToc({ entries, manifest, opfDirectory, opfXml });
   const builtSpine = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
   const nonLinearHrefs = new Set(

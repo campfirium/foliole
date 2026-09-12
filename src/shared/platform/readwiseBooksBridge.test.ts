@@ -230,11 +230,11 @@ it('rejects a selected Readwise original file result without action metadata', a
 it('normalizes readwise book epub progress events', () => {
   const onReadwiseBookEpubProgress = vi.fn(
     (handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void) => {
-    handler({
-      detail: 'Placing highlights…',
+      handler({
+      detail: 'Downloading EPUB…',
       nodeId: 'node-book-a',
-      phase: 'placing_highlights',
-      progress: 0.8
+      phase: 'downloading_epub',
+      progress: 0.2
     });
     return () => undefined;
     }
@@ -248,9 +248,9 @@ it('normalizes readwise book epub progress events', () => {
   onRuntimeReadwiseBookEpubProgress(handler);
 
   expect(handler).toHaveBeenCalledWith({
-    detail: 'Placing highlights…',
+    detail: 'Downloading EPUB…',
     nodeId: 'node-book-a',
-    phase: 'placing_highlights',
-    progress: 0.8
+    phase: 'downloading_epub',
+    progress: 0.2
   });
 });

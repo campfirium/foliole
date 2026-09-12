@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseOriginalEpubUnlocated';
+
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -69,5 +71,21 @@ describe('folderListOrdering defaults', () => {
 
     expect(sortFolderListNodes(nodes, 'dateDeleted', 'desc', {}).map((node) => node.id)).toEqual(['newer', 'older']);
     expect(sortFolderListNodes(nodes, 'dateDeleted', 'asc', {}).map((node) => node.id)).toEqual(['older', 'newer']);
+  });
+
+  it('keeps only the dedicated Readwise unlocated role last in every ordering mode', () => {
+    const dedicated = createNode({
+      id: buildReadwiseUnlocatedNodeId('connection', 'document'), title: '※'
+    });
+    const ordinarySameTitle = createNode({ id: 'ordinary', title: '※' });
+    const first = createNode({ id: 'first', title: 'A' });
+
+    for (const sortKey of ['manual', 'name', 'dateSaved'] as const) {
+      const result = sortFolderListNodes(
+        [dedicated, ordinarySameTitle, first], sortKey, 'asc', {}, [dedicated.id, first.id, ordinarySameTitle.id]
+      );
+      expect(result.at(-1)?.id).toBe(dedicated.id);
+      expect(result.findIndex((node) => node.id === ordinarySameTitle.id)).toBeLessThan(2);
+    }
   });
 });

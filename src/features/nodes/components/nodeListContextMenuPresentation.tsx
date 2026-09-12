@@ -26,12 +26,14 @@ export function NodeContextMenuSeparator() {
 
 export function NodeContextMenuItem({
   children,
+  disabled,
   help,
   icon: Icon,
   onSelect,
   tone
 }: {
   children: ReactNode;
+  disabled?: boolean;
   help?: ActionHelpCardCopy;
   icon: LucideIcon;
   onSelect: () => void;
@@ -43,7 +45,11 @@ export function NodeContextMenuItem({
       : '';
   const iconDestructiveClassName = tone === 'destructive' ? 'text-error/75' : '';
   const item = (
-    <AppDropdownMenuItem className={`${menuItemClassName} ${destructiveClassName}`} onSelect={onSelect}>
+    <AppDropdownMenuItem
+      className={`${menuItemClassName} ${destructiveClassName}`}
+      {...(disabled === undefined ? {} : { disabled })}
+      onSelect={onSelect}
+    >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         <Icon className={`${menuIconClassName} ${iconDestructiveClassName}`} strokeWidth={1.75} />
       </span>

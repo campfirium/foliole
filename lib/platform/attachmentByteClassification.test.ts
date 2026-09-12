@@ -15,11 +15,12 @@ describe('canonical attachment preflight corpus', () => {
   it('uses one stable canonical key mapping for every host fixture', () => {
     const hash = 'a'.repeat(64);
     const cases: Array<[string, string]> = [
+      ['application/epub+zip', `${hash}.epub`],
       ['image/png', `${hash}.png`], ['image/jpeg', `${hash}.jpg`], ['image/gif', `${hash}.gif`],
       ['image/webp', `${hash}.webp`], ['application/pdf', `${hash}.pdf`]
     ];
     expect(cases.map(([mime, expected]) => buildCanonicalAttachmentKey(hash, mime) === expected))
-      .toEqual([true, true, true, true, true]);
+      .toEqual([true, true, true, true, true, true]);
     expect(buildCanonicalAttachmentKey(hash, 'text/html')).toBeNull();
   });
 

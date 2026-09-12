@@ -34,6 +34,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/displayScaleCommands.ts',
   'electron/ipc/importCommands.ts',
   'electron/ipc/initialLibrarySetupCommands.ts',
+  'electron/ipc/readwiseBookActionCommands.ts',
   'electron/ipc/reviewCommands.ts',
   'electron/ipc/splitTopicPreferencesCommands.ts',
   'electron/ipc/storageAttachmentCommands.ts',

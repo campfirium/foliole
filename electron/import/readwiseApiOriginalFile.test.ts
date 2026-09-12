@@ -31,8 +31,10 @@ import {
 } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import {
+  downloadReadwiseOriginalFile,
   persistReadwiseApiOriginalFile,
   prepareReadwiseApiOriginalFile
 } from './readwiseApiOriginalFile.js';
@@ -124,4 +126,25 @@ it('rejects non-S3 transport URLs before downloading', async () => {
     category: 'pdf', dependencies: { fetchImpl }, documentId: 'document-1', hasHtmlBody: true
   })).resolves.toMatchObject({ state: { reason: 'original_file_url_rejected', status: 'html_only' } });
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it('downloads a bounded EPUB archive without forwarding Readwise authorization', async () => {
+  const bytes = createTestZip([{ content: 'application/epub+zip', name: 'mimetype' }]);
+  const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+    expect(new Headers(init?.headers).has('authorization')).toBe(false);
+    return new Response(bytes, {
+      headers: { 'content-type': 'application/epub+zip' }, status: 200
+    });
+  }) as typeof fetch;
+
+  await expect(downloadReadwiseOriginalFile(
+    'https://bucket.s3.amazonaws.com/book.epub?signature=secret', 'epub', { fetchImpl }
+  )).resolves.toEqual(new Uint8Array(bytes));
+  await expect(downloadReadwiseOriginalFile(
+    'https://bucket.s3.amazonaws.com/book.epub', 'epub', {
+      fetchImpl: vi.fn(async () => new Response(Buffer.from('<html>wrong</html>'), {
+        headers: { 'content-type': 'application/epub+zip' }, status: 200
+      })) as typeof fetch
+    }
+  )).rejects.toThrow('original_file_signature_mismatch');
 });

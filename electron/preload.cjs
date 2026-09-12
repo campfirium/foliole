@@ -61,6 +61,7 @@ function normalizeReadwiseBookEpubProgressPayload(payload) {
   return {
     detail: payload.detail,
     nodeId: payload.nodeId,
+    operationId: typeof payload.operationId === 'string' ? payload.operationId : undefined,
     phase: payload.phase,
     progress: Math.min(1, Math.max(0, payload.progress))
   };

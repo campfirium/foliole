@@ -26,6 +26,7 @@ import {
   RelearnMenuIcon
 } from './nodeListContextMenuPresentation';
 import { NodeRenameContextMenuItem } from './NodeRenameContextMenuItem';
+import { ReadwiseOriginalEpubMenuItem } from './ReadwiseOriginalEpubMenuItem';
 
 import { useActionHelpCardsEnabled } from '@/shared/platform/actionHelpCards';
 
@@ -171,6 +172,10 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
       {hasEditGroup ? renderEditItems(t, props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
       {hasReviewGroup ? renderReviewItems(t, props, helpEnabled) : null}
+      <ReadwiseOriginalEpubMenuItem
+        hasPreviousGroup={hasAnyPrimaryGroup}
+        nodeId={props.readwiseOriginalEpubTargetId ?? null}
+      />
       {renderRemovalItems(t, props, hasAnyPrimaryGroup)}
     </>
   );
@@ -186,6 +191,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.onAddToVirtualFolder ? { onAddToVirtualFolder: props.onAddToVirtualFolder } : {})}
       {...(props.onCreateTopicFromClipboard ? { onCreateTopicFromClipboard: props.onCreateTopicFromClipboard } : {})}
       onCreateCommand={props.onCreateCommand}
+      {...(props.readwiseOriginalEpubTargetId !== undefined ? { readwiseOriginalEpubTargetId: props.readwiseOriginalEpubTargetId } : {})}
       onDeleteNode={props.onDeleteNode}
       {...(props.onDismissEntireTopic ? { onDismissEntireTopic: props.onDismissEntireTopic } : {})}
       {...(props.onDismissNode ? { onDismissNode: props.onDismissNode } : {})}

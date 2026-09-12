@@ -3,7 +3,7 @@ import {
   type ReadwiseRemoteLifecycleState
 } from './readwiseRemoteLifecycle.js';
 
-export const READWISE_API_IMPORT_STATE_VERSION = 4;
+export const READWISE_API_IMPORT_STATE_VERSION = 5;
 
 export type ReadwiseApiOriginalFileState =
   | { attachmentId: string; contentHash: string; mimeType: string; reason: null; sizeBytes: number; status: 'localized' }
@@ -22,6 +22,7 @@ export interface ReadwiseApiAnnotationState {
 
 export interface ReadwiseApiDocumentImportState {
   annotations: ReadwiseApiAnnotationState[];
+  bodyAuthority: 'original_epub' | 'reader_html';
   bodyState: 'materialized' | 'unavailable';
   documentBlockedAt: string | null;
   metadata: Record<string, unknown>;
@@ -44,6 +45,7 @@ export function normalizeReadwiseApiDocumentImportState(value: unknown): Readwis
     annotations: Array.isArray(row.annotations)
       ? row.annotations.flatMap(normalizeAnnotation).sort((left, right) => left.remoteId.localeCompare(right.remoteId))
       : [],
+    bodyAuthority: row.bodyAuthority === 'original_epub' ? 'original_epub' : 'reader_html',
     bodyState: row.bodyState === 'unavailable' ? 'unavailable' : 'materialized',
     documentBlockedAt: text(row.documentBlockedAt),
     metadata: record(row.metadata),

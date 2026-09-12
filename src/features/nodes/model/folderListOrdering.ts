@@ -1,3 +1,5 @@
+import { isReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseOriginalEpubUnlocated';
+
 import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 
@@ -140,10 +142,10 @@ export function sortFolderListNodes(
   }));
 
   if (sortKey === 'manual') {
-    return sortManualFolderListNodes(baseEntries, manualChildOrder);
+    return placeReadwiseUnlocatedLast(sortManualFolderListNodes(baseEntries, manualChildOrder));
   }
 
-  return baseEntries
+  return placeReadwiseUnlocatedLast(baseEntries
     .sort((left, right) => {
       if (sortKey === 'name') {
         return compareName(left, right, nameDirectionMultiplier);
@@ -181,7 +183,14 @@ export function sortFolderListNodes(
 
       return left.index - right.index;
     })
-    .map((entry) => entry.node);
+    .map((entry) => entry.node));
+}
+
+function placeReadwiseUnlocatedLast(nodes: Node[]) {
+  return [
+    ...nodes.filter((node) => !isReadwiseUnlocatedNodeId(node.id)),
+    ...nodes.filter((node) => isReadwiseUnlocatedNodeId(node.id))
+  ];
 }
 
 function sortManualFolderListNodes(

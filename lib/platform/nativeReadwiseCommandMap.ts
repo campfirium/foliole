@@ -23,7 +23,9 @@ import type {
   NativeReadwiseBookEpubLoadResult,
   NativeReadwiseBooksInventory,
   NativeReadwiseDetectionSource,
-  NativeReadwiseDetectionResult
+  NativeReadwiseDetectionResult,
+  NativeReadwiseOriginalEpubActionState,
+  NativeReadwiseOriginalEpubResult
 } from './nativeReadwiseContract.js';
 import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
 import type {
@@ -132,6 +134,14 @@ export type NativeReadwiseCommandMap = {
       node_id: string;
     };
     result: NativeReadwiseBookEpubLoadResult;
+  };
+  [NATIVE_COMMANDS.loadReadwiseOriginalEpubActionState]: {
+    args: { node_id: string };
+    result: NativeReadwiseOriginalEpubActionState;
+  };
+  [NATIVE_COMMANDS.useReadwiseOriginalEpub]: {
+    args: { node_id: string };
+    result: NativeReadwiseOriginalEpubResult;
   };
   [NATIVE_COMMANDS.resetReadwiseBookImport]: {
     args: {

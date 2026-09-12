@@ -26,6 +26,7 @@ export interface ReadwiseApiMaterializationResult {
 }
 
 export interface ReadwiseApiMaterializationInput {
+  allowOriginalEpubReplacement?: boolean;
   config: ReadwiseReaderConfig;
   connectionRef: string;
   destination: ReadwiseImportDestination;
@@ -34,6 +35,9 @@ export interface ReadwiseApiMaterializationInput {
   forceInbox?: boolean;
   importedAt?: string;
   preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
+  preserveTrackedAnnotations?: boolean;
+  relocationPolicy?: 'first' | 'unique';
+  relocateAllAnnotations?: boolean;
   replaceExistingBody?: boolean;
   reimportDeleted?: boolean;
 }
@@ -42,6 +46,14 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
   const importedAt = input.importedAt ?? new Date().toISOString();
   const previous = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const existing = input.reimportDeleted && previous?.nodeDeleted ? null : previous;
+  if (existing?.state.bodyAuthority === 'original_epub' && !input.allowOriginalEpubReplacement) {
+    input = {
+      ...input,
+      forceEpubStructure: false,
+      preparedEpubImages: null,
+      replaceExistingBody: false
+    };
+  }
   const materializesLocally = Boolean(input.forceInbox || existing || input.destination === 'inbox');
   if (existing?.nodeDeleted) {
     saveState(input, existing.sourceFingerprint, existing.annotations, {
@@ -65,6 +77,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
     const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt));
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
       annotations: existing?.state.annotations ?? [],
+      bodyAuthority: existing?.state.bodyAuthority ?? 'reader_html',
       bodyState: 'unavailable',
       documentBlockedAt: null,
       metadata: input.document.metadata,
@@ -93,6 +106,7 @@ export function shouldPrepareReadwiseApiEpubImages(input: {
 }) {
   if (input.document.category !== 'epub' || !input.document.epubStructure) return false;
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
+  if (existing?.state.bodyAuthority === 'original_epub') return false;
   const materializesLocally = Boolean(input.forceInbox || existing || input.destination === 'inbox');
   return materializesLocally && Boolean(input.document.epubStructure.sections.length)
     && (!existing || Boolean(input.forceEpubStructure));
@@ -135,6 +149,7 @@ function materializeAvailableDocument(
   const bindings = nextAnnotationStates.map(({ kind, nodeId, remoteId }) => ({ kind, nodeId, remoteId }));
   saveState(input, record.sourceFingerprint, bindings, {
     annotations: nextAnnotationStates,
+    bodyAuthority: existing?.state.bodyAuthority ?? 'reader_html',
     bodyState: 'materialized',
     documentBlockedAt: null,
     metadata: input.document.metadata,

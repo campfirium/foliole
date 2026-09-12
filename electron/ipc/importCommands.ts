@@ -8,11 +8,6 @@ import { assertKeepImportSourceCanRun } from '../import/keepImportExecutionGuard
 import { previewKeepImportRule, type KeepImportRuleConfig } from '../import/keepImportService.js';
 import { promoteReadwiseApiExternalDocument } from '../import/readwiseApiExternalPromotion.js';
 import { cancelReadwiseApiReconcile, runReadwiseApiReconcile } from '../import/readwiseApiReconcile.js';
-import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
-import {
-  loadReadwiseBookEpub,
-  openReadwiseBookDownload
-} from '../import/readwiseBookManualActions.js';
 import {
   previewReadwiseImportCleanup,
   runReadwiseImportCleanup
@@ -31,6 +26,7 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
+import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
@@ -155,23 +151,8 @@ async function handleReadwiseImportCommand(
     }
     return result;
   }
-  if (request.command === NATIVE_COMMANDS.openReadwiseBookDownload) {
-    return openReadwiseBookDownload(asString(args.node_id, 'node_id'));
-  }
-  if (request.command === NATIVE_COMMANDS.loadReadwiseBookEpub) {
-    const result = await loadReadwiseBookEpub(asString(args.node_id, 'node_id'), resolveTargetWindow(context));
-    if (result.status === 'selected') {
-      notifyWorkspaceContentChanged();
-    }
-    return result;
-  }
-  if (request.command === NATIVE_COMMANDS.resetReadwiseBookImport) {
-    const result = await resetReadwiseBookImport(asString(args.node_id, 'node_id'));
-    if (result.status === 'reset') {
-      notifyWorkspaceContentChanged();
-    }
-    return result;
-  }
+  const bookAction = await handleReadwiseBookActionCommand(request, args, resolveTargetWindow(context));
+  if (bookAction !== undefined) return bookAction;
   if (request.command === NATIVE_COMMANDS.runTextFileImport) {
     return undefined;
   }

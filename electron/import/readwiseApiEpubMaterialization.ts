@@ -1,9 +1,5 @@
-import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
-import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
 import {
-  stableReadwiseAnnotationNodeId,
   type PreparedReadwiseApiAnnotation,
   type PreparedReadwiseApiDocument
 } from '../../lib/core/readwise/readwiseApiImport.js';
@@ -15,15 +11,20 @@ import { runPreparedImport } from '../database/importPipeline.js';
 import { saveReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
+import { placeReadwiseApiEpubAnnotations } from './readwiseApiEpubAnnotationPlacement.js';
+import {
+  filterRelocatableAnnotations,
+  mergeRelocatedAnnotationStates
+} from './readwiseApiEpubAnnotationRelocation.js';
 import {
   buildReadwiseApiEpubBookNodes,
   persistReadwiseApiEpubBookNodes
 } from './readwiseApiEpubBookTree.js';
-import { placeReadwiseApiEpubHighlight } from './readwiseApiEpubHighlightPlacement.js';
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
 interface BodyNode extends NodeBodyRow {
+  created_at: string;
   id: string;
 }
 
@@ -46,24 +47,23 @@ export function materializeReadwiseApiEpub(input: {
   newAnnotations: PreparedReadwiseApiAnnotation[];
   previousState: ReadwiseApiDocumentImportState | null;
   preparedImages?: PreparedReadwiseApiEpubImages | null | undefined;
+  relocationPolicy: 'first' | 'unique';
   rebuildRoot: boolean;
   rootNodeId: string | null;
 }) {
   const driver = openDatabaseConnection().driver;
   return driver.transaction(() => {
     const rootNodeId = input.rootNodeId && !input.rebuildRoot ? input.rootNodeId : createBookTree(input);
-    const bodies = readBookBodies(rootNodeId);
-    const placed = placeAnnotations(input.connectionRef, input.newAnnotations, rootNodeId, bodies, input.importedAt);
-    const nextStates = [...input.annotationStates, ...input.newAnnotations.map((annotation) => ({
-      blockedAt: null,
-      contentHash: annotation.contentHash,
-      kind: annotation.kind,
-      nodeId: stableReadwiseAnnotationNodeId(input.connectionRef, annotation.remoteId),
-      parentRemoteId: annotation.parentRemoteId,
-      remoteId: annotation.remoteId,
-      remoteStatus: 'present' as const,
-      sourceUpdatedAt: annotation.updatedAt
-    }))];
+    const bodies = readReadwiseApiEpubBookBodies(rootNodeId);
+    const relocatable = filterRelocatableAnnotations(input.newAnnotations, input.annotationStates);
+    const placed = placeReadwiseApiEpubAnnotations({
+      annotations: relocatable, annotationStates: input.annotationStates, bodies,
+      connectionRef: input.connectionRef, documentId: input.document.id,
+      importedAt: input.importedAt, relocationPolicy: input.relocationPolicy, rootNodeId
+    });
+    const nextStates = mergeRelocatedAnnotationStates({
+      annotations: relocatable, connectionRef: input.connectionRef, states: input.annotationStates
+    });
     const sourceFingerprint = input.existingSourceFingerprint ?? readSourceFingerprint(rootNodeId);
     saveReadwiseApiImportSource({
       annotationsJson: JSON.stringify(nextStates.map(({ kind, nodeId, remoteId }) => ({ kind, nodeId, remoteId }))),
@@ -72,6 +72,7 @@ export function materializeReadwiseApiEpub(input: {
       sourceFingerprint,
       state: {
         annotations: nextStates,
+        bodyAuthority: input.previousState?.bodyAuthority ?? 'reader_html',
         bodyState: 'materialized',
         documentBlockedAt: null,
         metadata: input.document.metadata,
@@ -129,62 +130,21 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
   return root.nodeId;
 }
 
-function readBookBodies(rootNodeId: string) {
+export function readReadwiseApiEpubBookBodies(rootNodeId: string) {
   const rows = openDatabaseConnection().driver.queryAll<BodyNode>(
-    `WITH RECURSIVE descendants(id, content, body_blob_hash) AS (
-       SELECT id, content, body_blob_hash FROM nodes WHERE id = ? AND deleted_at IS NULL
-       UNION ALL SELECT child.id, child.content, child.body_blob_hash FROM nodes child
+    `WITH RECURSIVE descendants(id, content, body_blob_hash, created_at) AS (
+       SELECT id, content, body_blob_hash, created_at FROM nodes WHERE id = ? AND deleted_at IS NULL
+       UNION ALL SELECT child.id, child.content, child.body_blob_hash, child.created_at FROM nodes child
        JOIN descendants ON child.parent_id = descendants.id WHERE child.deleted_at IS NULL
-     ) SELECT d.id, d.content, d.body_blob_hash, cbd.data body_blob_data
-     FROM descendants d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash`, [rootNodeId]
+     ) SELECT d.id, d.content, d.body_blob_hash, d.created_at, cbd.data body_blob_data
+     FROM descendants d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash
+     ORDER BY CASE WHEN d.id = ? THEN 0 ELSE 1 END, d.created_at, d.id`, [rootNodeId, rootNodeId]
   );
   return rows.filter((row) => (
     row.id === rootNodeId
     || row.id.startsWith('node-epub-')
   ))
     .map((row) => ({ id: row.id, content: requireResolvedNodeBody(row, row.id).content }));
-}
-
-function placeAnnotations(
-  connectionRef: string,
-  annotations: PreparedReadwiseApiAnnotation[],
-  rootNodeId: string,
-  bodies: Array<{ content: string; id: string }>,
-  importedAt: string
-) {
-  const grouped = new Map<string, PreparedImportHighlightRecord[]>();
-  for (const annotation of annotations) {
-    const prepared = toHighlight(connectionRef, annotation);
-    const placement = placeReadwiseApiEpubHighlight({ bodies, highlight: prepared, rootNodeId });
-    const values = grouped.get(placement.parentId) ?? [];
-    values.push(placement.highlight);
-    grouped.set(placement.parentId, values);
-  }
-  for (const [parentId, highlights] of grouped) {
-    const body = bodies.find((item) => item.id === parentId)?.content ?? '';
-    const anchored = applyImportedHighlightAnchors({ content: body, highlights });
-    const anchoredIds = new Set(anchored.highlights.map((item) => item.nodeId));
-    insertImportedHighlightNodes({
-      driver: openDatabaseConnection().driver,
-      highlights: [
-        ...anchored.highlights,
-        ...highlights.filter((item) => !anchoredIds.has(item.nodeId)).map((item) => ({ ...item, locatorText: null }))
-      ],
-      importedAt,
-      parentContent: body,
-      parentNodeId: parentId
-    });
-  }
-  return annotations.length;
-}
-
-function toHighlight(connectionRef: string, annotation: PreparedReadwiseApiAnnotation) {
-  return {
-    content: annotation.content,
-    label: null,
-    locatorText: annotation.locatorText,
-    nodeId: stableReadwiseAnnotationNodeId(connectionRef, annotation.remoteId)
-  };
 }
 
 function buildRootContent(document: PreparedReadwiseApiDocument, rootBody = document.epubStructure?.rootBody) {

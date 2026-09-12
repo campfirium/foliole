@@ -86,4 +86,19 @@ describe('preload runtime config bridge', () => {
       progress: 1
     });
   });
+
+  it('keeps the sanitized operation identity for original EPUB progress', () => {
+    const { api, ipcRenderer } = executePreload({});
+    const handler = vi.fn();
+    api.onReadwiseBookEpubProgress(handler);
+    const listener = ipcRenderer.on.mock.calls.find(([channel]) => channel === 'foliole:readwise-book-epub-progress')?.[1];
+
+    listener({}, {
+      detail: 'Saving…', ignored: 'private', nodeId: 'node-1', operationId: 'operation-1', phase: 'saving', progress: 0.9
+    });
+
+    expect(handler).toHaveBeenCalledWith({
+      detail: 'Saving…', nodeId: 'node-1', operationId: 'operation-1', phase: 'saving', progress: 0.9
+    });
+  });
 });

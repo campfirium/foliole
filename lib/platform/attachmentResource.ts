@@ -1,6 +1,7 @@
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 const CANONICAL_EXTENSION_BY_MIME = {
+  'application/epub+zip': '.epub',
   'application/pdf': '.pdf',
   'image/gif': '.gif',
   'image/jpeg': '.jpg',

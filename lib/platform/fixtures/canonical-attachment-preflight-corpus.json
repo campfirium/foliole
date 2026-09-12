@@ -1,4 +1,5 @@
 [
+  { "name": "epub", "prefixHex": "504b0304", "expectedKind": "application/epub+zip", "canonicalExtension": ".epub" },
   { "name": "png", "prefixHex": "89504e470d0a1a0a", "expectedKind": "image/png", "canonicalExtension": ".png" },
   { "name": "jpeg", "prefixHex": "ffd8ff", "expectedKind": "image/jpeg", "canonicalExtension": ".jpg" },
   { "name": "gif87", "prefixText": "GIF87a", "expectedKind": "image/gif", "canonicalExtension": ".gif" },

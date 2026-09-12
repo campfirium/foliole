@@ -11,6 +11,7 @@ const HASH = 'a'.repeat(64);
 
 describe('canonical attachment storage keys', () => {
   it.each([
+    ['application/epub+zip', '.epub'],
     ['image/png', '.png'], ['image/jpeg', '.jpg'], ['image/gif', '.gif'],
     ['image/webp', '.webp'], ['application/pdf', '.pdf']
   ])('maps %s to %s', (mimeType, extension) => {

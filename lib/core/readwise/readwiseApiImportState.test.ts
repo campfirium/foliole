@@ -11,6 +11,7 @@ it('normalizes synced materialization and intake-blocking state deterministicall
       nodeId: 'node-1', parentRemoteId: 'doc', remoteId: 'highlight-1', sourceUpdatedAt: null
     }],
     bodyState: 'materialized',
+    bodyAuthority: 'reader_html',
     documentBlockedAt: null,
     metadata: { title: 'Title' },
     sourceUpdatedAt: '2026-09-06T00:00:00.000Z',
@@ -24,7 +25,7 @@ it('normalizes synced materialization and intake-blocking state deterministicall
     originalFile: null,
     remoteLifecycle: null,
     sourceUpdate: null,
-    version: 4
+    version: 5
   });
 });
 
