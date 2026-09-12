@@ -49,8 +49,20 @@ export function assertRepairProtectionPreserved(before: ProtectionDetails, after
   assertEqual('review_log', before.reviewLogRows, after.reviewLogRows);
   const afterAttachments = new Set(after.attachmentRows.map(stableJson));
   before.attachmentRows.forEach((row) => {
-    if (!afterAttachments.has(stableJson(row))) throw new Error('readwise_epub_repair_attachment_relation_lost');
+    if (!afterAttachments.has(stableJson(row)) && !generatedAttachmentWasTransferred(row, after.attachmentRows)) {
+      throw new Error('readwise_epub_repair_attachment_relation_lost');
+    }
   });
+}
+
+function generatedAttachmentWasTransferred(
+  before: Record<string, unknown>,
+  after: Array<Record<string, unknown>>
+) {
+  if (typeof before.node_id !== 'string' || !before.node_id.startsWith('node-epub-')) return false;
+  return after.some((row) => (
+    row.attachment_id === before.attachment_id && row.role === before.role
+  ));
 }
 
 export function coverageHash(value: string) {
