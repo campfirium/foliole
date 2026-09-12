@@ -26,7 +26,7 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
   const primaryPath = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
   const highlightPath = path.join(readwiseRoot, 'Articles');
   const sourceName = 'T182 Readwise Topic.md';
-  await app.evaluate(async (_electron, fixture) => {
+  return app.evaluate(async (_electron, fixture) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     const fsApi = process.getBuiltinModule('fs');
