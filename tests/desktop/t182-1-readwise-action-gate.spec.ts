@@ -124,7 +124,7 @@ test('keeps ordinary switching and placeholder display inert until one original-
   await expectWorkspaceShell(desktopWindow);
   await openNode(desktopWindow, ORDINARY_IDS[0]!);
   await openNode(desktopWindow, ORDINARY_IDS[1]!);
-  await openNode(desktopWindow, readwiseNodeId);
+  await desktopWindow.locator(`[role="treeitem"][data-node-id="${readwiseNodeId}"]`).click();
   await expect(desktopWindow.locator('.cm-md-readwise-original-file')).toBeVisible();
   const before = await readFacts(desktopApp);
   expect(before).toEqual({ dialogCount: 0, inventorySettingCount: 0, readwiseDirectoryReadCount: 0 });
