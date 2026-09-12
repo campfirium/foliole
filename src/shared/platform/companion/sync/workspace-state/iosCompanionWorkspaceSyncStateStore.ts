@@ -8,6 +8,7 @@ import {
   openCompanionDatabaseConnection
 } from '../../../companionSyncNodeVersions';
 import { normalizeWorkspaceSyncState } from '../../../companionWorkspaceSyncState';
+import { registerWorkspaceAttachmentResources } from '../../../workspaceAttachmentResourceRegistry';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
 import { loadIosCompanionWorkspaceSnapshot } from './iosCompanionWorkspaceSnapshotStore';
@@ -44,7 +45,7 @@ async function loadState(connection: DbPort) {
     [META.endpointUrl, META.events, META.lastSyncedAt, META.onboardingStatus, META.rememberedTargets]
   );
   const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
-  return normalizeWorkspaceSyncState({
+  const state = normalizeWorkspaceSyncState({
     endpoint_url: stringOrNull(values[META.endpointUrl]),
     last_synced_at: stringOrNull(values[META.lastSyncedAt]),
     remembered_targets: parseJson(values[META.rememberedTargets], []),
@@ -52,6 +53,8 @@ async function loadState(connection: DbPort) {
     sync_onboarding_status: stringOrNull(values[META.onboardingStatus]),
     workspace_snapshot: await loadIosCompanionWorkspaceSnapshot(connection)
   });
+  registerWorkspaceAttachmentResources(state.workspace_snapshot);
+  return state;
 }
 
 async function writeMeta(

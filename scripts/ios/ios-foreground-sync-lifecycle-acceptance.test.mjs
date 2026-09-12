@@ -82,6 +82,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(runner.match(/shell readiness', 60_000/g)).toHaveLength(2);
     expect(runner).toContain('timeoutMs = 20_000');
     expect(runner).toContain("value?.status === 'failed'");
+    expect(runner).toContain("`stage=${value?.stage ?? 'none'}`");
     expect(runner).toContain("throw new Error(value.error || `${label} failed`)");
     expect(runner).toMatch(/terminate[^\n]+com\.apple\.Preferences[^\n]+\n[^\n]+launch[^\n]+com\.apple\.Preferences/);
     expect(state).toContain("FROM sync_peer_cursors");

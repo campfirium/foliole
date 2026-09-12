@@ -21,7 +21,7 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
   if (nodes.length === 0) return null;
 
   const { nodesById, trashedNodeIds } = buildIosWorkspaceNodes(nodes);
-  attachIosWorkspaceNodeAttachments(nodesById, await loadAttachments(connection));
+  attachIosWorkspaceNodeAttachments(nodesById, await loadAttachments(connection), hostName);
   const orderedRows = await queryRows(connection, QUERIES.workspaceOrderedNodeIds.sql);
   const nodeOrder = orderedRows.flatMap((row) => typeof row.id === 'string' ? [row.id] : []);
   const activeNodeId = await loadMetaValue(connection, 'workspace_meta', ACTIVE_NODE_KEY);
@@ -38,6 +38,7 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
 
   return normalizeWorkspaceSnapshot({
     activeNodeId: resolveWorkspaceSnapshotActiveNodeId({ activeNodeId, nodeOrder, nodesById }),
+    libraryScope: hostName,
     nodeOrder,
     ...(Object.keys(nodeOpenStateById).length ? { nodeOpenStateById } : {}),
     nodesById,
@@ -59,8 +60,10 @@ async function snapshotSql(connection: DbPort) {
 
 async function loadAttachments(connection: DbPort) {
   return queryRows(connection,
-    `SELECT na.node_id, na.attachment_id, na.role, a.mime_type, a.original_name
+    `SELECT na.node_id, na.attachment_id, na.role, COALESCE(b.mime_type, a.mime_type) AS mime_type,
+       a.original_name, b.availability, b.content_hash, b.storage_key
      FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id
+     LEFT JOIN attachment_blobs b ON b.attachment_id = na.attachment_id
      ORDER BY na.node_id, na.role, na.attachment_id`
   );
 }

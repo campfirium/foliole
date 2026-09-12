@@ -62,13 +62,18 @@ describe('iosCompanionWorkspaceSnapshotRows', () => {
   it('attaches canonical attachment and view-state rows', () => {
     const { nodesById } = buildIosWorkspaceNodes([nodeRow()]);
     attachIosWorkspaceNodeAttachments(nodesById, [{
-      attachment_id: 'attachment-1', mime_type: 'application/pdf', node_id: 'node-1', original_name: 'paper.pdf', role: 'reference'
-    }]);
+      attachment_id: 'attachment-1', availability: 'cached', content_hash: 'a'.repeat(64),
+      mime_type: 'application/pdf', node_id: 'node-1', original_name: 'paper.pdf', role: 'reference',
+      storage_key: `${'a'.repeat(64)}.pdf`
+    }], 'ios-library');
     const views = buildIosPersistedNodeViews([{
       node_id: 'node-1', scroll_top: 42, selection_from: 2, selection_to: 7, source: 'user-scroll', updated_at: '2026-07-19T02:00:00.000Z'
     }]);
 
-    expect(nodesById['node-1']?.attachments).toEqual([expect.objectContaining({ attachmentId: 'attachment-1' })]);
+    expect(nodesById['node-1']?.attachments).toEqual([expect.objectContaining({
+      attachmentId: 'attachment-1', availability: 'cached', contentHash: 'a'.repeat(64),
+      libraryScope: 'ios-library', storageKey: `${'a'.repeat(64)}.pdf`
+    })]);
     expect(views['node-1']).toMatchObject({ scrollTop: 42, selectionFrom: 2, selectionTo: 7 });
   });
 });

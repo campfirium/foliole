@@ -189,7 +189,15 @@ async function waitForForeground(options, resultPath, previous) {
 
 function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
   return waitForIosBridgeResult({ accept: (value) => value?.status === 'failed' || accept(value),
-    describe: (value) => `phase=${value?.phase ?? 'missing'}`,
+    describe: (value) => [
+      `phase=${value?.phase ?? 'missing'}`,
+      `stage=${value?.stage ?? 'none'}`,
+      `state_ready=${value?.state_ready ?? 'unknown'}`,
+      `endpoint_ready=${value?.endpoint_ready ?? 'unknown'}`,
+      `group_joined=${value?.sync_group_joined ?? 'unknown'}`,
+      `participation_hydrated=${value?.participation_hydrated ?? 'unknown'}`,
+      `sync_status=${value?.sync_status ?? 'unknown'}`
+    ].join(' '),
     initialObservation: `${label} result was not readable`, label,
     resultPath, timeoutMs }).then((value) => {
     if (value?.status === 'failed') throw new Error(value.error || `${label} failed`);

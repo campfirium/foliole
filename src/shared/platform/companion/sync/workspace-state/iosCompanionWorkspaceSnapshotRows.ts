@@ -22,17 +22,22 @@ export function buildIosWorkspaceNodes(rows: SqlRow[]) {
 
 export function attachIosWorkspaceNodeAttachments(
   nodesById: Record<string, WorkspaceNodeSnapshot>,
-  rows: SqlRow[]
+  rows: SqlRow[],
+  libraryScope: string
 ) {
   for (const node of Object.values(nodesById)) node.attachments = [];
   for (const row of rows) {
     const node = typeof row.node_id === 'string' ? nodesById[row.node_id] : undefined;
     if (!node || typeof row.attachment_id !== 'string' || typeof row.role !== 'string') continue;
     node.attachments?.push({
+      availability: typeof row.availability === 'string' ? row.availability : 'unresolved',
       attachmentId: row.attachment_id,
+      contentHash: typeof row.content_hash === 'string' ? row.content_hash : null,
+      libraryScope,
       mimeType: typeof row.mime_type === 'string' ? row.mime_type : null,
       originalName: typeof row.original_name === 'string' ? row.original_name : null,
-      role: row.role
+      role: row.role,
+      storageKey: typeof row.storage_key === 'string' ? row.storage_key : null
     });
   }
 }

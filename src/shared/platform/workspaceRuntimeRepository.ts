@@ -1,6 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { registerAttachmentResourceDescriptions } from './attachmentResources';
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -17,6 +16,7 @@ import {
   isSoftDeleteNodesResult,
   logWorkspaceRuntimeMutationError
 } from './workspaceRuntimeMutationResults';
+import { registerWorkspaceAttachmentResources } from './workspaceAttachmentResourceRegistry';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export { replayPendingWorkspaceNodeSync } from './workspacePendingNodeReplay';
 export {
@@ -65,10 +65,7 @@ export async function loadWorkspaceListSnapshotFromRuntime(args?: {
     return null;
   }
   const snapshot = await runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, args);
-  const descriptions = Object.values(snapshot.nodesById).flatMap((node) => node.attachments ?? [])
-    .filter((value): value is typeof value & import('../../../lib/platform/attachmentResource').AttachmentResourceDescription =>
-      Boolean(value.availability && value.contentHash && value.storageKey && value.mimeType && value.libraryScope));
-  registerAttachmentResourceDescriptions(descriptions);
+  registerWorkspaceAttachmentResources(snapshot);
   return snapshot;
 }
 

@@ -69,6 +69,7 @@ export interface WorkspaceNodeAttachmentSnapshot {
   availability?: string;
   attachmentId: string;
   contentHash?: string | null;
+  libraryScope?: string;
   mimeType: string | null;
   originalName: string | null;
   role: string;

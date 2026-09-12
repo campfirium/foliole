@@ -17,6 +17,7 @@ import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
+  libraryScope?: string;
   nodeOrder: string[];
   nodeOpenStateById?: Record<string, NodeOpenState | undefined>;
   nodesById: Record<string, WorkspaceNodeSnapshot>;
