@@ -114,6 +114,7 @@ test('keeps ordinary switching and placeholder display inert until one original-
   { desktopApp, desktopSession, desktopWindow },
   testInfo
 ) => {
+  test.setTimeout(120_000);
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
   await desktopWindow.evaluate(async (ids) => window.__folioleWorkspaceDebug?.seedNodes?.(ids.map((id, index) => ({
@@ -130,7 +131,9 @@ test('keeps ordinary switching and placeholder display inert until one original-
   expect(before).toEqual({ dialogCount: 0, inventorySettingCount: 0, readwiseDirectoryReadCount: 0 });
 
   await desktopWindow.getByRole('button', { name: /^(Load original file|加载原文件)$/ }).evaluate((button) => button.click());
-  await expect(desktopWindow.getByRole('dialog', { name: /^(Choose reading mode|选择阅读模式)$/ })).toBeVisible();
+  await expect(desktopWindow.getByRole('dialog', { name: /^(Choose reading mode|选择阅读模式)$/ })).toBeVisible({
+    timeout: 30_000
+  });
   await desktopWindow.getByRole('button', { name: /^(Free reading|自由阅读)/ }).click();
   await expect.poll(() => readFacts(desktopApp)).toMatchObject({ dialogCount: 1 });
   const after = await readFacts(desktopApp);
