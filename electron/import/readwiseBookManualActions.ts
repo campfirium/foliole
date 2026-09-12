@@ -27,6 +27,7 @@ import {
 } from './readwiseOriginalFileResults.js';
 import {
   getReadwiseOriginalFileDownloadUrl,
+  getReadwiseOriginalFileTargetAnnotationStatus,
   getReadwiseOriginalFileTargetKey,
   getReadwiseOriginalFileTargetTitle,
   loadReadwiseOriginalFileTarget
@@ -188,8 +189,10 @@ export async function loadReadwiseBookEpub(
       await importSelectedReadwiseTopicFile({ filePath: selectedPath, target });
     }
     return {
+      annotation_status: getReadwiseOriginalFileTargetAnnotationStatus(target),
       book_key: updatedBook?.bookKey ?? getReadwiseOriginalFileTargetKey(target),
       epub_path: updatedBook?.epubPath ?? selectedPath,
+      import_status: 'completed',
       status: 'selected',
       title: updatedBook?.title ?? getReadwiseOriginalFileTargetTitle(target)
     };

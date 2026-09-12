@@ -191,20 +191,40 @@ it('returns failed with the thrown message when readwise books inventory loading
 
 it('loads a Readwise book EPUB through the native command', async () => {
   const invoke = vi.fn().mockResolvedValue({
+    annotation_status: 'has_highlights',
     book_key: 'book-a',
     epub_path: '/tmp/Book A.epub',
+    import_status: 'completed',
     status: 'selected',
     title: 'Book A'
   });
   window.electronAPI = createMockElectronApi(invoke);
 
   await expect(loadRuntimeReadwiseBookEpub('node-book-a')).resolves.toEqual({
+    annotation_status: 'has_highlights',
     book_key: 'book-a',
     epub_path: '/tmp/Book A.epub',
+    import_status: 'completed',
     status: 'selected',
     title: 'Book A'
   });
   expect(invoke).toHaveBeenCalledWith('load_readwise_book_epub', { node_id: 'node-book-a' });
+});
+
+it('rejects a selected Readwise original file result without action metadata', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  window.electronAPI = createMockElectronApi(vi.fn().mockResolvedValue({
+    book_key: 'book-a',
+    epub_path: '/tmp/Book A.epub',
+    status: 'selected',
+    title: 'Book A'
+  }));
+
+  await expect(loadRuntimeReadwiseBookEpub('node-book-a')).resolves.toBeNull();
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native readwise book epub payload invalid',
+    expect.objectContaining({ command: 'load_readwise_book_epub', fallback: 'return_null' })
+  );
 });
 
 it('normalizes readwise book epub progress events', () => {

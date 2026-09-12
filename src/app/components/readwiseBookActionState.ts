@@ -6,11 +6,9 @@ import type {
 } from '../../../lib/platform/nativeReadwiseContract';
 import {
   loadRuntimeReadwiseBookEpub,
-  loadRuntimeReadwiseBooksInventory,
   onRuntimeReadwiseBookEpubProgress,
   openRuntimeReadwiseBookDownload,
-  type RuntimeReadwiseBookEpubProgressEvent,
-  type RuntimeReadwiseBookInventoryItem
+  type RuntimeReadwiseBookEpubProgressEvent
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
@@ -23,31 +21,20 @@ export interface ReadwiseOriginalFileLoadedEventDetail {
   nodeId: string;
 }
 
-export function isReadwiseOriginalFileLoaded(book: RuntimeReadwiseBookInventoryItem | null) {
-  return book?.epubStatus === 'received' || book?.bodyState === 'loaded' || book?.importStatus === 'completed';
+function getBookLabel(title: string | null) {
+  return title?.trim() || 'this book';
 }
 
-function resolveBook(activeNodeId: string, books: RuntimeReadwiseBookInventoryItem[]) {
-  return books.find((book) => book.generatedNodeId === activeNodeId) ?? null;
-}
-
-function getBookLabel(book: RuntimeReadwiseBookInventoryItem | null, title: string | null) {
-  return title?.trim() || book?.title || 'this book';
-}
-
-function formatDownloadMessage(
-  result: NativeReadwiseBookDownloadResult | null,
-  book: RuntimeReadwiseBookInventoryItem | null
-) {
-  const label = getBookLabel(book, result?.title ?? null);
+function formatDownloadMessage(result: NativeReadwiseBookDownloadResult | null) {
+  const label = getBookLabel(result?.title ?? null);
   if (!result || result.status === 'book_not_found') return 'This topic is not available for original file actions right now.';
   if (result.status === 'missing_link') return `No original file download link was found for ${label}.`;
   if (result.status === 'source_inactive') return 'Readwise actions are available where this source is active.';
   return `Opened the original file download for ${label}.`;
 }
 
-function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null, book: RuntimeReadwiseBookInventoryItem | null) {
-  const label = getBookLabel(book, result?.title ?? null);
+function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null) {
+  const label = getBookLabel(result?.title ?? null);
   if (!result || result.status === 'book_not_found') return 'This topic is not available for original file actions right now.';
   if (result.status === 'cancelled') return 'Load original file was cancelled.';
   if (result.status === 'failed') return result.error_message?.trim() || `Could not load an original file for ${label}.`;
@@ -59,31 +46,6 @@ function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null, book
 
 function createIdleProgress() {
   return { detail: '', progress: 0 };
-}
-
-function useReadwiseBookInventory(activeNodeId: string | null) {
-  const [book, setBook] = useState<RuntimeReadwiseBookInventoryItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!activeNodeId) {
-      setBook(null);
-      setIsLoading(false);
-      return;
-    }
-
-    let isDisposed = false;
-    setIsLoading(true);
-    void loadRuntimeReadwiseBooksInventory().then((inventory) => {
-      if (!isDisposed) setBook(resolveBook(activeNodeId, inventory?.books ?? []));
-      if (!isDisposed) setIsLoading(false);
-    });
-    return () => {
-      isDisposed = true;
-    };
-  }, [activeNodeId]);
-
-  return { book, isLoading, setBook };
 }
 
 function useReadwiseBookLoadProgress(activeNodeId: string | null) {
@@ -106,7 +68,6 @@ function useReadwiseBookLoadProgress(activeNodeId: string | null) {
 }
 
 export function useReadwiseBookActions(activeNodeId: string | null) {
-  const { book, isLoading, setBook } = useReadwiseBookInventory(activeNodeId);
   const { loadProgress, setLoadProgress } = useReadwiseBookLoadProgress(activeNodeId);
   const [pendingAction, setPendingAction] = useState<'download' | 'load' | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -120,9 +81,9 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
     if (!activeNodeId) return;
     setPendingAction('download');
     const result = await openRuntimeReadwiseBookDownload(activeNodeId);
-    setStatusMessage(formatDownloadMessage(result, book));
+    setStatusMessage(formatDownloadMessage(result));
     setPendingAction(null);
-  }, [activeNodeId, book]);
+  }, [activeNodeId]);
 
   const runLoad = useCallback(async () => {
     if (!activeNodeId) return;
@@ -130,16 +91,14 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
     setLoadProgress({ detail: 'Waiting for original file...', progress: 0.1 });
     try {
       const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
-      setStatusMessage(formatLoadMessage(result, book));
+      setStatusMessage(formatLoadMessage(result));
       if (result?.status === 'selected') {
         await refreshWorkspaceState('readwise-book-load');
         await ensureWorkspaceNodeDocumentReady(activeNodeId, { forceLoad: true });
-        const mode = book
-          ? await requestReadwiseBookEpubImportReleaseMode({
-              fileName: `${book.title}.epub`,
-              hasHighlights: book.annotationStatus === 'has_highlights'
-            })
-          : null;
+        const mode = await requestReadwiseBookEpubImportReleaseMode({
+          fileName: `${getBookLabel(result.title)}.epub`,
+          hasHighlights: result.annotation_status === 'has_highlights'
+        });
         if (mode) {
           useWorkspaceStore.getState().setNodeSequentialReading(activeNodeId, mode === 'sequential');
         }
@@ -148,11 +107,6 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
             detail: { nodeId: activeNodeId }
           })
         );
-        setBook((current) =>
-          current
-            ? { ...current, bodyState: 'loaded', epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }
-            : current
-        );
         setLoadProgress({ detail: 'Done.', progress: 1 });
       } else {
         setLoadProgress(createIdleProgress());
@@ -160,7 +114,7 @@ export function useReadwiseBookActions(activeNodeId: string | null) {
     } finally {
       setPendingAction(null);
     }
-  }, [activeNodeId, book, setBook, setLoadProgress]);
+  }, [activeNodeId, setLoadProgress]);
 
-  return { book, isLoading, loadProgress, pendingAction, runDownload, runLoad, statusMessage };
+  return { loadProgress, pendingAction, runDownload, runLoad, statusMessage };
 }

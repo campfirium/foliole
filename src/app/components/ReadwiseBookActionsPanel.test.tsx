@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { dispatchReadwiseOriginalFileWidgetAction } from '../../shared/platform/readwiseOriginalFileWidgetEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const {
@@ -51,6 +52,14 @@ function createPendingBook() {
   };
 }
 
+const PLACEHOLDER_CONTENT = [
+  '# Book One',
+  '',
+  'Full text of this document omitted because this document is an EPUB',
+  '',
+  '[Download original file →](https://readwise.io/reader/document_raw_content/1)'
+].join('\n');
+
 function seedDefaultRuntime() {
   loadRuntimeReadwiseBooksInventory.mockResolvedValue({
     books: [createPendingBook()],
@@ -60,8 +69,10 @@ function seedDefaultRuntime() {
   });
   openRuntimeReadwiseBookDownload.mockResolvedValue({ book_key: 'book-1', status: 'opened', title: 'Book One' });
   loadRuntimeReadwiseBookEpub.mockResolvedValue({
+    annotation_status: 'has_highlights',
     book_key: 'book-1',
     epub_path: '/tmp/book-1.epub',
+    import_status: 'completed',
     status: 'selected',
     title: 'Book One'
   });
@@ -72,7 +83,7 @@ function seedDefaultRuntime() {
 function renderActionsPanel() {
   return renderWithLocalization(
     <>
-      <ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />
+      <ReadwiseBookActionsPanel activeContent={PLACEHOLDER_CONTENT} activeNodeId="node-book-1" />
       <EpubImportReleaseModeDialog />
     </>
   );
@@ -88,7 +99,7 @@ beforeEach(() => {
 describe('ReadwiseBookActionsPanel', () => {
   it('renders the original file panel while the file has not been loaded', async () => {
     renderWithLocalization(
-      <ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1">
+      <ReadwiseBookActionsPanel activeContent={PLACEHOLDER_CONTENT} activeNodeId="node-book-1">
         <div>Editor body</div>
       </ReadwiseBookActionsPanel>
     );
@@ -97,20 +108,40 @@ describe('ReadwiseBookActionsPanel', () => {
     expect(screen.getByText('Editor body')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download original file' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load original file' })).toBeInTheDocument();
+    expect(loadRuntimeReadwiseBooksInventory).not.toHaveBeenCalled();
   });
 
-  it('keeps the document body visible for pending books', async () => {
-    renderWithLocalization(
-      <ReadwiseBookDocumentGate activeContent="" activeNodeId="node-book-1">
+  it('keeps ordinary documents inert and only enables actions for placeholder content', async () => {
+    const view = renderWithLocalization(
+      <ReadwiseBookDocumentGate activeContent="# Ordinary topic" activeNodeId="node-ordinary-1">
         <div>Book placeholder body</div>
       </ReadwiseBookDocumentGate>
     );
 
     expect(await screen.findByText('Book placeholder body')).toBeInTheDocument();
-  });
+    view.rerender(
+      <ReadwiseBookDocumentGate activeContent="# Another ordinary topic" activeNodeId="node-ordinary-2">
+        <div>Book placeholder body</div>
+      </ReadwiseBookDocumentGate>
+    );
+    dispatchReadwiseOriginalFileWidgetAction({ action: 'download', nodeId: 'node-ordinary-2' });
+    expect(loadRuntimeReadwiseBooksInventory).not.toHaveBeenCalled();
+    expect(openRuntimeReadwiseBookDownload).not.toHaveBeenCalled();
 
+    view.rerender(
+      <ReadwiseBookDocumentGate activeContent={PLACEHOLDER_CONTENT} activeNodeId="node-book-1">
+        <div>Book placeholder body</div>
+      </ReadwiseBookDocumentGate>
+    );
+    expect(loadRuntimeReadwiseBooksInventory).not.toHaveBeenCalled();
+    dispatchReadwiseOriginalFileWidgetAction({ action: 'download', nodeId: 'node-book-1' });
+    await waitFor(() => expect(openRuntimeReadwiseBookDownload).toHaveBeenCalledWith('node-book-1'));
+  });
+});
+
+describe('Readwise original file actions', () => {
   it('runs download actions from the panel', async () => {
-    renderWithLocalization(<ReadwiseBookActionsPanel activeContent="" activeNodeId="node-book-1" />);
+    renderWithLocalization(<ReadwiseBookActionsPanel activeContent={PLACEHOLDER_CONTENT} activeNodeId="node-book-1" />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Download original file' }));
 

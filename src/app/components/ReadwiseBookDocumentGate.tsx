@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 
+import { collectReadwiseOriginalFilePlaceholderRanges } from '../../features/editor/model/readwiseOriginalFilePlaceholder';
 import {
   isReadwiseOriginalFileWidgetActionDetail,
   READWISE_ORIGINAL_FILE_WIDGET_ACTION_EVENT
@@ -9,6 +9,7 @@ import {
 import { useReadwiseBookActions } from './readwiseBookActionState';
 
 export function ReadwiseBookDocumentGate({
+  activeContent,
   activeNodeId,
   children
 }: {
@@ -16,18 +17,22 @@ export function ReadwiseBookDocumentGate({
   activeNodeId: string | null;
   children?: ReactNode;
 }) {
-  const { runDownload, runLoad } = useReadwiseBookActions(activeNodeId);
+  const isActionEligible = useMemo(
+    () => collectReadwiseOriginalFilePlaceholderRanges(activeContent).length > 0,
+    [activeContent]
+  );
+  const { runDownload, runLoad } = useReadwiseBookActions(isActionEligible ? activeNodeId : null);
 
   useEffect(() => {
     function handleAction(event: Event) {
       if (!(event instanceof CustomEvent) || !isReadwiseOriginalFileWidgetActionDetail(event.detail)) return;
-      if (!activeNodeId || event.detail.nodeId !== activeNodeId) return;
+      if (!isActionEligible || !activeNodeId || event.detail.nodeId !== activeNodeId) return;
       if (event.detail.action === 'download') void runDownload();
       if (event.detail.action === 'load') void runLoad();
     }
     window.addEventListener(READWISE_ORIGINAL_FILE_WIDGET_ACTION_EVENT, handleAction);
     return () => window.removeEventListener(READWISE_ORIGINAL_FILE_WIDGET_ACTION_EVENT, handleAction);
-  }, [activeNodeId, runDownload, runLoad]);
+  }, [activeNodeId, isActionEligible, runDownload, runLoad]);
 
   return children ?? null;
 }

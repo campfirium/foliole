@@ -39,13 +39,22 @@ export interface NativeReadwiseBookEpubProgressEvent {
   progress: number;
 }
 
-export interface NativeReadwiseBookEpubLoadResult {
+interface NativeReadwiseBookEpubLoadResultBase {
   book_key: string | null;
   error_message?: string | null;
   epub_path: string | null;
-  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed' | 'source_inactive';
   title: string | null;
 }
+
+export type NativeReadwiseBookEpubLoadResult =
+  | (NativeReadwiseBookEpubLoadResultBase & {
+      annotation_status: 'has_highlights' | 'no_highlights';
+      import_status: 'completed';
+      status: 'selected';
+    })
+  | (NativeReadwiseBookEpubLoadResultBase & {
+      status: 'book_not_found' | 'cancelled' | 'failed' | 'source_inactive';
+    });
 
 export interface NativeReadwiseBookImportResetResult {
   book_key: string | null;

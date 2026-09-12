@@ -121,7 +121,13 @@ it('uses the shared original-file actions for a Readwise PDF topic', async () =>
   await expect(openReadwiseBookDownload(nodeId)).resolves.toMatchObject({ status: 'opened', url: 'https://readwise.io/reader/document_raw_content/1' });
   expect(openExternal).toHaveBeenCalledWith('https://readwise.io/reader/document_raw_content/1');
 
-  await expect(loadReadwiseBookEpub(nodeId)).resolves.toMatchObject({ epub_path: pdfPath, status: 'selected', title: 'PDF Topic' });
+  await expect(loadReadwiseBookEpub(nodeId)).resolves.toMatchObject({
+    annotation_status: 'no_highlights',
+    epub_path: pdfPath,
+    import_status: 'completed',
+    status: 'selected',
+    title: 'PDF Topic'
+  });
   expect(listNodeAttachments(nodeId)[0]?.attachment.mimeType).toBe('application/pdf');
   expect(openDatabaseConnection().driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [nodeId])?.title).toBe('PDF Topic');
 });

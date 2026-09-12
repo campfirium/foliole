@@ -144,8 +144,10 @@ it('imports the selected EPUB into the current readwise book node and keeps that
   const result = await loadReadwiseBookEpub(nodeId!);
 
   expect(result).toEqual({
+    annotation_status: 'has_highlights',
     book_key: 'manual book',
     epub_path: selectedEpubPath,
+    import_status: 'completed',
     status: 'selected',
     title: 'Manual Book'
   });

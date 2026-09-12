@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
+import { loadImportManagerSettings } from './importManagerSettings.js';
 import { extractReadwiseDownloadUrl } from './readwiseBookFullDocumentMetadata.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import {
@@ -21,6 +23,7 @@ export type ReadwiseOriginalFileTarget =
       nodeId: string;
     }
   | {
+      annotationStatus: 'has_highlights' | 'no_highlights';
       bookKey: null;
       downloadUrl: string | null;
       highlightMarkdownPath: string | null;
@@ -51,6 +54,19 @@ async function readDownloadUrl(markdownPath: string) {
   }
 }
 
+async function resolveTopicAnnotationStatus(highlightMarkdownPath: string | null) {
+  if (!highlightMarkdownPath) return 'no_highlights' as const;
+  try {
+    const markdown = await fs.readFile(highlightMarkdownPath, 'utf8');
+    const config = loadImportManagerSettings().readwiseReaderConfig;
+    return extractReadwiseSidecarHighlights(markdown, config).length > 0
+      ? 'has_highlights' as const
+      : 'no_highlights' as const;
+  } catch {
+    return 'no_highlights' as const;
+  }
+}
+
 function resolveNodeTitle(nodeId: string, sourceName: string) {
   const details = loadNodeSourceDetails(nodeId);
   const heading = /^#\s+(.+)$/m.exec(details?.sourceNodeContent ?? '')?.[1]?.trim();
@@ -67,12 +83,14 @@ export async function loadReadwiseOriginalFileTarget(nodeId: string): Promise<Re
   if (!source) {
     return null;
   }
+  const highlightMarkdownPath = source.readwiseSource.highlightPath.trim()
+    ? path.join(source.readwiseSource.highlightPath, source.descriptor.sourceName)
+    : null;
   return {
+    annotationStatus: await resolveTopicAnnotationStatus(highlightMarkdownPath),
     bookKey: null,
     downloadUrl: await readDownloadUrl(source.descriptor.filePath),
-    highlightMarkdownPath: source.readwiseSource.highlightPath.trim()
-      ? path.join(source.readwiseSource.highlightPath, source.descriptor.sourceName)
-      : null,
+    highlightMarkdownPath,
     kind: 'topic',
     nodeId: source.sourceNodeId,
     title: resolveNodeTitle(source.sourceNodeId, source.descriptor.sourceName)
@@ -85,6 +103,10 @@ export function getReadwiseOriginalFileTargetTitle(target: ReadwiseOriginalFileT
 
 export function getReadwiseOriginalFileTargetKey(target: ReadwiseOriginalFileTarget) {
   return target.kind === 'book' ? target.book.bookKey : target.bookKey;
+}
+
+export function getReadwiseOriginalFileTargetAnnotationStatus(target: ReadwiseOriginalFileTarget) {
+  return target.kind === 'book' ? target.book.annotationStatus : target.annotationStatus;
 }
 
 export function getReadwiseOriginalFileDownloadUrl(target: ReadwiseOriginalFileTarget) {

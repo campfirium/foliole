@@ -111,8 +111,10 @@ beforeEach(() => {
     url: 'https://example.com'
   });
   loadReadwiseBookEpub.mockResolvedValue({
+    annotation_status: 'has_highlights',
     book_key: 'book-1',
     epub_path: '/tmp/book.epub',
+    import_status: 'completed',
     status: 'selected',
     title: 'Book 1'
   });
@@ -177,8 +179,10 @@ it('routes readwise book manual actions through the native invoke handler', asyn
       args: { node_id: 'node-book-1' }
     })
   ).resolves.toEqual({
+    annotation_status: 'has_highlights',
     book_key: 'book-1',
     epub_path: '/tmp/book.epub',
+    import_status: 'completed',
     status: 'selected',
     title: 'Book 1'
   });

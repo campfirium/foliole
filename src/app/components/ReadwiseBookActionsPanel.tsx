@@ -1,9 +1,10 @@
 import { useMemo, type ReactNode } from 'react';
 
+import { collectReadwiseOriginalFilePlaceholderRanges } from '../../features/editor/model/readwiseOriginalFilePlaceholder';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../shared/ui';
 
-import { isReadwiseOriginalFileLoaded, useReadwiseBookActions } from './readwiseBookActionState';
+import { useReadwiseBookActions } from './readwiseBookActionState';
 
 function OriginalFileActionPanel(props: {
   helperText: string;
@@ -56,6 +57,7 @@ function OriginalFileLoadProgress({ detail, progress }: { detail: string; progre
 }
 
 export function ReadwiseBookActionsPanel({
+  activeContent = '',
   activeNodeId,
   children
 }: {
@@ -64,22 +66,14 @@ export function ReadwiseBookActionsPanel({
   children?: ReactNode;
 }) {
   const t = useTranslation();
-  const { book, isLoading, loadProgress, pendingAction, runDownload, runLoad, statusMessage } =
-    useReadwiseBookActions(activeNodeId);
+  const isActionEligible = useMemo(
+    () => collectReadwiseOriginalFilePlaceholderRanges(activeContent).length > 0,
+    [activeContent]
+  );
+  const { loadProgress, pendingAction, runDownload, runLoad, statusMessage } =
+    useReadwiseBookActions(isActionEligible ? activeNodeId : null);
 
-  const helperText = useMemo(() => {
-    if (!book) {
-      return '';
-    }
-    return isReadwiseOriginalFileLoaded(book)
-      ? t('desktop.readwise.original.loaded')
-      : t('desktop.readwise.original.empty');
-  }, [book, t]);
-
-  if (!book && isLoading) {
-    return <>{children ?? null}</>;
-  }
-  if (!book || !activeNodeId || book.importStatus !== 'pending') {
+  if (!isActionEligible || !activeNodeId) {
     return <>{children ?? null}</>;
   }
 
@@ -90,7 +84,7 @@ export function ReadwiseBookActionsPanel({
     <>
       {children ?? null}
       <OriginalFileActionPanel
-        helperText={helperText}
+        helperText={t('desktop.readwise.original.empty')}
         isBusy={isBusy}
         loadProgress={loadProgress}
         pendingAction={pendingAction}

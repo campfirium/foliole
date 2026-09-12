@@ -219,8 +219,10 @@ it('runs the full readwise books loop from discovery to anchored highlights', as
   expect(openExternal).toHaveBeenCalledWith('https://readwise.example.com/books/manual-book.epub');
 
   await expect(loadReadwiseBookEpub(placeholderNodeId)).resolves.toEqual({
+    annotation_status: 'has_highlights',
     book_key: 'manual book',
     epub_path: selectedEpubPath,
+    import_status: 'completed',
     status: 'selected',
     title: 'Manual Book'
   });

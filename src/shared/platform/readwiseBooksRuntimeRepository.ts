@@ -44,16 +44,23 @@ function isReadwiseBookEpubLoadResult(value: unknown): value is NativeReadwiseBo
     return false;
   }
   const payload = value as Record<string, unknown>;
-  return (
+  const commonFieldsAreValid =
     (payload.book_key === null || typeof payload.book_key === 'string') &&
     (payload.title === null || typeof payload.title === 'string') &&
     (payload.error_message === undefined || payload.error_message === null || typeof payload.error_message === 'string') &&
-    (payload.epub_path === null || typeof payload.epub_path === 'string') &&
-    (payload.status === 'book_not_found' ||
-      payload.status === 'cancelled' ||
-      payload.status === 'selected' ||
-      payload.status === 'failed' ||
-      payload.status === 'source_inactive')
+    (payload.epub_path === null || typeof payload.epub_path === 'string');
+  if (!commonFieldsAreValid) return false;
+  if (payload.status === 'selected') {
+    return (
+      (payload.annotation_status === 'has_highlights' || payload.annotation_status === 'no_highlights') &&
+      payload.import_status === 'completed'
+    );
+  }
+  return (
+    payload.status === 'book_not_found' ||
+    payload.status === 'cancelled' ||
+    payload.status === 'failed' ||
+    payload.status === 'source_inactive'
   );
 }
 
