@@ -1,11 +1,12 @@
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
 
-interface LocalAnchorRow {
+interface LocalAnchorRow extends DatabaseRow {
   anchor_link: string;
   content: string;
   id: string;
@@ -24,7 +25,7 @@ function locateAnchor(bodies: Array<{ content: string; id: string }>, row: Local
   const matches = bodies.map((body) => ({
     anchored: applyImportedHighlightAnchors({
       content: body.content,
-      highlights: [{ content: row.content, locatorText: text, nodeId: row.id }]
+      highlights: [{ content: row.content, label: null, locatorText: text, nodeId: row.id }]
     }).highlights[0] ?? null,
     body
   })).filter((candidate) => candidate.anchored !== null);

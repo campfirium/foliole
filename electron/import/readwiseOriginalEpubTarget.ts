@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
@@ -9,7 +10,7 @@ import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js'
 
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 
-interface TargetRow {
+interface TargetRow extends DatabaseRow {
   body_blob_data: Uint8Array | string | null;
   body_blob_hash: string | null;
   connection_ref: string;
