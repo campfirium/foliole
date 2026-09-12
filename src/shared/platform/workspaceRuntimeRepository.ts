@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
+import { registerWorkspaceAttachmentResources } from './runtime/workspaceAttachmentResourceRegistry';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import {
@@ -16,7 +17,6 @@ import {
   isSoftDeleteNodesResult,
   logWorkspaceRuntimeMutationError
 } from './workspaceRuntimeMutationResults';
-import { registerWorkspaceAttachmentResources } from './workspaceAttachmentResourceRegistry';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export { replayPendingWorkspaceNodeSync } from './workspacePendingNodeReplay';
 export {

@@ -8,7 +8,7 @@ import {
   openCompanionDatabaseConnection
 } from '../../../companionSyncNodeVersions';
 import { normalizeWorkspaceSyncState } from '../../../companionWorkspaceSyncState';
-import { registerWorkspaceAttachmentResources } from '../../../workspaceAttachmentResourceRegistry';
+import { registerWorkspaceAttachmentResources } from '../../../runtime/workspaceAttachmentResourceRegistry';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
 import { loadIosCompanionWorkspaceSnapshot } from './iosCompanionWorkspaceSnapshotStore';
