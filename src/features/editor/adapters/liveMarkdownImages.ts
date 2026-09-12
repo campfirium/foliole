@@ -3,6 +3,7 @@ import {
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
 import { isNativeCompanionAttachmentResourceRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
+import type { RemoteImageSourceContextState } from '../../../shared/platform/remoteImageSourceRecovery';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
@@ -22,7 +23,10 @@ import {
 } from './liveMarkdownImageWidgetDom';
 import { resolveLocalDocumentImageSource } from './liveMarkdownLocalDocumentImages';
 import { createRemoteImageFailureStatus } from './liveMarkdownRemoteImageFailure';
-import { buildRemoteRenderSource } from './liveMarkdownRemoteRenderSource';
+import {
+  buildRemoteRenderSource,
+  resolveRemoteRenderSourceContext
+} from './liveMarkdownRemoteRenderSource';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
 
 export { disposeMarkdownImageWidgetDom } from './liveMarkdownImageDisposal';
@@ -63,30 +67,34 @@ function createImageSurface(
 function appendLoadingImageSurface(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
-  source: string,
   editorNodeId: string | null,
   requestMeasure: RequestEditorMeasure,
-  onRemoveImage: (() => void) | null
+  onRemoveImage: (() => void) | null,
+  existingContext?: RemoteImageSourceContextState,
+  retryKey: string | null = null
 ) {
-  wrapper.append(createImageStatusElement('loading', imageMatch.display));
-  const surface = createImageSurface(imageMatch, source, editorNodeId, {
+  wrapper.replaceChildren(createImageStatusElement('loading', imageMatch.display));
+  let sourceContext = existingContext ?? null;
+  const surface = createImageSurface(imageMatch, '', editorNodeId, {
     deferSource: true,
     onError: () => {
+      const activeContext = sourceContext;
+      if (!activeContext) return;
       closeActiveRemoteImageFailureMenu();
-      const retry = () => {
-        const nextRetryKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const nextSource = buildRemoteRenderSource(imageMatch.source, editorNodeId, nextRetryKey);
-        closeActiveRemoteImageFailureMenu();
-        wrapper.replaceChildren();
-        appendLoadingImageSurface(wrapper, imageMatch, nextSource, editorNodeId, requestMeasure, onRemoveImage);
-        requestMeasure?.();
-      };
+      const retry = () => appendLoadingImageSurface(
+        wrapper, imageMatch, editorNodeId, requestMeasure, onRemoveImage, activeContext,
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      );
       wrapper.replaceChildren(createRemoteImageFailureStatus({
         editorNodeId,
         imageMatch,
         onRemoveImage,
         onRetry: retry,
-        requestMeasure
+        onSourceContextChanged: () => appendLoadingImageSurface(
+          wrapper, imageMatch, editorNodeId, requestMeasure, onRemoveImage
+        ),
+        requestMeasure,
+        sourceContext: activeContext
       }));
       requestMeasure?.();
     },
@@ -108,6 +116,13 @@ function appendLoadingImageSurface(
   surface.style.position = 'absolute';
   surface.style.width = '1px';
   wrapper.append(surface);
+  void resolveRemoteContextAndRender();
+  async function resolveRemoteContextAndRender() {
+    sourceContext = existingContext ?? await resolveRemoteRenderSourceContext(imageMatch.source, editorNodeId);
+    const source = buildRemoteRenderSource(imageMatch.source, editorNodeId, sourceContext, retryKey);
+    const image = surface.querySelector<HTMLImageElement>('.cm-md-image-element');
+    if (image) image.src = source;
+  }
 }
 
 function appendResolvedNativeAttachmentImage(
@@ -175,7 +190,6 @@ export function createMarkdownImageWidgetDom(
     appendLoadingImageSurface(
       wrapper,
       imageMatch,
-      buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId),
       editorNodeId,
       requestMeasure,
       onRemoveImage

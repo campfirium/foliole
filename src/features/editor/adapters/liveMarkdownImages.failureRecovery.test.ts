@@ -38,6 +38,11 @@ function getRemoteImage(host: HTMLElement) {
   return host.querySelector('.cm-md-image-element') as HTMLImageElement | null;
 }
 
+async function failRemoteImage(host: HTMLElement) {
+  await waitFor(() => expect(getRemoteImage(host)).not.toBeNull());
+  getRemoteImage(host)?.dispatchEvent(new Event('error'));
+}
+
 async function waitForFailedStatus(
   host: HTMLElement,
   selector = '.cm-md-image-status[data-md-image-status="unavailable"]'
@@ -89,7 +94,7 @@ describe('live markdown remote image failure recovery menu', () => {
     const parentContextMenu = vi.fn();
     host.addEventListener('contextmenu', parentContextMenu);
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     const status = await waitForFailedStatus(host);
     const contextMenu = createEvent.contextMenu(status, { bubbles: true, clientX: 28, clientY: 36 });
     fireEvent(status, contextMenu);
@@ -114,7 +119,7 @@ describe('live markdown remote image failure recovery menu', () => {
   });
 
   it('shows forget only when the failed image used a learned source', async () => {
-    bridgeMock.loadRemoteImageSourceContext.mockResolvedValueOnce({
+    bridgeMock.loadRemoteImageSourceContext.mockResolvedValue({
       imageHost: 'example.com',
       learnedSourceOrigin: 'https://source.example/',
       source: 'learned',
@@ -122,7 +127,7 @@ describe('live markdown remote image failure recovery menu', () => {
     });
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     await waitFor(() => {
       expect(bridgeMock.loadRemoteImageSourceContext).toHaveBeenCalled();
     });
@@ -145,7 +150,7 @@ describe('live markdown remote image failure retry actions', () => {
   it('closes the failed image context menu before retry rebuilds the widget', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     fireEvent.contextMenu(await waitForFailedStatus(host), { clientX: 28, clientY: 36 });
     await waitFor(() => {
       expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
@@ -164,7 +169,7 @@ describe('live markdown remote image failure retry actions', () => {
     mockSourceWebsiteInput('');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     fireEvent.contextMenu(await waitForFailedStatus(host), { clientX: 28, clientY: 36 });
     await waitFor(() => {
       expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
@@ -184,7 +189,7 @@ describe('live markdown remote image failure recovery hint', () => {
   it('uses the inline action bar instead of a separate recovery hint', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/one.png)');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     await waitForFailedStatus(host);
     expect(host.querySelector('.cm-md-image-status-tip')).toBeNull();
     expect(host.querySelector('button[aria-label="Retry"]')).not.toBeNull();
@@ -198,7 +203,7 @@ describe('live markdown remote image failure recovery hint', () => {
     mockSourceWebsiteInput('https://source.example/article');
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/one.png)');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     await waitForFailedStatus(host);
     clickStatusButton(host, 'Add source');
 
@@ -215,7 +220,7 @@ describe('live markdown remote image failure recovery hint', () => {
   it('removes a failed image from the document when the visible remove action is used', async () => {
     const { adapter, host } = createAdapterHost('Lead\n\n![Remote](https://example.com/one.png)\n\nTail');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     await waitForFailedStatus(host);
     clickStatusButton(host, 'Remove');
 
@@ -229,7 +234,7 @@ describe('live markdown remote image failure recovery hint', () => {
   it('does not attach the custom failure menu to inline failed images', async () => {
     const { adapter, host } = createAdapterHost('Text ![Remote](https://example.com/inline.png) tail');
 
-    getRemoteImage(host)?.dispatchEvent(new Event('error'));
+    await failRemoteImage(host);
     const status = await waitForFailedStatus(host, '.cm-md-image-status-inline[data-md-image-status="unavailable"]');
     fireEvent.contextMenu(status, { clientX: 28, clientY: 36 });
 

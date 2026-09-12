@@ -19,6 +19,18 @@ it('loads stable attachment images with anonymous CORS before assigning the sour
   expect(image.src).toBe(ATTACHMENT_SOURCE);
 });
 
+it('leaves a deferred blank source unset for lifecycle context resolution', async () => {
+  const image = createMarkdownImageElement({
+    alt: 'Remote source',
+    deferSource: true,
+    display: 'block',
+    source: ''
+  });
+
+  await Promise.resolve();
+  expect(image.getAttribute('src')).toBeNull();
+});
+
 it('retries a transient local attachment failure before reporting it unavailable', () => {
   vi.useFakeTimers();
   const onError = vi.fn();

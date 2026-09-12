@@ -1,7 +1,7 @@
 import {
   forgetRemoteImageLearnedSource,
-  loadRemoteImageSourceContext,
-  saveRemoteImageSourceWebsite
+  saveRemoteImageSourceWebsite,
+  type RemoteImageSourceContextState
 } from '../../../shared/platform/remoteImageSourceRecovery';
 import { getDemoRuntimeState } from '../../../shared/platform/runtime/demoRuntime';
 import { requestAppTextInput } from '../../../shared/ui';
@@ -18,16 +18,12 @@ interface RemoteImageFailureStatusOptions {
   imageMatch: MarkdownImageMatch;
   onRemoveImage?: (() => void) | null;
   onRetry: () => void;
+  onSourceContextChanged: () => void;
   requestMeasure: RequestEditorMeasure;
+  sourceContext: RemoteImageSourceContextState;
 }
 
 export function createRemoteImageFailureStatus(options: RemoteImageFailureStatusOptions) {
-  let usesLearnedSource = false;
-  void loadRemoteImageSourceContext(options.imageMatch.source, options.editorNodeId)
-    .then((context) => {
-      usesLearnedSource = context.source === 'learned';
-    })
-    .catch(() => undefined);
   const provideSourceWebsite = () => {
     void requestAppTextInput({
       confirmLabel: 'Save source',
@@ -38,14 +34,13 @@ export function createRemoteImageFailureStatus(options: RemoteImageFailureStatus
     }).then((sourceWebsite) => {
       if (!sourceWebsite?.trim()) return;
       void saveRemoteImageSourceWebsite(options.imageMatch.source, sourceWebsite).then((saved) => {
-        if (saved) options.onRetry();
+        if (saved) options.onSourceContextChanged();
       });
     });
   };
   const forgetLearnedSource = () => {
     void forgetRemoteImageLearnedSource(options.imageMatch.source).then(() => {
-      usesLearnedSource = false;
-      options.onRetry();
+      options.onSourceContextChanged();
     });
   };
   return createImageStatusElement('unavailable', options.imageMatch.display, {
@@ -53,7 +48,7 @@ export function createRemoteImageFailureStatus(options: RemoteImageFailureStatus
     onContextMenu: (event, anchor) => {
       openRemoteImageFailureContextMenu({
         anchor,
-        canForgetLearnedSource: usesLearnedSource,
+        canForgetLearnedSource: options.sourceContext.source === 'learned',
         left: event.clientX,
         onForgetLearnedSource: forgetLearnedSource,
         onProvideSourceWebsite: provideSourceWebsite,

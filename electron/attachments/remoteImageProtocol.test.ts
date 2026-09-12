@@ -10,9 +10,6 @@ const { fetchRemoteImageResource, importRemoteImageAttachment } = vi.hoisted(() 
   fetchRemoteImageResource: vi.fn(),
   importRemoteImageAttachment: vi.fn()
 }));
-const { resolveRemoteImageSourceContext } = vi.hoisted(() => ({
-  resolveRemoteImageSourceContext: vi.fn()
-}));
 
 vi.mock('electron', () => ({
   protocol: {
@@ -25,10 +22,6 @@ vi.mock('./remoteImagePipeline.js', () => ({
   importRemoteImageAttachment
 }));
 
-vi.mock('./remoteImageSourceContext.js', () => ({
-  resolveRemoteImageSourceContext
-}));
-
 import { buildRemoteImageRenderUrl, REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../lib/platform/remoteImageProtocolUrl.js';
 
 import {
@@ -37,12 +30,6 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  resolveRemoteImageSourceContext.mockReturnValue({
-    imageHost: 'example.com',
-    learnedSourceOrigin: null,
-    source: 'none',
-    sourceOrigin: null
-  });
 });
 
 it('serves preview-only remote image resources with mime and cache headers but no page CSP', async () => {
@@ -75,13 +62,7 @@ it('serves preview-only remote image resources with mime and cache headers but n
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
 });
 
-it('resolves the source origin from the node id without exposing it in the render URL', async () => {
-  resolveRemoteImageSourceContext.mockReturnValue({
-    imageHost: 'cdn.example',
-    learnedSourceOrigin: null,
-    source: 'node',
-    sourceOrigin: 'https://source.example/'
-  });
+it('uses the minimal normalized source context carried by the render URL', async () => {
   fetchRemoteImageResource.mockResolvedValue({
     status: 'ready',
     resource: {
@@ -95,12 +76,13 @@ it('resolves the source origin from the node id without exposing it in the rende
   const url = buildRemoteImageRenderUrl({
     nodeId: 'node-1',
     persist: false,
+    sourceOrigin: 'https://source.example/article?id=1',
+    sourceProvenance: 'node',
     sourceUrl: 'https://cdn.example/cover.png'
   });
   const response = await handler({ url });
 
-  expect(url).not.toContain('sourceOrigin');
-  expect(resolveRemoteImageSourceContext).toHaveBeenCalledWith('node-1', 'https://cdn.example/cover.png');
+  expect(url).not.toContain('article');
   expect(fetchRemoteImageResource).toHaveBeenCalledWith('https://cdn.example/cover.png', {
     bypassFailureCache: false,
     sourceOrigin: 'https://source.example/'

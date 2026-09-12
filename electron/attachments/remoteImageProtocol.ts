@@ -6,7 +6,6 @@ import {
 } from '../../lib/platform/remoteImageProtocolUrl.js';
 
 import { fetchRemoteImageResource, importRemoteImageAttachment } from './remoteImagePipeline.js';
-import { resolveRemoteImageSourceContext } from './remoteImageSourceContext.js';
 
 
 
@@ -38,10 +37,9 @@ export function registerRemoteImageProtocol() {
       return createRemoteImageErrorResponse(400);
     }
 
-    const sourceContext = resolveRemoteImageSourceContext(parts.nodeId, parts.sourceUrl);
     const fetchResult = await fetchRemoteImageResource(parts.sourceUrl, {
       bypassFailureCache: Boolean(parts.retryKey),
-      sourceOrigin: sourceContext.sourceOrigin
+      sourceOrigin: parts.sourceOrigin ?? null
     });
     if (fetchResult.status === 'error') {
       return createRemoteImageErrorResponse(404, fetchResult.error.error_code);

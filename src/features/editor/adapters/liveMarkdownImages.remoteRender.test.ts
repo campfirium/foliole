@@ -53,9 +53,7 @@ function getRemoteImageSourceParam(host: HTMLElement) {
 }
 
 async function waitForRemoteImageSrc(host: HTMLElement) {
-  await waitFor(() => {
-    expect(getRemoteImage(host)?.src).toContain(`${REMOTE_IMAGE_PROTOCOL_SCHEME}://render`);
-  });
+  await waitFor(() => expect(getRemoteImage(host)?.src).toContain(`${REMOTE_IMAGE_PROTOCOL_SCHEME}://render`));
   return getRemoteImage(host)?.src ?? '';
 }
 
@@ -63,6 +61,7 @@ async function runDemoRemoteImageLimitCase() {
   demoRuntimeMock.isDemo = true;
   const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
+  await waitForRemoteImageSrc(host);
   getRemoteImage(host)?.dispatchEvent(new Event('error'));
 
   await waitFor(() => {
@@ -122,6 +121,7 @@ describe('live markdown remote image rendering', () => {
   it('shows unavailable when the internal protocol image fails', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
+    await waitForRemoteImageSrc(host);
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
 
     await waitFor(() => {
@@ -161,14 +161,16 @@ describe('live markdown remote image retry action', () => {
   it('adds a retry nonce when retrying a failed remote image from source', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
 
+    await waitForRemoteImageSrc(host);
     getRemoteImage(host)?.dispatchEvent(new Event('error'));
     await waitFor(() => {
       expect(host.querySelector('button[aria-label="Retry"]')).not.toBeNull();
     });
     (host.querySelector('button[aria-label="Retry"]') as HTMLButtonElement | null)?.click();
 
-    const src = await waitForRemoteImageSrc(host);
-    expect(new URL(src).searchParams.get('retry')).toBeTruthy();
+    await waitFor(() => {
+      expect(new URL(getRemoteImage(host)?.src ?? '').searchParams.get('retry')).toBeTruthy();
+    });
 
     adapter.destroy();
   });
@@ -245,9 +247,7 @@ describe('live markdown remote image loading order', () => {
 
     expect(image?.getAttribute('src')).toBeNull();
     expect(surface?.classList.contains('cm-md-image-surface-loading')).toBe(true);
-    await Promise.resolve();
-
-    expect(image?.src).toContain(`${REMOTE_IMAGE_PROTOCOL_SCHEME}://render`);
+    await waitFor(() => expect(image?.src).toContain(`${REMOTE_IMAGE_PROTOCOL_SCHEME}://render`));
     image?.dispatchEvent(new Event('load'));
 
     await waitFor(() => {

@@ -12,6 +12,14 @@ function buildLocalAttachmentRetrySource(source: string) {
   return url.toString();
 }
 
+function assignImageSource(image: HTMLImageElement, source: string, deferSource: boolean) {
+  if (!deferSource) {
+    image.src = source;
+    return;
+  }
+  if (source) queueMicrotask(() => { image.src = source; });
+}
+
 export function createMarkdownImageElement(args: {
   alt: string;
   display: MarkdownImageMatch['display'];
@@ -62,12 +70,6 @@ export function createMarkdownImageElement(args: {
     image.dataset.mdLinkUrl = args.linkHref;
     image.title = translate(locale, 'desktop.editor.openInBrowserHint');
   }
-  if (args.deferSource) {
-    queueMicrotask(() => {
-      image.src = args.source;
-    });
-  } else {
-    image.src = args.source;
-  }
+  assignImageSource(image, args.source, args.deferSource ?? false);
   return image;
 }
