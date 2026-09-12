@@ -48,7 +48,7 @@ function Menu({ nodeId }: { nodeId: string }) {
   );
 }
 
-it('hides ordinary nodes and exposes an explicit disabled action when the source cannot run', async () => {
+it('hides ordinary nodes and explains why an eligible book action cannot run', async () => {
   const { rerender } = renderWithLocalization(
     <Menu nodeId="ordinary" />
   );
@@ -56,8 +56,16 @@ it('hides ordinary nodes and exposes an explicit disabled action when the source
 
   state.status = 'source_inactive';
   rerender(<Menu nodeId="book" />);
-  const item = await screen.findByRole('menuitem', { name: 'Use original EPUB' });
+  const item = await screen.findByRole('menuitem', {
+    name: 'Use original EPUB — this device does not handle Readwise imports'
+  });
   expect(item).toHaveAttribute('data-disabled');
+
+  state.status = 'reconnect_required';
+  rerender(<Menu nodeId="book-reconnect" />);
+  expect(await screen.findByRole('menuitem', {
+    name: 'Use original EPUB — reconnect Readwise first'
+  })).toHaveAttribute('data-disabled');
 });
 
 it('runs the one-step action and reports the committed result', async () => {

@@ -42,6 +42,15 @@ export function ReadwiseOriginalEpubMenuItem(props: {
   }, [props.nodeId]);
 
   if (!props.nodeId || !state || state.status === 'not_applicable') return null;
+  const label = state.status === 'completed'
+    ? t('desktop.nodeList.menu.useOriginalEpub.completed')
+    : state.status === 'reconnect_required'
+      ? t('desktop.nodeList.menu.useOriginalEpub.reconnect')
+      : state.status === 'running'
+        ? t('desktop.nodeList.menu.useOriginalEpub.running')
+        : state.status === 'source_inactive'
+          ? t('desktop.nodeList.menu.useOriginalEpub.sourceInactive')
+          : t('desktop.nodeList.menu.useOriginalEpub');
   const run = async () => {
     if (state.status !== 'ready' || !props.nodeId) return;
     const nodeId = props.nodeId;
@@ -65,7 +74,7 @@ export function ReadwiseOriginalEpubMenuItem(props: {
     <>
       {props.hasPreviousGroup ? <NodeContextMenuSeparator /> : null}
       <NodeContextMenuItem disabled={state.status !== 'ready'} icon={BookDown} onSelect={() => void run()}>
-        {t('desktop.nodeList.menu.useOriginalEpub')}
+        {label}
       </NodeContextMenuItem>
       <NodeContextMenuSeparator />
     </>
