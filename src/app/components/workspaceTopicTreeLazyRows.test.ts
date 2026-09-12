@@ -2,7 +2,10 @@ import { expect, it } from 'vitest';
 
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
-import { buildTopicChildrenByParent, createDerivedMaterialDirectChildCounter } from './workspaceTopicTreeLazyRows';
+import {
+  buildTopicChildrenByParent,
+  createDerivedMaterialDirectChildCounter
+} from './workspaceTopicTreeLazyRows';
 
 function createTopic(id: string, parentNodeId: string | null = null, anchorLink = false): WorkspaceListNode {
   return {
