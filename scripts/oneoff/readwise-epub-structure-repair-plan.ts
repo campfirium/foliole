@@ -93,7 +93,7 @@ function buildBook(
   const desired = projected.map((node) => ({
     ...node, nodeId: stableReadwiseEpubNodeId(source.remote_connection_ref, source.remote_document_id, node.key)
   }));
-  assertPristineGeneratedProjection(
+  const projectionState = assertPristineGeneratedProjection(
     source, structure.legacyMarkerKeys ?? [], desired.map((node) => node.key), oldGenerated
   );
   const desiredIds = new Set(desired.map((node) => node.nodeId));
@@ -113,7 +113,9 @@ function buildBook(
   const coverage = buildRepairBodies({
     contentById, desired, documentId: source.remote_document_id,
     oldGenerated: oldGenerated.map((row) => ({ ...row, content: body(row) })),
-    root: { ...root, content: body(root) }, structure
+    root: { ...root, content: body(root) },
+    rootBody: projectionState === 'projected' ? structure.rootBody : structure.legacyRootBody ?? '',
+    structure
   });
   const staleNodeIds = oldGenerated.map((row) => row.id).filter((id) => !desiredIds.has(id));
   const staleTargets = buildStaleTargets(oldGenerated, desiredIds, root.id);
@@ -177,9 +179,9 @@ function assertPristineGeneratedProjection(
   const actual = rows.map((row) => row.id);
   const matches = (expected: string[]) => expected.length === actual.length
     && expected.every((id, index) => actual[index] === id);
-  if (!matches(ids(legacyMarkerKeys)) && !matches(ids(projectedMarkerKeys))) {
-    throw new Error(`readwise_epub_generated_projection_not_pristine:${source.remote_document_id}`);
-  }
+  if (matches(ids(projectedMarkerKeys))) return 'projected';
+  if (matches(ids(legacyMarkerKeys))) return 'legacy';
+  throw new Error(`readwise_epub_generated_projection_not_pristine:${source.remote_document_id}`);
 }
 
 function readTree(driver: DatabaseDriver, rootNodeId: string) {

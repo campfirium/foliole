@@ -26,12 +26,13 @@ export function buildRepairBodies(input: {
   documentId: string;
   oldGenerated: ExistingBody[];
   root: ExistingBody;
+  rootBody: string;
   structure: PreparedReadwiseApiEpubStructure;
 }) {
   const bodies: RepairBody[] = [
     {
       content: rebuildRootContent(
-        input.root.content, input.structure.legacyRootBody ?? '', input.contentById.get(input.root.id)
+        input.root.content, input.rootBody, input.contentById.get(input.root.id)
       ),
       isTitleManual: input.root.is_title_manual,
       nodeId: input.root.id, parentId: input.root.parent_id, title: input.root.title
@@ -55,24 +56,19 @@ export function buildRepairBodies(input: {
   const newCoverageHash = coverageHash([
     rootSourceContent(bodies[0]!.content), ...bodies.slice(1).map((item) => item.content)
   ].join('\n\n'));
-  assertCoverage(input, bodies, sourceCoverageHash, newCoverageHash);
+  assertCoverage(input, bodies, currentCoverageHash, sourceCoverageHash, newCoverageHash);
   return { bodies, currentCoverageHash, newCoverageHash, sourceCoverageHash };
 }
 
 function assertCoverage(
   input: Parameters<typeof buildRepairBodies>[0],
   bodies: RepairBody[],
+  currentCoverageHash: string,
   sourceCoverageHash: string,
   newCoverageHash: string
 ) {
-  const sourceSections = (input.structure.legacySections ?? []).map((section) => section.content).join('\n\n');
-  if (coverageHash(sourceSections) !== coverageHash(input.oldGenerated.map((row) => row.content).join('\n\n'))) {
+  if (currentCoverageHash !== sourceCoverageHash) {
     throw new Error(`readwise_epub_source_body_coverage_mismatch:${input.documentId}`);
-  }
-  const currentRoot = normalizeCoverage(rootSourceContent(input.root.content));
-  const sourceRoot = normalizeCoverage(input.structure.legacyRootBody ?? '');
-  if (currentRoot && currentRoot !== sourceRoot) {
-    throw new Error(`readwise_epub_root_body_not_pristine:${input.documentId}`);
   }
   if (sourceCoverageHash !== newCoverageHash || bodies.length !== input.desired.length + 1) {
     const sourceContent = [
