@@ -94,6 +94,7 @@
     "electron:native:health": "node scripts/run-electron-native-health.mjs",
     "macos:dev:full-restart": "node scripts/macos/macos-electron-dev.mjs full-restart",
     "macos:dev:logs": "node scripts/macos/macos-electron-dev.mjs logs",
+    "macos:dev:open": "node scripts/macos/macos-electron-dev.mjs open",
     "macos:dev:reset": "node scripts/macos/macos-electron-dev.mjs reset",
     "macos:dev:restart": "node scripts/macos/macos-electron-dev.mjs restart",
     "macos:dev:status": "node scripts/macos/macos-electron-dev.mjs status",
