@@ -80,6 +80,24 @@ it('loads persisted Untitled sequence state from sqlite snapshot', () => {
   expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __root__: 7 });
 });
 
+it('does not persist an Untitled sequence from a manually assigned title', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-manual-untitled',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Untitled 1123123123',
+    isTitleManual: true,
+    content: '',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z',
+    updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+
+  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({});
+});
+
 it('loads source-scoped image excerpt sequence state without advancing it for manual titles', () => {
   upsertNodeSnapshot({
     nodeId: 'pdf-1', parentNodeId: null, kind: 'topic', title: 'Source PDF', isTitleManual: true,

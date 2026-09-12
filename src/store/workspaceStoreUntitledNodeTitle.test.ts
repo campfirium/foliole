@@ -65,3 +65,12 @@ it('increments Untitled titles per parent when creating empty child nodes', asyn
   expect(useWorkspaceStore.getState().nodesById[firstChildId]?.title).toBe('Untitled');
   expect(useWorkspaceStore.getState().nodesById[secondChildId]?.title).toBe('Untitled 1');
 });
+
+it('does not derive the sequence from a manually assigned Untitled-style title', async () => {
+  const manualId = (await useWorkspaceStore.getState().createRootNode('Manual'))!;
+  await useWorkspaceStore.getState().updateNodeTitle(manualId, 'Untitled 1123123123');
+
+  const createdId = (await useWorkspaceStore.getState().createRootNode())!;
+
+  expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled');
+});

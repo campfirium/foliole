@@ -43,8 +43,9 @@ function resolveSequenceUpdate(input: {
   parentNodeId: string | null;
   title: string;
 }) {
+  if (input.isTitleManual) return null;
   if (input.isImageExcerpt) {
-    if (input.isTitleManual || !input.parentNodeId) return null;
+    if (!input.parentNodeId) return null;
     const match = input.title.trim().match(EXCERPT_TITLE_PATTERN);
     return match ? { key: `image-excerpt:${input.parentNodeId}`, next: Number.parseInt(match[1]!, 10) + 1 } : null;
   }

@@ -17,12 +17,14 @@ function readNextUntitledSequence(title: string) {
   return match[1] ? Number.parseInt(match[1], 10) + 1 : 1;
 }
 
-function listActiveSiblingTitles(parentNodeId: string | null, state: WorkspaceState) {
+function listGeneratedActiveSiblingTitles(parentNodeId: string | null, state: WorkspaceState) {
   const trashedNodeIds = new Set(state.trashedNodeIds);
   return state.nodeOrder
     .filter((nodeId) => !trashedNodeIds.has(nodeId))
     .map((nodeId) => state.nodesById[nodeId])
-    .filter((node): node is NonNullable<typeof node> => Boolean(node && node.parentNodeId === parentNodeId))
+    .filter((node): node is NonNullable<typeof node> =>
+      Boolean(node && node.parentNodeId === parentNodeId && !node.isTitleManual)
+    )
     .map((node) => node.title);
 }
 
@@ -39,7 +41,7 @@ export function resolveCreatedNodeTitleState(
   }
 
   const parentKey = toParentKey(parentNodeId);
-  const siblingTitles = listActiveSiblingTitles(parentNodeId, state);
+  const siblingTitles = listGeneratedActiveSiblingTitles(parentNodeId, state);
   const siblingNextSequence = siblingTitles.reduce((maxSequence, title) => {
     const nextSequence = readNextUntitledSequence(title);
     return nextSequence === null ? maxSequence : Math.max(maxSequence, nextSequence);
