@@ -1,7 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { resetRuntimeLibraryPathSettingsCacheForTest } from './libraryPathSettingsCache';
+import {
+  readRuntimeLibraryPathSettingsCache,
+  resetRuntimeLibraryPathSettingsCacheForTest
+} from './libraryPathSettingsCache';
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
@@ -107,6 +110,7 @@ it('updates the assets path through the native bridge', async () => {
   await expect(updateRuntimeLibraryPathSetting('assets_dir', '/attachment-vault')).resolves.toMatchObject({
     assetsDir: '/attachment-vault'
   });
+  expect(readRuntimeLibraryPathSettingsCache()?.assetsDir).toBe('/attachment-vault');
   expect(invoke).toHaveBeenCalledWith('update_library_path_setting', {
     location: 'assets_dir',
     path: '/attachment-vault'

@@ -7,7 +7,6 @@ import type { AppLanguagePreference } from '../shared/localization/appLanguage';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { useDemoRuntimeState } from '../shared/platform/runtime/demoRuntime';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
-import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { AppProviders } from './AppProviders';
 import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
@@ -23,6 +22,7 @@ import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
 import { useReleaseUpdateCheck } from './hooks/useReleaseUpdateCheck';
 import { useSystemEntryDisplayNamesHydration } from './hooks/useSystemEntryDisplayNamesHydration';
 import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
+import { ensureWorkspaceRuntimeHydrated } from './workspaceRuntimeHydration';
 
 function AppContent() {
   useSystemEntryDisplayNamesHydration();
@@ -208,7 +208,7 @@ export function App({ initialLanguagePreference, providerBridge }: AppProps = {}
         return;
       }
       didRequestHydration = true;
-      void ensureWorkspaceHydrated();
+      void ensureWorkspaceRuntimeHydrated();
     };
     const firstFrameId = window.requestAnimationFrame(() => {
       secondFrameId = window.requestAnimationFrame(() => {

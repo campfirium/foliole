@@ -1,7 +1,7 @@
 import type { EditorView } from '@codemirror/view';
 
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { loadRuntimeLibraryPathSettings } from '../../../shared/platform/libraryPathsRuntimeRepository';
+import { readRuntimeLibraryPathSettingsCache } from '../../../shared/platform/libraryPathSettingsCache';
 import {
   createClipboardExportPayload as createClipboardExportPayloadInModel,
   type ClipboardExportPayload
@@ -13,9 +13,6 @@ import { collectInlineLinkMatches } from '../model/inlineMarkdownMatches';
 import { getTextAnchorDecorations } from './liveMarkdownState';
 
 export const FOLIOLE_CLIPBOARD_MIME = 'application/x-foliole';
-
-let cachedAssetsDir: string | null | undefined;
-let pendingAssetsDirLoad: Promise<string | null> | null = null;
 
 interface SelectedSlice {
   from: number;
@@ -138,23 +135,6 @@ export function createClipboardExportPayload(
   });
 }
 
-async function ensureClipboardAssetsDirLoaded() {
-  if (cachedAssetsDir !== undefined) {
-    return cachedAssetsDir;
-  }
-  if (!pendingAssetsDirLoad) {
-    pendingAssetsDirLoad = loadRuntimeLibraryPathSettings()
-      .then((settings) => settings?.assetsDir ?? null)
-      .catch(() => null)
-      .then((assetsDir) => {
-        cachedAssetsDir = assetsDir;
-        pendingAssetsDirLoad = null;
-        return assetsDir;
-      });
-  }
-  return pendingAssetsDirLoad;
-}
-
 export function createClipboardExportFromView(view: EditorView) {
   const internalSlices = collectSelectedSlices(view, false);
   const internalText = joinSelectedText(internalSlices);
@@ -169,14 +149,7 @@ export function createClipboardExportFromView(view: EditorView) {
   return createClipboardExportPayload(
     internalText,
     expandedExternalText,
-    cachedAssetsDir ?? null,
+    readRuntimeLibraryPathSettingsCache()?.assetsDir ?? null,
     buildInternalAnchorRanges(view, internalSlices)
   );
 }
-
-export function resetClipboardInteropStateForTests() {
-  cachedAssetsDir = undefined;
-  pendingAssetsDirLoad = null;
-}
-
-void ensureClipboardAssetsDirLoaded();

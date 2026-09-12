@@ -25,6 +25,10 @@ export function setRuntimeLibraryPathSettingsCache(settings: RuntimeLibraryPaths
   cache = settings;
 }
 
+export function readRuntimeLibraryPathSettingsCache() {
+  return cache ?? null;
+}
+
 export function resetRuntimeLibraryPathSettingsCacheForTest() {
   cache = undefined;
   loadPromise = null;

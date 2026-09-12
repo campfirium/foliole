@@ -7,6 +7,7 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { installGlobalClipShortcut } from './globalClipShortcut.js';
 import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
 import { runGlobalClipToInbox } from './globalClipToInbox.js';
+import { installGlobalClipToInboxTestHook } from './globalClipToInboxTestHook.js';
 import { getMainWindow } from './mainWindowRegistry.js';
 
 function startAgentControlApiLifecycle() {
@@ -26,6 +27,7 @@ export function installDatabaseBackedEntryPoints(
   openMainWindow: () => Promise<BrowserWindow | null>
 ) {
   installGlobalClipShortcut({ captureToInbox: runGlobalClipToInbox });
+  installGlobalClipToInboxTestHook(runGlobalClipToInbox);
   installGlobalCaptureToastOpenHandler({ openMainWindow });
   installBackgroundTray({
     captureToInbox: runGlobalClipToInbox,
