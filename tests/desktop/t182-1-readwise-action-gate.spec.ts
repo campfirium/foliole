@@ -137,7 +137,7 @@ test('keeps ordinary switching and placeholder display inert until one original-
   await desktopWindow.getByRole('button', { name: /^(Free reading|自由阅读)/ }).click();
   await expect.poll(() => readFacts(desktopApp)).toMatchObject({ dialogCount: 1 });
   const after = await readFacts(desktopApp);
-  expect(after.inventorySettingCount).toBe(1);
+  expect(after.inventorySettingCount).toBe(0);
   expect(after.readwiseDirectoryReadCount).toBeGreaterThan(0);
   await attachEvidence(testInfo, before, after);
 });
