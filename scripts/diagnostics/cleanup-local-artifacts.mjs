@@ -18,7 +18,12 @@ export const CLEANUP_ROOTS = [
   'artifacts/windows-internal',
   'trees'
 ];
-const PROTECTED_ROOTS = new Set(['.tmp/artifacts', '.tmp/worktrees']);
+const PROTECTED_ROOTS = new Set([
+  '.tmp/artifacts',
+  '.tmp/macos-desktop-daily-debug',
+  '.tmp/macos-desktop-reset-preview',
+  '.tmp/worktrees'
+]);
 
 function isProtectedEntry(rootName, entryName, entryPath) {
   return PROTECTED_ROOTS.has(`${rootName}/${entryName}`)

@@ -109,6 +109,27 @@ describe('cleanup-local-artifacts', () => {
     }
   });
 
+  it('preserves persistent macOS DEV roots from general cleanup', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-macos-dev-'));
+    try {
+      const dailySecret = join(root, '.tmp/macos-desktop-daily-debug/user-data/readwise-secret.bin');
+      const resetPreviewState = join(root, '.tmp/macos-desktop-reset-preview/user-data/state.json');
+      for (const filePath of [dailySecret, resetPreviewState]) {
+        mkdirSync(dirname(filePath), { recursive: true });
+        touch(filePath, oldTime);
+        utimesSync(join(filePath, '..', '..'), oldTime, oldTime);
+      }
+
+      const result = runCleanup({ apply: true, days: 7, dryRun: false, nowMs, rootDir: root });
+
+      expect(result.entries).toEqual([]);
+      expect(existsSync(dailySecret)).toBe(true);
+      expect(existsSync(resetPreviewState)).toBe(true);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it('rejects arbitrary cleanup roots from the CLI', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-rejected-root-'));
     try {
