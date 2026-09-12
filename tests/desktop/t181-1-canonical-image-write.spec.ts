@@ -15,7 +15,7 @@ const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 const NODE_ID = 't181-1-canonical-image-write';
 
 async function inspectAttachment(desktopApp: ElectronApplication, nodeId: string) {
-  return desktopApp.evaluate((targetNodeId) => {
+  return desktopApp.evaluate((_electron, targetNodeId) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
