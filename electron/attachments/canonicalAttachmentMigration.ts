@@ -165,7 +165,9 @@ export function runCanonicalAttachmentMigration(args: {
   sqlite: SqliteDatabase;
 }) {
   const existing = readJournal(args.journalPath);
-  if (existing?.stage === 'finalized' || args.dryRun) {
+  const isReadOnlyTerminal = existing?.stage === 'finalized'
+    || (existing?.version === 1 && existing.stage === 'verified');
+  if (isReadOnlyTerminal || args.dryRun) {
     return existing?.plan ?? buildCanonicalAttachmentMigrationPlan(args.sqlite, args.assetsDir);
   }
   const journal = existing ?? {

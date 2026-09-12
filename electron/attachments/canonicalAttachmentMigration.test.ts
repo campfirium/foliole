@@ -20,6 +20,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { finalizeCanonicalAttachmentMigration, runCanonicalAttachmentMigration } from './canonicalAttachmentMigration.js';
+import * as canonicalAttachmentMigrationPlan from './canonicalAttachmentMigrationPlan.js';
 
 let root = '';
 
@@ -42,6 +43,29 @@ function seed(bytes: Buffer, storageKey: string) {
     VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .run('attachment-1', hash, storageKey, bytes.length, 'image/jpeg', 'local', '2026-09-10T00:00:00.000Z');
   return hash;
+}
+
+async function prepareJournalAt(stage: 'planned' | 'targets_prepared' | 'database_committed') {
+  const assetsDir = path.join(root, `Assets-${stage}`);
+  const journalPath = path.join(root, `${stage}.json`);
+  await fs.mkdir(assetsDir);
+  const bytes = Buffer.from([0xff, 0xd8, 0xff, ...Buffer.from(stage)]);
+  const hash = seed(bytes, hashPlaceholder(bytes));
+  await fs.writeFile(path.join(assetsDir, hash), bytes);
+  const sqlite = openDatabaseConnection().sqlite;
+  const plan = runCanonicalAttachmentMigration({ assetsDir, dryRun: true, journalPath, sqlite });
+  const canonicalPath = path.join(assetsDir, `${hash}.jpg`);
+  const createdTargets: string[] = [];
+  if (stage !== 'planned') {
+    await fs.writeFile(canonicalPath, bytes);
+    createdTargets.push(canonicalPath);
+  }
+  if (stage === 'database_committed') {
+    sqlite.prepare('UPDATE attachment_blobs SET storage_key = ? WHERE attachment_id = ?')
+      .run(`${hash}.jpg`, 'attachment-1');
+  }
+  await fs.writeFile(journalPath, JSON.stringify({ createdTargets, plan, stagedAliases: [], stage, version: 1 }, null, 2));
+  return { args: { assetsDir, journalPath, sqlite }, bytes, hash };
 }
 
 it('dry-runs without mutation, then prepares, commits, stages, resumes, and finalizes', async () => {
@@ -67,6 +91,52 @@ it('dry-runs without mutation, then prepares, commits, stages, resumes, and fina
   finalizeCanonicalAttachmentMigration(journalPath);
   expect(JSON.parse(await fs.readFile(journalPath, 'utf8')).stage).toBe('finalized');
 });
+
+it('treats verified and finalized version 1 journals as read-only terminal states', async () => {
+  const prepared = await prepareJournalAt('planned');
+  runCanonicalAttachmentMigration(prepared.args);
+  const planner = vi.spyOn(canonicalAttachmentMigrationPlan, 'buildCanonicalAttachmentMigrationPlan');
+  const readState = async () => {
+    const bytes = await fs.readFile(prepared.args.journalPath);
+    const stat = await fs.stat(prepared.args.journalPath);
+    const rows = prepared.args.sqlite.prepare(
+      'SELECT attachment_id, content_hash, storage_key, mime_type, availability FROM attachment_blobs ORDER BY attachment_id'
+    ).all();
+    const assets = await fs.readdir(prepared.args.assetsDir, { recursive: true });
+    return { assets, bytes, ino: stat.ino, mtimeMs: stat.mtimeMs, rows };
+  };
+  const verified = await readState();
+
+  expect(runCanonicalAttachmentMigration(prepared.args)).toEqual(
+    JSON.parse(verified.bytes.toString()).plan
+  );
+  expect(runCanonicalAttachmentMigration(prepared.args)).toEqual(
+    JSON.parse(verified.bytes.toString()).plan
+  );
+  expect(await readState()).toEqual(verified);
+  expect(planner).not.toHaveBeenCalled();
+
+  finalizeCanonicalAttachmentMigration(prepared.args.journalPath);
+  const finalized = await readState();
+  runCanonicalAttachmentMigration(prepared.args);
+  expect(await readState()).toEqual(finalized);
+  expect(planner).not.toHaveBeenCalled();
+});
+
+it.each(['planned', 'targets_prepared', 'database_committed'] as const)(
+  'resumes a %s version 1 journal through verified',
+  async (stage) => {
+    const prepared = await prepareJournalAt(stage);
+    runCanonicalAttachmentMigration(prepared.args);
+    expect(JSON.parse(await fs.readFile(prepared.args.journalPath, 'utf8')).stage).toBe('verified');
+    await expect(fs.readFile(path.join(prepared.args.assetsDir, `${prepared.hash}.jpg`)))
+      .resolves.toEqual(prepared.bytes);
+    await expect(fs.readFile(path.join(prepared.args.assetsDir, '.t180-retired', prepared.hash)))
+      .resolves.toEqual(prepared.bytes);
+    expect(prepared.args.sqlite.prepare('SELECT storage_key FROM attachment_blobs').get())
+      .toEqual({ storage_key: `${prepared.hash}.jpg` });
+  }
+);
 
 it('blocks before database commit when a canonical target has different bytes', async () => {
   const assetsDir = path.join(root, 'Assets-conflict');
