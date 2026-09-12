@@ -19,14 +19,37 @@ type RuntimeFacts = {
   dialogCount: number;
   inventorySettingCount: number;
   readwiseDirectoryReadCount: number;
+  readwiseSourceFileReadCount: number;
 };
+
+async function installReadwiseAccessProbe(app: ElectronApplication, readwiseRoot: string) {
+  await app.evaluate(async (electron, fixture) => {
+    const fsApi = process.getBuiltinModule('fs');
+    if (!fsApi) throw new Error('Node file system unavailable.');
+    const originalReaddir = fsApi.promises.readdir.bind(fsApi.promises);
+    const originalReadFile = fsApi.promises.readFile.bind(fsApi.promises);
+    globalThis.__t182ReadwiseGate = { dialogCount: 0, readwiseDirectoryReadCount: 0, readwiseSourceFileReadCount: 0 };
+    fsApi.promises.readdir = async (...args) => {
+      if (String(args[0]).startsWith(fixture.readwiseRoot)) globalThis.__t182ReadwiseGate.readwiseDirectoryReadCount += 1;
+      return originalReaddir(...args);
+    };
+    fsApi.promises.readFile = async (...args) => {
+      if (String(args[0]).startsWith(fixture.readwiseRoot)) globalThis.__t182ReadwiseGate.readwiseSourceFileReadCount += 1;
+      return originalReadFile(...args);
+    };
+    electron.dialog.showOpenDialog = async () => {
+      globalThis.__t182ReadwiseGate.dialogCount += 1;
+      return { canceled: false, filePaths: [fixture.originalPath] };
+    };
+  }, { originalPath: ORIGINAL_FILE_PATH, readwiseRoot });
+}
 
 async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
   const readwiseRoot = path.join(stateRoot, 'Readwise');
   const primaryPath = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
   const highlightPath = path.join(readwiseRoot, 'Articles');
   const sourceName = 'T182 Readwise Topic.md';
-  return app.evaluate(async (_electron, fixture) => {
+  const nodeId = await app.evaluate(async (_electron, fixture) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     const fsApi = process.getBuiltinModule('fs');
@@ -38,7 +61,6 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
     const locations = require(pathApi.join(process.cwd(), 'dist/electron/database/desktopSources.js'));
     const settings = require(pathApi.join(process.cwd(), 'dist/electron/import/importManagerSettings.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const electron = require('electron');
     await fsApi.promises.mkdir(fixture.primaryPath, { recursive: true });
     await fsApi.promises.mkdir(fixture.highlightPath, { recursive: true });
     const sourcePath = pathApi.join(fixture.primaryPath, fixture.sourceName);
@@ -68,18 +90,10 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
       host.activateReadwiseOnThisHost();
       return result;
     });
-    const originalReaddir = fsApi.promises.readdir.bind(fsApi.promises);
-    globalThis.__t182ReadwiseGate = { dialogCount: 0, readwiseDirectoryReadCount: 0 };
-    fsApi.promises.readdir = async (...args) => {
-      if (String(args[0]).startsWith(fixture.readwiseRoot)) globalThis.__t182ReadwiseGate.readwiseDirectoryReadCount += 1;
-      return originalReaddir(...args);
-    };
-    electron.dialog.showOpenDialog = async () => {
-      globalThis.__t182ReadwiseGate.dialogCount += 1;
-      return { canceled: false, filePaths: [fixture.originalPath] };
-    };
     return imported.nodeId;
   }, { content: PLACEHOLDER_CONTENT, highlightPath, originalPath: ORIGINAL_FILE_PATH, primaryPath, readwiseRoot, sourceName });
+  await installReadwiseAccessProbe(app, readwiseRoot);
+  return nodeId;
 }
 
 async function openNode(page: Page, nodeId: string) {
@@ -98,7 +112,8 @@ async function readFacts(app: ElectronApplication): Promise<RuntimeFacts> {
       inventorySettingCount: connection.openDatabaseConnection().driver.queryOne(
         "SELECT COUNT(*) count FROM settings WHERE key='readwise_books_inventory_state'"
       ).count,
-      readwiseDirectoryReadCount: globalThis.__t182ReadwiseGate?.readwiseDirectoryReadCount ?? 0
+      readwiseDirectoryReadCount: globalThis.__t182ReadwiseGate?.readwiseDirectoryReadCount ?? 0,
+      readwiseSourceFileReadCount: globalThis.__t182ReadwiseGate?.readwiseSourceFileReadCount ?? 0
     }));
   });
 }
@@ -128,7 +143,9 @@ test('keeps ordinary switching and placeholder display inert until one original-
   await desktopWindow.locator(`[role="treeitem"][data-node-id="${readwiseNodeId}"]`).click();
   await expect(desktopWindow.locator('.cm-md-readwise-original-file')).toBeVisible();
   const before = await readFacts(desktopApp);
-  expect(before).toEqual({ dialogCount: 0, inventorySettingCount: 0, readwiseDirectoryReadCount: 0 });
+  expect(before).toEqual({
+    dialogCount: 0, inventorySettingCount: 0, readwiseDirectoryReadCount: 0, readwiseSourceFileReadCount: 0
+  });
 
   await desktopWindow.getByRole('button', { name: /^(Load original file|加载原文件)$/ }).evaluate((button) => button.click());
   await expect(desktopWindow.getByRole('dialog', { name: /^(Choose reading mode|选择阅读模式)$/ })).toBeVisible({
@@ -138,10 +155,13 @@ test('keeps ordinary switching and placeholder display inert until one original-
   await expect.poll(() => readFacts(desktopApp)).toMatchObject({ dialogCount: 1 });
   const after = await readFacts(desktopApp);
   expect(after.inventorySettingCount).toBe(0);
-  expect(after.readwiseDirectoryReadCount).toBeGreaterThan(0);
+  expect(after.readwiseDirectoryReadCount).toBe(0);
+  expect(after.readwiseSourceFileReadCount).toBeGreaterThan(0);
   await attachEvidence(testInfo, before, after);
 });
 
 declare global {
-  var __t182ReadwiseGate: { dialogCount: number; readwiseDirectoryReadCount: number } | undefined;
+  var __t182ReadwiseGate: {
+    dialogCount: number; readwiseDirectoryReadCount: number; readwiseSourceFileReadCount: number;
+  } | undefined;
 }
