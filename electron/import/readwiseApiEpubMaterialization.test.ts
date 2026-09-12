@@ -71,7 +71,8 @@ it('creates one body topic per marked heading and places annotations across ever
   const section = descendants.find((node) => node.title === 'Second section')!;
   expect(unique.parent_id).toBe(section.id);
   const ambiguous = descendants.find((node) => node.id.includes('readwise') && node.content === 'Repeated excerpt')!;
-  expect(ambiguous.parent_id).toBe(source.latest_node_id);
+  const firstSection = descendants.find((node) => node.title === 'First section')!;
+  expect(ambiguous.parent_id).toBe(firstSection.id);
 
   materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   expect(driver.queryOne<{ count: number }>(

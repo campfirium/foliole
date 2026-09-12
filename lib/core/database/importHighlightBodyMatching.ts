@@ -102,3 +102,20 @@ export function findUniqueAvailableImportedBodyOccurrence(
   const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
   return overlaps ? null : candidate;
 }
+
+export function findFirstAvailableImportedBodyOccurrence(
+  content: string,
+  excerpt: string,
+  occupiedRanges: ImportedBodyRange[]
+) {
+  if (!excerpt) return null;
+  const bodyFrom = resolveImportedBodySearchFrom(content);
+  let from = content.indexOf(excerpt, bodyFrom);
+  while (from >= 0) {
+    const candidate = { from, to: from + excerpt.length };
+    const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
+    if (!overlaps) return candidate;
+    from = content.indexOf(excerpt, from + 1);
+  }
+  return null;
+}

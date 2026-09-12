@@ -42,6 +42,22 @@ it('keeps block markers and rejects nested duplicate markers at the same positio
   expect(structure.sections[0]?.content).toContain('First');
 });
 
+it('does not turn following body content into a missing structural title', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <hr data-rw-epub-toc="separator"><p>Body after separator</p>
+    <div data-rw-epub-toc="container"><p>Body inside container</p></div>
+    <h2 data-rw-epub-toc="chapter">Explicit chapter</h2><p>Chapter body</p>
+  `);
+
+  expect(structure.sections.map((section) => section.title)).toEqual(['Explicit chapter']);
+  expect(structure.rootBody).toContain('Body after separator');
+  expect(structure.rootBody).toContain('Body inside container');
+  expect(structure.candidates?.slice(0, 2)).toMatchObject([
+    { accepted: false, reason: 'rejected-missing-structural-title' },
+    { accepted: false, reason: 'rejected-missing-structural-title' }
+  ]);
+});
+
 it('normalizes h2 plus h4 to two natural levels', () => {
   const structure = prepareReadwiseApiEpubStructure(`
     <h2 data-rw-epub-toc="chapter">Chapter</h2><p>Intro</p>

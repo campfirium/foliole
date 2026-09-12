@@ -1,4 +1,3 @@
-import { findChineseVariantHighlightRange } from '../import/chineseVariantFuzzyMatch.js';
 import { createContextExcerptLocator, type ContextExcerptLocator } from '../import/contextExcerptLocator.js';
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { collectBoundaryFragments } from '../import/controlledContextText.js';
@@ -10,6 +9,7 @@ import {
 
 import {
   classifyImportedBodyCandidate,
+  findFirstAvailableImportedBodyOccurrence,
   findUniqueAvailableImportedBodyOccurrence
 } from './importHighlightBodyMatching.js';
 
@@ -73,6 +73,7 @@ function collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highligh
 }
 
 export function applyImportedHighlightAnchors(input: {
+  ambiguityPolicy?: 'first' | 'unique';
   content: string;
   highlights: PreparedImportHighlightRecord[] | undefined;
 }) {
@@ -90,18 +91,16 @@ export function applyImportedHighlightAnchors(input: {
       return;
     }
     const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
-    if (classifyImportedBodyCandidate(content, highlightText).status === 'ambiguous') {
+    if (input.ambiguityPolicy !== 'first'
+      && classifyImportedBodyCandidate(content, highlightText).status === 'ambiguous') {
       return;
     }
-    const exactRange = collectAnchorExcerptCandidates(locator, highlight)
-      .map((excerpt) => findUniqueAvailableImportedBodyOccurrence(content, excerpt, occupiedRanges))
+    const findAvailableOccurrence = input.ambiguityPolicy === 'first'
+      ? findFirstAvailableImportedBodyOccurrence
+      : findUniqueAvailableImportedBodyOccurrence;
+    const range = collectAnchorExcerptCandidates(locator, highlight)
+      .map((excerpt) => findAvailableOccurrence(content, excerpt, occupiedRanges))
       .find((candidate) => candidate !== null);
-    const fuzzyRange = exactRange ? null : findChineseVariantHighlightRange(
-      locator,
-      highlight.locatorText ?? highlightText
-    );
-    const range = exactRange ?? (fuzzyRange && !occupiedRanges.some((item) =>
-      fuzzyRange.from < item.to && fuzzyRange.to > item.from) ? fuzzyRange : null);
     if (!range) {
       return;
     }

@@ -51,7 +51,7 @@ export function projectReadwiseApiEpubMarkers(input: {
       headingLevel: naturalLevel,
       markerKey: marker.markerKey,
       naturalLevel,
-      title: marker.title ?? readableMarkdownTitle(marker.content) ?? `Untitled section ${acceptedIndex}`
+      title: marker.title!
     };
     sections.push(currentSection);
     return audit(marker, true, naturalLevel <= 3 ? marker.markerKey : null, naturalLevel, verdict.reason);
@@ -63,6 +63,7 @@ export function projectReadwiseApiEpubMarkers(input: {
 function eligibility(marker: ReadwiseApiEpubMarkerInput) {
   if (!marker.blockLevel) return { accepted: false, reason: 'rejected-inline-marker' };
   if (marker.insideNavigation) return { accepted: false, reason: 'rejected-navigation-copy' };
+  if (!marker.title) return { accepted: false, reason: 'rejected-missing-structural-title' };
   if (!marker.content.trim()) return { accepted: false, reason: 'rejected-empty-boundary' };
   if (marker.headingLevel !== null) return { accepted: true, reason: 'accepted-block-heading' };
   return { accepted: true, reason: 'accepted-block-boundary' };
@@ -138,11 +139,6 @@ function audit(
     accepted, finalCarrierKey, markerKey: marker.markerKey, naturalLevel, reason,
     tagName: marker.tagName, title: marker.title
   };
-}
-
-function readableMarkdownTitle(content: string) {
-  const line = content.split('\n').map((item) => item.trim()).find(Boolean);
-  return line?.replace(/^#{1,6}\s+/u, '').replace(/[*_`~]/gu, '').trim().slice(0, 120) || null;
 }
 
 function joinChunks(chunks: string[]) {

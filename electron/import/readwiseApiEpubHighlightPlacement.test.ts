@@ -31,14 +31,14 @@ it('uses a unique long fragment when source markup prevents a full-quote match',
   });
 });
 
-it('keeps an ambiguous highlight unanchored at the EPUB root', () => {
+it('places repeated text at the first body in source order', () => {
   expect(placeReadwiseApiEpubHighlight({
     bodies,
     highlight: highlight('A repeated phrase.'),
     rootNodeId: 'root'
   })).toEqual({
-    highlight: expect.objectContaining({ locatorText: null }),
-    parentId: 'root'
+    highlight: expect.objectContaining({ locatorText: 'A repeated phrase.' }),
+    parentId: 'chapter-one'
   });
 });
 

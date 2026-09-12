@@ -163,13 +163,24 @@ function splitAtTokens(content: string, count: number, prefix: string) {
 }
 
 function readableElementTitle(element: HtmlElement) {
-  const title = collectText(element).replace(/\s+/gu, ' ').trim();
+  const title = collectStructuralLabel(element).replace(/\s+/gu, ' ').trim();
   return title ? title.slice(0, 120) : null;
 }
 
-function collectText(node: HtmlNode): string {
+function collectStructuralLabel(element: HtmlElement) {
+  if (/^h[1-6]$/u.test(element.tagName)) return collectInlineText(element);
+  const childHeading = element.childNodes.find((child): child is HtmlElement => (
+    'tagName' in child && /^h[1-6]$/u.test(child.tagName)
+  ));
+  if (childHeading) return collectInlineText(childHeading);
+  return element.childNodes.map((child) => (
+    'tagName' in child && BLOCK_TAGS.has(child.tagName) ? '' : collectInlineText(child)
+  )).join(' ');
+}
+
+function collectInlineText(node: HtmlNode): string {
   if (node.nodeName === '#text') return 'value' in node ? node.value : '';
-  return 'childNodes' in node ? node.childNodes.map(collectText).join(' ') : '';
+  return 'childNodes' in node ? node.childNodes.map(collectInlineText).join(' ') : '';
 }
 
 function markerKey(marker: LocatedMarker) {
