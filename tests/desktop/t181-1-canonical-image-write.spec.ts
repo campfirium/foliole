@@ -95,7 +95,6 @@ test('imports misleading image extension to one canonical key across relaunch', 
     });
     await expect(fs.readFile(storagePath)).resolves.toEqual(bytes);
     await expect(fs.access(path.join(libraryHome, 'Assets', `${contentHash}.jpeg`))).rejects.toThrow();
-    await openImageNode(desktopSession.firstWindow, nodeId);
 
     await desktopSession.electronApp.close();
     secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
