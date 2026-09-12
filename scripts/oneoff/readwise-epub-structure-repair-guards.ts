@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { isReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
 
 interface ProtectionDetails {
   attachmentRows: Array<Record<string, unknown>>;
@@ -12,7 +13,9 @@ interface ProtectionDetails {
 
 export function captureRepairProtection(driver: DatabaseDriver, rootNodeIds: string[]) {
   const ids = descendants(driver, rootNodeIds);
-  const protectedIds = ids.filter((id) => !id.startsWith('node-epub-') && !rootNodeIds.includes(id));
+  const protectedIds = ids.filter((id) => (
+    !id.startsWith('node-epub-') && !isReadwiseUnlocatedNodeId(id) && !rootNodeIds.includes(id)
+  ));
   const details: ProtectionDetails = {
     attachmentRows: rowsByIds(driver, 'node_attachments', 'node_id', ids),
     immutableNodeRows: immutableNodes(driver, protectedIds),
