@@ -1,7 +1,7 @@
 import type { PreparedReadwiseApiEpubStructure } from '../../lib/core/readwise/readwiseApiEpubStructure.js';
 
 import {
-  coverageHash, normalizeCoverage, rootSourceContent
+  coverageHash, describeCoverageDifference, normalizeCoverage, rootSourceContent
 } from './readwise-epub-structure-repair-guards.js';
 import type { RepairBody } from './readwise-epub-structure-repair-types.js';
 
@@ -30,7 +30,9 @@ export function buildRepairBodies(input: {
 }) {
   const bodies: RepairBody[] = [
     {
-      content: rebuildRootContent(input.root.content, input.structure.rootBody, input.contentById.get(input.root.id)),
+      content: rebuildRootContent(
+        input.root.content, input.structure.legacyRootBody ?? '', input.contentById.get(input.root.id)
+      ),
       isTitleManual: input.root.is_title_manual,
       nodeId: input.root.id, parentId: input.root.parent_id, title: input.root.title
     },
@@ -73,7 +75,19 @@ function assertCoverage(
     throw new Error(`readwise_epub_root_body_not_pristine:${input.documentId}`);
   }
   if (sourceCoverageHash !== newCoverageHash || bodies.length !== input.desired.length + 1) {
-    throw new Error(`readwise_epub_reprojected_body_coverage_mismatch:${input.documentId}`);
+    const sourceContent = [
+      input.structure.legacyRootBody ?? '',
+      ...(input.structure.legacySections ?? []).map((section) => section.content)
+    ].join('\n\n');
+    const projectedContent = [
+      rootSourceContent(bodies[0]!.content), ...bodies.slice(1).map((item) => item.content)
+    ].join('\n\n');
+    throw new Error([
+      'readwise_epub_reprojected_body_coverage_mismatch', input.documentId,
+      `source=${sourceCoverageHash}`, `projected=${newCoverageHash}`,
+      `bodies=${bodies.length}`, `desired=${input.desired.length + 1}`,
+      JSON.stringify(describeCoverageDifference(sourceContent, projectedContent))
+    ].join(':'));
   }
 }
 

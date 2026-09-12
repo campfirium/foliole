@@ -4,6 +4,7 @@ export interface RepairBody {
   nodeId: string;
   parentId: string | null;
   title: string;
+  unlocatedNodeId: string;
 }
 
 export interface RepairHighlight {
@@ -52,6 +53,7 @@ export interface ReadwiseEpubStructureRepairPlan {
     moves: number;
     rootHighlights: number;
     staleNodes: number;
+    unlocatedHighlights: number;
     unanchoredHighlights: number;
   };
   corpusAudit: ReturnType<typeof import('./readwise-epub-corpus-audit.js').auditReadwiseEpubCorpus>;

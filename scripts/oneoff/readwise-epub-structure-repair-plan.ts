@@ -5,6 +5,10 @@ import { requireResolvedNodeBody } from '../../lib/core/database/nodeBodyResolut
 import { buildReadwiseApiEpubBookNodes } from '../../lib/core/readwise/readwiseApiEpubBookTree.js';
 import { prepareReadwiseApiEpubStructure } from '../../lib/core/readwise/readwiseApiEpubStructure.js';
 import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
+import {
+  buildReadwiseUnlocatedNodeId,
+  isReadwiseUnlocatedNodeId
+} from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
 
 import { auditReadwiseEpubCorpus, type ReadwiseEpubSourceSnapshot } from './readwise-epub-corpus-audit.js';
 import { buildRepairBodies } from './readwise-epub-structure-repair-bodies.js';
@@ -62,6 +66,9 @@ export function buildReadwiseEpubStructureRepairPlan(input: {
       total + book.highlights.filter((item) => item.parentId === book.rootNodeId).length
     ), 0),
     staleNodes: sum(books, 'staleNodeIds'),
+    unlocatedHighlights: books.reduce((total, book) => (
+      total + book.highlights.filter((item) => item.parentId === book.unlocatedNodeId).length
+    ), 0),
     unanchoredHighlights: highlights.filter((item) => !hasResolvedRepairHighlight(item)).length
   };
   const protection = captureRepairProtection(input.driver, books.map((book) => book.rootNodeId)).summary;
@@ -81,8 +88,8 @@ function buildBook(
   const rows = readTree(driver, source.latest_node_id);
   const root = rows.find((row) => row.id === source.latest_node_id);
   if (!root) throw new Error(`readwise_epub_root_missing:${source.remote_document_id}`);
-  const oldGenerated = rows.filter((row) => row.id.startsWith('node-epub-'))
-    .sort((left, right) => left.created_at.localeCompare(right.created_at));
+  const generatedRows = rows.filter((row) => row.id.startsWith('node-epub-'));
+  const oldGenerated = orderGeneratedRows(generatedRows, source, structure.legacyMarkerKeys ?? []);
   const desired = projected.map((node) => ({
     ...node, nodeId: stableReadwiseEpubNodeId(source.remote_connection_ref, source.remote_document_id, node.key)
   }));
@@ -110,8 +117,7 @@ function buildBook(
   });
   const staleNodeIds = oldGenerated.map((row) => row.id).filter((id) => !desiredIds.has(id));
   const staleTargets = buildStaleTargets(oldGenerated, desiredIds, root.id);
-  const highlights = rows.filter((row) => row.id.startsWith('node-readwise-') && row.id !== root.id)
-    .map((row) => relocateRepairHighlight(row, coverage.bodies, root.id));
+  const { highlights, unlocatedNodeId } = buildRepairHighlights(source, rows, coverage.bodies, root.id);
   const highlightIds = new Set(highlights.map((item) => item.nodeId));
   const moves = rows.filter((row) => row.parent_id && staleTargets.has(row.parent_id)
     && !staleNodeIds.includes(row.id) && !highlightIds.has(row.id))
@@ -124,8 +130,39 @@ function buildBook(
     attachmentCopies, bodies: coverage.bodies, documentId: source.remote_document_id, headingCount: desired.length,
     currentCoverageHash: coverage.currentCoverageHash, highlights, moves, newCoverageHash: coverage.newCoverageHash,
     reusedNodeIds: desired.map((node) => node.nodeId), rootNodeId: root.id,
-    sourceCoverageHash: coverage.sourceCoverageHash, staleNodeIds, title: root.title
+    sourceCoverageHash: coverage.sourceCoverageHash, staleNodeIds, title: root.title,
+    unlocatedNodeId
   };
+}
+
+function orderGeneratedRows(
+  rows: NodeRow[],
+  source: { remote_connection_ref: string; remote_document_id: string },
+  markerKeys: string[]
+) {
+  const order = new Map(markerKeys.map((key, index) => [
+    stableReadwiseEpubNodeId(source.remote_connection_ref, source.remote_document_id, key), index
+  ]));
+  return [...rows].sort((left, right) => (
+    (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    || left.created_at.localeCompare(right.created_at)
+    || left.id.localeCompare(right.id)
+  ));
+}
+
+function buildRepairHighlights(
+  source: { remote_connection_ref: string; remote_document_id: string },
+  rows: NodeRow[],
+  bodies: Array<{ content: string; nodeId: string }>,
+  rootId: string
+) {
+  const unlocatedNodeId = buildReadwiseUnlocatedNodeId(
+    source.remote_connection_ref, source.remote_document_id
+  );
+  const highlights = rows.filter((row) => (
+    row.id.startsWith('node-readwise-') && row.id !== rootId && !isReadwiseUnlocatedNodeId(row.id)
+  )).map((row) => relocateRepairHighlight(row, bodies, rootId, unlocatedNodeId));
+  return { highlights, unlocatedNodeId };
 }
 
 function assertPristineGeneratedProjection(

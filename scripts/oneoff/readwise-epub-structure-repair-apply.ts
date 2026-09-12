@@ -1,4 +1,5 @@
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver.js';
+import { ensureReadwiseUnlocatedNode } from '../../electron/import/readwiseOriginalEpubUnlocated.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import {
@@ -43,6 +44,16 @@ export function applyReadwiseEpubStructureRepair(
 }
 
 function applyBook(driver: DatabaseDriver, book: ReadwiseEpubBookRepair, now: string, changed: Set<string>) {
+  if (book.highlights.some((highlight) => highlight.parentId === book.unlocatedNodeId)) {
+    ensureReadwiseUnlocatedNode({
+      connectionRef: readConnectionRef(driver, book.rootNodeId),
+      documentId: book.documentId,
+      driver,
+      importedAt: now,
+      rootNodeId: book.rootNodeId
+    });
+    changed.add(book.unlocatedNodeId);
+  }
   book.bodies.forEach((body) => applyBody(driver, body, now, changed));
   book.moves.forEach((move) => {
     const result = driver.execute(
@@ -125,6 +136,14 @@ export function verifyReadwiseEpubStructureRepair(
         throw new Error(`readwise_epub_repair_highlight_verification_failed:${highlight.nodeId}`);
       }
     }
+    if (book.highlights.some((highlight) => highlight.parentId === book.unlocatedNodeId)) {
+      const unlocated = driver.queryOne<{ parent_id: string | null; title: string }>(
+        'SELECT parent_id, title FROM nodes WHERE id = ? AND deleted_at IS NULL', [book.unlocatedNodeId]
+      );
+      if (!unlocated || unlocated.parent_id !== book.rootNodeId || unlocated.title !== '※') {
+        throw new Error(`readwise_epub_repair_unlocated_verification_failed:${book.documentId}`);
+      }
+    }
     if (book.staleNodeIds.length === 0) continue;
     const marks = book.staleNodeIds.map(() => '?').join(', ');
     const visible = driver.queryOne<{ count: number }>(
@@ -133,6 +152,14 @@ export function verifyReadwiseEpubStructureRepair(
     if (visible !== 0) throw new Error(`readwise_epub_repair_stale_visible:${book.documentId}`);
   }
   return { books: plan.books.length, headings: plan.counts.headings, staleNodes: plan.counts.staleNodes };
+}
+
+function readConnectionRef(driver: DatabaseDriver, rootNodeId: string) {
+  const row = driver.queryOne<{ remote_connection_ref: string }>(
+    'SELECT remote_connection_ref FROM import_sources WHERE latest_node_id = ?', [rootNodeId]
+  );
+  if (!row) throw new Error(`readwise_epub_repair_source_missing:${rootNodeId}`);
+  return row.remote_connection_ref;
 }
 
 function verifyBookBodies(driver: DatabaseDriver, book: ReadwiseEpubBookRepair) {

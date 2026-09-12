@@ -18,7 +18,8 @@ interface HighlightRow {
 export function relocateRepairHighlight(
   row: HighlightRow,
   bodies: Array<{ content: string; nodeId: string }>,
-  rootId: string
+  rootId: string,
+  unlocatedNodeId: string
 ): RepairHighlight {
   const stored = parseAnchor(row.anchor_link);
   const content = requireResolvedNodeBody(row, row.id).content;
@@ -35,7 +36,9 @@ export function relocateRepairHighlight(
     bodies: available, highlight: { content, label: null, locatorText, nodeId: row.id }, rootNodeId: rootId
   });
   const parentBody = available.find((item) => item.id === placement.parentId)?.content ?? '';
-  const anchored = applyImportedHighlightAnchors({ content: parentBody, highlights: [placement.highlight] }).highlights[0];
+  const anchored = applyImportedHighlightAnchors({
+    ambiguityPolicy: 'first', content: parentBody, highlights: [placement.highlight]
+  }).highlights[0];
   if (stored.locator && !anchored) throw new Error(`readwise_epub_resolved_highlight_regressed:${row.id}`);
   const anchorId = typeof stored.id === 'string' ? stored.id : `imported-highlight-${row.id}`;
   const anchorLink = anchored ? JSON.stringify({
@@ -49,7 +52,7 @@ export function relocateRepairHighlight(
     }) : null;
   return {
     anchorLink, imageRegions: regions ? JSON.stringify(regions) : null,
-    nodeId: row.id, parentId: placement.parentId
+    nodeId: row.id, parentId: anchored ? placement.parentId : unlocatedNodeId
   };
 }
 
