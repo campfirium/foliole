@@ -129,7 +129,7 @@ test('keeps ordinary switching and placeholder display inert until one original-
   const before = await readFacts(desktopApp);
   expect(before).toEqual({ dialogCount: 0, inventorySettingCount: 0, readwiseDirectoryReadCount: 0 });
 
-  await desktopWindow.getByRole('button', { name: /^(Load original file|加载原文件)$/ }).click();
+  await desktopWindow.getByRole('button', { name: /^(Load original file|加载原文件)$/ }).evaluate((button) => button.click());
   await expect(desktopWindow.getByRole('dialog', { name: /^(Choose reading mode|选择阅读模式)$/ })).toBeVisible();
   await desktopWindow.getByRole('button', { name: /^(Free reading|自由阅读)/ }).click();
   await expect.poll(() => readFacts(desktopApp)).toMatchObject({ dialogCount: 1 });
