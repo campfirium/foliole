@@ -34,10 +34,11 @@ async function inspectAttachment(desktopApp: ElectronApplication, nodeId: string
   }, nodeId);
 }
 
-async function openImageNode(page: Page, nodeId: string) {
-  await expect.poll(() => page.evaluate(async (targetNodeId) =>
-    globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false, nodeId)).toBe(true);
-  const image = page.locator('.cm-md-image-element-block');
+async function openImageNode(page: Page) {
+  const topic = page.getByRole('treeitem', { exact: true, name: 'Canonical image write' });
+  await expect(topic).toBeVisible();
+  await topic.click();
+  const image = page.getByRole('main').getByRole('img', { name: 'Misleading extension' });
   await expect(image).toHaveCount(1);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
 }
@@ -100,7 +101,7 @@ test('imports misleading image extension to one canonical key across relaunch', 
     await expectWorkspaceShell(secondSession.firstWindow);
     const content = (await loadNodeDocument(secondSession.firstWindow, nodeId))?.content ?? '';
     expect(content).toBe(firstContent);
-    await openImageNode(secondSession.firstWindow, nodeId);
+    await openImageNode(secondSession.firstWindow);
     await writeEvidence({
       attachment: await inspectAttachment(secondSession.electronApp, nodeId),
       content, sourcePath, storagePath, testInfo
