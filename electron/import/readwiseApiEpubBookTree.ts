@@ -1,4 +1,5 @@
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   buildReadwiseApiEpubBookNodes,
@@ -19,10 +20,12 @@ export function persistReadwiseApiEpubBookNodes(input: {
   rootNodeId: string;
 }) {
   const driver = openDatabaseConnection().driver;
-  const nodeIds = new Map<string, string>();
+  const nodeIds = new Map(input.nodes.map((node) => [
+    node.key,
+    stableReadwiseEpubNodeId(input.connectionRef, input.documentId, node.key)
+  ]));
   input.nodes.forEach((node, index) => {
-    const nodeId = stableReadwiseEpubNodeId(input.connectionRef, input.documentId, node.key);
-    nodeIds.set(node.key, nodeId);
+    const nodeId = nodeIds.get(node.key)!;
     upsertNodeSnapshot(driver, {
       anchorLink: null,
       content: node.content,
@@ -40,6 +43,28 @@ export function persistReadwiseApiEpubBookNodes(input: {
     replaceReadwiseApiEpubImageLinks(nodeId, node.attachmentIds);
   });
   retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);
+  orderBookNodes(driver, input.rootNodeId, [...nodeIds.values()]);
+}
+
+function orderBookNodes(
+  driver: ReturnType<typeof openDatabaseConnection>['driver'],
+  rootNodeId: string,
+  nodeIds: string[]
+) {
+  const current = driver.queryAll<{ node_id: string }>(
+    'SELECT node_id FROM node_order ORDER BY position ASC'
+  ).map((row) => row.node_id);
+  const rootIndex = current.indexOf(rootNodeId);
+  if (rootIndex < 0) return;
+  const generated = new Set(driver.queryAll<{ id: string }>(
+    `WITH RECURSIVE descendants(id) AS (
+       SELECT id FROM nodes WHERE parent_id = ?
+       UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
+     ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%'`, [rootNodeId]
+  ).map((row) => row.id));
+  const ordered = current.filter((nodeId) => !generated.has(nodeId));
+  ordered.splice(ordered.indexOf(rootNodeId) + 1, 0, ...nodeIds);
+  rewriteExistingNodeOrder(driver, ordered);
 }
 
 function retireObsoleteBookNodes(

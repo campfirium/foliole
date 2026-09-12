@@ -55,3 +55,15 @@ it('merges reliable fourth through sixth level content into the closest third le
   expect(nodes[2]?.content).toContain('#### Detail');
   expect(nodes[2]?.content).toContain('###### Finest');
 });
+
+it('preserves the parent keys produced by the shared EPUB importer', () => {
+  const nodes = buildReadwiseApiEpubBookNodes([
+    { content: 'Chapter', headingLevel: null, markerKey: 'chapter', naturalLevel: 2, parentKey: 'volume', title: 'Chapter' },
+    { content: 'Volume', headingLevel: null, markerKey: 'volume', naturalLevel: 1, parentKey: null, title: 'Volume' }
+  ]);
+
+  expect(nodes.map((node) => [node.key, node.parentKey])).toEqual([
+    ['chapter', 'volume'],
+    ['volume', null]
+  ]);
+});

@@ -51,6 +51,7 @@ function fragmentKey(href: string | null) {
 
 function normalizeSectionTitle(title: string) {
   return title
+    .replace(/\[\^?\d+\]/g, '')
     .replace(/[*_`~[\]()#]/g, '')
     .replace(/\s+/g, '')
     .trim()
@@ -116,15 +117,22 @@ function resolveUnconsumedChapter(
 
 function appendTocNode(
   nodes: RawBookNode[],
-  input: { chapter: SpineChapterNode | null; entry: EpubTocEntry; key: string; parentKey: string | null }
+  input: {
+    chapter: SpineChapterNode | null;
+    entry: EpubTocEntry;
+    key: string;
+    parentKey: string | null;
+    sliceByTitle: boolean;
+  }
 ) {
   const { chapter, entry, key, parentKey } = input;
   const fragment = fragmentKey(entry.href);
-  const content = chapter && hasFragment(entry.href) && !hasFragment(chapter.href)
-    ? (sliceMarkdownSection(chapter.content, entry.title) ?? '')
+  const content = chapter && input.sliceByTitle
+    ? (sliceMarkdownSection(chapter.content, entry.title)
+      ?? (normalizeSectionTitle(chapter.title) === normalizeSectionTitle(entry.title) ? chapter.content : ''))
     : (chapter?.content ?? '');
   const splitChapterBody = Boolean(chapter && entry.children.length > 0 && content.trim());
-  const placeholderParent = Boolean(!chapter && entry.children.length > 0);
+  const placeholderParent = Boolean(entry.children.length > 0 && !content.trim());
   const missingFragmentReason = chapter && fragment && !hasFragment(chapter.href) && !content
     ? `EPUB TOC fragment could not be matched: ${entry.href ?? fragment}`
     : null;
@@ -167,29 +175,63 @@ export function buildBookNodes(input: {
     }
   }
   const nodes: RawBookNode[] = [];
+  const referenceCounts = countUnanchoredTocReferences(input.toc);
   let tocIndex = 0;
 
   const visitEntries = (entries: EpubTocEntry[], parentKey: string | null) => {
     entries.forEach((entry) => {
-      const matchedChapter = resolveUnconsumedChapter(chapterByHref, consumedChapterKeys, entry.href);
+      const repeatedReference = (referenceCounts.get(entry.href) ?? 0) > 1;
+      const matchedChapter = repeatedReference
+        ? (chapterByHref.get(entry.href) ?? chapterByHref.get(stripFragment(entry.href)) ?? null)
+        : resolveUnconsumedChapter(chapterByHref, consumedChapterKeys, entry.href);
       const fragment = matchedChapter && hasFragment(entry.href) ? fragmentKey(entry.href) : null;
-      const hasFragmentSection = Boolean(matchedChapter && fragment && sliceMarkdownSection(matchedChapter.content, entry.title));
-      const key = matchedChapter && (!fragment || hasFragmentSection)
+      const sliceByTitle = Boolean(matchedChapter && !hasFragment(matchedChapter.href) && (fragment || repeatedReference));
+      const hasSection = Boolean(matchedChapter && sliceByTitle && sliceMarkdownSection(matchedChapter.content, entry.title));
+      const key = matchedChapter && !repeatedReference && (!sliceByTitle || hasSection)
         ? (fragment ? `${matchedChapter.key}::${fragment}` : matchedChapter.key)
         : `toc-${tocIndex += 1}`;
       if (matchedChapter) {
         consumedChapterKeys.add(matchedChapter.key);
       }
-      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey });
+      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey, sliceByTitle });
       visitEntries(entry.children, key);
     });
   };
 
   visitEntries(input.toc, null);
-  for (const chapter of input.chapters) {
-    if (!consumedChapterKeys.has(chapter.key)) {
-      nodes.push(copyChapterNode(chapter, null));
-    }
-  }
+  reconcileUnconsumedChapterBodies(nodes, input.chapters, consumedChapterKeys);
   return nodes;
+}
+
+function countUnanchoredTocReferences(toc: EpubTocEntry[]) {
+  const counts = new Map<string | null, number>();
+  const visit = (entries: EpubTocEntry[]) => entries.forEach((entry) => {
+    if (entry.href && !hasFragment(entry.href)) {
+      counts.set(entry.href, (counts.get(entry.href) ?? 0) + 1);
+    }
+    visit(entry.children);
+  });
+  visit(toc);
+  return counts;
+}
+
+function reconcileUnconsumedChapterBodies(
+  nodes: RawBookNode[],
+  chapters: SpineChapterNode[],
+  consumedChapterKeys: ReadonlySet<string>
+) {
+  const nodesByTitle = new Map<string, RawBookNode[]>();
+  for (const node of nodes) {
+    const title = normalizeSectionTitle(node.title);
+    nodesByTitle.set(title, [...(nodesByTitle.get(title) ?? []), node]);
+  }
+  for (const chapter of chapters) {
+    const matches = nodesByTitle.get(normalizeSectionTitle(chapter.title)) ?? [];
+    if (matches.length !== 1) continue;
+    const [node] = matches;
+    if (!node || (consumedChapterKeys.has(chapter.key) && node.content.trim())) continue;
+    node.content = chapter.content;
+    node.degradedReason = chapter.degradedReason;
+    node.embeddedImages = chapter.embeddedImages;
+  }
 }

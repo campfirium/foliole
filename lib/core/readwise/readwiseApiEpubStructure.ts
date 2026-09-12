@@ -34,6 +34,7 @@ export interface PreparedReadwiseApiEpubSection {
   headingLevel: number | null;
   markerKey: string;
   naturalLevel?: number;
+  parentKey?: string | null;
   title: string;
 }
 

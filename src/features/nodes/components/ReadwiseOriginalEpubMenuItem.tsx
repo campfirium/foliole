@@ -41,10 +41,8 @@ export function ReadwiseOriginalEpubMenuItem(props: {
     return () => { active = false; };
   }, [props.nodeId]);
 
-  if (!props.nodeId || !state || state.status === 'not_applicable') return null;
-  const label = state.status === 'completed'
-    ? t('desktop.nodeList.menu.useOriginalEpub.completed')
-    : state.status === 'reconnect_required'
+  if (!props.nodeId || !state || state.status === 'not_applicable' || state.status === 'completed') return null;
+  const label = state.status === 'reconnect_required'
       ? t('desktop.nodeList.menu.useOriginalEpub.reconnect')
       : state.status === 'running'
         ? t('desktop.nodeList.menu.useOriginalEpub.running')

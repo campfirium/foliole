@@ -49,7 +49,6 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.rename': 'Rename',
   'desktop.nodeList.menu.mergeHighlights': 'Merge highlights',
   'desktop.nodeList.menu.useOriginalEpub': 'Use original EPUB',
-  'desktop.nodeList.menu.useOriginalEpub.completed': 'Original EPUB is in use',
   'desktop.nodeList.menu.useOriginalEpub.reconnect': 'Use original EPUB — reconnect Readwise first',
   'desktop.nodeList.menu.useOriginalEpub.running': 'Using original EPUB…',
   'desktop.nodeList.menu.useOriginalEpub.sourceInactive': 'Use original EPUB — this device does not handle Readwise imports',

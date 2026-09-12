@@ -16,6 +16,10 @@ export function buildReadwiseApiEpubBookNodes(
   const stack: Array<{ key: string; level: number }> = [];
   const nodes: ReadwiseApiEpubBookNode[] = [];
   for (const section of sections) {
+    if (section.parentKey !== undefined) {
+      nodes.push(toNode(section, section.parentKey));
+      continue;
+    }
     if (section.naturalLevel === undefined && section.headingLevel === null) {
       nodes.push(toNode(section, null));
       continue;

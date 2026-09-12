@@ -164,3 +164,52 @@ it('marks unresolved same-file toc fragments as degraded instead of silently imp
     }
   ]);
 });
+
+it('uses the navigation tree once and fills its body from an otherwise unconsumed same-title spine chapter', () => {
+  const nodes = buildBookNodes({
+    chapters: [
+      {
+        content: '# Wrong body\n\nWrong chapter.', degradedReason: null, embeddedImages: [],
+        href: 'OPS/shared.xhtml', key: 'shared', parentKey: null, title: 'Other chapter'
+      },
+      {
+        content: '# Chapter 2\n\nCorrect body.', degradedReason: null, embeddedImages: [],
+        href: 'OPS/chapter-2.xhtml', key: 'chapter-2', parentKey: null, title: 'Chapter 2'
+      },
+      {
+        content: '# Contents\n\nNavigation links.', degradedReason: null, embeddedImages: [],
+        href: 'OPS/contents.xhtml', key: 'contents', parentKey: null, title: 'Contents'
+      }
+    ],
+    toc: [{
+      children: [{ children: [], href: 'OPS/shared.xhtml', title: 'Chapter 2' }],
+      href: null,
+      title: 'Volume One'
+    }]
+  });
+
+  expect(nodes.map((node) => [node.title, node.parentKey, node.content])).toEqual([
+    ['Volume One', null, '**Volume One**'],
+    ['Chapter 2', 'toc-1', '# Chapter 2\n\nCorrect body.']
+  ]);
+});
+
+it('splits repeated unanchored toc references by their explicit headings', () => {
+  const nodes = buildBookNodes({
+    chapters: [{
+      content: '# Chapter 1\n\nFirst body.\n\n# Chapter 2\n\nSecond body.',
+      degradedReason: null, embeddedImages: [], href: 'OPS/shared.xhtml',
+      key: 'shared', parentKey: null, title: 'Chapter 1'
+    }],
+    toc: [
+      { children: [], href: 'OPS/shared.xhtml', title: 'Chapter 1' },
+      { children: [], href: 'OPS/shared.xhtml', title: 'Chapter 2' }
+    ]
+  });
+
+  expect(nodes.map((node) => [node.title, node.content])).toEqual([
+    ['Chapter 1', '# Chapter 1\n\nFirst body.'],
+    ['Chapter 2', '# Chapter 2\n\nSecond body.']
+  ]);
+  expect(new Set(nodes.map((node) => node.key))).toHaveLength(2);
+});

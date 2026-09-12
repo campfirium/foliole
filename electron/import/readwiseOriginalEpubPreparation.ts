@@ -107,6 +107,7 @@ export async function prepareOriginalEpubCandidate(input: {
         headingLevel: null,
         markerKey: node.key,
         naturalLevel: nodeDepth(book.nodes, node.key),
+        parentKey: node.parentKey,
         title: node.title
       });
     }

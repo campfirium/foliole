@@ -48,10 +48,14 @@ function Menu({ nodeId }: { nodeId: string }) {
   );
 }
 
-it('hides ordinary nodes and explains why an eligible book action cannot run', async () => {
+it('hides ordinary and completed books and explains why an eligible book action cannot run', async () => {
   const { rerender } = renderWithLocalization(
     <Menu nodeId="ordinary" />
   );
+  await waitFor(() => expect(screen.queryByRole('menuitem')).toBeNull());
+
+  state.status = 'completed';
+  rerender(<Menu nodeId="completed-book" />);
   await waitFor(() => expect(screen.queryByRole('menuitem')).toBeNull());
 
   state.status = 'source_inactive';
