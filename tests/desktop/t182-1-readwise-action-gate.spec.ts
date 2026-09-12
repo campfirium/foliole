@@ -47,6 +47,13 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
     await fsApi.promises.writeFile(sourcePath, content, 'utf8');
     await fsApi.promises.writeFile(highlightFile, '# T182 Readwise Topic\n\n## Highlights\n- Govern database reads.', 'utf8');
     const imported = await connection.runWithDatabaseConnectionOwner(() => {
+      settings.saveImportManagerSettings({
+        ...settings.loadImportManagerSettings(),
+        readwiseReaderConfig: { enabled: true, highlightsHeading: '## Highlights', importScope: 'full_document', validatedAt: null },
+        readwiseRootPath: fixture.readwiseRoot,
+        readwiseSources: [{ highlightMode: 'split', highlightPath: fixture.highlightPath, id: 't182-articles',
+          keepPreview: null, keepState: 'enabled', kind: 'articles', primaryPath: fixture.primaryPath }]
+      });
       const prepared = fingerprint.createPreparedDesktopTextImport({
         content, fileName: fixture.sourceName, filePath: sourcePath,
         importedAt: '2026-09-12T00:00:00.000Z', kind: 'markdown',
@@ -57,13 +64,6 @@ async function seedWorkspace(app: ElectronApplication, stateRoot: string) {
         configRef: 't182-articles', location: fixture.sourceName,
         sourceFingerprint: prepared.sourceFingerprint, sourceType: 'readwise',
         updatedAt: '2026-09-12T00:00:00.000Z'
-      });
-      settings.saveImportManagerSettings({
-        ...settings.loadImportManagerSettings(),
-        readwiseReaderConfig: { enabled: true, highlightsHeading: '## Highlights', importScope: 'full_document', validatedAt: null },
-        readwiseRootPath: fixture.readwiseRoot,
-        readwiseSources: [{ highlightMode: 'split', highlightPath: fixture.highlightPath, id: 't182-articles',
-          keepPreview: null, keepState: 'enabled', kind: 'articles', primaryPath: fixture.primaryPath }]
       });
       host.activateReadwiseOnThisHost();
       return result;
