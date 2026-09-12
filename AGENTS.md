@@ -47,7 +47,7 @@
 - 短标题按“本轮点名文件/方案 > active plan > 最近未完成明确指令”解析；仍无唯一目标时只问一个问题。歧义与未确认根因只写现象、假设和待确认点。
 - sync、schema/migration、preload/IPC/native bridge、Capacitor/宿主生命周期、review queue、delete/restore、import/reimport、持久化、冲突、安全边界、不可逆数据与人工验收失败复修属于高风险触发；评估中建议 High/XHigh，并按适用局部规则核对官方来源。
 - 扫描、轮询、自造协议、新依赖、长期双写、运行时迁移、隐式 fallback、局部复制或先污染后清理若成为拟议主路线，先说明其身份、触发证据和退出条件并进入 `STOP_CONFIRM`。
-- 规划、修订与 owner 裁决只由 `/2` 负责；执行审定闭环只由 `/3` 负责。根不复述阶段、合同轴、交接或完成状态机。
+- 规划与行为修订使用 `/2`：修改已有行为先描述现状，再逐层展开目标伪代码，与用户对齐后才拆闭环；`/3` 负责实现和验证，`/4` 负责最终验收。具体流程只由技能定义，不另写平行功能设计。
 - 未获用户当次授权不得使用子代理。获授权后也只分流边界清晰的只读会诊或机械整改；主进程负责根因、语义、最终 diff、验证与提交收口。
 
 ## Architecture And Data
@@ -59,7 +59,7 @@
 
 ## Quality, Acceptance, And Preview
 
-- Foliole implementation plans default to `Validation mode: closure`: each `/3` closure completes its affected narrow validation and required visible host acceptance before it is marked complete. Use `final-batch` only when the user or an approved project plan explicitly chooses deferred acceptance.
+- 每个 `/3` 闭环默认完成相关窄验证与必要宿主验收后才勾选。只有用户或已批准方案明确选择延后验收时才采用 `final-batch`，清楚记录交给 `/4` 的剩余验证，不以开发完成冒充最终通过。
 - 使用 `npm` 与 `package.json` 中登记的入口，不用不存在的 `npm test` 兜底，也不得降低检查标准。普通本地优先 `npm run quality:fast`，或显式 `npm run test:files -- <files>`、`npm run test:sqlite:electron -- <files>`、`npm run lint:files -- <files>`。
 - `test:changed`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 只在 hosted lane 执行。`scripts/quality/quality-command-contracts.mjs` 是命令分类真相；dev hosted recheck 只用 `npm run quality:remote -- --scope <desktop|shared|android|ios|full>`。
 - 新增或改变可观察行为时维护独立于实现方式仍需长期成立的测试 contract；不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构。纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。
