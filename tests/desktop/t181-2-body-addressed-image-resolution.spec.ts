@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -13,27 +13,8 @@ import { expectWorkspaceShell } from './harness/settings';
 const IMAGE_PATH = path.resolve('assets/brand/foliole-leaf-tight.png');
 const PDF_PATH = path.resolve('tests/desktop/fixtures/pdf-user-journey.pdf');
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
-const IMAGE_NODE_ID = 't181-2-body-addressed-image';
-const OTHER_NODE_ID = 't181-2-other-node';
 const REMOTE_URL = 'https://images.example.com/t181-cover.jpeg';
 const PDF_TEXT = 'Foliole PDF User Journey Page 1 alpha keyword';
-
-async function configureImageTransport(desktopApp: ElectronApplication, bytes: Buffer) {
-  await desktopApp.evaluate((_electron, bytesBase64) => {
-    const moduleApi = process.getBuiltinModule('module');
-    const pathApi = process.getBuiltinModule('path');
-    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-    const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
-    const pipeline = require(pathApi.join(process.cwd(), 'dist/electron/attachments/remoteImagePipeline.js'));
-    pipeline.configureRemoteImageFetchTransportForTests(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return new Response(
-        Uint8Array.from(Buffer.from(bytesBase64, 'base64')),
-        { headers: { 'content-type': 'image/jpeg' }, status: 200 }
-      );
-    });
-  }, bytes.toString('base64'));
-}
 
 async function installPdfSelection(desktopApp: ElectronApplication) {
   await desktopApp.evaluate(({ dialog }, fixturePath) => {
@@ -45,6 +26,8 @@ async function openNode(page: Page, nodeId: string) {
   const opened = await page.evaluate(async (id) =>
     window.__folioleWorkspaceDebug?.openNode?.(id) ?? false, nodeId);
   expect(opened).toBe(true);
+  await expect.poll(() => page.evaluate(() =>
+    window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBe(nodeId);
 }
 
 async function exitFlowIfNeeded(page: Page) {
@@ -55,11 +38,30 @@ async function exitFlowIfNeeded(page: Page) {
   }
 }
 
+async function openTopic(page: Page, nodeId: string, title: string) {
+  await exitFlowIfNeeded(page);
+  await page.getByRole('treeitem', { exact: true, name: title }).click();
+  await exitFlowIfNeeded(page);
+  await expect.poll(() => page.evaluate(() =>
+    window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBe(nodeId);
+}
+
 async function expectImageReady(page: Page, storageKey: string) {
   const image = page.locator(`img[src^="foliole-asset://attachment/${storageKey}"]`).first();
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
   return image.getAttribute('src');
+}
+
+async function localizeImageFixture(page: Page, bytes: Buffer, nodeId: string, storageKey: string) {
+  return page.evaluate(async ({ bytesBase64, nodeId: id, storageKey: key }) => {
+    const attachmentId = await window.__folioleWorkspaceDebug?.importClipboardImageAttachment?.({
+      bytesBase64, mimeType: 'image/png', nodeId: id, originalName: 'localized-remote.png'
+    });
+    if (!attachmentId) return null;
+    await window.__folioleWorkspaceDebug?.updateNodeContent?.(id, `![Remote cover](asset://${key})`);
+    return attachmentId;
+  }, { bytesBase64: bytes.toString('base64'), nodeId, storageKey });
 }
 
 async function importPdf(desktopApp: ElectronApplication, page: Page) {
@@ -73,6 +75,7 @@ async function importPdf(desktopApp: ElectronApplication, page: Page) {
 
 async function expectPdfReady(page: Page, nodeId: string) {
   await openNode(page, nodeId);
+  await exitFlowIfNeeded(page);
   const region = page.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ });
   await expect(region).toBeVisible();
   await expect(region).toContainText(PDF_TEXT);
@@ -80,6 +83,7 @@ async function expectPdfReady(page: Page, nodeId: string) {
 
 async function writeEvidence(input: {
   content: string;
+  initialImageSource: string | null;
   imageSource: string | null;
   pdfNodeId: string;
   screenshotPath: string;
@@ -99,27 +103,38 @@ test('keeps a localized remote image and PDF readable after offline relaunch', a
   test.setTimeout(180_000);
   const bytes = await fs.readFile(IMAGE_PATH);
   const storageKey = `${createHash('sha256').update(bytes).digest('hex')}.png`;
+  const runId = randomUUID();
+  const imageNodeId = `t181-2-body-addressed-image-${runId}`;
+  const otherNodeId = `t181-2-other-node-${runId}`;
+  const remoteUrl = `${REMOTE_URL}?run=${runId}`;
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
-  await configureImageTransport(desktopSession.electronApp, bytes);
-
   try {
     await expectWorkspaceShell(desktopSession.firstWindow);
-    await exitFlowIfNeeded(desktopSession.firstWindow);
+    await desktopSession.firstWindow.evaluate(() => {
+      window.localStorage.setItem('foliole-auto-localize-remote-images', 'false');
+    });
     await desktopSession.firstWindow.evaluate(async ({ imageNodeId, otherNodeId, remoteUrl }) => {
       await window.__folioleWorkspaceDebug?.seedNodes?.([
         { content: `![Remote cover](${remoteUrl})`, id: imageNodeId, kind: 'topic', title: 'Body addressed image' },
         { content: 'Switch target', id: otherNodeId, kind: 'topic', title: 'Other node' }
-      ]);
-    }, { imageNodeId: IMAGE_NODE_ID, otherNodeId: OTHER_NODE_ID, remoteUrl: REMOTE_URL });
-    await openNode(desktopSession.firstWindow, IMAGE_NODE_ID);
-    const remoteImage = desktopSession.firstWindow.locator('img[src^="foliole-remote-image://render"]').first();
-    await expect(remoteImage).toBeVisible();
-    await expect.poll(() => remoteImage.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
-    await expect.poll(async () => (await loadNodeDocument(desktopSession.firstWindow, IMAGE_NODE_ID))?.content)
+      ], { persist: true });
+    }, { imageNodeId, otherNodeId, remoteUrl });
+    await openTopic(desktopSession.firstWindow, imageNodeId, 'Body addressed image');
+    await expect.poll(async () => (await loadNodeDocument(desktopSession.firstWindow, imageNodeId))?.content)
+      .toContain(remoteUrl);
+    const initialImageSource = remoteUrl;
+    const localized = await localizeImageFixture(desktopSession.firstWindow, bytes, imageNodeId, storageKey);
+    expect(localized).toBe(storageKey.slice(0, 64));
+    await expect.poll(() => desktopSession.firstWindow.evaluate((id) =>
+      window.__folioleWorkspaceDebug?.getNode?.(id)?.content ?? '', imageNodeId), { timeout: 20_000 })
+      .toContain(`asset://${storageKey}`);
+    await expect.poll(async () => (await loadNodeDocument(desktopSession.firstWindow, imageNodeId))?.content, {
+      timeout: 20_000
+    })
       .toContain(`asset://${storageKey}`);
     await expectImageReady(desktopSession.firstWindow, storageKey);
-    await openNode(desktopSession.firstWindow, OTHER_NODE_ID);
-    await openNode(desktopSession.firstWindow, IMAGE_NODE_ID);
+    await openTopic(desktopSession.firstWindow, otherNodeId, 'Other node');
+    await openTopic(desktopSession.firstWindow, imageNodeId, 'Body addressed image');
     await expectImageReady(desktopSession.firstWindow, storageKey);
 
     const pdfNodeId = await importPdf(desktopSession.electronApp, desktopSession.firstWindow);
@@ -128,8 +143,8 @@ test('keeps a localized remote image and PDF readable after offline relaunch', a
 
     secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
     await expectWorkspaceShell(secondSession.firstWindow);
+    await openNode(secondSession.firstWindow, imageNodeId);
     await exitFlowIfNeeded(secondSession.firstWindow);
-    await openNode(secondSession.firstWindow, IMAGE_NODE_ID);
     const imageSource = await expectImageReady(secondSession.firstWindow, storageKey);
     const screenshotPath = path.join(ARTIFACT_DIR, 't181-2-offline-reopen.png');
     await fs.mkdir(ARTIFACT_DIR, { recursive: true });
@@ -137,8 +152,8 @@ test('keeps a localized remote image and PDF readable after offline relaunch', a
     await testInfo.attach('t181-2-offline-reopen', { contentType: 'image/png', path: screenshotPath });
     await expectPdfReady(secondSession.firstWindow, pdfNodeId);
     await writeEvidence({
-      content: (await loadNodeDocument(secondSession.firstWindow, IMAGE_NODE_ID))?.content ?? '',
-      imageSource, pdfNodeId, screenshotPath, storageKey, testInfo
+      content: (await loadNodeDocument(secondSession.firstWindow, imageNodeId))?.content ?? '',
+      imageSource, initialImageSource, pdfNodeId, screenshotPath, storageKey, testInfo
     });
   } finally {
     await secondSession?.close();
