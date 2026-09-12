@@ -108,6 +108,23 @@ function invalidImageBytes() {
   ]);
 }
 
+function headingCoverBytes() {
+  return createTestZip([
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content: '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content: '<?xml version="1.0"?><package version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Cover</dc:title></metadata><manifest><item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/><item id="image" href="cover.png" media-type="image/png"/></manifest><spine><itemref idref="cover"/><itemref idref="chapter"/></spine><guide><reference type="cover" href="cover.xhtml"/></guide></package>',
+      name: 'OPS/book.opf'
+    },
+    { content: '<html><body><h1><img alt="Cover" src="cover.png"/></h1></body></html>', name: 'OPS/cover.xhtml' },
+    { content: '<html><body><h1>Chapter</h1><p>Body remains available.</p></body></html>', name: 'OPS/chapter.xhtml' },
+    { content: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), name: 'OPS/cover.png' }
+  ]);
+}
+
 async function seedTarget() {
   const connectionRef = ensureReadwiseRemoteSource(false, importedAt).connectionRef;
   const document = apiDocument();
@@ -189,4 +206,12 @@ it('removes files staged before an EPUB preparation failure', async () => {
   await expect(prepareOriginalEpubCandidate({ bytes: invalidImageBytes(), now: importedAt, title: 'Broken' }))
     .rejects.toThrow('original_epub_image_invalid');
   await expect(fs.readdir(path.join(mockedAppDataDir, 'assets'))).resolves.toEqual([]);
+});
+
+it('keeps a cover image nested in the leading heading when replacing the whole EPUB', async () => {
+  const candidate = await prepareOriginalEpubCandidate({ bytes: headingCoverBytes(), now: importedAt, title: 'Cover' });
+  expect(candidate.images.rootBody).toMatch(/^!\[Cover\]\(asset:\/\//u);
+  expect(candidate.images.rootAttachmentIds).toHaveLength(1);
+  expect(candidate.images.sections.some((section) => section.content.includes('Body remains available.'))).toBe(true);
+  expect(candidate.stages).toHaveLength(2);
 });

@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+import { collectMarkdownImageReferences } from '../../lib/core/import/markdownImageReferences.js';
 
 export interface ManifestItem {
   href: string;
@@ -27,7 +28,13 @@ function parseAttributes(fragment: string) {
 }
 
 function stripLeadingHeading(content: string) {
-  return content.replace(/^#\s+.*(?:\n\n|$)/, '').trim();
+  const heading = /^#\s+(.*)(?:\n\n|$)/.exec(content);
+  if (!heading) return content.trim();
+  const headingImages = collectMarkdownImageReferences(heading[1] ?? '')
+    .map((reference) => reference.fullMatch)
+    .join('\n\n');
+  const remainder = content.slice(heading[0].length).trim();
+  return [headingImages, remainder].filter(Boolean).join('\n\n');
 }
 
 function parseCoverImageItems(opfXml: string, manifest: ReadonlyMap<string, ManifestItem>) {

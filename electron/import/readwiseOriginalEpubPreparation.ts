@@ -34,7 +34,6 @@ async function prepareBody(
 ): Promise<PreparedBody> {
   const byDestination = new Map(embeddedImages.map((image) => [image.destination, image]));
   const attachmentIds = new Set<string>();
-  const consumedDestinations = new Set<string>();
   let rewritten = '';
   let cursor = 0;
   for (const reference of collectMarkdownImageReferences(content)) {
@@ -48,7 +47,6 @@ async function prepareBody(
     }
     const canonical = prepareCanonicalImageAttachment(image.bytes);
     if (!canonical) throw new Error('original_epub_image_invalid');
-    consumedDestinations.add(image.destination);
     attachmentIds.add(canonical.hash);
     let stage = stages.get(canonical.hash);
     if (!stage) {
@@ -64,9 +62,6 @@ async function prepareBody(
     rewritten += `![${reference.altText}](${buildAssetMarkdownUrl(canonical.storageKey)}${suffix})`;
   }
   rewritten += content.slice(cursor);
-  if (embeddedImages.some((image) => !consumedDestinations.has(image.destination))) {
-    throw new Error('original_epub_image_unreferenced');
-  }
   return {
     attachmentIds: [...attachmentIds],
     content: rewritten
