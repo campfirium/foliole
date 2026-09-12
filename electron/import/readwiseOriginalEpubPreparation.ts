@@ -92,9 +92,6 @@ export async function prepareOriginalEpubCandidate(input: {
   title: string;
 }): Promise<PreparedOriginalEpubCandidate> {
   const book = readRawEpubBookBytes(input.bytes, `${input.title}.epub`);
-  if (book.rootDegradedReason || book.nodes.some((node) => node.degradedReason)) {
-    throw new Error('original_epub_incomplete');
-  }
   if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
   const stages = new Map<string, StagedManagedAttachment>();
   try {

@@ -20,7 +20,6 @@ import {
   fetchOriginalEpubRemoteRoot
 } from './readwiseOriginalEpubRemote.js';
 import {
-  assertReadwiseOriginalEpubSourcePristine,
   captureReadwiseOriginalEpubSnapshot,
   isReadwiseOriginalEpubRuntimeReady,
   loadReadwiseOriginalEpubTarget,
@@ -68,7 +67,6 @@ export async function useReadwiseOriginalEpub(
   let candidate: PreparedOriginalEpubCandidate | null = null;
   runningNodeIds.add(nodeId);
   try {
-    assertReadwiseOriginalEpubSourcePristine(target);
     const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(target);
     publish(window, nodeId, operationId, 'getting_original', 'Getting original EPUB…', 0);
     const remote = await fetchOriginalEpubRemoteRoot({
@@ -98,10 +96,16 @@ export async function useReadwiseOriginalEpub(
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     if (candidate) await cleanCreatedManagedAttachmentFiles(candidate.stages);
-    const errorCode = error instanceof Error ? error.message : 'original_epub_failed';
+    const errorCode = readOriginalEpubErrorCode(error);
+    console.error('[readwise-original-epub] replacement failed', { errorCode, nodeId });
     publish(window, nodeId, operationId, 'failed', 'The book is unchanged.', 1);
     return { error_code: errorCode, node_id: nodeId, status: 'failed' };
   } finally {
     runningNodeIds.delete(nodeId);
   }
+}
+
+function readOriginalEpubErrorCode(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  return /^[a-z0-9_]+$/u.test(message) ? message.slice(0, 120) : 'original_epub_failed';
 }

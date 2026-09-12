@@ -32,7 +32,6 @@ import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js'
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
 import { prepareOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import {
-  assertReadwiseOriginalEpubSourcePristine,
   captureReadwiseOriginalEpubSnapshot,
   loadReadwiseOriginalEpubTarget
 } from './readwiseOriginalEpubTarget.js';
@@ -80,10 +79,14 @@ function originalBytes() {
       name: 'META-INF/container.xml'
     },
     {
-      content: '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Original</dc:title></metadata><manifest><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/><item id="two" href="two.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="one"/><itemref idref="two"/></spine></package>',
+      content: '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Original</dc:title></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/><item id="two" href="two.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="one"/><itemref idref="two"/></spine></package>',
       name: 'OPS/book.opf'
     },
-    { content: '<html><head><title>One</title></head><body><h1>One</h1><p>Remember me and local phrase.</p></body></html>', name: 'OPS/one.xhtml' },
+    {
+      content: '<html xmlns:epub="http://www.idpf.org/2007/ops"><body><nav epub:type="toc"><ol><li><a href="one.xhtml#missing">Missing anchor</a></li><li><a href="one.xhtml#found">One</a></li><li><a href="two.xhtml">Two</a></li></ol></nav></body></html>',
+      name: 'OPS/nav.xhtml'
+    },
+    { content: '<html><head><title>One</title></head><body><h1 id="found">One</h1><p>Remember me and local phrase.</p></body></html>', name: 'OPS/one.xhtml' },
     { content: '<html><head><title>Two</title></head><body><h1>Two</h1><p>Remember me in another place.</p></body></html>', name: 'OPS/two.xhtml' }
   ]);
 }
@@ -118,6 +121,10 @@ async function seedTarget() {
   driver.execute("UPDATE nodes SET title = 'My title', content = 'My remote note' WHERE id = ?", [remote.id]);
   driver.execute("UPDATE nodes SET title = 'My Book', updated_at = ? WHERE id = ?", ['2026-09-12T01:10:00.000Z', root.id]);
   driver.execute(
+    "UPDATE nodes SET title = 'Edited Reader chapter', content = 'Changed Reader body', body_blob_hash = NULL, updated_at = ? WHERE id = ?",
+    ['2026-09-12T01:20:00.000Z', readerSection.id]
+  );
+  driver.execute(
     `INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
      VALUES ('local-cloze',?,'item','Local',1,'Answer',? ,?,?),
        ('local-missing',?,'topic','Missing',1,'Kept',? ,?,?),
@@ -129,12 +136,11 @@ async function seedTarget() {
     ]
   );
   const target = loadReadwiseOriginalEpubTarget(root.id)!;
-  assertReadwiseOriginalEpubSourcePristine(target);
   const candidate = await prepareOriginalEpubCandidate({ bytes: originalBytes(), now: importedAt, title: target.title });
-  return { candidate, connectionRef, document, remoteId: remote.id, rootId: root.id, target };
+  return { candidate, connectionRef, document, readerSectionId: readerSection.id, remoteId: remote.id, rootId: root.id, target };
 }
 
-it('atomically replaces one book while preserving identities, user content, and local anchors', async () => {
+it('force-replaces changed Reader content while preserving identities, user content, and local anchors', async () => {
   const seeded = await seedTarget();
   const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(seeded.target);
   commitReadwiseOriginalEpub({ ...seeded, expectedSnapshot, importedAt });
@@ -144,6 +150,8 @@ it('atomically replaces one book while preserving identities, user content, and 
     .toEqual({ title: 'My Book' });
   expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id = ?', [seeded.remoteId]))
     .toEqual({ content: 'My remote note' });
+  expect(driver.queryOne('SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [seeded.readerSectionId]))
+    .toBeUndefined();
   expect(driver.queryOne<{ parent_title: string }>(
     'SELECT parent.title parent_title FROM nodes child JOIN nodes parent ON parent.id=child.parent_id WHERE child.id=?',
     [seeded.remoteId]

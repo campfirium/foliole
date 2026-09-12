@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
@@ -11,15 +9,9 @@ import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js'
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 
 interface TargetRow extends DatabaseRow {
-  body_blob_data: Uint8Array | string | null;
-  body_blob_hash: string | null;
   connection_ref: string;
-  content: string;
   document_id: string;
-  import_content_fingerprint: string | null;
-  last_imported_at: string;
   node_id: string;
-  node_updated_at: string;
   source_fingerprint: string;
   state_json: string;
   title: string;
@@ -37,11 +29,9 @@ export interface ReadwiseOriginalEpubTarget {
 function readTargetRow(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<TargetRow>(
     `SELECT i.remote_connection_ref connection_ref, i.remote_document_id document_id,
-       i.source_fingerprint, i.remote_import_state_json state_json, i.last_imported_at,
-       n.id node_id, n.title, n.updated_at node_updated_at, n.import_content_fingerprint,
-       n.content, n.body_blob_hash, cbd.data body_blob_data
+       i.source_fingerprint, i.remote_import_state_json state_json,
+       n.id node_id, n.title
      FROM import_sources i JOIN nodes n ON n.id = i.latest_node_id
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE i.remote_provider = 'readwise' AND n.id = ? AND n.deleted_at IS NULL`,
     [nodeId]
   ) ?? null;
@@ -78,7 +68,7 @@ export function readReadwiseOriginalEpubRuntimeStatus(target: ReadwiseOriginalEp
 
 export function captureReadwiseOriginalEpubSnapshot(target: ReadwiseOriginalEpubTarget) {
   const driver = openDatabaseConnection().driver;
-  const source = driver.queryOne<TargetRow>(
+  const source = driver.queryOne<Record<string, unknown>>(
     `SELECT i.remote_connection_ref connection_ref, i.remote_document_id document_id,
        i.source_fingerprint, i.remote_import_state_json state_json, i.last_imported_at,
        n.id node_id, n.title, n.updated_at node_updated_at, n.import_content_fingerprint
@@ -100,35 +90,4 @@ export function captureReadwiseOriginalEpubSnapshot(target: ReadwiseOriginalEpub
     rows,
     source
   })).digest('hex');
-}
-
-export function assertReadwiseOriginalEpubSourcePristine(target: ReadwiseOriginalEpubTarget) {
-  const row = readTargetRow(target.nodeId);
-  if (!row || !row.import_content_fingerprint || currentContentFingerprint(row, target) !== row.import_content_fingerprint) {
-    throw new Error('original_epub_user_changes_present');
-  }
-  const generated = openDatabaseConnection().driver.queryAll<{ updated_at: string }>(
-    `WITH RECURSIVE tree AS (
-       SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
-       UNION ALL SELECT n.id FROM nodes n JOIN tree ON n.parent_id = tree.id WHERE n.deleted_at IS NULL
-     ) SELECT updated_at FROM nodes WHERE id IN (SELECT id FROM tree) AND id LIKE 'node-epub-%'`,
-    [target.nodeId]
-  );
-  if (generated.some((node) => node.updated_at !== row.last_imported_at)) {
-    throw new Error('original_epub_user_changes_present');
-  }
-}
-
-function currentContentFingerprint(row: TargetRow, target: ReadwiseOriginalEpubTarget) {
-  const content = requireResolvedNodeBody(row as TargetRow & NodeBodyRow, row.node_id).content;
-  return createPreparedDesktopTextImport({
-    content,
-    fileName: `${row.title}.html`,
-    filePath: `readwise://document/${encodeURIComponent(target.documentId)}`,
-    highlightPolicy: 'reference_only',
-    importedAt: row.last_imported_at,
-    kind: 'html',
-    sourceIdentity: `readwise/api/${target.connectionRef}/${target.documentId}`,
-    sourceProfile: 'body_with_highlight_sidecar'
-  }).contentFingerprint;
 }
