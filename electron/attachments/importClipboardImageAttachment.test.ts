@@ -91,6 +91,7 @@ it('imports pasted clipboard image bytes into attachments and links them to the 
     mime_type: 'image/png',
     original_name: 'pasted-image.png',
     size_bytes: imageBytes.byteLength,
+    storage_key: `${hash}.png`,
     stored_file: 'created'
   });
 

@@ -5,7 +5,12 @@ const { importRemoteImageAttachment } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../shared/platform/remoteImageLocalization', () => ({
-  importRemoteImageAttachment
+  importRemoteImageAttachment: async (...args: unknown[]) => {
+    const result = await importRemoteImageAttachment(...args);
+    return result?.status === 'imported' && !result.storage_key
+      ? { ...result, storage_key: `${result.hash}.png` }
+      : result;
+  }
 }));
 
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
@@ -34,12 +39,13 @@ describe('localizeRemoteMarkdownImages', () => {
       attachment_id: 'attachment-1',
       hash: IMAGE_HASH,
       mime_type: 'image/png',
-      original_name: 'cover.png'
+      original_name: 'cover.png',
+      storage_key: `${IMAGE_HASH}.jpg`
     });
 
     await expect(
       localizeRemoteMarkdownImages('node-1', 'Before ![Cover](https://example.com/cover.png) after')
-    ).resolves.toBe(`Before ![Cover](${IMAGE_URL}) after`);
+    ).resolves.toBe(`Before ![Cover](asset://${IMAGE_HASH}.jpg) after`);
   });
 
   it('moves localized large remote images out of inline text', async () => {

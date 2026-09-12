@@ -9,7 +9,12 @@ const { importRemoteImageAttachment } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../shared/platform/remoteImageLocalization', () => ({
-  importRemoteImageAttachment
+  importRemoteImageAttachment: async (...args: unknown[]) => {
+    const result = await importRemoteImageAttachment(...args);
+    return result?.status === 'imported' && !result.storage_key
+      ? { ...result, storage_key: `${result.hash}.png` }
+      : result;
+  }
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';

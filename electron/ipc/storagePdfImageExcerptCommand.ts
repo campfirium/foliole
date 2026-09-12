@@ -1,3 +1,4 @@
+import { buildCanonicalAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { persistCreatedNodeImageAttachment } from '../attachments/persistCreatedNodeImageAttachment.js';
 import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
@@ -31,7 +32,7 @@ export async function handleStoragePdfImageExcerptCommand(
   const anchor = parsed.node.anchorLink;
   const locator = anchor?.locator as { attachmentId?: string; page?: number; rects?: unknown[] } | undefined;
   if (anchor?.kind !== 'image-excerpt' || typeof args.bytesBase64 !== 'string' || typeof args.attachmentId !== 'string' ||
-      !parsed.node.content.includes(`asset://${args.attachmentId}.png`) ||
+      !parsed.node.content.includes(buildCanonicalAssetMarkdownUrl(args.attachmentId, 'image/png')) ||
       (!isPdfExcerptLocator(locator) && !isAttachmentExcerptLocator(locator, parsed.node.imageRegions))) {
     throw new Error('invalid argument: image excerpt');
   }

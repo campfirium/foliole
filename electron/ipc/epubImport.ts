@@ -9,7 +9,6 @@ import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerpri
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
@@ -104,14 +103,12 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
     });
     if (importedImage.status === 'error') {
       degradedMessages.push(importedImage.message);
-      rewrittenContent += `[${importedImage.message}]`;
+      rewrittenContent += reference.fullMatch;
       continue;
     }
 
     const suffix = parsedTarget.suffix ? ` ${parsedTarget.suffix}` : '';
-    const storageKey = buildCanonicalAttachmentStorageKey(importedImage.hash, importedImage.mime_type);
-    if (!storageKey) throw new Error('epub image did not produce a canonical storage key');
-    rewrittenContent += `![${reference.altText}](${buildAssetMarkdownUrl(storageKey)}${suffix})`;
+    rewrittenContent += `![${reference.altText}](${buildAssetMarkdownUrl(importedImage.storage_key)}${suffix})`;
   }
 
   rewrittenContent += node.content.slice(previousEnd);

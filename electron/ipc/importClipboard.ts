@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import { decideClipboardPasteSource } from '../../lib/clipboard/clipboardPasteSource.js';
@@ -6,9 +5,12 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import type { NativeTextImportArgs, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
-import { importImageAttachmentBytes, normalizeImageFileName } from '../attachments/importImageAttachmentBytes.js';
+import {
+  importImageAttachmentBytes,
+  normalizeImageFileName,
+  prepareCanonicalImageAttachment
+} from '../attachments/importImageAttachmentBytes.js';
 import { electronClipboardAccess } from '../clipboardAccess.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
@@ -25,10 +27,6 @@ import { collectClipboardFilePaths } from './clipboardFilePaths.js';
 import { resolveClipboardTextSourceName } from './clipboardTextSourceName.js';
 import { buildPreparedImportRecord, importTargetParentNodeProps, resolveImportHighlightPolicy, resolveImportKind, resolveImportNodeTitleStrategy, toImportPayload } from './importSourcePipeline.js';
 import { runImportForFilePath, toNativeTextImportResult } from './importTextFile.js';
-
-function createContentHash(bytes: Uint8Array) {
-  return createHash('sha256').update(bytes).digest('hex');
-}
 
 function canImportTextFilePath(filePath: string) {
   try {
@@ -117,12 +115,11 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
   }
 
   const bytes = image.toPNG();
-  const mimeType = 'image/png';
-  const hash = createContentHash(bytes);
+  const preparedImage = prepareCanonicalImageAttachment(bytes);
+  if (!preparedImage) throw new Error('The clipboard image bytes are not supported.');
+  const { hash, mimeType, storageKey } = preparedImage;
   const originalName = normalizeImageFileName('pasted-image.png', mimeType);
   const importedAt = new Date().toISOString();
-  const storageKey = buildCanonicalAttachmentStorageKey(hash, mimeType);
-  if (!storageKey) throw new Error('clipboard image did not produce a canonical storage key');
   const content = `![Pasted image](${buildAssetMarkdownUrl(storageKey)})`;
   const result = toNativeTextImportResult(
     runPreparedImport(

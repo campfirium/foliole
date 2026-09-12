@@ -1,4 +1,4 @@
-import { parseCanonicalAttachmentStorageKey } from './attachmentResource.js';
+import { buildCanonicalAttachmentStorageKey, parseCanonicalAttachmentStorageKey } from './attachmentResource.js';
 
 const ASSET_MARKDOWN_SCHEME = 'asset://';
 
@@ -7,6 +7,12 @@ export function buildAssetMarkdownUrl(storageKey: string) {
     throw new Error('attachment storage key is not canonical');
   }
   return `${ASSET_MARKDOWN_SCHEME}${storageKey}`;
+}
+
+export function buildCanonicalAssetMarkdownUrl(contentHash: string, mimeType: string) {
+  const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
+  if (!storageKey) throw new Error('attachment identity is not canonical');
+  return buildAssetMarkdownUrl(storageKey);
 }
 
 export function parseAssetMarkdownUrl(resourceUrl: string) {

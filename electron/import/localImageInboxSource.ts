@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
+
 const SUPPORTED_LOCAL_IMAGE_EXTENSIONS = new Set(['.gif', '.jpeg', '.jpg', '.png', '.webp']);
 const UNSUPPORTED_LOCAL_IMAGE_EXTENSIONS = new Set(['.avif', '.bmp', '.heic', '.heif', '.svg', '.tif', '.tiff']);
 
@@ -33,44 +35,10 @@ export function createUnsupportedLocalImageMessage() {
   return 'Only png, jpg, jpeg, webp, and gif images are supported.';
 }
 
-function hasPngSignature(bytes: Uint8Array) {
-  return bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
-}
-
-function hasJpegSignature(bytes: Uint8Array) {
-  return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8;
-}
-
-function hasGifSignature(bytes: Uint8Array) {
-  const signature = Buffer.from(bytes.subarray(0, 6)).toString('ascii');
-  return signature === 'GIF87a' || signature === 'GIF89a';
-}
-
-function hasWebpSignature(bytes: Uint8Array) {
-  return Buffer.from(bytes.subarray(0, 4)).toString('ascii') === 'RIFF' && Buffer.from(bytes.subarray(8, 12)).toString('ascii') === 'WEBP';
-}
-
-function isSupportedImageBytes(filePath: string, bytes: Uint8Array) {
-  const extension = path.extname(filePath).toLowerCase();
-  if (extension === '.png') {
-    return hasPngSignature(bytes);
-  }
-  if (extension === '.jpg' || extension === '.jpeg') {
-    return hasJpegSignature(bytes);
-  }
-  if (extension === '.gif') {
-    return hasGifSignature(bytes);
-  }
-  if (extension === '.webp') {
-    return hasWebpSignature(bytes);
-  }
-  return false;
-}
-
 export async function validateLocalImageInboxFile(filePath: string) {
   try {
     const bytes = await fs.readFile(filePath);
-    return isSupportedImageBytes(filePath, bytes) ? null : 'The image file is invalid or corrupted.';
+    return prepareCanonicalImageAttachment(bytes) ? null : 'The image file is invalid, unsupported, or too large.';
   } catch {
     return 'The source image could not be read.';
   }

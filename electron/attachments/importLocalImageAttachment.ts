@@ -36,16 +36,6 @@ export async function importLocalImageAttachment(
 ): Promise<NativeImportLocalImageAttachmentResult> {
   const normalizedNodeId = nodeId.trim();
   const normalizedSourcePath = sourcePath.trim();
-  const mimeType = resolveImageMimeType(normalizedSourcePath);
-
-  if (!mimeType) {
-    return {
-      status: 'error',
-      error_code: 'unsupported_format',
-      message: 'Only png, jpg, jpeg, webp, and gif images are supported.',
-      source_path: normalizedSourcePath
-    };
-  }
 
   let sourceBytes: Uint8Array | null;
   try {
@@ -61,7 +51,7 @@ export async function importLocalImageAttachment(
   return importImageAttachmentBytes({
     bytes: sourceBytes,
     errorSource: normalizedSourcePath,
-    mimeType,
+    mimeType: resolveImageMimeType(normalizedSourcePath) ?? '',
     nodeId: normalizedNodeId,
     originalName: normalizedSourcePath
   });

@@ -97,14 +97,13 @@ it('uses the configured runtime fetch transport before writing the render cache'
   );
 });
 
-it('falls back to url extension when the response omits content-type', async () => {
+it('classifies response bytes when content-type is absent', async () => {
   const fetchMock = vi.fn().mockResolvedValue(
     new Response(WEBP_BYTES, {
       status: 200
     })
   );
   vi.stubGlobal('fetch', fetchMock);
-  resolveImageMimeType.mockReturnValue('image/webp');
   importImageAttachmentBytes.mockResolvedValue({ status: 'imported', attachment_id: 'hash-2' });
 
   await importRemoteImageAttachment({
@@ -112,12 +111,25 @@ it('falls back to url extension when the response omits content-type', async () 
     sourceUrl: 'https://example.com/images/cover.webp'
   });
 
-  expect(resolveImageMimeType).toHaveBeenCalledWith('https://example.com/images/cover.webp');
   expect(importImageAttachmentBytes).toHaveBeenCalledWith(
     expect.objectContaining({
       mimeType: 'image/webp'
     })
   );
+});
+
+it('corrects misleading URL and response MIME hints from the real bytes', async () => {
+  const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(jpegBytes, {
+    headers: { 'content-type': 'image/png' }, status: 200
+  })));
+  importImageAttachmentBytes.mockResolvedValue({ status: 'imported', attachment_id: 'hash-jpeg' });
+
+  await importRemoteImageAttachment({ nodeId: 'node-1', sourceUrl: 'https://example.com/cover.png' });
+
+  expect(importImageAttachmentBytes).toHaveBeenCalledWith(expect.objectContaining({
+    bytes: jpegBytes, mimeType: 'image/jpeg', originalName: 'cover.png'
+  }));
 });
 
 it('shares concurrent imports for the same node and remote source', async () => {

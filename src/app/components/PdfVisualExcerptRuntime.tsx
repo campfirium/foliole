@@ -2,6 +2,7 @@ import type { PDFPageProxy } from 'pdfjs-dist';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
+import { buildCanonicalAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -87,7 +88,7 @@ function usePdfExcerptCreation(props: { nodeId: string | null; rotation: number 
           y: sourceRect.y,
           rects: [sourceRect]
         };
-        const imageContent = `![Image excerpt](asset://${attachmentId}.png)`;
+        const imageContent = `![Image excerpt](${buildCanonicalAssetMarkdownUrl(attachmentId, 'image/png')})`;
         const content = request.note
           ? formatHighlightCardContent({
               note: request.note,

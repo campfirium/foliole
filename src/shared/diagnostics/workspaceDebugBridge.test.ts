@@ -187,6 +187,7 @@ it('persists seeded debug nodes and imports debug attachments through the native
         mime_type: 'image/png',
         original_name: 'debug-image.png',
         size_bytes: 5,
+        storage_key: `${'a'.repeat(64)}.png`,
         stored_file: 'created'
       };
     }

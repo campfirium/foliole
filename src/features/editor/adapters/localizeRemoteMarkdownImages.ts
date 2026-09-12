@@ -1,6 +1,5 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { buildCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 import { importRemoteImageAttachment } from '../../../shared/platform/remoteImageLocalization';
 
 import {
@@ -26,6 +25,7 @@ interface LocalizedRemoteImageImport {
   intrinsic_size?: { height: number; width: number } | null;
   original_name: string;
   status: 'imported';
+  storage_key: string;
 }
 
 function toLocalizedRemoteImage(result: Awaited<ReturnType<typeof importRemoteImageAttachment>>) {
@@ -33,10 +33,9 @@ function toLocalizedRemoteImage(result: Awaited<ReturnType<typeof importRemoteIm
   return imported
     ? {
         attachmentId: imported.attachment_id,
-        contentHash: imported.hash,
         intrinsicSize: imported.intrinsic_size ?? null,
-        mimeType: imported.mime_type,
-        originalName: imported.original_name
+        originalName: imported.original_name,
+        storageKey: imported.storage_key
       }
     : null;
 }
@@ -75,10 +74,8 @@ function collectRemoteMarkdownImages(markdown: string) {
   return matches;
 }
 
-function buildLocalizedMarkdownImage(token: MarkdownImageToken, contentHash: string, mimeType: string) {
+function buildLocalizedMarkdownImage(token: MarkdownImageToken, storageKey: string) {
   const suffix = token.suffix ? ` ${token.suffix}` : '';
-  const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
-  if (!storageKey) throw new Error('localized image did not produce a canonical storage key');
   const imageMarkdown = `![${token.alt}](${buildAssetMarkdownUrl(storageKey)}${suffix})`;
   return token.wrappingLinkTarget ? `[${imageMarkdown}](${token.wrappingLinkTarget})` : imageMarkdown;
 }
@@ -156,10 +153,9 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
     string,
     | {
         attachmentId: string;
-        contentHash: string;
         intrinsicSize?: { height: number; width: number } | null;
-        mimeType: string;
         originalName: string;
+        storageKey: string;
       }
     | null
   >();
@@ -176,7 +172,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
     const localization = resultByUrl.get(match.sourceUrl);
     if (localization) {
       const layout = layoutLocalizedMarkdownImage({
-        imageMarkdown: buildLocalizedMarkdownImage(match, localization.contentHash, localization.mimeType),
+        imageMarkdown: buildLocalizedMarkdownImage(match, localization.storageKey),
         markdown: markdownWithoutStaleWrappingLinks,
         previousLocalizedImageWasSmall,
         range: match,

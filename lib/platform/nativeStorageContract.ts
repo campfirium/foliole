@@ -169,6 +169,7 @@ export type NativeImportLocalImageAttachmentResult =
       mime_type: string;
       original_name: string;
       size_bytes: number;
+      storage_key: string;
       stored_file: 'created' | 'reused';
     }
   | {

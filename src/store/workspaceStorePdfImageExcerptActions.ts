@@ -1,3 +1,4 @@
+import { buildCanonicalAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
 import type { NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
@@ -15,7 +16,7 @@ function createExcerptNode(args: { attachmentId: string; content?: string; image
     title: args.title,
     isTitleManual: false,
     hasContent: true,
-    content: args.content ?? `![Image excerpt](asset://${args.attachmentId}.png)`,
+    content: args.content ?? `![Image excerpt](${buildCanonicalAssetMarkdownUrl(args.attachmentId, 'image/png')})`,
     anchorLink: {
       id: `anchor-${crypto.randomUUID()}`,
       kind: 'image-excerpt',

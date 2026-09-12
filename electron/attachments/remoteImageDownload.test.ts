@@ -40,6 +40,14 @@ it('keeps normal remote image responses downloadable', async () => {
   });
 });
 
+it('uses JPEG bytes instead of misleading URL and response MIME hints', async () => {
+  const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  await expect(downloadWith(createImageResponse(jpegBytes))).resolves.toMatchObject({
+    resource: { bytes: jpegBytes, mimeType: 'image/jpeg', originalName: 'cover.png' },
+    status: 'ready'
+  });
+});
+
 it.each([
   'http://127.0.0.1/image.png',
   'http://[::1]/image.png',

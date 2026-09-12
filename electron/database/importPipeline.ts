@@ -8,7 +8,6 @@ import { applyParentContentChange } from '../../lib/core/database/parentContentM
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { normalizeSafeMarkdownDataImageUrl, parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
 
 import { createNodeAttachmentLink } from './attachments.js';
@@ -88,13 +87,11 @@ function rewriteImportImageReferences(input: {
     }
     if (importResult.status === 'error') {
       input.degradedMessages.push(importResult.message);
-      return `[${importResult.message}]`;
+      return reference.fullMatch;
     }
 
     const suffix = reference.suffix ? ` ${reference.suffix}` : '';
-    const storageKey = buildCanonicalAttachmentStorageKey(importResult.attachmentId, importResult.mimeType);
-    if (!storageKey) return reference.fullMatch;
-    return `![${reference.altText}](${buildAssetMarkdownUrl(storageKey)}${suffix})`;
+    return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.storageKey)}${suffix})`;
   });
 }
 
@@ -125,14 +122,16 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   }
 
   const connection = openDatabaseConnection();
-  applyParentContentChange({
-    driver: connection.driver,
-    nextContent: rewrittenContent,
-    nodeId,
-    previousContent: currentContent,
-    title: persistedNode?.title ?? prepared.nodeTitle,
-    updatedAt: record.importedAt
-  });
+  if (rewrittenContent !== currentContent) {
+    applyParentContentChange({
+      driver: connection.driver,
+      nextContent: rewrittenContent,
+      nodeId,
+      previousContent: currentContent,
+      title: persistedNode?.title ?? prepared.nodeTitle,
+      updatedAt: record.importedAt
+    });
+  }
 
   if (degradedMessages.length === 0) {
     return record;

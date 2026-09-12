@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
+import { buildCanonicalAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import {
@@ -53,7 +54,7 @@ async function saveAnnotatedImageExcerpt(args: {
 }) {
   const bytes = await renderImageExcerptCrop(args.pending.image, args.pending.rect);
   const attachmentId = await hashImageExcerptBytes(bytes);
-  const imageContent = `![Image excerpt](asset://${attachmentId}.png)`;
+  const imageContent = `![Image excerpt](${buildCanonicalAssetMarkdownUrl(attachmentId, 'image/png')})`;
   const content = formatHighlightCardContent({
     note: args.note,
     notePrefix: getHighlightAnnotationPrefix(),

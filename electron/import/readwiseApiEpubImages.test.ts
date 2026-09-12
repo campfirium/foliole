@@ -40,6 +40,7 @@ beforeEach(() => {
     hash: 'a'.repeat(64),
     mime_type: 'image/png',
     original_name: input.originalName,
+    storage_key: `${'a'.repeat(64)}.png`,
     status: 'imported'
   }));
 });

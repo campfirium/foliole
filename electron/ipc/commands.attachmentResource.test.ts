@@ -12,7 +12,8 @@ const ATTACHMENT_STORAGE_KEY = `${ATTACHMENT_HASH}.png`;
 function imageImportResult(hash: string, createdAt: string, originalName: string, sizeBytes: number) {
   return {
     status: 'imported', attachment_id: hash, attachment_record: 'created', created_at: createdAt,
-    hash, mime_type: 'image/png', original_name: originalName, size_bytes: sizeBytes, stored_file: 'created'
+    hash, mime_type: 'image/png', original_name: originalName, size_bytes: sizeBytes,
+    storage_key: `${hash}.png`, stored_file: 'created'
   };
 }
 

@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../lib/platform/markdownImageDataUrl.js';
+import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { buildAttachmentStorageFileName } from '../attachments/storagePath.js';
 
 import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import {
@@ -14,6 +14,7 @@ import {
   findAttachmentRecordById,
   listNodeAttachments
 } from './attachments.js';
+import { openDatabaseConnection } from './connection.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
 
@@ -21,12 +22,8 @@ const IMAGE_ATTACHMENT_ROLE = 'image';
 const PDF_ATTACHMENT_ROLE = 'reference';
 const PDF_MIME_TYPE = 'application/pdf';
 
-const SUPPORTED_IMAGE_MIME_TYPES = new Map([
-  ['.gif', 'image/gif'],
-  ['.jpeg', 'image/jpeg'],
-  ['.jpg', 'image/jpeg'],
-  ['.png', 'image/png'],
-  ['.webp', 'image/webp']
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  '.gif', '.jpeg', '.jpg', '.png', '.webp'
 ]);
 
 function createContentHash(bytes: Uint8Array) {
@@ -75,13 +72,19 @@ function resolveLocalImageSourcePaths(destination: string, sourceLocator: string
 }
 
 function resolveMimeType(sourcePath: string) {
-  return SUPPORTED_IMAGE_MIME_TYPES.get(path.extname(sourcePath).toLowerCase()) ?? null;
+  return SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase());
 }
 
 function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
-  if (fs.existsSync(storagePath)) return;
+  if (fs.existsSync(storagePath)) {
+    if (createContentHash(fs.readFileSync(storagePath)) !== createContentHash(bytes)) {
+      throw new Error('canonical attachment path contains different bytes');
+    }
+    return false;
+  }
   fs.mkdirSync(path.dirname(storagePath), { recursive: true });
   fs.writeFileSync(storagePath, bytes, { flag: 'wx' });
+  return true;
 }
 
 function createAttachmentRecordIfNeeded(hash: string, sourcePath: string, mimeType: string, sizeBytes: number) {
@@ -103,11 +106,12 @@ function recordAttachmentBlobManifest(input: {
   hash: string;
   mimeType: string;
   sizeBytes: number;
+  storageKey: string;
 }) {
   upsertAttachmentBlobManifest({
     attachmentId: input.attachment.id,
     contentHash: input.hash,
-    storageKey: buildAttachmentStorageFileName(input.hash, input.mimeType),
+    storageKey: input.storageKey,
     sizeBytes: input.sizeBytes,
     mimeType: input.mimeType,
     availability: 'local',
@@ -119,21 +123,33 @@ function recordAttachmentBlobManifest(input: {
 }
 
 function importLocalImageAttachment(nodeId: string, sourcePath: string) {
-  const mimeType = resolveMimeType(sourcePath);
-  if (!mimeType) return { message: `Unsupported local image: ${sourcePath}`, status: 'error' as const };
   if (!fs.existsSync(sourcePath)) return { message: `Missing local image: ${sourcePath}`, status: 'error' as const };
+  let createdFile = false;
+  let storagePath = '';
   try {
     const sourceBytes = fs.readFileSync(sourcePath);
-    const hash = createContentHash(sourceBytes);
-    persistAttachmentFile(
-      resolveAttachmentStoragePath(hash, undefined, mimeType),
-      sourceBytes
-    );
-    const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, mimeType, sourceBytes.byteLength);
-    recordAttachmentBlobManifest({ attachment, hash, mimeType, sizeBytes: sourceBytes.byteLength });
-    createNodeAttachmentLink({ attachmentId: attachment.id, nodeId, role: IMAGE_ATTACHMENT_ROLE });
-    return { attachmentId: attachment.id, mimeType, originalName: attachment.originalName, status: 'imported' as const };
+    const prepared = prepareCanonicalImageAttachment(sourceBytes);
+    if (!prepared) return { message: `Unsupported local image: ${sourcePath}`, status: 'error' as const };
+    const existing = findAttachmentRecordById(prepared.hash);
+    if (existing && (existing.mimeType !== prepared.mimeType || existing.sizeBytes !== prepared.sizeBytes)) {
+      return { message: `Local image metadata mismatch: ${sourcePath}`, status: 'error' as const };
+    }
+    storagePath = resolveAttachmentStoragePath(prepared.hash, undefined, prepared.mimeType);
+    createdFile = persistAttachmentFile(storagePath, sourceBytes);
+    let attachment!: ReturnType<typeof createAttachmentRecordIfNeeded>;
+    openDatabaseConnection().driver.transaction(() => {
+      attachment = createAttachmentRecordIfNeeded(
+        prepared.hash, sourcePath, prepared.mimeType, prepared.sizeBytes
+      );
+      recordAttachmentBlobManifest({ attachment, ...prepared });
+      createNodeAttachmentLink({ attachmentId: attachment.id, nodeId, role: IMAGE_ATTACHMENT_ROLE });
+    });
+    return {
+      attachmentId: attachment.id, mimeType: prepared.mimeType, originalName: attachment.originalName,
+      status: 'imported' as const, storageKey: prepared.storageKey
+    };
   } catch {
+    if (createdFile && storagePath) fs.rmSync(storagePath, { force: true });
     return { message: `Local image unavailable: ${sourcePath}`, status: 'error' as const };
   }
 }
@@ -178,7 +194,10 @@ export function importPdfSourceAttachment(nodeId: string, sourcePath: string) {
     sourceBytes
   );
   const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, PDF_MIME_TYPE, sourceBytes.byteLength);
-  recordAttachmentBlobManifest({ attachment, hash, mimeType: PDF_MIME_TYPE, sizeBytes: sourceBytes.byteLength });
+  recordAttachmentBlobManifest({
+    attachment, hash, mimeType: PDF_MIME_TYPE, sizeBytes: sourceBytes.byteLength,
+    storageKey: `${hash}.pdf`
+  });
   replaceNodePdfAttachmentLink(nodeId, attachment.id);
   markPdfAttachmentIndexPending(attachment.id);
   enqueuePdfAttachmentIndexing(attachment.id);

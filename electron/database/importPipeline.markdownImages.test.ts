@@ -51,11 +51,11 @@ async function createMarkdownImportFixture(rootDir: string) {
   const sourceMarkdownPath = path.join(rootDir, 'note.md');
 
   await fs.mkdir(subdirectoryPath, { recursive: true });
-  await fs.writeFile(relativeImagePath, Buffer.from('cover-image'));
-  await fs.writeFile(nestedImagePath, Buffer.from('chart-image'));
-  await fs.writeFile(absoluteImagePath, Buffer.from('absolute-image'));
-  await fs.writeFile(parenthesizedImagePath, Buffer.from('parenthesized-image'));
-  await fs.writeFile(spacedEmbedPath, Buffer.from('obsidian-embed-image'));
+  await fs.writeFile(relativeImagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10]));
+  await fs.writeFile(nestedImagePath, Buffer.from('RIFF0000WEBP'));
+  await fs.writeFile(absoluteImagePath, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  await fs.writeFile(parenthesizedImagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 1]));
+  await fs.writeFile(spacedEmbedPath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 2]));
   await fs.writeFile(
     sourceMarkdownPath,
     [
@@ -99,7 +99,7 @@ function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string; b
   expect(nodeRow.content).toContain('![[Linked note]]');
   expect(nodeRow.content).toContain('![Inline data](data:image/png;base64,cG5n)');
   expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
-  expect(nodeRow.content).toContain('[Missing local image:');
+  expect(nodeRow.content).toContain('![Missing](missing.png)');
   expect(nodeRow.content).toContain('asset://');
   expect(nodeRow.content).toContain('.png)');
   expect(nodeRow.content).toContain('.webp)');
@@ -200,7 +200,10 @@ it('resolves obsidian image embeds from the configured external attachment folde
   const sourceMarkdownPath = path.join(noteDir, 'note.md');
   await fs.mkdir(noteDir, { recursive: true });
   await fs.mkdir(attachmentDir, { recursive: true });
-  await fs.writeFile(path.join(attachmentDir, 'Pasted image 20260421082325.png'), Buffer.from('external-attachment-image'));
+  await fs.writeFile(
+    path.join(attachmentDir, 'Pasted image 20260421082325.png'),
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])
+  );
   await fs.writeFile(sourceMarkdownPath, '# Imported\n\n![[Pasted image 20260421082325.png]]');
 
   const source = upsertDesktopSource({

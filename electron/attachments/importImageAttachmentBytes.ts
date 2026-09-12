@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
 import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import {
@@ -14,9 +15,9 @@ import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
-import { SUPPORTED_IMAGE_MIME_TYPES, validateSupportedImageBytes as hasValidSupportedImageBytes } from './supportedImageFormats.js';
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
+const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 
 const MIME_TYPE_EXTENSION_MAP = new Map([
   ['image/gif', '.gif'],
@@ -34,7 +35,7 @@ interface ImportImageAttachmentBytesInput {
   bytes: Uint8Array;
   errorSource: string;
   mimeType: string;
-  nodeId: string;
+  nodeId?: string;
   originalName: string;
 }
 
@@ -42,24 +43,17 @@ function createContentHash(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function validateSupportedImageBytes(input: ImportImageAttachmentBytesInput, normalizedMimeType: string) {
-  if (!SUPPORTED_IMAGE_MIME_TYPES.has(normalizedMimeType)) {
-    return createErrorResult(
-      'unsupported_format',
-      'Only png, jpg, jpeg, webp, and gif images are supported.',
-      input.errorSource
-    );
-  }
-
-  if (!hasValidSupportedImageBytes(input.bytes, normalizedMimeType)) {
-    return createErrorResult(
-      'unsupported_format',
-      'The image bytes do not match the declared image format.',
-      input.errorSource
-    );
-  }
-
-  return null;
+export function prepareCanonicalImageAttachment(bytes: Uint8Array) {
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) return null;
+  const mimeType = classifyAttachmentBytes(bytes);
+  if (!MIME_TYPE_EXTENSION_MAP.has(mimeType)) return null;
+  const hash = createContentHash(bytes);
+  return {
+    hash,
+    mimeType,
+    sizeBytes: bytes.byteLength,
+    storageKey: buildAttachmentStorageFileName(hash, mimeType)
+  };
 }
 
 function createErrorResult(
@@ -89,6 +83,7 @@ function toImportedResult(input: {
   intrinsicSize: { height: number; width: number } | null;
   mimeType: string;
   sizeBytes: number;
+  storageKey: string;
   storedFile: 'created' | 'reused';
 }): NativeImportLocalImageAttachmentResult {
   const result = {
@@ -101,6 +96,7 @@ function toImportedResult(input: {
     mime_type: input.mimeType,
     original_name: input.attachment.originalName ?? normalizeImageFileName('', input.mimeType),
     size_bytes: input.sizeBytes,
+    storage_key: input.storageKey,
     stored_file: input.storedFile
   };
   return result;
@@ -108,7 +104,10 @@ function toImportedResult(input: {
 
 async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
   try {
-    await fs.access(storagePath);
+    const existingBytes = await fs.readFile(storagePath);
+    if (createContentHash(existingBytes) !== createContentHash(bytes)) {
+      throw new Error('canonical attachment path contains different bytes');
+    }
     return 'reused' as const;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -147,11 +146,6 @@ function createAttachmentRecordIfNeeded(hash: string, originalName: string, mime
   };
 }
 
-function resolveCanonicalStoragePath(hash: string, originalName: string) {
-  const existingAttachment = findAttachmentRecordById(hash);
-  return resolveAttachmentStoragePath(hash, undefined, existingAttachment?.mimeType ?? resolveImageMimeType(originalName) ?? '');
-}
-
 export function normalizeImageFileName(originalName: string | null | undefined, mimeType: string) {
   const trimmedName = originalName?.trim() ?? '';
   if (trimmedName) {
@@ -168,19 +162,22 @@ export function resolveImageMimeType(fileNameOrPath: string) {
 export async function importImageAttachmentBytes(
   input: ImportImageAttachmentBytesInput
 ): Promise<NativeImportLocalImageAttachmentResult> {
-  const normalizedNodeId = input.nodeId.trim();
-  const normalizedMimeType = input.mimeType.trim().toLowerCase();
-  const normalizedOriginalName = normalizeImageFileName(input.originalName, normalizedMimeType);
+  const prepared = prepareCanonicalImageAttachment(input.bytes);
+  if (!prepared) {
+    return createErrorResult('unsupported_format', 'Only valid png, jpg, webp, and gif image bytes are supported.', input.errorSource);
+  }
+  const normalizedNodeId = input.nodeId?.trim() || null;
+  const normalizedOriginalName = normalizeImageFileName(input.originalName, prepared.mimeType);
 
-  const validationError = validateSupportedImageBytes(input, normalizedMimeType);
-  if (validationError) return validationError;
-
-  if (!ensureNodeExists(normalizedNodeId)) {
+  if (normalizedNodeId && !ensureNodeExists(normalizedNodeId)) {
     return createErrorResult('node_not_found', 'The target node does not exist.', input.errorSource);
   }
 
-  const hash = createContentHash(input.bytes);
-  const storagePath = resolveCanonicalStoragePath(hash, normalizedOriginalName);
+  const existing = findAttachmentRecordById(prepared.hash);
+  if (existing && (existing.mimeType !== prepared.mimeType || existing.sizeBytes !== prepared.sizeBytes)) {
+    return createErrorResult('storage_write_failed', 'The existing attachment metadata does not match its bytes.', input.errorSource);
+  }
+  const storagePath = resolveAttachmentStoragePath(prepared.hash, undefined, prepared.mimeType);
 
   let storedFile: 'created' | 'reused';
   try {
@@ -189,38 +186,34 @@ export async function importImageAttachmentBytes(
     return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
   }
 
-  const { attachment, attachmentRecord } = createAttachmentRecordIfNeeded(
-    hash,
-    normalizedOriginalName,
-    normalizedMimeType,
-    input.bytes.byteLength
-  );
-
-  upsertAttachmentBlobManifest({
-    attachmentId: attachment.id,
-    contentHash: hash,
-    storageKey: buildAttachmentStorageFileName(hash, normalizedMimeType),
-    sizeBytes: input.bytes.byteLength,
-    mimeType: normalizedMimeType,
-    availability: 'local',
-    sourceHostName: null,
-    createdAt: attachment.createdAt,
-    cachedAt: attachment.createdAt,
-    lastVerifiedAt: attachment.createdAt
-  });
-
-  createNodeAttachmentLink({
-    nodeId: normalizedNodeId,
-    attachmentId: attachment.id,
-    role: IMAGE_ATTACHMENT_ROLE
-  });
+  let attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
+  let attachmentRecord: 'created' | 'reused';
+  try {
+    openDatabaseConnection().driver.transaction(() => {
+      ({ attachment, attachmentRecord } = createAttachmentRecordIfNeeded(
+        prepared.hash, normalizedOriginalName, prepared.mimeType, prepared.sizeBytes
+      ));
+      upsertAttachmentBlobManifest({
+        attachmentId: attachment.id, contentHash: prepared.hash, storageKey: prepared.storageKey,
+        sizeBytes: prepared.sizeBytes, mimeType: prepared.mimeType, availability: 'local', sourceHostName: null,
+        createdAt: attachment.createdAt, cachedAt: attachment.createdAt, lastVerifiedAt: attachment.createdAt
+      });
+      if (normalizedNodeId) {
+        createNodeAttachmentLink({ nodeId: normalizedNodeId, attachmentId: attachment.id, role: IMAGE_ATTACHMENT_ROLE });
+      }
+    });
+  } catch {
+    if (storedFile === 'created') await fs.unlink(storagePath).catch(() => undefined);
+    return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
+  }
 
   return toImportedResult({
-    attachment,
-    attachmentRecord,
+    attachment: attachment!,
+    attachmentRecord: attachmentRecord!,
     intrinsicSize: readImageIntrinsicSize(input.bytes),
-    mimeType: normalizedMimeType,
-    sizeBytes: input.bytes.byteLength,
+    mimeType: prepared.mimeType,
+    sizeBytes: prepared.sizeBytes,
+    storageKey: prepared.storageKey,
     storedFile
   });
 }

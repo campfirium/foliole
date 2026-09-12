@@ -110,6 +110,7 @@ it('imports a local png into the app attachment directory and links it to the no
     mime_type: 'image/png',
     original_name: 'cover.png',
     size_bytes: imageBytes.byteLength,
+    storage_key: `${hashBytes(imageBytes)}.png`,
     stored_file: 'created'
   });
 
@@ -188,6 +189,25 @@ it('reuses the same stored file and attachment record for repeated imports of id
   ]);
 });
 
+it('uses JPEG bytes as truth when the source file is named png', async () => {
+  seedNode('node-1');
+  const sourcePath = path.join(tempRoot, 'misleading.png');
+  const imageBytes = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+  const hash = hashBytes(imageBytes);
+  await fs.writeFile(sourcePath, imageBytes);
+
+  await expect(importLocalImageAttachment('node-1', sourcePath)).resolves.toMatchObject({
+    attachment_id: hash, hash, mime_type: 'image/jpeg', storage_key: `${hash}.jpg`, status: 'imported'
+  });
+  await expect(fs.readFile(resolveAttachmentStoragePath(
+    hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/jpeg'
+  ))).resolves.toEqual(imageBytes);
+  await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${hash}.png`))).rejects.toThrow();
+  expect(findAttachmentBlobManifestById(hash)).toMatchObject({
+    attachmentId: hash, contentHash: hash, mimeType: 'image/jpeg', storageKey: `${hash}.jpg`
+  });
+});
+
 it('rejects files whose bytes do not match the declared image type', async () => {
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
@@ -197,20 +217,24 @@ it('rejects files whose bytes do not match the declared image type', async () =>
   await expect(importLocalImageAttachment('node-1', sourcePath)).resolves.toEqual({
     status: 'error',
     error_code: 'unsupported_format',
-    message: 'The image bytes do not match the declared image format.',
+    message: 'Only valid png, jpg, webp, and gif image bytes are supported.',
     source_path: sourcePath
   });
   expect(countAttachments()).toBe(0);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachment_blobs').get()).toEqual({ count: 0 });
+  expect(listNodeAttachments('node-1')).toEqual([]);
 });
 
 it('returns explicit errors for unsupported formats and missing source files', async () => {
   seedNode('node-1');
+  const vectorPath = path.join(tempRoot, 'vector.svg');
+  await fs.writeFile(vectorPath, '<svg></svg>');
 
-  await expect(importLocalImageAttachment('node-1', path.join(tempRoot, 'vector.svg'))).resolves.toEqual({
+  await expect(importLocalImageAttachment('node-1', vectorPath)).resolves.toEqual({
     status: 'error',
     error_code: 'unsupported_format',
-    message: 'Only png, jpg, jpeg, webp, and gif images are supported.',
-    source_path: path.join(tempRoot, 'vector.svg')
+    message: 'Only valid png, jpg, webp, and gif image bytes are supported.',
+    source_path: vectorPath
   });
 
   await expect(importLocalImageAttachment('node-1', path.join(tempRoot, 'missing.png'))).resolves.toEqual({

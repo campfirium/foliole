@@ -13,6 +13,7 @@ const {
   runPreparedImport,
   databaseDriver,
   importImageAttachmentBytes,
+  prepareCanonicalImageAttachment,
   notifyManagedInboxUpdated
 } = vi.hoisted(() => {
   const driver = {
@@ -44,6 +45,9 @@ const {
     databaseDriver: driver,
     clipboardImage: image,
     importImageAttachmentBytes: vi.fn(),
+    prepareCanonicalImageAttachment: vi.fn(() => ({
+      hash: 'a'.repeat(64), mimeType: 'image/png', sizeBytes: 9, storageKey: `${'a'.repeat(64)}.png`
+    })),
     notifyManagedInboxUpdated: vi.fn(),
     runImportForFilePath: vi.fn(),
     runPreparedImport: vi.fn()
@@ -57,7 +61,8 @@ vi.mock('../clipboardAccess.js', () => ({
 vi.mock('../database/importPipeline.js', () => ({ runPreparedImport }));
 vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes,
-  normalizeImageFileName: vi.fn((originalName: string | null | undefined) => originalName || 'pasted-image.png')
+  normalizeImageFileName: vi.fn((originalName: string | null | undefined) => originalName || 'pasted-image.png'),
+  prepareCanonicalImageAttachment
 }));
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: vi.fn(() => ({ driver: databaseDriver }))
@@ -133,6 +138,7 @@ beforeEach(() => {
     original_name: 'pasted-image.png',
     size_bytes: 9,
     status: 'imported',
+    storage_key: `${'a'.repeat(64)}.png`,
     stored_file: 'created'
   });
 });

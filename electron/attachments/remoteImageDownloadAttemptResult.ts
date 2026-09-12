@@ -1,6 +1,8 @@
 import path from 'node:path';
 
-import { normalizeImageFileName, resolveImageMimeType } from './importImageAttachmentBytes.js';
+import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
+
+import { normalizeImageFileName } from './importImageAttachmentBytes.js';
 import { readRemoteImageResponseBytes } from './remoteImageBodyReader.js';
 import {
   recordRemoteImageDiagnostic,
@@ -12,7 +14,6 @@ import type {
   RemoteImageFetchResponse
 } from './remoteImageFetchAttempt.js';
 import { RemoteImagePolicyError } from './remoteImageFetchPolicy.js';
-import { isSupportedImageMimeType, validateSupportedImageBytes } from './supportedImageFormats.js';
 
 const REMOTE_IMAGE_TRANSIENT_FAILURE_CACHE_MS = 5_000;
 const REMOTE_IMAGE_STABLE_FAILURE_CACHE_MS = 60_000;
@@ -68,10 +69,10 @@ export async function resolveRemoteImageAttemptResponse(
   args: RemoteImageAttemptResponseArgs
 ): Promise<RemoteImageFetchResult> {
   if (!args.response.ok) return createStatusFailure(args);
-  const mimeType = resolveImageMimeTypeFromResponse(args.sourceUrl, args.response);
-  if (!mimeType) return createUnsupportedMimeFailure(args);
-  const bytes = await readSupportedRemoteImageBytes(args, mimeType);
+  const bytes = await readSupportedRemoteImageBytes(args);
   if (bytes.status === 'error') return bytes;
+  const mimeType = classifyAttachmentBytes(bytes.value);
+  if (!mimeType.startsWith('image/')) return createUnsupportedBytesFailure(args, bytes.value.length);
   recordRemoteImageAttemptDiagnostic(
     args.sourceUrl,
     args.attempt,
@@ -127,12 +128,6 @@ function createUnsupportedFormatResult(sourceUrl: string): RemoteImageErrorResul
   };
 }
 
-function resolveImageMimeTypeFromResponse(sourceUrl: string, response: Response) {
-  const headerValue = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
-  if (headerValue) return isSupportedImageMimeType(headerValue) ? headerValue : '';
-  return headerValue ? '' : resolveImageMimeType(sourceUrl);
-}
-
 function resolveOriginalName(sourceUrl: string, mimeType: string) {
   try {
     return normalizeImageFileName(decodeURIComponent(path.basename(new URL(sourceUrl).pathname)), mimeType);
@@ -146,21 +141,14 @@ function createStatusFailure(args: RemoteImageAttemptResponseArgs): RemoteImageF
   return { status: 'error', error: createRemoteImageDownloadError(`The remote image request failed with status ${args.response.status}.`, args.sourceUrl) };
 }
 
-function createUnsupportedMimeFailure(args: RemoteImageAttemptResponseArgs): RemoteImageFetchResult {
-  recordRemoteImageAttemptDiagnostic(args.sourceUrl, args.attempt, Date.now() - args.startedAt, args.transportName, args.response, null, 'unsupported_format');
-  return { status: 'error', error: createUnsupportedFormatResult(args.sourceUrl) };
-}
-
 async function readSupportedRemoteImageBytes(
-  args: RemoteImageAttemptResponseArgs,
-  mimeType: string
+  args: RemoteImageAttemptResponseArgs
 ): Promise<{ status: 'ready'; value: Uint8Array } | { status: 'error'; error: RemoteImageErrorResult }> {
   const readResult = await readRemoteImageResponseBytes(args.response, args.fetched.signal).catch(() => null);
   if (!readResult) return createReadFailure(args, null, 'The remote image could not be downloaded.');
   if (readResult.status === 'too_large')
     return createReadFailure(args, readResult.bytes, 'The remote image is larger than the supported size limit.');
   if (readResult.bytes.length === 0) return createReadFailure(args, 0, 'The remote image response was empty.');
-  if (!validateSupportedImageBytes(readResult.bytes, mimeType)) return createUnsupportedBytesFailure(args, readResult.bytes.length);
   return { status: 'ready', value: readResult.bytes };
 }
 

@@ -185,6 +185,7 @@ async function runClipboardImageCase() {
     mime_type: 'image/png',
     original_name: 'clip.png',
     size_bytes: 9,
+    storage_key: `${IMAGE_HASH}.png`,
     stored_file: 'created'
   });
 

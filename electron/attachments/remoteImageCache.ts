@@ -111,7 +111,7 @@ export async function readRemoteImageCache(cacheKey: string): Promise<RemoteImag
       await deleteCacheEntry(cacheKey);
       return null;
     }
-    void writeJsonAtomic(paths.metadataPath, {
+    await writeJsonAtomic(paths.metadataPath, {
       ...metadata,
       lastReadAt: new Date().toISOString()
     }).catch(() => undefined);

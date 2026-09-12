@@ -46,6 +46,7 @@ beforeEach(() => {
     hash: 'a'.repeat(64),
     mime_type: 'image/png',
     original_name: 'image.png',
+    storage_key: `${'a'.repeat(64)}.png`,
     status: 'ok'
   });
 });

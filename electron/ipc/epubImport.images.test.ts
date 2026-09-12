@@ -57,17 +57,17 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
     },
     {
       content:
-        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Image Book</dc:title></metadata><manifest><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/><item id="image" href="images/00006.jpeg" media-type="image/jpeg"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Image Book</dc:title></metadata><manifest><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/><item id="image" href="images/00006.png" media-type="image/png"/></manifest><spine><itemref idref="chapter"/></spine></package>',
       name: 'OPS/book.opf'
     },
     {
       content:
-        '<html><head><title>Picture Chapter</title></head><body><p>Intro paragraph.</p><img src="../images/00006.jpeg" alt="Image"/><p>Outro paragraph.</p></body></html>',
+        '<html><head><title>Picture Chapter</title></head><body><p>Intro paragraph.</p><img src="../images/00006.png" alt="Image"/><p>Outro paragraph.</p></body></html>',
       name: 'OPS/text/chapter.xhtml'
     },
     {
       content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
-      name: 'OPS/images/00006.jpeg'
+      name: 'OPS/images/00006.png'
     }
   ]);
 
@@ -90,11 +90,12 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   expect(child.content).toContain('Intro paragraph.');
   expect(child.content).toContain('Outro paragraph.');
   expect(child.content).toContain('![Image](asset://');
-  expect(child.content).not.toContain('../images/00006.jpeg');
+  expect(child.content).not.toContain('../images/00006.png');
+  expect(child.content).toMatch(/asset:\/\/[a-f0-9]{64}\.jpg/u);
   expect(child.content).not.toContain('[EPUB image not imported:');
   expect(child.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
   expect(child.body_blob_data).toBe(child.content);
   expect(attachments).toHaveLength(1);
   expect(attachments[0]?.attachment.mimeType).toBe('image/jpeg');
-  expect(attachments[0]?.attachment.originalName).toBe('00006.jpeg');
+  expect(attachments[0]?.attachment.originalName).toBe('00006.png');
 });
