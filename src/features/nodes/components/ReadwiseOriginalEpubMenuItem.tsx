@@ -8,6 +8,7 @@ import {
   useRuntimeReadwiseOriginalEpub
 } from '../../../shared/platform/import/readwiseOriginalEpubRuntimeRepository';
 import { onRuntimeReadwiseBookEpubProgress } from '../../../shared/platform/readwiseBooksRuntimeRepository';
+import { requestAppConfirmation } from '../../../shared/ui/appConfirmation';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 
 import { NodeContextMenuItem, NodeContextMenuSeparator } from './nodeListContextMenuPresentation';
@@ -21,6 +22,14 @@ const PHASE_NOTICE_KEYS = {
   reading_epub: 'desktop.nodeList.originalEpub.phase.reading_epub',
   saving: 'desktop.nodeList.originalEpub.phase.saving'
 } as const;
+
+function confirmEpubRebuild(t: ReturnType<typeof useTranslation>) {
+  return requestAppConfirmation({
+    confirmLabel: t('desktop.nodeList.originalEpub.confirm.confirm'),
+    description: t('desktop.nodeList.originalEpub.confirm.description'),
+    title: t('desktop.nodeList.originalEpub.confirm.title')
+  });
+}
 
 export function ReadwiseOriginalEpubMenuItem(props: {
   hasPreviousGroup: boolean;
@@ -40,7 +49,7 @@ export function ReadwiseOriginalEpubMenuItem(props: {
     return () => { active = false; };
   }, [props.nodeId]);
 
-  if (!props.nodeId || !state || state.status === 'not_applicable' || state.status === 'completed') return null;
+  if (!props.nodeId || !state || state.status === 'not_applicable') return null;
   const label = state.status === 'reconnect_required'
       ? t('desktop.nodeList.menu.useOriginalEpub.reconnect')
       : state.status === 'running'
@@ -50,6 +59,7 @@ export function ReadwiseOriginalEpubMenuItem(props: {
           : t('desktop.nodeList.menu.useOriginalEpub');
   const run = async () => {
     if (state.status !== 'ready' || !props.nodeId) return;
+    if (!await confirmEpubRebuild(t)) return;
     const nodeId = props.nodeId;
     const unsubscribe = onRuntimeReadwiseBookEpubProgress((event) => {
       if (event.nodeId !== nodeId || !(event.phase in PHASE_NOTICE_KEYS)) return;
@@ -58,7 +68,7 @@ export function ReadwiseOriginalEpubMenuItem(props: {
     });
     showAppRuntimeNotice(t('desktop.nodeList.originalEpub.getting'));
     const result = await useRuntimeReadwiseOriginalEpub(nodeId).catch(() => null).finally(() => unsubscribe?.());
-    if (result?.status === 'completed' || result?.status === 'already_completed') {
+    if (result?.status === 'completed') {
       showAppRuntimeNotice(t('desktop.nodeList.originalEpub.success'));
       return;
     }

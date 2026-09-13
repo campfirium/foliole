@@ -42,7 +42,6 @@ function publish(
 export function loadReadwiseOriginalEpubActionState(nodeId: string): NativeReadwiseOriginalEpubActionState {
   const target = loadReadwiseOriginalEpubTarget(nodeId);
   if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (target.state.bodyAuthority === 'original_epub') return { node_id: nodeId, status: 'completed' };
   if (runningNodeIds.has(nodeId)) return { node_id: nodeId, status: 'running' };
   const runtimeStatus = readReadwiseOriginalEpubRuntimeStatus(target);
   if (runtimeStatus !== 'ready') return { node_id: nodeId, status: runtimeStatus };
@@ -56,7 +55,6 @@ export async function useReadwiseOriginalEpub(
 ): Promise<NativeReadwiseOriginalEpubResult> {
   const target = loadReadwiseOriginalEpubTarget(nodeId);
   if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (target.state.bodyAuthority === 'original_epub') return { node_id: nodeId, status: 'already_completed' };
   if (!isReadwiseOriginalEpubRuntimeReady(target) || runningNodeIds.has(nodeId)) {
     return { node_id: nodeId, status: 'source_inactive' };
   }
@@ -79,7 +77,7 @@ export async function useReadwiseOriginalEpub(
     publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);
     publish(window, nodeId, operationId, 'saving', 'Saving…', 0.9);
     commitReadwiseOriginalEpub({ candidate, document, expectedSnapshot, importedAt, target });
-    publish(window, nodeId, operationId, 'completed', 'Original EPUB is now in use.', 1);
+    publish(window, nodeId, operationId, 'completed', 'Rebuilt from EPUB.', 1);
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     if (candidate) await cleanCreatedManagedAttachmentFiles(candidate.stages);

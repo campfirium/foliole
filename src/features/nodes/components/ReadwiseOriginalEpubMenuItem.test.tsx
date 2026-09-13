@@ -6,6 +6,7 @@ import { renderWithLocalization } from '../../../shared/localization/testLocaliz
 const state = vi.hoisted(() => ({ status: 'not_applicable' as string }));
 const useOriginal = vi.hoisted(() => vi.fn());
 const notice = vi.hoisted(() => vi.fn());
+const confirmation = vi.hoisted(() => vi.fn());
 const progress = vi.hoisted(() => ({ handler: null as null | ((event: {
   detail: string; nodeId: string; phase: 'downloading_epub'; progress: number
 }) => void) }));
@@ -21,12 +22,15 @@ vi.mock('../../../shared/platform/readwiseBooksRuntimeRepository', () => ({
   }
 }));
 vi.mock('../../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: notice }));
+vi.mock('../../../shared/ui/appConfirmation', () => ({ requestAppConfirmation: confirmation }));
 import { NodeListContextMenu } from './NodeListContextMenu';
 
 beforeEach(() => {
   state.status = 'not_applicable';
   useOriginal.mockReset();
   notice.mockReset();
+  confirmation.mockReset();
+  confirmation.mockResolvedValue(false);
   progress.handler = null;
 });
 
@@ -48,42 +52,55 @@ function Menu({ nodeId }: { nodeId: string }) {
   );
 }
 
-it('hides ordinary and completed books and explains why an eligible book action cannot run', async () => {
+it('hides ordinary books and explains why an eligible book action cannot run', async () => {
   const { rerender } = renderWithLocalization(
     <Menu nodeId="ordinary" />
   );
   await waitFor(() => expect(screen.queryByRole('menuitem')).toBeNull());
 
-  state.status = 'completed';
-  rerender(<Menu nodeId="completed-book" />);
-  await waitFor(() => expect(screen.queryByRole('menuitem')).toBeNull());
-
   state.status = 'source_inactive';
   rerender(<Menu nodeId="book" />);
   const item = await screen.findByRole('menuitem', {
-    name: 'Use original EPUB — this device does not handle Readwise imports'
+    name: 'Rebuild from EPUB — this device does not handle Readwise imports'
   });
   expect(item).toHaveAttribute('data-disabled');
 
   state.status = 'reconnect_required';
   rerender(<Menu nodeId="book-reconnect" />);
   expect(await screen.findByRole('menuitem', {
-    name: 'Use original EPUB — reconnect Readwise first'
+    name: 'Rebuild from EPUB — reconnect Readwise first'
   })).toHaveAttribute('data-disabled');
 });
 
-it('runs the one-step action and reports the committed result', async () => {
+it('does not request or write anything when rebuild confirmation is cancelled', async () => {
   state.status = 'ready';
+  renderWithLocalization(<Menu nodeId="book" />);
+
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Rebuild from EPUB' }));
+
+  await waitFor(() => expect(confirmation).toHaveBeenCalledWith({
+    confirmLabel: 'Rebuild',
+    description: 'Foliole will get the EPUB from Readwise and rebuild this book’s text, images, and table of contents. Existing highlights, clozes, and notes will be kept and located again.',
+    title: 'Rebuild from EPUB?'
+  }));
+  expect(useOriginal).not.toHaveBeenCalled();
+  expect(notice).not.toHaveBeenCalled();
+});
+
+it('runs the existing action once after confirmation and reports the committed result', async () => {
+  state.status = 'ready';
+  confirmation.mockResolvedValue(true);
   useOriginal.mockImplementation(async () => {
     progress.handler?.({ detail: 'ignored native copy', nodeId: 'book', phase: 'downloading_epub', progress: 0.2 });
     return { node_id: 'book', status: 'completed' };
   });
   renderWithLocalization(<Menu nodeId="book" />);
 
-  fireEvent.click(await screen.findByRole('menuitem', { name: 'Use original EPUB' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Rebuild from EPUB' }));
 
   await waitFor(() => expect(useOriginal).toHaveBeenCalledWith('book'));
+  expect(useOriginal).toHaveBeenCalledTimes(1);
   expect(notice).toHaveBeenNthCalledWith(1, 'Getting original EPUB…');
   expect(notice).toHaveBeenNthCalledWith(2, 'Downloading EPUB…');
-  await waitFor(() => expect(notice).toHaveBeenNthCalledWith(3, 'Original EPUB is now in use.'));
+  await waitFor(() => expect(notice).toHaveBeenNthCalledWith(3, 'Rebuilt from EPUB.'));
 });
