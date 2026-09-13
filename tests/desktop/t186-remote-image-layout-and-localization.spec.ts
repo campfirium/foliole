@@ -117,10 +117,12 @@ async function startFrameTrace(page: Page, alt: string) {
 async function localizeAndExcerptSecond(page: Page) {
   const second = page.getByAltText('Demand B').locator('..');
   await startFrameTrace(page, 'Demand B');
-  const editor = page.locator('.cm-content[role="textbox"]');
-  await editor.click({ position: { x: 8, y: 8 } });
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Meta+Shift+A');
+  const ribbon = page.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
+  await ribbon.getByRole('button', { name: /Command Palette|命令面板/ }).click();
+  const palette = page.getByRole('dialog', { name: /Command palette|命令面板/ });
+  await palette.getByRole('textbox', { name: /Search commands|搜索命令/ }).fill('annotation');
+  await palette.locator('button[aria-label="Annotate Selection"], button[aria-label="批注所选内容"]').click();
+  await second.hover({ position: { x: 40, y: 40 } });
   await second.click({ position: { x: 40, y: 40 } });
   await expect.poll(() => page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.onDemand))
     .toMatch(/Demand A.*https:\/\/.*Demand B.*asset:\/\//s);
