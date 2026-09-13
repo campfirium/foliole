@@ -1,7 +1,6 @@
 import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
 import {
@@ -19,27 +18,17 @@ import {
   resolveManagedBackupDirectory
 } from './backupSettings.js';
 import { cleanupOrphanedBackupTemporaryFiles } from './backupTemporaryFileCleanup.js';
+import { backupCompressedSqliteDatabase } from './compressedSqliteBackup.js';
 import {
-  backupCompressedSqliteDatabase,
-  materializeCompressedSqliteBackup
-} from './compressedSqliteBackup.js';
-import {
-  clearDatabaseConnectionUnavailable,
-  closeDatabaseConnection,
   openDatabaseConnection,
   runWithDatabaseConnectionMaintenance
 } from './connection.js';
-import { recoverCurrentDatabaseAfterRestoreFailure } from './databaseRestoreRecovery.js';
+import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
-import {
-  assertManagedSafetySnapshotIntegrity,
-  createManagedSafetySnapshotWithBackup,
-  waitForManagedSafetySnapshotSettlements
-} from './managedSafetySnapshots.js';
+import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import {
   backupSqliteDatabase,
-  restoreSqliteDatabase,
   verifySqliteDatabaseFile,
   type SqliteBackupResult,
   type SqliteRestoreResult
@@ -75,7 +64,7 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
   const destinationPath = path.join(backupDirectory, automaticBackupFileName(now));
   if (existsSync(destinationPath)) {
     console.warn('[backup] automatic restore point already exists', destinationPath);
-    return;
+    return false;
   }
   const connection = openDatabaseConnection();
   const result = await backupCompressedSqliteDatabase({
@@ -91,6 +80,7 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
     primaryBackupDir: backupDirectory,
     sourcePath: result.destinationPath
   });
+  return true;
 }
 
 export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
@@ -110,14 +100,13 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
         frequencyBucketKey(new Date(entry.updatedAt), cadence) === frequencyBucketKey(now, cadence)
       )
     : true;
-  if (!alreadyExists) {
-    await createAutomaticBackup(now, backupDirectory);
+  const created = !alreadyExists && await createAutomaticBackup(now, backupDirectory);
+  if (created) {
+    const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
+      disposeFile: moveManagedBackupToTrash
+    });
+    showBackupCleanupNotification(pruneResult);
   }
-
-  const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
-    disposeFile: moveManagedBackupToTrash
-  });
-  showBackupCleanupNotification(pruneResult);
   return temporaryCleanup;
 }
 
@@ -138,6 +127,9 @@ export async function createApplicationDatabaseBackup(
   const result = options.destinationPath
     ? await backupSqliteDatabase(backupOptions)
     : await backupCompressedSqliteDatabase(backupOptions);
+  if (options.destinationPath) {
+    verifySqliteDatabaseFile(result.destinationPath);
+  }
   const extraBackup = options.destinationPath
     ? disabledExtraBackupResult()
     : await copyExtraBackup({
@@ -147,7 +139,9 @@ export async function createApplicationDatabaseBackup(
         primaryBackupDir: backupDirectory,
         sourcePath: result.destinationPath
       });
-  await pruneBackupsNow();
+  if (!options.destinationPath) {
+    await pruneBackupsNow();
+  }
   return { ...result, extraBackup };
 }
 
@@ -161,62 +155,15 @@ export async function restoreApplicationDatabaseBackup(
   let resumeLibraryTasks: (() => void) | null = null;
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
-    return await runWithDatabaseConnectionMaintenance(() => restoreDatabaseBackupInMaintenance(options));
+    return await runWithDatabaseConnectionMaintenance(() =>
+      restoreDatabaseBackupInMaintenance(options.sourcePath));
   } finally {
     resumeLibraryTasks?.();
     restoreInProgress = false;
   }
 }
 
-async function restoreDatabaseBackupInMaintenance(
-  options: RestoreApplicationDatabaseBackupOptions
-): Promise<SqliteRestoreResult> {
-  const connection = openDatabaseConnection();
-  const targetPath = connection.dbPath;
-  const safetySnapshot = await createManagedSafetySnapshotWithBackup({
-    reason: 'pre-restore',
-    sourceDatabase: connection.sqlite,
-    sourcePath: targetPath
-  });
-  let materialized: Awaited<ReturnType<typeof materializeCompressedSqliteBackup>> | null = null;
-  let connectionClosed = false;
-  let replacementComplete = false;
-  let restored = false;
-  try {
-    await assertManagedSafetySnapshotIntegrity(safetySnapshot.currentPath);
-    materialized = await materializeCompressedSqliteBackup(options.sourcePath, path.dirname(targetPath));
-    verifySqliteDatabaseFile(materialized.databasePath);
-    closeDatabaseConnection();
-    connectionClosed = true;
-    const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
-    replacementComplete = true;
-    initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
-    clearDatabaseConnectionUnavailable();
-    restored = true;
-    return { ...result, sourcePath: path.resolve(options.sourcePath) };
-  } catch (error) {
-    if (!connectionClosed) {
-      console.error('[backup] restore failed before database replacement', error);
-      throw new Error('The selected backup was not restored. Your current library is unchanged.');
-    }
-    await recoverCurrentDatabaseAfterRestoreFailure({
-      error,
-      replacementComplete,
-      safetySnapshot,
-      targetPath
-    });
-    throw new Error('The selected backup was not restored. Your current library has been restored.');
-  } finally {
-    await materialized?.cleanup();
-    safetySnapshot.release();
-    if (restored) {
-      await pruneBackupsNow();
-    }
-  }
-}
-
 export async function listApplicationDatabaseBackups(): Promise<ApplicationDatabaseBackupEntry[]> {
   await waitForManagedSafetySnapshotSettlements();
-  await pruneBackupsNow();
   return listManagedDatabaseBackups(resolveManagedBackupDirectory());
 }

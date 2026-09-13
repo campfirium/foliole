@@ -152,11 +152,19 @@ it('does not overwrite an existing automatic restore point in the same second', 
     'existing',
     now.toISOString()
   );
+  await createBackupFixture(
+    backupDirectory,
+    'manual-2026-04-06_10-05-00-000.db',
+    'surplus',
+    new Date(2026, 3, 6, 10, 5).toISOString()
+  );
 
   await reconcileAutomaticDatabaseBackups(now);
 
   await expect(fs.readFile(path.join(backupDirectory, 'foliole-auto-backup-260406-101500.db'), 'utf8'))
     .resolves.toBe('existing');
+  await expect(fs.readFile(path.join(backupDirectory, 'manual-2026-04-06_10-05-00-000.db'), 'utf8'))
+    .resolves.toBe('surplus');
 });
 
 it('treats legacy frequency files as one shared restore point collection', async () => {
@@ -178,10 +186,13 @@ it('treats legacy frequency files as one shared restore point collection', async
     );
   }
 
-  await reconcileAutomaticDatabaseBackups(now);
+  await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 6, 11, 15, 0));
 
-  const backupNames = await fs.readdir(backupDirectory);
-  expect(backupNames).toEqual(['auto-daily-2026-04-06_10-15-00-000.db']);
+  const backupNames = (await fs.readdir(backupDirectory)).sort();
+  expect(backupNames).toEqual([
+    'auto-daily-2026-04-06_10-15-00-000.db',
+    'foliole-auto-backup-260406-111500.db.gz'
+  ]);
   expect(notificationMocks.show).toHaveBeenCalledTimes(1);
   expect(notificationMocks.show).toHaveBeenCalledWith(expect.objectContaining({
     capacityDeletedCount: 0,

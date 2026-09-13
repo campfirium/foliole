@@ -25,6 +25,7 @@ afterEach(async () => {
 it('removes only exact inactive private files and reports actual bytes idempotently', async () => {
   const exactSource = `.foliole-auto-backup-260812-120000.db.gz-${UUID_A}.source.db`;
   const exactCompressed = `.pre-restore-2026-08-12_12-00-00-000.db.gz-${UUID_B}.compressed.tmp`;
+  const exactPending = `.manual-2026-08-12_12-00-00-000.db.gz-${UUID_A}.pending.db.gz`;
   const emptySource = `.manual-2026-08-12_10-00-00-000.db.gz-${UUID_B}.source.db`;
   const retained = [
     'manual-2026-08-12_11-00-00-000.db',
@@ -33,13 +34,13 @@ it('removes only exact inactive private files and reports actual bytes idempoten
     `.foliole-auto-backup-260812-120000.db.gz-${UUID_A}.source.db-copy`
   ];
   await Promise.all([
-    write(exactSource, 7), write(exactCompressed, 11), write(emptySource, 0),
+    write(exactSource, 7), write(exactCompressed, 11), write(exactPending, 13), write(emptySource, 0),
     ...retained.map((fileName) => write(fileName, 3))
   ]);
 
   await expect(cleanupOrphanedBackupTemporaryFiles(tempRoot)).resolves.toEqual({
-    deletedCount: 3,
-    releasedBytes: 18
+    deletedCount: 4,
+    releasedBytes: 31
   });
   expect((await fs.readdir(tempRoot)).sort()).toEqual(retained.sort());
   await expect(cleanupOrphanedBackupTemporaryFiles(tempRoot)).resolves.toEqual({

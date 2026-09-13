@@ -7,7 +7,8 @@ import { createGunzip, createGzip, constants } from 'node:zlib';
 import {
   backupSqliteDatabase,
   type BackupSqliteDatabaseOptions,
-  type SqliteBackupResult
+  type SqliteBackupResult,
+  verifySqliteDatabaseFile
 } from './sqliteBackupRestore.js';
 
 export const COMPRESSED_SQLITE_BACKUP_SUFFIX = '.db.gz';
@@ -26,16 +27,34 @@ export async function backupCompressedSqliteDatabase(
 ): Promise<SqliteBackupResult> {
   const destinationPath = path.resolve(options.destinationPath);
   const temporaryPath = siblingTemporaryPath(destinationPath, 'source.db');
+  const compressedTemporaryPath = siblingTemporaryPath(destinationPath, 'pending.db.gz');
   activeTemporaryPaths.add(temporaryPath);
+  activeTemporaryPaths.add(compressedTemporaryPath);
   try {
     const result = await backupSqliteDatabase({ ...options, destinationPath: temporaryPath });
-    await compressSqliteFile(temporaryPath, destinationPath);
+    verifySqliteDatabaseFile(temporaryPath);
+    await assertCompressionSpace(temporaryPath, path.dirname(destinationPath));
+    await writeCompressedSqliteFile(temporaryPath, compressedTemporaryPath);
+    const materialized = await materializeCompressedSqliteBackup(
+      compressedTemporaryPath,
+      path.dirname(destinationPath)
+    );
+    try {
+      verifySqliteDatabaseFile(materialized.databasePath);
+    } finally {
+      await materialized.cleanup();
+    }
+    await fs.link(compressedTemporaryPath, destinationPath);
     return { ...result, destinationPath };
   } finally {
     try {
-      await fs.rm(temporaryPath, { force: true });
+      await Promise.all([
+        removeSqliteFileGroup(temporaryPath),
+        fs.rm(compressedTemporaryPath, { force: true })
+      ]);
     } finally {
       activeTemporaryPaths.delete(temporaryPath);
+      activeTemporaryPaths.delete(compressedTemporaryPath);
     }
   }
 }
@@ -72,11 +91,7 @@ export async function compressSqliteFile(sourcePath: string, destinationPath: st
   const temporaryPath = siblingTemporaryPath(destinationPath, 'compressed.tmp');
   activeTemporaryPaths.add(temporaryPath);
   try {
-    await pipeline(
-      createReadStream(sourcePath),
-      createGzip({ level: constants.Z_BEST_SPEED }),
-      createWriteStream(temporaryPath, { flags: 'wx' })
-    );
+    await writeCompressedSqliteFile(sourcePath, temporaryPath);
     await fs.link(temporaryPath, destinationPath);
   } finally {
     try {
@@ -85,6 +100,14 @@ export async function compressSqliteFile(sourcePath: string, destinationPath: st
       activeTemporaryPaths.delete(temporaryPath);
     }
   }
+}
+
+async function writeCompressedSqliteFile(sourcePath: string, destinationPath: string) {
+  await pipeline(
+    createReadStream(sourcePath),
+    createGzip({ level: constants.Z_BEST_SPEED }),
+    createWriteStream(destinationPath, { flags: 'wx' })
+  );
 }
 
 async function assertCompressionSpace(sourcePath: string, destinationDirectory: string) {

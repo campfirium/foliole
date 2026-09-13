@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 let mockedAppDataDir = '/tmp/foliole-backup-restore-snapshot-tests';
+const trashItem = vi.hoisted(() => vi.fn());
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -20,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('./backupFileDisposition.js', () => ({ moveManagedBackupToTrash: trashItem }));
 
 import {
   createApplicationDatabaseBackup,
@@ -40,6 +42,10 @@ import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  trashItem.mockReset().mockImplementation(async (filePath: string) => {
+    const { rm } = await import('node:fs/promises');
+    await rm(filePath, { force: true });
+  });
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-backup-restore-snapshots-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
@@ -61,7 +67,7 @@ async function removeTempRoot() {
   }
 }
 
-it('creates a pre-restore snapshot in Backups and prunes older snapshot files', async () => {
+it('creates a pre-restore snapshot and keeps only the configured safety count', async () => {
   seedNode('node-1', '# original');
   const manualBackup = await createApplicationDatabaseBackup();
   const connection = openDatabaseConnection();
@@ -85,7 +91,7 @@ it('creates a pre-restore snapshot in Backups and prunes older snapshot files', 
     .filter((fileName) => fileName.startsWith('pre-restore-'))
     .sort();
   const backupDirectoryNames = await fs.readdir(snapshotDirectory);
-  expect(snapshotNames).toHaveLength(INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT);
+  expect(snapshotNames).toHaveLength(2);
   expect(snapshotNames.some((fileName) => fileName.startsWith('pre-restore-'))).toBe(true);
   expect(backupDirectoryNames).not.toContain('foliole-external.db');
   expect(backupDirectoryNames).not.toContain(path.basename(connection.searchDbPath));
@@ -94,7 +100,9 @@ it('creates a pre-restore snapshot in Backups and prunes older snapshot files', 
 
 it('keeps the current database untouched when the pre-restore snapshot cannot be created', async () => {
   seedNode('node-1', '# original');
-  const manualBackup = await createApplicationDatabaseBackup();
+  const manualBackup = await createApplicationDatabaseBackup({
+    destinationPath: path.join(tempRoot, 'manual-export.db')
+  });
 
   seedNode('node-1', '# current');
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(openDatabaseConnection().dbPath);
@@ -102,9 +110,8 @@ it('keeps the current database untouched when the pre-restore snapshot cannot be
   await fs.mkdir(path.dirname(snapshotDirectory), { recursive: true });
   await fs.writeFile(snapshotDirectory, 'blocked');
 
-  await expect(restoreApplicationDatabaseBackup({ sourcePath: manualBackup.destinationPath })).rejects.toThrow(
-    /failed to create pre-restore snapshot/
-  );
+  await expect(restoreApplicationDatabaseBackup({ sourcePath: manualBackup.destinationPath }))
+    .rejects.toThrow('Your current library is unchanged');
 
   const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   if (snapshot === null) {
@@ -158,6 +165,7 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
 
   await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.filePath ?? '' });
   expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# current state');
+  await expect(fs.access(preRestore?.filePath ?? '')).resolves.toBeUndefined();
 });
 
 async function readSnapshotState(filePath: string | undefined) {

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-compressed-backup-tests';
+const trashItem = vi.hoisted(() => vi.fn());
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -16,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('./backupFileDisposition.js', () => ({ moveManagedBackupToTrash: trashItem }));
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection } from './connection.js';
@@ -26,6 +28,10 @@ import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  trashItem.mockReset().mockImplementation(async (filePath: string) => {
+    const { rm } = await import('node:fs/promises');
+    await rm(filePath, { force: true });
+  });
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-compressed-backup-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
@@ -48,6 +54,7 @@ it('creates an independent gzip backup and restores it through the existing sqli
 
   expect(restored.sourcePath).toBe(path.resolve(backup.destinationPath));
   expect(currentContent()).toBe('# original');
+  await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
   await expectNoRestoreSources(path.dirname(mockedAppDataDir));
 });
 
@@ -61,6 +68,9 @@ it('keeps the current database available when a compressed backup is truncated',
     .rejects.toThrow('Your current library is unchanged');
 
   expect(currentContent()).toBe('# current');
+  expect(trashItem).not.toHaveBeenCalled();
+  expect((await fs.readdir(path.dirname(backup.destinationPath)))
+    .some((fileName) => fileName.startsWith('pre-restore-'))).toBe(false);
   await expectNoRestoreSources(path.dirname(mockedAppDataDir));
 });
 
@@ -97,6 +107,7 @@ it('restores the current library when database replacement fails', async () => {
       .rejects.toThrow('Your current library has been restored');
     expect(currentContent()).toBe('# current');
     expect(targetExistedBeforeCommit).toBe(true);
+    expect(trashItem).toHaveBeenCalledWith(expect.stringContaining('pre-restore-'));
   } finally {
     renameSpy.mockRestore();
   }

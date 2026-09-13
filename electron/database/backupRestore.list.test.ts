@@ -87,6 +87,23 @@ it('returns an empty list when the managed backup directory does not exist', asy
   await expect(listApplicationDatabaseBackups()).resolves.toEqual([]);
 });
 
+it('does not change the backup directory when the list is refreshed', async () => {
+  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Backups');
+  await fs.mkdir(backupDirectoryPath, { recursive: true });
+  for (let index = 0; index < 12; index += 1) {
+    await fs.writeFile(
+      path.join(backupDirectoryPath, `manual-2026-03-14_10-${String(index).padStart(2, '0')}-00-000.db`),
+      `backup-${index}`
+    );
+  }
+  const before = (await fs.readdir(backupDirectoryPath)).sort();
+
+  await listApplicationDatabaseBackups();
+  await listApplicationDatabaseBackups();
+
+  expect((await fs.readdir(backupDirectoryPath)).sort()).toEqual(before);
+});
+
 it('recognizes the compact automatic restore point filename', async () => {
   const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Backups');
   const fileName = 'foliole-auto-backup-260713-081408.db';
