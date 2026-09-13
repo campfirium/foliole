@@ -71,6 +71,6 @@
 - 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。
 - Hidden/Visible spec 只断言稳定用户行为。UI、layout、空白页或视觉回归还必须产出截图或 trace 到 `.tmp/artifacts/`；不得用 DOM 顺序、坐标或文本存在代替视觉证据。最终汇报说明自动断言覆盖的用户效果与未覆盖观察点。
 - Desktop Playwright 使用共享 harness、隔离 state root 与 resource gate，并在共享工作区串行执行；并发占用是资源冲突，不得报告为产品失败。不得绕开 runner 直接运行裸 Playwright CLI。
-- macOS Hidden/Visible Native 验收被同仓 Foliole DEV 预览占用 resource gate 时，核实 holder 是 `scripts/macos/macos-electron-dev.mjs` 后直接运行 `npm run macos:dev:stop` 并继续验收，不要求用户手动关闭。该规则只授权关闭当前仓库的 DEV 预览，不扩张到正式版、其他应用或无法核实身份的 holder；验收结束后不自动重开预览。单一 owner 为本文件，主要成本是中断当前 DEV 预览会话；当验收入口不再互斥或 stop 入口失效时修订。
+- macOS Hidden/Visible Native 验收被同仓 Foliole DEV 预览占用 resource gate 时，核实 holder 是 `scripts/macos/macos-electron-dev.mjs` 后记录恢复意图，直接运行 `npm run macos:dev:stop` 并继续验收，不要求用户手动关闭。无论验收通过或失败，验收命令到达终态后都必须运行 `npm run macos:dev:open` 并以 `npm run macos:dev:status` 核实 `RUNNING`；只有用户当次明确要求保持关闭时才不恢复。该规则只授权停止和恢复当前仓库原本已运行的 DEV 预览，不扩张到原本未运行的预览、正式版、其他应用或无法核实身份的 holder。单一 owner 为本文件，主要成本是验收前后各一次 DEV 生命周期切换；当验收入口不再互斥或 stop/open 入口失效时修订。
 - macOS preview 使用 `npm run electron:dev` 的 `.tmp` sandbox，native preflight 使用 `npm run electron:native:health`。Windows 人工预览使用 `npm run windows:preview:native`，仅在 Windows 专属触发成立时执行。
 - Windows 专属证据覆盖 Windows path/`app.getPath`、ABI、native shell/dialog/tray/notification、主数据库、installer/updater 与 Windows preload/IPC 边界；Linux Electron + Xvfb 或 macOS preview 不得替代。
