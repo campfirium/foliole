@@ -7,7 +7,7 @@ export interface SettingsRowProps extends HTMLAttributes<HTMLDivElement> {
   className?: string;
   description?: ReactNode;
   readonly?: boolean;
-  title: string;
+  title?: string;
 }
 
 export function SettingsRow({
@@ -18,6 +18,8 @@ export function SettingsRow({
   title,
   ...rest
 }: SettingsRowProps) {
+  const hasCopy = Boolean(title || description);
+
   return (
     <div
       className={cn(
@@ -28,10 +30,12 @@ export function SettingsRow({
       data-settings-row
       {...rest}
     >
-      <div className="min-w-0 flex-1">
-        <h4 className="text-ui-lg font-normal text-foreground">{title}</h4>
-        {description ? <p className="mt-0.5 max-w-[780px] text-ui-md leading-6 text-foreground/64">{description}</p> : null}
-      </div>
+      {hasCopy ? (
+        <div className="min-w-0 flex-1">
+          {title ? <h4 className="text-ui-lg font-normal text-foreground">{title}</h4> : null}
+          {description ? <p className="mt-0.5 max-w-[780px] text-ui-md leading-6 text-foreground/64">{description}</p> : null}
+        </div>
+      ) : null}
       {children}
     </div>
   );

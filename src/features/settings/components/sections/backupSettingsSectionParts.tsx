@@ -188,7 +188,6 @@ export function BackupListSection(props: {
   const t = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const visibleBackups = isExpanded ? props.backups : props.backups.slice(0, 3);
-  const hiddenBackupCount = Math.max(0, props.backups.length - visibleBackups.length);
 
   return (
     <SettingsSection ariaLabel={t('settings.backups.list.sectionAria')} title={t('settings.backups.title')}>
@@ -217,12 +216,10 @@ export function BackupListSection(props: {
         </SettingsRow>
       ))}
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length > 3 ? (
-        <SettingsRow
-          title={isExpanded ? t('settings.backups.more.collapse') : t('settings.backups.more.title')}
-        >
+        <SettingsRow className="justify-end">
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <button className={SETTINGS_BUTTON_CLASS_NAME} onClick={() => setIsExpanded((value) => !value)} type="button">
-              {isExpanded ? t('settings.backups.more.showFewer') : t('settings.backups.more.showMore', { count: hiddenBackupCount })}
+              {isExpanded ? t('settings.backups.list.collapse') : t('settings.backups.list.showAll')}
             </button>
           </SettingsControlSlot>
         </SettingsRow>

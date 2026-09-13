@@ -27,6 +27,13 @@ it('renders without a description block when description is omitted', () => {
   expect(screen.getByRole('heading', { level: 4, name: 'Bare row' })).toBeInTheDocument();
 });
 
+it('renders an action-only row without an empty heading', () => {
+  render(<SettingsRow><button type="button">View all</button></SettingsRow>);
+
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'View all' })).toBeInTheDocument();
+});
+
 it('tags the row with data-settings-row so the section divider selector can match', () => {
   render(<SettingsRow data-testid="row" title="Tagged" />);
 

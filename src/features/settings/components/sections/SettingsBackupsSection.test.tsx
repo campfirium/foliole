@@ -180,7 +180,7 @@ it('changes and turns off the extra backup location', async () => {
   });
 });
 
-it('shows only three backups by default and expands the rest on demand', async () => {
+it('keeps backup disclosure inside the list without creating a separate backup group', async () => {
   vi.mocked(listDatabaseBackups).mockResolvedValue([
     backupEntry('manual-2026-04-02_11-00-00-000.db', '2026-04-02T11:00:00.000Z'),
     backupEntry('manual-2026-04-02_10-00-00-000.db', '2026-04-02T10:00:00.000Z'),
@@ -190,14 +190,14 @@ it('shows only three backups by default and expands the rest on demand', async (
 
   renderWithLocalization(<SettingsBackupsSection />);
 
-  await screen.findByRole('button', { name: 'Show 1 more' });
+  await screen.findByRole('button', { name: 'View all backups' });
   expect(screen.queryByText('auto-daily-2026-04-02_08-00-00-000.db')).not.toBeInTheDocument();
-  expect(screen.getByText('More backups').compareDocumentPosition(screen.getByRole('heading', { name: 'Source topic handling' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(screen.queryByRole('heading', { name: 'More backups' })).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
+  fireEvent.click(screen.getByRole('button', { name: 'View all backups' }));
 
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show fewer' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
 });
 
 it('creates a manual backup and refreshes the list', async () => {
