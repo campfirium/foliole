@@ -13,7 +13,7 @@ function launch(source) {
   });
 }
 
-describe('managed DEV child shutdown', () => {
+describe.runIf(process.platform !== 'win32')('managed DEV child shutdown', () => {
   it('waits for inherited output to close after the shell exits', async () => {
     const active = launch(`
       const { spawn } = require('node:child_process');
