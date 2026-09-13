@@ -1,8 +1,9 @@
 import {
   cancelImageExcerptRegionSelection,
   IMAGE_EXCERPT_SELECTION_MODE_EVENT,
+  isImageExcerptRegionSelectionActive,
   registerImageExcerptSelectionSurface,
-  requestImageExcerptRegionSelection
+  resumeImageExcerptRegionSelection
 } from '../model/imageExcerptRegionSelection';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
@@ -15,7 +16,7 @@ export function attachRemoteImageOnDemandLocalization(
   nodeId: string,
   imageMatch: MarkdownImageMatch
 ) {
-  let active = false;
+  let active = isImageExcerptRegionSelectionActive(nodeId);
   let pending = false;
   const unregister = registerImageExcerptSelectionSurface(nodeId);
   const onMode = (event: Event) => {
@@ -34,7 +35,7 @@ export function attachRemoteImageOnDemandLocalization(
       to: Number.isInteger(to) ? to : imageMatch.to
     }).then((localized) => {
       if (!localized) cancelImageExcerptRegionSelection();
-      if (localized) requestAnimationFrame(() => requestImageExcerptRegionSelection(nodeId));
+      if (localized) resumeImageExcerptRegionSelection(nodeId);
     }).finally(() => { pending = false; });
   };
   window.addEventListener(IMAGE_EXCERPT_SELECTION_MODE_EVENT, onMode);

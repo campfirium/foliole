@@ -44,6 +44,14 @@ export function requestImageExcerptRegionSelection(editorNodeId: string) {
   return true;
 }
 
+export function resumeImageExcerptRegionSelection(editorNodeId: string) {
+  dispatchSelectionMode(editorNodeId);
+}
+
+export function isImageExcerptRegionSelectionActive(editorNodeId: string) {
+  return activeEditorNodeId === editorNodeId;
+}
+
 export function finishImageExcerptRegionSelection(selection: ImageExcerptRegionSelection) {
   dispatchSelectionMode(null);
   window.dispatchEvent(new CustomEvent<ImageExcerptRegionSelection>(IMAGE_EXCERPT_REGION_SELECTED_EVENT, { detail: selection }));

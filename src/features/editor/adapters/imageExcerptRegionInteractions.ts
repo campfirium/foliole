@@ -2,6 +2,7 @@ import {
   cancelImageExcerptRegionSelection,
   finishImageExcerptRegionSelection,
   IMAGE_EXCERPT_SELECTION_MODE_EVENT,
+  isImageExcerptRegionSelectionActive,
   registerImageExcerptSelectionSurface,
   type ImageExcerptRegionRect
 } from '../model/imageExcerptRegionSelection';
@@ -51,7 +52,7 @@ function createModeHandlers(args: InteractionArgs, state: InteractionState) {
   const onKeyDown = (event: KeyboardEvent) => {
     if (state.active && event.key === 'Escape') cancelImageExcerptRegionSelection();
   };
-  return { onKeyDown, onMode };
+  return { onKeyDown, onMode, setActive };
 }
 
 function createPointerHandlers(args: InteractionArgs, state: InteractionState) {
@@ -103,7 +104,10 @@ function createPointerHandlers(args: InteractionArgs, state: InteractionState) {
 }
 
 export function attachImageExcerptRegionInteractions(args: InteractionArgs) {
-  const state: InteractionState = { active: false, drag: null };
+  const state: InteractionState = {
+    active: isImageExcerptRegionSelectionActive(args.editorNodeId),
+    drag: null
+  };
   const unregister = registerImageExcerptSelectionSurface(args.editorNodeId);
   const mode = createModeHandlers(args, state);
   const pointer = createPointerHandlers(args, state);
@@ -112,6 +116,7 @@ export function attachImageExcerptRegionInteractions(args: InteractionArgs) {
   args.surface.addEventListener('pointerdown', pointer.onPointerDown, true);
   args.surface.addEventListener('pointermove', pointer.onPointerMove, true);
   args.surface.addEventListener('pointerup', pointer.onPointerUp, true);
+  mode.setActive(state.active);
   const cleanup = () => {
     unregister();
     window.removeEventListener(IMAGE_EXCERPT_SELECTION_MODE_EVENT, mode.onMode);

@@ -127,6 +127,7 @@ async function localizeAndExcerptSecond(page: Page) {
   await expect.poll(() => page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.onDemand))
     .toMatch(/Demand A.*https:\/\/.*Demand B.*asset:\/\//s);
   const localSurface = page.getByAltText('Demand B').locator('..');
+  await expect(localSurface).toHaveAttribute('data-md-image-excerpt-active', 'true');
   const bounds = await localSurface.boundingBox();
   if (!bounds) throw new Error('localized image surface has no bounds');
   await page.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.2);

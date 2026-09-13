@@ -56,7 +56,6 @@ it('localizes only the remote image targeted for an excerpt', async () => {
 
   expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
   await targetSurface(1);
-  await vi.advanceTimersByTimeAsync(20);
 
   expect(adapter.getContent()).toBe(`${first}\n![Second](${IMAGE_URL})`);
   expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
