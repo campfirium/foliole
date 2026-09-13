@@ -10,6 +10,10 @@ let mockedAppDataDir = '/tmp/foliole-removed-import-restore-tests';
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
+const PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+yZB8AAAAASUVORK5CYII=',
+  'base64'
+);
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -162,7 +166,7 @@ it('restores a removed import by importing a fresh initial topic', async () => {
   const imageDir = path.join(sourceDir, 'images');
   await fs.mkdir(sourceDir, { recursive: true });
   await fs.mkdir(imageDir, { recursive: true });
-  await fs.writeFile(path.join(imageDir, 'cover.png'), 'png', 'utf8');
+  await fs.writeFile(path.join(imageDir, 'cover.png'), PNG_BYTES);
   await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\n![Cover](images/cover.png)\n\nFresh body\n', 'utf8');
   saveGenericKeepSettings(sourceDir);
   await runKeepImportRule({
