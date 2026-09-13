@@ -197,7 +197,9 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
   expect(frameTrace.blankFrames).toBeLessThanOrEqual(1);
 
   await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-auto-localize-remote-images', 'true'));
-  await openNode(desktopWindow, IDS.auto);
+  await desktopWindow.getByRole('treeitem', { name: 'T186 Automatic' }).click();
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe(IDS.auto);
   await expect.poll(() => desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.auto))
     .toMatch(/asset:\/\//);
   await expect(desktopWindow.locator('.cm-md-image-surface-clozeable')).toBeVisible();
