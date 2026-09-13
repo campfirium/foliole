@@ -52,6 +52,10 @@ it('resolves confirmation requests from the shared app dialog', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Open confirmation' }));
   const dialog = await screen.findByRole('dialog', { name: 'Continue action?' });
   expect(within(dialog).getByText('The action will continue only after confirmation.')).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveClass('border-transparent');
+  expect(within(dialog).getByRole('button', { name: 'Proceed' })).toHaveClass(
+    'border-[var(--app-control-border-color)]'
+  );
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Proceed' }));
 

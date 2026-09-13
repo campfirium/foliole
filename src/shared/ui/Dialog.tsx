@@ -84,7 +84,7 @@ const AppDialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     data-app-dialog-title="true"
-    className={cn('text-ui-xl font-semibold text-foreground', className)}
+    className={cn('text-ui-md font-normal text-foreground', className)}
     {...props}
   />
 ));

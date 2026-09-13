@@ -24,7 +24,8 @@ it('renders dialog content with shared floating surface baseline', async () => {
   expect(dialog.className).toContain('border-[var(--app-floating-border-color)]');
   expect(dialog.className).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(screen.getByLabelText('Demo overlay')).toBeInTheDocument();
-  expect(screen.getByText('Shared dialog').className).toContain('text-ui-xl');
+  expect(screen.getByText('Shared dialog')).toHaveClass('text-ui-md', 'font-normal');
+  expect(screen.getByText('Shared dialog')).not.toHaveClass('font-semibold');
   expect(screen.getByText('Body copy').className).toContain('text-foreground/68');
   expect(screen.getByText('Body copy')).toBeInTheDocument();
 });
