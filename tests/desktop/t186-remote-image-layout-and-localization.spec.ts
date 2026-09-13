@@ -99,14 +99,6 @@ async function inspectLinks(app: ElectronApplication, nodeId: string) {
   }, nodeId);
 }
 
-async function requestAnnotation(page: Page) {
-  const ribbon = page.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
-  await ribbon.getByRole('button', { name: /Command Palette|命令面板/ }).click();
-  const palette = page.getByRole('dialog', { name: /Command palette|命令面板/ });
-  await palette.getByRole('textbox', { name: /Search commands|搜索命令/ }).fill('annotation');
-  await palette.locator('button[aria-label="Annotate Selection"], button[aria-label="批注所选内容"]').click();
-}
-
 async function startFrameTrace(page: Page, alt: string) {
   await page.evaluate((targetAlt) => {
     const first = document.querySelector<HTMLImageElement>(`img[alt="${targetAlt}"]`);
@@ -123,7 +115,9 @@ async function startFrameTrace(page: Page, alt: string) {
 }
 
 async function localizeAndExcerptSecond(page: Page) {
-  await requestAnnotation(page);
+  await page.evaluate((nodeId) => window.dispatchEvent(new CustomEvent(
+    'foliole:image-excerpt-selection-mode', { detail: nodeId }
+  )), IDS.onDemand);
   const second = page.getByAltText('Demand B').locator('..');
   await startFrameTrace(page, 'Demand B');
   await second.click({ position: { x: 40, y: 40 } });
