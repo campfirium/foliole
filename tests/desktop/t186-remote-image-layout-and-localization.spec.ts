@@ -197,6 +197,8 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
   expect(await inspectLinks(desktopApp, IDS.auto)).toHaveLength(1);
 
   await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-auto-localize-remote-images', 'false'));
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
   await openNode(desktopWindow, IDS.onDemand);
   await waitForImages(desktopWindow, 2);
   const frameTrace = await localizeAndExcerptSecond(desktopWindow);
