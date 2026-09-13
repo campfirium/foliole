@@ -13,6 +13,11 @@ import { selectImageClozeOccurrencePresentation } from './imageClozeOccurrencePr
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import {
+  concealLoadingMarkdownImageSurface,
+  finalizeLoadedMarkdownImageDisplay,
+  revealLoadedMarkdownImageSurface
+} from './liveMarkdownImageDisplay';
+import {
   createMarkdownImageElement,
   type RequestEditorMeasure
 } from './liveMarkdownImageElement';
@@ -100,21 +105,13 @@ function appendLoadingImageSurface(
     },
     onLoad: () => {
       closeActiveRemoteImageFailureMenu();
-      surface.classList.remove('cm-md-image-surface-loading');
-      surface.removeAttribute('aria-hidden');
-      surface.removeAttribute('style');
+      revealLoadedMarkdownImageSurface(surface);
       wrapper.replaceChildren(surface);
+      finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure);
     },
     requestMeasure
   });
-  surface.classList.add('cm-md-image-surface-loading');
-  surface.setAttribute('aria-hidden', 'true');
-  surface.style.height = '1px';
-  surface.style.opacity = '0';
-  surface.style.overflow = 'hidden';
-  surface.style.pointerEvents = 'none';
-  surface.style.position = 'absolute';
-  surface.style.width = '1px';
+  concealLoadingMarkdownImageSurface(surface);
   wrapper.append(surface);
   void resolveRemoteContextAndRender();
   async function resolveRemoteContextAndRender() {
@@ -198,7 +195,10 @@ export function createMarkdownImageWidgetDom(
   }
 
   if (renderPlan.browserImageSrc || localDocumentImageSrc) {
-    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc ?? localDocumentImageSrc!, editorNodeId, { requestMeasure }));
+    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc ?? localDocumentImageSrc!, editorNodeId, {
+      onLoad: () => finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure),
+      requestMeasure
+    }));
     return wrapper;
   }
 
@@ -224,6 +224,7 @@ export function createMarkdownImageWidgetDom(
         closeActiveRemoteImageFailureMenu();
         wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
       },
+      onLoad: () => finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure),
       requestMeasure
     })
   );

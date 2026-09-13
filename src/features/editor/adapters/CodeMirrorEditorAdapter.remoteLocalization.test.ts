@@ -100,7 +100,7 @@ it('does not restore the remote image URL from editor undo history', async () =>
   adapter.destroy();
 });
 
-it('rewrites large remote images as standalone blocks after editor localization', async () => {
+it('does not rewrite surrounding whitespace when localizing a large remote image', async () => {
   importRemoteImageAttachment.mockResolvedValue({
     status: 'imported',
     attachment_id: 'attachment-1',
@@ -115,8 +115,8 @@ it('rewrites large remote images as standalone blocks after editor localization'
   adapter.replaceSelection('Before ![Remote](https://example.com/cover.png) after');
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe(`Before\n\n![Remote](${IMAGE_URL})\n\nafter`);
-  expect(onChange).toHaveBeenLastCalledWith(`Before\n\n![Remote](${IMAGE_URL})\n\nafter`, { nodeId: 'node-1' });
+  expect(adapter.getContent()).toBe(`Before ![Remote](${IMAGE_URL}) after`);
+  expect(onChange).toHaveBeenLastCalledWith(`Before ![Remote](${IMAGE_URL}) after`, { nodeId: 'node-1' });
 
   adapter.destroy();
 });
@@ -156,7 +156,7 @@ it('detects remote markdown images through the shared image parser before rewrit
   adapter.replaceSelection('![Remote](<https://example.com/cover.png> "Title")');
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe(`![Remote](${IMAGE_URL} "Title")`);
+  expect(adapter.getContent()).toBe(`![Remote](<${IMAGE_URL}> "Title")`);
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/cover.png');
 
   adapter.destroy();
@@ -179,12 +179,12 @@ it('preserves image-only wrapping links when localizing remote markdown images',
   );
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe(`[![](${IMAGE_URL})](https://blogger.googleusercontent.com/img/a/cover)\n\n正文`);
+  expect(adapter.getContent()).toBe(`[\n\n![](${IMAGE_URL})\n\n](https://blogger.googleusercontent.com/img/a/cover)正文`);
 
   adapter.destroy();
 });
 
-it('keeps stale remote wrappers around already localized images after the node opens', async () => {
+it('leaves stale remote wrappers unchanged after the node opens', async () => {
   const { adapter, onChange } = createAdapter();
 
   adapter.setContent(
@@ -193,9 +193,11 @@ it('keeps stale remote wrappers around already localized images after the node o
   adapter.setNodeId('node-1');
   await waitForLocalization();
 
-  expect(adapter.getContent()).toBe(`[![image1971×1242 140 KB](${IMAGE_URL})](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文`);
+  expect(adapter.getContent()).toBe(
+    `[\n\n![image](${IMAGE_URL})\n\nimage1971×1242 140 KB](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文`
+  );
   expect(importRemoteImageAttachment).not.toHaveBeenCalled();
-  expect(onChange).toHaveBeenLastCalledWith(`[![image1971×1242 140 KB](${IMAGE_URL})](https://cdn.example.com/uploads/original/2X/f/cover.png)\n正文`, { nodeId: 'node-1' });
+  expect(onChange).not.toHaveBeenCalled();
 
   adapter.destroy();
 });
@@ -211,6 +213,26 @@ it('skips remote download when the setting is turned off', async () => {
   expect(adapter.getContent()).toBe('![Remote](https://example.com/cover.png)');
   expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   expect(window.confirm).not.toHaveBeenCalled();
+
+  adapter.destroy();
+});
+
+it('localizes externally supplied content using the current setting', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'attachment-1',
+    hash: IMAGE_HASH,
+    mime_type: 'image/png',
+    original_name: 'cover.png'
+  });
+  const { adapter } = createAdapter();
+
+  adapter.setNodeId('node-1');
+  adapter.setContent('Lead ![Remote](https://example.com/cover.png) tail');
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe(`Lead ![Remote](${IMAGE_URL}) tail`);
+  expect(importRemoteImageAttachment).toHaveBeenCalledTimes(1);
 
   adapter.destroy();
 });

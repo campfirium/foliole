@@ -150,6 +150,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; },
       view: this.view
     });
+    this.remoteImageLocalization.schedule();
   }
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;

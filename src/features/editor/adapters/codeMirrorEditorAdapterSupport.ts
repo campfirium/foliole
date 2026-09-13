@@ -10,7 +10,6 @@ import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalization
 import type { EditorContentChangeMeta, EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
-import { hasLocalizedImageOnlyRemoteWrappingLink } from './markdownImageWrappingLinks';
 
 export interface CodeMirrorEditorAdapterOptions {
   applicationCutEnabled?: boolean;
@@ -83,7 +82,7 @@ function hasLocalizableMarkdownImageContent(content: string) {
     const parsed = parseMarkdownImageTarget(reference.rawTarget);
     return parsed?.destination.startsWith('http://') || parsed?.destination.startsWith('https://');
   });
-  return hasRemoteMarkdownImage || hasLocalizedImageOnlyRemoteWrappingLink(content);
+  return hasRemoteMarkdownImage;
 }
 
 export function dispatchLiveMarkdownReconfigure(args: {
