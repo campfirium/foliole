@@ -49,6 +49,7 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
     },
     getContent: args.getContent,
     getNodeId: args.getNodeId,
+    host: args.host,
     isApplyingExternalContent: args.isApplyingExternalContent,
     onFlush: (content, nodeId) => {
       const onChange = args.getOnChange();

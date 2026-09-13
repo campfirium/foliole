@@ -4,6 +4,7 @@ import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { selectImageClozeOccurrencePresentation } from './imageClozeOccurrencePresentation';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 import { createMarkdownImageElement, type RequestEditorMeasure } from './liveMarkdownImageElement';
+import { attachRemoteImageOnDemandLocalization } from './remoteImageOnDemandLocalization';
 
 export function createImageSurface(
   imageMatch: MarkdownImageMatch,
@@ -18,7 +19,7 @@ export function createImageSurface(
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
   const imagePresentation = selectImageClozeOccurrencePresentation(presentation, imageMatch);
-  return createImageClozeImageSurface({
+  const surface = createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
     display: imageMatch.display,
     ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),
@@ -40,4 +41,8 @@ export function createImageSurface(
     previewSource: source,
     to: imageMatch.to
   });
+  if (!imageMatch.attachmentId && editorNodeId && /^https?:\/\//u.test(imageMatch.source)) {
+    attachRemoteImageOnDemandLocalization(surface, editorNodeId, imageMatch);
+  }
+  return surface;
 }

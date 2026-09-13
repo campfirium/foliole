@@ -9,7 +9,11 @@ import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalization
 
 import type { EditorContentChangeMeta, EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
-import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
+import { localizeRemoteMarkdownImageOccurrence, localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
+import {
+  listenForRemoteImageLocalization,
+  type RemoteImageLocalizationRequest
+} from './remoteImageLocalizationEvents';
 
 export interface CodeMirrorEditorAdapterOptions {
   applicationCutEnabled?: boolean;
@@ -129,25 +133,33 @@ export function dispatchReadOnlyReconfigure(args: {
 export class RemoteImageLocalizationController {
   private localizationRunId = 0;
   private localizationTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly stopListening: () => void;
 
   constructor(
     private readonly args: {
       applyLocalizedContent: (localized: string, contentSnapshot: string) => void;
       getContent: () => string;
       getNodeId: () => string | null;
+      host?: HTMLElement;
     }
-  ) {}
+  ) {
+    this.stopListening = args.host
+      ? listenForRemoteImageLocalization(args.host, (request) => this.handleOccurrenceRequest(request))
+      : () => undefined;
+  }
 
-  destroy() {
-    if (!this.localizationTimer) {
-      return;
-    }
-    clearTimeout(this.localizationTimer);
+  private clearTimer() {
+    if (this.localizationTimer) clearTimeout(this.localizationTimer);
     this.localizationTimer = null;
   }
 
+  destroy() {
+    this.clearTimer();
+    this.stopListening();
+  }
+
   schedule() {
-    this.destroy();
+    this.clearTimer();
     const nodeId = this.args.getNodeId();
     if (!nodeId) {
       return;
@@ -177,5 +189,21 @@ export class RemoteImageLocalizationController {
       return;
     }
     this.args.applyLocalizedContent(localized, contentSnapshot);
+  }
+
+  private handleOccurrenceRequest(request: RemoteImageLocalizationRequest) {
+    if (request.nodeId !== this.args.getNodeId()) return;
+    request.handled = true;
+    const contentSnapshot = this.args.getContent();
+    void localizeRemoteMarkdownImageOccurrence(request.nodeId, contentSnapshot, request)
+      .then((localized) => {
+        if (!localized || this.args.getNodeId() !== request.nodeId || this.args.getContent() !== contentSnapshot) {
+          request.resolve(false);
+          return;
+        }
+        this.args.applyLocalizedContent(localized.content, contentSnapshot);
+        request.resolve(true);
+      })
+      .catch(() => request.resolve(false));
   }
 }

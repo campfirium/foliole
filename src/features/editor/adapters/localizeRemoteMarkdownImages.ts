@@ -65,6 +65,28 @@ function buildLocalizedMarkdownImage(token: MarkdownImageToken, storageKey: stri
   return token.raw.replace(token.rawTarget, target);
 }
 
+async function importRemoteImageToken(nodeId: string, token: MarkdownImageToken) {
+  const result = await importRemoteImageAttachment(nodeId, token.sourceUrl);
+  return toLocalizedRemoteImage(result);
+}
+
+export async function localizeRemoteMarkdownImageOccurrence(
+  nodeId: string,
+  markdown: string,
+  occurrence: { from: number; source: string; to: number }
+) {
+  const token = collectRemoteMarkdownImages(markdown).find((candidate) =>
+    candidate.from === occurrence.from && candidate.to === occurrence.to && candidate.sourceUrl === occurrence.source
+  );
+  if (!token) return null;
+  const localized = await importRemoteImageToken(nodeId, token);
+  if (!localized) return null;
+  return {
+    attachmentId: localized.attachmentId,
+    content: `${markdown.slice(0, token.from)}${buildLocalizedMarkdownImage(token, localized.storageKey)}${markdown.slice(token.to)}`
+  };
+}
+
 export async function localizeRemoteMarkdownImages(nodeId: string, markdown: string) {
   const matches = collectRemoteMarkdownImages(markdown);
   if (matches.length === 0) {
@@ -86,8 +108,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
 
   for (const match of matches) {
     if (!resultByUrl.has(match.sourceUrl)) {
-      const result = await importRemoteImageAttachment(nodeId, match.sourceUrl);
-      resultByUrl.set(match.sourceUrl, toLocalizedRemoteImage(result));
+      resultByUrl.set(match.sourceUrl, await importRemoteImageToken(nodeId, match));
     }
 
     const localization = resultByUrl.get(match.sourceUrl);

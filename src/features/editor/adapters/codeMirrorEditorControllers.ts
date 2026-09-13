@@ -9,6 +9,7 @@ export function createCodeMirrorEditorControllers(args: {
   applyLocalizedContent: (localized: string) => void;
   getContent: () => string;
   getNodeId: () => string | null;
+  host: HTMLElement;
   isApplyingExternalContent: () => boolean;
   onFlush: (content: string, nodeId: string | null) => void;
 }) {
@@ -23,7 +24,8 @@ export function createCodeMirrorEditorControllers(args: {
     remoteImageLocalization: new RemoteImageLocalizationController({
       applyLocalizedContent: args.applyLocalizedContent,
       getContent: args.getContent,
-      getNodeId: args.getNodeId
+      getNodeId: args.getNodeId,
+      host: args.host
     })
   };
 }
