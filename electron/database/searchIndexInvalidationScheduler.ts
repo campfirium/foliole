@@ -1,7 +1,8 @@
 import { setSearchIndexInvalidationScheduler } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
-import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
+import { submitDesktopOperation } from '../desktopOperations.js';
 import type { DesktopTaskHandle } from '../desktopTaskTypes.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
+import { notifyCurrentSearchIndexStatus } from '../ipc/searchIndexRebuild.js';
 import { runWorkspaceSearchMaintenanceInWorker } from '../ipc/searchIndexRebuildWorkerClient.js';
 
 const BATCH_LIMIT = 500;
@@ -28,18 +29,12 @@ function scheduleSearchIndexInvalidationProcessing() {
   requested = true;
   if (active) return;
   requested = false;
-  const handle = desktopTaskScheduler.submit({
-    cancellable: true,
-    concurrencyKey: 'search-index-rebuild',
-    duplicatePolicy: 'enqueue',
+  const handle = submitDesktopOperation('search-index-incremental', {
     id: 'search-index-incremental-maintenance',
-    label: 'Search index maintenance',
-    priority: 'background',
-    runOn: 'utility',
-    source: 'search-invalidation',
     run: (context) => runWorkspaceSearchMaintenanceInWorker(BATCH_LIMIT, context.signal)
   });
   active = handle;
+  notifyCurrentSearchIndexStatus();
   void handle.promise.then((value) => {
     const result = value as { failed: number; processed: number } | undefined;
     if (result?.failed) throw new Error(`Search indexing failed for ${result.failed} queued items.`);
@@ -47,6 +42,7 @@ function scheduleSearchIndexInvalidationProcessing() {
   }).catch((error) => {
     if (!stopped) appendMainProcessDiagnosticLog('search_index_invalidation_processing_failed', { error });
   }).finally(() => {
+    notifyCurrentSearchIndexStatus();
     if (active === handle) active = null;
     if (requested && !stopped) scheduleSearchIndexInvalidationProcessing();
   });

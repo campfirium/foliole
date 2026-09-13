@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { LibraryPathOverrides, ResolvedLibraryPaths } from '../../lib/platform/libraryPaths.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
+import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
 import { moveDirectoryContents, pathExists } from './libraryPathFileMove.js';
 import {
@@ -63,6 +64,7 @@ async function migrateLibraryHome(args: {
   nextOverrides: LibraryPathOverrides;
   nextPaths: ResolvedLibraryPaths;
 }) {
+  const resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
   beginLibraryHomeMigration();
   try {
     await pauseExternalSearchRefresh();
@@ -86,6 +88,7 @@ async function migrateLibraryHome(args: {
     }
   } finally {
     endLibraryHomeMigration();
+    resumeLibraryTasks();
   }
 }
 

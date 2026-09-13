@@ -124,7 +124,7 @@ it('pauses pending startup refresh and waits for in-flight work', async () => {
   controller.stop();
 });
 
-it('throttles user-triggered refreshes', async () => {
+it('does not turn user activity into an external directory rescan', async () => {
   vi.useFakeTimers();
   const rebuild = vi.fn().mockResolvedValue(undefined);
   let currentTime = 0;
@@ -146,6 +146,6 @@ it('throttles user-triggered refreshes', async () => {
 
   currentTime = 6000;
   controller.notifyUserActivity();
-  expect(rebuild).toHaveBeenCalledTimes(2);
+  expect(rebuild).toHaveBeenCalledTimes(1);
   controller.stop();
 });

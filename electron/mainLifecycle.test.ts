@@ -45,6 +45,9 @@ vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDa
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: vi.fn() }));
 vi.mock('./database/syncGroupIdentityStore.js', () => ({ updateLocalSyncGroupHostName: vi.fn() }));
+vi.mock('./desktopTaskScheduler.js', () => ({
+  desktopTaskScheduler: { pauseResource: vi.fn(async () => vi.fn()) }
+}));
 vi.mock('./devRendererReloadIntent.js', () => ({ installDevRendererReloadIntentWatcher: vi.fn(() => null) }));
 vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(() => null) }));
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
@@ -89,6 +92,7 @@ vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));
 vi.mock('./ipc/legacyWebviewStorage.js', () => ({ migrateLegacyWebviewStorage: vi.fn() }));
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: mocks.installAppMenu }));
 vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: mocks.resolveAppPaths }));
+vi.mock('./mainDatabaseBackedEntryPoints.js', () => ({ installDatabaseBackedEntryPoints: vi.fn() }));
 vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./mirror/rebuildMirrorOutput.js', () => ({ backfillMissingMirrorOutput: vi.fn() }));
 vi.mock('./runtimeMainSupport.js', () => ({
@@ -101,7 +105,6 @@ vi.mock('./windowRuntimeDiagnostics.js', () => ({
   applyStartupWindowPresentation: vi.fn(),
   presentInitialRendererWindow: mocks.presentInitialRendererWindow
 }));
-vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: mocks.isDesktopCompanionSyncParticipating
 }));

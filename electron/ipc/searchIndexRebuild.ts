@@ -5,13 +5,16 @@ import {
   type FullTextSearchIndexStrategy
 } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
 import {
+  readSearchIndexInvalidationBacklog
+} from '../../lib/core/database/searchIndexInvalidations.js';
+import {
   markWorkspaceSearchSidecarRebuilding,
   readWorkspaceSearchSidecarRebuildStatus,
   type WorkspaceSearchSidecarRebuildStatus
 } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { rebuildExternalSearchCacheStrategy } from '../database/externalSearchCacheDatabase.js';
-import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
+import { submitDesktopOperation } from '../desktopOperations.js';
 
 import {
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL,
@@ -81,21 +84,16 @@ function drainRebuildQueue() {
   const strategy = pendingStrategy;
   pendingStrategy = null;
   activeStrategy = strategy;
-  const handle = desktopTaskScheduler.submit({
-    concurrencyKey: 'search-index-rebuild',
-    duplicatePolicy: 'enqueue',
+  const handle = submitDesktopOperation('search-index-rebuild', {
     failureLabel: '[search] index rebuild failed',
     id: `search-index-rebuild:${strategy}`,
-    label: 'Search index rebuild',
-    priority: 'background',
+    priority: 'foreground',
     run: async (context) => {
       context.progress({ message: 'rebuilding search index', unit: 'index' });
       const workspaceStatus = await runWorkspaceSearchRebuildInWorker(strategy);
       await context.yieldIfNeeded();
       return combineRebuildStatus(workspaceStatus, rebuildExternalSearchCacheStrategy(strategy));
-    },
-    runOn: 'utility',
-    source: 'search-index-rebuild'
+    }
   });
   void handle.promise
     .then((status) => {
@@ -108,9 +106,32 @@ function drainRebuildQueue() {
 }
 
 export function loadSearchIndexRebuildStatus(): SearchIndexRebuildStatusEvent | null {
-  return toSearchIndexRebuildStatusEvent(
-    readWorkspaceSearchSidecarRebuildStatus(openDatabaseConnection().sqlite)
+  const connection = openDatabaseConnection();
+  const persisted = toSearchIndexRebuildStatusEvent(
+    readWorkspaceSearchSidecarRebuildStatus(connection.sqlite)
   );
+  if (!persisted || persisted.status === 'failed') return persisted;
+  const backlog = readSearchIndexInvalidationBacklog(connection.driver);
+  if (backlog.failed_count > 0) {
+    return {
+      error: 'Some search data could not be updated.',
+      status: 'failed',
+      strategy: persisted.strategy
+    };
+  }
+  if (backlog.pending_count > 0 || backlog.running_count > 0) {
+    return { status: 'rebuilding', strategy: persisted.strategy };
+  }
+  return persisted;
+}
+
+export function notifyCurrentSearchIndexStatus() {
+  const status = loadSearchIndexRebuildStatus();
+  if (!status) return;
+  const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
+  for (const window of windows) {
+    if (!window.isDestroyed()) window.webContents.send(IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, status);
+  }
 }
 
 export function requestSearchIndexRebuild(strategy: FullTextSearchIndexStrategy): SearchIndexRebuildStatusEvent {

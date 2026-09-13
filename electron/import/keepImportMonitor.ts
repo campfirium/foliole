@@ -102,6 +102,8 @@ function startConfigRun(
         failureLabel: `[keep-import] auto cycle failed for ${state.config.directoryPath}`,
         id: `keep-import:${state.config.adapterConfigId}`,
         label: 'Keep import cycle',
+        operation: 'keep-import',
+        priority: state.hasCompletedRun ? 'startup' : 'background',
         run: () => runImportCycle(deps, startedRef, state, () => scheduleRun()),
         source: 'keep-import'
       });

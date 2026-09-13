@@ -1,4 +1,8 @@
-export { backfillMissingMirrorOutput, syncIncrementalMirrorOutput } from './mirrorOutputSync.js';
+export {
+  backfillMissingMirrorOutput,
+  resumePendingMirrorOutput,
+  syncIncrementalMirrorOutput
+} from './mirrorOutputSync.js';
 
 import { rebuildAllMirrorOutput } from './mirrorOutputSync.js';
 

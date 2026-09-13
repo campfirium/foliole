@@ -30,7 +30,12 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
-import { backfillMissingMirrorOutput, rebuildMirrorOutput, syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
+import {
+  backfillMissingMirrorOutput,
+  rebuildMirrorOutput,
+  resumePendingMirrorOutput,
+  syncIncrementalMirrorOutput
+} from './rebuildMirrorOutput.js';
 
 let tempRoot = '';
 
@@ -170,6 +175,22 @@ it('startup backfill only recreates missing article files without refreshing exi
   await expect(backfillMissingMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
   await expect(readMirror('Mirror Demo.md')).resolves.not.toContain('Should stay stale on startup.');
   await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body.');
+});
+
+it('startup resume refreshes only missing or stale mirror work', async () => {
+  seedArticles();
+  await rebuildMirrorOutput();
+  const untouchedBefore = await fs.stat(mirrorPath('Mirror Demo.md'));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  saveNode('node-second', null, 'Resume pending mirror.', '2030-03-30T00:13:00.000Z', {
+    title: 'Second Demo',
+    position: 3
+  });
+
+  await expect(resumePendingMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1 });
+
+  await expect(readMirror('Second Demo.md')).resolves.toContain('Resume pending mirror.');
+  expect((await fs.stat(mirrorPath('Mirror Demo.md'))).mtimeMs).toBe(untouchedBefore.mtimeMs);
 });
 
 it('manual rebuild fully refreshes all article mirrors', async () => {

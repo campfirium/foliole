@@ -7,6 +7,7 @@ vi.mock('../../shared/platform/runtimeInvoke', () => ({
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
@@ -149,6 +150,28 @@ it('renders search results as title context and path rows', async () => {
   const resultButtons = screen.getAllByRole('button').filter((button) => !button.getAttribute('aria-label'));
   expect(resultButtons[0]).toHaveTextContent('Atlas note');
   expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
+});
+
+it('keeps available results visible while search coverage is still updating', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(
+    vi.fn().mockImplementation((command: string) => {
+      if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus) {
+        return Promise.resolve({ status: 'rebuilding', strategy: 'word-based' });
+      }
+      return Promise.resolve([createNodeResult()]);
+    })
+  );
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
+  renderSearchPalette();
+
+  expect(await screen.findByText('Search results are still being updated and may be incomplete.')).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
+    target: { value: 'launch' }
+  });
+
+  expect(await screen.findByText('Atlas note')).toBeInTheDocument();
+  expect(screen.getByText('Search results are still being updated and may be incomplete.')).toBeInTheDocument();
 });
 
 it('keeps the search input focused when pointer selection reaches a result row', async () => {

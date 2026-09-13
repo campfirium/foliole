@@ -1,10 +1,9 @@
-import path from 'node:path';
-
 import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { renderArticleBodyFromLocators } from './articleMirrorAnchors.js';
 import { stripLeadingMatchingHeading } from './articleMirrorMarkup.js';
+import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
 import {
   compactNoteText,
   normalizeClozeComparableText,
@@ -13,12 +12,7 @@ import {
   stripAnchorTags
 } from './articleMirrorText.js';
 import { hasArticleBodyTitleHeading } from './articleMirrorTitle.js';
-import { collectArticleData } from './articleMirrorTree.js';
 import { rewriteMirrorMarkdownAttachmentPaths } from './markdownAttachmentPaths.js';
-import {
-  createRootReservedDirectoryNames,
-  resolveArticleDirectory
-} from './mirrorTargetDirectories.js';
 type ArticleNode = WorkspaceSnapshot['nodesById'][string];
 
 export interface ArticleMirrorTarget {
@@ -27,75 +21,6 @@ export interface ArticleMirrorTarget {
   relativePath: string;
   sourceUpdatedAt: string;
   targetPath: string;
-}
-
-function sanitizeArticleTitle(title: string) {
-  const cleaned = Array.from(title)
-    .map((character) => {
-      const code = character.charCodeAt(0);
-      if (code <= 31 || '<>:"/\\|?*'.includes(character)) {
-        return ' ';
-      }
-      return character;
-    })
-    .join('')
-    .replace(/[.\s]+$/g, '')
-    .trim();
-  return cleaned || 'Untitled';
-}
-
-function formatMirrorFileTimestampParts(timestamp: string) {
-  const parsed = Date.parse(timestamp);
-  if (Number.isNaN(parsed)) {
-    return {
-      date: 'unknown',
-      minute: 'unknown0000',
-      second: 'unknown000000'
-    };
-  }
-  const normalized = new Date(parsed).toISOString();
-  return {
-    date: normalized.slice(2, 10).replaceAll('-', ''),
-    minute: normalized.slice(2, 16).replaceAll('-', '').replace('T', '').replace(':', ''),
-    second: normalized.slice(2, 19).replaceAll('-', '').replace('T', '').replaceAll(':', '')
-  };
-}
-
-function createStableFileName(title: string, createdAt: string, usedNames: Set<string>) {
-  const baseName = sanitizeArticleTitle(title);
-  const firstCandidate = `${baseName}.md`;
-  if (!usedNames.has(firstCandidate)) {
-    usedNames.add(firstCandidate);
-    return firstCandidate;
-  }
-  const timestampParts = formatMirrorFileTimestampParts(createdAt);
-  const secondCandidate = `${baseName}${timestampParts.second}.md`;
-  if (!usedNames.has(secondCandidate)) {
-    usedNames.add(secondCandidate);
-    return secondCandidate;
-  }
-
-  let duplicateIndex = 2;
-  while (true) {
-    const dedupedCandidate = `${baseName}${timestampParts.second}${duplicateIndex}.md`;
-    if (!usedNames.has(dedupedCandidate)) {
-      usedNames.add(dedupedCandidate);
-      return dedupedCandidate;
-    }
-    duplicateIndex += 1;
-  }
-}
-
-function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
-  const baseName = sanitizeArticleTitle(title);
-  if (!usedNames.has(baseName)) {
-    usedNames.add(baseName);
-    return baseName;
-  }
-  const suffix = nodeId.replace(/^node-/, '').slice(0, 8) || nodeId.slice(-8);
-  const dedupedCandidate = `${baseName}--${suffix}`;
-  usedNames.add(dedupedCandidate);
-  return dedupedCandidate;
 }
 
 function createBaselineClozePrompt(articleContent: string, articleTitle: string, from: number, to: number) {
@@ -185,28 +110,6 @@ function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<str
   return rewriteMirrorMarkdownAttachmentPaths(`# ${title}\n\n${body}\n`);
 }
 
-function buildDerivedChildMap(snapshot: WorkspaceSnapshot, articleId: string) {
-  const derivedChildren = Object.values(snapshot.nodesById).filter(
-    (node) => node.parentNodeId === articleId && node.anchorLink !== null
-  );
-  const map = new Map<string, ArticleNode[]>();
-  for (const node of derivedChildren) {
-    const key = `${node.anchorLink?.kind}:${node.anchorLink?.id}`;
-    map.set(key, [...(map.get(key) ?? []), node]);
-  }
-  return { derivedByAnchorKey: map, derivedChildren };
-}
-function toRelativeMirrorPath(mirrorRoot: string, targetPath: string) {
-  return path.relative(mirrorRoot, targetPath).split(path.sep).join('/');
-}
-
-function resolveSourceUpdatedAt(article: ArticleNode, derivedChildren: ArticleNode[]) {
-  return derivedChildren.reduce(
-    (latest, child) => (child.updatedAt > latest ? child.updatedAt : latest),
-    article.updatedAt
-  );
-}
-
 export interface MirrorRenderableNode {
   id: string;
   parentNodeId: string | null;
@@ -233,32 +136,23 @@ export function renderSingleArticleMirror(
 }
 
 export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorTarget[] {
-  const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
-  const usedFileNamesByDirectory = new Map<string, Set<string>>();
-  const usedDirectoryNamesByParent = createRootReservedDirectoryNames(mirrorRoot);
-  const resolvedFolderDirectories = new Map<string, string>();
+  return collectArticleMirrorPlans(snapshot, mirrorRoot).map((plan) => renderArticleMirrorPlan(snapshot, plan));
+}
 
-  return articles.map((article) => {
-    const targetDirectory = resolveArticleDirectory(
-      article,
-      snapshot,
-      mirrorRoot,
-      resolvedFolderDirectories,
-      usedDirectoryNamesByParent,
-      createStableDirectoryName
-    );
-    const usedNames = usedFileNamesByDirectory.get(targetDirectory) ?? new Set<string>();
-    usedFileNamesByDirectory.set(targetDirectory, usedNames);
-    const fileName = createStableFileName(article.title.trim() || 'Untitled', article.createdAt, usedNames);
-    const targetPath = path.join(targetDirectory, fileName);
-    const { derivedByAnchorKey, derivedChildren } = buildDerivedChildMap(snapshot, article.id);
-    const manualTopics = manualTopicsByArticleId.get(article.id) ?? [];
-    return {
-      articleId: article.id,
-      markdown: renderArticleMarkdown(article, derivedByAnchorKey, manualTopics),
-      relativePath: toRelativeMirrorPath(mirrorRoot, targetPath),
-      sourceUpdatedAt: resolveSourceUpdatedAt(article, [...derivedChildren, ...manualTopics]),
-      targetPath
-    };
-  });
+export function renderArticleMirrorPlan(snapshot: WorkspaceSnapshot, plan: ArticleMirrorPlan): ArticleMirrorTarget {
+  const article = snapshot.nodesById[plan.articleId];
+  if (!article) throw new Error(`Mirror article is missing from snapshot: ${plan.articleId}`);
+  const derivedChildren = plan.derivedNodeIds
+    .map((nodeId) => snapshot.nodesById[nodeId])
+    .filter((node): node is ArticleNode => node !== undefined);
+  const manualTopics = plan.manualTopicIds
+    .map((nodeId) => snapshot.nodesById[nodeId])
+    .filter((node): node is ArticleNode => node !== undefined);
+  return {
+    articleId: plan.articleId,
+    markdown: renderSingleArticleMirror(article, derivedChildren, manualTopics),
+    relativePath: plan.relativePath,
+    sourceUpdatedAt: plan.sourceUpdatedAt,
+    targetPath: plan.targetPath
+  };
 }

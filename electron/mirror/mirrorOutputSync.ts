@@ -8,30 +8,43 @@ import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
-import { collectArticleMirrorTargets } from './articleMirrorOutput.js';
+import type { MirrorRenderableNode } from './articleMirrorOutput.js';
+import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
+import { renderArticleMirrorInWorker } from './articleMirrorRenderWorkerClient.js';
 import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
+import {
+  clearMirrorArticleRecords,
+  deleteMirrorArticleRecord,
+  loadMirrorArticleRecords,
+  type MirrorArticleRecord,
+  readMirrorFileUpdatedAt,
+  removeLegacyMirrorArtifacts,
+  removeMirrorFileAndLegacyDirectory,
+  resetMirrorRoot,
+  resolveAbsoluteMirrorPath,
+  saveMirrorArticleRecord
+} from './mirrorOutputStorage.js';
 
 type MirrorSyncMode = 'full' | 'incremental' | 'missing';
-
-interface MirrorArticleRecord {
-  articleId: string;
-  mirroredAt: string;
-  relativePath: string;
-}
 
 interface MirrorSyncOptions {
   articleIds?: string[];
   taskContext?: DesktopTaskContext;
 }
 
-function hydrateMirrorSnapshotBodies(snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>) {
+function hydrateMirrorPlanBodies(
+  snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
+  plan: ArticleMirrorPlan
+) {
+  const nodeIds = [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds];
+  if (nodeIds.length === 0) return snapshot;
+  const placeholders = nodeIds.map(() => '?').join(', ');
   const rows = openDatabaseConnection().driver.queryAll<NodeBodyRow & { id: string }>(
     `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
      FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE (n.kind = 'topic' OR n.anchor_link IS NOT NULL)
-       AND n.deleted_at IS NULL`,
-    []
+     WHERE n.id IN (${placeholders}) AND n.deleted_at IS NULL`,
+    nodeIds
   );
   for (const row of rows) {
     const node = snapshot.nodesById[row.id];
@@ -42,78 +55,26 @@ function hydrateMirrorSnapshotBodies(snapshot: NonNullable<ReturnType<typeof loa
   return snapshot;
 }
 
-function loadMirrorArticleRecords() {
-  const rows = openDatabaseConnection().sqlite
-    .prepare('SELECT article_id, relative_path, mirrored_at FROM mirror_articles')
-    .all() as Array<{ article_id: string; mirrored_at: string; relative_path: string }>;
-
-  return new Map(
-    rows.map((row) => [
-      row.article_id,
-      {
-        articleId: row.article_id,
-        mirroredAt: row.mirrored_at,
-        relativePath: row.relative_path
-      } satisfies MirrorArticleRecord
-    ])
-  );
+function requireRenderableNode(
+  snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
+  nodeId: string
+): MirrorRenderableNode {
+  const node = snapshot.nodesById[nodeId];
+  if (!node) throw new Error(`Mirror render node is missing: ${nodeId}`);
+  return node;
 }
 
-function saveMirrorArticleRecord(record: MirrorArticleRecord) {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO mirror_articles (article_id, relative_path, mirrored_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(article_id) DO UPDATE SET
-         relative_path = excluded.relative_path,
-         mirrored_at = excluded.mirrored_at`
-    )
-    .run(record.articleId, record.relativePath, record.mirroredAt);
-}
-
-function deleteMirrorArticleRecord(articleId: string) {
-  openDatabaseConnection().sqlite.prepare('DELETE FROM mirror_articles WHERE article_id = ?').run(articleId);
-}
-
-function clearMirrorArticleRecords() {
-  openDatabaseConnection().sqlite.prepare('DELETE FROM mirror_articles').run();
-}
-
-function resolveAbsoluteMirrorPath(mirrorRoot: string, relativePath: string) {
-  return path.join(mirrorRoot, ...relativePath.split('/'));
-}
-
-function resolveLegacyArticleDirectory(filePath: string) {
-  return path.join(path.dirname(filePath), path.basename(filePath, '.md'));
-}
-
-async function readFileUpdatedAt(filePath: string) {
-  try {
-    const stats = await fs.stat(filePath);
-    return stats.isFile() ? stats.mtime.toISOString() : null;
-  } catch {
-    return null;
-  }
-}
-
-async function removeMirrorFileAndLegacyDirectory(filePath: string) {
-  await fs.rm(filePath, { force: true });
-  await fs.rm(resolveLegacyArticleDirectory(filePath), { force: true, recursive: true });
-}
-
-async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: string[]) {
-  await Promise.all([
-    fs.rm(path.join(mirrorRoot, 'Highlights.md'), { force: true }),
-    fs.rm(path.join(mirrorRoot, 'Clozes.md'), { force: true })
-  ]);
-
-  await Promise.all(targetPaths.map((targetPath) => fs.rm(resolveLegacyArticleDirectory(targetPath), { force: true, recursive: true })));
-}
-
-async function resetMirrorRoot(mirrorRoot: string) {
-  await fs.mkdir(mirrorRoot, { recursive: true });
-  const entries = await fs.readdir(mirrorRoot);
-  await Promise.all(entries.map((entry) => fs.rm(path.join(mirrorRoot, entry), { recursive: true, force: true })));
+async function renderMirrorPlan(
+  snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
+  plan: ArticleMirrorPlan,
+  signal?: AbortSignal
+) {
+  hydrateMirrorPlanBodies(snapshot, plan);
+  return renderArticleMirrorInWorker({
+    article: requireRenderableNode(snapshot, plan.articleId),
+    derivedChildren: plan.derivedNodeIds.map((nodeId) => requireRenderableNode(snapshot, nodeId)),
+    manualTopics: plan.manualTopicIds.map((nodeId) => requireRenderableNode(snapshot, nodeId))
+  }, signal);
 }
 
 async function prepareFullMirrorRebuild(mirrorRoot: string) {
@@ -159,33 +120,40 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
   return record.mirroredAt < sourceUpdatedAt;
 }
 
-async function processMirrorTargets(args: {
+async function processMirrorPlans(args: {
   mode: MirrorSyncMode;
   options: MirrorSyncOptions;
   paths: ReturnType<typeof loadLibraryPathSettingsSync>;
+  plans: ArticleMirrorPlan[];
   recordsByArticleId: Map<string, MirrorArticleRecord>;
-  targets: ReturnType<typeof collectArticleMirrorTargets>;
+  snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>;
   updatedAt: string;
 }) {
   let rebuiltArticleCount = 0;
   let visitedArticleCount = 0;
-  for (const target of args.targets) {
+  for (const plan of args.plans) {
     if (args.options.taskContext?.signal.aborted) {
       throw new DOMException('AbortError', 'AbortError');
     }
-    const persistedRecord = args.recordsByArticleId.get(target.articleId) ?? null;
-    const fileUpdatedAt = await readFileUpdatedAt(target.targetPath);
+    const persistedRecord = args.recordsByArticleId.get(plan.articleId) ?? null;
+    const fileUpdatedAt = await readMirrorFileUpdatedAt(plan.targetPath);
     const effectiveRecord =
       persistedRecord ??
-      (fileUpdatedAt ? { articleId: target.articleId, mirroredAt: fileUpdatedAt, relativePath: target.relativePath } : null);
-    const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== target.relativePath);
-    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, target.sourceUpdatedAt) || pathChanged) {
-      if (persistedRecord && persistedRecord.relativePath !== target.relativePath) {
+      (fileUpdatedAt ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
+    const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== plan.relativePath);
+    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged) {
+      if (persistedRecord && persistedRecord.relativePath !== plan.relativePath) {
         await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(args.paths.mirror, persistedRecord.relativePath));
       }
-      await fs.mkdir(path.dirname(target.targetPath), { recursive: true });
-      await fs.writeFile(target.targetPath, target.markdown, 'utf8');
-      saveMirrorArticleRecord({ articleId: target.articleId, mirroredAt: args.updatedAt, relativePath: target.relativePath });
+      await args.options.taskContext?.yieldIfNeeded();
+      const markdown = await renderMirrorPlan(
+        args.snapshot,
+        plan,
+        args.options.taskContext?.signal
+      );
+      await fs.mkdir(path.dirname(plan.targetPath), { recursive: true });
+      await fs.writeFile(plan.targetPath, markdown, 'utf8');
+      saveMirrorArticleRecord({ articleId: plan.articleId, mirroredAt: args.updatedAt, relativePath: plan.relativePath });
       rebuiltArticleCount += 1;
     } else if (!persistedRecord && effectiveRecord) {
       saveMirrorArticleRecord(effectiveRecord);
@@ -194,7 +162,7 @@ async function processMirrorTargets(args: {
     args.options.taskContext?.progress({
       completed: visitedArticleCount,
       message: 'processed mirror target',
-      total: args.targets.length,
+      total: args.plans.length,
       unit: 'article'
     });
     await args.options.taskContext?.yieldIfNeeded();
@@ -209,27 +177,28 @@ async function syncMirrorOutput(
   const updatedAt = new Date().toISOString();
   const paths = loadLibraryPathSettingsSync();
   const snapshot = loadWorkspaceSnapshot({ includeBody: false });
-  const hydratedSnapshot = snapshot ? hydrateMirrorSnapshotBodies(snapshot) : null;
-  const targets = hydratedSnapshot ? collectArticleMirrorTargets(hydratedSnapshot, paths.mirror) : [];
+  const plans = snapshot ? collectArticleMirrorPlans(snapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
-  const targetArticleIds = new Set(targets.map((target) => target.articleId));
+  const targetArticleIds = new Set(plans.map((plan) => plan.articleId));
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
-  const selectedTargets = selectedArticleIds ? targets.filter((target) => selectedArticleIds.has(target.articleId)) : targets;
+  const selectedPlans = selectedArticleIds ? plans.filter((plan) => selectedArticleIds.has(plan.articleId)) : plans;
 
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
   } else if (mode === 'incremental') {
-    await pruneMirrorOutputToTargets(paths.mirror, targets.map((target) => target.targetPath));
+    await pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath));
   }
 
   await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, selectedArticleIds);
 
-  await removeLegacyMirrorArtifacts(paths.mirror, selectedTargets.map((target) => target.targetPath));
+  await removeLegacyMirrorArtifacts(paths.mirror, selectedPlans.map((plan) => plan.targetPath));
 
-  const rebuiltArticleCount = await processMirrorTargets({ mode, options, paths, recordsByArticleId, targets: selectedTargets, updatedAt });
+  const rebuiltArticleCount = snapshot
+    ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot })
+    : 0;
 
   return {
-    queued_article_count: mode === 'full' ? targets.length : rebuiltArticleCount,
+    queued_article_count: mode === 'full' ? plans.length : rebuiltArticleCount,
     rebuilt_article_count: rebuiltArticleCount,
     failed_article_count: 0,
     pending_article_count: 0,
@@ -241,10 +210,17 @@ export function rebuildAllMirrorOutput() {
   return syncMirrorOutput('full');
 }
 
-export function syncIncrementalMirrorOutput(articleIds?: string[]) {
-  return syncMirrorOutput('incremental', articleIds?.length ? { articleIds } : {});
+export function syncIncrementalMirrorOutput(articleIds?: string[], taskContext?: DesktopTaskContext) {
+  return syncMirrorOutput('incremental', {
+    ...(articleIds?.length ? { articleIds } : {}),
+    ...(taskContext ? { taskContext } : {})
+  });
 }
 
 export function backfillMissingMirrorOutput(context?: DesktopTaskContext) {
   return syncMirrorOutput('missing', context ? { taskContext: context } : {});
+}
+
+export function resumePendingMirrorOutput(context?: DesktopTaskContext) {
+  return syncMirrorOutput('incremental', context ? { taskContext: context } : {});
 }

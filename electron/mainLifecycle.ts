@@ -12,6 +12,7 @@ import { initializeDatabase } from './database/migrate.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
+import { desktopTaskScheduler } from './desktopTaskScheduler.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { stopDevScreenshotServer } from './devScreenshotServer.js';
@@ -80,7 +81,10 @@ function installBeforeQuitLifecycle() {
   const devRestartIntentWatcher = installDevRestartIntentWatcher({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   const coordinateBeforeQuit = createBeforeQuitCoordinator({
-    flush: flushMirrorSync,
+    flush: async () => {
+      await flushMirrorSync();
+      await desktopTaskScheduler.pauseResource('library');
+    },
     onFlushError: (error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error }),
     quit: () => app.quit()
   });

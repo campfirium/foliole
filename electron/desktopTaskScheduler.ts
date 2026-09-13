@@ -1,31 +1,23 @@
+import { waitForDesktopTaskPressureRelief } from './desktopTaskPressure.js';
+import { shouldWriteDesktopTaskProgressEvent } from './desktopTaskProgressEvents.js';
 import {
-  shouldWriteDesktopTaskProgressEvent,
-  type DesktopTaskProgressEventState
-} from './desktopTaskProgressEvents.js';
+  createQueuedDesktopTask,
+  isDesktopTaskAbortError,
+  type QueuedDesktopTask
+} from './desktopTaskQueue.js';
+import { hasDesktopTaskResourceCapacity, usesDesktopTaskResource } from './desktopTaskResources.js';
 import type {
   DesktopTaskContext,
   DesktopTaskDefinition,
   DesktopTaskHandle,
-  DesktopTaskPriority
+  DesktopTaskPriority,
+  DesktopTaskResource
 } from './desktopTaskTypes.js';
 import { appendBootEvent } from './ipc/boot.js';
-
-interface QueuedDesktopTask {
-  attempt: number;
-  controller: AbortController;
-  definition: DesktopTaskDefinition;
-  lastProgressEvent: DesktopTaskProgressEventState | null;
-  promise: Promise<unknown>;
-  reject: (error: unknown) => void;
-  resolve: (value: unknown) => void;
-  sequence: number;
-  state: 'pending' | 'running' | 'finished';
-}
 
 interface DesktopTaskSchedulerArgs {
   appendEvent?: typeof appendBootEvent;
   now?: () => number;
-  schedule?: (callback: () => void, delayMs: number) => unknown;
 }
 
 const PRIORITY_ORDER: Record<DesktopTaskPriority, number> = {
@@ -36,35 +28,12 @@ const PRIORITY_ORDER: Record<DesktopTaskPriority, number> = {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function createDeferredTask(definition: DesktopTaskDefinition, sequence: number): QueuedDesktopTask {
-  let resolveTask: (value: unknown) => void = () => {};
-  let rejectTask: (error: unknown) => void = () => {};
-  const promise = new Promise<unknown>((resolve, reject) => {
-    resolveTask = resolve;
-    rejectTask = reject;
-  });
-  return {
-    attempt: 1,
-    controller: new AbortController(),
-    definition,
-    lastProgressEvent: null,
-    promise,
-    reject: rejectTask,
-    resolve: resolveTask,
-    sequence,
-    state: 'pending'
-  };
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof Error && (error.name === 'AbortError' || error.message === 'AbortError');
-}
-
 export class DesktopTaskScheduler {
   private readonly appendEvent: typeof appendBootEvent;
   private readonly now: () => number;
   private pending: QueuedDesktopTask[] = [];
-  private running: QueuedDesktopTask | null = null;
+  private pausedResources = new Set<DesktopTaskResource>();
+  private running = new Set<QueuedDesktopTask>();
   private sequence = 0;
   private tickScheduled = false;
 
@@ -81,7 +50,7 @@ export class DesktopTaskScheduler {
       }
       return this.createHandle(duplicate);
     }
-    const task = createDeferredTask(definition, ++this.sequence);
+    const task = createQueuedDesktopTask(definition, ++this.sequence, this.now());
     this.pending.push(task);
     void this.writeEvent('desktop_task_submitted', definition);
     this.scheduleTick();
@@ -90,6 +59,29 @@ export class DesktopTaskScheduler {
 
   hasHigherPriorityPending(priority: DesktopTaskPriority) {
     return this.pending.some((task) => PRIORITY_ORDER[task.definition.priority] < PRIORITY_ORDER[priority]);
+  }
+
+  notifyPressureChanged() {
+    this.scheduleTick();
+  }
+
+  async pauseResource(resource: DesktopTaskResource) {
+    this.pausedResources.add(resource);
+    const cancelledPending = this.pending.filter((task) => usesDesktopTaskResource(task.definition, resource));
+    this.pending = this.pending.filter((task) => !usesDesktopTaskResource(task.definition, resource));
+    for (const task of cancelledPending) {
+      task.controller.abort();
+      task.state = 'finished';
+      task.resolve(undefined);
+      void this.writeEvent('desktop_task_cancelled', task.definition);
+    }
+    const active = [...this.running].filter((task) => usesDesktopTaskResource(task.definition, resource));
+    active.forEach((task) => task.controller.abort());
+    await Promise.allSettled(active.map((task) => task.promise));
+    return () => {
+      this.pausedResources.delete(resource);
+      this.scheduleTick();
+    };
   }
 
   private createHandle(task: QueuedDesktopTask): DesktopTaskHandle {
@@ -105,9 +97,8 @@ export class DesktopTaskScheduler {
   }
 
   private findDuplicate(definition: DesktopTaskDefinition) {
-    return [this.running, ...this.pending].find(
+    return [...this.running, ...this.pending].find(
       (task): task is QueuedDesktopTask =>
-        task !== null &&
         task.state !== 'finished' &&
         (task.definition.id === definition.id || task.definition.concurrencyKey === definition.concurrencyKey)
     );
@@ -125,14 +116,15 @@ export class DesktopTaskScheduler {
   }
 
   private async runNext() {
-    if (this.running || this.pending.length === 0) {
-      return;
+    while (this.pending.length > 0) {
+      const task = this.takeNextRunnableTask();
+      if (!task) return;
+      this.running.add(task);
+      void this.runTask(task);
     }
-    const task = this.takeNextTask();
-    if (!task) {
-      return;
-    }
-    this.running = task;
+  }
+
+  private async runTask(task: QueuedDesktopTask) {
     task.state = 'running';
     const startedAt = this.now();
     await this.writeEvent('desktop_task_started', task.definition);
@@ -144,19 +136,30 @@ export class DesktopTaskScheduler {
     } catch (error) {
       await this.handleTaskError(task, error);
     } finally {
-      if (this.running === task) {
-        this.running = null;
-      }
+      this.running.delete(task);
       this.scheduleTick();
     }
   }
 
-  private takeNextTask() {
+  private takeNextRunnableTask() {
     this.pending.sort((left, right) => {
-      const priority = PRIORITY_ORDER[left.definition.priority] - PRIORITY_ORDER[right.definition.priority];
+      const priority = this.effectivePriority(left) - this.effectivePriority(right);
       return priority || left.sequence - right.sequence;
     });
-    return this.pending.shift() ?? null;
+    const runningDefinitions = [...this.running].map((task) => task.definition);
+    const index = this.pending.findIndex((task) =>
+      !task.definition.resources?.some((claim) => this.pausedResources.has(claim.resource)) &&
+      hasDesktopTaskResourceCapacity(task.definition, runningDefinitions)
+    );
+    return index < 0 ? null : this.pending.splice(index, 1)[0] ?? null;
+  }
+
+  private effectivePriority(task: QueuedDesktopTask) {
+    const base = PRIORITY_ORDER[task.definition.priority];
+    const maxWaitMs = task.definition.maxWaitMs;
+    if (!maxWaitMs || maxWaitMs <= 0) return base;
+    const promotions = Math.floor((this.now() - task.submittedAt) / maxWaitMs);
+    return Math.max(0, base - promotions);
   }
 
   private createContext(task: QueuedDesktopTask): DesktopTaskContext {
@@ -182,13 +185,16 @@ export class DesktopTaskScheduler {
         if (task.controller.signal.aborted) {
           throw new DOMException('AbortError', 'AbortError');
         }
+        const isHeavyMaintenance = task.definition.priority !== 'foreground' &&
+          task.definition.resources?.some((claim) => claim.resource === 'cpu-heavy');
+        if (isHeavyMaintenance) await waitForDesktopTaskPressureRelief(task.controller.signal);
         await delay(0);
       }
     };
   }
 
   private async handleTaskError(task: QueuedDesktopTask, error: unknown) {
-    if (task.controller.signal.aborted || isAbortError(error)) {
+    if (task.controller.signal.aborted || isDesktopTaskAbortError(error)) {
       task.state = 'finished';
       task.resolve(undefined);
       await this.writeEvent('desktop_task_cancelled', task.definition);
@@ -219,6 +225,7 @@ export class DesktopTaskScheduler {
       label: definition.label,
       metadata: definition.metadata ?? null,
       priority: definition.priority,
+      resources: definition.resources ?? null,
       runOn: definition.runOn ?? 'main',
       source: definition.source
     }).catch((error) => {

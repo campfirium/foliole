@@ -1,24 +1,16 @@
 import { app, BrowserWindow } from 'electron';
 
-import { desktopTaskScheduler } from './desktopTaskScheduler.js';
+import { submitDesktopOperation } from './desktopOperations.js';
 import { createExternalSearchBackgroundRefreshController } from './externalSearchBackgroundRefresh.js';
 
 const externalSearchBackgroundRefresh = createExternalSearchBackgroundRefreshController({
   rebuild: () =>
-    desktopTaskScheduler.submit({
-      cancellable: true,
-      concurrencyKey: 'external-search-refresh',
-      duplicatePolicy: 'coalesce',
+    submitDesktopOperation('external-search-refresh', {
       failureLabel: '[external-search] background refresh failed',
-      id: 'external-search-refresh',
-      label: 'External search refresh',
-      priority: 'background',
       run: (context) =>
         import('./database/externalSearchCache.js').then((module) =>
           module.refreshExternalSearchIndexes(undefined, { taskContext: context })
-        ),
-      runOn: 'main',
-      source: 'external-search'
+        )
     }).promise
 });
 

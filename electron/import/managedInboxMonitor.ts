@@ -191,6 +191,8 @@ export function createManagedInboxMonitor(
         failureLabel: '[managed-inbox] auto import cycle failed',
         id: 'managed-inbox-import-cycle',
         label: 'Managed inbox import cycle',
+        operation: 'managed-inbox-import',
+        priority: 'startup',
         run: () => runImportCycle(deps, state, () => scheduleRun()),
         source: 'managed-inbox'
       });

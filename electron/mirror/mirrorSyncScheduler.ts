@@ -1,3 +1,5 @@
+import { submitDesktopOperation } from '../desktopOperations.js';
+
 import * as articleMirror from './exportArticleMirror.js';
 import { syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
 
@@ -21,28 +23,29 @@ function clearTimers() {
 }
 
 async function drainQueue() {
-  const nodeIds = pendingNodeIds;
-  pendingNodeIds = new Set();
   clearTimers();
-
-  const articleIds = new Set<string>();
-  for (const nodeId of nodeIds) {
-    for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) {
-      articleIds.add(articleId);
+  if (flushInFlight) return flushInFlight;
+  const handle = submitDesktopOperation('mirror-incremental', {
+    failureLabel: '[mirror] incremental export failed',
+    run: async (context) => {
+      while (pendingNodeIds.size > 0) {
+        const nodeIds = pendingNodeIds;
+        pendingNodeIds = new Set();
+        const articleIds = new Set<string>();
+        for (const nodeId of nodeIds) {
+          for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
+        }
+        if (articleIds.size > 0) await syncIncrementalMirrorOutput([...articleIds], context);
+        await context.yieldIfNeeded();
+      }
     }
-  }
-
-  if (articleIds.size === 0) {
-    return;
-  }
-
+  });
+  flushInFlight = handle.promise.then(() => undefined);
   try {
-    await syncIncrementalMirrorOutput([...articleIds]);
-  } catch (error) {
-    console.error('[mirror] incremental export failed', {
-      articleIds: [...articleIds],
-      error
-    });
+    await flushInFlight;
+  } finally {
+    flushInFlight = null;
+    if (pendingNodeIds.size > 0) void drainQueue();
   }
 }
 
@@ -79,13 +82,6 @@ export function scheduleMirrorSync(nodeIds: string[]) {
 
 export async function flushMirrorSync() {
   clearTimers();
-  if (pendingNodeIds.size === 0) {
-    if (flushInFlight) {
-      await flushInFlight;
-    }
-    return;
-  }
-  flushInFlight = drainQueue();
-  await flushInFlight;
-  flushInFlight = null;
+  if (pendingNodeIds.size > 0) await drainQueue();
+  if (flushInFlight) await flushInFlight;
 }

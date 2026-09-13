@@ -8,6 +8,7 @@ import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
+import { SearchPaletteIndexStatus } from './SearchPaletteIndexStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
 import {
@@ -72,6 +73,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           totalItems={results.length}
         />
         <SearchPaletteEnhancementPrompt />
+        <SearchPaletteIndexStatus isOpen={props.isOpen} />
         <SearchPaletteBody
           activeIndex={activeIndex}
           hasError={searchState.error}

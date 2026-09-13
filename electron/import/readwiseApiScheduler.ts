@@ -6,6 +6,7 @@ import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportSt
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { submitDesktopOperation } from '../desktopOperations.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -187,7 +188,10 @@ const scheduler = createReadwiseApiScheduler({
   notifyChanged: notifyWorkspaceContentChanged,
   queueRun: queueReadwiseApiTrackedRun,
   recoverRun: recoverInterruptedReadwiseApiRun,
-  runImport: runReadwiseApiImport,
+  runImport: async (args) => await submitDesktopOperation('readwise-api-import', {
+    failureLabel: '[readwise-api] automatic import failed',
+    run: () => runReadwiseApiImport(args)
+  }).promise as Awaited<ReturnType<typeof runReadwiseApiImport>>,
   saveNextRun: saveReadwiseApiNextRun,
   setTimeout,
   trackedRunActive: isReadwiseApiTrackedRunActive

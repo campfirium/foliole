@@ -16,6 +16,7 @@ vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: mocks.appendLog
 }));
 vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../ipc/searchIndexRebuild.js', () => ({ notifyCurrentSearchIndexStatus: vi.fn() }));
 
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 

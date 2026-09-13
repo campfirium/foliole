@@ -22,7 +22,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
-import { moveDatabaseToPreRebuildSnapshot } from './integrity.js';
+import { moveDatabaseToPreRebuildSnapshot, verifyDatabaseIntegrity } from './integrity.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -34,14 +34,13 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  delete process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK;
   delete process.env.FOLIOLE_SKIP_STARTUP_SCHEMA_INIT;
   delete process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE;
   closeDatabaseConnection();
   await removeTempRoot();
 });
 
-it('quarantines a malformed sqlite database and recreates an empty schema on initialize', async () => {
+it('leaves routine startup free of a full integrity scan while explicit diagnosis detects corruption', async () => {
   const databasePath = resolveDatabasePath();
   initializeDatabase();
   closeDatabaseConnection();
@@ -50,17 +49,11 @@ it('quarantines a malformed sqlite database and recreates an empty schema on ini
   malformedDatabase[4_096] = (malformedDatabase[4_096] ?? 0) ^ 0xff;
   await fs.writeFile(databasePath, malformedDatabase);
 
-  const recoveredConnection = initializeDatabase();
+  const reopenedConnection = initializeDatabase();
   const recoveryDir = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'recovery');
-  const recoveredEntries = await fs.readdir(recoveryDir);
-  const recoveredDatabaseNames = recoveredEntries.filter((entry) => /^foliole-corrupt-.*\.db$/.test(entry));
 
-  expect(recoveredConnection.sqlite.prepare('PRAGMA quick_check(1)').pluck().get()).toBe('ok');
-  expect(recoveredConnection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(DATABASE_SCHEMA_VERSION);
-  expect(recoveredDatabaseNames).toHaveLength(1);
-  closeDatabaseConnection();
-  const recoveredStats = await fs.stat(path.join(recoveryDir, recoveredDatabaseNames[0] ?? ''));
-  expect(recoveredStats.size).toBeGreaterThan(0);
+  expect(() => verifyDatabaseIntegrity(reopenedConnection.sqlite)).toThrow();
+  await expect(fs.access(recoveryDir)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 async function removeTempRoot() {
@@ -127,8 +120,7 @@ it('moves sqlite sidecar files into the pre-rebuild snapshot directory', async (
   await expect(fs.access(databasePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-it('can skip startup integrity checks for native preview startup latency', () => {
-  process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK = '1';
+it('does not run a routine full-database integrity check during startup', () => {
   const stages: string[] = [];
 
   const connection = initializeDatabase((stage) => stages.push(stage));

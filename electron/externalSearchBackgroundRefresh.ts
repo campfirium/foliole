@@ -3,7 +3,6 @@ import { loadExternalSearchFolders } from './database/externalSearchFolders.js';
 
 const INITIAL_DELAY_MS = 20_000;
 const PERIODIC_REFRESH_MS = 15 * 60_000;
-const USER_TRIGGER_MIN_INTERVAL_MS = 5 * 60_000;
 
 interface ExternalSearchBackgroundRefreshController {
   notifyUserActivity(): void;
@@ -28,14 +27,12 @@ interface ExternalSearchBackgroundRefreshArgs {
 
 interface RefreshRuntime {
   disposed: boolean;
-  lastRefreshAt: number;
   refreshInFlight: Promise<void> | null;
 }
 
 function createRefreshRuntime() {
   const runtime: RefreshRuntime = {
     disposed: false,
-    lastRefreshAt: 0,
     refreshInFlight: null
   };
   return runtime;
@@ -46,7 +43,6 @@ function hasConfiguredFolders(readFolders: typeof loadExternalSearchFolders) {
 }
 
 function createRefreshRunner(args: {
-  now: () => number;
   rebuild: () => Promise<unknown>;
   readFolders: typeof loadExternalSearchFolders;
   runtime: RefreshRuntime;
@@ -59,9 +55,7 @@ function createRefreshRunner(args: {
       .catch((error) => {
         console.error('[external-search] background refresh failed', error);
       })
-      .then(() => {
-        args.runtime.lastRefreshAt = args.now();
-      })
+      .then(() => undefined)
       .finally(() => {
         args.runtime.refreshInFlight = null;
       });
@@ -77,26 +71,21 @@ function createTimerHandles() {
 }
 
 export function createExternalSearchBackgroundRefreshController(args?: ExternalSearchBackgroundRefreshArgs) {
-  const now = args?.now ?? Date.now;
   const rebuild = args?.rebuild ?? (() => refreshExternalSearchIndexes());
   const readFolders = args?.readFolders ?? loadExternalSearchFolders;
   const initialDelayMs = args?.initialDelayMs ?? INITIAL_DELAY_MS;
   const refreshIntervalMs = args?.refreshIntervalMs ?? PERIODIC_REFRESH_MS;
-  const userTriggerMinIntervalMs = args?.userTriggerMinIntervalMs ?? USER_TRIGGER_MIN_INTERVAL_MS;
   const scheduleTimeout = args?.scheduleTimeout ?? globalThis.setTimeout;
   const scheduleInterval = args?.scheduleInterval ?? globalThis.setInterval;
   const clearTimeoutHandle = args?.clearTimeoutHandle ?? globalThis.clearTimeout;
   const clearIntervalHandle = args?.clearIntervalHandle ?? globalThis.clearInterval;
   const runtime = createRefreshRuntime();
   const timers = createTimerHandles();
-  const runRefresh = createRefreshRunner({ now, rebuild, readFolders, runtime });
+  const runRefresh = createRefreshRunner({ rebuild, readFolders, runtime });
 
   return {
     notifyUserActivity() {
-      if (runtime.disposed || now() - runtime.lastRefreshAt < userTriggerMinIntervalMs) {
-        return;
-      }
-      void runRefresh();
+      // Focus and clicks are not refresh triggers; timers and directory changes own scheduling.
     },
     async pause() {
       if (timers.startupTimer) {

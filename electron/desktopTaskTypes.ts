@@ -4,6 +4,7 @@ type DesktopTaskDuplicatePolicy = 'coalesce' | 'enqueue' | 'skip';
 export type DesktopTaskCost = 'light' | 'medium' | 'heavy';
 export type DesktopTaskProgressCapability = 'none' | 'bounded' | 'incremental';
 export type DesktopTaskStartupEligibility = 'startup-allowed' | 'startup-deferred' | 'manual-only';
+export type DesktopTaskResource = 'cpu-heavy' | 'library' | 'main-database-write' | 'total';
 
 interface DesktopTaskProgress {
   completed?: number;
@@ -30,6 +31,11 @@ interface DesktopTaskAuditMetadata {
   startupEligibility: DesktopTaskStartupEligibility;
 }
 
+export interface DesktopTaskResourceClaim {
+  resource: DesktopTaskResource;
+  units?: number;
+}
+
 export interface DesktopTaskDefinition {
   cancellable?: boolean;
   concurrencyKey: string;
@@ -38,7 +44,9 @@ export interface DesktopTaskDefinition {
   id: string;
   label: string;
   metadata?: DesktopTaskAuditMetadata;
+  maxWaitMs?: number;
   priority: DesktopTaskPriority;
+  resources?: DesktopTaskResourceClaim[];
   retry?: {
     attempts: number;
     delayMs?: number;

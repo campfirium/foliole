@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   isDestroyed: vi.fn(() => false),
   markWorkspaceSearchSidecarRebuilding: vi.fn(),
   openDatabaseConnection: vi.fn(),
+  readSearchIndexInvalidationBacklog: vi.fn(),
   readWorkspaceSearchSidecarRebuildStatus: vi.fn(),
   rebuildExternalSearchCacheStrategy: vi.fn(),
   runWorkspaceSearchRebuildInWorker: vi.fn(),
@@ -40,6 +41,10 @@ vi.mock('../../lib/core/database/workspaceSearchSidecar.js', () => ({
   readWorkspaceSearchSidecarRebuildStatus: mocks.readWorkspaceSearchSidecarRebuildStatus
 }));
 
+vi.mock('../../lib/core/database/searchIndexInvalidations.js', () => ({
+  readSearchIndexInvalidationBacklog: mocks.readSearchIndexInvalidationBacklog
+}));
+
 vi.mock('./searchIndexRebuildWorkerClient.js', () => ({
   runWorkspaceSearchRebuildInWorker: mocks.runWorkspaceSearchRebuildInWorker
 }));
@@ -51,12 +56,18 @@ import {
   resetSearchIndexRebuildRuntimeForTests
 } from './searchIndexRebuild.js';
 
-const connection = { sqlite: {} };
+const connection = { driver: {}, sqlite: {} };
 
 beforeEach(() => {
   vi.clearAllMocks();
   resetSearchIndexRebuildRuntimeForTests();
   mocks.openDatabaseConnection.mockReturnValue(connection);
+  mocks.readSearchIndexInvalidationBacklog.mockReturnValue({
+    failed_count: 0,
+    pending_count: 0,
+    running_count: 0,
+    total_count: 0
+  });
   mocks.markWorkspaceSearchSidecarRebuilding.mockImplementation((_connection, strategy: string) => ({
     status: 'rebuilding',
     strategy,
@@ -85,6 +96,33 @@ beforeEach(() => {
       id: definition.id,
       promise
     };
+  });
+});
+
+it('reports incomplete and failed incremental coverage without hiding existing results', () => {
+  mocks.readWorkspaceSearchSidecarRebuildStatus.mockReturnValue({
+    status: 'ready',
+    strategy: 'word-based',
+    tokenizer: 'unicode61'
+  });
+  mocks.readSearchIndexInvalidationBacklog.mockReturnValue({
+    failed_count: 0,
+    pending_count: 2,
+    running_count: 1,
+    total_count: 3
+  });
+  expect(loadSearchIndexRebuildStatus()).toEqual({ status: 'rebuilding', strategy: 'word-based' });
+
+  mocks.readSearchIndexInvalidationBacklog.mockReturnValue({
+    failed_count: 1,
+    pending_count: 0,
+    running_count: 0,
+    total_count: 1
+  });
+  expect(loadSearchIndexRebuildStatus()).toEqual({
+    error: 'Some search data could not be updated.',
+    status: 'failed',
+    strategy: 'word-based'
   });
 });
 

@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { verifyDatabaseIntegrity } from './integrity.js';
+
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
@@ -100,6 +102,7 @@ export async function restoreSqliteDatabase({
   const sqlite = new BetterSqlite3(resolvedSourcePath, { fileMustExist: true, readonly: true });
   let metadata: Awaited<ReturnType<import('better-sqlite3').Database['backup']>>;
   try {
+    verifyDatabaseIntegrity(sqlite);
     metadata = await sqlite.backup(tempTargetPath);
   } finally {
     sqlite.close();

@@ -1,3 +1,5 @@
+import { reportDesktopTaskResponsiveness } from './desktopTaskPressure.js';
+import { desktopTaskScheduler } from './desktopTaskScheduler.js';
 import { appendBootEvent } from './ipc/boot.js';
 
 interface DesktopTaskWatchdogArgs {
@@ -27,6 +29,8 @@ export function startDesktopTaskWatchdog(args: DesktopTaskWatchdogArgs = {}): De
     const tickAt = now();
     const driftMs = Math.max(0, tickAt - lastTickAt - intervalMs);
     lastTickAt = tickAt;
+    reportDesktopTaskResponsiveness(driftMs);
+    desktopTaskScheduler.notifyPressureChanged();
     if (wroteFirstSample && driftMs < minDriftMs) {
       return;
     }

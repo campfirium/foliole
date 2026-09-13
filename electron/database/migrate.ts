@@ -39,10 +39,6 @@ export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 
 type DatabaseInitStageReporter = (stage: string, payload?: unknown) => void;
 
-function shouldSkipStartupIntegrityCheck() {
-  return process.env.FOLIOLE_SKIP_STARTUP_INTEGRITY_CHECK === '1';
-}
-
 function shouldSkipStartupWalEnable() {
   return process.env.FOLIOLE_SKIP_STARTUP_WAL_ENABLE === '1';
 }
@@ -61,18 +57,6 @@ function reportDatabaseFileNameMigration(
   });
 }
 
-function verifyStartupDatabaseIntegrity(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
-  if (shouldSkipStartupIntegrityCheck()) {
-    reportStage?.('database_integrity_check_skipped', {
-      reason: 'startup-integrity-check-disabled'
-    });
-    return;
-  }
-  reportStage?.('database_integrity_check_start');
-  verifyDatabaseIntegrity(connection.sqlite);
-  reportStage?.('database_integrity_check_complete');
-}
-
 function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
   if (shouldSkipStartupWalEnable()) {
     reportStage?.('database_wal_enable_skipped', {
@@ -84,7 +68,9 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
 }
 
 function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false) {
-  verifyStartupDatabaseIntegrity(connection, reportStage);
+  reportStage?.('database_integrity_check_skipped', {
+    reason: 'routine-startup-check-disabled'
+  });
   enableStartupWriteAheadLog(connection, reportStage);
   if (shouldSkipStartupSchemaInit()) {
     reportStage?.('database_schema_init_skipped', {
