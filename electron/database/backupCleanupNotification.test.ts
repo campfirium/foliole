@@ -34,6 +34,7 @@ it('shows one summary notification for a cleanup batch', () => {
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 2,
     deletedCount: 3,
+    failedCount: 0,
     policyDeletedCount: 1,
     releasedBytes: 462 * 1024 * 1024
   })).toBe(true);
@@ -48,6 +49,7 @@ it('does not notify when nothing was deleted or notifications are unavailable', 
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 0,
     deletedCount: 0,
+    failedCount: 0,
     policyDeletedCount: 0,
     releasedBytes: 0
   })).toBe(false);
@@ -55,6 +57,7 @@ it('does not notify when nothing was deleted or notifications are unavailable', 
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 0,
     deletedCount: 1,
+    failedCount: 0,
     policyDeletedCount: 1,
     releasedBytes: 1024
   })).toBe(false);
@@ -65,6 +68,7 @@ it('explains when the latest safety backup keeps storage over the limit', () => 
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 0,
     deletedCount: 0,
+    failedCount: 0,
     policyDeletedCount: 0,
     releasedBytes: 0,
     remainingBytesOverLimit: 12 * 1024 * 1024,
@@ -81,6 +85,7 @@ it('uses Chinese cleanup copy for Chinese locales', () => {
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 0,
     deletedCount: 1,
+    failedCount: 0,
     policyDeletedCount: 1,
     releasedBytes: 10 * 1024 * 1024
   })).toBe(true);
@@ -100,6 +105,7 @@ it('uses English when Chinese is secondary, traditional, ambiguous, or absent', 
     expect(showBackupCleanupNotification({
       capacityDeletedCount: 0,
       deletedCount: 1,
+      failedCount: 0,
       policyDeletedCount: 1,
       releasedBytes: 10 * 1024 * 1024
     })).toBe(true);
@@ -119,6 +125,7 @@ it('does not let notification failures escape into completed backup work', () =>
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 1,
     deletedCount: 1,
+    failedCount: 0,
     policyDeletedCount: 0,
     releasedBytes: 10 * 1024 * 1024
   })).toBe(false);

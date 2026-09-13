@@ -45,12 +45,14 @@ it('keeps the latest completed safety snapshot even when the directory remains o
   await writeFixture('manual-2026-08-12_08-00-00-000.db', 10, '2026-08-12T08:00:00.000Z');
   await writeFixture('pre-restore-2026-08-12_09-00-00-000.db.gz', 30, '2026-08-12T09:00:00.000Z');
 
-  const result = await pruneManagedDatabaseBackups(backupDirectory, settings(5));
+  const result = await pruneManagedDatabaseBackups(backupDirectory, settings(5), {
+    disposeFile: removeFixture
+  });
 
   expect(result).toMatchObject({
-    capacityDeletedCount: 1,
-    deletedCount: 1,
-    remainingBytesOverLimit: 25,
+    capacityDeletedCount: 0,
+    deletedCount: 0,
+    remainingBytesOverLimit: 35,
     safetySnapshotFloorPreserved: true
   });
   await expect(fs.access(path.join(backupDirectory, 'pre-restore-2026-08-12_09-00-00-000.db.gz')))
@@ -80,7 +82,9 @@ it('does not let a full-size protected snapshot evict completed restore points',
   });
   await linkStarted;
 
-  const result = await pruneManagedDatabaseBackups(backupDirectory, settings(20));
+  const result = await pruneManagedDatabaseBackups(backupDirectory, settings(20), {
+    disposeFile: removeFixture
+  });
 
   expect(result.deletedCount).toBe(0);
   expect((await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName))
@@ -97,8 +101,10 @@ it('does not let a full-size protected snapshot evict completed restore points',
 it.each(['EBUSY', 'EPERM'])('keeps an occupied restore point and reports only successful %s removals', async (code) => {
   const occupiedName = 'manual-2026-08-12_08-00-00-000.db';
   const removedName = 'manual-2026-08-12_09-00-00-000.db';
+  const latestName = 'manual-2026-08-12_10-00-00-000.db';
   await writeFixture(occupiedName, 10, '2026-08-12T08:00:00.000Z');
   await writeFixture(removedName, 10, '2026-08-12T09:00:00.000Z');
+  await writeFixture(latestName, 10, '2026-08-12T10:00:00.000Z');
   const occupiedPath = path.join(backupDirectory, occupiedName);
   const originalRm = fs.rm.bind(fs);
   vi.spyOn(fs, 'rm').mockImplementation(async (filePath, options) => {
@@ -108,24 +114,52 @@ it.each(['EBUSY', 'EPERM'])('keeps an occupied restore point and reports only su
     await originalRm(filePath, options);
   });
 
-  const result = await pruneManagedDatabaseBackups(backupDirectory, {
-    ...settings(100),
-    manual_max_count: 0
+  const result = await pruneManagedDatabaseBackups(backupDirectory, settings(100), {
+    disposeFile: removeFixture
   });
 
-  expect(result).toMatchObject({ deletedCount: 1, policyDeletedCount: 1, releasedBytes: 10 });
+  expect(result).toMatchObject({
+    deletedCount: 1,
+    failedCount: 1,
+    policyDeletedCount: 1,
+    releasedBytes: 10
+  });
   await expect(fs.access(occupiedPath)).resolves.toBeUndefined();
   await expect(fs.access(path.join(backupDirectory, removedName))).rejects.toMatchObject({ code: 'ENOENT' });
-  await expect(listManagedDatabaseBackups(backupDirectory)).resolves.toHaveLength(1);
+  await expect(listManagedDatabaseBackups(backupDirectory)).resolves.toHaveLength(2);
+});
+
+it('uses the saved tier priority when the capacity cannot fit every selected point', async () => {
+  await writeFixture('manual-2026-08-12_08-00-00-000.db', 10, '2026-08-12T08:00:00.000Z');
+  await writeFixture('manual-2026-08-13_09-00-00-000.db', 10, '2026-08-13T09:00:00.000Z');
+  await writeFixture('manual-2026-08-13_10-00-00-000.db', 10, '2026-08-13T10:00:00.000Z');
+  const configured = {
+    ...settings(20),
+    daily_max_count: 1,
+    hourly_max_count: 2,
+    retention_priority: ['daily', 'hourly', 'weekly', 'monthly'] as NativeBackupSettings['retention_priority']
+  };
+
+  await pruneManagedDatabaseBackups(backupDirectory, configured, { disposeFile: removeFixture });
+
+  expect((await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName)).toEqual([
+    'manual-2026-08-13_10-00-00-000.db',
+    'manual-2026-08-12_08-00-00-000.db'
+  ]);
 });
 
 function settings(totalSizeLimitBytes: number): NativeBackupSettings {
   return {
-    auto_daily_days: 0, auto_hourly_hours: 0, auto_monthly_months: 0, auto_weekly_weeks: 0,
+    schema_version: 2,
+    daily_max_count: 0, hourly_max_count: 0, monthly_max_count: 0, weekly_max_count: 0,
     backup_dir: backupDirectory, extra_backup_dir: '', extra_backup_max_count: 10,
-    manual_max_count: 10, snapshot_max_count: 5,
+    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'], safety_max_count: 1,
     total_size_limit_bytes: totalSizeLimitBytes, updated_at: '2026-08-12T00:00:00.000Z'
   };
+}
+
+async function removeFixture(filePath: string) {
+  await fs.rm(filePath, { force: true });
 }
 
 async function writeFixture(fileName: string, size: number, updatedAt: string) {

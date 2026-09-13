@@ -1,9 +1,18 @@
-import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
+import type {
+  NativeBackupRetentionTier,
+  NativeBackupSettings
+} from '../../lib/platform/nativeUtilityContract.js';
 
 import type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
-export const AUTO_FREQUENCIES = ['hourly', 'daily', 'weekly', 'monthly'] as const;
-export type AutoFrequency = (typeof AUTO_FREQUENCIES)[number];
+export const BACKUP_RETENTION_TIERS: NativeBackupRetentionTier[] = [
+  'hourly',
+  'daily',
+  'weekly',
+  'monthly'
+];
+
+export type RestorePointsByTier = Record<NativeBackupRetentionTier, ApplicationDatabaseBackupEntry[]>;
 
 function startOfLocalHour(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
@@ -15,69 +24,57 @@ function startOfLocalDay(date: Date) {
 
 function startOfLocalWeek(date: Date) {
   const dayStart = new Date(startOfLocalDay(date));
-  const distance = (dayStart.getDay() + 6) % 7;
-  dayStart.setDate(dayStart.getDate() - distance);
+  dayStart.setDate(dayStart.getDate() - ((dayStart.getDay() + 6) % 7));
   return dayStart.getTime();
 }
 
-function startOfLocalMonth(date: Date) {
+function bucketStart(date: Date, tier: NativeBackupRetentionTier) {
+  if (tier === 'hourly') return startOfLocalHour(date);
+  if (tier === 'daily') return startOfLocalDay(date);
+  if (tier === 'weekly') return startOfLocalWeek(date);
   return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
 }
 
-function bucketStart(date: Date, frequency: AutoFrequency) {
-  if (frequency === 'hourly') return startOfLocalHour(date);
-  if (frequency === 'daily') return startOfLocalDay(date);
-  if (frequency === 'weekly') return startOfLocalWeek(date);
-  return startOfLocalMonth(date);
-}
-
-function calendarDistance(now: Date, entryDate: Date, frequency: AutoFrequency) {
-  if (frequency === 'hourly') {
-    return Math.round((startOfLocalHour(now) - startOfLocalHour(entryDate)) / (60 * 60 * 1000));
-  }
-  if (frequency === 'daily') {
-    return Math.round((startOfLocalDay(now) - startOfLocalDay(entryDate)) / (24 * 60 * 60 * 1000));
-  }
-  if (frequency === 'weekly') {
-    return Math.round((startOfLocalWeek(now) - startOfLocalWeek(entryDate)) / (7 * 24 * 60 * 60 * 1000));
-  }
-  return (now.getFullYear() - entryDate.getFullYear()) * 12 + now.getMonth() - entryDate.getMonth();
-}
-
-export function retentionLimit(settings: NativeBackupSettings, frequency: AutoFrequency) {
-  if (frequency === 'hourly') return settings.auto_hourly_hours;
-  if (frequency === 'daily') return settings.auto_daily_days;
-  if (frequency === 'weekly') return settings.auto_weekly_weeks;
-  return settings.auto_monthly_months;
+export function retentionLimit(settings: NativeBackupSettings, tier: NativeBackupRetentionTier) {
+  if (tier === 'hourly') return settings.hourly_max_count;
+  if (tier === 'daily') return settings.daily_max_count;
+  if (tier === 'weekly') return settings.weekly_max_count;
+  return settings.monthly_max_count;
 }
 
 export function finestEnabledFrequency(settings: NativeBackupSettings) {
-  return AUTO_FREQUENCIES.find((frequency) => retentionLimit(settings, frequency) > 0) ?? null;
+  return BACKUP_RETENTION_TIERS.find((tier) => retentionLimit(settings, tier) > 0) ?? null;
 }
 
-export function frequencyBucketKey(date: Date, frequency: AutoFrequency) {
-  return `${frequency}:${bucketStart(date, frequency)}`;
+export function frequencyBucketKey(date: Date, tier: NativeBackupRetentionTier) {
+  return `${tier}:${bucketStart(date, tier)}`;
 }
 
-export function selectAutomaticRestorePoints(
+export function selectOrdinaryRestorePoints(
   entries: ApplicationDatabaseBackupEntry[],
-  settings: NativeBackupSettings,
-  now: Date
-) {
-  const retained = new Set<string>();
-  for (const frequency of AUTO_FREQUENCIES) {
-    const limit = retentionLimit(settings, frequency);
+  settings: NativeBackupSettings
+): RestorePointsByTier {
+  const selected: RestorePointsByTier = { hourly: [], daily: [], weekly: [], monthly: [] };
+  const assigned = new Set<string>();
+  const newestFirst = [...entries].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+
+  for (const tier of BACKUP_RETENTION_TIERS) {
+    const limit = retentionLimit(settings, tier);
     if (limit <= 0) continue;
-    const seenBuckets = new Set<string>();
-    for (const entry of entries) {
-      const entryDate = new Date(entry.updatedAt);
-      const distance = calendarDistance(now, entryDate, frequency);
-      if (distance < 0 || distance >= limit) continue;
-      const bucketKey = frequencyBucketKey(entryDate, frequency);
-      if (seenBuckets.has(bucketKey)) continue;
-      seenBuckets.add(bucketKey);
-      retained.add(entry.filePath);
+    const coveredBuckets = new Set(
+      newestFirst
+        .filter((entry) => assigned.has(entry.filePath))
+        .map((entry) => frequencyBucketKey(new Date(entry.updatedAt), tier))
+    );
+    for (const entry of newestFirst) {
+      if (selected[tier].length >= limit) break;
+      if (assigned.has(entry.filePath)) continue;
+      const bucket = frequencyBucketKey(new Date(entry.updatedAt), tier);
+      if (coveredBuckets.has(bucket)) continue;
+      coveredBuckets.add(bucket);
+      assigned.add(entry.filePath);
+      selected[tier].push(entry);
     }
   }
-  return retained;
+  return selected;
 }

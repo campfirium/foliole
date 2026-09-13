@@ -39,7 +39,7 @@ afterEach(async () => {
 });
 
 it('reclaims interrupted private compression files before creating the next restore point', async () => {
-  saveBackupSettings({ auto_hourly_hours: 24 });
+  saveBackupSettings({ hourly_max_count: 24 });
   const backupDirectory = resolveManagedBackupDirectory(loadBackupSettings());
   const orphanName = '.foliole-auto-backup-260402-100000.db.gz-11111111-1111-4111-8111-111111111111.source.db';
   await fs.mkdir(backupDirectory, { recursive: true });

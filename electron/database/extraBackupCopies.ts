@@ -9,6 +9,7 @@ import { listManagedDatabaseBackups } from './backupCatalog.js';
 export type ExtraBackupCopyResult = NativeExtraBackupResult;
 
 export interface CopyExtraBackupOptions {
+  disposeFile: (filePath: string) => Promise<void>;
   extraBackupDir: string;
   maxCount: number;
   primaryBackupDir: string;
@@ -38,9 +39,9 @@ export async function copyExtraBackup(options: CopyExtraBackupOptions): Promise<
     const destinationPath = path.join(options.extraBackupDir, path.basename(options.sourcePath));
     tempPath = path.join(options.extraBackupDir, `.foliole-extra-backup-${randomUUID()}.tmp`);
     await fs.copyFile(options.sourcePath, tempPath);
-    await fs.rm(destinationPath, { force: true });
+    await disposeExistingBackup(destinationPath, options.disposeFile);
     await fs.rename(tempPath, destinationPath);
-    await pruneExtraBackups(options.extraBackupDir, options.maxCount);
+    await pruneExtraBackups(options.extraBackupDir, options.maxCount, options.disposeFile);
     return { destinationPath, errorMessage: null, status: 'copied' };
   } catch (error) {
     return {
@@ -55,11 +56,28 @@ export async function copyExtraBackup(options: CopyExtraBackupOptions): Promise<
   }
 }
 
-async function pruneExtraBackups(directoryPath: string, maxCount: number) {
+async function disposeExistingBackup(
+  filePath: string,
+  disposeFile: CopyExtraBackupOptions['disposeFile']
+) {
+  try {
+    await fs.access(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  await disposeFile(filePath);
+}
+
+async function pruneExtraBackups(
+  directoryPath: string,
+  maxCount: number,
+  disposeFile: CopyExtraBackupOptions['disposeFile']
+) {
   const entries = await listManagedDatabaseBackups(directoryPath);
   const retained = new Set(entries.slice(0, Math.max(1, maxCount)).map((entry) => entry.filePath));
   const deletedPaths = entries.filter((entry) => !retained.has(entry.filePath)).map((entry) => entry.filePath);
-  await Promise.all(deletedPaths.map((filePath) => fs.rm(filePath, { force: true })));
+  await Promise.all(deletedPaths.map((filePath) => disposeFile(filePath)));
 }
 
 async function areSameDirectory(left: string, right: string) {

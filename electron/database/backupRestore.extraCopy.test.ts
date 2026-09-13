@@ -18,6 +18,12 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('./backupFileDisposition.js', () => ({
+  moveManagedBackupToTrash: async (filePath: string) => {
+    const { rm } = await import('node:fs/promises');
+    await rm(filePath, { force: true });
+  }
+}));
 
 import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, normalizeBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
@@ -99,10 +105,10 @@ it('skips extra copying when the extra location matches the main backup location
 it('copies automatic backups into the extra location without blocking primary retention', async () => {
   const extraDir = path.join(tempRoot, 'CloudBackups');
   saveBackupSettings({
-    auto_daily_days: 1,
-    auto_hourly_hours: 0,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 0,
+    daily_max_count: 1,
+    hourly_max_count: 0,
+    monthly_max_count: 0,
+    weekly_max_count: 0,
     extra_backup_dir: extraDir
   });
   await writeSidecarSentinels();

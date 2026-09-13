@@ -122,12 +122,11 @@ export function BackupRulesSection(props: {
 
   return (
     <SettingsSection ariaLabel={t('settings.backups.rules.sectionAria')} title={t('settings.backups.rules.title')}>
-      <NumberRuleRow description={t('settings.backups.rules.hourly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_hourly_hours', value)} title={t('settings.backups.rules.hourly.title')} value={String(props.draft.auto_hourly_hours)} />
-      <NumberRuleRow description={t('settings.backups.rules.daily.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_daily_days', value)} title={t('settings.backups.rules.daily.title')} value={String(props.draft.auto_daily_days)} />
-      <NumberRuleRow description={t('settings.backups.rules.weekly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_weekly_weeks', value)} title={t('settings.backups.rules.weekly.title')} value={String(props.draft.auto_weekly_weeks)} />
-      <NumberRuleRow description={t('settings.backups.rules.monthly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_monthly_months', value)} title={t('settings.backups.rules.monthly.title')} value={String(props.draft.auto_monthly_months)} />
-      <NumberRuleRow description={t('settings.backups.rules.manual.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('manual_max_count', value)} title={t('settings.backups.rules.manual.title')} value={String(props.draft.manual_max_count)} />
-      <NumberRuleRow description={t('settings.backups.rules.snapshots.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title={t('settings.backups.rules.snapshots.title')} value={String(props.draft.snapshot_max_count)} />
+      <NumberRuleRow description={t('settings.backups.rules.hourly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('hourly_max_count', value)} title={t('settings.backups.rules.hourly.title')} value={String(props.draft.hourly_max_count)} />
+      <NumberRuleRow description={t('settings.backups.rules.daily.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('daily_max_count', value)} title={t('settings.backups.rules.daily.title')} value={String(props.draft.daily_max_count)} />
+      <NumberRuleRow description={t('settings.backups.rules.weekly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('weekly_max_count', value)} title={t('settings.backups.rules.weekly.title')} value={String(props.draft.weekly_max_count)} />
+      <NumberRuleRow description={t('settings.backups.rules.monthly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('monthly_max_count', value)} title={t('settings.backups.rules.monthly.title')} value={String(props.draft.monthly_max_count)} />
+      <NumberRuleRow description={t('settings.backups.rules.snapshots.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('safety_max_count', value)} title={t('settings.backups.rules.snapshots.title')} value={String(props.draft.safety_max_count)} />
       <SettingsRow description={t('settings.backups.rules.totalSize.description')} title={t('settings.backups.rules.totalSize.title')}>
         <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
           <input

@@ -3,7 +3,10 @@ import path from 'node:path';
 
 import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
 
-import { selectAutomaticRestorePoints } from './backupRetentionPolicy.js';
+import {
+  selectOrdinaryRestorePoints,
+  type RestorePointsByTier
+} from './backupRetentionPolicy.js';
 import { isManagedSafetySnapshotProtected } from './managedSafetySnapshots.js';
 
 export interface ApplicationDatabaseBackupEntry {
@@ -19,10 +22,15 @@ export interface ApplicationDatabaseBackupEntry {
 export interface BackupPruneResult {
   capacityDeletedCount: number;
   deletedCount: number;
+  failedCount: number;
   policyDeletedCount: number;
   releasedBytes: number;
   remainingBytesOverLimit?: number;
   safetySnapshotFloorPreserved?: boolean;
+}
+
+export interface BackupPruneOptions {
+  disposeFile: (filePath: string) => Promise<void>;
 }
 
 const LEGACY_AUTO_FILE_PATTERN =
@@ -57,11 +65,7 @@ function parseEntryFromFileName(fileName: string): Pick<
     };
   }
   if (MANUAL_FILE_PATTERN.test(fileName)) {
-    return {
-      autoFrequency: null,
-      kind: 'manual',
-      snapshotReason: null
-    };
+    return { autoFrequency: null, kind: 'manual', snapshotReason: null };
   }
   return null;
 }
@@ -71,120 +75,131 @@ async function readBackupDirectory(directoryPath: string) {
   try {
     fileNames = await fs.readdir(directoryPath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [] as ApplicationDatabaseBackupEntry[];
-    }
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   }
-
-  const entries = await Promise.all(
-    fileNames
-      .filter((fileName) => fileName.endsWith('.db') || fileName.endsWith('.db.gz'))
-      .map(async (fileName) => {
-        const parsed = parseEntryFromFileName(fileName);
-        if (!parsed) {
-          return null;
-        }
-        const filePath = path.join(directoryPath, fileName);
-        const stats = await fs.stat(filePath);
-        if (!stats.isFile()) {
-          return null;
-        }
-        return {
-          fileName,
-          filePath,
-          kind: parsed.kind,
-          autoFrequency: parsed.autoFrequency,
-          snapshotReason: parsed.snapshotReason,
-          sizeBytes: stats.size,
-          updatedAt: stats.mtime.toISOString()
-        } satisfies ApplicationDatabaseBackupEntry;
-      })
-  );
-
+  const entries = await Promise.all(fileNames.map(async (fileName) => {
+    if (!fileName.endsWith('.db') && !fileName.endsWith('.db.gz')) return null;
+    const parsed = parseEntryFromFileName(fileName);
+    if (!parsed) return null;
+    const filePath = path.join(directoryPath, fileName);
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile()) return null;
+    return {
+      ...parsed,
+      fileName,
+      filePath,
+      sizeBytes: stats.size,
+      updatedAt: stats.mtime.toISOString()
+    } satisfies ApplicationDatabaseBackupEntry;
+  }));
   return entries
     .filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null)
     .sort((left, right) =>
-      right.updatedAt.localeCompare(left.updatedAt) || left.fileName.localeCompare(right.fileName)
-    );
+      right.updatedAt.localeCompare(left.updatedAt) || left.fileName.localeCompare(right.fileName));
 }
 
 export async function listManagedDatabaseBackups(directoryPath: string) {
   return readBackupDirectory(directoryPath);
 }
 
-export async function pruneManagedDatabaseBackups(directoryPath: string, settings: NativeBackupSettings, now = new Date()) {
-  const entries = await readBackupDirectory(directoryPath);
-  const retained = new Set<string>();
-  const protectedEntries = entries.filter((entry) => isManagedSafetySnapshotProtected(entry.filePath));
-  protectedEntries.forEach((entry) => retained.add(entry.filePath));
-
-  const manualEntries = entries.filter((entry) => entry.kind === 'manual').slice(0, settings.manual_max_count);
-  manualEntries.forEach((entry) => retained.add(entry.filePath));
-
-  const protectedSnapshotCount = protectedEntries.filter((entry) => entry.kind === 'snapshot').length;
-  const snapshotEntries = entries
-    .filter((entry) => entry.kind === 'snapshot' && !isManagedSafetySnapshotProtected(entry.filePath))
-    .slice(0, Math.max(0, settings.snapshot_max_count - protectedSnapshotCount));
-  snapshotEntries.forEach((entry) => retained.add(entry.filePath));
-
-  const autoEntries = entries.filter((entry) => entry.kind === 'automatic');
-  selectAutomaticRestorePoints(autoEntries, settings, now).forEach((filePath) => retained.add(filePath));
-
-  const policyDeleted = entries.filter((entry) =>
-    !retained.has(entry.filePath) && !isManagedSafetySnapshotProtected(entry.filePath));
-
-  const retainedEntries = entries.filter((entry) => retained.has(entry.filePath));
-  const latestCompletedSnapshot = retainedEntries.find((entry) =>
-    entry.kind === 'snapshot' && !isManagedSafetySnapshotProtected(entry.filePath));
-  let capacitySizeBytes = retainedEntries
-    .filter((entry) => !isManagedSafetySnapshotProtected(entry.filePath))
-    .reduce((sum, entry) => sum + entry.sizeBytes, 0);
-  if (settings.total_size_limit_bytes > 0 && capacitySizeBytes > settings.total_size_limit_bytes) {
-    const oldestFirst = [...retainedEntries].sort((left, right) => left.updatedAt.localeCompare(right.updatedAt));
-    for (const entry of oldestFirst) {
-      if (capacitySizeBytes <= settings.total_size_limit_bytes) {
-        break;
-      }
-      if (isManagedSafetySnapshotProtected(entry.filePath) || entry.filePath === latestCompletedSnapshot?.filePath) {
+function selectCapacityRetainedPaths(
+  entries: ApplicationDatabaseBackupEntry[],
+  protectedEntries: ApplicationDatabaseBackupEntry[],
+  selectedSafety: ApplicationDatabaseBackupEntry[],
+  ordinaryEntries: ApplicationDatabaseBackupEntry[],
+  selectedOrdinary: RestorePointsByTier,
+  settings: NativeBackupSettings
+) {
+  const retainedPaths = new Set(protectedEntries.map((entry) => entry.filePath));
+  selectedSafety.forEach((entry) => retainedPaths.add(entry.filePath));
+  const latestOrdinary = ordinaryEntries[0];
+  if (latestOrdinary) retainedPaths.add(latestOrdinary.filePath);
+  let retainedBytes = entries
+    .filter((entry) => retainedPaths.has(entry.filePath) && !isManagedSafetySnapshotProtected(entry.filePath))
+    .reduce((total, entry) => total + entry.sizeBytes, 0);
+  for (const tier of settings.retention_priority) {
+    for (const entry of selectedOrdinary[tier]) {
+      if (retainedPaths.has(entry.filePath)) continue;
+      if (settings.total_size_limit_bytes > 0 && retainedBytes + entry.sizeBytes > settings.total_size_limit_bytes) {
         continue;
       }
-      retained.delete(entry.filePath);
-      capacitySizeBytes -= entry.sizeBytes;
+      retainedPaths.add(entry.filePath);
+      retainedBytes += entry.sizeBytes;
     }
   }
+  return retainedPaths;
+}
 
-  const capacityDeleted = retainedEntries.filter((entry) => !retained.has(entry.filePath));
-  const policyRemoved = await removeBackupEntries(policyDeleted);
-  const capacityRemoved = await removeBackupEntries(capacityDeleted);
-  const deletedEntries = [...policyRemoved, ...capacityRemoved];
-  const deletedPaths = new Set(deletedEntries.map((entry) => entry.filePath));
+export async function pruneManagedDatabaseBackups(
+  directoryPath: string,
+  settings: NativeBackupSettings,
+  options: BackupPruneOptions
+) {
+  const entries = await readBackupDirectory(directoryPath);
+  const protectedEntries = entries.filter((entry) => isManagedSafetySnapshotProtected(entry.filePath));
+  const safetyEntries = entries.filter((entry) =>
+    entry.kind === 'snapshot' && !isManagedSafetySnapshotProtected(entry.filePath));
+  const selectedSafety = safetyEntries.slice(0, settings.safety_max_count);
+  const ordinaryEntries = entries.filter((entry) => entry.kind === 'automatic' || entry.kind === 'manual');
+  const selectedOrdinary = selectOrdinaryRestorePoints(ordinaryEntries, settings);
+  const latestOrdinary = ordinaryEntries[0];
+  const desiredPaths = new Set([
+    ...protectedEntries.map((entry) => entry.filePath),
+    ...selectedSafety.map((entry) => entry.filePath),
+    ...Object.values(selectedOrdinary).flat().map((entry) => entry.filePath)
+  ]);
+  if (latestOrdinary) desiredPaths.add(latestOrdinary.filePath);
+
+  const retainedPaths = selectCapacityRetainedPaths(
+    entries,
+    protectedEntries,
+    selectedSafety,
+    ordinaryEntries,
+    selectedOrdinary,
+    settings
+  );
+
+  const policyDeleted = entries.filter((entry) =>
+    !desiredPaths.has(entry.filePath) && !isManagedSafetySnapshotProtected(entry.filePath));
+  const capacityDeleted = entries.filter((entry) =>
+    desiredPaths.has(entry.filePath) && !retainedPaths.has(entry.filePath) &&
+    !isManagedSafetySnapshotProtected(entry.filePath));
+  const policyResult = await disposeEntries(policyDeleted, options.disposeFile);
+  const capacityResult = await disposeEntries(capacityDeleted, options.disposeFile);
+  const removed = [...policyResult.removed, ...capacityResult.removed];
+  const removedPaths = new Set(removed.map((entry) => entry.filePath));
   const remainingSizeBytes = entries
-    .filter((entry) => !deletedPaths.has(entry.filePath))
-    .reduce((sum, entry) => sum + entry.sizeBytes, 0);
+    .filter((entry) => !removedPaths.has(entry.filePath))
+    .reduce((total, entry) => total + entry.sizeBytes, 0);
   const remainingBytesOverLimit = settings.total_size_limit_bytes > 0
     ? Math.max(0, remainingSizeBytes - settings.total_size_limit_bytes)
     : 0;
   return {
-    capacityDeletedCount: capacityRemoved.length,
-    deletedCount: deletedEntries.length,
-    policyDeletedCount: policyRemoved.length,
-    releasedBytes: deletedEntries.reduce((sum, entry) => sum + entry.sizeBytes, 0),
+    capacityDeletedCount: capacityResult.removed.length,
+    deletedCount: removed.length,
+    failedCount: policyResult.failedCount + capacityResult.failedCount,
+    policyDeletedCount: policyResult.removed.length,
+    releasedBytes: removed.reduce((total, entry) => total + entry.sizeBytes, 0),
     ...(remainingBytesOverLimit > 0 ? {
       remainingBytesOverLimit,
-      safetySnapshotFloorPreserved: latestCompletedSnapshot !== undefined && retained.has(latestCompletedSnapshot.filePath)
+      safetySnapshotFloorPreserved: selectedSafety.every((entry) => !removedPaths.has(entry.filePath))
     } : {})
   } satisfies BackupPruneResult;
 }
 
-async function removeBackupEntries(entries: ApplicationDatabaseBackupEntry[]) {
-  const removed = await Promise.all(entries.map(async (entry) => {
+async function disposeEntries(
+  entries: ApplicationDatabaseBackupEntry[],
+  disposeFile: BackupPruneOptions['disposeFile']
+) {
+  const outcomes = await Promise.all(entries.map(async (entry) => {
     try {
-      await fs.rm(entry.filePath, { force: true });
+      await disposeFile(entry.filePath);
       return entry;
     } catch {
       return null;
     }
   }));
-  return removed.filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null);
+  const removed = outcomes.filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null);
+  return { failedCount: entries.length - removed.length, removed };
 }

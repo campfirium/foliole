@@ -8,15 +8,16 @@ import {
 export type DatabaseBackupSettings = RuntimeBackupSettings;
 
 const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
-  auto_daily_days: 7,
-  auto_hourly_hours: 24,
-  auto_monthly_months: 0,
-  auto_weekly_weeks: 4,
+  schema_version: 2,
+  daily_max_count: 5,
+  hourly_max_count: 8,
+  monthly_max_count: 0,
+  weekly_max_count: 1,
   backup_dir: '',
   extra_backup_dir: '',
   extra_backup_max_count: 10,
-  manual_max_count: 10,
-  snapshot_max_count: 5,
+  retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+  safety_max_count: 2,
   total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
   updated_at: '1970-01-01T00:00:00.000Z'
 };
@@ -31,19 +32,28 @@ function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings
   }
   const payload = value as Record<string, unknown>;
   return {
-    auto_daily_days: isFiniteNumber(payload.auto_daily_days) ? Math.max(0, Math.round(payload.auto_daily_days)) : 7,
-    auto_hourly_hours: isFiniteNumber(payload.auto_hourly_hours) ? Math.max(0, Math.round(payload.auto_hourly_hours)) : 24,
-    auto_monthly_months: isFiniteNumber(payload.auto_monthly_months) ? Math.max(0, Math.round(payload.auto_monthly_months)) : 0,
-    auto_weekly_weeks: isFiniteNumber(payload.auto_weekly_weeks) ? Math.max(0, Math.round(payload.auto_weekly_weeks)) : 4,
+    schema_version: 2,
+    daily_max_count: isFiniteNumber(payload.daily_max_count) ? Math.max(0, Math.round(payload.daily_max_count)) : 5,
+    hourly_max_count: isFiniteNumber(payload.hourly_max_count) ? Math.max(0, Math.round(payload.hourly_max_count)) : 8,
+    monthly_max_count: isFiniteNumber(payload.monthly_max_count) ? Math.max(0, Math.round(payload.monthly_max_count)) : 0,
+    weekly_max_count: isFiniteNumber(payload.weekly_max_count) ? Math.max(0, Math.round(payload.weekly_max_count)) : 1,
     backup_dir: typeof payload.backup_dir === 'string' ? payload.backup_dir : '',
     extra_backup_dir: typeof payload.extra_backup_dir === 'string' ? payload.extra_backup_dir : '',
     extra_backup_max_count: isFiniteNumber(payload.extra_backup_max_count) ? Math.max(1, Math.round(payload.extra_backup_max_count)) : 10,
-    manual_max_count: isFiniteNumber(payload.manual_max_count) ? Math.max(1, Math.round(payload.manual_max_count)) : 10,
-    snapshot_max_count: isFiniteNumber(payload.snapshot_max_count) ? Math.max(1, Math.round(payload.snapshot_max_count)) : 5,
+    retention_priority: normalizeRetentionPriority(payload.retention_priority),
+    safety_max_count: isFiniteNumber(payload.safety_max_count) ? Math.max(1, Math.round(payload.safety_max_count)) : 2,
     total_size_limit_bytes:
       isFiniteNumber(payload.total_size_limit_bytes) ? Math.max(0, Math.round(payload.total_size_limit_bytes)) : DEFAULT_BACKUP_SETTINGS.total_size_limit_bytes,
     updated_at: typeof payload.updated_at === 'string' && payload.updated_at.trim().length > 0 ? payload.updated_at : DEFAULT_BACKUP_SETTINGS.updated_at
   };
+}
+
+function normalizeRetentionPriority(value: unknown): DatabaseBackupSettings['retention_priority'] {
+  const defaults = DEFAULT_BACKUP_SETTINGS.retention_priority;
+  if (!Array.isArray(value)) return defaults;
+  const result = value.filter((entry): entry is DatabaseBackupSettings['retention_priority'][number] =>
+    typeof entry === 'string' && defaults.includes(entry as DatabaseBackupSettings['retention_priority'][number]));
+  return result.length === defaults.length && new Set(result).size === defaults.length ? result : defaults;
 }
 
 export async function loadDatabaseBackupSettings(): Promise<DatabaseBackupSettings> {

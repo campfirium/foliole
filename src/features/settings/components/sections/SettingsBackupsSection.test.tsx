@@ -94,7 +94,7 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByText('Location')).toBeInTheDocument();
   expect(screen.getByText('Backup scope')).toBeInTheDocument();
   expect(screen.getByText(/They do not restore external original files/)).toBeInTheDocument();
-  expect(screen.getAllByDisplayValue('10')).toHaveLength(2);
+  expect(screen.getAllByDisplayValue('10')).toHaveLength(1);
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
@@ -134,7 +134,7 @@ it('auto-saves edited backup settings without a save button', async () => {
   await waitFor(() => {
     expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
       expect.objectContaining({
-        auto_hourly_hours: 12,
+        hourly_max_count: 12,
         total_size_limit_bytes: 3 * 1024 * 1024 * 1024
       })
     );

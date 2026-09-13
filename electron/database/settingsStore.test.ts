@@ -183,7 +183,7 @@ it('stores full-text search index strategy inside the user-space app settings re
 
 it('mirrors backup and library path settings as user-space setting records', () => {
   saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
-  saveJsonSetting('backup_settings', { auto_daily_days: 7 }, '2026-03-06T00:01:00.000Z');
+  saveJsonSetting('backup_settings', { daily_max_count: 7 }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('library_path_settings', { mirror: '/library/Mirror' }, '2026-03-06T00:02:00.000Z');
 
   const connection = openDatabaseConnection();

@@ -22,6 +22,12 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('./backupCleanupNotification.js', () => ({
   showBackupCleanupNotification: notificationMocks.show
 }));
+vi.mock('./backupFileDisposition.js', () => ({
+  moveManagedBackupToTrash: async (filePath: string) => {
+    const { rm } = await import('node:fs/promises');
+    await rm(filePath, { force: true });
+  }
+}));
 
 import { listManagedDatabaseBackups, pruneManagedDatabaseBackups } from './backupCatalog.js';
 import { reconcileAutomaticDatabaseBackups } from './backupRestore.js';
@@ -46,10 +52,10 @@ afterEach(async () => {
 
 it('creates one automatic restore point for all enabled retention layers', async () => {
   saveBackupSettings({
-    auto_daily_days: 7,
-    auto_hourly_hours: 24,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 4
+    daily_max_count: 7,
+    hourly_max_count: 24,
+    monthly_max_count: 0,
+    weekly_max_count: 4
   });
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
@@ -60,10 +66,10 @@ it('creates one automatic restore point for all enabled retention layers', async
 
 it('uses the finest enabled layer as the only automatic backup cadence', async () => {
   saveBackupSettings({
-    auto_daily_days: 7,
-    auto_hourly_hours: 24,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 4
+    daily_max_count: 7,
+    hourly_max_count: 24,
+    monthly_max_count: 0,
+    weekly_max_count: 4
   });
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
@@ -79,10 +85,10 @@ it('uses the finest enabled layer as the only automatic backup cadence', async (
 
 it('falls back to daily cadence when hourly retention is disabled', async () => {
   saveBackupSettings({
-    auto_daily_days: 7,
-    auto_hourly_hours: 0,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 4
+    daily_max_count: 7,
+    hourly_max_count: 0,
+    monthly_max_count: 0,
+    weekly_max_count: 4
   });
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
@@ -102,14 +108,14 @@ it.each([
     name: 'weekly',
     next: new Date(2026, 3, 13, 10, 0),
     same: new Date(2026, 3, 12, 18, 0),
-    settings: { auto_daily_days: 0, auto_hourly_hours: 0, auto_monthly_months: 0, auto_weekly_weeks: 4 }
+    settings: { daily_max_count: 0, hourly_max_count: 0, monthly_max_count: 0, weekly_max_count: 4 }
   },
   {
     first: new Date(2026, 3, 6, 10, 0),
     name: 'monthly',
     next: new Date(2026, 4, 1, 10, 0),
     same: new Date(2026, 3, 30, 18, 0),
-    settings: { auto_daily_days: 0, auto_hourly_hours: 0, auto_monthly_months: 3, auto_weekly_weeks: 0 }
+    settings: { daily_max_count: 0, hourly_max_count: 0, monthly_max_count: 3, weekly_max_count: 0 }
   }
 ])('uses $name cadence when it is the finest enabled layer', async ({ first, next, same, settings }) => {
   saveBackupSettings(settings);
@@ -124,10 +130,10 @@ it.each([
 
 it('does not create automatic restore points when every layer is disabled', async () => {
   saveBackupSettings({
-    auto_daily_days: 0,
-    auto_hourly_hours: 0,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 0
+    daily_max_count: 0,
+    hourly_max_count: 0,
+    monthly_max_count: 0,
+    weekly_max_count: 0
   });
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 6, 10, 0));
@@ -137,7 +143,7 @@ it('does not create automatic restore points when every layer is disabled', asyn
 
 it('does not overwrite an existing automatic restore point in the same second', async () => {
   const now = new Date(2026, 3, 6, 10, 15, 0);
-  saveBackupSettings({ auto_hourly_hours: 24 });
+  saveBackupSettings({ hourly_max_count: 24 });
   const backupDirectory = resolveManagedBackupDirectory(loadBackupSettings());
   await fs.mkdir(backupDirectory, { recursive: true });
   await createBackupFixture(
@@ -156,10 +162,10 @@ it('does not overwrite an existing automatic restore point in the same second', 
 it('treats legacy frequency files as one shared restore point collection', async () => {
   const now = new Date(2026, 3, 6, 10, 15, 0);
   saveBackupSettings({
-    auto_daily_days: 7,
-    auto_hourly_hours: 24,
-    auto_monthly_months: 1,
-    auto_weekly_weeks: 4
+    daily_max_count: 7,
+    hourly_max_count: 24,
+    monthly_max_count: 1,
+    weekly_max_count: 4
   });
   const backupDirectory = resolveManagedBackupDirectory(loadBackupSettings());
   await fs.mkdir(backupDirectory, { recursive: true });
@@ -184,14 +190,13 @@ it('treats legacy frequency files as one shared restore point collection', async
   }));
 });
 
-it('prunes backups by kind rules and then removes the oldest retained backup when total size is exceeded', async () => {
+it('keeps the newest ordinary backup and configured safety snapshot at the capacity floor', async () => {
   saveBackupSettings({
-    auto_daily_days: 0,
-    auto_hourly_hours: 0,
-    auto_monthly_months: 0,
-    auto_weekly_weeks: 0,
-    manual_max_count: 2,
-    snapshot_max_count: 1,
+    daily_max_count: 0,
+    hourly_max_count: 0,
+    monthly_max_count: 0,
+    weekly_max_count: 0,
+    safety_max_count: 1,
     total_size_limit_bytes: 20
   });
   const backupDirectory = resolveManagedBackupDirectory(loadBackupSettings());
@@ -207,14 +212,15 @@ it('prunes backups by kind rules and then removes the oldest retained backup whe
   const result = await pruneManagedDatabaseBackups(
     backupDirectory,
     settings,
-    new Date('2026-04-02T15:00:00.000Z')
+    { disposeFile: async (filePath) => fs.rm(filePath, { force: true }) }
   );
   const entries = await listManagedDatabaseBackups(backupDirectory);
 
   expect(result).toEqual({
-    capacityDeletedCount: 1,
+    capacityDeletedCount: 0,
     deletedCount: 3,
-    policyDeletedCount: 2,
+    failedCount: 0,
+    policyDeletedCount: 3,
     releasedBytes: 30
   });
   expect(entries.map((entry) => entry.fileName)).toEqual([

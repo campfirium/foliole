@@ -10,6 +10,8 @@ import {
   type ApplicationDatabaseBackupEntry
 } from './backupCatalog.js';
 import { showBackupCleanupNotification } from './backupCleanupNotification.js';
+import { moveManagedBackupToTrash } from './backupFileDisposition.js';
+import { automaticBackupFileName, buildManagedBackupPath } from './backupFileNames.js';
 import { finestEnabledFrequency, frequencyBucketKey } from './backupRetentionPolicy.js';
 import {
   ensureManagedBackupDirectory,
@@ -19,7 +21,6 @@ import {
 import { cleanupOrphanedBackupTemporaryFiles } from './backupTemporaryFileCleanup.js';
 import {
   backupCompressedSqliteDatabase,
-  COMPRESSED_SQLITE_BACKUP_SUFFIX,
   materializeCompressedSqliteBackup
 } from './compressedSqliteBackup.js';
 import {
@@ -60,28 +61,12 @@ export type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
 let restoreInProgress = false;
 
-function backupFileTimestamp(now: Date) {
-  return now.toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '');
-}
-
-function buildManagedBackupPath(prefix: string, now: Date, backupDirectory = resolveManagedBackupDirectory()) {
-  return path.join(backupDirectory, `${prefix}-${backupFileTimestamp(now)}${COMPRESSED_SQLITE_BACKUP_SUFFIX}`);
-}
-
-function pad(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function automaticBackupFileName(now: Date) {
-  const date = `${pad(now.getFullYear() % 100)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  return `foliole-auto-backup-${date}-${time}${COMPRESSED_SQLITE_BACKUP_SUFFIX}`;
-}
-
-async function pruneBackupsNow(now = new Date()) {
+async function pruneBackupsNow() {
   await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
-  const result = await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, now);
+  const result = await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, {
+    disposeFile: moveManagedBackupToTrash
+  });
   showBackupCleanupNotification(result);
 }
 
@@ -100,6 +85,7 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
   });
   await fs.utimes(result.destinationPath, now, now);
   await copyExtraBackup({
+    disposeFile: moveManagedBackupToTrash,
     extraBackupDir: settings.extra_backup_dir,
     maxCount: settings.extra_backup_max_count,
     primaryBackupDir: backupDirectory,
@@ -128,7 +114,9 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
     await createAutomaticBackup(now, backupDirectory);
   }
 
-  const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, now);
+  const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
+    disposeFile: moveManagedBackupToTrash
+  });
   showBackupCleanupNotification(pruneResult);
   return temporaryCleanup;
 }
@@ -153,12 +141,13 @@ export async function createApplicationDatabaseBackup(
   const extraBackup = options.destinationPath
     ? disabledExtraBackupResult()
     : await copyExtraBackup({
+        disposeFile: moveManagedBackupToTrash,
         extraBackupDir: settings.extra_backup_dir,
         maxCount: settings.extra_backup_max_count,
         primaryBackupDir: backupDirectory,
         sourcePath: result.destinationPath
       });
-  await pruneBackupsNow(now);
+  await pruneBackupsNow();
   return { ...result, extraBackup };
 }
 
