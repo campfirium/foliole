@@ -60,9 +60,11 @@ export function ReadwiseSourceResyncMenuItem(props: {
     if (!confirmed) return;
     showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.running'));
     const result = await resyncRuntimeReadwiseSource(props.nodeId).catch(() => null);
-    showAppRuntimeNotice(t(result?.status === 'completed'
-      ? 'desktop.nodeList.readwiseResync.success'
-      : 'desktop.nodeList.readwiseResync.failed'), result?.status === 'completed' ? 'info' : 'error');
+    if (result?.status === 'completed') {
+      showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.success'), 'info', undefined, { durationMs: 8000 });
+      return;
+    }
+    showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.failed'), 'error');
   };
   const followsEpubAction = state.category === 'epub';
   return (
