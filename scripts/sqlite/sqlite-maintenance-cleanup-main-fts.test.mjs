@@ -11,6 +11,7 @@ import { promisify } from 'node:util';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { buildElectronNodeArgs } from '../electron-sqlite-runner.mjs';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -144,12 +145,7 @@ it('reports locked cleanup attempts with a machine-readable status', async () =>
 async function runCleanup(...args) {
   return execFileAsync(
     process.execPath,
-    [
-      '--experimental-strip-types',
-      'scripts/sqlite/sqlite-maintenance.ts',
-      'cleanup-main-fts',
-      ...args
-    ],
+    buildElectronNodeArgs('scripts/sqlite/sqlite-maintenance.ts', ['cleanup-main-fts', ...args]),
     { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
   );
 }
