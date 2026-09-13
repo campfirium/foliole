@@ -61,7 +61,7 @@
 
 - macOS Codex 会话调试或操作桌面客户端时，默认不得抢占用户当前桌面；优先使用日志 / CLI、应用级后台状态读取或不激活窗口的 Computer Use 操作，能在后台完成时不得将 Foliole 拉到前台。
 - 当目标是已由统一脚本启动的 Foliole DEV 且验收确需 Computer Use 时，先用 `cua.getState()` 核实 `com.campfirium.foliole.dev` 正在运行，再仅按该 bundle ID 连接；不得调用 `cua.getApp("Foliole")`，它会解析并启动正式版 `/Applications/Foliole.app`。DEV 不在 inventory 时返回统一脚本诊断，不尝试应用名称。此规则由本文件拥有；仅当 DEV bundle identity 改变或 Computer Use 提供经验证的 non-launching process binding 时修订，固定成本是一轮 inventory 读取。
-- 只有验收目标依赖真实焦点、键盘输入、菜单栏、拖拽或窗口呈现，或用户当次明确要求可见预览时，才允许前台操作；执行前必须先在 commentary 说明会短暂打扰桌面，结束后只停止或隐藏本轮启动的窗口，不得关闭用户原有窗口。
+- 只有验收目标依赖真实焦点、键盘输入、菜单栏、拖拽或窗口呈现，或用户当次明确要求可见预览时，才允许前台操作；执行前必须先在 commentary 说明会短暂打扰桌面，结束后只停止或隐藏本轮启动的窗口，不得关闭用户原有窗口；同仓 Foliole DEV 预览阻塞验收 resource gate 时按下述专门规则处理。
 
 ## Validation
 
@@ -71,5 +71,6 @@
 - 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。
 - Hidden/Visible spec 只断言稳定用户行为。UI、layout、空白页或视觉回归还必须产出截图或 trace 到 `.tmp/artifacts/`；不得用 DOM 顺序、坐标或文本存在代替视觉证据。最终汇报说明自动断言覆盖的用户效果与未覆盖观察点。
 - Desktop Playwright 使用共享 harness、隔离 state root 与 resource gate，并在共享工作区串行执行；并发占用是资源冲突，不得报告为产品失败。不得绕开 runner 直接运行裸 Playwright CLI。
+- macOS Hidden/Visible Native 验收被同仓 Foliole DEV 预览占用 resource gate 时，核实 holder 是 `scripts/macos/macos-electron-dev.mjs` 后直接运行 `npm run macos:dev:stop` 并继续验收，不要求用户手动关闭。该规则只授权关闭当前仓库的 DEV 预览，不扩张到正式版、其他应用或无法核实身份的 holder；验收结束后不自动重开预览。单一 owner 为本文件，主要成本是中断当前 DEV 预览会话；当验收入口不再互斥或 stop 入口失效时修订。
 - macOS preview 使用 `npm run electron:dev` 的 `.tmp` sandbox，native preflight 使用 `npm run electron:native:health`。Windows 人工预览使用 `npm run windows:preview:native`，仅在 Windows 专属触发成立时执行。
 - Windows 专属证据覆盖 Windows path/`app.getPath`、ABI、native shell/dialog/tray/notification、主数据库、installer/updater 与 Windows preload/IPC 边界；Linux Electron + Xvfb 或 macOS preview 不得替代。
