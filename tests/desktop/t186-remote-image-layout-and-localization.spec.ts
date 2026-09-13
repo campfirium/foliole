@@ -124,12 +124,12 @@ async function startFrameTrace(page: Page, alt: string) {
 
 async function localizeAndExcerptSecond(page: Page) {
   await requestAnnotation(page);
-  const second = page.locator('.cm-md-image-surface').nth(1);
+  const second = page.getByAltText('Demand B').locator('..');
   await startFrameTrace(page, 'Demand B');
   await second.hover();
   await expect.poll(() => page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.onDemand))
     .toMatch(/Demand A.*https:\/\/.*Demand B.*asset:\/\//s);
-  const localSurface = page.locator('.cm-md-image-surface-clozeable').last();
+  const localSurface = page.getByAltText('Demand B').locator('..');
   const bounds = await localSurface.boundingBox();
   if (!bounds) throw new Error('localized image surface has no bounds');
   await page.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.2);
