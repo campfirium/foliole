@@ -4,6 +4,7 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
+import { resolveAnchoredImport } from './importPipelineAnchoring.js';
 import {
   hasLandedImportEvidence,
   type ExistingNodeRow,
@@ -20,9 +21,9 @@ import {
   writeImportSource
 } from './importPipelineRecords.js';
 import { updateExistingReadwiseNode } from './importReadwiseHighlightBackfill.js';
-import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
 
 export interface RunPreparedImportOptions {
+  ambiguityPolicy?: 'first' | 'unique';
   forceUpdateExistingNodeId?: string;
   resetImportedStructure?: boolean;
 }
@@ -163,9 +164,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
       resultStatus: 'degraded'
     });
   }
-  const anchoredImport = prepared.sourceProfile === 'body_with_highlight_sidecar'
-    ? resolveReadwiseHighlightUpdate({ existingChildContents: [], existingContent: prepared.content, prepared })
-    : applyImportedHighlightAnchors({ content: prepared.content, highlights: prepared.matchedHighlights });
+  const anchoredImport = resolveAnchoredImport(prepared, options);
   const nodeId = resolvePreparedNodeId({
     anchoredContent: anchoredImport.content,
     baseRecord,

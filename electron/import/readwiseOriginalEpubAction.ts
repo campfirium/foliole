@@ -22,8 +22,11 @@ import {
   loadReadwiseOriginalEpubTarget,
   readReadwiseOriginalEpubRuntimeStatus
 } from './readwiseOriginalEpubTarget.js';
-
-const runningNodeIds = new Set<string>();
+import {
+  beginReadwiseSourceOperation,
+  finishReadwiseSourceOperation,
+  isReadwiseSourceOperationRunning
+} from './readwiseSourceOperationLock.js';
 
 function publish(
   window: BrowserWindow | null,
@@ -42,7 +45,7 @@ function publish(
 export function loadReadwiseOriginalEpubActionState(nodeId: string): NativeReadwiseOriginalEpubActionState {
   const target = loadReadwiseOriginalEpubTarget(nodeId);
   if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (runningNodeIds.has(nodeId)) return { node_id: nodeId, status: 'running' };
+  if (isReadwiseSourceOperationRunning(nodeId)) return { node_id: nodeId, status: 'running' };
   const runtimeStatus = readReadwiseOriginalEpubRuntimeStatus(target);
   if (runtimeStatus !== 'ready') return { node_id: nodeId, status: runtimeStatus };
   return { node_id: nodeId, status: 'ready' };
@@ -55,12 +58,11 @@ export async function useReadwiseOriginalEpub(
 ): Promise<NativeReadwiseOriginalEpubResult> {
   const target = loadReadwiseOriginalEpubTarget(nodeId);
   if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (!isReadwiseOriginalEpubRuntimeReady(target) || runningNodeIds.has(nodeId)) {
+  if (!isReadwiseOriginalEpubRuntimeReady(target) || !beginReadwiseSourceOperation(nodeId)) {
     return { node_id: nodeId, status: 'source_inactive' };
   }
   const operationId = randomUUID();
   let candidate: PreparedOriginalEpubCandidate | null = null;
-  runningNodeIds.add(nodeId);
   try {
     const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(target);
     publish(window, nodeId, operationId, 'getting_original', 'Getting original EPUB…', 0);
@@ -86,7 +88,7 @@ export async function useReadwiseOriginalEpub(
     publish(window, nodeId, operationId, 'failed', 'The book is unchanged.', 1);
     return { error_code: errorCode, node_id: nodeId, status: 'failed' };
   } finally {
-    runningNodeIds.delete(nodeId);
+    finishReadwiseSourceOperation(nodeId);
   }
 }
 

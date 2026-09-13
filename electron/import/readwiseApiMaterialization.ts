@@ -41,6 +41,7 @@ export interface ReadwiseApiMaterializationInput {
   relocationPolicy?: 'first' | 'unique';
   relocateAllAnnotations?: boolean;
   replaceExistingBody?: boolean;
+  resetImportedStructure?: boolean;
   reimportDeleted?: boolean;
 }
 
@@ -133,7 +134,11 @@ function materializeAvailableDocument(
   }));
   prepared.matchedHighlights = materialized.filter((annotation) => annotation.locatorText);
   prepared.unmatchedHighlights = materialized.filter((annotation) => !annotation.locatorText);
-  const record = runPreparedImport(prepared);
+  const record = runPreparedImport(prepared, input.resetImportedStructure ? {
+    ...(input.relocationPolicy ? { ambiguityPolicy: input.relocationPolicy } : {}),
+    ...(existing?.nodeId ? { forceUpdateExistingNodeId: existing.nodeId } : {}),
+    resetImportedStructure: true
+  } : undefined);
   if (!record.nodeId) return result(input.document.id, 'degraded');
 
   const nextAnnotationStates = [

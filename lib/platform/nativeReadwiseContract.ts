@@ -52,6 +52,19 @@ export interface NativeReadwiseOriginalEpubResult {
   status: 'completed' | 'failed' | 'not_applicable' | 'source_inactive';
 }
 
+export interface NativeReadwiseSourceResyncActionState {
+  body_authority: 'original_epub' | 'reader_html' | null;
+  category: string | null;
+  node_id: string;
+  status: 'not_applicable' | 'ready' | 'reconnect_required' | 'running' | 'source_inactive';
+}
+
+export interface NativeReadwiseSourceResyncResult {
+  error_code?: string | null;
+  node_id: string;
+  status: 'completed' | 'failed' | 'not_applicable' | 'source_inactive';
+}
+
 interface NativeReadwiseBookEpubLoadResultBase {
   book_key: string | null;
   error_message?: string | null;

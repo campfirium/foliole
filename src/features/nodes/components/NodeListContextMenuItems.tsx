@@ -26,7 +26,7 @@ import {
   RelearnMenuIcon
 } from './nodeListContextMenuPresentation';
 import { NodeRenameContextMenuItem } from './NodeRenameContextMenuItem';
-import { ReadwiseOriginalEpubMenuItem } from './ReadwiseOriginalEpubMenuItem';
+import { ReadwiseSourceMenuItems } from './ReadwiseSourceMenuItems';
 
 import { useActionHelpCardsEnabled } from '@/shared/platform/actionHelpCards';
 
@@ -172,7 +172,7 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
       {hasEditGroup ? renderEditItems(t, props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
       {hasReviewGroup ? renderReviewItems(t, props, helpEnabled) : null}
-      <ReadwiseOriginalEpubMenuItem
+      <ReadwiseSourceMenuItems
         hasPreviousGroup={hasAnyPrimaryGroup}
         nodeId={props.readwiseOriginalEpubTargetId ?? null}
       />

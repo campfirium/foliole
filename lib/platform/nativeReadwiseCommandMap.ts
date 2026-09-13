@@ -25,7 +25,9 @@ import type {
   NativeReadwiseDetectionSource,
   NativeReadwiseDetectionResult,
   NativeReadwiseOriginalEpubActionState,
-  NativeReadwiseOriginalEpubResult
+  NativeReadwiseOriginalEpubResult,
+  NativeReadwiseSourceResyncActionState,
+  NativeReadwiseSourceResyncResult
 } from './nativeReadwiseContract.js';
 import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
 import type {
@@ -142,6 +144,14 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.useReadwiseOriginalEpub]: {
     args: { node_id: string };
     result: NativeReadwiseOriginalEpubResult;
+  };
+  [NATIVE_COMMANDS.loadReadwiseSourceResyncActionState]: {
+    args: { node_id: string };
+    result: NativeReadwiseSourceResyncActionState;
+  };
+  [NATIVE_COMMANDS.resyncReadwiseSource]: {
+    args: { node_id: string };
+    result: NativeReadwiseSourceResyncResult;
   };
   [NATIVE_COMMANDS.resetReadwiseBookImport]: {
     args: {

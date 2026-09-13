@@ -32,6 +32,7 @@ function confirmEpubRebuild(t: ReturnType<typeof useTranslation>) {
 }
 
 export function ReadwiseOriginalEpubMenuItem(props: {
+  hasFollowingReadwiseAction?: boolean;
   hasPreviousGroup: boolean;
   nodeId: string | null;
 }) {
@@ -83,7 +84,7 @@ export function ReadwiseOriginalEpubMenuItem(props: {
       <NodeContextMenuItem disabled={state.status !== 'ready'} icon={BookDown} onSelect={() => void run()}>
         {label}
       </NodeContextMenuItem>
-      <NodeContextMenuSeparator />
+      {props.hasFollowingReadwiseAction ? null : <NodeContextMenuSeparator />}
     </>
   );
 }
