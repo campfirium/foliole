@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 
 import { expectBridgeBackedControlEnabled } from './harness/bridgeBackedControls';
 import { expect, test } from './harness/fixtures';
+import type { DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell, openBackupsSection } from './harness/settings';
 
 const CLOSE_BUTTON_NAME = /^(Close|关闭)$/;
@@ -16,6 +17,36 @@ const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
 const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db\.gz$/;
 const SAFETY_BACKUP_FILE_NAME = /^pre-restore-.*\.db\.gz$/;
 const RESTORE_DRIFT_NODE_ID = 'desktop-backup-restore-drift';
+const USES_NATIVE_MACOS_CONTROLS = process.platform === 'darwin';
+
+async function expectPlatformWindowControls(desktopSession: DesktopSession, desktopWindow: Page) {
+  if (USES_NATIVE_MACOS_CONTROLS) {
+    await expect(desktopWindow.locator('.window-titlebar')).toHaveAttribute('data-window-controls', 'native-macos');
+    await expect(desktopWindow.getByRole('button', { name: MINIMIZE_BUTTON_NAME })).toHaveCount(0);
+    await expect(desktopWindow.getByRole('button', { name: MAXIMIZE_BUTTON_NAME })).toHaveCount(0);
+    await expect(desktopWindow.getByRole('button', { name: CLOSE_BUTTON_NAME })).toHaveCount(0);
+    return;
+  }
+
+  await expectBridgeBackedControlEnabled({
+    controlName: 'Minimize',
+    desktopSession,
+    locator: desktopWindow.getByRole('button', { name: MINIMIZE_BUTTON_NAME }),
+    windowPage: desktopWindow
+  });
+  await expectBridgeBackedControlEnabled({
+    controlName: 'Maximize',
+    desktopSession,
+    locator: desktopWindow.getByRole('button', { name: MAXIMIZE_BUTTON_NAME }),
+    windowPage: desktopWindow
+  });
+  await expectBridgeBackedControlEnabled({
+    controlName: 'Close',
+    desktopSession,
+    locator: desktopWindow.getByRole('button', { name: CLOSE_BUTTON_NAME }),
+    windowPage: desktopWindow
+  });
+}
 
 test.describe('desktop smoke', () => {
   test('startup renders the desktop workspace shell', async ({ desktopSession, desktopWindow }) => {
@@ -24,27 +55,9 @@ test.describe('desktop smoke', () => {
     await expectWorkspaceShell(desktopWindow);
   });
 
-  test('titlebar window controls are enabled through the desktop bridge', async ({ desktopSession, desktopWindow }) => {
+  test('titlebar uses the platform-appropriate window controls', async ({ desktopSession, desktopWindow }) => {
     await expectWorkspaceShell(desktopWindow);
-
-    await expectBridgeBackedControlEnabled({
-      controlName: 'Minimize',
-      desktopSession,
-      locator: desktopWindow.getByRole('button', { name: MINIMIZE_BUTTON_NAME }),
-      windowPage: desktopWindow
-    });
-    await expectBridgeBackedControlEnabled({
-      controlName: 'Maximize',
-      desktopSession,
-      locator: desktopWindow.getByRole('button', { name: MAXIMIZE_BUTTON_NAME }),
-      windowPage: desktopWindow
-    });
-    await expectBridgeBackedControlEnabled({
-      controlName: 'Close',
-      desktopSession,
-      locator: desktopWindow.getByRole('button', { name: CLOSE_BUTTON_NAME }),
-      windowPage: desktopWindow
-    });
+    await expectPlatformWindowControls(desktopSession, desktopWindow);
   });
 
   test('settings creates, lists, and restores a compressed safety backup', async ({ desktopSession, desktopWindow }) => {
