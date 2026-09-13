@@ -126,6 +126,7 @@ async function localizeAndExcerptSecond(page: Page) {
   await requestAnnotation(page);
   const second = page.getByAltText('Demand B').locator('..');
   await startFrameTrace(page, 'Demand B');
+  await page.mouse.move(1, 1);
   await second.hover();
   await expect.poll(() => page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.onDemand))
     .toMatch(/Demand A.*https:\/\/.*Demand B.*asset:\/\//s);
