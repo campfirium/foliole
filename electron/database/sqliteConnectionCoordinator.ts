@@ -3,7 +3,10 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type BetterSqlite3 from 'better-sqlite3';
 
 type SqliteDatabase = BetterSqlite3.Database;
-export type SqliteConnectionOwner = { readonly token: symbol };
+export type SqliteConnectionOwner = {
+  readonly canClose: boolean;
+  readonly token: symbol;
+};
 
 interface WaitingOwner {
   owner: SqliteConnectionOwner;
@@ -31,6 +34,10 @@ export class SqliteConnectionCoordinator {
   }
 
   assertCanClose() {
+    const currentOwner = this.ownerContext.getStore();
+    if (this.activeOwner && currentOwner === this.activeOwner && currentOwner.canClose) {
+      return;
+    }
     if (this.activeOwner || this.waitingOwners.length > 0) {
       throw new SqliteConnectionOwnerError('cannot close sqlite connection while coordinated work is active');
     }
@@ -45,12 +52,26 @@ export class SqliteConnectionCoordinator {
   async runExclusive<T>(
     execute: (owner: SqliteConnectionOwner, nested: boolean) => Promise<T> | T
   ): Promise<T> {
+    return this.runOwned(false, execute);
+  }
+
+  async runMaintenance<T>(execute: () => Promise<T> | T): Promise<T> {
+    return this.runOwned(true, () => execute());
+  }
+
+  private async runOwned<T>(
+    canClose: boolean,
+    execute: (owner: SqliteConnectionOwner, nested: boolean) => Promise<T> | T
+  ): Promise<T> {
     const currentOwner = this.ownerContext.getStore();
     if (currentOwner && currentOwner === this.activeOwner) {
+      if (canClose && !currentOwner.canClose) {
+        throw new SqliteConnectionOwnerError('sqlite connection owner cannot enter maintenance');
+      }
       return await execute(currentOwner, true);
     }
 
-    const owner: SqliteConnectionOwner = { token: Symbol('sqlite-owner') };
+    const owner: SqliteConnectionOwner = { canClose, token: Symbol('sqlite-owner') };
     const wait = this.acquire(owner);
     if (wait) await wait;
     try {

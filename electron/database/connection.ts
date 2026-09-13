@@ -11,7 +11,7 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
-import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
+import { SqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -31,7 +31,9 @@ interface OpenDatabaseConnectionOptions {
 }
 
 let cachedConnection: DatabaseConnection | null = null;
+let databaseUnavailableError: Error | null = null;
 const connectionCleanupCallbacks = new Set<() => void>();
+const mainDatabaseCoordinator = new SqliteConnectionCoordinator();
 
 export function registerDatabaseConnectionCleanup(callback: () => void) {
   connectionCleanupCallbacks.add(callback);
@@ -54,6 +56,8 @@ function attachSearchDatabase(sqlite: SqliteDatabase, searchDbPath: string) {
 }
 
 export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = {}): DatabaseConnection {
+  mainDatabaseCoordinator.assertAccess();
+  if (databaseUnavailableError) throw databaseUnavailableError;
   if (cachedConnection) {
     return cachedConnection;
   }
@@ -75,7 +79,7 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   }
   rawSqlite.pragma('foreign_keys = ON');
   attachSearchDatabase(rawSqlite, searchDbPath);
-  const sqlite = guardBetterSqliteDatabase(rawSqlite);
+  const sqlite = guardBetterSqliteDatabase(rawSqlite, mainDatabaseCoordinator);
 
   cachedConnection = {
     driver: createBetterSqlite3Driver(sqlite),
@@ -87,8 +91,19 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
 }
 
 export function runWithDatabaseConnectionOwner<T>(execute: () => Promise<T> | T) {
-  const connection = openDatabaseConnection();
-  return getSqliteConnectionCoordinator(connection.sqlite).runExclusive(() => execute());
+  return mainDatabaseCoordinator.runExclusive(() => execute());
+}
+
+export function runWithDatabaseConnectionMaintenance<T>(execute: () => Promise<T> | T) {
+  return mainDatabaseCoordinator.runMaintenance(execute);
+}
+
+export function markDatabaseConnectionUnavailable(error: Error) {
+  databaseUnavailableError = error;
+}
+
+export function clearDatabaseConnectionUnavailable() {
+  databaseUnavailableError = null;
 }
 
 export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {

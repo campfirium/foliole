@@ -57,7 +57,8 @@ it('keeps the current database available when a compressed backup is truncated',
   seedNode('# current');
   await fs.truncate(backup.destinationPath, 12);
 
-  await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath })).rejects.toThrow();
+  await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+    .rejects.toThrow('Your current library is unchanged');
 
   expect(currentContent()).toBe('# current');
   await expectNoRestoreSources(path.dirname(mockedAppDataDir));
@@ -73,6 +74,32 @@ it('continues to restore explicitly exported legacy sqlite files', async () => {
 
   expect(backup.destinationPath).toBe(destinationPath);
   expect(currentContent()).toBe('# original');
+});
+
+it('restores the current library when database replacement fails', async () => {
+  seedNode('# original');
+  const backup = await createApplicationDatabaseBackup();
+  seedNode('# current');
+  const originalRename = fs.rename.bind(fs);
+  let renameCount = 0;
+  let targetExistedBeforeCommit = false;
+  const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (sourcePath, targetPath) => {
+    renameCount += 1;
+    if (renameCount === 1) {
+      targetExistedBeforeCommit = await fs.access(targetPath).then(() => true, () => false);
+      throw new Error('injected replacement failure');
+    }
+    await originalRename(sourcePath, targetPath);
+  });
+
+  try {
+    await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+      .rejects.toThrow('Your current library has been restored');
+    expect(currentContent()).toBe('# current');
+    expect(targetExistedBeforeCommit).toBe(true);
+  } finally {
+    renameSpy.mockRestore();
+  }
 });
 
 async function readPrefix(filePath: string) {

@@ -12,10 +12,14 @@ type Callable = (...args: unknown[]) => unknown;
 
 const guardedDatabases = new WeakMap<SqliteDatabase, SqliteDatabase>();
 
-export function guardBetterSqliteDatabase(raw: SqliteDatabase): SqliteDatabase {
+export function guardBetterSqliteDatabase(
+  raw: SqliteDatabase,
+  sharedCoordinator?: SqliteConnectionCoordinator
+): SqliteDatabase {
   const existing = guardedDatabases.get(raw);
   if (existing) return existing;
-  const coordinator = getSqliteConnectionCoordinator(raw);
+  const coordinator = sharedCoordinator ?? getSqliteConnectionCoordinator(raw);
+  if (sharedCoordinator) registerSqliteConnectionAlias(raw, sharedCoordinator);
   let guarded!: SqliteDatabase;
   guarded = new Proxy(raw, {
     get(target, property) {

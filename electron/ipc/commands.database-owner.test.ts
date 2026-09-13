@@ -51,9 +51,10 @@ it.each([
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,
+  NATIVE_COMMANDS.restoreSqliteDatabase,
   NATIVE_COMMANDS.runReadwiseSourceCutover,
   NATIVE_COMMANDS.syncCompanionNow
-])('keeps internally coordinated network command %s outside the outer owner', async (command) => {
+])('keeps internally coordinated storage command %s outside the outer owner', async (command) => {
   handleStorageCommand.mockResolvedValue('completed');
 
   await expect(handleInvokeRequest({ command })).resolves.toBe('completed');

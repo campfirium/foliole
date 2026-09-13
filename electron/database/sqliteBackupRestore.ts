@@ -35,6 +35,16 @@ export interface RestoreSqliteDatabaseOptions {
   targetPath: string;
 }
 
+export function verifySqliteDatabaseFile(filePath: string) {
+  const resolvedPath = path.resolve(filePath);
+  const sqlite = new BetterSqlite3(resolvedPath, { fileMustExist: true, readonly: true });
+  try {
+    verifyDatabaseIntegrity(sqlite);
+  } finally {
+    sqlite.close();
+  }
+}
+
 export function resolveDefaultSqliteBackupPath(sourcePath: string, now = new Date()): string {
   const databasePath = path.resolve(sourcePath);
   return path.join(path.dirname(databasePath), 'backups', `${backupFileStem(now)}.db`);
@@ -110,7 +120,6 @@ export async function restoreSqliteDatabase({
 
   try {
     await removeSqliteSidecars(resolvedTargetPath);
-    await fs.rm(resolvedTargetPath, { force: true });
     await fs.rename(tempTargetPath, resolvedTargetPath);
   } catch (error) {
     await fs.rm(tempTargetPath, { force: true });

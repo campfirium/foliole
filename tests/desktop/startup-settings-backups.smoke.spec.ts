@@ -15,6 +15,7 @@ const RESTORE_SUCCESS_TITLE = /^(Backup restored|备份已恢复)$/;
 const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
 const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db\.gz$/;
 const SAFETY_BACKUP_FILE_NAME = /^pre-restore-.*\.db\.gz$/;
+const RESTORE_DRIFT_NODE_ID = 'desktop-backup-restore-drift';
 
 test.describe('desktop smoke', () => {
   test('startup renders the desktop workspace shell', async ({ desktopSession, desktopWindow }) => {
@@ -60,6 +61,7 @@ test.describe('desktop smoke', () => {
     await createBackupButton.click();
 
     await expect(desktopWindow.getByText(/^Backup created:/)).toBeVisible();
+    await createRestoreDriftTopic(desktopWindow);
     await expectBridgeBackedControlEnabled({
       controlName: 'Restore',
       desktopSession,
@@ -70,6 +72,7 @@ test.describe('desktop smoke', () => {
     const restoreButton = desktopWindow.getByRole('button', { name: RESTORE_BUTTON_NAME }).first();
     await restoreButton.click();
     await expect(desktopWindow.getByRole('dialog').getByRole('heading', { name: RESTORE_SUCCESS_TITLE })).toBeVisible();
+    await expect(hasRestoreDriftTopic(desktopWindow)).resolves.toBe(false);
     await expect(desktopWindow.locator('button').filter({ hasText: RESTORE_BUTTON_NAME }).first()).toBeEnabled();
     await desktopWindow.screenshot({ path: '.tmp/artifacts/desktop-acceptance/backup-restore-success-dialog.png' });
     await desktopWindow.getByRole('button', { name: RESTORE_DONE_BUTTON_NAME }).click();
@@ -79,6 +82,39 @@ test.describe('desktop smoke', () => {
   });
 
 });
+
+async function createRestoreDriftTopic(desktopWindow: Page) {
+  await desktopWindow.evaluate(async (nodeId) => {
+    const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_list_snapshot', {}) as {
+      nodeOrder: string[];
+    };
+    const now = new Date().toISOString();
+    await globalThis.window?.electronAPI?.invoke('create_topic', {
+      activeNodeId: nodeId,
+      anchorLink: null,
+      content: '# This topic must disappear after restore',
+      createdAt: now,
+      isTitleManual: true,
+      kind: 'topic',
+      nodeId,
+      nodeOrder: [...snapshot.nodeOrder, nodeId],
+      parentNodeId: null,
+      position: snapshot.nodeOrder.length,
+      reveal: null,
+      title: 'Backup restore drift',
+      updatedAt: now
+    });
+  }, RESTORE_DRIFT_NODE_ID);
+}
+
+async function hasRestoreDriftTopic(desktopWindow: Page) {
+  return desktopWindow.evaluate(async (nodeId) => {
+    const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_list_snapshot', {}) as {
+      nodesById: Record<string, unknown>;
+    };
+    return nodeId in snapshot.nodesById;
+  }, RESTORE_DRIFT_NODE_ID);
+}
 
 async function readPrefix(filePath: string) {
   const handle = await fs.open(filePath, 'r');
