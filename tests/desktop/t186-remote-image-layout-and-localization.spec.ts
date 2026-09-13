@@ -179,7 +179,7 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
   await seed(desktopWindow);
 
   await openNode(desktopWindow, IDS.layout);
-  await expect(desktopWindow.getByAltText('Large A').locator('..')).toHaveCSS('aspect-ratio', '16 / 9');
+  await expect(desktopWindow.getByAltText('Large A').locator('..')).toHaveCSS('aspect-ratio', '640 / 360');
   expect(await desktopWindow.getByAltText('Large A').evaluate((image: HTMLImageElement) => image.complete)).toBe(false);
   await waitForImages(desktopWindow, 6);
   await expect(desktopWindow.getByAltText('Large A').locator('..')).toHaveClass(/surface-block/);
