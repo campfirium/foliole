@@ -13,6 +13,10 @@ export {
   resetSourceDispositions,
   restoreSourceDispositions
 } from './sourceDispositionBackups';
+export {
+  loadBackupRetentionStatus,
+  type DatabaseBackupRetentionStatus
+} from './databaseBackupRetentionStatus';
 
 export interface DatabaseBackupEntry {
   fileName: string;

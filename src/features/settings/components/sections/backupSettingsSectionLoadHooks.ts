@@ -4,6 +4,8 @@ import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libr
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   listDatabaseBackups,
+  loadBackupRetentionStatus,
+  type DatabaseBackupRetentionStatus,
   loadSourceDispositionSummary,
   type DatabaseBackupEntry
 } from '../../model/databaseBackups';
@@ -16,6 +18,7 @@ export function useInitialBackupData(
   isDesktopRuntime: boolean,
   reloadKey: number,
   setBackups: (value: DatabaseBackupEntry[]) => void,
+  setRetentionStatus: (value: DatabaseBackupRetentionStatus) => void,
   setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void,
   setDraft: (value: DatabaseBackupSettings) => void,
   setIsLoadingBackups: (value: boolean) => void,
@@ -48,6 +51,9 @@ export function useInitialBackupData(
       }).finally(() => {
         if (alive) setIsLoadingBackups(false);
       });
+      void loadBackupRetentionStatus().then((status) => {
+        if (alive) setRetentionStatus(status);
+      });
       void loadSourceDispositionSummary().then((summary) => {
         if (alive) setSourceDispositionSummary(summary);
       });
@@ -55,7 +61,7 @@ export function useInitialBackupData(
     return () => {
       alive = false;
     };
-  }, [isDesktopRuntime, reloadKey, setBackups, setDraft, setIsLoadingBackups, setLoadErrorMessage, setSettings, setSourceDispositionSummary]);
+  }, [isDesktopRuntime, reloadKey, setBackups, setDraft, setIsLoadingBackups, setLoadErrorMessage, setRetentionStatus, setSettings, setSourceDispositionSummary]);
 }
 
 function joinBackupPath(libraryHome: string) {

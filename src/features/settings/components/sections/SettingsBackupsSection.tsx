@@ -7,10 +7,10 @@ import {
 } from '../../../../shared/ui';
 
 import { BackupRestoreSuccessDialog } from './BackupRestoreSuccessDialog';
+import { BackupRetentionRulesSection } from './BackupRetentionRulesSection';
 import {
   BackupListSection,
   BackupPathRow,
-  BackupRulesSection,
   ExtraBackupCopySection
 } from './backupSettingsSectionParts';
 import { SourceDispositionStateRow } from './SourceDispositionStateRow';
@@ -92,7 +92,13 @@ export function SettingsBackupsSection() {
         <BackupPathRow backupPath={state.activeDraft.backup_dir || state.defaultBackupPath} defaultBackupPath={state.activeDraft.backup_dir || state.defaultBackupPath} errorMessage={state.pathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangePath={state.handleChangeBackupPath} onRestoreDefault={state.handleRestoreBackupPathDefault} />
       </SettingsSection>
       <ExtraBackupCopySection draft={state.activeDraft} errorMessage={state.extraPathErrorMessage} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} onChangePath={state.handleChangeExtraBackupPath} onRestoreDefault={state.handleRestoreExtraBackupPathDefault} />
-      <BackupRulesSection draft={state.activeDraft} isDesktopRuntime={state.isDesktopRuntime} onChangeField={state.handleDraftField} />
+      <BackupRetentionRulesSection
+        draft={state.activeDraft}
+        isDesktopRuntime={state.isDesktopRuntime}
+        onChangeField={state.handleDraftField}
+        onChangePriority={state.handleRetentionPriority}
+        status={state.retentionStatus}
+      />
     </>
   );
 }

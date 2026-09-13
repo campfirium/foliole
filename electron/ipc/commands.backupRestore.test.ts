@@ -40,6 +40,13 @@ const {
   })
 }));
 
+const loadBackupRetentionStatus = vi.hoisted(() => vi.fn().mockResolvedValue({
+  counts: { hourly: 1, daily: 0, weekly: 0, monthly: 0 },
+  lastCleanup: null,
+  safetyCount: 2,
+  totalSizeBytes: 4096
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -70,6 +77,24 @@ vi.mock('../database/backupRestore.js', () => ({
   createApplicationDatabaseBackup,
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
+}));
+vi.mock('../database/backupRetentionStatus.js', () => ({ loadBackupRetentionStatus }));
+vi.mock('../database/backupSettings.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/backupSettings.js')>(),
+  loadBackupSettings: vi.fn(() => ({
+    schema_version: 2,
+    backup_dir: '/app/Backups',
+    daily_max_count: 5,
+    extra_backup_dir: '',
+    extra_backup_max_count: 10,
+    hourly_max_count: 8,
+    monthly_max_count: 0,
+    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+    safety_max_count: 2,
+    total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
+    updated_at: '2026-09-13T00:00:00.000Z',
+    weekly_max_count: 1
+  }))
 }));
 
 beforeEach(() => {
@@ -128,6 +153,18 @@ it('dispatches sqlite backup listing command through invoke handler', async () =
   ]);
 
   expect(listApplicationDatabaseBackups).toHaveBeenCalledWith();
+});
+
+it('dispatches backup retention status through the read route', async () => {
+  await expect(handleInvokeRequest({
+    command: 'load_backup_retention_status'
+  })).resolves.toEqual({
+    counts: { hourly: 1, daily: 0, weekly: 0, monthly: 0 },
+    lastCleanup: null,
+    safetyCount: 2,
+    totalSizeBytes: 4096
+  });
+  expect(loadBackupRetentionStatus).toHaveBeenCalledTimes(1);
 });
 
 it('dispatches sqlite restore command through invoke handler', async () => {

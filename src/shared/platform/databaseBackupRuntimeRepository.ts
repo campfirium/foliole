@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeBackupSettings,
+  NativeBackupRetentionStatus,
   NativeExportSourceDispositionResult,
   NativeImportSourceDispositionResult,
   NativeSourceDispositionRestoreResult,
@@ -12,6 +13,7 @@ import type {
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeBackupSettings = NativeBackupSettings;
+export type RuntimeBackupRetentionStatus = NativeBackupRetentionStatus;
 export type RuntimeExportSourceDispositionResult = NativeExportSourceDispositionResult;
 export type RuntimeImportSourceDispositionResult = NativeImportSourceDispositionResult;
 export type RuntimeSourceDispositionRestoreResult = NativeSourceDispositionRestoreResult;
@@ -29,6 +31,14 @@ export async function loadDatabaseBackupSettingsFromRuntime(): Promise<unknown |
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.loadBackupSettings);
+}
+
+export async function loadBackupRetentionStatusFromRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return runtimeInvoke(NATIVE_COMMANDS.loadBackupRetentionStatus);
 }
 
 export async function saveDatabaseBackupSettingsToRuntime(settings: RuntimeBackupSettings): Promise<unknown | null> {

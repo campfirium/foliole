@@ -140,12 +140,18 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
   const handleResetSourceDispositions = () => void runResetSourceDispositions(args);
   const handleDraftField = (field: keyof DatabaseBackupSettings, value: string) => {
     if (!args.draft) return;
-    saveDraft(updateDraftValue(args.draft, field, value));
+    const refreshRetention = field.endsWith('_max_count') || field === 'total_size_limit_bytes';
+    saveDraft(updateDraftValue(args.draft, field, value), refreshRetention);
+  };
+  const handleRetentionPriority = (retentionPriority: DatabaseBackupSettings['retention_priority']) => {
+    if (!args.draft) return;
+    saveDraft({ ...args.draft, retention_priority: retentionPriority }, true);
   };
   return {
     ...buildPathHandlers(args, saveDraft),
     handleCreateBackup,
     handleDraftField,
+    handleRetentionPriority,
     handleRestoreBackup,
     handleExportSourceDispositions,
     handleImportSourceDispositions,

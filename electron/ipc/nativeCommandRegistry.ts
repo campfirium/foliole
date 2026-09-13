@@ -96,6 +96,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadLibraryPathSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadDatabaseMaintenanceStatus, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadBackupSettings, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadBackupRetentionStatus, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.rebuildMirrorOutput, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.rebuildMirrorAttachmentLinks, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.exportCurrentArticleMirror, route: 'storage', capability: 'dataMutation' },

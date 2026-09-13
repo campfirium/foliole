@@ -16,6 +16,7 @@ vi.mock('../../model/databaseBackups', () => ({
   exportSourceDispositions: vi.fn(),
   importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
+  loadBackupRetentionStatus: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
   restoreDatabaseBackup: vi.fn()
 }));
@@ -28,6 +29,7 @@ import {
   exportSourceDispositions,
   importSourceDispositions,
   listDatabaseBackups,
+  loadBackupRetentionStatus,
   loadSourceDispositionSummary,
   restoreDatabaseBackup
 } from '../../model/databaseBackups';
@@ -37,7 +39,7 @@ import {
 } from '../../model/databaseBackupSettings';
 
 import { SettingsBackupsSection } from './SettingsBackupsSection';
-import { backupEntry, defaultBackups, defaultSettings } from './SettingsBackupsSection.testUtils';
+import { backupEntry, defaultBackups, defaultRetentionStatus, defaultSettings } from './SettingsBackupsSection.testUtils';
 
 beforeEach(() => {
   vi.mocked(selectRuntimeFolder).mockReset();
@@ -48,6 +50,7 @@ beforeEach(() => {
   vi.mocked(exportSourceDispositions).mockReset();
   vi.mocked(importSourceDispositions).mockReset();
   vi.mocked(listDatabaseBackups).mockReset();
+  vi.mocked(loadBackupRetentionStatus).mockReset();
   vi.mocked(loadSourceDispositionSummary).mockReset();
   vi.mocked(restoreDatabaseBackup).mockReset();
 
@@ -55,6 +58,7 @@ beforeEach(() => {
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(saveDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
+  vi.mocked(loadBackupRetentionStatus).mockResolvedValue(defaultRetentionStatus);
   vi.mocked(exportSourceDispositions).mockResolvedValue({ ok: true, value: { entryCount: 2, path: '/out/handling.txt', status: 'saved' } });
   vi.mocked(importSourceDispositions).mockResolvedValue({ ok: true, value: { appliedDeletedCount: 1, appliedDismissedCount: 1, importedCount: 2, status: 'imported', summary: { recordCount: 2, sizeBytes: 1536 } } });
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 2, sizeBytes: 1536 });
@@ -83,7 +87,7 @@ it('shows backup settings and backup list in the backups section', async () => {
   renderWithLocalization(<SettingsBackupsSection />);
 
   await waitFor(() => {
-    expect(screen.getByDisplayValue('24')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Hourly backups kept' })).toHaveValue(8);
   });
 
   expect(screen.getByRole('button', { name: 'Change location' })).toHaveTextContent('Backups');
@@ -96,7 +100,9 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByText(/They do not restore external original files/)).toBeInTheDocument();
   expect(screen.getAllByDisplayValue('10')).toHaveLength(1);
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
-  expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
+  expect(screen.getByText('Current')).toBeInTheDocument();
+  expect(screen.getByText('Set')).toBeInTheDocument();
+  expect(screen.getByText('Retention priority')).toBeInTheDocument();
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
   expect(screen.getByText(/Auto backup .* 6 MB/)).toBeInTheDocument();
   expect(screen.queryByText(/Auto backup .* daily/)).not.toBeInTheDocument();
@@ -119,7 +125,7 @@ it('shows a retry action when backup settings fail to load', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
   await waitFor(() => {
-    expect(screen.getByDisplayValue('24')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Hourly backups kept' })).toHaveValue(8);
   });
   expect(loadDatabaseBackupSettings).toHaveBeenCalledTimes(2);
 });
@@ -127,9 +133,9 @@ it('shows a retry action when backup settings fail to load', async () => {
 it('auto-saves edited backup settings without a save button', async () => {
   renderWithLocalization(<SettingsBackupsSection />);
 
-  await screen.findByDisplayValue('24');
-  fireEvent.change(screen.getByDisplayValue('24'), { target: { value: '12' } });
-  fireEvent.change(screen.getByDisplayValue('2'), { target: { value: '3' } });
+  const hourlyInput = await screen.findByRole('spinbutton', { name: 'Hourly backups kept' });
+  fireEvent.change(hourlyInput, { target: { value: '12' } });
+  fireEvent.change(screen.getByRole('spinbutton', { name: 'Total backup size limit (GB)' }), { target: { value: '3' } });
 
   await waitFor(() => {
     expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
@@ -142,12 +148,25 @@ it('auto-saves edited backup settings without a save button', async () => {
   expect(screen.queryByRole('button', { name: 'Save settings' })).not.toBeInTheDocument();
 });
 
+it('auto-saves a keyboard priority reorder', async () => {
+  renderWithLocalization(<SettingsBackupsSection />);
+
+  const handle = await screen.findByRole('button', { name: 'Move Hourly backups kept' });
+  fireEvent.keyDown(handle, { key: 'ArrowDown' });
+
+  await waitFor(() => {
+    expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(expect.objectContaining({
+      retention_priority: ['daily', 'hourly', 'weekly', 'monthly']
+    }));
+  });
+});
+
 it('changes backup location through folder picker and saves immediately', async () => {
   vi.mocked(selectRuntimeFolder).mockResolvedValue('/new/Backups');
 
   renderWithLocalization(<SettingsBackupsSection />);
 
-  await screen.findByDisplayValue('24');
+  await screen.findByRole('spinbutton', { name: 'Hourly backups kept' });
   fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
 
   await waitFor(() => {
@@ -162,7 +181,7 @@ it('changes and turns off the extra backup location', async () => {
 
   renderWithLocalization(<SettingsBackupsSection />);
 
-  await screen.findByDisplayValue('24');
+  await screen.findByRole('spinbutton', { name: 'Hourly backups kept' });
   fireEvent.click(screen.getByRole('button', { name: 'Change extra location' }));
 
   await waitFor(() => {

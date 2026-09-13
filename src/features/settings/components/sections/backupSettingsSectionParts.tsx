@@ -49,10 +49,6 @@ export function getBackupFileName(filePath: string) {
   return filePath.split(/[/\\]/).at(-1) || filePath;
 }
 
-function toGigabytes(value: number) {
-  return Number((value / (1024 * 1024 * 1024)).toFixed(1)).toString();
-}
-
 function NumberRuleRow(props: {
   description: string;
   disabled: boolean;
@@ -110,37 +106,6 @@ export function BackupPathRow(props: {
         </div>
       </SettingsControlSlot>
     </SettingsRow>
-  );
-}
-
-export function BackupRulesSection(props: {
-  draft: DatabaseBackupSettings;
-  isDesktopRuntime: boolean;
-  onChangeField: (field: keyof DatabaseBackupSettings, value: string) => void;
-}) {
-  const t = useTranslation();
-
-  return (
-    <SettingsSection ariaLabel={t('settings.backups.rules.sectionAria')} title={t('settings.backups.rules.title')}>
-      <NumberRuleRow description={t('settings.backups.rules.hourly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('hourly_max_count', value)} title={t('settings.backups.rules.hourly.title')} value={String(props.draft.hourly_max_count)} />
-      <NumberRuleRow description={t('settings.backups.rules.daily.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('daily_max_count', value)} title={t('settings.backups.rules.daily.title')} value={String(props.draft.daily_max_count)} />
-      <NumberRuleRow description={t('settings.backups.rules.weekly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('weekly_max_count', value)} title={t('settings.backups.rules.weekly.title')} value={String(props.draft.weekly_max_count)} />
-      <NumberRuleRow description={t('settings.backups.rules.monthly.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('monthly_max_count', value)} title={t('settings.backups.rules.monthly.title')} value={String(props.draft.monthly_max_count)} />
-      <NumberRuleRow description={t('settings.backups.rules.snapshots.description')} disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('safety_max_count', value)} title={t('settings.backups.rules.snapshots.title')} value={String(props.draft.safety_max_count)} />
-      <SettingsRow description={t('settings.backups.rules.totalSize.description')} title={t('settings.backups.rules.totalSize.title')}>
-        <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
-          <input
-            className={settingsFieldClassName('[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none')}
-            disabled={!props.isDesktopRuntime}
-            inputMode="decimal"
-            min="0"
-            onChange={(event) => props.onChangeField('total_size_limit_bytes', event.target.value)}
-            type="number"
-            value={toGigabytes(props.draft.total_size_limit_bytes)}
-          />
-        </SettingsControlSlot>
-      </SettingsRow>
-    </SettingsSection>
   );
 }
 

@@ -15,6 +15,7 @@ vi.mock('../../model/databaseBackups', () => ({
   exportSourceDispositions: vi.fn(),
   importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
+  loadBackupRetentionStatus: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
   resetSourceDispositions: vi.fn(),
 }));
@@ -25,6 +26,7 @@ import {
   exportSourceDispositions,
   importSourceDispositions,
   listDatabaseBackups,
+  loadBackupRetentionStatus,
   loadSourceDispositionSummary,
   resetSourceDispositions
 } from '../../model/databaseBackups';
@@ -49,6 +51,12 @@ beforeEach(() => {
     updated_at: '2026-04-02T10:00:00.000Z'
   });
   vi.mocked(listDatabaseBackups).mockResolvedValue([]);
+  vi.mocked(loadBackupRetentionStatus).mockResolvedValue({
+    counts: { hourly: 0, daily: 0, weekly: 0, monthly: 0 },
+    lastCleanup: null,
+    safetyCount: 0,
+    totalSizeBytes: 0
+  });
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 2, sizeBytes: 1536 });
   vi.mocked(exportSourceDispositions).mockResolvedValue({ ok: true, value: { entryCount: 2, path: '/out/handling.txt', status: 'saved' } });
   vi.mocked(importSourceDispositions).mockResolvedValue({ ok: true, value: { appliedDeletedCount: 1, appliedDismissedCount: 2, importedCount: 3, status: 'imported', summary: { recordCount: 3, sizeBytes: 2048 } } });

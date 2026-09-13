@@ -4,6 +4,8 @@ import {
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
+import { loadBackupRetentionStatus } from '../database/backupRetentionStatus.js';
+import { loadBackupSettings } from '../database/backupSettings.js';
 
 import { asNullableString, asString } from './commandParsers.js';
 
@@ -24,6 +26,9 @@ export function readObjectArg(value: unknown, field: string) {
 export function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.listSqliteBackups) {
     return listApplicationDatabaseBackups();
+  }
+  if (command === NATIVE_COMMANDS.loadBackupRetentionStatus) {
+    return loadBackupRetentionStatus(loadBackupSettings());
   }
   if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
     const destinationPath = asNullableString(args.destinationPath, 'destinationPath');

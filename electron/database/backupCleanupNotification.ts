@@ -15,13 +15,19 @@ function formatBytes(bytes: number) {
 }
 
 function buildBody(result: BackupPruneResult, usesSimplifiedChinese: boolean) {
-  if (result.deletedCount === 0 && result.remainingBytesOverLimit) {
+  if (result.deletedCount === 0) {
+    const failure = result.failedCount > 0
+      ? (usesSimplifiedChinese
+          ? `${result.failedCount} 份较早的备份未能移到系统废纸篓。`
+          : `${result.failedCount} older ${result.failedCount === 1 ? 'backup could' : 'backups could'} not be moved to the system trash.`)
+      : '';
+    if (!result.remainingBytesOverLimit) return failure;
     const excess = formatBytes(result.remainingBytesOverLimit);
-    return usesSimplifiedChinese
+    const overLimit = usesSimplifiedChinese
       ? `为保留最新安全备份，备份占用仍比上限多 ${excess}。`
       : `Backup storage remains ${excess} over the limit to keep the latest safety backup.`;
+    return failure ? `${failure} ${overLimit}` : overLimit;
   }
-  const released = formatBytes(result.releasedBytes);
   const count = result.deletedCount;
   const hasPolicyCleanup = result.policyDeletedCount > 0;
   const hasCapacityCleanup = result.capacityDeletedCount > 0;
@@ -31,7 +37,8 @@ function buildBody(result: BackupPruneResult, usesSimplifiedChinese: boolean) {
       : hasCapacityCleanup
         ? '因为超过备份大小上限'
         : '根据保留规则';
-    const cleanup = `${reason}删除了 ${count} 份较早的备份，释放 ${released}。`;
+    const failure = result.failedCount > 0 ? ` ${result.failedCount} 份未能移动。` : '';
+    const cleanup = `${reason}将 ${count} 份较早的备份移到了系统废纸篓。${failure}`;
     return result.remainingBytesOverLimit
       ? `${cleanup} 为保留最新安全备份，备份占用仍比上限多 ${formatBytes(result.remainingBytesOverLimit)}。`
       : cleanup;
@@ -41,14 +48,17 @@ function buildBody(result: BackupPruneResult, usesSimplifiedChinese: boolean) {
     : hasCapacityCleanup
       ? 'The backup size limit'
       : 'Retention rules';
-  const cleanup = `${reason} removed ${count} older ${count === 1 ? 'backup' : 'backups'} and freed ${released}.`;
+  const failure = result.failedCount > 0
+    ? ` ${result.failedCount} ${result.failedCount === 1 ? 'backup could' : 'backups could'} not be moved.`
+    : '';
+  const cleanup = `${reason} moved ${count} older ${count === 1 ? 'backup' : 'backups'} to the system trash.${failure}`;
   return result.remainingBytesOverLimit
     ? `${cleanup} Backup storage remains ${formatBytes(result.remainingBytesOverLimit)} over the limit to keep the latest safety backup.`
     : cleanup;
 }
 
 export function showBackupCleanupNotification(result: BackupPruneResult) {
-  if (result.deletedCount === 0 && !result.remainingBytesOverLimit) return false;
+  if (result.deletedCount === 0 && result.failedCount === 0 && !result.remainingBytesOverLimit) return false;
   try {
     if (!Notification?.isSupported?.()) {
       console.warn('[backup] cleanup notification is not supported', result);
@@ -61,8 +71,10 @@ export function showBackupCleanupNotification(result: BackupPruneResult) {
       body: buildBody(result, usesSimplifiedChinese),
       silent: true,
       title: result.deletedCount > 0
-        ? (usesSimplifiedChinese ? '旧备份已清理' : 'Older backups cleaned up')
-        : (usesSimplifiedChinese ? '备份仍超出上限' : 'Backup limit not reached')
+        ? (usesSimplifiedChinese ? '旧备份已移到废纸篓' : 'Older backups moved to trash')
+        : result.remainingBytesOverLimit
+          ? (usesSimplifiedChinese ? '备份仍超出上限' : 'Backup limit not reached')
+          : (usesSimplifiedChinese ? '旧备份未能清理' : 'Older backups could not be moved')
     }).show();
     return true;
   } catch (error) {

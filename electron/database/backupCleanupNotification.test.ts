@@ -40,8 +40,8 @@ it('shows one summary notification for a cleanup batch', () => {
   })).toBe(true);
   expect(notificationMocks.show).toHaveBeenCalledTimes(1);
   expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
-    body: 'Retention rules and the backup size limit removed 3 older backups and freed 462 MB.',
-    title: 'Older backups cleaned up'
+    body: 'Retention rules and the backup size limit moved 3 older backups to the system trash.',
+    title: 'Older backups moved to trash'
   }));
 });
 
@@ -62,6 +62,20 @@ it('does not notify when nothing was deleted or notifications are unavailable', 
     releasedBytes: 1024
   })).toBe(false);
   expect(notificationMocks.show).not.toHaveBeenCalled();
+});
+
+it('reports when an older backup could not be moved to trash', () => {
+  expect(showBackupCleanupNotification({
+    capacityDeletedCount: 0,
+    deletedCount: 0,
+    failedCount: 1,
+    policyDeletedCount: 0,
+    releasedBytes: 0
+  })).toBe(true);
+  expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
+    body: '1 older backup could not be moved to the system trash.',
+    title: 'Older backups could not be moved'
+  }));
 });
 
 it('explains when the latest safety backup keeps storage over the limit', () => {
@@ -91,8 +105,8 @@ it('uses Chinese cleanup copy for Chinese locales', () => {
   })).toBe(true);
   expect(notificationMocks.show).toHaveBeenCalledTimes(1);
   expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
-    body: '根据保留规则删除了 1 份较早的备份，释放 10 MB。',
-    title: '旧备份已清理'
+    body: '根据保留规则将 1 份较早的备份移到了系统废纸篓。',
+    title: '旧备份已移到废纸篓'
   }));
 });
 
@@ -110,8 +124,8 @@ it('uses English when Chinese is secondary, traditional, ambiguous, or absent', 
       releasedBytes: 10 * 1024 * 1024
     })).toBe(true);
     expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
-      body: 'Retention rules removed 1 older backup and freed 10 MB.',
-      title: 'Older backups cleaned up'
+      body: 'Retention rules moved 1 older backup to the system trash.',
+      title: 'Older backups moved to trash'
     }));
   }
 });

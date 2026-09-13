@@ -7,6 +7,7 @@ import type {
   NativeSourceDispositionSummary
 } from './nativeSourceDispositionContract.js';
 import type {
+  NativeBackupRetentionStatus,
   NativeBackupSettings,
   NativeClearLinkPanelBrowsingDataResult,
   NativeCopyAttachmentImageResult,
@@ -154,6 +155,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadBackupSettings]: {
     args: undefined;
     result: NativeBackupSettings;
+  };
+  [NATIVE_COMMANDS.loadBackupRetentionStatus]: {
+    args: undefined;
+    result: NativeBackupRetentionStatus;
   };
   [NATIVE_COMMANDS.loadPerformanceMemorySnapshot]: {
     args: undefined;

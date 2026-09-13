@@ -202,6 +202,19 @@ export interface NativeBackupSettings {
   updated_at: string;
 }
 
+export interface NativeBackupCleanupStatus {
+  failedCount: number;
+  movedToTrashCount: number;
+  remainingBytesOverLimit: number;
+}
+
+export interface NativeBackupRetentionStatus {
+  counts: Record<NativeBackupRetentionTier, number>;
+  lastCleanup: NativeBackupCleanupStatus | null;
+  safetyCount: number;
+  totalSizeBytes: number;
+}
+
 
 export interface NativeSqliteBackupEntry {
   fileName: string;

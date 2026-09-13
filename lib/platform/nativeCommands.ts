@@ -86,6 +86,7 @@ export const NATIVE_COMMANDS = {
   loadLibraryPathSettings: 'load_library_path_settings',
   loadDatabaseMaintenanceStatus: 'load_database_maintenance_status',
   loadBackupSettings: 'load_backup_settings',
+  loadBackupRetentionStatus: 'load_backup_retention_status',
   rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   exportCurrentArticleMirror: 'export_current_article_mirror',

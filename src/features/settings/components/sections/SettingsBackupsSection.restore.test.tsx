@@ -13,21 +13,23 @@ vi.mock('../../model/databaseBackups', () => ({
   exportSourceDispositions: vi.fn(),
   importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
+  loadBackupRetentionStatus: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
   restoreDatabaseBackup: vi.fn()
 }));
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { refreshWorkspaceState } from '../../../../store/workspaceRefreshScheduler';
-import { listDatabaseBackups, loadSourceDispositionSummary, restoreDatabaseBackup } from '../../model/databaseBackups';
+import { listDatabaseBackups, loadBackupRetentionStatus, loadSourceDispositionSummary, restoreDatabaseBackup } from '../../model/databaseBackups';
 import { loadDatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
 import { SettingsBackupsSection } from './SettingsBackupsSection';
-import { defaultBackups, defaultSettings } from './SettingsBackupsSection.testUtils';
+import { defaultBackups, defaultRetentionStatus, defaultSettings } from './SettingsBackupsSection.testUtils';
 
 beforeEach(() => {
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
+  vi.mocked(loadBackupRetentionStatus).mockResolvedValue(defaultRetentionStatus);
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 0, sizeBytes: 0 });
   vi.mocked(refreshWorkspaceState).mockReset().mockResolvedValue();
   vi.mocked(restoreDatabaseBackup).mockReset().mockResolvedValue({

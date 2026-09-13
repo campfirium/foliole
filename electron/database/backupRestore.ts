@@ -12,6 +12,7 @@ import { showBackupCleanupNotification } from './backupCleanupNotification.js';
 import { moveManagedBackupToTrash } from './backupFileDisposition.js';
 import { automaticBackupFileName, buildManagedBackupPath } from './backupFileNames.js';
 import { finestEnabledFrequency, frequencyBucketKey } from './backupRetentionPolicy.js';
+import { recordBackupCleanup } from './backupRetentionStatus.js';
 import {
   ensureManagedBackupDirectory,
   loadBackupSettings,
@@ -53,9 +54,11 @@ let restoreInProgress = false;
 async function pruneBackupsNow() {
   await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
-  const result = await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, {
+  const backupDirectory = resolveManagedBackupDirectory(settings);
+  const result = await pruneManagedDatabaseBackups(backupDirectory, settings, {
     disposeFile: moveManagedBackupToTrash
   });
+  recordBackupCleanup(backupDirectory, result);
   showBackupCleanupNotification(result);
 }
 
@@ -105,6 +108,7 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
     const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
       disposeFile: moveManagedBackupToTrash
     });
+    recordBackupCleanup(backupDirectory, pruneResult);
     showBackupCleanupNotification(pruneResult);
   }
   return temporaryCleanup;
