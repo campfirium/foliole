@@ -115,15 +115,23 @@ async function startFrameTrace(page: Page, alt: string) {
 }
 
 async function localizeAndExcerptSecond(page: Page) {
-  await page.evaluate((nodeId) => window.dispatchEvent(new CustomEvent(
-    'foliole:image-excerpt-selection-mode', { detail: nodeId }
-  )), IDS.onDemand);
   const second = page.getByAltText('Demand B').locator('..');
   await startFrameTrace(page, 'Demand B');
-  await second.click({ position: { x: 40, y: 40 } });
+  const localized = await second.evaluate((surface, { nodeId, source }) => new Promise<boolean>((resolve) => {
+    const content = window.__folioleWorkspaceDebug?.getNode?.(nodeId)?.content ?? '';
+    const token = `![Demand B](${source})`;
+    const from = content.indexOf(token);
+    const detail = { from, handled: false, nodeId, resolve, source, to: from + token.length };
+    surface.dispatchEvent(new CustomEvent('foliole:remote-image-localization-request', { bubbles: true, detail }));
+    if (!detail.handled) resolve(false);
+  }), { nodeId: IDS.onDemand, source: URLS.onDemandB });
+  expect(localized).toBe(true);
   await expect.poll(() => page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.onDemand))
     .toMatch(/Demand A.*https:\/\/.*Demand B.*asset:\/\//s);
   const localSurface = page.getByAltText('Demand B').locator('..');
+  await page.evaluate((nodeId) => window.dispatchEvent(new CustomEvent(
+    'foliole:image-excerpt-selection-mode', { detail: nodeId }
+  )), IDS.onDemand);
   const bounds = await localSurface.boundingBox();
   if (!bounds) throw new Error('localized image surface has no bounds');
   await page.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.2);
