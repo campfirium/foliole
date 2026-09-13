@@ -42,20 +42,39 @@ it('keeps block markers and rejects nested duplicate markers at the same positio
   expect(structure.sections[0]?.content).toContain('First');
 });
 
-it('does not turn following body content into a missing structural title', () => {
+it('uses the first visible block inside an explicit boundary as its title', () => {
   const structure = prepareReadwiseApiEpubStructure(`
     <hr data-rw-epub-toc="separator"><p>Body after separator</p>
     <div data-rw-epub-toc="container"><p>Body inside container</p></div>
     <h2 data-rw-epub-toc="chapter">Explicit chapter</h2><p>Chapter body</p>
   `);
 
-  expect(structure.sections.map((section) => section.title)).toEqual(['Explicit chapter']);
+  expect(structure.sections.map((section) => section.title)).toEqual([
+    'Body inside container',
+    'Explicit chapter'
+  ]);
   expect(structure.rootBody).toContain('Body after separator');
-  expect(structure.rootBody).toContain('Body inside container');
   expect(structure.candidates?.slice(0, 2)).toMatchObject([
     { accepted: false, reason: 'rejected-missing-structural-title' },
-    { accepted: false, reason: 'rejected-missing-structural-title' }
+    { accepted: true, reason: 'accepted-block-boundary' }
   ]);
+});
+
+it('recovers Reader EPUB chapters whose explicit boundaries wrap paragraph titles', () => {
+  const structure = prepareReadwiseApiEpubStructure(`
+    <div data-rw-epub-toc="preface">
+      <p></p><p>︿推荐序﹀</p><p>一本可以实际运用的习惯改变指南</p><p>Preface body</p>
+    </div>
+    <div data-rw-epub-toc="chapter-1">
+      <p></p><p class="h-indent-3em">１ 原子习惯的惊人力量</p><p>Chapter body</p>
+    </div>
+  `);
+
+  expect(structure.sections).toMatchObject([
+    { title: '︿推荐序﹀一本可以实际运用的习惯改变指南' },
+    { title: '１ 原子习惯的惊人力量' }
+  ]);
+  expect(structure.sections[1]?.content).toContain('Chapter body');
 });
 
 it('normalizes h2 plus h4 to two natural levels', () => {

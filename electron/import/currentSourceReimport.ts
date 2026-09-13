@@ -1,9 +1,6 @@
-import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { NativeDevReimportCurrentTopicSourceResult } from '../../lib/platform/nativeImportContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
-import { loadStagedReadwiseApiContracts } from '../database/readwiseApiImportState.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { processSearchIndexForKeepImportSource } from './keepImportIndexingProgress.js';
@@ -11,71 +8,13 @@ import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
 import { resolveKeepImportResultDetail, resolveKeepImportResultStatus } from './keepImportSourceUpdateState.js';
-import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
-import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { reimportReadwiseApiEpubSource } from './readwiseApiEpubReimport.js';
 import { resetReadwiseBookImportFromInventory } from './readwiseBookImportReset.js';
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
 import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
 import type { EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
 import { applyWatchedPreparedImportIdentity } from './watchedPreparedImportIdentity.js';
-
-async function reimportReadwiseApiEpubSource(
-  nodeId: string,
-  reimportedAt: string
-): Promise<NativeDevReimportCurrentTopicSourceResult | null> {
-  const source = openDatabaseConnection().driver.queryOne<{
-    remote_connection_ref: string;
-    remote_document_id: string;
-  }>(
-    `SELECT remote_connection_ref, remote_document_id FROM import_sources
-     WHERE latest_node_id = ? AND remote_provider = 'readwise' AND source_kind = 'html'
-       AND json_extract(remote_import_state_json, '$.metadata.category') = 'epub'`, [nodeId]
-  );
-  if (!source) return null;
-  const staged = loadStagedReadwiseApiContracts(source.remote_connection_ref);
-  const document = prepareReadwiseApiDocuments(staged.readerDocuments, staged.exportBooks)
-    .find((candidate) => candidate.id === source.remote_document_id);
-  if (document?.category !== 'epub' || !document.epubStructure) {
-    return {
-      detail: 'Refresh the Readwise preview before re-importing this EPUB.',
-      node_id: nodeId,
-      reimported_at: reimportedAt,
-      status: 'failed' as const
-    };
-  }
-  const config = loadImportManagerSettings().readwiseReaderConfig;
-  const preparedEpubImages = await prepareReadwiseApiEpubImagesIfNeeded({
-    config,
-    connectionRef: source.remote_connection_ref,
-    destination: 'inbox',
-    document,
-    forceEpubStructure: true
-  });
-  const result = materializeReadwiseApiDocument({
-    config,
-    connectionRef: source.remote_connection_ref,
-    destination: 'inbox',
-    document,
-    forceEpubStructure: true,
-    importedAt: reimportedAt,
-    preparedEpubImages
-  });
-  if (result.status === 'imported') {
-    return {
-      detail: 'Readwise API EPUB rebuilt from Reader HTML.',
-      node_id: nodeId,
-      reimported_at: reimportedAt,
-      status: 'reimported'
-    };
-  }
-  return {
-    detail: 'Readwise API EPUB re-import failed.',
-    node_id: null,
-    reimported_at: reimportedAt,
-    status: 'failed'
-  };
-}
 
 function isActiveReadwiseBooksSource(source: unknown): source is EnabledReadwiseBooksSource {
   const candidate = source as Partial<EnabledReadwiseBooksSource>;

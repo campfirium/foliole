@@ -8,7 +8,10 @@ import {
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import type { ReadwiseApiPreparedResources } from './readwiseApiDocumentCommit.js';
-import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
+import {
+  prepareReadwiseApiEpubCoverIfNeeded,
+  prepareReadwiseApiEpubImagesIfNeeded
+} from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import {
   prepareReadwiseApiOriginalFile,
@@ -47,6 +50,13 @@ export async function prepareReadwiseApiFrozenResources(input: {
     document: input.document,
     forceEpubStructure
   });
+  const epubCover = await prepareReadwiseApiEpubCoverIfNeeded({
+    config: input.config,
+    connectionRef: input.connectionRef,
+    destination,
+    document: input.document,
+    forceEpubStructure
+  });
   if (originalFile?.bytes && originalFile.state.status === 'localized') {
     await stageReadwiseApiOriginalFile({
       bytes: originalFile.bytes,
@@ -55,6 +65,7 @@ export async function prepareReadwiseApiFrozenResources(input: {
     });
   }
   const resources: ReadwiseApiPreparedResources = {
+    epubCover,
     epubImages,
     forceEpubStructure,
     originalFile: originalFile ? { bytes: null, state: originalFile.state } : null

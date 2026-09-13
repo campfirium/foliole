@@ -5,6 +5,7 @@ import { resolveFolioleAppVersion } from './appVersion.js';
 import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { shouldShowInitialWindow } from './backgroundStartup.js';
 import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
+import { runWithDatabaseConnectionOwner } from './database/connection.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
@@ -109,7 +110,7 @@ async function initializeRuntimeServices() {
         error,
         stage
       }));
-    });
+    }, { deferSearchIndex: true });
     await appendBootEvent('database_initialize_call_complete');
     refreshGlobalClipShortcutFromSettings();
     await appendBootEvent('database_init_complete');
@@ -210,11 +211,11 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
           capturePanelLaunchIntent: capturePanelLaunchIntent.hasInitialIntent,
           openedAtLogin: wasOpenedAtLogin()
         }),
-        startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
+        startCompanionSyncIfEnabled: () => runWithDatabaseConnectionOwner(() => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncParticipating,
           deviceId: loadOrCreateDesktopDeviceId()
-        })
+        }))
       });
       externalDocumentFileOpen.setReadyWindow(mainWindow);
       return mainWindow;

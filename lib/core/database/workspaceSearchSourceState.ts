@@ -119,6 +119,11 @@ export function markWorkspaceSearchSourceIndexedIfSettled(driver: DatabaseDriver
   if (hasActiveWorkspaceSearchInvalidations(driver)) return false;
   const state = readWorkspaceSearchSourceState(driver);
   if (!state || state.queuedRevision !== state.revision) return false;
+  recordIndexedWorkspaceSearchSourceState(driver, state);
+  return true;
+}
+
+export function recordIndexedWorkspaceSearchSourceState(driver: DatabaseDriver, state: WorkspaceSearchSourceState) {
   const indexedState: IndexedWorkspaceSearchSourceState = {
     identity: state.identity,
     revision: state.revision
@@ -129,7 +134,6 @@ export function markWorkspaceSearchSourceIndexedIfSettled(driver: DatabaseDriver
      ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`,
     [INDEXED_SOURCE_METADATA_KEY, JSON.stringify(indexedState), nowIso()]
   );
-  return true;
 }
 
 export function workspaceSearchSourceStateMatches(driver: DatabaseDriver) {
@@ -141,6 +145,20 @@ export function workspaceSearchSourceStateMatches(driver: DatabaseDriver) {
     && source.queuedRevision === source.revision
     && source.identity === indexed.identity
     && source.revision === indexed.revision
+    && !hasActiveWorkspaceSearchInvalidations(driver)
+  );
+}
+
+export function canResumeWorkspaceSearchInvalidations(driver: DatabaseDriver) {
+  const source = readWorkspaceSearchSourceState(driver);
+  const indexed = readIndexedWorkspaceSearchSourceState(driver);
+  return Boolean(
+    source
+    && indexed
+    && source.identity === indexed.identity
+    && source.queuedRevision === source.revision
+    && indexed.revision <= source.revision
+    && (indexed.revision === source.revision || hasActiveWorkspaceSearchInvalidations(driver))
   );
 }
 

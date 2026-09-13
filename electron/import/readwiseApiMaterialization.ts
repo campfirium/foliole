@@ -16,6 +16,7 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
+import type { PreparedReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 import { prepareReadwiseApiMaterializationState } from './readwiseApiMaterializationState.js';
 
@@ -34,6 +35,7 @@ export interface ReadwiseApiMaterializationInput {
   forceEpubStructure?: boolean;
   forceInbox?: boolean;
   importedAt?: string;
+  preparedEpubCover?: PreparedReadwiseApiEpubCover | null;
   preparedEpubImages?: PreparedReadwiseApiEpubImages | null;
   preserveTrackedAnnotations?: boolean;
   relocationPolicy?: 'first' | 'unique';
@@ -50,6 +52,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
     input = {
       ...input,
       forceEpubStructure: false,
+      preparedEpubCover: null,
       preparedEpubImages: null,
       replaceExistingBody: false
     };

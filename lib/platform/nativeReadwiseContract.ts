@@ -36,7 +36,7 @@ export interface NativeReadwiseBookEpubProgressEvent {
   detail: string;
   node_id: string;
   operation_id?: string;
-  phase: 'getting_original' | 'downloading_epub' | 'reading_epub' | 'getting_highlights' |
+  phase: 'getting_original' | 'downloading_epub' | 'reading_epub' |
     'locating_highlights' | 'saving' | 'importing_epub' | 'placing_highlights' | 'completed' | 'failed';
   progress: number;
 }

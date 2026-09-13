@@ -36,6 +36,10 @@ vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtoc
 vi.mock('./attachments/extDocImageProtocol.js', () => ({ registerExtDocImageProtocol: mocks.registerExtDocImageProtocol }));
 vi.mock('./attachments/remoteImageProtocol.js', () => ({ registerRemoteImageProtocol: mocks.registerRemoteImageProtocol }));
 vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackups: vi.fn() }));
+vi.mock('./database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./database/connection.js')>(),
+  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+}));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
@@ -144,6 +148,7 @@ it('loads the static workspace shell before runtime services and activates React
 
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
   expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1);
+  expect(mocks.initializeDatabase).toHaveBeenCalledWith(expect.any(Function), { deferSearchIndex: true });
   expect(createMainWindow).toHaveBeenCalledWith(null);
   expect(createMainWindow).toHaveBeenCalledTimes(1);
   expect(loadMainWindow).toHaveBeenCalledWith(window);

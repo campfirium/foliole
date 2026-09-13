@@ -1,4 +1,4 @@
-/* global process */
+/* global clearTimeout, process, setTimeout */
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,9 +24,10 @@ export async function createMacosElectronDevLogger(logFile) {
   };
 }
 
-export function spawnLoggedChild(bin, args, { cwd, env, logger }) {
+export function spawnLoggedChild(bin, args, { cwd, env, logger, detached = false }) {
   const child = spawn(bin, args, {
     cwd,
+    detached,
     env,
     shell: false,
     stdio: ['inherit', 'pipe', 'pipe']
@@ -34,8 +35,9 @@ export function spawnLoggedChild(bin, args, { cwd, env, logger }) {
   child.stdout.on('data', logger.stdout);
   child.stderr.on('data', logger.stderr);
   const closed = new Promise((resolve) => {
-    child.on('error', (error) => resolve({ code: 1, error, signal: null }));
-    child.on('exit', (code, signal) => resolve({ code: code ?? 1, error: null, signal }));
+    let spawnError = null;
+    child.on('error', (error) => { spawnError = error; });
+    child.on('close', (code, signal) => resolve({ code: code ?? 1, error: spawnError, signal }));
   });
   return { child, closed };
 }
@@ -44,4 +46,29 @@ export async function runLoggedCommand(bin, args, options) {
   const { closed } = spawnLoggedChild(bin, args, options);
   const result = await closed;
   return result.code === 0 && !result.signal;
+}
+
+export async function stopLoggedChild(active, timeoutMs = 5000) {
+  if (!active) return;
+  const { child, closed } = active;
+  const signalGroup = (signal) => {
+    if (!child.pid) return;
+    try { process.kill(-child.pid, signal); }
+    catch (error) { if (error.code !== 'ESRCH') throw error; }
+  };
+  const waitForClose = async () => {
+    let timer;
+    try {
+      return await Promise.race([
+        closed.then(() => true),
+        new Promise((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs); })
+      ]);
+    } finally { clearTimeout(timer); }
+  };
+  if (child.pid && child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+  if (await waitForClose()) return;
+  signalGroup('SIGTERM');
+  if (await waitForClose()) return;
+  signalGroup('SIGKILL');
+  if (!await waitForClose()) throw new Error(`DEV child group did not close pid=${child.pid}`);
 }

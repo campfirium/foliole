@@ -95,9 +95,11 @@ it('presents the startup shell on ready-to-show before the full renderer load co
   await vi.waitFor(() => expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(mainWindow, { show: true }));
   expect(mocks.appendBootEvent).toHaveBeenCalledWith('main_window_shell_ready');
   expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
+  expect(startup.initializeRuntimeServices).not.toHaveBeenCalled();
 
   rendererLoad.resolve();
   await startupPromise;
+  expect(startup.initializeRuntimeServices).toHaveBeenCalledOnce();
 
   expect(mocks.waitForRendererAppReady).toHaveBeenCalledTimes(1);
   expect(mocks.startFollowupTasks).toHaveBeenCalledTimes(1);
@@ -139,4 +141,16 @@ it('does not arm the followup gate when startup falls back to the error surface'
   expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
   expect(startup.startCompanionSyncIfEnabled).not.toHaveBeenCalled();
   expect(mainWindowArgs.activateMainWindow).not.toHaveBeenCalled();
+});
+
+it('reports navigation failure without starting database work behind the failed shell', async () => {
+  const error = new Error('navigation failed');
+  mainWindowArgs.loadMainWindow.mockRejectedValueOnce(error);
+  const startup = createStartupArgs();
+  await startInitialMainWindow(mainWindowArgs, startup);
+  expect(startup.failDatabaseStartup).toHaveBeenCalledWith(error);
+  expect(startup.initializeRuntimeServices).not.toHaveBeenCalled();
+  expect(startup.loadStartupErrorSurface).toHaveBeenCalledWith({
+    error, moduleLabel: 'Workspace shell', window: startup.mainWindow
+  });
 });

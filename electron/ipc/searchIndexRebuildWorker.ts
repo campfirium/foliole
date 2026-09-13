@@ -2,7 +2,10 @@ import { createRequire } from 'node:module';
 import { parentPort, workerData } from 'node:worker_threads';
 
 import type { FullTextSearchIndexStrategy } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
+  initializeWorkspaceSearchSidecar,
+  readWorkspaceSearchSidecarRebuildStatus,
   rebuildWorkspaceSearchSidecar,
   type WorkspaceSearchSidecarRebuildStatus
 } from '../../lib/core/database/workspaceSearchSidecar.js';
@@ -14,11 +17,12 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 interface WorkerInput {
   dbPath: string;
   searchDbPath: string;
-  strategy: FullTextSearchIndexStrategy;
+  strategy?: FullTextSearchIndexStrategy;
+  limit?: number;
 }
 
 type WorkerOutput =
-  | { ok: true; status: WorkspaceSearchSidecarRebuildStatus }
+  | { ok: true; status: WorkspaceSearchSidecarRebuildStatus; processed?: number; failed?: number }
   | { message: string; ok: false; stack?: string };
 
 function toWorkerError(error: unknown): WorkerOutput {
@@ -38,13 +42,14 @@ function runWorker(input: WorkerInput): WorkerOutput {
     sqlite.pragma('journal_mode = WAL');
     sqlite.pragma('foreign_keys = ON');
     sqlite.prepare('ATTACH DATABASE ? AS search').run(input.searchDbPath);
-    return {
-      ok: true,
-      status: rebuildWorkspaceSearchSidecar({
-        driver: createBetterSqlite3Driver(sqlite),
-        sqlite
-      }, { strategy: input.strategy })
-    };
+    const connection = { driver: createBetterSqlite3Driver(sqlite), sqlite };
+    if (input.strategy) {
+      return { ok: true, status: rebuildWorkspaceSearchSidecar(connection, { strategy: input.strategy }) };
+    }
+    initializeWorkspaceSearchSidecar(connection);
+    const status = readWorkspaceSearchSidecarRebuildStatus(sqlite);
+    if (!status || status.status !== 'ready') throw new Error(status?.error ?? 'Search index is not ready.');
+    return { ok: true, status, ...processSearchIndexInvalidations(connection.driver, input.limit) };
   } catch (error) {
     return toWorkerError(error);
   } finally {

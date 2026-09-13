@@ -20,6 +20,7 @@ import {
   buildReadwiseApiEpubBookNodes,
   persistReadwiseApiEpubBookNodes
 } from './readwiseApiEpubBookTree.js';
+import type { PreparedReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
@@ -46,6 +47,7 @@ export function materializeReadwiseApiEpub(input: {
   importedAt: string;
   newAnnotations: PreparedReadwiseApiAnnotation[];
   previousState: ReadwiseApiDocumentImportState | null;
+  preparedCover?: PreparedReadwiseApiEpubCover | null | undefined;
   preparedImages?: PreparedReadwiseApiEpubImages | null | undefined;
   relocationPolicy: 'first' | 'unique';
   rebuildRoot: boolean;
@@ -97,14 +99,19 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
     rootBody: structure.rootBody,
     sections: structure.sections
   };
+  const projectedCover = input.preparedCover ?? { attachmentIds: [], degradedReason: null, text: '' };
   const preparedRoot = buildPreparedImportRecord({
     filePath: remoteLocator(input.document.id), kind: 'html', sourceName: `${input.document.title}.html`
   }, {
     content: buildRootContent(
       input.document,
-      structure.sections.length ? projectedStructure.rootBody : input.document.body
+      [projectedCover.text, structure.sections.length ? projectedStructure.rootBody : input.document.body]
+        .filter(Boolean).join('\n\n')
     ),
-    degradedReason: appendReason(structure.degradedReason, projectedStructure.degradedReason),
+    degradedReason: appendReason(
+      appendReason(structure.degradedReason, projectedStructure.degradedReason),
+      projectedCover.degradedReason
+    ),
     highlightPolicy: 'reference_only',
     hideTitleHeadingOverride: false,
     importedAt: input.importedAt,
@@ -119,7 +126,10 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
     input.rootNodeId ? { forceUpdateExistingNodeId: input.rootNodeId, resetImportedStructure: true } : undefined
   );
   if (!root.nodeId) throw new Error('readwise_epub_root_missing');
-  replaceReadwiseApiEpubImageLinks(root.nodeId, projectedStructure.rootAttachmentIds);
+  replaceReadwiseApiEpubImageLinks(
+    root.nodeId,
+    [...projectedCover.attachmentIds, ...projectedStructure.rootAttachmentIds]
+  );
   persistReadwiseApiEpubBookNodes({
     connectionRef: input.connectionRef,
     documentId: input.document.id,

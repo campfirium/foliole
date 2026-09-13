@@ -14,7 +14,6 @@ import { NodeContextMenuItem, NodeContextMenuSeparator } from './nodeListContext
 
 const PHASE_NOTICE_KEYS = {
   downloading_epub: 'desktop.nodeList.originalEpub.phase.downloading_epub',
-  getting_highlights: 'desktop.nodeList.originalEpub.phase.getting_highlights',
   getting_original: 'desktop.nodeList.originalEpub.phase.getting_original',
   importing_epub: 'desktop.nodeList.originalEpub.phase.importing_epub',
   locating_highlights: 'desktop.nodeList.originalEpub.phase.locating_highlights',

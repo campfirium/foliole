@@ -59,7 +59,6 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.originalEpub.phase.getting_original': 'Getting original EPUB…',
   'desktop.nodeList.originalEpub.phase.downloading_epub': 'Downloading EPUB…',
   'desktop.nodeList.originalEpub.phase.reading_epub': 'Reading EPUB…',
-  'desktop.nodeList.originalEpub.phase.getting_highlights': 'Getting highlights…',
   'desktop.nodeList.originalEpub.phase.locating_highlights': 'Locating highlights…',
   'desktop.nodeList.originalEpub.phase.saving': 'Saving…',
   'desktop.nodeList.originalEpub.phase.importing_epub': 'Importing EPUB…',

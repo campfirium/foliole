@@ -12,13 +12,10 @@ import { IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { downloadReadwiseOriginalFile } from './readwiseApiOriginalFile.js';
-import { mergeRetainedReadwiseAnnotations } from './readwiseOriginalEpubAnnotations.js';
+import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
 import { prepareOriginalEpubCandidate, type PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
-import {
-  fetchOriginalEpubRemoteAnnotations,
-  fetchOriginalEpubRemoteRoot
-} from './readwiseOriginalEpubRemote.js';
+import { fetchOriginalEpubRemoteRoot } from './readwiseOriginalEpubRemote.js';
 import {
   captureReadwiseOriginalEpubSnapshot,
   isReadwiseOriginalEpubRuntimeReady,
@@ -78,18 +75,8 @@ export async function useReadwiseOriginalEpub(
     publish(window, nodeId, operationId, 'reading_epub', 'Reading EPUB…', 0.35);
     const importedAt = new Date().toISOString();
     candidate = await prepareOriginalEpubCandidate({ bytes, now: importedAt, title: target.title });
-    publish(window, nodeId, operationId, 'getting_highlights', 'Getting highlights…', 0.55);
-    const fetchedDocument = await fetchOriginalEpubRemoteAnnotations({
-      ...(dependencies ? { dependencies } : {}),
-      documentId: target.documentId,
-      onPage: () => publish(window, nodeId, operationId, 'getting_highlights', 'Getting highlights…', 0.55),
-      root: remote.root
-    });
-    const document = {
-      ...fetchedDocument,
-      annotations: mergeRetainedReadwiseAnnotations(target, fetchedDocument.annotations)
-    };
-    publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.7);
+    const document = buildLocalReadwiseOriginalEpubDocument(target);
+    publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);
     publish(window, nodeId, operationId, 'saving', 'Saving…', 0.9);
     commitReadwiseOriginalEpub({ candidate, document, expectedSnapshot, importedAt, target });
     publish(window, nodeId, operationId, 'completed', 'Original EPUB is now in use.', 1);

@@ -56,6 +56,7 @@ function materializeEpubIfStructured(
     importedAt,
     newAnnotations,
     previousState: existing ? { ...existing.state, sourceUpdate } : null,
+    preparedCover: input.preparedEpubCover,
     preparedImages: input.preparedEpubImages,
     relocationPolicy: input.relocationPolicy ?? 'first',
     rebuildRoot: Boolean(existing && input.forceEpubStructure),

@@ -18,9 +18,10 @@ import {
 } from './workspaceSearchSidecarMetadata.js';
 import {
   clearIndexedWorkspaceSearchSourceState,
+  canResumeWorkspaceSearchInvalidations,
   ensureWorkspaceSearchSourceState,
-  markWorkspaceSearchSourceIndexedIfSettled,
   markWorkspaceSearchSourceRevisionQueued,
+  recordIndexedWorkspaceSearchSourceState,
   recoverInterruptedWorkspaceSearchInvalidations,
   workspaceSearchSourceStateMatches
 } from './workspaceSearchSourceState.js';
@@ -40,6 +41,7 @@ interface WorkspaceSearchSidecarConnection extends DatabaseConnectionLike {
 
 interface InitializeWorkspaceSearchSidecarOptions {
   rebuildWorkspaceSearchIndexes?: (driver: DatabaseDriver) => void;
+  requireCurrentSource?: boolean;
 }
 
 interface WorkspaceSearchSidecarRebuildOptions {
@@ -149,6 +151,8 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
   ensureWorkspaceSearchSourceState(connection.driver);
   markWorkspaceSearchSidecarRebuilding(connection, resolution.strategy);
   try {
+    // Keep main-database writes outside the long search transaction so foreground edits can proceed.
+    const source = markWorkspaceSearchSourceRevisionQueued(connection.driver);
     return connection.driver.transaction(() => {
       clearIndexedWorkspaceSearchSourceState(connection.driver);
       dropSearchIndexTables(connection.sqlite);
@@ -159,8 +163,7 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
         strategy: resolution.strategy,
         tokenizer: resolution.tokenizer
       });
-      markWorkspaceSearchSourceRevisionQueued(connection.driver);
-      markWorkspaceSearchSourceIndexedIfSettled(connection.driver);
+      recordIndexedWorkspaceSearchSourceState(connection.driver, source);
       const readyStatus = {
         status: 'ready',
         strategy: resolution.strategy,
@@ -192,7 +195,9 @@ export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSideca
   if (
     shouldRecreateSearchIndexes(connection.sqlite, resolution.tokenizer)
     || shouldRetryPreviousRebuild(connection.sqlite)
-    || !workspaceSearchSourceStateMatches(connection.driver)
+    || !(options.requireCurrentSource
+      ? workspaceSearchSourceStateMatches(connection.driver)
+      : canResumeWorkspaceSearchInvalidations(connection.driver))
   ) {
     const rebuildOptions: WorkspaceSearchSidecarRebuildOptions = { strategy: resolution.strategy };
     if (options.rebuildWorkspaceSearchIndexes) {

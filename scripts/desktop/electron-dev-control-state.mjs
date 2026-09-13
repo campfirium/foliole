@@ -98,9 +98,11 @@ export function waitForElectronDevCondition({
   evaluate,
   label,
   stateRoot,
+  signal,
   timeoutMs = 30000,
   watch = fs.watch
 }) {
+  signal?.throwIfAborted();
   const initial = evaluate();
   if (initial) return Promise.resolve(initial);
   return new Promise((resolve, reject) => {
@@ -112,9 +114,12 @@ export function waitForElectronDevCondition({
       settled = true;
       if (timer) clearTimeout(timer);
       watcher?.close();
+      signal?.removeEventListener('abort', onAbort);
       if (error) reject(error);
       else resolve(value);
     };
+    const onAbort = () => finish(signal.reason);
+    signal?.addEventListener('abort', onAbort, { once: true });
     const check = () => {
       try {
         const value = evaluate();

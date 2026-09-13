@@ -23,7 +23,6 @@ export interface PreparedReadwiseApiEpubImages {
     treeBodyCount: number;
     unavailableBodyCount: number;
   };
-  coverState: 'localized' | 'missing' | 'unavailable';
   degradedReason: string | null;
   rootAttachmentIds: string[];
   rootBody: string;
@@ -47,7 +46,6 @@ export async function prepareReadwiseApiEpubImages(
     deadlineAt: Date.now() + IMAGE_PREPARATION_BUDGET_MS,
     fetchAttempts: 2
   });
-  const cover = await prepareCover(document, context);
   const root = await localizeAndFinalize(structure.rootBody, context);
   const sections: PreparedReadwiseApiEpubImageSection[] = [];
   for (const section of structure.sections) {
@@ -64,29 +62,14 @@ export async function prepareReadwiseApiEpubImages(
   const conversionDroppedCount = Math.max(0, sourceBodyCount - treeBodyCount);
   return {
     accounting: { conversionDroppedCount, localizedBodyCount, sourceBodyCount, treeBodyCount, unavailableBodyCount },
-    coverState: cover.state,
     degradedReason: imageDegradedReason({
       conversionDroppedCount,
-      coverState: cover.state,
       sourceBodyCount,
       unavailableBodyCount
     }),
-    rootAttachmentIds: unique([...cover.attachmentIds, ...root.attachmentIds]),
-    rootBody: [cover.text, root.text].filter(Boolean).join('\n\n'),
+    rootAttachmentIds: root.attachmentIds,
+    rootBody: root.text,
     sections
-  };
-}
-
-async function prepareCover(document: PreparedReadwiseApiDocument, context: ImageLocalizationContext) {
-  if (!document.coverImageUrl) {
-    return { attachmentIds: [] as string[], state: 'missing' as const, text: '' };
-  }
-  const alt = `${document.title.replace(/[\]\r\n]/gu, ' ').trim()} cover`;
-  const finalized = await localizeAndFinalize(`![${alt}](${document.coverImageUrl})`, context);
-  return {
-    attachmentIds: finalized.attachmentIds,
-    state: finalized.localizedCount === 1 ? 'localized' as const : 'unavailable' as const,
-    text: finalized.text
   };
 }
 
@@ -125,14 +108,13 @@ function countUnavailablePlaceholders(markdown: string) {
 
 function imageDegradedReason(input: {
   conversionDroppedCount: number;
-  coverState: PreparedReadwiseApiEpubImages['coverState'];
   sourceBodyCount: number;
   unavailableBodyCount: number;
 }) {
-  if (input.coverState === 'localized' && input.unavailableBodyCount === 0 && input.conversionDroppedCount === 0) {
+  if (input.unavailableBodyCount === 0 && input.conversionDroppedCount === 0) {
     return null;
   }
-  return `Reader EPUB images incomplete: cover=${input.coverState}; source=${input.sourceBodyCount}; unavailable=${input.unavailableBodyCount}; conversion_dropped=${input.conversionDroppedCount}.`;
+  return `Reader EPUB body images incomplete: source=${input.sourceBodyCount}; unavailable=${input.unavailableBodyCount}; conversion_dropped=${input.conversionDroppedCount}.`;
 }
 
 function unique(values: string[]) {

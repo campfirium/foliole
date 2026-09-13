@@ -1,4 +1,4 @@
-/* global process */
+/* global AbortController, process */
 
 import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
@@ -24,7 +24,8 @@ import {
 import {
   createMacosElectronDevLogger,
   runLoggedCommand,
-  spawnLoggedChild
+  spawnLoggedChild,
+  stopLoggedChild
 } from './macos-electron-dev-process.mjs';
 
 function createCompileRunner({ env, logger, paths }) {
@@ -41,16 +42,21 @@ function createCompileRunner({ env, logger, paths }) {
   };
 }
 
-async function waitForSessionReady(paths, bootSession, timeoutMs) {
-  return waitForElectronDevCondition({
-    evaluate: () => {
-      const snapshot = readElectronDevSnapshot(paths);
-      return snapshot.running && snapshot.ready.appReady.session === bootSession ? snapshot : null;
-    },
-    label: 'macOS Electron daily debug startup',
-    stateRoot: paths.dailyRoot,
-    timeoutMs
-  });
+async function waitForSessionReady(paths, bootSession, timeoutMs, closed) {
+  const controller = new AbortController();
+  void closed.then(() => controller.abort(new Error('inner dev shell exited before ready')));
+  try {
+    return await waitForElectronDevCondition({
+      evaluate: () => {
+        const snapshot = readElectronDevSnapshot(paths);
+        return snapshot.running && snapshot.ready.appReady.session === bootSession ? snapshot : null;
+      },
+      label: 'macOS Electron daily debug startup',
+      stateRoot: paths.dailyRoot,
+      signal: controller.signal,
+      timeoutMs
+    });
+  } finally { controller.abort(); }
 }
 
 async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs }) {
@@ -68,10 +74,7 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
 
   const stop = async () => {
     stopping = true;
-    if (active?.child && active.child.exitCode === null && active.child.signalCode === null) {
-      await requestMacosElectronShellExit({ paths, reason: 'macOS daily debug stop' });
-      await active.closed;
-    }
+    await stopLoggedChild(active);
   };
   registerStop(stop);
 
@@ -117,6 +120,7 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
       else delete shellEnv.FOLIOLE_ELECTRON_DEV_SKIP_COMPILE;
       active = spawnLoggedChild(process.execPath, ['scripts/electron-dev.mjs', '--preview-sandbox'], {
         cwd: paths.appRoot,
+        detached: true,
         env: shellEnv,
         logger
       });
@@ -132,10 +136,7 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
       };
       await writeElectronDevClientState(paths, clientState);
       logger.event('shell_started', `pid=${active.child.pid} session=${bootSession}`);
-      await Promise.race([
-        waitForSessionReady(paths, bootSession, startupTimeoutMs),
-        active.closed.then((result) => { throw new Error(`inner dev shell exited before ready code=${result.code}`); })
-      ]);
+      await waitForSessionReady(paths, bootSession, startupTimeoutMs, active.closed);
       if (clientState.lastControl?.action === 'full-restart') {
         await persistClientState({
           lastControl: { ...clientState.lastControl, status: 'completed' }
@@ -155,6 +156,8 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
     return 0;
   } finally {
     process.off('SIGHUP', onSighup);
+    await stop();
+    await removeElectronDevReadyMarkers(paths);
     await removeElectronDevClientState(paths);
     await rm(paths.shellRequestFile, { force: true });
     await logger.close();
@@ -166,7 +169,9 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   if (platform !== 'darwin') throw new Error('macOS Electron daily debug requires a darwin host');
   const paths = options.paths ?? resolveMacosElectronDevPaths(options.cwd);
   const existing = readElectronDevSnapshot(paths, options.isAlive ?? processIsAlive);
-  if (existing.supervisorAlive) throw new Error(`macOS Electron daily debug already running pid=${existing.client.supervisorPid}`);
+  if (existing.supervisorAlive || existing.shellAlive) {
+    throw new Error(`macOS Electron daily debug still owned supervisor=${existing.client.supervisorPid} shell=${existing.client.shellPid}`);
+  }
   (options.maintain ?? maintainBeforeProduction)({ rootDir: paths.appRoot });
   await (options.prepareSignature ?? prepareMacosElectronDevSignature)({
     appRoot: paths.appRoot,

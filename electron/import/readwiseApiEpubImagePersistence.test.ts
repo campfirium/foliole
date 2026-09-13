@@ -44,8 +44,14 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
     createAttachmentRecord({ createdAt, id, mimeType: 'image/png', originalName: `${id}.png`, sizeBytes: 3 });
   }
   const preparedEpubImages = preparedImages(document);
+  const preparedEpubCover = {
+    attachmentIds: ['cover-attachment'], degradedReason: null,
+    text: '![Cover](asset://cover-attachment.png)'
+  };
   const config = createDefaultReadwiseReaderConfig();
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document, preparedEpubImages });
+  materializeReadwiseApiDocument({
+    config, connectionRef: 'connection', destination: 'inbox', document, preparedEpubCover, preparedEpubImages
+  });
 
   const driver = openDatabaseConnection().driver;
   const source = driver.queryOne<{ latest_node_id: string }>(
@@ -63,7 +69,8 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
   createNodeAttachmentLink({ attachmentId: 'stale-attachment', nodeId: section.id, role: 'image' });
 
   materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', destination: 'inbox', document, forceEpubStructure: true, preparedEpubImages
+    config, connectionRef: 'connection', destination: 'inbox', document, forceEpubStructure: true,
+    preparedEpubCover, preparedEpubImages
   });
 
   expect(driver.queryAll<{ attachment_id: string; node_id: string }>(
@@ -80,10 +87,9 @@ function preparedImages(document: PreparedReadwiseApiDocument) {
       conversionDroppedCount: 0, localizedBodyCount: 1, sourceBodyCount: 1,
       treeBodyCount: 1, unavailableBodyCount: 0
     },
-    coverState: 'localized' as const,
     degradedReason: null,
-    rootAttachmentIds: ['cover-attachment'],
-    rootBody: '![Cover](asset://cover-attachment.png)',
+    rootAttachmentIds: [],
+    rootBody: '',
     sections: document.epubStructure!.sections.map((section) => ({
       ...section,
       attachmentIds: ['section-attachment'],

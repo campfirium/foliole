@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import type { PreparedReadwiseApiAnnotation } from '../../lib/core/readwise/readwiseApiImport.js';
+import type {
+  PreparedReadwiseApiAnnotation,
+  PreparedReadwiseApiDocument
+} from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
@@ -40,4 +43,30 @@ export function mergeRetainedReadwiseAnnotations(
     });
   }
   return [...byRemoteId.values()];
+}
+
+export function buildLocalReadwiseOriginalEpubDocument(
+  target: ReadwiseOriginalEpubTarget
+): PreparedReadwiseApiDocument {
+  const metadata = target.state.metadata;
+  return {
+    annotations: mergeRetainedReadwiseAnnotations(target, []),
+    body: '',
+    category: 'epub',
+    coverImageUrl: null,
+    createdAt: null,
+    degradedReason: null,
+    id: target.documentId,
+    metadata: {
+      ...metadata,
+      author: typeof metadata.author === 'string' ? metadata.author : null,
+      category: 'epub',
+      readerUrl: typeof metadata.readerUrl === 'string' ? metadata.readerUrl : null,
+      sourceUrl: typeof metadata.sourceUrl === 'string' ? metadata.sourceUrl : null,
+      title: target.title
+    },
+    title: target.title,
+    unmatchedAnnotationCount: 0,
+    updatedAt: target.state.sourceUpdatedAt
+  };
 }

@@ -88,21 +88,23 @@ export async function startInitialMainWindow(
     await startup.loadStartupErrorSurface({ error, moduleLabel: 'Workspace shell', window: startup.mainWindow });
     return;
   }
-  const [rendererResult, runtimeResult] = await Promise.allSettled([
-    loadWorkspaceShell({
+  try {
+    await loadWorkspaceShell({
       loadMainWindow: args.loadMainWindow,
       showInitialWindow: startup.showInitialWindow !== false,
       ...(startup.initialStartupView === undefined ? {} : { startupView: startup.initialStartupView }),
       window: startup.mainWindow
-    }),
-    startup.initializeRuntimeServices()
-  ]);
-  if (rendererResult.status === 'rejected') {
-    await startup.loadStartupErrorSurface({ error: rendererResult.reason, moduleLabel: 'Workspace shell', window: startup.mainWindow });
+    });
+  } catch (error) {
+    startup.failDatabaseStartup(error);
+    await startup.loadStartupErrorSurface({ error, moduleLabel: 'Workspace shell', window: startup.mainWindow });
     return;
   }
-  if (runtimeResult.status === 'rejected') {
-    await startup.loadStartupErrorSurface({ error: runtimeResult.reason, moduleLabel: 'Database migration', window: startup.mainWindow });
+  try {
+    // Let Chromium finish navigation before synchronous database work blocks the main thread.
+    await startup.initializeRuntimeServices();
+  } catch (error) {
+    await startup.loadStartupErrorSurface({ error, moduleLabel: 'Database migration', window: startup.mainWindow });
     return;
   }
   try {

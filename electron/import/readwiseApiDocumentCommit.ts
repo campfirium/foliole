@@ -9,7 +9,10 @@ import {
 } from '../database/readwiseApiImportState.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-import { prepareReadwiseApiEpubImagesIfNeeded } from './readwiseApiEpubImagePreparation.js';
+import {
+  prepareReadwiseApiEpubCoverIfNeeded,
+  prepareReadwiseApiEpubImagesIfNeeded
+} from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import {
@@ -32,6 +35,7 @@ interface ReadwiseApiDocumentCommitInput {
 }
 
 export interface ReadwiseApiPreparedResources {
+  epubCover?: Awaited<ReturnType<typeof prepareReadwiseApiEpubCoverIfNeeded>>;
   epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;
   forceEpubStructure?: boolean;
   originalFile: Awaited<ReturnType<typeof prepareReadwiseApiOriginalFile>> | null;
@@ -57,18 +61,13 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     ? withOriginalFileStatus(input.document, prepared?.state ?? previousOriginalFile ?? null)
     : input.document;
   const forceEpubStructure = Boolean(input.forceEpubStructure || input.preparedResources?.forceEpubStructure);
-  const preparedEpubImages = input.preparedResources?.epubImages && !input.forceEpubStructure
-    ? input.preparedResources.epubImages
-    : await prepareReadwiseApiEpubImagesIfNeeded({
-    config: input.config,
-    connectionRef: input.connectionRef,
-    destination: input.destination,
-    document,
-    forceEpubStructure: Boolean(forceEpubStructure || (input.reimportDeleted && existingBefore?.nodeDeleted))
-    });
+  const { preparedEpubCover, preparedEpubImages } = await prepareEpubResources(
+    input, document, forceEpubStructure, Boolean(existingBefore?.nodeDeleted)
+  );
   input.assertEligible?.();
   const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, destination: input.destination, document, preparedEpubImages,
+    config: input.config, connectionRef: input.connectionRef, destination: input.destination, document,
+    preparedEpubCover, preparedEpubImages,
     ...(forceEpubStructure ? { forceEpubStructure: true } : {}),
     ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
     ...(input.replaceExistingBody === undefined && !forceEpubStructure
@@ -97,6 +96,24 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   }
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
+}
+
+async function prepareEpubResources(
+  input: ReadwiseApiDocumentCommitInput,
+  document: PreparedReadwiseApiDocument,
+  forceEpubStructure: boolean,
+  nodeDeleted: boolean
+) {
+  const preparationInput = {
+    config: input.config, connectionRef: input.connectionRef, destination: input.destination,
+    document, forceEpubStructure: Boolean(forceEpubStructure || (input.reimportDeleted && nodeDeleted))
+  };
+  const cover = input.preparedResources && 'epubCover' in input.preparedResources
+    ? input.preparedResources.epubCover : prepareReadwiseApiEpubCoverIfNeeded(preparationInput);
+  const images = input.preparedResources?.epubImages && !input.forceEpubStructure
+    ? input.preparedResources.epubImages : prepareReadwiseApiEpubImagesIfNeeded(preparationInput);
+  const [preparedEpubCover, preparedEpubImages] = await Promise.all([cover, images]);
+  return { preparedEpubCover, preparedEpubImages };
 }
 
 function guardPostCutoverDocument(connectionRef: string, document: PreparedReadwiseApiDocument) {

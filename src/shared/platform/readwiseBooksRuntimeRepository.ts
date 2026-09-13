@@ -93,7 +93,6 @@ function isReadwiseBookEpubProgressEvent(value: unknown): value is NativeReadwis
     (payload.phase === 'getting_original' ||
       payload.phase === 'downloading_epub' ||
       payload.phase === 'reading_epub' ||
-      payload.phase === 'getting_highlights' ||
       payload.phase === 'locating_highlights' ||
       payload.phase === 'saving' ||
       payload.phase === 'importing_epub' ||

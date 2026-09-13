@@ -121,7 +121,6 @@ export async function prepareOriginalEpubCandidate(input: {
           treeBodyCount: stages.size - 1,
           unavailableBodyCount: 0
         },
-        coverState: root.attachmentIds.length ? 'localized' : 'missing',
         degradedReason: null,
         rootAttachmentIds: root.attachmentIds,
         rootBody: root.content,

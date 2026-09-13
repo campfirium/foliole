@@ -29,6 +29,7 @@ import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.j
 import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
 import { prepareOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import {
@@ -156,6 +157,16 @@ async function seedTarget() {
   const candidate = await prepareOriginalEpubCandidate({ bytes: originalBytes(), now: importedAt, title: target.title });
   return { candidate, connectionRef, document, readerSectionId: readerSection.id, remoteId: remote.id, rootId: root.id, target };
 }
+
+it('builds the replacement document from existing local annotations', async () => {
+  const seeded = await seedTarget();
+
+  expect(buildLocalReadwiseOriginalEpubDocument(seeded.target)).toMatchObject({
+    annotations: [{ content: 'My remote note', remoteId: 'highlight-1' }],
+    id: 'book-1',
+    unmatchedAnnotationCount: 0
+  });
+});
 
 it('force-replaces changed Reader content while preserving identities, user content, and local anchors', async () => {
   const seeded = await seedTarget();

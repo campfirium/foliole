@@ -1,6 +1,8 @@
 import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+
 import {
   listManagedDatabaseBackups,
   pruneManagedDatabaseBackups,
@@ -167,7 +169,7 @@ export async function restoreApplicationDatabaseBackup(
     materialized = await materializeCompressedSqliteBackup(options.sourcePath, path.dirname(targetPath));
     closeDatabaseConnection();
     const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
-    initializeDatabase();
+    initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
     restored = true;
     return { ...result, sourcePath: path.resolve(options.sourcePath) };
   } finally {

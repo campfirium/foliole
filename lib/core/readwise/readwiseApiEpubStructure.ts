@@ -174,9 +174,21 @@ function collectStructuralLabel(element: HtmlElement) {
     'tagName' in child && /^h[1-6]$/u.test(child.tagName)
   ));
   if (childHeading) return collectInlineText(childHeading);
-  return element.childNodes.map((child) => (
+  const directLabel = element.childNodes.map((child) => (
     'tagName' in child && BLOCK_TAGS.has(child.tagName) ? '' : collectInlineText(child)
   )).join(' ');
+  if (directLabel.trim()) return directLabel;
+  return collectBoundaryBlockLabel(element);
+}
+
+function collectBoundaryBlockLabel(element: HtmlElement) {
+  const labels = element.childNodes.flatMap((child) => {
+    if (!('tagName' in child) || !BLOCK_TAGS.has(child.tagName)) return [];
+    const label = collectInlineText(child).replace(/\s+/gu, ' ').trim();
+    return label ? [label] : [];
+  });
+  if (/^︿.*﹀$/u.test(labels[0] ?? '') && labels[1]) return `${labels[0]}${labels[1]}`;
+  return labels[0] ?? '';
 }
 
 function collectInlineText(node: HtmlNode): string {

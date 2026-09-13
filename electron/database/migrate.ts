@@ -83,7 +83,7 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
   enableDatabaseWriteAheadLog(connection);
 }
 
-function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
+function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false) {
   verifyStartupDatabaseIntegrity(connection, reportStage);
   enableStartupWriteAheadLog(connection, reportStage);
   if (shouldSkipStartupSchemaInit()) {
@@ -96,7 +96,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   const pendingSnapshot = createPreMigrationSnapshotIfNeeded(connection);
   let initializedConnection: ReturnType<typeof initializeSchemaWorkspaceAndSearch>;
   try {
-    initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
+    initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), deferSearchIndex);
   } catch (error) {
     pendingSnapshot?.protection.release();
     throw error;
@@ -111,7 +111,8 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
 
 function initializeSchemaWorkspaceAndSearch(
   connection: ReturnType<typeof openDatabaseConnection>,
-  currentHostName: string
+  currentHostName: string,
+  deferSearchIndex = false
 ) {
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
@@ -127,10 +128,10 @@ function initializeSchemaWorkspaceAndSearch(
     libraryScope: createHash('sha256').update(initializedConnection.dbPath).digest('hex')
   });
   seedInitialWorkspace(initializedConnection);
-  return initializeWorkspaceSearchSidecar(initializedConnection);
+  return deferSearchIndex ? initializedConnection : initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
-export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean } = {}) {
   const databasePath = resolveDatabasePath();
 
   try {
@@ -145,14 +146,14 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
       });
-      return initializeOpenedDatabase(connection, reportStage);
+      return initializeOpenedDatabase(connection, reportStage, options.deferSearchIndex);
     } catch (error) {
       closeDatabaseConnection();
       throw error;
     }
   } catch (error) {
     if (isLegacyDatabaseRebuildRequiredError(error)) {
-      return rebuildLegacyDevelopmentDatabase(databasePath, reportStage);
+      return rebuildLegacyDevelopmentDatabase(databasePath, reportStage, options.deferSearchIndex);
     }
     if (!isDatabaseCorruptionError(error)) {
       throw error;
@@ -182,7 +183,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_complete');
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
-    const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
+    const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), options.deferSearchIndex);
     clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
     return initializedConnection;
@@ -201,7 +202,7 @@ function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDa
   });
 }
 
-function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: DatabaseInitStageReporter) {
+function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false) {
   reportStage?.('database_legacy_rebuild_start', { databasePath });
   closeDatabaseConnection();
   const snapshot = moveDatabaseToPreRebuildSnapshot(databasePath);
@@ -210,7 +211,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
     reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
-  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
+  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), deferSearchIndex);
   clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   return initializedConnection;

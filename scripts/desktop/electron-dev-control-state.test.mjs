@@ -54,3 +54,18 @@ describe('Electron dev control state', () => {
     expect(emitter.close).toHaveBeenCalledOnce();
   });
 });
+
+it('releases startup observation immediately when its shell closes', async () => {
+  const controller = new globalThis.AbortController();
+  const watcher = new EventEmitter();
+  watcher.close = vi.fn();
+  const result = waitForElectronDevCondition({
+    evaluate: () => false,
+    label: 'startup', signal: controller.signal, stateRoot: '/state',
+    watch: () => watcher
+  });
+  const error = new Error('shell closed');
+  controller.abort(error);
+  await expect(result).rejects.toBe(error);
+  expect(watcher.close).toHaveBeenCalledOnce();
+});

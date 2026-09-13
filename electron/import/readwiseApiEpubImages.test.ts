@@ -45,7 +45,7 @@ beforeEach(() => {
   }));
 });
 
-it('localizes the cover and body images while replacing unresolved references', async () => {
+it('localizes body images independently from the document cover', async () => {
   const prepared = await prepareReadwiseApiEpubImages(documentFixture());
 
   expect(prepared).not.toBeNull();
@@ -56,18 +56,16 @@ it('localizes the cover and body images while replacing unresolved references', 
     treeBodyCount: 3,
     unavailableBodyCount: 1
   });
-  expect(prepared?.coverState).toBe('localized');
   expect(prepared?.rootBody).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(prepared?.sections[0]?.content).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(prepared?.sections[0]?.content).toContain('**Image unavailable.**');
   expect(JSON.stringify(prepared)).not.toContain('https://');
   expect(JSON.stringify(prepared)).not.toContain('../images/missing.png');
   expect(prepared?.rootAttachmentIds).toEqual([
-    'attachment-cover.jpg.png',
     'attachment-root.png.png'
   ]);
   expect(prepared?.sections[0]?.attachmentIds).toEqual(['attachment-section.png.png']);
-  expect(mocks.fetchRemoteImageResource).toHaveBeenCalledTimes(3);
+  expect(mocks.fetchRemoteImageResource).toHaveBeenCalledTimes(2);
   expect(mocks.fetchRemoteImageResource).toHaveBeenCalledWith(expect.any(String), { bypassFailureCache: true });
 });
 
