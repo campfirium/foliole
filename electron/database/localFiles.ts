@@ -9,12 +9,11 @@ import type {
   NativeLocalFileSaveResult
 } from '../../lib/platform/nativeLocalFileCommandMap.js';
 
-import { openDatabaseConnection } from './connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import {
   markLocalDocumentSearchIndexMissing,
   upsertLocalDocumentSearchIndex
 } from './localDocumentSearchIndex.js';
-import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
 interface LocalFileRow extends Record<string, unknown> {
   absolute_path: string;
@@ -133,8 +132,7 @@ function upsertLocalFileMetadata(args: {
 }
 
 function runWithLocalFileDatabaseAccess<T>(execute: () => T) {
-  const connection = openDatabaseConnection();
-  return getSqliteConnectionCoordinator(connection.sqlite).runExclusive(execute);
+  return runWithDatabaseConnectionOwner(execute);
 }
 
 async function statLocalFile(absolutePath: string): Promise<FileStatSnapshot | null> {

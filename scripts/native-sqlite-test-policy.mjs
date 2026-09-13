@@ -38,6 +38,7 @@ const controlledElectronSqliteTests = [
   'electron/database/publicDesktopDatabaseUpgrades.test.ts',
   'electron/database/readwiseApiCompanionMigration.test.ts',
   'electron/database/readwiseExternalReferenceCompanionMigration.test.ts',
+  'electron/database/sqliteConnectionCoordinator.maintenance.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
   'electron/database/syncPackAcceptedSettingAtomicity.test.ts',

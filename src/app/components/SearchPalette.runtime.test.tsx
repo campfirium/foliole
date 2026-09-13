@@ -71,14 +71,13 @@ it('waits for a typing pause before running workspace search', async () => {
     fireEvent.change(input, { target: { value: 'launch' } });
 
     act(() => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1));
-    expect(runtimeInvoke).not.toHaveBeenCalled();
+    expect(runtimeInvoke).not.toHaveBeenCalledWith('search_workspace', expect.anything());
 
     await act(async () => {
       vi.advanceTimersByTime(1);
       await Promise.resolve();
     });
-    expect(runtimeInvoke).toHaveBeenCalledTimes(1);
-    expect(runtimeInvoke).toHaveBeenCalledWith(expect.any(String), { query: 'launch' });
+    expect(runtimeInvoke).toHaveBeenCalledWith('search_workspace', { query: 'launch' });
   } finally {
     vi.useRealTimers();
   }

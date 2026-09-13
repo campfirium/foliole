@@ -156,14 +156,16 @@ export function saveBackupSettings(
   return normalized;
 }
 
-export function resolveManagedBackupDirectory(settings = loadBackupSettings()) {
+export function resolveManagedBackupDirectory(
+  settings = normalizeBackupSettings(readStoredBackupSettings())
+) {
   if (settings.backup_dir) {
     return settings.backup_dir;
   }
   return path.join(loadLibraryPathSettingsSync().library_home, 'Backups');
 }
 
-export function ensureManagedBackupDirectory(settings = loadBackupSettings()) {
+export function ensureManagedBackupDirectory(settings?: NativeBackupSettings) {
   const directoryPath = resolveManagedBackupDirectory(settings);
   fs.mkdirSync(directoryPath, { recursive: true });
   return directoryPath;
