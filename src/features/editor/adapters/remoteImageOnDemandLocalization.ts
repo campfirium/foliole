@@ -38,12 +38,12 @@ export function attachRemoteImageOnDemandLocalization(
     }).finally(() => { pending = false; });
   };
   window.addEventListener(IMAGE_EXCERPT_SELECTION_MODE_EVENT, onMode);
-  surface.addEventListener('pointerenter', localize);
+  surface.addEventListener('pointermove', localize);
   surface.addEventListener('pointerdown', localize);
   cleanupBySurface.set(surface, () => {
     unregister();
     window.removeEventListener(IMAGE_EXCERPT_SELECTION_MODE_EVENT, onMode);
-    surface.removeEventListener('pointerenter', localize);
+    surface.removeEventListener('pointermove', localize);
     surface.removeEventListener('pointerdown', localize);
   });
 }

@@ -28,7 +28,7 @@ function createAdapter() {
 
 async function targetSurface(index = 0) {
   const surfaces = document.querySelectorAll<HTMLElement>('.cm-md-image-surface');
-  surfaces[index]?.dispatchEvent(new Event('pointerenter'));
+  surfaces[index]?.dispatchEvent(new Event('pointermove'));
   await vi.advanceTimersByTimeAsync(20);
 }
 
@@ -81,6 +81,21 @@ it('does not change content when targeted localization fails', async () => {
   adapter.destroy();
 });
 
+it('does not localize when a palette disappears over a stationary remote image', async () => {
+  const { adapter } = createAdapter();
+  const content = '![Remote](https://example.com/cover.png)';
+  adapter.setNodeId('node-1');
+  adapter.setContent(content);
+
+  expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
+  document.querySelector<HTMLElement>('.cm-md-image-surface')?.dispatchEvent(new Event('pointerenter'));
+  await vi.advanceTimersByTimeAsync(20);
+
+  expect(adapter.getContent()).toBe(content);
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
+  adapter.destroy();
+});
+
 it('discards a targeted result after editor content changes', async () => {
   let resolveImport: ((value: unknown) => void) | undefined;
   importRemoteImageAttachment.mockReturnValue(new Promise((resolve) => { resolveImport = resolve; }));
@@ -88,7 +103,7 @@ it('discards a targeted result after editor content changes', async () => {
   adapter.setNodeId('node-1');
   adapter.setContent('![Remote](https://example.com/cover.png)');
   expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
-  document.querySelector<HTMLElement>('.cm-md-image-surface')?.dispatchEvent(new Event('pointerenter'));
+  document.querySelector<HTMLElement>('.cm-md-image-surface')?.dispatchEvent(new Event('pointermove'));
   adapter.setContent('Replacement');
 
   resolveImport?.({
@@ -110,7 +125,7 @@ it('ignores repeated targeting and a result that arrives after switching nodes',
   adapter.setContent('![Remote](https://example.com/cover.png)');
   expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
   const surface = document.querySelector<HTMLElement>('.cm-md-image-surface');
-  surface?.dispatchEvent(new Event('pointerenter'));
+  surface?.dispatchEvent(new Event('pointermove'));
   surface?.dispatchEvent(new Event('pointerdown'));
   expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
   adapter.setNodeId('node-2');
