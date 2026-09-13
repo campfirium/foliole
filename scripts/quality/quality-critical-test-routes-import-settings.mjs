@@ -2,6 +2,10 @@ const CURRENT_SOURCE_REIMPORT_CONTRACT_TESTS = [
   'electron/import/currentSourceReimport.test.ts'
 ];
 
+const IMPORT_SELECTION_CONTRACT_TESTS = [
+  'electron/ipc/commands.window-and-utility.test.ts'
+];
+
 const READWISE_TOPIC_MERGE_CONTRACT_TESTS = [
   'electron/import/readwiseTopicMerge.test.ts'
 ];
@@ -17,6 +21,12 @@ const MOUSE_GESTURE_FOLDER_INTEGRATION_TESTS = [
 ];
 
 export const IMPORT_SETTINGS_CRITICAL_TEST_ROUTES = [
+  {
+    triggers: [
+      /^electron\/ipc\/importTextFile\.ts$/u
+    ],
+    tests: IMPORT_SELECTION_CONTRACT_TESTS
+  },
   {
     triggers: [
       /^electron\/database\/importPipeline\.ts$/u,

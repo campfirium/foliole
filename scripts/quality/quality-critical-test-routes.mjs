@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { DATABASE_RESTORE_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-database-restore.mjs';
 import { IMPORT_SETTINGS_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-import-settings.mjs';
 
 export const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('../run-vitest-with-summary.mjs', import.meta.url));
@@ -28,10 +29,6 @@ const DOCUMENT_HEADER_MENU_PROVIDER_CONTRACT_TESTS = [
 
 const VIRTUAL_NODE_RESULT_INDEX_CONTRACT_TESTS = [
   'src/features/nodes/model/virtualNodeResultIndex.test.ts'
-];
-
-const IMPORT_SELECTION_CONTRACT_TESTS = [
-  'electron/ipc/commands.window-and-utility.test.ts'
 ];
 
 const Z_INDEX_TOKEN_CONTRACT_TESTS = [
@@ -120,12 +117,7 @@ export const CRITICAL_TEST_ROUTES = [
     ],
     tests: VIRTUAL_NODE_RESULT_INDEX_CONTRACT_TESTS
   },
-  {
-    triggers: [
-      /^electron\/ipc\/importTextFile\.ts$/u
-    ],
-    tests: IMPORT_SELECTION_CONTRACT_TESTS
-  },
+  ...DATABASE_RESTORE_CRITICAL_TEST_ROUTES,
   ...IMPORT_SETTINGS_CRITICAL_TEST_ROUTES,
   {
     triggers: [

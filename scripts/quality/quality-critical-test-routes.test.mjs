@@ -118,6 +118,19 @@ describe('quality critical test routes', () => {
     ]);
   });
 
+  it.each([
+    'electron/ipc/commands.ts',
+    'electron/database/connection.ts',
+    'electron/database/sqliteConnectionCoordinator.ts',
+    'electron/database/guardedBetterSqliteDatabase.ts',
+    'electron/database/backupRestore.ts',
+    'electron/database/sqliteBackupRestore.ts'
+  ])('routes %s to the real backup restore lifecycle contract', (trigger) => {
+    expect(resolveCriticalTestFiles([trigger], existing)).toEqual([
+      'electron/ipc/commands.backupRestore.integration.test.ts'
+    ]);
+  });
+
   it.each(HOSTED_QUALITY_GAP_ROUTES)('routes the %s triggers to their cross-file contract', (_name, triggers, tests) => {
     expect(resolveCriticalTestFiles(triggers, existing)).toEqual(tests);
   });
