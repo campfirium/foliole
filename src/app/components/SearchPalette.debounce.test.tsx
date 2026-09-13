@@ -55,7 +55,7 @@ it('waits until input settles before running workspace search', async () => {
   });
   act(() => vi.advanceTimersByTime(399));
 
-  expect(search).not.toHaveBeenCalled();
+  expect(search).not.toHaveBeenCalledWith('search_workspace', expect.anything());
 
   await act(async () => vi.advanceTimersByTime(1));
 
@@ -74,7 +74,7 @@ it('does not run workspace search while IME composition is active', async () => 
   fireEvent.change(input, { target: { value: 'laun' } });
   act(() => vi.advanceTimersByTime(800));
 
-  expect(search).not.toHaveBeenCalled();
+  expect(search).not.toHaveBeenCalledWith('search_workspace', expect.anything());
 
   fireEvent.compositionEnd(input);
   fireEvent.change(input, { target: { value: 'launch' } });

@@ -80,7 +80,7 @@ it('does not request or write anything when rebuild confirmation is cancelled', 
 
   await waitFor(() => expect(confirmation).toHaveBeenCalledWith({
     confirmLabel: 'Rebuild',
-    description: 'Foliole will get the EPUB from Readwise and rebuild this book’s text, images, and table of contents. Existing highlights, clozes, and notes will be kept and located again.',
+    description: 'Foliole will get the EPUB from Readwise and rebuild this book’s text, images, and table of contents. Existing highlights, clozes, and annotations will be kept and located again.',
     title: 'Rebuild from EPUB?'
   }));
   expect(useOriginal).not.toHaveBeenCalled();
