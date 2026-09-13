@@ -14,7 +14,7 @@ export interface ApplicationDatabaseBackupEntry {
   filePath: string;
   kind: 'manual' | 'automatic' | 'snapshot';
   autoFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly' | null;
-  snapshotReason: 'pre-migration' | 'pre-restore' | null;
+  snapshotReason: 'pre-compact' | 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
 }
@@ -37,7 +37,7 @@ const LEGACY_AUTO_FILE_PATTERN =
   /^auto-(hourly|daily|weekly|monthly)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
 const AUTO_RESTORE_POINT_PATTERN = /^foliole-auto-backup-(\d{6})-(\d{6})\.db(?:\.gz)?$/;
 const SNAPSHOT_FILE_PATTERN =
-  /^(pre-migration|pre-restore)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
+  /^(pre-compact|pre-migration|pre-restore)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
 const MANUAL_FILE_PATTERN =
   /^(?:manual|foliole)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
 

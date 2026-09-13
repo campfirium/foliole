@@ -8,7 +8,7 @@ import { backupSqliteDatabase } from './sqliteBackupRestore.js';
 
 export const INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT = 5;
 
-type InternalDatabaseSnapshotReason = 'pre-cleanup' | 'pre-migration' | 'pre-restore';
+type InternalDatabaseSnapshotReason = 'pre-cleanup' | 'pre-compact' | 'pre-migration' | 'pre-restore';
 
 export interface InternalDatabaseSnapshotResult {
   destinationPath: string;

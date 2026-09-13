@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { NativeDatabaseCompactionResult, NativeDatabaseSpaceStatus } from './nativeDatabaseCompactionContract.js';
 import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
 import type {
   NativeExportSourceDispositionResult,
@@ -152,6 +153,10 @@ export type NativeUtilityCommandMap = {
     args: undefined;
     result: NativeDatabaseMaintenanceStatus;
   };
+  [NATIVE_COMMANDS.loadDatabaseSpaceStatus]: {
+    args: undefined;
+    result: NativeDatabaseSpaceStatus;
+  };
   [NATIVE_COMMANDS.loadBackupSettings]: {
     args: undefined;
     result: NativeBackupSettings;
@@ -175,6 +180,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.restoreSqliteDatabase]: {
     args: { sourcePath: string };
     result: NativeSqliteRestoreResult;
+  };
+  [NATIVE_COMMANDS.compactSqliteDatabase]: {
+    args: undefined;
+    result: NativeDatabaseCompactionResult;
   };
   [NATIVE_COMMANDS.loadSourceDispositionSummary]: {
     args: undefined;

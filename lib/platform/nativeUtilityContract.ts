@@ -162,6 +162,11 @@ export interface NativeSqliteBackupResult {
   totalPages: number;
   remainingPages: number;
   extraBackup: NativeExtraBackupResult;
+  sidecarCleanup: {
+    deletedCount: number;
+    failedCount: number;
+    releasedBytes: number;
+  };
 }
 
 export type NativeExtraBackupResult =
@@ -221,7 +226,7 @@ export interface NativeSqliteBackupEntry {
   filePath: string;
   kind: 'manual' | 'automatic' | 'snapshot';
   autoFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly' | null;
-  snapshotReason: 'pre-migration' | 'pre-restore' | null;
+  snapshotReason: 'pre-compact' | 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
 }

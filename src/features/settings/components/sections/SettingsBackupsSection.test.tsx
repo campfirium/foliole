@@ -53,7 +53,6 @@ beforeEach(() => {
   vi.mocked(loadBackupRetentionStatus).mockReset();
   vi.mocked(loadSourceDispositionSummary).mockReset();
   vi.mocked(restoreDatabaseBackup).mockReset();
-
   vi.mocked(areDatabaseBackupActionsAvailable).mockReturnValue(true);
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
   vi.mocked(saveDatabaseBackupSettings).mockResolvedValue(defaultSettings);
@@ -68,6 +67,7 @@ beforeEach(() => {
       destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
       extraBackup: { destinationPath: null, errorMessage: null, status: 'disabled' },
       remainingPages: 0,
+      sidecarCleanup: { deletedCount: 0, failedCount: 0, releasedBytes: 0 },
       sourcePath: '/app/Data/foliole.db',
       totalPages: 12
     }
@@ -248,6 +248,7 @@ it('shows a warning when the extra backup copy fails after the main backup is cr
         status: 'failed'
       },
       remainingPages: 0,
+      sidecarCleanup: { deletedCount: 0, failedCount: 0, releasedBytes: 0 },
       sourcePath: '/app/Data/foliole.db',
       totalPages: 12
     }

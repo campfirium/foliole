@@ -8,6 +8,10 @@ const ARTIFACT_PATH = path.join(
   process.cwd(),
   '.tmp/artifacts/desktop-acceptance/backup-retention-priority.png'
 );
+const COMPACTION_ARTIFACT_PATH = path.join(
+  process.cwd(),
+  '.tmp/artifacts/desktop-acceptance/database-compaction.png'
+);
 
 test('shows live retention counts and persists drag priority', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
@@ -31,6 +35,26 @@ test('shows live retention counts and persists drag priority', async ({ desktopW
 
   await rules.getByRole('button', { name: /^(Reset|重置)$/ }).click();
   await expect.poll(() => loadPriority(desktopWindow)).toEqual(['hourly', 'daily', 'weekly', 'monthly']);
+});
+
+test('shows database space and compacts only after the explicit action', async ({ desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  const dialog = await openBackupsSection(desktopWindow);
+  const database = dialog.getByRole('region', { name: /^(Database maintenance section|数据库维护设置区)$/ });
+  await database.scrollIntoViewIfNeeded();
+
+  await expect(database.getByText(/(?:total|共).*(?:reclaimable|可回收)/)).toBeVisible();
+  const compact = database.getByRole('button', { name: /^(Compact database|整理数据库)$/ });
+  await compact.click();
+  await expect(database.getByText(/^(Database compacted\.|数据库已整理。)$/)).toBeVisible();
+  await expect(compact).toBeEnabled();
+
+  await mkdir(path.dirname(COMPACTION_ARTIFACT_PATH), { recursive: true });
+  await database.screenshot({ path: COMPACTION_ARTIFACT_PATH });
+  await testInfo.attach('database-compaction', {
+    contentType: 'image/png',
+    path: COMPACTION_ARTIFACT_PATH
+  });
 });
 
 async function loadPriority(desktopWindow: Parameters<typeof openBackupsSection>[0]) {

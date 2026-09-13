@@ -6,7 +6,8 @@ import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection,
-  markDatabaseConnectionUnavailable
+  markDatabaseConnectionUnavailable,
+  openDatabaseConnection
 } from './connection.js';
 import type { ManagedSafetySnapshot } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
@@ -23,7 +24,9 @@ export async function recoverCurrentDatabaseAfterRestoreFailure(args: {
   try {
     closeDatabaseConnection();
     if (!args.replacementComplete) {
-      initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
+      initializeWorkspaceSearchSidecar(openDatabaseConnection({ applyJournalMode: false }), {
+        requireCurrentSource: true
+      });
       clearDatabaseConnectionUnavailable();
       return;
     }

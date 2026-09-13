@@ -84,25 +84,31 @@ export async function runCreateBackup(
     setIsCreatingBackup(false);
     return;
   }
+  const cleanup = result.value.sidecarCleanup ?? { deletedCount: 0, failedCount: 0, releasedBytes: 0 };
+  const sidecarMessage = cleanup.deletedCount > 0
+    ? ` Removed ${cleanup.deletedCount} orphaned database files (${cleanup.releasedBytes} bytes).`
+    : cleanup.failedCount > 0
+      ? ` ${cleanup.failedCount} orphaned database files could not be removed.`
+      : '';
   await refreshBackups();
   const backupName = getBackupFileName(result.value.destinationPath);
   const extraStatus = result.value.extraBackup;
   if (extraStatus.status === 'failed') {
-    setStatusMessage(`Backup created: ${backupName}. Extra copy failed: ${extraStatus.errorMessage}`);
+    setStatusMessage(`Backup created: ${backupName}. Extra copy failed: ${extraStatus.errorMessage}${sidecarMessage}`);
     setIsCreatingBackup(false);
     return;
   }
   if (extraStatus.status === 'skipped_same_directory') {
-    setStatusMessage(`Backup created: ${backupName}. Extra copy skipped because it uses the main backup location.`);
+    setStatusMessage(`Backup created: ${backupName}. Extra copy skipped because it uses the main backup location.${sidecarMessage}`);
     setIsCreatingBackup(false);
     return;
   }
   if (extraStatus.status === 'copied') {
-    setStatusMessage(`Backup created: ${backupName}. Extra copy created.`);
+    setStatusMessage(`Backup created: ${backupName}. Extra copy created.${sidecarMessage}`);
     setIsCreatingBackup(false);
     return;
   }
-  setStatusMessage(`Backup created: ${backupName}.`);
+  setStatusMessage(`Backup created: ${backupName}.${sidecarMessage}`);
   setIsCreatingBackup(false);
 }
 

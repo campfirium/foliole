@@ -1,6 +1,8 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeBackupSettings,
+  NativeDatabaseCompactionResult,
+  NativeDatabaseSpaceStatus,
   NativeBackupRetentionStatus,
   NativeExportSourceDispositionResult,
   NativeImportSourceDispositionResult,
@@ -20,6 +22,8 @@ export type RuntimeSourceDispositionRestoreResult = NativeSourceDispositionResto
 export type RuntimeSourceDispositionSummary = NativeSourceDispositionSummary;
 export type RuntimeSqliteBackupResult = NativeSqliteBackupResult;
 export type RuntimeSqliteRestoreResult = NativeSqliteRestoreResult;
+export type RuntimeDatabaseCompactionResult = NativeDatabaseCompactionResult;
+export type RuntimeDatabaseSpaceStatus = NativeDatabaseSpaceStatus;
 
 export function hasDatabaseBackupRuntimeRepository() {
   return Boolean(getRuntimeInvoke());
@@ -71,6 +75,16 @@ export async function restoreDatabaseBackupInRuntime(sourcePath: string): Promis
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.restoreSqliteDatabase, { sourcePath });
+}
+
+export async function loadDatabaseSpaceStatusFromRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadDatabaseSpaceStatus) : null;
+}
+
+export async function compactDatabaseInRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.compactSqliteDatabase) : null;
 }
 
 export async function loadSourceDispositionSummaryFromRuntime(): Promise<unknown | null> {

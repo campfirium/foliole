@@ -23,7 +23,7 @@ export interface DatabaseBackupEntry {
   filePath: string;
   kind: 'manual' | 'automatic' | 'snapshot';
   autoFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly' | null;
-  snapshotReason: 'pre-migration' | 'pre-restore' | null;
+  snapshotReason: 'pre-compact' | 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
 }
@@ -72,7 +72,7 @@ function normalizeDatabaseBackupEntry(value: unknown): DatabaseBackupEntry | nul
     payload.autoFrequency === 'monthly'
       ? payload.autoFrequency
       : null;
-  const snapshotReason = payload.snapshotReason === 'pre-migration' || payload.snapshotReason === 'pre-restore'
+  const snapshotReason = payload.snapshotReason === 'pre-compact' || payload.snapshotReason === 'pre-migration' || payload.snapshotReason === 'pre-restore'
     ? payload.snapshotReason
     : payload.snapshotReason === null || payload.snapshotReason === undefined
       ? null
@@ -102,7 +102,20 @@ function normalizeSqliteBackupResult(value: unknown): RuntimeSqliteBackupResult 
     destinationPath,
     totalPages,
     remainingPages,
-    extraBackup: normalizeExtraBackupResult(payload.extraBackup)
+    extraBackup: normalizeExtraBackupResult(payload.extraBackup),
+    sidecarCleanup: normalizeSidecarCleanup(payload.sidecarCleanup)
+  };
+}
+
+function normalizeSidecarCleanup(value: unknown): RuntimeSqliteBackupResult['sidecarCleanup'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { deletedCount: 0, failedCount: 0, releasedBytes: 0 };
+  }
+  const payload = value as Record<string, unknown>;
+  return {
+    deletedCount: readNumber(payload.deletedCount) ?? 0,
+    failedCount: readNumber(payload.failedCount) ?? 0,
+    releasedBytes: readNumber(payload.releasedBytes) ?? 0
   };
 }
 

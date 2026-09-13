@@ -28,6 +28,7 @@ import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
+import { cleanupOrphanedBackupSidecars } from './orphanedBackupSidecars.js';
 import {
   backupSqliteDatabase,
   verifySqliteDatabaseFile,
@@ -41,6 +42,7 @@ export interface CreateApplicationDatabaseBackupOptions {
 
 export type ApplicationDatabaseBackupResult = SqliteBackupResult & {
   extraBackup: ExtraBackupCopyResult;
+  sidecarCleanup: Awaited<ReturnType<typeof cleanupOrphanedBackupSidecars>>;
 };
 
 export interface RestoreApplicationDatabaseBackupOptions {
@@ -83,6 +85,8 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
     primaryBackupDir: backupDirectory,
     sourcePath: result.destinationPath
   });
+  const sidecarCleanup = await cleanupOrphanedBackupSidecars(backupDirectory);
+  reportSidecarCleanup(sidecarCleanup);
   return true;
 }
 
@@ -144,9 +148,21 @@ export async function createApplicationDatabaseBackup(
         sourcePath: result.destinationPath
       });
   if (!options.destinationPath) {
+    const sidecarCleanup = await cleanupOrphanedBackupSidecars(backupDirectory);
+    reportSidecarCleanup(sidecarCleanup);
     await pruneBackupsNow();
+    return { ...result, extraBackup, sidecarCleanup };
   }
-  return { ...result, extraBackup };
+  return {
+    ...result,
+    extraBackup,
+    sidecarCleanup: { deletedCount: 0, failedCount: 0, releasedBytes: 0 }
+  };
+}
+
+function reportSidecarCleanup(result: Awaited<ReturnType<typeof cleanupOrphanedBackupSidecars>>) {
+  if (result.deletedCount === 0 && result.failedCount === 0) return;
+  console.info('[backup] retired orphaned legacy SQLite sidecars', result);
 }
 
 export async function restoreApplicationDatabaseBackup(

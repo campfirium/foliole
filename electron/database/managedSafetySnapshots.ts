@@ -23,7 +23,7 @@ const pendingSettlements = new Set<Promise<void>>();
 interface SafetySnapshotOptions {
   destinationDirectory?: string;
   now?: Date;
-  reason: 'pre-migration' | 'pre-restore';
+  reason: 'pre-compact' | 'pre-migration' | 'pre-restore';
   sourceDatabase: SqliteDatabase;
   sourcePath: string;
 }

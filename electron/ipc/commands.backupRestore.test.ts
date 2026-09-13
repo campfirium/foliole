@@ -40,6 +40,19 @@ const {
   })
 }));
 
+const { compactApplicationDatabase, loadApplicationDatabaseSpaceStatus } = vi.hoisted(() => ({
+  compactApplicationDatabase: vi.fn().mockResolvedValue({
+    before: { database_size_bytes: 4096, reclaimable_bytes: 1024, reclaimable_percent: 25 },
+    after: { database_size_bytes: 3072, reclaimable_bytes: 0, reclaimable_percent: 0 },
+    safety_snapshot_path: '/app/Backups/pre-compact.db.gz'
+  }),
+  loadApplicationDatabaseSpaceStatus: vi.fn().mockResolvedValue({
+    database_size_bytes: 4096,
+    reclaimable_bytes: 1024,
+    reclaimable_percent: 25
+  })
+}));
+
 const loadBackupRetentionStatus = vi.hoisted(() => vi.fn().mockResolvedValue({
   counts: { hourly: 1, daily: 0, weekly: 0, monthly: 0 },
   lastCleanup: null,
@@ -77,6 +90,10 @@ vi.mock('../database/backupRestore.js', () => ({
   createApplicationDatabaseBackup,
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
+}));
+vi.mock('../database/databaseCompaction.js', () => ({
+  compactApplicationDatabase,
+  loadApplicationDatabaseSpaceStatus
 }));
 vi.mock('../database/backupRetentionStatus.js', () => ({ loadBackupRetentionStatus }));
 vi.mock('../database/backupSettings.js', async (importOriginal) => ({
@@ -181,4 +198,18 @@ it('dispatches sqlite restore command through invoke handler', async () => {
   });
 
   expect(restoreApplicationDatabaseBackup).toHaveBeenCalledWith({ sourcePath: '/tmp/backup.db' });
+});
+
+it('dispatches database space status and explicit compaction', async () => {
+  await expect(handleInvokeRequest({ command: 'load_database_space_status' })).resolves.toEqual({
+    database_size_bytes: 4096,
+    reclaimable_bytes: 1024,
+    reclaimable_percent: 25
+  });
+  await expect(handleInvokeRequest({ command: 'compact_sqlite_database' })).resolves.toMatchObject({
+    after: { database_size_bytes: 3072 },
+    before: { database_size_bytes: 4096 }
+  });
+  expect(loadApplicationDatabaseSpaceStatus).toHaveBeenCalledTimes(1);
+  expect(compactApplicationDatabase).toHaveBeenCalledTimes(1);
 });

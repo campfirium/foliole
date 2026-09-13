@@ -42,6 +42,7 @@ export type * from './nativeReadwiseContract.js'; export type * from './nativeUt
 export type * from './nativeReadwiseApiConnectionContract.js';
 export type * from './nativeReadwiseApiImportContract.js';
 export type * from './nativeSourceDispositionContract.js';
+export type * from './nativeDatabaseCompactionContract.js';
 export type * from './nativeInitialLibrarySetupContract.js';
 export type * from './nativeNodeOpenStateContract.js';
 export type * from './nativeAideStorageContract.js';

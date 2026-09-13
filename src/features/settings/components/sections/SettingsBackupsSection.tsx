@@ -13,8 +13,10 @@ import {
   BackupPathRow,
   ExtraBackupCopySection
 } from './backupSettingsSectionParts';
+import { DatabaseCompactionRow } from './DatabaseCompactionRow';
 import { SourceDispositionStateRow } from './SourceDispositionStateRow';
 import { useBackupSettingsSectionState } from './useBackupSettingsSectionState';
+import { useDatabaseCompaction } from './useDatabaseCompaction';
 
 function BackupLoadingState() {
   const t = useTranslation();
@@ -59,6 +61,7 @@ function BackupLoadErrorState(props: {
 
 export function SettingsBackupsSection() {
   const state = useBackupSettingsSectionState();
+  const compaction = useDatabaseCompaction(state.isDesktopRuntime);
   const t = useTranslation();
 
   if (!state.activeDraft) {
@@ -99,6 +102,19 @@ export function SettingsBackupsSection() {
         onChangePriority={state.handleRetentionPriority}
         status={state.retentionStatus}
       />
+      <SettingsSection ariaLabel={t('settings.backups.database.sectionAria')} title={t('settings.backups.database.sectionTitle')}>
+        <DatabaseCompactionRow
+          compact={compaction.compact}
+          isAvailable={state.isDesktopRuntime}
+          isCompacting={compaction.isCompacting}
+          status={compaction.status}
+          statusMessage={compaction.statusMessage === 'success'
+            ? t('settings.backups.database.success')
+            : compaction.statusMessage
+              ? t('settings.backups.database.failed', { message: compaction.statusMessage })
+              : ''}
+        />
+      </SettingsSection>
     </>
   );
 }

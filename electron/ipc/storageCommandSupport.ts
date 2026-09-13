@@ -6,6 +6,10 @@ import {
 } from '../database/backupRestore.js';
 import { loadBackupRetentionStatus } from '../database/backupRetentionStatus.js';
 import { loadBackupSettings } from '../database/backupSettings.js';
+import {
+  compactApplicationDatabase,
+  loadApplicationDatabaseSpaceStatus
+} from '../database/databaseCompaction.js';
 
 import { asNullableString, asString } from './commandParsers.js';
 
@@ -30,6 +34,9 @@ export function handleSqliteMaintenanceCommand(command: string, args: Record<str
   if (command === NATIVE_COMMANDS.loadBackupRetentionStatus) {
     return loadBackupRetentionStatus(loadBackupSettings());
   }
+  if (command === NATIVE_COMMANDS.loadDatabaseSpaceStatus) {
+    return loadApplicationDatabaseSpaceStatus();
+  }
   if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
     const destinationPath = asNullableString(args.destinationPath, 'destinationPath');
     return createApplicationDatabaseBackup({
@@ -40,6 +47,9 @@ export function handleSqliteMaintenanceCommand(command: string, args: Record<str
     return restoreApplicationDatabaseBackup({
       sourcePath: asString(args.sourcePath, 'sourcePath')
     });
+  }
+  if (command === NATIVE_COMMANDS.compactSqliteDatabase) {
+    return compactApplicationDatabase();
   }
   return undefined;
 }

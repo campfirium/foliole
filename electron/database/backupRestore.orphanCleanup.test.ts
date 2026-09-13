@@ -44,6 +44,7 @@ it('reclaims interrupted private compression files before creating the next rest
   const orphanName = '.foliole-auto-backup-260402-100000.db.gz-11111111-1111-4111-8111-111111111111.source.db';
   await fs.mkdir(backupDirectory, { recursive: true });
   await fs.writeFile(path.join(backupDirectory, orphanName), Buffer.alloc(13));
+  await fs.writeFile(path.join(backupDirectory, 'manual-2026-04-01_09-00-00-000.db-wal'), Buffer.alloc(17));
   await fs.writeFile(path.join(backupDirectory, 'manual-2026-04-02_09-00-00-000.db'), 'formal');
 
   await expect(reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0))).resolves.toEqual({
