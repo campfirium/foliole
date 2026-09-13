@@ -34,7 +34,7 @@ export function attachRemoteImageOnDemandLocalization(
       to: Number.isInteger(to) ? to : imageMatch.to
     }).then((localized) => {
       if (!localized) cancelImageExcerptRegionSelection();
-      if (localized) queueMicrotask(() => requestImageExcerptRegionSelection(nodeId));
+      if (localized) requestAnimationFrame(() => requestImageExcerptRegionSelection(nodeId));
     }).finally(() => { pending = false; });
   };
   window.addEventListener(IMAGE_EXCERPT_SELECTION_MODE_EVENT, onMode);

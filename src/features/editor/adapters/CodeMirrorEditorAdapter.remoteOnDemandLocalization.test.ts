@@ -56,12 +56,17 @@ it('localizes only the remote image targeted for an excerpt', async () => {
 
   expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
   await targetSurface(1);
+  await vi.advanceTimersByTimeAsync(20);
 
   expect(adapter.getContent()).toBe(`${first}\n![Second](${IMAGE_URL})`);
   expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/second.png');
   expect(onChange).toHaveBeenLastCalledWith(`${first}\n![Second](${IMAGE_URL})`, { nodeId: 'node-1' });
-  expect(document.querySelector(`[data-md-image-attachment-id="${IMAGE_HASH}"]`)).not.toBeNull();
+  const localizedSurface = document.querySelector<HTMLElement>(
+    `[data-md-image-attachment-id="${IMAGE_HASH}"] .cm-md-image-surface`
+  );
+  expect(localizedSurface).not.toBeNull();
+  expect(localizedSurface?.dataset.mdImageExcerptActive).toBe('true');
   expect(requestImageExcerptRegionSelection('node-1')).toBe(true);
   adapter.destroy();
 });

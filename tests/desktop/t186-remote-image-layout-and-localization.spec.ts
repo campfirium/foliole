@@ -174,6 +174,8 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
   await expectWorkspaceShell(desktopWindow);
   await installControlledImages(desktopApp);
   await seed(desktopWindow);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
 
   await openNode(desktopWindow, IDS.layout);
   await expect(desktopWindow.getByAltText('Large A').locator('..')).toHaveCSS('aspect-ratio', '640 / 360');
@@ -186,22 +188,19 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
   }
   expect(await inspectLinks(desktopApp, IDS.layout)).toHaveLength(0);
 
-  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-auto-localize-remote-images', 'true'));
-  await openNode(desktopWindow, IDS.auto);
-  await expect.poll(() => desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.auto))
-    .toMatch(/asset:\/\//);
-  await expect(desktopWindow.locator('.cm-md-image-surface-clozeable')).toBeVisible();
-  expect(await inspectLinks(desktopApp, IDS.auto)).toHaveLength(1);
-
-  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-auto-localize-remote-images', 'false'));
-  await desktopWindow.reload();
-  await expectWorkspaceShell(desktopWindow);
   await openNode(desktopWindow, IDS.onDemand);
   await waitForImages(desktopWindow, 2);
   const frameTrace = await localizeAndExcerptSecond(desktopWindow);
   expect(await inspectLinks(desktopApp, IDS.onDemand)).toHaveLength(1);
   expect(frameTrace).toMatchObject({ excerptCreated: true, imageRebuilt: true });
   expect(frameTrace.blankFrames).toBeLessThanOrEqual(1);
+
+  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-auto-localize-remote-images', 'true'));
+  await openNode(desktopWindow, IDS.auto);
+  await expect.poll(() => desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, IDS.auto))
+    .toMatch(/asset:\/\//);
+  await expect(desktopWindow.locator('.cm-md-image-surface-clozeable')).toBeVisible();
+  expect(await inspectLinks(desktopApp, IDS.auto)).toHaveLength(1);
 
   const probe = await desktopApp.evaluate(() => structuredClone(globalThis.__t186Probe));
   for (const url of Object.values(URLS)) expect(probe.requests.filter((request) => request === url)).toHaveLength(1);
