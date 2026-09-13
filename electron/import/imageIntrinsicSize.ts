@@ -22,6 +22,14 @@ function readUint32(bytes: Uint8Array, offset: number) {
   );
 }
 
+function readUint16Le(bytes: Uint8Array, offset: number) {
+  return bytes[offset]! + (bytes[offset + 1]! << 8);
+}
+
+function readUint24Le(bytes: Uint8Array, offset: number) {
+  return bytes[offset]! + (bytes[offset + 1]! << 8) + (bytes[offset + 2]! << 16);
+}
+
 function readPngSize(bytes: Uint8Array): ImageIntrinsicSize | null {
   if (bytes.length < 24 || !hasPngSignature(bytes)) {
     return null;
@@ -69,6 +77,37 @@ function readJpegSize(bytes: Uint8Array): ImageIntrinsicSize | null {
   return null;
 }
 
+function readGifSize(bytes: Uint8Array): ImageIntrinsicSize | null {
+  if (bytes.length < 10) return null;
+  const signature = String.fromCharCode(...bytes.slice(0, 6));
+  if (signature !== 'GIF87a' && signature !== 'GIF89a') return null;
+  const width = readUint16Le(bytes, 6);
+  const height = readUint16Le(bytes, 8);
+  return width > 0 && height > 0 ? { height, width } : null;
+}
+
+function hasAscii(bytes: Uint8Array, offset: number, value: string) {
+  return Array.from(value).every((character, index) => bytes[offset + index] === character.charCodeAt(0));
+}
+
+function readWebpSize(bytes: Uint8Array): ImageIntrinsicSize | null {
+  if (bytes.length < 20 || !hasAscii(bytes, 0, 'RIFF') || !hasAscii(bytes, 8, 'WEBP')) return null;
+  if (hasAscii(bytes, 12, 'VP8X') && bytes.length >= 30) {
+    return { height: readUint24Le(bytes, 27) + 1, width: readUint24Le(bytes, 24) + 1 };
+  }
+  if (hasAscii(bytes, 12, 'VP8L') && bytes.length >= 25 && bytes[20] === 0x2f) {
+    const width = 1 + bytes[21]! + ((bytes[22]! & 0x3f) << 8);
+    const height = 1 + (bytes[22]! >> 6) + (bytes[23]! << 2) + ((bytes[24]! & 0x0f) << 10);
+    return { height, width };
+  }
+  if (hasAscii(bytes, 12, 'VP8 ') && bytes.length >= 30 && hasAscii(bytes, 23, String.fromCharCode(0x9d, 0x01, 0x2a))) {
+    const width = readUint16Le(bytes, 26) & 0x3fff;
+    const height = readUint16Le(bytes, 28) & 0x3fff;
+    return width > 0 && height > 0 ? { height, width } : null;
+  }
+  return null;
+}
+
 export function readImageIntrinsicSize(bytes: Uint8Array): ImageIntrinsicSize | null {
-  return readPngSize(bytes) ?? readJpegSize(bytes);
+  return readPngSize(bytes) ?? readJpegSize(bytes) ?? readGifSize(bytes) ?? readWebpSize(bytes);
 }

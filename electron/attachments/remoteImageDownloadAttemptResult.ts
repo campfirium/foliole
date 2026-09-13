@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
+import { readImageIntrinsicSize, type ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { normalizeImageFileName } from './importImageAttachmentBytes.js';
 import { readRemoteImageResponseBytes } from './remoteImageBodyReader.js';
@@ -24,6 +25,7 @@ interface RemoteImageAttemptResponseArgs {
   attempt: RemoteImageAttempt;
   cacheKey: string;
   fetched: RemoteImageFetchResponse;
+  onIntrinsicSize?: (size: ImageIntrinsicSize) => void;
   response: Response;
   sourceUrl: string;
   startedAt: number;
@@ -87,6 +89,7 @@ export async function resolveRemoteImageAttemptResponse(
     resource: {
       bytes: bytes.value,
       cacheKey: args.cacheKey,
+      intrinsicSize: readImageIntrinsicSize(bytes.value),
       mimeType,
       originalName: resolveOriginalName(args.sourceUrl, mimeType),
       sourceUrl: args.sourceUrl
@@ -144,7 +147,14 @@ function createStatusFailure(args: RemoteImageAttemptResponseArgs): RemoteImageF
 async function readSupportedRemoteImageBytes(
   args: RemoteImageAttemptResponseArgs
 ): Promise<{ status: 'ready'; value: Uint8Array } | { status: 'error'; error: RemoteImageErrorResult }> {
-  const readResult = await readRemoteImageResponseBytes(args.response, args.fetched.signal).catch(() => null);
+  let didResolveSize = false;
+  const readResult = await readRemoteImageResponseBytes(args.response, args.fetched.signal, (prefix) => {
+    if (didResolveSize) return;
+    const size = readImageIntrinsicSize(prefix);
+    if (!size) return;
+    didResolveSize = true;
+    args.onIntrinsicSize?.(size);
+  }).catch(() => null);
   if (!readResult) return createReadFailure(args, null, 'The remote image could not be downloaded.');
   if (readResult.status === 'too_large')
     return createReadFailure(args, readResult.bytes, 'The remote image is larger than the supported size limit.');

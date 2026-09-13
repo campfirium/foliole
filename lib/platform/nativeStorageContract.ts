@@ -148,6 +148,7 @@ export interface NativeImportClipboardImageAttachmentArgs {
 
 export interface NativeImportRemoteImageAttachmentArgs {
   nodeId: string;
+  sourceOrigin?: string | null;
   sourceUrl: string;
 }
 

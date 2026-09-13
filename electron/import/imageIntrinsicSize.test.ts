@@ -38,3 +38,18 @@ it('reads JPEG dimensions from a start-of-frame segment', () => {
 it('returns null when image dimensions cannot be read', () => {
   expect(readImageIntrinsicSize(new Uint8Array([1, 2, 3]))).toBeNull();
 });
+
+it('reads GIF logical screen dimensions', () => {
+  const bytes = new Uint8Array([...new TextEncoder().encode('GIF89a'), 0x40, 0x01, 0xf0, 0x00]);
+  expect(readImageIntrinsicSize(bytes)).toEqual({ height: 240, width: 320 });
+});
+
+it('reads WebP VP8X canvas dimensions', () => {
+  const bytes = new Uint8Array(30);
+  bytes.set(new TextEncoder().encode('RIFF'), 0);
+  bytes.set(new TextEncoder().encode('WEBP'), 8);
+  bytes.set(new TextEncoder().encode('VP8X'), 12);
+  bytes.set([0x3f, 0x01, 0x00], 24);
+  bytes.set([0xef, 0x00, 0x00], 27);
+  expect(readImageIntrinsicSize(bytes)).toEqual({ height: 240, width: 320 });
+});

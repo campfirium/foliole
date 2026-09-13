@@ -76,6 +76,7 @@ export const NATIVE_COMMANDS = {
   importRemoteImageAttachment: 'import_remote_image_attachment',
   forgetRemoteImageLearnedSource: 'forget_remote_image_learned_source',
   loadRemoteImageSourceContext: 'load_remote_image_source_context',
+  loadRemoteImageMetadata: 'load_remote_image_metadata',
   saveRemoteImageSourceOrigin: 'save_remote_image_source_origin',
   resolveAttachmentResource: 'resolve_attachment_resource',
   copyAttachmentImageToClipboard: 'copy_attachment_image_to_clipboard',

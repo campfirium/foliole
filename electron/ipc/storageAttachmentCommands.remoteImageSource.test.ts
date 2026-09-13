@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  fetchRemoteImageMetadata: vi.fn(),
   resolveRemoteImageSourceContext: vi.fn()
 }));
 
@@ -17,6 +18,9 @@ vi.mock('../attachments/remoteImageLearnedSources.js', () => ({
 }));
 vi.mock('../attachments/remoteImageSourceContext.js', () => ({
   resolveRemoteImageSourceContext: mocks.resolveRemoteImageSourceContext
+}));
+vi.mock('../attachments/remoteImagePipeline.js', () => ({
+  fetchRemoteImageMetadata: mocks.fetchRemoteImageMetadata
 }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource: vi.fn() }));
 
@@ -45,4 +49,19 @@ it('returns only normalized origin and provenance fields to the renderer', () =>
   expect(mocks.resolveRemoteImageSourceContext).toHaveBeenCalledWith(
     'node-1', 'https://cdn.example/image.png'
   );
+});
+
+it('loads metadata with the node source context and retry intent', async () => {
+  mocks.resolveRemoteImageSourceContext.mockReturnValue({ sourceOrigin: 'https://source.example/' });
+  mocks.fetchRemoteImageMetadata.mockResolvedValue({ height: 240, width: 320 });
+
+  await expect(handleStorageAttachmentCommand(NATIVE_COMMANDS.loadRemoteImageMetadata, {
+    bypass_failure_cache: true,
+    node_id: 'node-1',
+    source_url: 'https://cdn.example/image.png'
+  })).resolves.toEqual({ intrinsic_size: { height: 240, width: 320 } });
+  expect(mocks.fetchRemoteImageMetadata).toHaveBeenCalledWith('https://cdn.example/image.png', {
+    bypassFailureCache: true,
+    sourceOrigin: 'https://source.example/'
+  });
 });

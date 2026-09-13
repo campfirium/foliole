@@ -2,6 +2,7 @@ import type {
   NativeImportLocalImageAttachmentResult,
   NativeImportRemoteImageAttachmentArgs
 } from '../../lib/platform/nativeStorageContract.js';
+import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { importImageAttachmentBytes } from './importImageAttachmentBytes.js';
 import {
@@ -26,7 +27,12 @@ import {
 import { learnRemoteImageSourceOrigin } from './remoteImageLearnedSources.js';
 import { resolveRemoteImageTransportName } from './remoteImageTransport.js';
 
-const fetchByCacheKey = new Map<string, Promise<RemoteImageFetchResult>>();
+interface RemoteImageFetchLifecycle {
+  metadataReady: Promise<ImageIntrinsicSize | null>;
+  resourceReady: Promise<RemoteImageFetchResult>;
+}
+
+const fetchByCacheKey = new Map<string, RemoteImageFetchLifecycle>();
 const importByNodeAndCacheKey = new Map<string, Promise<NativeImportLocalImageAttachmentResult>>();
 const failureByCacheKey = new Map<string, { error: RemoteImageErrorResult; expiresAt: number }>();
 let fetchTransportForTests: RemoteImageFetchTransport | null = null;
@@ -89,9 +95,25 @@ export async function fetchRemoteImageResource(
   const cachedError = readCachedRemoteImageFailure(sourceUrl, fetchKey, options);
   if (cachedError) return cachedError;
   if (!fetchByCacheKey.has(fetchKey)) {
-    fetchByCacheKey.set(fetchKey, createRemoteImageFetchPromise(sourceUrl, cacheKey, fetchKey, options));
+    fetchByCacheKey.set(fetchKey, createRemoteImageFetchLifecycle(sourceUrl, cacheKey, fetchKey, options));
   }
-  return fetchByCacheKey.get(fetchKey)!;
+  return fetchByCacheKey.get(fetchKey)!.resourceReady;
+}
+
+export async function fetchRemoteImageMetadata(
+  sourceUrl: string,
+  options: RemoteImageFetchOptions = {}
+): Promise<ImageIntrinsicSize | null> {
+  const cacheKey = resolveRemoteImageCacheKey(sourceUrl);
+  if (!cacheKey) return null;
+  const cachedResource = await readRemoteImageCache(cacheKey);
+  if (cachedResource) return cachedResource.intrinsicSize;
+  const fetchKey = resolveRemoteImageFetchKey(cacheKey, options.sourceOrigin ?? null);
+  if (readCachedRemoteImageFailure(sourceUrl, fetchKey, options)) return null;
+  if (!fetchByCacheKey.has(fetchKey)) {
+    fetchByCacheKey.set(fetchKey, createRemoteImageFetchLifecycle(sourceUrl, cacheKey, fetchKey, options));
+  }
+  return fetchByCacheKey.get(fetchKey)!.metadataReady;
 }
 
 async function readCachedRemoteImageResource(
@@ -140,18 +162,28 @@ function readCachedRemoteImageFailure(
   return { status: 'error', error: cachedError };
 }
 
-function createRemoteImageFetchPromise(
+function createRemoteImageFetchLifecycle(
   sourceUrl: string,
   cacheKey: string,
   fetchKey: string,
   options: RemoteImageFetchOptions
-) {
-  return downloadRemoteImageBytes(
+): RemoteImageFetchLifecycle {
+  let resolveMetadata!: (size: ImageIntrinsicSize | null) => void;
+  let didResolveMetadata = false;
+  const metadataReady = new Promise<ImageIntrinsicSize | null>((resolve) => { resolveMetadata = resolve; });
+  const finishMetadata = (size: ImageIntrinsicSize | null) => {
+    if (didResolveMetadata) return;
+    didResolveMetadata = true;
+    resolveMetadata(size);
+  };
+  const resourceReady = downloadRemoteImageBytes(
     sourceUrl.trim(),
     cacheKey,
     options.sourceOrigin ?? null,
-    fetchTransportForTests
+    fetchTransportForTests,
+    finishMetadata
   ).then(async (result) => {
+    finishMetadata(result.status === 'ready' ? result.resource.intrinsicSize : null);
     if (result.status === 'error') {
       fetchByCacheKey.delete(fetchKey);
       failureByCacheKey.set(fetchKey, {
@@ -162,13 +194,14 @@ function createRemoteImageFetchPromise(
     }
     return storeRemoteImageFetchResult(sourceUrl, options.sourceOrigin ?? null, result);
   });
+  return { metadataReady, resourceReady };
 }
 
 export async function importRemoteImageAttachment(
   args: NativeImportRemoteImageAttachmentArgs
 ): Promise<NativeImportLocalImageAttachmentResult> {
   const normalizedNodeId = args.nodeId.trim();
-  const fetchResult = await fetchRemoteImageResource(args.sourceUrl);
+  const fetchResult = await fetchRemoteImageResource(args.sourceUrl, { sourceOrigin: args.sourceOrigin ?? null });
   if (fetchResult.status === 'error') {
     return fetchResult.error;
   }

@@ -1,4 +1,5 @@
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
+import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import {
   createRemoteImageDownloadError,
@@ -35,6 +36,7 @@ interface RemoteImageBytesResult {
   bytes: Uint8Array;
   cacheKey: string;
   mimeType: string;
+  intrinsicSize: ImageIntrinsicSize | null;
   originalName: string;
   sourceUrl: string;
 }
@@ -73,7 +75,8 @@ async function runRemoteImageAttempt(
   sourceUrl: string,
   cacheKey: string,
   attempt: RemoteImageAttempt,
-  fetchTransportForTests: RemoteImageFetchTransport | null
+  fetchTransportForTests: RemoteImageFetchTransport | null,
+  onIntrinsicSize?: (size: ImageIntrinsicSize) => void
 ): Promise<RemoteImageFetchResult> {
   const startedAt = Date.now();
   const transportName = resolveRemoteImageTransportName(fetchTransportForTests);
@@ -90,6 +93,7 @@ async function runRemoteImageAttempt(
       attempt,
       cacheKey,
       fetched,
+      ...(onIntrinsicSize ? { onIntrinsicSize } : {}),
       response,
       sourceUrl,
       startedAt,
@@ -107,13 +111,15 @@ export async function downloadRemoteImageBytes(
   sourceUrl: string,
   cacheKey: string,
   sourceOrigin: string | null,
-  fetchTransportForTests: RemoteImageFetchTransport | null
+  fetchTransportForTests: RemoteImageFetchTransport | null,
+  onIntrinsicSize?: (size: ImageIntrinsicSize) => void
 ): Promise<RemoteImageFetchResult> {
   const direct = await runRemoteImageAttempt(
     sourceUrl,
     cacheKey,
     { attempt: 1, sourceOrigin, strategy: 'direct' },
-    fetchTransportForTests
+    fetchTransportForTests,
+    onIntrinsicSize
   );
   return direct.status === 'ready' || !sourceOrigin
     ? direct
@@ -121,6 +127,7 @@ export async function downloadRemoteImageBytes(
       sourceUrl,
       cacheKey,
       { attempt: 2, sourceOrigin, strategy: 'source-origin' },
-      fetchTransportForTests
+      fetchTransportForTests,
+      onIntrinsicSize
     );
 }

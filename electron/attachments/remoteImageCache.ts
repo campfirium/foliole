@@ -2,12 +2,15 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
+
 import { isSupportedImageMimeType, validateSupportedImageBytes } from './supportedImageFormats.js';
 
 interface RemoteImageCacheMetadata {
   cachedAt: string;
   cacheKey: string;
   lastReadAt: string;
+  intrinsicSize: ImageIntrinsicSize | null;
   mimeType: string;
   originalName: string;
   sizeBytes: number;
@@ -17,6 +20,7 @@ interface RemoteImageCacheMetadata {
 export interface RemoteImageCacheEntry {
   bytes: Uint8Array;
   cacheKey: string;
+  intrinsicSize: ImageIntrinsicSize | null;
   mimeType: string;
   originalName: string;
   sourceUrl: string;
@@ -45,6 +49,7 @@ function isCacheMetadata(value: unknown, cacheKey: string): value is RemoteImage
   }
   const candidate = value as Record<string, unknown>;
   const sizeBytes = candidate.sizeBytes;
+  const intrinsicSize = candidate.intrinsicSize as Record<string, unknown> | undefined;
   return (
     candidate.cacheKey === cacheKey &&
     typeof candidate.sourceUrl === 'string' &&
@@ -53,7 +58,15 @@ function isCacheMetadata(value: unknown, cacheKey: string): value is RemoteImage
     typeof candidate.originalName === 'string' &&
     typeof sizeBytes === 'number' &&
     Number.isInteger(sizeBytes) &&
-    sizeBytes >= 0
+    sizeBytes >= 0 &&
+    (candidate.intrinsicSize === null || (
+      typeof intrinsicSize?.width === 'number' &&
+      Number.isInteger(intrinsicSize.width) &&
+      intrinsicSize.width > 0 &&
+      typeof intrinsicSize.height === 'number' &&
+      Number.isInteger(intrinsicSize.height) &&
+      intrinsicSize.height > 0
+    ))
   );
 }
 
@@ -118,6 +131,7 @@ export async function readRemoteImageCache(cacheKey: string): Promise<RemoteImag
     return {
       bytes: new Uint8Array(bytes),
       cacheKey,
+      intrinsicSize: metadata.intrinsicSize,
       mimeType: metadata.mimeType,
       originalName: metadata.originalName,
       sourceUrl: metadata.sourceUrl
@@ -140,6 +154,7 @@ export async function writeRemoteImageCache(entry: RemoteImageCacheEntry) {
       cachedAt: now,
       cacheKey: entry.cacheKey,
       lastReadAt: now,
+      intrinsicSize: entry.intrinsicSize,
       mimeType: entry.mimeType,
       originalName: entry.originalName,
       sizeBytes: entry.bytes.byteLength,

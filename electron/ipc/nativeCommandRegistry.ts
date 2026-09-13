@@ -86,6 +86,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.importRemoteImageAttachment, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.forgetRemoteImageLearnedSource, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadRemoteImageSourceContext, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadRemoteImageMetadata, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveRemoteImageSourceOrigin, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.resolveAttachmentResource, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.copyAttachmentImageToClipboard, route: 'storage', capability: 'clipboardWrite' },

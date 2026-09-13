@@ -112,6 +112,7 @@ it('persists the image when the render URL requests node-backed localization', a
 
   expect(importRemoteImageAttachment).toHaveBeenCalledWith({
     nodeId: 'node-1',
+    sourceOrigin: null,
     sourceUrl: 'https://example.com/cover.png'
   });
   expect(response.status).toBe(200);
@@ -139,6 +140,7 @@ it('keeps rendering the remote image when node-backed localization fails', async
 
   expect(importRemoteImageAttachment).toHaveBeenCalledWith({
     nodeId: 'node-1',
+    sourceOrigin: null,
     sourceUrl: 'https://example.com/cover.png'
   });
   expect(response.status).toBe(200);

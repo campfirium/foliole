@@ -8,6 +8,7 @@ import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteIma
 const demoRuntimeMock = vi.hoisted(() => ({
   isDemo: false
 }));
+const metadataMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
@@ -30,6 +31,9 @@ vi.mock('../../../shared/platform/remoteImageSourceRecovery', () => ({
     sourceOrigin: null
   })),
   saveRemoteImageSourceWebsite: vi.fn()
+}));
+vi.mock('../../../shared/platform/external/remoteImageMetadata', () => ({
+  loadRemoteImageMetadata: metadataMock
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
@@ -73,12 +77,27 @@ async function runDemoRemoteImageLimitCase() {
   adapter.destroy();
 }
 
+async function runLargeMetadataSlotCase() {
+  metadataMock.mockResolvedValue({ height: 900, width: 1200 });
+  const { adapter, host } = createAdapterHost('Lead ![Remote](https://example.com/cover.png) tail');
+  await waitFor(() => {
+    const widget = host.querySelector<HTMLElement>('.cm-md-image-widget');
+    expect(widget).toHaveAttribute('data-md-image-final-display', 'block');
+    expect(widget).toHaveClass('cm-md-image-widget-block');
+    expect(widget?.querySelector<HTMLElement>('.cm-md-image-surface')?.style.aspectRatio).toBe('1200 / 900');
+    expect(host.querySelector('.cm-md-image-status')).toBeNull();
+  });
+  expect(host.querySelector('.cm-md-image-surface-loading')).not.toBeNull();
+  adapter.destroy();
+}
+
 describe('live markdown remote image rendering', () => {
   beforeEach(() => {
     demoRuntimeMock.isDemo = false;
     resetRemoteImageFailureHintDismissalForTests();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
+    metadataMock.mockReset().mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -117,6 +136,8 @@ describe('live markdown remote image rendering', () => {
 
     adapter.destroy();
   });
+
+  it('stabilizes a large inline image slot from metadata before image load', runLargeMetadataSlotCase);
 
   it('shows unavailable when the internal protocol image fails', async () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');

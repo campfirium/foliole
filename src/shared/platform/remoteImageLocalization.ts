@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeImportLocalImageAttachmentResult } from '../../../lib/platform/nativeStorageContract';
 
+import { loadRemoteImageSourceContext } from './remoteImageSourceRecovery';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 function isImportResult(value: unknown): value is NativeImportLocalImageAttachmentResult {
@@ -17,8 +18,11 @@ export async function importRemoteImageAttachment(nodeId: string, sourceUrl: str
     return null;
   }
 
+  const context = await loadRemoteImageSourceContext(sourceUrl, nodeId).catch(() => null);
+
   const result = await runtimeInvoke(NATIVE_COMMANDS.importRemoteImageAttachment, {
     nodeId,
+    sourceOrigin: context?.sourceOrigin ?? null,
     sourceUrl
   });
   return isImportResult(result) ? result : null;

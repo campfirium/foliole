@@ -4,6 +4,24 @@ export type RemoteImageBodyReadResult =
   | { status: 'ready'; bytes: Uint8Array }
   | { status: 'too_large'; bytes: number };
 
+type PrefixObserver = (bytes: Uint8Array) => void;
+
+class GrowingPrefix {
+  private bytes = new Uint8Array(64);
+  private length = 0;
+
+  append(chunk: Uint8Array) {
+    while (this.bytes.length < this.length + chunk.length) {
+      const grown = new Uint8Array(Math.min(REMOTE_IMAGE_MAX_BYTES, this.bytes.length * 2));
+      grown.set(this.bytes.subarray(0, this.length));
+      this.bytes = grown;
+    }
+    this.bytes.set(chunk, this.length);
+    this.length += chunk.length;
+    return this.bytes.subarray(0, this.length);
+  }
+}
+
 function parseContentLength(response: Response) {
   const headerValue = response.headers.get('content-length');
   if (!headerValue?.trim()) return null;
@@ -43,11 +61,13 @@ function combineChunks(chunks: Uint8Array[], totalBytes: number) {
 
 async function readStreamBody(
   body: ReadableStream<Uint8Array>,
-  signal: AbortSignal
+  signal: AbortSignal,
+  observePrefix?: PrefixObserver
 ): Promise<RemoteImageBodyReadResult> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
+  const prefix = observePrefix ? new GrowingPrefix() : null;
   try {
     for (;;) {
       const result = await runWithAbort(reader.read(), signal);
@@ -59,6 +79,7 @@ async function readStreamBody(
         return { status: 'too_large', bytes: totalBytes };
       }
       chunks.push(chunk);
+      if (prefix) observePrefix?.(prefix.append(chunk));
     }
   } catch (error) {
     await reader.cancel().catch(() => undefined);
@@ -75,16 +96,18 @@ async function readStreamBody(
 
 export async function readRemoteImageResponseBytes(
   response: Response,
-  signal: AbortSignal
+  signal: AbortSignal,
+  observePrefix?: PrefixObserver
 ): Promise<RemoteImageBodyReadResult> {
   const contentLength = parseContentLength(response);
   if (contentLength !== null && contentLength > REMOTE_IMAGE_MAX_BYTES) {
     return { status: 'too_large', bytes: contentLength };
   }
   if (response.body) {
-    return readStreamBody(response.body, signal);
+    return readStreamBody(response.body, signal, observePrefix);
   }
   const bytes = new Uint8Array(await runWithAbort(response.arrayBuffer(), signal));
+  observePrefix?.(bytes);
   return bytes.length > REMOTE_IMAGE_MAX_BYTES
     ? { status: 'too_large', bytes: bytes.length }
     : { status: 'ready', bytes };

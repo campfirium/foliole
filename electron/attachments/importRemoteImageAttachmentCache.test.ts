@@ -20,12 +20,17 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
 
 import {
   configureRemoteImagePipelineCacheRoot,
+  fetchRemoteImageMetadata,
   fetchRemoteImageResource,
   importRemoteImageAttachment,
   resetRemoteImagePipelineForTests
 } from './remoteImagePipeline.js';
 
-const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52,
+  0, 0, 1, 0x40, 0, 0, 0, 0xf0
+]);
 
 let tempRoot: string;
 
@@ -56,6 +61,8 @@ it('imports from the remote image cache without downloading again', async () => 
   configureRemoteImagePipelineCacheRoot(tempRoot);
   fetchMock.mockRejectedValue(new Error('offline'));
 
+  await expect(fetchRemoteImageMetadata('https://example.com/images/cover.png'))
+    .resolves.toEqual({ height: 240, width: 320 });
   await expect(importRemoteImageAttachment({
     nodeId: 'node-1',
     sourceUrl: 'https://example.com/images/cover.png'

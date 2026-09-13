@@ -4,24 +4,20 @@ import {
 } from '../../../shared/platform/attachmentResources';
 import { isNativeCompanionAttachmentResourceRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
 import type { RemoteImageSourceContextState } from '../../../shared/platform/remoteImageSourceRecovery';
-import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
-import { selectImageClozeOccurrencePresentation } from './imageClozeOccurrencePresentation';
-import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import {
   concealLoadingMarkdownImageSurface,
   finalizeLoadedMarkdownImageDisplay,
+  resolveRemoteMarkdownImageDisplay,
   revealLoadedMarkdownImageSurface
 } from './liveMarkdownImageDisplay';
-import {
-  createMarkdownImageElement,
-  type RequestEditorMeasure
-} from './liveMarkdownImageElement';
+import type { RequestEditorMeasure } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
+import { createImageSurface } from './liveMarkdownImageSurface';
 import {
   setMarkdownImageWidgetDomIdentity,
   updateMarkdownImageWidgetDomRange
@@ -35,39 +31,6 @@ import {
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
 
 export { disposeMarkdownImageWidgetDom } from './liveMarkdownImageDisposal';
-
-function createImageSurface(
-  imageMatch: MarkdownImageMatch,
-  source: string,
-  editorNodeId: string | null = null,
-  imageOptions: { deferSource?: boolean; onError?: (() => void) | null; onLoad?: (() => void) | null; requestMeasure?: RequestEditorMeasure } = {}
-) {
-  const presentation = getImageClozeEditorPresentation(editorNodeId);
-  const imagePresentation = selectImageClozeOccurrencePresentation(presentation, imageMatch);
-  return createImageClozeImageSurface({
-    attachmentId: imageMatch.attachmentId,
-    display: imageMatch.display,
-    ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),
-    editorNodeId,
-    from: imageMatch.from,
-    presentation: imagePresentation,
-    renderImage: () =>
-      createMarkdownImageElement({
-        alt: imageMatch.alt,
-        deferSource: imageOptions.deferSource ?? false,
-        display: imageMatch.display,
-        ...(imageMatch.linkHref ? { linkHref: imageMatch.linkHref } : {}),
-        onError: imageOptions.onError ?? null,
-        onLoad: imageOptions.onLoad ?? null,
-        requestMeasure: imageOptions.requestMeasure ?? null,
-        source
-      }),
-    previewAlt: imageMatch.alt,
-    previewPresentation: imagePresentation,
-    previewSource: source,
-    to: imageMatch.to
-  });
-}
 
 function appendLoadingImageSurface(
   wrapper: HTMLElement,
@@ -116,6 +79,7 @@ function appendLoadingImageSurface(
   void resolveRemoteContextAndRender();
   async function resolveRemoteContextAndRender() {
     sourceContext = existingContext ?? await resolveRemoteRenderSourceContext(imageMatch.source, editorNodeId);
+    resolveRemoteMarkdownImageDisplay({ imageMatch, nodeId: editorNodeId, requestMeasure, retry: Boolean(retryKey), widget: wrapper });
     const source = buildRemoteRenderSource(imageMatch.source, editorNodeId, sourceContext, retryKey);
     const image = surface.querySelector<HTMLImageElement>('.cm-md-image-element');
     if (image) image.src = source;

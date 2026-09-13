@@ -1,3 +1,4 @@
+import { loadRemoteImageMetadata } from '../../../shared/platform/external/remoteImageMetadata';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { resolveImageDisplay, type ImageIntrinsicSize } from '../model/remoteImageDisplay';
 
@@ -33,6 +34,10 @@ export function finalizeMarkdownImageDisplay(
   if (surface) {
     replaceDisplayClass(surface, 'cm-md-image-surface', display);
     surface.classList.toggle('group', display === 'block');
+    if (surface.classList.contains('cm-md-image-surface-loading')) {
+      widget.replaceChildren(surface);
+      surface.style.position = 'relative';
+    }
   }
   const image = widget.querySelector('.cm-md-image-element');
   if (image) replaceDisplayClass(image, 'cm-md-image-element', display);
@@ -78,5 +83,22 @@ export function concealLoadingMarkdownImageSurface(surface: HTMLElement) {
 export function revealLoadedMarkdownImageSurface(surface: HTMLElement) {
   surface.classList.remove('cm-md-image-surface-loading');
   surface.removeAttribute('aria-hidden');
-  surface.removeAttribute('style');
+  surface.style.removeProperty('opacity');
+  surface.style.removeProperty('overflow');
+  surface.style.removeProperty('pointer-events');
+  surface.style.removeProperty('position');
+  if (surface.style.height === '1px') surface.style.removeProperty('height');
+  if (surface.style.width === '1px') surface.style.removeProperty('width');
+}
+
+export function resolveRemoteMarkdownImageDisplay(args: {
+  imageMatch: MarkdownImageMatch;
+  nodeId: string | null;
+  requestMeasure: (() => void) | null;
+  retry: boolean;
+  widget: HTMLElement;
+}) {
+  void loadRemoteImageMetadata(args.imageMatch.source, args.nodeId, args.retry).then((size) => {
+    if (size) finalizeMarkdownImageDisplay(args.widget, args.imageMatch, size, args.requestMeasure);
+  });
 }

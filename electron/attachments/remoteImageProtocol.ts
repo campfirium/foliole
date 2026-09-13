@@ -49,6 +49,7 @@ export function registerRemoteImageProtocol() {
       try {
         await importRemoteImageAttachment({
           nodeId: parts.nodeId,
+          sourceOrigin: parts.sourceOrigin ?? null,
           sourceUrl: parts.sourceUrl
         });
       } catch {
