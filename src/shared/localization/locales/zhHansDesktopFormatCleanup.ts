@@ -2,7 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_FORMAT_CLEANUP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'desktop.formatCleanup.title': '清理格式',
-  'desktop.formatCleanup.description': '选择当前主题中要替换的内容。“替换为”留空即删除匹配内容。',
+  'desktop.formatCleanup.description': '“替换为”留空即删除匹配内容。',
   'desktop.formatCleanup.find': '查找',
   'desktop.formatCleanup.when': '位置',
   'desktop.formatCleanup.follow': '后接',
@@ -21,7 +21,6 @@ export const ZH_HANS_DESKTOP_FORMAT_CLEANUP_TRANSLATIONS: Partial<Record<Transla
   'desktop.formatCleanup.tab': 'Tab',
   'desktop.formatCleanup.lineBreak': '换行',
   'desktop.formatCleanup.inputHelp': '普通文本直接输入；正则表达式请写成 /pattern/。',
-  'desktop.formatCleanup.savedAutomatically': '自动保存',
   'desktop.formatCleanup.reset': '重置',
   'desktop.formatCleanup.preview': '预览',
   'desktop.formatCleanup.previewTitle': '清理后的文本',

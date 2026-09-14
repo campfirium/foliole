@@ -1,6 +1,6 @@
 export const EN_DESKTOP_FORMAT_CLEANUP_TRANSLATIONS = {
   'desktop.formatCleanup.title': 'Clean formatting',
-  'desktop.formatCleanup.description': 'Choose what to replace in the current topic. Leave Replace empty to remove a match.',
+  'desktop.formatCleanup.description': 'Leave Replace empty to remove a match.',
   'desktop.formatCleanup.find': 'Find',
   'desktop.formatCleanup.when': 'When',
   'desktop.formatCleanup.follow': 'Follow',
@@ -19,7 +19,6 @@ export const EN_DESKTOP_FORMAT_CLEANUP_TRANSLATIONS = {
   'desktop.formatCleanup.tab': 'Tab',
   'desktop.formatCleanup.lineBreak': 'Line break',
   'desktop.formatCleanup.inputHelp': 'Type text normally. Use /pattern/ for a regular expression.',
-  'desktop.formatCleanup.savedAutomatically': 'Saved automatically',
   'desktop.formatCleanup.reset': 'Reset',
   'desktop.formatCleanup.preview': 'Preview',
   'desktop.formatCleanup.previewTitle': 'Cleaned text',

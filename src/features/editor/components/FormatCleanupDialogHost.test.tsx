@@ -45,6 +45,24 @@ describe('FormatCleanupDialogHost', () => {
     expect(editor.replaceRange).not.toHaveBeenCalled();
   });
 
+  it('uses switches to disable rules without showing save-status chrome', async () => {
+    const { editor, ref } = createEditorRef('- First');
+    renderWithLocalization(<FormatCleanupDialogHost canClean editorRef={ref} />);
+
+    requestFormatCleanup('configure');
+    await screen.findByRole('dialog', { name: 'Clean formatting' });
+
+    const ruleSwitch = screen.getAllByRole('switch', { name: 'Enable rule 1' })[0] as HTMLElement;
+    expect(ruleSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText('Saved automatically')).not.toBeInTheDocument();
+
+    fireEvent.click(ruleSwitch);
+    expect(ruleSwitch).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Clean' }));
+
+    expect(editor.replaceRange).not.toHaveBeenCalled();
+  });
+
   it('inserts visible special values into the targeted rule field', async () => {
     const { ref } = createEditorRef('Text');
     renderWithLocalization(<FormatCleanupDialogHost canClean editorRef={ref} />);

@@ -10,7 +10,8 @@ import {
   AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  SettingsSwitch
 } from '../../../shared/ui';
 import type { FormatCleanupRule, FormatCleanupSettings } from '../model/formatCleanupTypes';
 
@@ -46,9 +47,16 @@ function WhitespaceRules(props: FormatCleanupDialogSurfaceProps) {
   return (
     <section className="border-t border-settings-divider/70 pt-4">
       <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.whitespace')}</h2>
-      <div className="mt-2 flex flex-wrap gap-x-8 gap-y-2 text-ui-md">
-        <label className="inline-flex items-center gap-2"><input checked={props.settings.removeIndentation} className="size-4 accent-foreground" onChange={(event) => update({ removeIndentation: event.target.checked })} type="checkbox" />{props.t('desktop.formatCleanup.removeIndentation')}</label>
-        <label className="inline-flex items-center gap-2"><input checked={props.settings.collapseBlankLines} className="size-4 accent-foreground" onChange={(event) => update({ collapseBlankLines: event.target.checked })} type="checkbox" />{props.t('desktop.formatCleanup.collapseBlankLines')}</label>
+      <div className="mt-2 overflow-hidden rounded-md bg-settings-group text-ui-md">
+        <div className="flex min-h-12 items-center justify-between px-4 py-2.5">
+          <span>{props.t('desktop.formatCleanup.removeIndentation')}</span>
+          <SettingsSwitch aria-label={props.t('desktop.formatCleanup.removeIndentation')} checked={props.settings.removeIndentation} onCheckedChange={(removeIndentation) => update({ removeIndentation })} />
+        </div>
+        <div className="mx-4 border-t border-settings-divider/70" />
+        <div className="flex min-h-12 items-center justify-between px-4 py-2.5">
+          <span>{props.t('desktop.formatCleanup.collapseBlankLines')}</span>
+          <SettingsSwitch aria-label={props.t('desktop.formatCleanup.collapseBlankLines')} checked={props.settings.collapseBlankLines} onCheckedChange={(collapseBlankLines) => update({ collapseBlankLines })} />
+        </div>
       </div>
     </section>
   );
@@ -128,8 +136,7 @@ export function FormatCleanupDialogSurface(props: FormatCleanupDialogSurfaceProp
             <p className="mt-2 text-ui-xs text-foreground/48">{props.t('desktop.formatCleanup.inputHelp')}</p>
             <div className="mt-4"><Preview preview={props.preview} t={props.t} /></div>
           </AppDialogBody>
-          <AppDialogActions className="justify-between">
-            <span className="mr-auto text-ui-xs text-foreground/48">{props.t('desktop.formatCleanup.savedAutomatically')}</span>
+          <AppDialogActions>
             <AppButton onClick={props.onReset}>{props.t('desktop.formatCleanup.reset')}</AppButton>
             <AppButton disabled={!props.canClean} onClick={props.onPreview}>{props.t('desktop.formatCleanup.preview')}</AppButton>
             <AppButton disabled={!props.canClean} onClick={props.onClean} variant="emphasis">{props.t('desktop.formatCleanup.clean')}</AppButton>
