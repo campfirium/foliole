@@ -21,24 +21,33 @@ async function seedCompletedApiMode(app: ElectronApplication) {
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const hostSettings = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseHostSettings.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
+    const sourceMode = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceMode.js'));
     connection.runWithDatabaseConnectionOwner(() => {
       host.activateReadwiseOnThisHost();
       const assignment = host.loadReadwiseHostAssignment();
       const source = identity.createReadwiseRemoteSource('2026-09-12T00:00:00.000Z');
-      identity.saveReadwiseConnectionState({
-        ...hostSettings.createDefaultReadwiseHostSettings(),
-        apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
-        readwiseSourceMode: 'api',
-        updatedAt: '2026-09-12T00:00:00.000Z'
-      }, source, '2026-09-12T00:00:00.000Z');
+      identity.saveReadwiseConnectionState(
+        { secretRef: null, state: 'disconnected', verifiedAt: null },
+        source,
+        '2026-09-12T00:00:00.000Z'
+      );
       cutover.writeReadwiseSourceCutover({
         annotations: [], cohortDocumentIds: [],
-        completedAt: '2026-09-12T00:00:00.000Z', documents: [], retiredNodeIds: [],
+        completedAt: '2026-09-12T00:00:00.000Z', completionVersion: 2,
+        documents: [], retiredNodeIds: [],
         sourceHost: assignment.current_host_name, startedAt: '2026-09-12T00:00:00.000Z', status: 'api'
       });
+      sourceMode.writeReadwiseSourceMode(
+        connection.openDatabaseConnection().driver,
+        'api',
+        '2026-09-12T00:00:00.000Z',
+        {
+          batchId: null, completedAt: '2026-09-12T00:00:00.000Z',
+          sourceHost: assignment.current_host_name, startedAt: '2026-09-12T00:00:00.000Z'
+        }
+      );
     });
   });
 }
@@ -82,11 +91,12 @@ test('keeps Readwise row actions fixed across folder and API modes', async ({ br
     await session.firstWindow.reload();
     await expectWorkspaceShell(session.firstWindow);
     settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    const apiRows = settings.getByLabel(/^(Source|来源)$/, { exact: true });
+    const connectionRows = settings.getByLabel(/^(API connection|API 连接)$/);
+    const syncRows = settings.getByLabel(/^(Readwise Reader sync|Readwise Reader 同步)$/);
     await expectSameSize([
-      apiRows.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }),
-      apiRows.getByRole('button', { name: /^(Sync|同步)$/ }),
-      apiRows.getByRole('button', { name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/ })
+      connectionRows.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }),
+      syncRows.getByRole('button', { name: /^(Sync|同步)$/ }),
+      syncRows.getByRole('button', { name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/ })
     ]);
     await expect(settings.getByRole('radiogroup', {
       name: /^(Readwise source mode|Readwise 来源模式)$/

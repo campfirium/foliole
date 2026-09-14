@@ -36,7 +36,6 @@ export function useReadwiseSourceMigration(input: {
   const start = useCallback(async () => {
     if (startingRef.current) return;
     startingRef.current = true;
-    if (input.committedMode !== 'api') input.onCommitMode?.('api');
     setPending(true);
     setProgress((current) => ({ ...current, errorReason: null, failed: false }));
     let unsubscribe: (() => void) | null = null;
@@ -59,7 +58,7 @@ export function useReadwiseSourceMigration(input: {
         phase: active ? state.phase : null,
         totalCount: active ? state.total_count : null
       });
-      if (state.status === 'migration_in_progress' || output.status === 'completed' || output.status === 'already_completed') {
+      if (output.status === 'completed' || output.status === 'already_completed') {
         input.onCommitMode?.('api');
       }
     } catch {
@@ -71,7 +70,9 @@ export function useReadwiseSourceMigration(input: {
       startingRef.current = false;
     }
   }, [input.committedMode, input.onCommitMode]);
-  useResumeReadwiseMigration(input.committedMode, resumeAttemptedRef, setRequired, setProgress, start);
+  useResumeReadwiseMigration(
+    input.committedMode, input.onSelectApi, resumeAttemptedRef, setRequired, setProgress, start
+  );
   const selectApi = () => selectReadwiseApi(input);
   const requestStart = (beforeStart: () => Promise<void> | void) =>
     requestReadwiseApiMigration(input.t, beforeStart, start);
@@ -126,6 +127,7 @@ async function requestReadwiseApiMigration(
 
 function useResumeReadwiseMigration(
   committedMode: ReadwiseSourceMode,
+  onSelectApi: () => void,
   attempted: MutableRefObject<boolean>,
   setRequired: Dispatch<SetStateAction<boolean>>,
   setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
@@ -136,6 +138,7 @@ function useResumeReadwiseMigration(
     attempted.current = true;
     void previewReadwiseSourceCutoverInRuntime().then((state) => {
       if (state.status !== 'migration_in_progress') return;
+      onSelectApi();
       setRequired(true);
       setProgress({
         completedCount: state.completed_count,
@@ -144,9 +147,9 @@ function useResumeReadwiseMigration(
         phase: state.phase,
         totalCount: state.total_count
       });
-      void start();
+      if (!state.error_reason) void start();
     });
-  }, [attempted, committedMode, setProgress, setRequired, start]);
+  }, [attempted, committedMode, onSelectApi, setProgress, setRequired, start]);
 }
 
 async function confirmMigration(topicCount: number, t: Translate) {

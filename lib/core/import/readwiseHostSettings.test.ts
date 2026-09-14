@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import { normalizeReadwiseHostSettings } from './readwiseHostSettings.js';
 
-it('migrates legacy Host settings to folder mode without borrowing API readiness', () => {
+it('removes the legacy source mode from Host settings', () => {
   expect(normalizeReadwiseHostSettings({
     readwiseRootPath: '/Readwise',
     version: 1
@@ -10,12 +10,11 @@ it('migrates legacy Host settings to folder mode without borrowing API readiness
     autoImportPolicyVersion: 3,
     apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
     readwiseRootPath: '/Readwise',
-    readwiseSourceMode: 'folder',
-    version: 5
+    version: 6
   });
 });
 
-it('preserves explicit API mode and redacted credential metadata', () => {
+it('preserves redacted credential metadata without retaining API mode', () => {
   expect(normalizeReadwiseHostSettings({
     apiConnection: {
       secretRef: 'readwise-api-11111111-1111-1111-1111-111111111111.bin',
@@ -26,17 +25,16 @@ it('preserves explicit API mode and redacted credential metadata', () => {
     version: 3
   })).toMatchObject({
     apiConnection: { state: 'connected' },
-    readwiseSourceMode: 'api',
-    version: 5
+    version: 6
   });
 });
 
-it('preserves an explicit disabled source mode', () => {
+it('drops an explicit disabled source mode from Host state', () => {
   expect(normalizeReadwiseHostSettings({ readwiseSourceMode: 'off', version: 2 }))
-    .toMatchObject({ readwiseSourceMode: 'off' });
+    .not.toHaveProperty('readwiseSourceMode');
 });
 
 it('rejects a future settings version instead of downgrading it', () => {
-  expect(() => normalizeReadwiseHostSettings({ version: 6 }))
+  expect(() => normalizeReadwiseHostSettings({ version: 7 }))
     .toThrow('readwise_host_settings_version_unsupported');
 });

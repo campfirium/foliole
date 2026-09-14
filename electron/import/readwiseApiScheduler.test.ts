@@ -45,18 +45,17 @@ function importRunner() {
 function createHarness() {
   let callback: (() => void) | null = null;
   let connectionRef = 'connection-one';
+  let sourceMode: 'api' | 'relay' = 'api';
   let completedThrough: string | null = '2026-09-08T11:30:00.000Z';
-  let sourceMode: 'api' | 'folder' = 'api';
   const progress = candidateProgress();
   let lastResult: NativeReadwiseApiScheduleResult | null = null;
   let lifecycle: NativeReadwiseApiRunLifecycle | null = null;
   let initialProgress: NativeReadwiseApiTaskProgress | null = null;
   let active = true;
-  const cancelImport = vi.fn(() => ({ status: 'cancelled' as const }));
   const runImport = importRunner();
   const saveNextRun = vi.fn();
   const dependencies = {
-    cancelImport,
+    cancelImport: vi.fn(() => ({ status: 'cancelled' as const })),
     clearTimeout: vi.fn(),
     loadConnectionReady: vi.fn(() => true),
     loadCandidateProgress: vi.fn(() => progress),
@@ -70,6 +69,7 @@ function createHarness() {
     loadSettings: vi.fn(() => ({
       ...createDefaultImportManagerSettings(), readwiseSourceMode: sourceMode
     })),
+    loadSourceMode: vi.fn(() => ({ completion: null, conflictReasons: [], mode: sourceMode })),
     loadSource: vi.fn(() => ({ ...SOURCE, connectionRef })),
     now: () => NOW,
     notifyChanged: vi.fn(),
@@ -85,7 +85,7 @@ function createHarness() {
   };
   const scheduler = createReadwiseApiScheduler(dependencies);
   return {
-    cancelImport,
+    cancelImport: dependencies.cancelImport,
     dependencies,
     fire: async () => { callback?.(); await Promise.resolve(); await Promise.resolve(); },
     runImport,
@@ -99,7 +99,7 @@ function createHarness() {
     setLifecycle: (value: typeof lifecycle) => { lifecycle = value; },
     setCandidateProgress: (completed: number, total: number, failed = 0) =>
       updateCandidateProgress(progress, completed, total, failed),
-    setSourceMode: (value: 'api' | 'folder') => { sourceMode = value; }
+    setSourceMode: (value: 'api' | 'relay') => { sourceMode = value; }
   };
 }
 
@@ -253,7 +253,7 @@ it('cancels and invalidates old work after mode, host, or connection changes', a
   harness.scheduler.refresh();
   expect(harness.cancelImport).toHaveBeenCalledTimes(1);
 
-  harness.setSourceMode('folder');
+  harness.setSourceMode('relay');
   harness.scheduler.refresh();
   harness.setActive(false);
   harness.scheduler.refresh();

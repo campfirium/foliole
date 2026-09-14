@@ -3,6 +3,7 @@ import type { NativeReadwiseSourceCutoverResult } from '../../lib/platform/nativ
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportProgressEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -47,9 +48,13 @@ async function runNow(
   input: RunReadwiseSourceCutoverInput
 ): Promise<NativeReadwiseSourceCutoverResult> {
   const current = loadReadwiseSourceCutover();
+  const sourceMode = loadReadwiseSourceModeState();
   const currentProgress = current ? readwiseSourceCutoverProgress(current) : null;
-  if (current?.status === 'api') {
+  if (current?.status === 'api' && sourceMode.mode === 'api' && sourceMode.conflictReasons.length === 0) {
     return result('already_completed', currentProgress?.migratedCount, currentProgress?.unmatchedCount);
+  }
+  if (sourceMode.conflictReasons.length > 0 || sourceMode.mode !== 'relay') {
+    return result('failed', 0, 0, 'readwise_source_mode_conflict');
   }
   const assignment = loadReadwiseHostAssignment();
   if (!assignment.is_active) return result('not_active_host');
@@ -131,11 +136,15 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
 
 function assertMigrationEligible(connectionRef: string) {
   const state = loadReadwiseSourceCutover();
+  const sourceMode = loadReadwiseSourceModeState();
   if (state?.status !== 'migration-in-progress') {
     throw new Error('readwise_source_migration_not_active');
   }
   if (!loadReadwiseHostAssignment().is_active || !isStoredReadwiseApiConnectionReady()) {
     throw new Error('readwise_execution_eligibility_lost');
+  }
+  if (sourceMode.mode !== 'relay' || sourceMode.conflictReasons.length > 0) {
+    throw new Error('readwise_source_mode_conflict');
   }
   if (loadReadwiseRemoteSource()?.connectionRef !== connectionRef) {
     throw new Error('readwise_execution_connection_changed');
@@ -147,6 +156,7 @@ function safeFailureReason(error: unknown) {
   if (error.message.startsWith('readwise_api_rate_limited:')) return 'rate_limited';
   const reasons = [
     'readwise_api_reconnect_required',
+    'readwise_source_mode_conflict',
     'readwise_execution_connection_changed',
     'readwise_execution_eligibility_lost'
   ];

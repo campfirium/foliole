@@ -41,11 +41,11 @@ it('saves reviewed draft rules before the confirmed API migration starts', async
   const onChangePolicy = vi.fn();
   const onCommitApiPolicy = vi.fn().mockResolvedValue(undefined);
   const onCommitMode = vi.fn();
-  const view = (mode: 'folder' | 'api') => (
+  const view = (mode: 'relay' | 'api') => (
     <LocalizationProvider>
       <ReadwiseSourceModeSection
         apiSettings={createReadwiseApiModeTestSettings()}
-        committedMode="folder"
+        committedMode="relay"
         mode={mode}
         onChange={onChange}
         onChangePolicy={onChangePolicy}
@@ -54,7 +54,7 @@ it('saves reviewed draft rules before the confirmed API migration starts', async
       />
     </LocalizationProvider>
   );
-  const { rerender } = render(view('folder'));
+  const { rerender } = render(view('relay'));
   fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
   await waitFor(() => expect(onChange).toHaveBeenCalledWith('api'));
   rerender(view('api'));
@@ -87,5 +87,5 @@ it('saves reviewed draft rules before the confirmed API migration starts', async
   const migrationOrder = cutover.run.mock.invocationCallOrder[0];
   if (commitOrder === undefined || migrationOrder === undefined) throw new Error('Expected ordered calls');
   expect(commitOrder).toBeLessThan(migrationOrder);
-  expect(onCommitMode).toHaveBeenCalledWith('api');
+  await waitFor(() => expect(onCommitMode).toHaveBeenCalledWith('api'), { timeout: 1500 });
 });

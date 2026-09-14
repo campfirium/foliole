@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
-import { READWISE_HOST_SETTINGS_KEY, type ReadwiseHostSettings } from '../../lib/core/import/readwiseHostSettings.js';
+import type { ReadwiseHostApiConnection } from '../../lib/core/import/readwiseHostSettings.js';
 import {
   normalizeReadwiseRemoteSource,
   READWISE_REMOTE_SOURCE_KEY,
@@ -12,6 +12,11 @@ import {
 } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 
 import { openDatabaseConnection } from './connection.js';
+import {
+  deleteReadwiseDeviceConnection,
+  loadReadwiseDeviceConnection,
+  saveReadwiseDeviceConnection
+} from './readwiseDeviceConnection.js';
 import { loadJsonSetting, writeJsonSetting } from './settingsStore.js';
 
 export interface ConfirmedReadwiseIdentityBinding {
@@ -44,14 +49,26 @@ export function ensureReadwiseRemoteSource(replace = false, now = new Date().toI
 }
 
 export function saveReadwiseConnectionState(
-  hostSettings: ReadwiseHostSettings,
+  connection: ReadwiseHostApiConnection,
   remoteSource: ReadwiseRemoteSource | undefined,
   now: string
 ) {
-  openDatabaseConnection().driver.transaction((driver) => {
-    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, hostSettings, now);
-    if (remoteSource) writeJsonSetting(driver, READWISE_REMOTE_SOURCE_KEY, remoteSource, now);
-  });
+  const source = remoteSource ?? loadReadwiseRemoteSource();
+  if (!source) throw new Error('readwise_remote_source_missing');
+  const previousConnection = loadReadwiseDeviceConnection(source.connectionRef);
+  saveReadwiseDeviceConnection(source.connectionRef, connection);
+  try {
+    openDatabaseConnection().driver.transaction((driver) => {
+      if (remoteSource) writeJsonSetting(driver, READWISE_REMOTE_SOURCE_KEY, remoteSource, now);
+    });
+  } catch (error) {
+    if (previousConnection.secretRef || previousConnection.state !== 'disconnected') {
+      saveReadwiseDeviceConnection(source.connectionRef, previousConnection);
+    } else {
+      deleteReadwiseDeviceConnection(source.connectionRef);
+    }
+    throw error;
+  }
 }
 
 export function loadReadwiseRemoteDocumentIds(connectionRef: string, limit = 3) {

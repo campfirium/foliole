@@ -6,6 +6,7 @@ import {
 import {
   normalizeReadwiseHostSettings,
   READWISE_HOST_SETTINGS_KEY,
+  withoutReadwiseHostConnection,
   withoutReadwiseImportManagerFields
 } from '../../lib/core/import/readwiseHostSettings.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -13,7 +14,10 @@ import {
   hydrateWatchedImportManagerSources,
   upsertWatchedImportManagerSources
 } from '../database/desktopSources.js';
-import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import {
+  loadReadwiseSourceModeState,
+  writeReadwiseSourceMode
+} from '../database/readwiseSourceMode.js';
 import {
   hydrateCurrentHostReadwiseSources,
   saveCurrentHostReadwiseSources
@@ -62,11 +66,14 @@ export function loadImportManagerSettings(): ImportManagerSettings {
     normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY))
   );
   const hostSettings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
+  const sourceMode = loadReadwiseSourceModeState();
   return {
     ...globalSettings,
+    readwiseApiMigrationCompleted: Boolean(sourceMode.completion),
     readwiseReaderConfig: hostSettings.readwiseReaderConfig,
     readwiseRootPath: hostSettings.readwiseRootPath,
-    readwiseSourceMode: loadReadwiseSourceCutover() ? 'api' : hostSettings.readwiseSourceMode,
+    readwiseSourceMode: sourceMode.mode,
+    readwiseSourceModeConflict: sourceMode.conflictReasons,
     readwiseSources: hydrateCurrentHostReadwiseSources(globalSettings.readwiseSources)
   };
 }
@@ -84,8 +91,11 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       : applyReadwiseRootPath(current.readwiseSources, readwiseRootPath),
     updatedAt: new Date().toISOString()
   });
-  const hasReadwiseSourceCutover = Boolean(loadReadwiseSourceCutover());
-  if (hasReadwiseSourceCutover) normalized = { ...normalized, readwiseSourceMode: 'api' };
+  const sourceMode = loadReadwiseSourceModeState();
+  normalized = { ...normalized, readwiseSourceModeConflict: sourceMode.conflictReasons };
+  if (sourceMode.conflictReasons.length > 0 && normalized.readwiseSourceMode !== sourceMode.mode) {
+    throw new Error('readwise_source_mode_conflict');
+  }
   assertSafeImportManagerPaths(normalized);
   openDatabaseConnection().driver.transaction((driver) => {
     normalized = {
@@ -104,14 +114,19 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       withoutReadwiseImportManagerFields(normalized),
       normalized.updatedAt
     );
+    if (normalized.readwiseSourceMode !== sourceMode.mode) {
+      writeReadwiseSourceMode(
+        driver, normalized.readwiseSourceMode, normalized.updatedAt,
+        sourceMode.completion ?? undefined
+      );
+    }
     const currentHostSettings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
-    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, normalizeReadwiseHostSettings({
+    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, withoutReadwiseHostConnection(normalizeReadwiseHostSettings({
       ...currentHostSettings,
       readwiseReaderConfig: normalized.readwiseReaderConfig,
       readwiseRootPath: normalized.readwiseRootPath,
-      readwiseSourceMode: hasReadwiseSourceCutover ? 'api' : normalized.readwiseSourceMode,
       updatedAt: normalized.updatedAt
-    }), normalized.updatedAt);
+    })), normalized.updatedAt);
   });
   return normalized;
 }

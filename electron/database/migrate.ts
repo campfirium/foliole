@@ -32,6 +32,8 @@ import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
 } from './managedSafetySnapshots.js';
+import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
+import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
@@ -109,6 +111,8 @@ function initializeSchemaWorkspaceAndSearch(
     journalPath: path.join(path.dirname(initializedConnection.dbPath), 'attachment-migrations', 'canonical-v1.json'),
     sqlite: initializedConnection.sqlite
   });
+  ensureReadwiseSourceModeInitialized();
+  migrateLegacyReadwiseDeviceConnection();
   publishAttachmentLibraryPathSnapshot({
     assetsDir,
     libraryScope: createHash('sha256').update(initializedConnection.dbPath).digest('hex')

@@ -17,6 +17,7 @@ import {
   loadReadwiseRemoteSource,
   type ConfirmedReadwiseIdentityBinding
 } from '../database/readwiseRemoteIdentity.js';
+import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 
 import { loadStoredReadwiseHostSettings, isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 import { readReadwiseApiSecret } from './readwiseApiSecret.js';
@@ -122,7 +123,7 @@ export function confirmReadwiseIdentityBindingPreview(previewId: string): Native
 
 function readinessResult(allowFolderMode: boolean): NativeReadwiseIdentityBindingPreview | null {
   if (!loadReadwiseHostAssignment().is_active) return empty('not_active_host');
-  if (!allowFolderMode && loadStoredReadwiseHostSettings().readwiseSourceMode !== 'api') {
+  if (!allowFolderMode && loadReadwiseSourceModeState().mode !== 'api') {
     return empty('source_mode_mismatch');
   }
   return isStoredReadwiseApiConnectionReady() ? null : empty('connection_missing');

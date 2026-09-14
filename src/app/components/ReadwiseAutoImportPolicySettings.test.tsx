@@ -8,7 +8,7 @@ import { LocalizationProvider } from '../../shared/localization/LocalizationProv
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-function renderPolicy(sourceMode: 'api' | 'folder') {
+function renderPolicy(sourceMode: 'api' | 'relay') {
   const onChangePolicy = vi.fn();
   render(
     <LocalizationProvider>
@@ -34,7 +34,7 @@ function expectSelection(groupName: string, optionName: string) {
 }
 
 it('keeps the folder policy on article and book rows backed by article and EPUB fields', () => {
-  const onChangePolicy = renderPolicy('folder');
+  const onChangePolicy = renderPolicy('relay');
   expectSelection('Articles with highlights destination', 'Inbox');
   expectSelection('Articles without highlights destination', "Don't import");
   expectSelection('Books with highlights destination', 'Inbox');

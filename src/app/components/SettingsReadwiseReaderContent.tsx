@@ -56,6 +56,8 @@ interface SettingsReadwiseReaderContentProps {
   policy?: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
   readwiseSourceMode?: ReadwiseSourceMode;
+  readwiseSourceModeConflict?: string[];
+  readwiseApiMigrationCompleted?: boolean;
   readwiseSources: DraftImportSource[];
 }
 
@@ -111,18 +113,25 @@ function createApiModeSettings(
   };
 }
 
-function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps) {
-  const setup = useReadwiseSetupController(props);
-  const committedMode = props.readwiseSourceMode ?? 'folder';
-  const [sourceMode, setSourceMode] = useState(committedMode);
-  useEffect(() => setSourceMode(committedMode), [committedMode]);
-  const cleanup = useReadwiseCleanup({
+function useReadwiseSettingsCleanup(
+  props: SettingsReadwiseReaderContentProps,
+  setup: ReturnType<typeof useReadwiseSetupController>
+) {
+  return useReadwiseCleanup({
     onCleanupComplete: () => saveDisabledReadwiseSetup(props, setup.draft),
     ...definedProps({
       onPreviewCleanup: props.onPreviewCleanup,
       onRunCleanup: props.onRunCleanup
     })
   });
+}
+
+function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps) {
+  const setup = useReadwiseSetupController(props);
+  const committedMode = props.readwiseSourceMode ?? 'relay';
+  const [sourceMode, setSourceMode] = useState(committedMode);
+  useEffect(() => setSourceMode(committedMode), [committedMode]);
+  const cleanup = useReadwiseSettingsCleanup(props, setup);
   function saveApiFrequency(syncFrequency: ReadwiseSyncFrequency) {
     const draft = setup.draft;
     const config = { ...draft.draftConfig, syncFrequency };
@@ -133,7 +142,9 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
   return (
     <>
       <ReadwiseSourceModeSection
+        apiMigrationCompleted={props.readwiseApiMigrationCompleted ?? false}
         committedMode={committedMode}
+        conflictReasons={props.readwiseSourceModeConflict ?? []}
         apiSettings={apiSettings}
         mode={sourceMode}
         onChange={setSourceMode}

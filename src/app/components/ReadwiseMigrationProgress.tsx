@@ -18,7 +18,9 @@ export function ReadwiseMigrationProgress(props: {
       className={`flex items-center gap-2 text-ui-md ${presentation.failed ? 'text-error' : 'text-foreground'}`}
       role="status"
     >
-      <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
+      {presentation.active
+        ? <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
+        : null}
       <span>{presentation.text}</span>
     </div>
   );
@@ -30,8 +32,18 @@ function migrationPresentation(
   t: ReturnType<typeof useTranslation>
 ) {
   if (!migration.phase) {
+    if (taskStatus?.cutover.status === 'completed') {
+      return {
+        active: false,
+        failed: false,
+        text: taskStatus.initial_sync.status === 'completed'
+          ? t('desktop.readwise.api.enabled')
+          : `${t('desktop.readwise.api.enabled')} · ${t('desktop.readwise.api.firstSyncPending')}`
+      };
+    }
     return taskStatus?.cutover.status === 'in_progress'
       ? {
+          active: true,
           failed: false,
           text: withProgress(
             `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
@@ -46,6 +58,7 @@ function migrationPresentation(
     : t('desktop.readwise.cutover.phase.merging');
   if (!migration.failed) {
     return {
+      active: true,
       failed: false,
       text: withProgress(
         `${t('desktop.readwise.cutover.status')} · ${phase}`,
@@ -59,6 +72,7 @@ function migrationPresentation(
     : t('desktop.readwise.cutover.phase.mergeFailed');
   const reason = readwiseFailureReason(migration.errorReason, t);
   return {
+    active: false,
     failed: true,
     text: `${withProgress(
       `${t('desktop.readwise.cutover.status')} · ${failed}`,

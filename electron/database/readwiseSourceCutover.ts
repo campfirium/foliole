@@ -1,3 +1,4 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import {
   normalizeReadwiseSourceCutover,
   readwiseSourceCutoverProgress,
@@ -47,13 +48,42 @@ export function writeReadwiseSourceCutover(
     status: value.status,
     totalCandidateCount: progress.totalCandidateCount,
     unmatchedCount: progress.unmatchedCount,
-    version: 1
+    version: 1 as const
   };
-  openDatabaseConnection().driver.transaction((driver) => {
-    writeJsonSetting(driver, READWISE_SOURCE_CUTOVER_JOURNAL_KEY, value, now);
-    writeJsonSetting(driver, READWISE_SOURCE_CUTOVER_KEY, legacy, now);
-  });
+  openDatabaseConnection().driver.transaction((driver) =>
+    writeReadwiseSourceCutoverValues(driver, value, legacy, now));
   return value;
+}
+
+export function writeReadwiseSourceCutoverWithDriver(
+  driver: DatabaseDriver,
+  input: Omit<ReadwiseSourceCutover, 'version'>,
+  now = input.completedAt
+) {
+  const value: ReadwiseSourceCutover = { ...input, version: READWISE_SOURCE_CUTOVER_VERSION };
+  const progress = readwiseSourceCutoverProgress(value);
+  writeReadwiseSourceCutoverValues(driver, value, {
+    completedAt: value.completedAt,
+    completedCandidateCount: progress.completedCandidateCount,
+    migratedCount: progress.migratedCount,
+    sourceHost: value.sourceHost,
+    startedAt: value.startedAt,
+    status: value.status,
+    totalCandidateCount: progress.totalCandidateCount,
+    unmatchedCount: progress.unmatchedCount,
+    version: 1 as const
+  }, now);
+  return value;
+}
+
+function writeReadwiseSourceCutoverValues(
+  driver: DatabaseDriver,
+  value: ReadwiseSourceCutover,
+  legacy: LegacyReadwiseSourceCutover,
+  now: string
+) {
+  writeJsonSetting(driver, READWISE_SOURCE_CUTOVER_JOURNAL_KEY, value, now);
+  writeJsonSetting(driver, READWISE_SOURCE_CUTOVER_KEY, legacy, now);
 }
 
 export function writeLegacyReadwiseSourceCutover(

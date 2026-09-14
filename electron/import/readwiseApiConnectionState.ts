@@ -4,13 +4,16 @@ import {
   type ReadwiseHostSettings
 } from '../../lib/core/import/readwiseHostSettings.js';
 import type { NativeReadwiseApiConnection } from '../../lib/platform/nativeReadwiseApiConnectionContract.js';
+import { loadReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadJsonSetting } from '../database/settingsStore.js';
 
 import { hasReadwiseApiSecret, readReadwiseApiSecret } from './readwiseApiSecret.js';
 
 export function loadStoredReadwiseHostSettings() {
-  return normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
+  const settings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
+  const source = loadReadwiseRemoteSource();
+  return { ...settings, apiConnection: loadReadwiseDeviceConnection(source?.connectionRef ?? null) };
 }
 
 export function toPublicReadwiseApiConnection(

@@ -117,6 +117,63 @@ it('materializes the Readwise import tag without turning it into Host state', as
   expect(loadJsonSetting('readwise_import_settings')).toBeNull();
 });
 
+it('waits for the matching cutover proof before materializing API mode', async () => {
+  const completion = {
+    batchId: 'batch-1', completedAt: '2026-09-15T00:02:00.000Z',
+    sourceHost: 'Source Mac', startedAt: '2026-09-15T00:01:00.000Z'
+  };
+  const mode = settingRecord({
+    contentHash: 'readwise-mode-api', formFactor: 'desktop', hostName: '*',
+    key: 'readwise_source_mode', platform: 'windows', scope: 'user_space',
+    updatedAt: completion.completedAt,
+    valueJson: JSON.stringify({ completion, mode: 'api', version: 1 })
+  });
+  const cutover = settingRecord({
+    contentHash: 'readwise-cutover-api', formFactor: 'desktop', hostName: '*',
+    key: 'readwise_source_cutover_v2', platform: 'windows', scope: 'user_space',
+    updatedAt: completion.completedAt,
+    valueJson: JSON.stringify({
+      annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
+      completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+      retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
+      status: 'api', version: 2
+    })
+  });
+
+  await applySyncObjectsAsync([mode]);
+  expect(loadJsonSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+
+  await applySyncObjectsAsync([cutover]);
+  expect(loadJsonSetting('readwise_source_mode')).toEqual({ completion, mode: 'api', version: 1 });
+});
+
+it('does not materialize API mode when the cutover proof differs', async () => {
+  const mode = settingRecord({
+    contentHash: 'readwise-mode-unproved', formFactor: 'desktop', hostName: '*',
+    key: 'readwise_source_mode', platform: 'windows', scope: 'user_space',
+    updatedAt: '2026-09-15T00:02:00.000Z',
+    valueJson: JSON.stringify({
+      completion: {
+        batchId: 'mode-batch', completedAt: 'done', sourceHost: 'Source Mac', startedAt: 'start'
+      },
+      mode: 'api', version: 1
+    })
+  });
+  const cutover = settingRecord({
+    contentHash: 'readwise-cutover-different', formFactor: 'desktop', hostName: '*',
+    key: 'readwise_source_cutover_v2', platform: 'windows', scope: 'user_space',
+    updatedAt: '2026-09-15T00:01:00.000Z',
+    valueJson: JSON.stringify({
+      annotations: [], batchId: 'other-batch', cohortDocumentIds: [], completedAt: 'done',
+      completionVersion: 2, documents: [], phase: null, retiredNodeIds: [],
+      sourceHost: 'Source Mac', startedAt: 'start', status: 'api', version: 2
+    })
+  });
+
+  await applySyncObjectsAsync([cutover, mode]);
+  expect(loadJsonSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+});
+
 it('materializes a tombstone as projection deletion and consumers recover defaults', async () => {
   saveJsonSetting('review_scheduler_settings', { desiredRetention: 0.9 }, '2026-07-10T00:01:00.000Z');
   const tombstone = settingRecord({

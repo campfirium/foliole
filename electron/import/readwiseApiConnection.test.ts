@@ -3,8 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
-  createDefaultReadwiseHostSettings,
-  READWISE_HOST_SETTINGS_VERSION
+  createDefaultReadwiseHostSettings
 } from '../../lib/core/import/readwiseHostSettings.js';
 
 const state = vi.hoisted(() => ({
@@ -13,7 +12,8 @@ const state = vi.hoisted(() => ({
   remoteSource: null as null | { connectionRef: string },
   secret: '',
   secure: true,
-  settings: null as unknown
+  settings: null as unknown,
+  sourceMode: 'api' as 'api' | 'relay'
 }));
 const clipboardRead = vi.hoisted(() => vi.fn());
 
@@ -21,14 +21,26 @@ vi.mock('electron', () => ({ clipboard: { readText: clipboardRead } }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   loadReadwiseHostAssignment: () => ({ is_active: state.active })
 }));
+vi.mock('../database/readwiseSourceMode.js', () => ({
+  loadReadwiseSourceModeState: () => ({
+    completion: null, conflictReasons: [], mode: state.sourceMode
+  })
+}));
+vi.mock('../database/readwiseDeviceConnection.js', () => ({
+  deleteReadwiseDeviceConnection: () => {
+    state.settings = { secretRef: null, state: 'disconnected', verifiedAt: null };
+  },
+  loadReadwiseDeviceConnection: () => state.settings,
+  saveReadwiseDeviceConnection: (_ref: string, connection: unknown) => { state.settings = connection; }
+}));
 vi.mock('../database/readwiseRemoteIdentity.js', () => ({
   createReadwiseRemoteSource: () => ({
     connectionRef: 'readwise-new', createdAt: 'created', updatedAt: 'updated', version: 1
   }),
   loadReadwiseRemoteDocumentIds: () => state.documentIds,
   loadReadwiseRemoteSource: () => state.remoteSource,
-  saveReadwiseConnectionState: (settings: unknown, source: typeof state.remoteSource) => {
-    state.settings = settings;
+  saveReadwiseConnectionState: (connection: unknown, source: typeof state.remoteSource) => {
+    state.settings = connection;
     if (source) state.remoteSource = source;
   }
 }));
@@ -60,7 +72,8 @@ beforeEach(() => {
   state.remoteSource = null;
   state.secret = '';
   state.secure = true;
-  state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'api' };
+  state.settings = createDefaultReadwiseHostSettings().apiConnection;
+  state.sourceMode = 'api';
   clipboardRead.mockReset();
   clipboardRead.mockReturnValue('READWISE-SECRET');
 });
@@ -78,8 +91,7 @@ it('validates and stores a clipboard token without returning or persisting it', 
   expect(JSON.stringify(connected)).not.toContain('READWISE-SECRET');
   expect(JSON.stringify(state.settings)).not.toContain('READWISE-SECRET');
   expect(state.settings).toMatchObject({
-    apiConnection: { secretRef: expect.stringMatching(/^readwise-api-/), state: 'connected' },
-    version: READWISE_HOST_SETTINGS_VERSION
+    secretRef: expect.stringMatching(/^readwise-api-/), state: 'connected'
   });
 });
 
@@ -92,8 +104,8 @@ it('blocks non-active Hosts before reading the clipboard or sending a request', 
   expect(fetchImpl).not.toHaveBeenCalled();
 });
 
-it('blocks folder mode before reading the clipboard or sending a request', async () => {
-  state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'folder' };
+it('blocks relay mode before reading the clipboard or sending a request', async () => {
+  state.sourceMode = 'relay';
   const fetchImpl = vi.fn();
 
   await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({
@@ -104,13 +116,13 @@ it('blocks folder mode before reading the clipboard or sending a request', async
 });
 
 it('allows an explicit migration connection without committing API mode first', async () => {
-  state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'folder' };
+  state.sourceMode = 'relay';
   const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
 
   await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'continue', 'migration'))
     .resolves.toMatchObject({ status: 'connected' });
   expect(clipboardRead).toHaveBeenCalledTimes(1);
-  expect(state.settings).toMatchObject({ readwiseSourceMode: 'folder' });
+  expect(state.sourceMode).toBe('relay');
 });
 
 it('reports auth rejection and rate limits without storing the attempted token', async () => {
@@ -120,7 +132,7 @@ it('reports auth rejection and rate limits without storing the attempted token',
   expect(rejected).toMatchObject({ connection: { has_credential: false }, status: 'reconnect_required' });
   expect(state.secret).toBe('');
 
-  state.settings = { ...createDefaultReadwiseHostSettings(), readwiseSourceMode: 'api' };
+  state.sourceMode = 'api';
   const limited = await connectReadwiseApiFromClipboard({
     fetchImpl: vi.fn(async () => new Response(null, { headers: { 'Retry-After': '12' }, status: 429 }))
   });

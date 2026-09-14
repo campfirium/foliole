@@ -7,7 +7,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-host-tests';
-const apiState = vi.hoisted(() => ({ mode: 'folder' as 'api' | 'folder', ready: false }));
+const apiState = vi.hoisted(() => ({
+  conflictReasons: [] as string[], mode: 'relay' as 'api' | 'relay', ready: false
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -18,8 +20,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../import/readwiseApiConnectionState.js', () => ({
-  isStoredReadwiseApiConnectionReady: () => apiState.ready,
-  loadStoredReadwiseHostSettings: () => ({ readwiseSourceMode: apiState.mode })
+  isStoredReadwiseApiConnectionReady: () => apiState.ready
+}));
+vi.mock('./readwiseSourceMode.js', () => ({
+  ensureReadwiseSourceModeInitialized: () => undefined,
+  loadReadwiseSourceModeState: () => ({
+    conflictReasons: apiState.conflictReasons,
+    mode: apiState.mode
+  })
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -35,7 +43,8 @@ import { saveJsonSetting } from './settingsStore.js';
 let tempRoot = '';
 
 beforeEach(async () => {
-  apiState.mode = 'folder';
+  apiState.mode = 'relay';
+  apiState.conflictReasons = [];
   apiState.ready = false;
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-host-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -137,12 +146,12 @@ it('uses API readiness instead of folder readiness in explicit API mode', async 
   expect(canCurrentHostRunReadwise()).toBe(false);
   apiState.ready = true;
   expect(canCurrentHostRunReadwise()).toBe(true);
-  apiState.mode = 'folder';
+  apiState.mode = 'relay';
   apiState.ready = false;
   expect(canCurrentHostRunReadwise()).toBe(true);
 });
 
-it('lets the workspace cutover override a stale folder mode on this Host', () => {
+it('fails closed when a completed cutover conflicts with relay mode', () => {
   saveJsonSetting('readwise_source_cutover', {
     completedAt: '2026-09-08T00:00:00.000Z',
     migratedCount: 12,
@@ -150,13 +159,14 @@ it('lets the workspace cutover override a stale folder mode on this Host', () =>
     unmatchedCount: 0,
     version: 1
   });
-  apiState.mode = 'folder';
+  apiState.mode = 'relay';
+  apiState.conflictReasons = ['completion_conflicts_with_mode'];
   apiState.ready = true;
 
-  expect(canCurrentHostRunReadwise()).toBe(true);
+  expect(canCurrentHostRunReadwise()).toBe(false);
 });
 
-it('blocks folder execution as soon as migration-in-progress is durable', () => {
+it('blocks ordinary relay and API execution while migration is in progress', () => {
   saveJsonSetting('readwise_source_cutover', {
     completedAt: '2026-09-09T00:00:00.000Z',
     completedCandidateCount: 2,
@@ -168,9 +178,9 @@ it('blocks folder execution as soon as migration-in-progress is durable', () => 
     unmatchedCount: 0,
     version: 1
   });
-  apiState.mode = 'folder';
+  apiState.mode = 'relay';
   apiState.ready = true;
 
-  expect(canCurrentHostRunReadwise('folder')).toBe(false);
-  expect(canCurrentHostRunReadwise('api')).toBe(true);
+  expect(canCurrentHostRunReadwise('relay')).toBe(false);
+  expect(canCurrentHostRunReadwise('api')).toBe(false);
 });

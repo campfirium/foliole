@@ -55,7 +55,7 @@ it('shows Off, Obsidian relay, and API as one source selector', async () => {
   const onCommitMode = vi.fn();
   render(
     <LocalizationProvider>
-      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} onCommitMode={onCommitMode} />
+      <ReadwiseSourceModeSection committedMode="relay" mode="relay" onChange={onChange} onCommitMode={onCommitMode} />
     </LocalizationProvider>
   );
 
@@ -72,7 +72,7 @@ it('opens API setup from source selection before migration', async () => {
   const onCommitMode = vi.fn();
   render(
     <LocalizationProvider>
-      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} onCommitMode={onCommitMode} />
+      <ReadwiseSourceModeSection committedMode="relay" mode="relay" onChange={onChange} onCommitMode={onCommitMode} />
     </LocalizationProvider>
   );
 
@@ -122,6 +122,7 @@ it('shows indeterminate indexing below the API source selector', async () => {
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
     committedMode="api"
     mode="api"
@@ -141,13 +142,15 @@ it('restores merging progress and explains a paused migration in place', async (
   });
   cutover.run.mockResolvedValue({ error_reason: 'request_failed', migrated_count: 7, status: 'failed', unmatched_count: 0 });
   render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
     committedMode="api"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  await waitFor(() => expect(cutover.run).toHaveBeenCalled());
+  await waitFor(() => expect(cutover.preview).toHaveBeenCalled());
+  expect(cutover.run).not.toHaveBeenCalled();
   expect(await screen.findByText('Migrating · Merging failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Continue migrating/ })).not.toBeInTheDocument();
@@ -219,7 +222,7 @@ it('uses the same instruction for a missing or invalid token', async () => {
     connection: { has_credential: false, state: 'disconnected', verified_at: null },
     status: 'token_missing'
   });
-  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={createReadwiseApiModeTestSettings()} committedMode="folder" mode="api" onChange={() => undefined} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiSettings={createReadwiseApiModeTestSettings()} committedMode="relay" mode="api" onChange={() => undefined} /></LocalizationProvider>);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();
@@ -228,9 +231,9 @@ it('uses the same instruction for a missing or invalid token', async () => {
   expect(screen.getByText('Connect Readwise first.')).toBeInTheDocument();
 });
 
-it('locks the source selector after the API cutover', async () => {
+it('locks the retired relay choice after the API cutover', async () => {
   const onChange = vi.fn();
-  render(<LocalizationProvider><ReadwiseSourceModeSection committedMode="api" mode="api" onChange={onChange} /></LocalizationProvider>);
+  render(<LocalizationProvider><ReadwiseSourceModeSection apiMigrationCompleted committedMode="api" mode="api" onChange={onChange} /></LocalizationProvider>);
 
   const folderMode = await screen.findByRole('radio', { name: 'Obsidian relay import' });
   expect(folderMode).toBeDisabled();

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import fixture from '../../lib/platform/fixtures/sync-anchor-topology-v5.json' with { type: 'json' };
+import fixture from '../../lib/platform/fixtures/sync-anchor-topology-v6.json' with { type: 'json' };
 import { PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncAnchorTopologyContract.js';
 
 import {

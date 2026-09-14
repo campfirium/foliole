@@ -133,6 +133,8 @@ function ReadwiseReaderCategoryContent(props: { importSettings: ImportSettingsSt
       onRunSync={importSettings.runReadwiseReaderImport}
       readwiseRootPath={importSettings.readwiseRootPath}
       readwiseSourceMode={importSettings.readwiseSourceMode}
+      readwiseApiMigrationCompleted={importSettings.readwiseApiMigrationCompleted}
+      readwiseSourceModeConflict={importSettings.readwiseSourceModeConflict}
       readwiseSources={importSettings.readwiseSources}
     />
   );

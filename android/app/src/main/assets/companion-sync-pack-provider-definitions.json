@@ -101,14 +101,15 @@
         "group-key-routing-v1",
         "lan-sync-v1",
         "opaque-sync-refs-v1",
+        "readwise-library-source-mode-v1",
         "source-host-ownership-v1",
         "sync-group-device-facts-v1",
         "system-entry-display-names-v1",
         "workgroup-aead-v1"
       ],
-      "max_supported_version": 5,
-      "min_supported_version": 5,
-      "version": 5
+      "max_supported_version": 6,
+      "min_supported_version": 6,
+      "version": 6
     },
     "resourceKinds": [
       "attachment",
@@ -168,16 +169,17 @@
       "group-key-routing-v1",
       "lan-sync-v1",
       "opaque-sync-refs-v1",
+      "readwise-library-source-mode-v1",
       "source-host-ownership-v1",
       "sync-group-device-facts-v1",
       "system-entry-display-names-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 5,
-    "min_supported_version": 5,
-    "version": 5
+    "max_supported_version": 6,
+    "min_supported_version": 6,
+    "version": 6
   },
-  "schemaVersion": 84,
+  "schemaVersion": 85,
   "stateCopyIndex": 2,
   "tableNames": [
     "sync_groups",

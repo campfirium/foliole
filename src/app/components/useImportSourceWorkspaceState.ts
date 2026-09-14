@@ -167,10 +167,12 @@ export function useImportSourceWorkspaceState() {
     ...createReadwiseSourceActions(setSettings),
     ...createWorkspaceMetaActions(setSettings),
     readwiseReaderConfig: settings.readwiseReaderConfig,
+    readwiseApiMigrationCompleted: settings.readwiseApiMigrationCompleted,
     handleCommitReadwiseApiPolicy,
     readwiseAutoImportPolicy: settings.readwiseAutoImportPolicy,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSourceMode: settings.readwiseSourceMode,
+    readwiseSourceModeConflict: settings.readwiseSourceModeConflict,
     readwiseSources: settings.readwiseSources,
     sources: settings.sources,
     titleStrategy: settings.titleStrategy

@@ -21,32 +21,24 @@ async function seedIncompleteMigration(app: ElectronApplication) {
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const hostSettings = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseHostSettings.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
-    const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
+    const importSettings = require(pathApi.join(process.cwd(), 'dist/electron/import/importManagerSettings.js'));
+    const reset = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseSourceCutoverReset.js'));
     connection.runWithDatabaseConnectionOwner(() => {
       host.activateReadwiseOnThisHost();
       const assignment = host.loadReadwiseHostAssignment();
       const source = identity.createReadwiseRemoteSource('2026-09-10T00:00:00.000Z');
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000019.bin';
-      const defaults = hostSettings.createDefaultReadwiseHostSettings();
       secret.writeReadwiseApiSecret(secretRef, 't178-19-token');
       identity.saveReadwiseConnectionState({
-        ...defaults,
-        apiConnection: { secretRef, state: 'connected', verifiedAt: '2026-09-10T00:00:00.000Z' },
-        readwiseSourceMode: 'api',
-        updatedAt: '2026-09-10T00:00:00.000Z'
+        secretRef, state: 'connected', verifiedAt: '2026-09-10T00:00:00.000Z'
       }, source, '2026-09-10T00:00:00.000Z');
-      cutover.writeLegacyReadwiseSourceCutover({
-        completedAt: '2026-09-10T00:00:00.000Z',
-        completedCandidateCount: 7,
-        migratedCount: 7,
+      reset.restartIncompleteReadwiseSourceCutover({
+        connectionRef: source.connectionRef,
+        policy: importSettings.loadImportManagerSettings().readwiseAutoImportPolicy,
         sourceHost: assignment.current_host_name,
-        startedAt: '2026-09-10T00:00:00.000Z',
-        status: 'migration-in-progress',
-        totalCandidateCount: 31,
-        unmatchedCount: 0
+        startedAt: '2026-09-10T00:00:00.000Z'
       });
     });
   });
@@ -76,7 +68,6 @@ async function seedConnectedFolderMode(app: ElectronApplication) {
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const hostSettings = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseHostSettings.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
     connection.runWithDatabaseConnectionOwner(() => {
@@ -85,25 +76,19 @@ async function seedConnectedFolderMode(app: ElectronApplication) {
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000914.bin';
       secret.writeReadwiseApiSecret(secretRef, 't178-19-source-mode-token');
       identity.saveReadwiseConnectionState({
-        ...hostSettings.createDefaultReadwiseHostSettings(),
-        apiConnection: { secretRef, state: 'connected', verifiedAt: '2026-09-14T00:00:00.000Z' },
-        readwiseSourceMode: 'folder',
-        updatedAt: '2026-09-14T00:00:00.000Z'
+        secretRef, state: 'connected', verifiedAt: '2026-09-14T00:00:00.000Z'
       }, source, '2026-09-14T00:00:00.000Z');
     });
   });
 }
 
-async function expectAutomaticRun(session: T178AcceptanceSession) {
+async function expectStableFailure(session: T178AcceptanceSession) {
   await expectWorkspaceShell(session.firstWindow);
   const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
   await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
   await expect(settings.getByRole('status').filter({
-    hasText: /^(Migrating · Indexing|正在迁移 · 索引中)/
+    hasText: /^(Migrating · Indexing failed|正在迁移 · 索引失败)/
   })).toBeVisible();
-  await expect.poll(() => session.electronApp.evaluate(() => Boolean(
-    (globalThis as typeof globalThis & { __t17819Requested?: boolean }).__t17819Requested
-  ))).toBe(true);
   return settings;
 }
 
@@ -130,7 +115,7 @@ async function pause(session: T178AcceptanceSession) {
   });
 }
 
-test('restores the credential and auto-resumes cutover without owning network wait', async ({ browserName }) => {
+test('restores the credential, records failure, and does not retry it on restart', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-'));
@@ -140,16 +125,22 @@ test('restores the credential and auto-resumes cutover without owning network wa
     await seedIncompleteMigration(session.electronApp);
     await installBlockedTransport(session.electronApp);
     await session.firstWindow.reload();
-    await expectAutomaticRun(session);
+    await expectStableFailure(session);
     await expectStorageResponsive(session);
-    await pause(session);
     await session.close();
 
     session = await createT178ApiAcceptanceSession(stateRoot);
     await installBlockedTransport(session.electronApp);
-    await expectAutomaticRun(session);
+    await expectWorkspaceShell(session.firstWindow);
+    const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
+    await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
+    await expect(settings.getByRole('status').filter({
+      hasText: /^(Migrating · Indexing failed|正在迁移 · 索引失败)/
+    })).toBeVisible();
+    expect(await session.electronApp.evaluate(() => Boolean(
+      (globalThis as typeof globalThis & { __t17819Requested?: boolean }).__t17819Requested
+    ))).toBe(false);
     await expectStorageResponsive(session);
-    await pause(session);
   } finally {
     if (session) await pause(session).catch(() => undefined);
     await session?.close().catch(() => undefined);
@@ -157,7 +148,7 @@ test('restores the credential and auto-resumes cutover without owning network wa
   }
 });
 
-test('keeps API mode selected after navigating away during migration', async ({ browserName }) => {
+test('keeps API preparation selected after navigating away from a failed migration', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-mode-'));
@@ -191,7 +182,7 @@ test('keeps API mode selected after navigating away during migration', async ({ 
     });
     await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
     await expect(settings.getByRole('radio', { name: /^(API mode|API 模式)$/ })).toBeChecked();
-    await expect(settings.getByText(/^(Migrating · Indexing|正在迁移 · 索引中)$/)).toBeVisible();
+    await expect(settings.getByText(/^(Migrating · Indexing failed|正在迁移 · 索引失败)/)).toBeVisible();
 
     await openSettingsCategory(session.firstWindow, 'Appearance');
     settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
@@ -199,6 +190,7 @@ test('keeps API mode selected after navigating away during migration', async ({ 
     await expect(settings.getByRole('radio', {
       name: /^(Obsidian relay import|Obsidian 中转导入模式)$/
     })).not.toBeChecked();
+    await expect(settings.getByText(/^(Migrating · Indexing failed|正在迁移 · 索引失败)/)).toBeVisible();
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-after-return.png') });
     await pause(session);
   } finally {

@@ -1,4 +1,3 @@
-import type { ReadwiseSourceMode } from './importManagerSettings.js';
 import {
   createDefaultReadwiseReaderConfig,
   normalizeReadwiseReaderConfig,
@@ -6,7 +5,7 @@ import {
 } from './readwiseReaderSettings.js';
 
 export const READWISE_HOST_SETTINGS_KEY = 'readwise_import_settings';
-export const READWISE_HOST_SETTINGS_VERSION = 5;
+export const READWISE_HOST_SETTINGS_VERSION = 6;
 export const READWISE_HOST_AUTO_IMPORT_POLICY_VERSION = 3;
 
 export interface ReadwiseHostApiConnection {
@@ -19,7 +18,6 @@ export interface ReadwiseHostSettings {
   autoImportPolicyVersion: typeof READWISE_HOST_AUTO_IMPORT_POLICY_VERSION;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
-  readwiseSourceMode: ReadwiseSourceMode;
   apiConnection: ReadwiseHostApiConnection;
   updatedAt: string;
   version: number;
@@ -40,7 +38,6 @@ export function createDefaultReadwiseHostSettings(): ReadwiseHostSettings {
     autoImportPolicyVersion: READWISE_HOST_AUTO_IMPORT_POLICY_VERSION,
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
-    readwiseSourceMode: 'folder',
     apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
     updatedAt: '1970-01-01T00:00:00.000Z',
     version: READWISE_HOST_SETTINGS_VERSION
@@ -58,9 +55,6 @@ export function normalizeReadwiseHostSettings(value: unknown): ReadwiseHostSetti
     autoImportPolicyVersion: READWISE_HOST_AUTO_IMPORT_POLICY_VERSION,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(payload.readwiseReaderConfig),
     readwiseRootPath: typeof payload.readwiseRootPath === 'string' ? payload.readwiseRootPath : '',
-    readwiseSourceMode: payload.readwiseSourceMode === 'api' || payload.readwiseSourceMode === 'off'
-      ? payload.readwiseSourceMode
-      : 'folder',
     apiConnection: {
       secretRef: normalizeSecretRef(apiConnection.secretRef),
       state: apiConnection.state === 'connected' || apiConnection.state === 'reconnect_required'
@@ -77,7 +71,6 @@ export function readwiseHostSettingsFromImportManager(value: unknown): ReadwiseH
   return normalizeReadwiseHostSettings({
     readwiseReaderConfig: payload.readwiseReaderConfig,
     readwiseRootPath: payload.readwiseRootPath,
-    readwiseSourceMode: payload.readwiseSourceMode,
     updatedAt: payload.updatedAt
   });
 }
@@ -85,7 +78,15 @@ export function readwiseHostSettingsFromImportManager(value: unknown): ReadwiseH
 export function withoutReadwiseImportManagerFields(value: unknown) {
   const payload = isRecord(value) ? { ...value } : {};
   delete payload.readwiseReaderConfig;
+  delete payload.readwiseApiMigrationCompleted;
   delete payload.readwiseRootPath;
   delete payload.readwiseSources;
+  delete payload.readwiseSourceMode;
+  return payload;
+}
+
+export function withoutReadwiseHostConnection(value: unknown) {
+  const payload = isRecord(value) ? { ...value } : {};
+  delete payload.apiConnection;
   return payload;
 }

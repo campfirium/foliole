@@ -16,6 +16,9 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   loadReadwiseHostAssignment: () => ({ current_host_name: 'desktop-test', is_active: true })
 }));
+vi.mock('../database/readwiseSourceMode.js', () => ({
+  loadReadwiseSourceModeState: () => ({ completion: null, conflictReasons: [], mode: 'api' })
+}));
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
 vi.mock('./readwiseApiConnectionState.js', async () => {
   const { createDefaultReadwiseHostSettings } = await import('../../lib/core/import/readwiseHostSettings.js');

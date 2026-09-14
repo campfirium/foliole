@@ -165,7 +165,7 @@ export async function previewReadwiseReaderImport(
     ? normalizeImportManagerSettings(settingsInput)
     : loadImportManagerSettings();
   if (settings.readwiseSourceMode === 'api') return previewReadwiseApiImport(settings);
-  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('folder')) {
+  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('relay')) {
     return {
       active_count: 0,
       blocked_count: 0,

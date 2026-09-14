@@ -7,7 +7,7 @@ export function assertKeepImportSourceCanRun(input: {
   sourceType?: 'generic' | 'readwise';
 }) {
   const allowed = input.sourceType === 'readwise'
-    ? canCurrentHostRunReadwise('folder')
+    ? canCurrentHostRunReadwise('relay')
     : resolveExecutableWatchedBinding(input.ruleId, input.directoryPath).executable;
   if (!allowed) throw new Error('source_not_owned_by_current_host');
 }

@@ -59,46 +59,45 @@ it('keeps the completed merging phase visible before removing migration status',
   await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('none:4/none'), { timeout: 1500 });
 });
 
-it('commits API mode before waiting for a long migration run to finish', async () => {
+it('keeps relay mode while a long migration is still running', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: null, status: 'ready', topic_count: 12, total_count: null
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   const onCommitMode = vi.fn();
 
-  render(<Probe committedMode="folder" onCommitMode={onCommitMode} />);
+  render(<Probe committedMode="relay" onCommitMode={onCommitMode} />);
   fireEvent.click(screen.getByRole('button', { name: 'start-migration' }));
 
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
-  expect(onCommitMode).toHaveBeenCalledWith('api');
-  const commitOrder = onCommitMode.mock.invocationCallOrder[0];
-  const runOrder = cutover.run.mock.invocationCallOrder[0];
-  if (commitOrder === undefined || runOrder === undefined) throw new Error('missing invocation order');
-  expect(commitOrder).toBeLessThan(runOrder);
+  expect(onCommitMode).not.toHaveBeenCalled();
 });
 
-it('repairs a stale folder projection from the durable in-progress migration', async () => {
+it('resumes a durable migration without presenting API as enabled', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
     topic_count: 12, total_count: null
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   const onCommitMode = vi.fn();
+  const onSelectApi = vi.fn();
 
-  render(<Probe committedMode="folder" onCommitMode={onCommitMode} />);
+  render(<Probe committedMode="relay" onCommitMode={onCommitMode} onSelectApi={onSelectApi} />);
 
-  await waitFor(() => expect(onCommitMode).toHaveBeenCalledWith('api'));
-  expect(cutover.run).toHaveBeenCalled();
+  await waitFor(() => expect(cutover.run).toHaveBeenCalled());
+  expect(onSelectApi).toHaveBeenCalledOnce();
+  expect(onCommitMode).not.toHaveBeenCalled();
 });
 
 function Probe(props: {
-  committedMode?: 'api' | 'folder';
-  onCommitMode?: (mode: 'api' | 'folder' | 'off') => void;
+  committedMode?: 'api' | 'relay';
+  onCommitMode?: (mode: 'api' | 'relay' | 'off') => void;
+  onSelectApi?: () => void;
 } = {}) {
   const migration = useReadwiseSourceMigration({
     committedMode: props.committedMode ?? 'api',
     ...(props.onCommitMode ? { onCommitMode: props.onCommitMode } : {}),
-    onSelectApi: () => undefined,
+    onSelectApi: props.onSelectApi ?? (() => undefined),
     t: ((key: string) => key) as Translate
   });
   return <>

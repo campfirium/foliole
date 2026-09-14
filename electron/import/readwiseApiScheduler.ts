@@ -6,6 +6,7 @@ import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportSt
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { submitDesktopOperation } from '../desktopOperations.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
@@ -39,6 +40,7 @@ interface SchedulerDependencies {
   loadMigrationPending: typeof isReadwiseApiMigrationPending;
   loadScheduleState: typeof loadReadwiseApiScheduleState;
   loadSettings: typeof loadImportManagerSettings;
+  loadSourceMode: typeof loadReadwiseSourceModeState;
   loadSource: typeof loadReadwiseRemoteSource;
   now: () => number;
   notifyChanged: () => void;
@@ -142,7 +144,10 @@ function buildScheduleStatus(dependencies: SchedulerDependencies): NativeReadwis
 
 function resolveEligibility(dependencies: SchedulerDependencies) {
   const settings = dependencies.loadSettings();
-  if (settings.readwiseSourceMode !== 'api') return { status: 'source_mode_mismatch' as const };
+  const sourceMode = dependencies.loadSourceMode();
+  if (sourceMode.conflictReasons.length > 0 || settings.readwiseSourceMode !== 'api') {
+    return { status: 'source_mode_mismatch' as const };
+  }
   const assignment = dependencies.loadHostAssignment();
   if (!assignment.is_active) return { status: 'inactive_host' as const };
   const source = dependencies.loadSource();
@@ -183,6 +188,7 @@ const scheduler = createReadwiseApiScheduler({
   loadMigrationPending: isReadwiseApiMigrationPending,
   loadScheduleState: loadReadwiseApiScheduleState,
   loadSettings: loadImportManagerSettings,
+  loadSourceMode: loadReadwiseSourceModeState,
   loadSource: loadReadwiseRemoteSource,
   now: Date.now,
   notifyChanged: notifyWorkspaceContentChanged,

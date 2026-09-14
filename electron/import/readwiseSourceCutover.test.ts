@@ -68,6 +68,7 @@ beforeEach(async () => {
   await fs.mkdir(state.sourcePath, { recursive: true });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+  openDatabaseConnection().driver.execute("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('readwise_source_mode', '{\"mode\":\"relay\",\"version\":1}', '2026-09-08T00:00:00.000Z')");
 });
 
 afterEach(async () => {
@@ -159,6 +160,17 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
     status: 'api',
     version: 2
   });
+  expect(JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_mode'"
+  )?.value ?? '{}')).toEqual({
+    completion: {
+      batchId: expect.any(String),
+      completedAt: expect.any(String),
+      sourceHost: 'This Mac',
+      startedAt: expect.any(String)
+    },
+    mode: 'api', version: 1
+  });
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
@@ -167,6 +179,29 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   expect(documentRequests[1]?.searchParams.get('withHtmlContent')).toBe('true');
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
 }, 20_000);
+
+it('rolls back the final completion record when the source mode cannot commit', async () => {
+  await seedMigratableSource(state.sourcePath);
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`CREATE TRIGGER reject_readwise_mode_update
+    BEFORE UPDATE OF value ON settings WHEN NEW.key = 'readwise_source_mode'
+    BEGIN SELECT RAISE(ABORT, 'injected source mode failure'); END`);
+
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 }
+  })).resolves.toMatchObject({ error_reason: 'request_failed', status: 'failed' });
+
+  expect(JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_mode'"
+  )?.value ?? '{}')).toEqual({ mode: 'relay', version: 1 });
+  expect(JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}')).toMatchObject({ status: 'migration-in-progress' });
+  expect(driver.queryOne<{ query_updated_after: string | null }>(
+    'SELECT query_updated_after FROM readwise_api_import_runs LIMIT 1'
+  )).toEqual({ query_updated_after: null });
+});
 
 it.each(['dismissed', 'hard_deleted'] as const)(
   'migrates %s folder sources to Readwise ids without fetching or materializing them', async (disposition) => {

@@ -15,9 +15,10 @@ import {
   type ReadwiseReaderConfig
 } from './readwiseReaderSettings.js';
 import { READWISE_FOLDER_NAMES, type ReadwiseSourceKind } from './readwiseSourceKinds.js';
+import type { ReadwiseSourceMode } from './readwiseSourceMode.js';
 
 export type ImportHighlightMode = 'merged' | 'split';
-export type ReadwiseSourceMode = 'api' | 'folder' | 'off';
+export type { ReadwiseSourceMode } from './readwiseSourceMode.js';
 export type KeepImportRuleState = 'draft' | 'enabled' | 'previewed';
 
 export interface ImportManagerSourceDraft {
@@ -35,8 +36,10 @@ export interface ImportManagerSourceDraft {
 export interface ImportManagerSettings {
   detailsOpen: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
+  readwiseApiMigrationCompleted: boolean;
   readwiseAutoImportPolicy: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
+  readwiseSourceModeConflict: string[];
   readwiseSourceMode: ReadwiseSourceMode;
   readwiseSources: ImportManagerSourceDraft[];
   sources: ImportManagerSourceDraft[];
@@ -179,10 +182,12 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
 export function createDefaultImportManagerSettings(): ImportManagerSettings {
   return {
     detailsOpen: true,
+    readwiseApiMigrationCompleted: false,
     readwiseAutoImportPolicy: createDefaultReadwiseAutoImportPolicy(),
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
-    readwiseSourceMode: 'folder',
+    readwiseSourceModeConflict: [],
+    readwiseSourceMode: 'relay',
     readwiseSources: createReadwiseImportSources(),
     sources: createDefaultGenericImportSources(),
     titleStrategy: 'file_name',
@@ -220,12 +225,16 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
+    readwiseApiMigrationCompleted: value.readwiseApiMigrationCompleted === true,
     readwiseAutoImportPolicy: normalizeReadwiseAutoImportPolicy(value.readwiseAutoImportPolicy),
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
+    readwiseSourceModeConflict: Array.isArray(value.readwiseSourceModeConflict)
+      ? value.readwiseSourceModeConflict.filter((item): item is string => typeof item === 'string')
+      : [],
     readwiseSourceMode: value.readwiseSourceMode === 'api' || value.readwiseSourceMode === 'off'
       ? value.readwiseSourceMode
-      : 'folder',
+      : 'relay',
     readwiseSources: defaultReadwiseSources.map((source) =>
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)
     ),

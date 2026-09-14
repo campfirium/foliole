@@ -2,6 +2,10 @@ import {
   canMaterializeDesktopSetting,
   type DesktopSettingIdentity
 } from '../../lib/core/database/desktopSettingPolicy.js';
+import {
+  normalizeReadwiseSourceMode,
+  READWISE_SOURCE_MODE_KEY
+} from '../../lib/core/import/readwiseSourceMode.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import type { SyncPackSyncObjectRecord } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
 
@@ -30,10 +34,51 @@ export async function materializeDesktopSettingRecord(port: DbPort, record: Sync
     [identity.scope, identity.platform, identity.formFactor, identity.hostName, identity.key]
   ))[0];
   if (!row) return;
+  if (identity.key === READWISE_SOURCE_MODE_KEY
+    && !await canMaterializeReadwiseMode(port, row.value_json)) return;
   await port.run(
     `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     [identity.key, row.value_json, row.updated_at]
+  );
+  if (identity.key === 'readwise_source_cutover_v2') {
+    await materializePendingReadwiseMode(port);
+  }
+}
+
+async function canMaterializeReadwiseMode(port: DbPort, valueJson: string) {
+  let setting;
+  try { setting = normalizeReadwiseSourceMode(JSON.parse(valueJson) as unknown); }
+  catch { return false; }
+  if (setting.mode !== 'api') return true;
+  const rows = await port.query<SettingValueRow>(
+    `SELECT value_json, updated_at FROM setting_records
+     WHERE key = 'readwise_source_cutover_v2' AND scope = 'user_space'
+       AND platform = 'windows' AND form_factor = 'desktop' AND host_name = '*'`
+  );
+  if (!rows[0]) return false;
+  try {
+    const cutover = JSON.parse(rows[0].value_json) as Record<string, unknown>;
+    return cutover.version === 2 && cutover.status === 'api' && cutover.completionVersion === 2
+      && setting.completion?.completedAt === cutover.completedAt
+      && setting.completion?.startedAt === cutover.startedAt
+      && setting.completion?.sourceHost === cutover.sourceHost
+      && setting.completion?.batchId === (cutover.batchId ?? null);
+  } catch { return false; }
+}
+
+async function materializePendingReadwiseMode(port: DbPort) {
+  const rows = await port.query<SettingValueRow>(
+    `SELECT value_json, updated_at FROM setting_records
+     WHERE key = ? AND scope = 'user_space' AND platform = 'windows'
+       AND form_factor = 'desktop' AND host_name = '*'`, [READWISE_SOURCE_MODE_KEY]
+  );
+  const row = rows[0];
+  if (!row || !await canMaterializeReadwiseMode(port, row.value_json)) return;
+  await port.run(
+    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [READWISE_SOURCE_MODE_KEY, row.value_json, row.updated_at]
   );
 }
 

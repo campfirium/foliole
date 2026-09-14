@@ -10,6 +10,7 @@ import { cn } from '@/shared/lib/utils';
 
 interface SettingsSegmentedOption {
   ariaLabel?: string;
+  disabled?: boolean;
   label: ReactNode;
   value: string;
 }
@@ -63,7 +64,7 @@ export function SettingsSegmentedControl({
               'focus-visible:relative focus-visible:z-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
               active && 'bg-settings-segmented-active font-medium text-settings-segmented-active-foreground'
             )}
-            disabled={disabled}
+            disabled={disabled || option.disabled}
             key={option.value}
             onClick={() => onChange(option.value)}
             role="radio"

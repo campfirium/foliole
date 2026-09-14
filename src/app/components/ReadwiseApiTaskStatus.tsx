@@ -77,6 +77,7 @@ export function readwiseFailureReason(reason: string | null, t: Translate) {
     readwise_api_reconnect_required: 'desktop.readwise.api.failure.reconnectRequired',
     readwise_execution_connection_changed: 'desktop.readwise.api.failure.connectionChanged',
     readwise_execution_eligibility_lost: 'desktop.readwise.api.failure.notEligible',
+    readwise_source_mode_conflict: 'desktop.readwise.source.conflict',
     request_failed: 'desktop.readwise.api.failure.requestFailed'
   }[reason ?? ''] as Parameters<Translate>[0] | undefined;
   return key ? t(key) : null;

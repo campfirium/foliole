@@ -39,12 +39,12 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         let roleKey = try XCTUnwrap(fixture?["role_txt_key"] as? String)
         let record = NetService.data(fromTXTRecord: [
             roleKey: Data("anchor".utf8),
-            "protocol_version": Data("5".utf8)
+            "protocol_version": Data("6".utf8)
         ])
         let decoded = FolioleCompanionBonjourTXT.decode(record)
 
         XCTAssertEqual(decoded[roleKey], "anchor")
-        XCTAssertEqual(decoded["protocol_version"], "5")
+        XCTAssertEqual(decoded["protocol_version"], "6")
     }
 
     func testRefusesSignedRequestRedirects() throws {
@@ -79,6 +79,6 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v5.json")
+            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v6.json")
     }
 }

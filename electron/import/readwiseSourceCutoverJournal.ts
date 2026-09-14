@@ -6,7 +6,12 @@ import { completeReadwiseApiCandidateRun } from '../database/readwiseApiCandidat
 import {
   confirmReadwiseIdentityBindings
 } from '../database/readwiseRemoteIdentity.js';
-import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import {
+  loadReadwiseSourceCutover,
+  writeReadwiseSourceCutover,
+  writeReadwiseSourceCutoverWithDriver
+} from '../database/readwiseSourceCutover.js';
+import { writeReadwiseSourceMode } from '../database/readwiseSourceMode.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { hasPersistedReadwiseApiEpubStructure } from './readwiseApiEpubMaterialization.js';
@@ -176,19 +181,27 @@ function adoptBookSource(
 }
 
 export function completeReadwiseSourceCutoverMigration(connectionRef: string) {
-  requireReadwiseSourceCutoverV2();
-  recordReadwiseUnavailableAnnotationTerminals(connectionRef);
-  assertReadwiseSourceCutoverComplete(connectionRef);
-  const completedAt = new Date().toISOString();
-  const latest = requireReadwiseSourceCutoverV2();
-  writeReadwiseSourceCutover({
-    ...latest,
-    completedAt,
-    completionVersion: 2,
-    phase: null,
-    status: 'api'
-  }, completedAt);
-  completeReadwiseApiCandidateRun(connectionRef, 'cutover', completedAt);
+  openDatabaseConnection().driver.transaction((driver) => {
+    requireReadwiseSourceCutoverV2();
+    recordReadwiseUnavailableAnnotationTerminals(connectionRef);
+    assertReadwiseSourceCutoverComplete(connectionRef);
+    const completedAt = new Date().toISOString();
+    const latest = requireReadwiseSourceCutoverV2();
+    writeReadwiseSourceCutoverWithDriver(driver, {
+      ...latest,
+      completedAt,
+      completionVersion: 2,
+      phase: null,
+      status: 'api'
+    }, completedAt);
+    completeReadwiseApiCandidateRun(connectionRef, 'cutover', completedAt);
+    writeReadwiseSourceMode(driver, 'api', completedAt, {
+      batchId: latest.batchId ?? null,
+      completedAt,
+      sourceHost: latest.sourceHost,
+      startedAt: latest.startedAt
+    });
+  });
 }
 
 export function setReadwiseSourceCutoverPhase(phase: 'indexing' | 'merging') {

@@ -53,6 +53,9 @@ import {
 } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { saveReadwiseDeviceConnection, loadReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
+import { loadReadwiseSourceModeState } from './readwiseSourceMode.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -123,6 +126,39 @@ it('rolls back the library when current backup controls cannot be reapplied', as
 
   expect(currentContent()).toBe('# current');
   expect(loadBackupSettings()).toEqual(current);
+});
+
+it('restores Readwise mode and cutover together without restoring device credentials', async () => {
+  const completion = {
+    batchId: 'batch-1', completedAt: 'done', sourceHost: 'This Mac', startedAt: 'start'
+  };
+  saveJsonSetting('readwise_remote_source', {
+    connectionRef: 'readwise-device', createdAt: 'created', updatedAt: 'updated', version: 1
+  });
+  saveJsonSetting('readwise_source_cutover_v2', {
+    annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
+    completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+    retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
+    status: 'api', version: 2
+  });
+  saveJsonSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
+  saveReadwiseDeviceConnection('readwise-device', {
+    secretRef: 'local-secret', state: 'connected', verifiedAt: 'verified'
+  });
+  const backup = await createApplicationDatabaseBackup();
+
+  saveJsonSetting('readwise_source_mode', { completion, mode: 'off', version: 1 });
+  saveReadwiseDeviceConnection('readwise-device', {
+    secretRef: 'new-local-secret', state: 'connected', verifiedAt: 'new-verified'
+  });
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  expect(loadReadwiseSourceModeState()).toEqual({
+    completion, conflictReasons: [], mode: 'api'
+  });
+  expect(loadReadwiseDeviceConnection('readwise-device')).toEqual({
+    secretRef: 'new-local-secret', state: 'connected', verifiedAt: 'new-verified'
+  });
 });
 
 function currentContent() {

@@ -2,10 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import { clipboard } from 'electron';
 
-import {
-  normalizeReadwiseHostSettings,
-  type ReadwiseHostApiConnection,
-  type ReadwiseHostSettings
+import type {
+  ReadwiseHostApiConnection,
+  ReadwiseHostSettings
 } from '../../lib/core/import/readwiseHostSettings.js';
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import type {
@@ -20,6 +19,7 @@ import {
   loadReadwiseRemoteSource,
   saveReadwiseConnectionState
 } from '../database/readwiseRemoteIdentity.js';
+import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
 import {
@@ -48,20 +48,15 @@ function result(status: NativeReadwiseApiConnectionResult['status'], retryAfterS
 }
 
 function saveConnection(
-  settings: ReadwiseHostSettings,
   apiConnection: ReadwiseHostApiConnection,
   remoteSource?: ReturnType<typeof createReadwiseRemoteSource>
 ) {
   const updatedAt = new Date().toISOString();
-  saveReadwiseConnectionState(normalizeReadwiseHostSettings({
-    ...settings,
-    apiConnection,
-    updatedAt
-  }), remoteSource, updatedAt);
+  saveReadwiseConnectionState(apiConnection, remoteSource, updatedAt);
 }
 
 export function saveReconnectRequired(settings: ReadwiseHostSettings) {
-  saveConnection(settings, {
+  saveConnection({
     ...settings.apiConnection,
     state: 'reconnect_required'
   });
@@ -116,7 +111,7 @@ export async function connectReadwiseApiFromClipboard(
 ): Promise<NativeReadwiseApiConnectionResult> {
   if (!loadReadwiseHostAssignment().is_active) return result('not_active_host');
   const settings = loadStoredReadwiseHostSettings();
-  if (settings.readwiseSourceMode !== 'api' && connectionIntent !== 'migration') {
+  if (loadReadwiseSourceModeState().mode !== 'api' && connectionIntent !== 'migration') {
     return result('source_mode_mismatch');
   }
   try {
@@ -161,7 +156,7 @@ export async function connectReadwiseApiFromClipboard(
   writeReadwiseApiSecret(secretRef, token);
   try {
     const verifiedAt = new Date().toISOString();
-    saveConnection(settings, { secretRef, state: 'connected', verifiedAt }, remoteSource);
+    saveConnection({ secretRef, state: 'connected', verifiedAt }, remoteSource);
   } catch (error) {
     if (previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     else deleteReadwiseApiSecret(secretRef);
@@ -183,7 +178,7 @@ export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
   }
   if (secretRef) deleteReadwiseApiSecret(secretRef);
   try {
-    saveConnection(settings, { secretRef: null, state: 'disconnected', verifiedAt: null });
+    saveConnection({ secretRef: null, state: 'disconnected', verifiedAt: null });
   } catch (error) {
     if (secretRef && previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     throw error;

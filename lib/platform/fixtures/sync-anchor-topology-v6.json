@@ -1,7 +1,7 @@
 {
   "join_contract_version": 1,
-  "production_protocol_version": 5,
-  "prepared_protocol_version": 5,
+  "production_protocol_version": 6,
+  "prepared_protocol_version": 6,
   "role_txt_key": "topology_role",
   "host_cases": [
     {
