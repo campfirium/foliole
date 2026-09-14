@@ -1,6 +1,6 @@
 import { defaultKeymap, redo, toggleComment, undo } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState, Prec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, highlightActiveLine, keymap, type ViewUpdate } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
@@ -14,6 +14,7 @@ import {
 } from './codeMirrorEditorAdapterSupport';
 import { markdownFormattingKeymap } from './codeMirrorMarkdownFormatting';
 import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMarkerState';
+import { structuredListKeymap } from './codeMirrorStructuredListKeymap';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
@@ -69,6 +70,7 @@ const escapeBlurKeymap = [{
 
 function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
   return [
+    Prec.highest(keymap.of(structuredListKeymap)),
     keymap.of([...escapeBlurKeymap, ...markdownFormattingKeymap, ...folioleDefaultKeymap]),
     ...createApplicationCutExtensions(options.applicationCutEnabled === true)
   ];

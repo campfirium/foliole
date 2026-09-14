@@ -32,6 +32,8 @@ export interface MarkdownPrefixRange {
   kind: MarkdownPrefixKind;
   lineFrom: number;
   markerText: string;
+  taskMarkerFrom?: number;
+  taskMarkerTo?: number;
   to: number;
 }
 
@@ -101,6 +103,8 @@ function addPrefixRange(
     ...range,
     from: offset + range.from,
     lineFrom: offset + findLineStart(source, range.from),
+    ...(range.taskMarkerFrom !== undefined ? { taskMarkerFrom: offset + range.taskMarkerFrom } : {}),
+    ...(range.taskMarkerTo !== undefined ? { taskMarkerTo: offset + range.taskMarkerTo } : {}),
     to: offset + range.to
   });
 }
@@ -148,14 +152,19 @@ function collectListItemPrefix(args: {
 }) {
   const listMark = findChild(args.node, 'ListMark');
   if (!listMark) return;
-  const taskMarker = findDescendant(args.node, 'TaskMarker');
+  const nestedTaskMarker = findDescendant(args.node, 'TaskMarker');
+  const taskMarker = nestedTaskMarker && findLineStart(args.source, nestedTaskMarker.from) === findLineStart(args.source, listMark.from)
+    ? nestedTaskMarker
+    : null;
   const paragraph = findChild(args.node, 'Paragraph');
-  if (args.parentName === 'BulletList' && taskMarker) {
+  if ((args.parentName === 'BulletList' || args.parentName === 'OrderedList') && taskMarker) {
     addPrefixRange(args.prefixes, args.source, args.offset, {
       checked: args.source.slice(taskMarker.from, taskMarker.to).toLowerCase().includes('x'),
       from: args.node.from,
       kind: 'task-list',
       markerText: '',
+      taskMarkerFrom: taskMarker.from,
+      taskMarkerTo: taskMarker.to,
       to: extendTrailingSpaces(args.source, taskMarker.to)
     });
   } else if (args.parentName === 'BulletList') {

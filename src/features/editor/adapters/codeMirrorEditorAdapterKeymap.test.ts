@@ -32,6 +32,7 @@ vi.mock('@codemirror/state', () => ({
   EditorState: {
     allowMultipleSelections: { of: vi.fn(() => 'allow-multiple-selections') }
   },
+  Prec: { highest: vi.fn((value) => value) },
   StateEffect: {
     define: vi.fn(() => ({ of: vi.fn((value) => value) }))
   },

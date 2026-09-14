@@ -147,6 +147,7 @@ export const liveMarkdownTheme = EditorView.theme({
     border: '1px solid rgb(var(--color-border-strong) / 0.72)',
     borderRadius: 'var(--editor-radius-sm)',
     boxSizing: 'border-box',
+    cursor: 'pointer',
     display: 'inline-block',
     height: liveMarkdownSpacing.taskCheckboxSize,
     position: 'relative',

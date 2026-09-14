@@ -126,6 +126,17 @@ describe('editorOperationHistory text grouping', () => {
     }));
     expect(getEditorOperationSession(history, 'node-1').undoStack).toHaveLength(1);
   });
+
+  it('keeps adjacent list structure commands as separate undo steps', () => {
+    let history = pushEditorOperationEntry(createEmptyEditorOperationHistory(), createTextHistoryEntry({
+      afterContent: '- A', beforeContent: 'A', timestamp: 1000, userEvent: 'input.list'
+    }));
+    history = pushEditorOperationEntry(history, createTextHistoryEntry({
+      afterContent: '  - A', beforeContent: '- A', timestamp: 1100, userEvent: 'input.list'
+    }));
+
+    expect(getEditorOperationSession(history, 'node-1').undoStack).toHaveLength(2);
+  });
 });
 
 describe('editorOperationHistory metadata', () => {
