@@ -34,8 +34,7 @@ it('keeps incrementing Untitled titles while the series still exists', async () 
   const secondId = (await useWorkspaceStore.getState().createRootNode())!;
   const thirdId = (await useWorkspaceStore.getState().createRootNode())!;
 
-  useWorkspaceStore.getState().deleteNode(secondId);
-  useWorkspaceStore.getState().deleteNode(thirdId);
+  useWorkspaceStore.setState({ trashedNodeIds: [secondId, thirdId] });
 
   const fourthId = (await useWorkspaceStore.getState().createRootNode())!;
 
@@ -43,24 +42,24 @@ it('keeps incrementing Untitled titles while the series still exists', async () 
   expect(useWorkspaceStore.getState().nodesById[fourthId]?.title).toBe('Untitled 3');
 });
 
-it('keeps Untitled titles monotonic after the visible series is removed', async () => {
+it('resets Untitled titles after the series is fully removed', async () => {
   resetToEmptyWorkspace();
 
   const firstId = (await useWorkspaceStore.getState().createRootNode())!;
   const secondId = (await useWorkspaceStore.getState().createRootNode())!;
 
-  useWorkspaceStore.getState().deleteNode(firstId);
-  useWorkspaceStore.getState().deleteNode(secondId);
+  useWorkspaceStore.setState({ trashedNodeIds: [firstId, secondId] });
 
   const resetId = (await useWorkspaceStore.getState().createRootNode())!;
 
-  expect(useWorkspaceStore.getState().nodesById[resetId]?.title).toBe('Untitled 2');
+  expect(useWorkspaceStore.getState().nodesById[resetId]?.title).toBe('Untitled');
 });
 
-it('increments Untitled titles per parent when creating empty child nodes', async () => {
-  const parentId = (await useWorkspaceStore.getState().createRootNode('Parent'))!;
-  const firstChildId = (await useWorkspaceStore.getState().createChildNode(parentId))!;
-  const secondChildId = (await useWorkspaceStore.getState().createChildNode(parentId))!;
+it('increments Untitled titles across different parents', async () => {
+  const firstParentId = (await useWorkspaceStore.getState().createRootNode('First parent'))!;
+  const secondParentId = (await useWorkspaceStore.getState().createRootNode('Second parent'))!;
+  const firstChildId = (await useWorkspaceStore.getState().createChildNode(firstParentId))!;
+  const secondChildId = (await useWorkspaceStore.getState().createChildNode(secondParentId))!;
 
   expect(useWorkspaceStore.getState().nodesById[firstChildId]?.title).toBe('Untitled');
   expect(useWorkspaceStore.getState().nodesById[secondChildId]?.title).toBe('Untitled 1');
@@ -73,4 +72,15 @@ it('does not derive the sequence from a manually assigned Untitled-style title',
   const createdId = (await useWorkspaceStore.getState().createRootNode())!;
 
   expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled');
+});
+
+it('ignores stale counters when no generated Untitled title remains', async () => {
+  useWorkspaceStore.setState({
+    untitledSequenceByParent: { __global__: 1123123128, 'special-inbox': 1123123128 }
+  });
+
+  const createdId = (await useWorkspaceStore.getState().createRootNode())!;
+
+  expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled');
+  expect(useWorkspaceStore.getState().untitledSequenceByParent.__global__).toBe(1);
 });

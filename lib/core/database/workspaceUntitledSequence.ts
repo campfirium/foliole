@@ -7,11 +7,7 @@ interface WorkspaceMetaRow extends DatabaseRow {
 const UNTITLED_TITLE_PATTERN = /^Untitled(?: (\d+))?$/;
 const EXCERPT_TITLE_PATTERN = /^Excerpt (\d+)$/;
 const UNTITLED_SEQUENCE_META_KEY = 'untitled_sequence_by_parent';
-const ROOT_PARENT_KEY = '__root__';
-
-function toParentKey(parentNodeId: string | null) {
-  return parentNodeId ?? ROOT_PARENT_KEY;
-}
+const GLOBAL_SEQUENCE_KEY = '__global__';
 
 function parseSequenceMap(value: string): Record<string, number> {
   try {
@@ -50,7 +46,7 @@ function resolveSequenceUpdate(input: {
     return match ? { key: `image-excerpt:${input.parentNodeId}`, next: Number.parseInt(match[1]!, 10) + 1 } : null;
   }
   const next = toNextSequence(input.title);
-  return next === null ? null : { key: toParentKey(input.parentNodeId), next };
+  return next === null ? null : { key: GLOBAL_SEQUENCE_KEY, next };
 }
 
 export function loadUntitledSequenceByParent(driver: DatabaseDriver) {
@@ -67,6 +63,7 @@ export function bumpUntitledSequenceByParent(
     isImageExcerpt: boolean;
     isTitleManual: boolean;
     parentNodeId: string | null;
+    resetGlobalUntitledSequence?: boolean;
     title: string;
     updatedAt: string;
   }
@@ -74,9 +71,12 @@ export function bumpUntitledSequenceByParent(
   const update = resolveSequenceUpdate(input);
   if (!update) return;
   const currentSequenceByParent = loadUntitledSequenceByParent(driver);
+  const nextSequence = input.resetGlobalUntitledSequence && update.key === GLOBAL_SEQUENCE_KEY
+    ? update.next
+    : Math.max(currentSequenceByParent[update.key] ?? 0, update.next);
   const updatedSequenceByParent = {
     ...currentSequenceByParent,
-    [update.key]: Math.max(currentSequenceByParent[update.key] ?? 0, update.next)
+    [update.key]: nextSequence
   };
   driver.execute(
     `INSERT INTO workspace_meta (key, value, updated_at)

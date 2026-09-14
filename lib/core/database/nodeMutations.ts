@@ -147,6 +147,10 @@ export function upsertNodeSnapshot(
   const statements = getUpsertNodeSnapshotStatements(driver);
 
   driver.transaction(() => {
+    const resetGlobalUntitledSequence = !input.isTitleManual
+      && input.anchorLink?.kind !== 'image-excerpt'
+      && input.title.trim() === 'Untitled'
+      && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
@@ -165,6 +169,7 @@ export function upsertNodeSnapshot(
       isImageExcerpt: input.anchorLink?.kind === 'image-excerpt',
       isTitleManual: input.isTitleManual,
       parentNodeId: input.parentNodeId,
+      resetGlobalUntitledSequence,
       title: input.title,
       updatedAt: input.updatedAt
     });

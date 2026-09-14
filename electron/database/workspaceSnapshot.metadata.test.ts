@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { upsertNodeSnapshot } from './nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -77,7 +77,38 @@ it('loads persisted Untitled sequence state from sqlite snapshot', () => {
     updatedAt: '2026-03-18T00:00:00.000Z'
   });
 
-  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __root__: 7 });
+  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __global__: 7 });
+});
+
+it('persists one Untitled sequence across parents', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-first-parent', parentNodeId: null, kind: 'topic', title: 'Untitled 2',
+    isTitleManual: false, content: '', reveal: null, anchorLink: null, position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z', updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-second-parent', parentNodeId: 'special-inbox', kind: 'topic', title: 'Untitled 6',
+    isTitleManual: false, content: '', reveal: null, anchorLink: null, position: 1,
+    createdAt: '2026-03-18T00:00:01.000Z', updatedAt: '2026-03-18T00:00:01.000Z'
+  });
+
+  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __global__: 7 });
+});
+
+it('restarts the persisted Untitled sequence after all generated titles are removed', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-old-series', parentNodeId: null, kind: 'topic', title: 'Untitled 1123123127',
+    isTitleManual: false, content: '', reveal: null, anchorLink: null, position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z', updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+  softDeleteNodes({ nodeIds: ['node-old-series'], deletedAt: '2026-03-18T00:00:01.000Z' });
+  upsertNodeSnapshot({
+    nodeId: 'node-new-series', parentNodeId: 'special-inbox', kind: 'topic', title: 'Untitled',
+    isTitleManual: false, content: '', reveal: null, anchorLink: null, position: 1,
+    createdAt: '2026-03-18T00:00:02.000Z', updatedAt: '2026-03-18T00:00:02.000Z'
+  });
+
+  expect(loadWorkspaceSnapshot()?.untitledSequenceByParent).toEqual({ __global__: 1 });
 });
 
 it('does not persist an Untitled sequence from a manually assigned title', () => {
