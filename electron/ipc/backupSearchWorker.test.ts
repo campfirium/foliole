@@ -68,6 +68,7 @@ it('walks compressed and plain backups one match at a time and skips duplicates 
   const hashes = await Promise.all(sources.map(sha256));
   const engine = new BackupSearchWorkerEngine({
     backups: [...sources, missing].map((filePath, index) => ({
+      fileName: path.basename(filePath),
       filePath,
       updatedAt: `2026-09-${10 - index}T00:00:00.000Z`
     })),
@@ -75,7 +76,9 @@ it('walks compressed and plain backups one match at a time and skips duplicates 
     sessionDirectory
   });
 
-  await expect(engine.next()).resolves.toMatchObject({ status: 'match', match: { node_id: 'same', deleted: true } });
+  await expect(engine.next()).resolves.toMatchObject({
+    status: 'match', match: { backup_name: 'manual-match.db', deleted: true, node_id: 'same' }
+  });
   await expect(engine.next()).resolves.toMatchObject({ status: 'match', match: { node_id: 'second' } });
   await expect(engine.next()).resolves.toMatchObject({ status: 'match', match: { node_id: 'older' } });
   await expect(engine.next()).resolves.toEqual({ skipped_backup_count: 2, status: 'complete' });

@@ -15,6 +15,7 @@ interface MutableCell<T> {
 
 function useBackupSearchModel() {
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [history, setHistory] = useState<DatabaseBackupSearchMatch[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [status, setStatus] = useState<BackupSearchStatus>('idle');
@@ -24,7 +25,8 @@ function useBackupSearchModel() {
   const generationRef = useRef(0);
   return {
     currentIndex, error, generationRef, history, query, sessionIdRef, setCurrentIndex,
-    setError, setHistory, setQuery, setSkippedBackupCount, setStatus, skippedBackupCount, status
+    setError, setHistory, setQuery, setSkippedBackupCount, setStatus, setSubmittedQuery,
+    skippedBackupCount, status, submittedQuery
   };
 }
 
@@ -70,7 +72,8 @@ function useSubmitBackupSearch(
   loadNext: (sessionId: string, generation: number) => Promise<void>
 ) {
   const {
-    generationRef, query, sessionIdRef, setCurrentIndex, setError, setHistory, setSkippedBackupCount, setStatus
+    generationRef, query, sessionIdRef, setCurrentIndex, setError, setHistory, setSkippedBackupCount,
+    setStatus, setSubmittedQuery
   } = model;
   return useCallback(async () => {
     const normalized = query.trim();
@@ -81,6 +84,7 @@ function useSubmitBackupSearch(
     setHistory([]);
     setCurrentIndex(-1);
     setSkippedBackupCount(0);
+    setSubmittedQuery(normalized);
     setStatus('starting');
     try {
       const sessionId = await startDatabaseBackupSearch(normalized);
@@ -89,25 +93,24 @@ function useSubmitBackupSearch(
       await loadNext(sessionId, generation);
     } catch (startError) {
       if (generationRef.current !== generation) return;
+      setSubmittedQuery('');
       setError(startError instanceof Error ? startError.message : String(startError));
       setStatus('error');
     }
-  }, [clearSession, generationRef, loadNext, query, sessionIdRef, setCurrentIndex, setError, setHistory, setSkippedBackupCount, setStatus]);
+  }, [clearSession, generationRef, loadNext, query, sessionIdRef, setCurrentIndex, setError, setHistory,
+    setSkippedBackupCount, setStatus, setSubmittedQuery]);
 }
 
-function useBackupSearchNavigation(
+function useContinueBackupSearch(
   model: ReturnType<typeof useBackupSearchModel>,
   loadNext: (sessionId: string, generation: number) => Promise<void>
 ) {
-  const { currentIndex, generationRef, history, sessionIdRef, setCurrentIndex, status } = model;
-  const next = useCallback(async () => {
-    if (currentIndex < history.length - 1) return void setCurrentIndex((index) => index + 1);
+  const { generationRef, sessionIdRef, status } = model;
+  return useCallback(async () => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || status === 'searching' || status === 'starting' || status === 'complete') return;
     await loadNext(sessionId, generationRef.current);
-  }, [currentIndex, generationRef, history.length, loadNext, sessionIdRef, setCurrentIndex, status]);
-  const previous = useCallback(() => setCurrentIndex((index) => Math.max(0, index - 1)), [setCurrentIndex]);
-  return { next, previous };
+  }, [generationRef, loadNext, sessionIdRef, status]);
 }
 
 function useBackupSearchLifecycle(
@@ -115,7 +118,9 @@ function useBackupSearchLifecycle(
   model: ReturnType<typeof useBackupSearchModel>,
   clearSession: () => Promise<void>
 ) {
-  const { setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus } = model;
+  const {
+    setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus, setSubmittedQuery
+  } = model;
   useEffect(() => {
     if (open) return;
     void clearSession();
@@ -124,8 +129,10 @@ function useBackupSearchLifecycle(
     setCurrentIndex(-1);
     setSkippedBackupCount(0);
     setError('');
+    setSubmittedQuery('');
     setStatus('idle');
-  }, [clearSession, open, setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus]);
+  }, [clearSession, open, setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus,
+    setSubmittedQuery]);
   useEffect(() => () => { void clearSession(); }, [clearSession]);
 }
 
@@ -134,29 +141,33 @@ export function useBackupSearchSession(open: boolean) {
   const clearSession = useClearBackupSearchSession(model.generationRef, model.sessionIdRef);
   const loadNext = useLoadNextBackupMatch(model);
   const submit = useSubmitBackupSearch(model, clearSession, loadNext);
-  const { next, previous } = useBackupSearchNavigation(model, loadNext);
+  const continueSearch = useContinueBackupSearch(model, loadNext);
   useBackupSearchLifecycle(open, model, clearSession);
-  const { setCurrentIndex, setHistory, setSkippedBackupCount, setStatus } = model;
+  const { setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery } = model;
+  const select = useCallback((index: number) => {
+    if (index >= 0 && index < model.history.length) setCurrentIndex(index);
+  }, [model.history.length, setCurrentIndex]);
   const cancel = useCallback(async () => {
     await clearSession();
     setHistory([]);
     setCurrentIndex(-1);
     setSkippedBackupCount(0);
+    setSubmittedQuery('');
     setStatus('cancelled');
-  }, [clearSession, setCurrentIndex, setHistory, setSkippedBackupCount, setStatus]);
+  }, [clearSession, setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery]);
   return {
     cancel,
+    continueSearch,
     current: model.currentIndex >= 0 ? model.history[model.currentIndex] ?? null : null,
     currentIndex: model.currentIndex,
     error: model.error,
-    hasNextInHistory: model.currentIndex >= 0 && model.currentIndex < model.history.length - 1,
-    historyLength: model.history.length,
-    next,
-    previous,
+    history: model.history,
     query: model.query,
+    select,
     setQuery: model.setQuery,
     skippedBackupCount: model.skippedBackupCount,
     status: model.status,
+    submittedQuery: model.submittedQuery,
     submit
   };
 }

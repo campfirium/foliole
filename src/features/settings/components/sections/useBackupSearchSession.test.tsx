@@ -16,6 +16,7 @@ vi.mock('../../../../shared/platform/backupSearch/databaseBackupSearchRuntimeRep
 import { useBackupSearchSession } from './useBackupSearchSession';
 
 const match = (nodeId: string) => ({
+  backup_name: `manual-${nodeId}.db.gz`,
   backup_updated_at: '2026-09-10T00:00:00.000Z',
   content: `# ${nodeId}`,
   deleted: false,
@@ -31,7 +32,7 @@ beforeEach(() => {
   runtime.next.mockResolvedValue({ match: match('first'), skipped_backup_count: 0, status: 'match' });
 });
 
-it('waits for explicit submit, presents one result, and navigates viewed content in memory', async () => {
+it('accumulates fetched results and selects viewed content in memory', async () => {
   const { result } = renderHook(() => useBackupSearchSession(true));
   act(() => result.current.setQuery('needle'));
   expect(runtime.start).not.toHaveBeenCalled();
@@ -41,19 +42,17 @@ it('waits for explicit submit, presents one result, and navigates viewed content
   expect(result.current.current?.node_id).toBe('first');
 
   runtime.next.mockResolvedValueOnce({ match: match('second'), skipped_backup_count: 1, status: 'match' });
-  await act(() => result.current.next());
+  await act(() => result.current.continueSearch());
   expect(result.current.current?.node_id).toBe('second');
   expect(result.current.skippedBackupCount).toBe(1);
-  act(() => result.current.previous());
+  act(() => result.current.select(0));
   expect(result.current.current?.node_id).toBe('first');
-  await act(() => result.current.next());
-  expect(result.current.current?.node_id).toBe('second');
   expect(runtime.next).toHaveBeenCalledTimes(2);
 
   runtime.next.mockResolvedValueOnce({ skipped_backup_count: 1, status: 'complete' });
-  await act(() => result.current.next());
+  await act(() => result.current.continueSearch());
   expect(result.current.status).toBe('complete');
-  expect(result.current.historyLength).toBe(2);
+  expect(result.current.history).toHaveLength(2);
 });
 
 it('cancels an old query before replacement and ignores its late first result', async () => {
@@ -76,7 +75,7 @@ it('cancels an old query before replacement and ignores its late first result', 
     resolveOld({ match: match('old-result'), skipped_backup_count: 0, status: 'match' });
     await oldSubmit;
   });
-  expect(result.current.historyLength).toBe(1);
+  expect(result.current.history).toHaveLength(1);
   expect(result.current.current?.node_id).toBe('new-result');
 });
 

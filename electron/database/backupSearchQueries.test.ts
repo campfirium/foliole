@@ -40,17 +40,18 @@ afterEach(() => sqlite.close());
 it('searches title before inline and blob bodies while retaining deleted rows and paths', () => {
   const schema = inspectBackupSearchSchema(sqlite);
   const first = findBackupSearchMatch({
-    backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 0, query: 'needle', schema, sqlite
+    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 0, query: 'needle', schema, sqlite
   });
   const second = findBackupSearchMatch({
-    backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 1, query: 'needle', schema, sqlite
+    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 1, query: 'needle', schema, sqlite
   });
   const third = findBackupSearchMatch({
-    backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 2, query: 'needle', schema, sqlite
+    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 2, query: 'needle', schema, sqlite
   });
 
   expect(first).toMatchObject({
-    content: 'ordinary body', deleted: true, node_id: 'title', path: 'Archive / Needle title', title: 'Needle title'
+    backup_name: 'manual-2026-09-10.db.gz', content: 'ordinary body', deleted: true,
+    node_id: 'title', path: 'Archive / Needle title', title: 'Needle title'
   });
   expect([second?.node_id, third?.node_id].sort()).toEqual(['blob', 'body']);
   expect(third?.content === 'complete blob needle body' || second?.content === 'complete blob needle body').toBe(true);

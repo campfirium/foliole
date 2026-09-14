@@ -13,9 +13,9 @@ export function BackupSearchDialogHost() {
     <BackupSearchDialog
       onCancel={() => { void search.cancel(); }}
       onClose={() => setOpen(false)}
-      onNext={() => { void search.next(); }}
-      onPrevious={search.previous}
+      onContinue={() => { void search.continueSearch(); }}
       onQueryChange={search.setQuery}
+      onSelect={search.select}
       onSubmit={() => { void search.submit(); }}
       open={open}
       state={search}

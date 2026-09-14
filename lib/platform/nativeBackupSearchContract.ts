@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export interface NativeBackupSearchMatch {
+  backup_name: string;
   backup_updated_at: string;
   content: string;
   deleted: boolean;

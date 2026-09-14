@@ -12,15 +12,24 @@ function readString(value: unknown) {
 function normalizeMatch(value: unknown): NativeBackupSearchMatch | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const payload = value as Record<string, unknown>;
+  const backupName = readString(payload.backup_name);
   const backupUpdatedAt = readString(payload.backup_updated_at);
   const content = typeof payload.content === 'string' ? payload.content : null;
   const nodeId = readString(payload.node_id);
   const path = readString(payload.path);
   const title = readString(payload.title);
-  if (!backupUpdatedAt || content === null || !nodeId || !path || !title || typeof payload.deleted !== 'boolean') {
+  if (!backupName || !backupUpdatedAt || content === null || !nodeId || !path || !title || typeof payload.deleted !== 'boolean') {
     return null;
   }
-  return { backup_updated_at: backupUpdatedAt, content, deleted: payload.deleted, node_id: nodeId, path, title };
+  return {
+    backup_name: backupName,
+    backup_updated_at: backupUpdatedAt,
+    content,
+    deleted: payload.deleted,
+    node_id: nodeId,
+    path,
+    title
+  };
 }
 
 function normalizeNextResult(value: unknown): NativeBackupSearchNextResult {

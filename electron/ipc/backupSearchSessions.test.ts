@@ -8,7 +8,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  backups: [{ filePath: '/managed/backup.db', updatedAt: '2026-09-10T00:00:00.000Z' }],
+  backups: [{ fileName: 'backup.db', filePath: '/managed/backup.db', updatedAt: '2026-09-10T00:00:00.000Z' }],
   clients: [] as Array<{
     input: unknown;
     nextCalls: number;

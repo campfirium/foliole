@@ -77,6 +77,7 @@ function nodePath(sqlite: SqliteDatabase, row: BackupSearchRow, schema: BackupSe
 }
 
 export function findBackupSearchMatch(args: {
+  backupName: string;
   backupUpdatedAt: string;
   offset: number;
   query: string;
@@ -87,6 +88,7 @@ export function findBackupSearchMatch(args: {
     .get(args.query, args.query, args.query, args.offset) as BackupSearchRow | undefined;
   if (!row) return null;
   return {
+    backup_name: args.backupName,
     backup_updated_at: args.backupUpdatedAt,
     content: stringContent(row.content),
     deleted: Boolean(row.deleted_at),

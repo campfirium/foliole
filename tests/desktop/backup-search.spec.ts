@@ -98,42 +98,46 @@ test('searches managed backups one document at a time without changing source da
   if (!libraryHome) throw new Error('missing isolated library home');
   const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
   const sourceHashes = await Promise.all(sourcePaths.map(fileHash));
+  const matchingBackupName = path.basename(created.destinationPath);
   const libraryHash = await fileHash(databasePath);
   const searchRoot = await backupSearchDirectory(desktopWindow);
 
   const settings = await openBackupsSection(desktopWindow);
   const searchSection = settings.getByRole('region', { name: /^(Backup search section|搜索备份设置区)$/ });
-  await searchSection.getByRole('button', { name: /^(Search backups|搜索备份)$/ }).click();
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Search backups|搜索备份)$/ });
+  await searchSection.getByRole('button', { name: /^(Search backup content|搜索备份内容)$/ }).click();
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Search backup content|搜索备份内容)$/ });
   const input = dialog.getByRole('textbox', { name: /^(Search term|搜索词)$/ });
   await input.fill(QUERY);
   await expect.poll(() => privateDatabaseCount(searchRoot)).toBe(0);
   await dialog.getByRole('button', { name: /^(Search|搜索)$/ }).click();
 
-  await expect(dialog.getByRole('heading', { name: `${QUERY} title result` })).toBeVisible();
-  await expect(dialog.getByText(/^(In Trash at this time|当时在废纸篓)$/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: new RegExp(`${QUERY} title result`) })).toBeVisible();
+  await expect(dialog.getByText(/^(In Trash|在废纸篓)$/)).toBeVisible();
+  await expect(dialog.getByText(matchingBackupName, { exact: true }).first()).toBeVisible();
   await expect(dialog.locator('.markdown-editor-host')).toContainText('Complete deleted backup body.');
   await expect.poll(() => privateDatabaseCount(searchRoot)).toBe(1);
 
-  await dialog.getByRole('button', { name: /^(Continue|继续)$/ }).click();
-  await expect(dialog.getByRole('heading', { name: 'Body result' })).toBeVisible();
+  await dialog.getByRole('button', { name: /^(Continue search|继续搜索)$/ }).click();
+  await expect(dialog.getByRole('button', { name: /Body result/ })).toBeVisible();
   await expect(dialog.locator('.markdown-editor-host')).toContainText('appears in the second document');
-  await dialog.getByRole('button', { name: /^(Continue|继续)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Continue search|继续搜索)$/ }).click();
   await expect(dialog.locator('.markdown-editor-host')).toContainText(`${QUERY} older-version`);
-  await dialog.getByRole('button', { name: /^(Previous|上一个)$/ }).click();
+  await dialog.getByRole('button', { name: /Body result/ }).first().click();
   await expect(dialog.locator('.markdown-editor-host')).toContainText('appears in the second document');
-  await dialog.getByRole('button', { name: /^(Continue|继续)$/ }).click();
-  await dialog.getByRole('button', { name: /^(Continue|继续)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Continue search|继续搜索)$/ }).click();
   await expect(dialog).toContainText(/(?:could not be read|无法读取)/);
+  await expect(dialog.getByRole('button', { name: /^(No more results|没有更多结果)$/ })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: /^(Previous|上一个)$/ })).toHaveCount(0);
 
   const artifact = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance',
-    process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1' ? 'backup-search-hidden.png' : 'backup-search-visible.png');
+    process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1' ? 'backup-search-split-hidden.png' : 'backup-search-split-visible.png');
   await fs.mkdir(path.dirname(artifact), { recursive: true });
   await dialog.screenshot({ path: artifact });
   await testInfo.attach('backup-search', { contentType: 'image/png', path: artifact });
   await expect(Promise.all(sourcePaths.map(fileHash))).resolves.toEqual(sourceHashes);
   await expect(fileHash(databasePath)).resolves.toBe(libraryHash);
 
-  await dialog.getByRole('button', { name: /^(Close backup search|关闭搜索备份)$/ }).click();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   await expect.poll(() => privateDatabaseCount(searchRoot)).toBe(0);
 });

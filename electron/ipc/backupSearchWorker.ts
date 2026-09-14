@@ -12,12 +12,13 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 export interface BackupSearchWorkerInput {
-  backups: Array<{ filePath: string; updatedAt: string }>;
+  backups: Array<{ fileName: string; filePath: string; updatedAt: string }>;
   query: string;
   sessionDirectory: string;
 }
 
 interface ActiveBackup {
+  backupName: string;
   databasePath: string;
   offset: number;
   schema: ReturnType<typeof inspectBackupSearchSchema>;
@@ -104,7 +105,14 @@ export class BackupSearchWorkerEngine {
         try {
           sqlite.pragma('query_only = ON');
           const schema = inspectBackupSearchSchema(sqlite);
-          this.active = { databasePath, offset: 0, schema, sqlite, updatedAt: entry.updatedAt };
+          this.active = {
+            backupName: entry.fileName,
+            databasePath,
+            offset: 0,
+            schema,
+            sqlite,
+            updatedAt: entry.updatedAt
+          };
           return true;
         } catch (error) {
           sqlite.close();
@@ -125,6 +133,7 @@ export class BackupSearchWorkerEngine {
       let match;
       try {
         match = findBackupSearchMatch({
+          backupName: active.backupName,
           backupUpdatedAt: active.updatedAt,
           offset: active.offset,
           query: this.input.query,

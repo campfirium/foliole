@@ -83,8 +83,8 @@ export function SettingsBackupsSection() {
         fileName={state.restoreSuccessFileName}
         onClose={state.clearRestoreSuccess}
       />
-      <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
       <BackupSearchSettings isDesktopRuntime={state.isDesktopRuntime} />
+      <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
       <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>
         <SourceDispositionStateRow
           isDesktopRuntime={state.isDesktopRuntime}
@@ -130,7 +130,7 @@ function BackupSearchSettings(props: { isDesktopRuntime: boolean }) {
   const t = useTranslation();
   return (
     <SettingsSection ariaLabel={t('settings.backups.search.sectionAria')} title={t('settings.backups.search.sectionTitle')}>
-      <SettingsRow description={t('settings.backups.search.description')} title={t('settings.backups.search.rowTitle')}>
+      <SettingsRow description={t('settings.backups.search.description')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={requestBackupSearchDialogOpen}>
             {t('settings.backups.search.action')}
