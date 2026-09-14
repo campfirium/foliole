@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { once } from 'node:events';
+import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 
 import { describe, expect, it } from 'vitest';
@@ -10,6 +11,15 @@ const logger = { stdout() {}, stderr() {} };
 function launch(source) {
   return spawnLoggedChild(process.execPath, ['-e', source], {
     cwd: process.cwd(), detached: true, env: process.env, logger
+  });
+}
+
+function processGroupHasRunningMember(processGroupId) {
+  const result = spawnSync('ps', ['-axo', 'pgid=,stat='], { encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(result.stderr || `ps failed with ${result.status}`);
+  return result.stdout.split('\n').some((line) => {
+    const [group, state] = line.trim().split(/\s+/u);
+    return Number(group) === processGroupId && !state?.startsWith('Z');
   });
 }
 
@@ -46,7 +56,7 @@ describe.runIf(process.platform !== 'win32')('managed DEV child shutdown', () =>
       await ready;
       await stopLoggedChild(active, 100);
       expect((await active.closed).signal).toBe('SIGKILL');
-      expect(() => process.kill(-active.child.pid, 0)).toThrow();
+      expect(processGroupHasRunningMember(active.child.pid)).toBe(false);
     } finally {
       await stopLoggedChild(active, 100);
     }
