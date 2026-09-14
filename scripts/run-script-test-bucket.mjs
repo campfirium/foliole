@@ -32,6 +32,10 @@ export function resolveBucketTimeoutSeconds(bucket) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+export function resolveBucketPool(bucket) {
+  return bucket === 'core' ? 'forks' : 'threads';
+}
+
 export function writeBucketTimeoutReport(reportPath, bucket, timeoutSeconds, files) {
   mkdirSync(path.dirname(reportPath), { recursive: true });
   const now = Date.now();
@@ -96,7 +100,7 @@ function runVitest(bucket, reportPath, files) {
     reportPath,
     '--',
     '--silent=passed-only',
-    '--pool=threads',
+    `--pool=${resolveBucketPool(bucket)}`,
     '--maxWorkers=2',
     '--no-file-parallelism',
     ...files
