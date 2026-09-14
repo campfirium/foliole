@@ -57,7 +57,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(screen.getByText('Readwise Reader Import')).toBeInTheDocument();
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
   expect(screen.getByText('Clean up imports')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Automatic import' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
   expect(screen.getByRole('radiogroup', { name: 'Articles with highlights destination' })).toBeInTheDocument();
@@ -71,7 +71,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(
     screen
       .getByRole('button', { name: 'Sync' })
-      .compareDocumentPosition(screen.getByRole('heading', { name: 'Automatic import' }))
+      .compareDocumentPosition(screen.getByRole('heading', { name: 'Import rules' }))
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   expect(
     screen

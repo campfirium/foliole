@@ -123,6 +123,7 @@ function ReadwiseReaderCategoryContent(props: { importSettings: ImportSettingsSt
       config={importSettings.readwiseReaderConfig}
       policy={importSettings.readwiseAutoImportPolicy}
       onChangePolicy={importSettings.handleChangeReadwiseAutoImportPolicy}
+      onCommitApiPolicy={importSettings.handleCommitReadwiseApiPolicy}
       onChangeSourceMode={importSettings.handleChangeReadwiseSourceMode}
       onSave={importSettings.handleSaveReadwiseReaderSetup}
       onCancelSync={importSettings.cancelReadwiseReaderImport}

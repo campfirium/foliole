@@ -62,7 +62,7 @@ function resultMessage(result: NativeReadwiseApiConnectionResult, t: Translate) 
   return key ? t(key) : null;
 }
 
-function useReadwiseApiConnection(t: Translate, onConnected: () => void) {
+function useReadwiseApiConnection(t: Translate, onConnectionChange: (connected: boolean) => void) {
   const [connection, setConnection] = useState<NativeReadwiseApiConnection | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -77,22 +77,24 @@ function useReadwiseApiConnection(t: Translate, onConnected: () => void) {
       const next = await action();
       setConnection(next.connection);
       setMessage(resultMessage(next, t));
-      if (next.status === 'connected') onConnected();
     } catch {
       setMessage(t('desktop.readwise.api.result.connectionFailed'));
     } finally {
       setPending(false);
     }
   }
+  useEffect(() => {
+    if (connection) onConnectionChange(connection.state === 'connected');
+  }, [connection, onConnectionChange]);
   return { connection, message, pending, run };
 }
 
-function ReadwiseApiConnectionRow(props: {
+export function ReadwiseApiConnectionRow(props: {
   migration: boolean;
-  onConnected: () => void;
+  onConnectionChange: (connected: boolean) => void;
 }) {
   const t = useTranslation();
-  const state = useReadwiseApiConnection(t, props.onConnected);
+  const state = useReadwiseApiConnection(t, props.onConnectionChange);
   if (!state.connection) {
     return (
       <SettingsRow
@@ -133,10 +135,8 @@ function ReadwiseApiConnectionRow(props: {
   );
 }
 
-export function ReadwiseApiModeSettingsRows(props: {
+export function ReadwiseApiOperationsRows(props: {
   migrationActive: boolean;
-  migrationMode: boolean;
-  onConnected: () => void;
   settings: ReadwiseApiModeSettings;
   taskStatus: NativeReadwiseApiScheduleStatus | null;
 }) {
@@ -144,23 +144,17 @@ export function ReadwiseApiModeSettingsRows(props: {
   const task = readwiseApiTaskPresentation(props.taskStatus, t);
   const migrationActive = props.migrationActive;
   return (
-    <>
-      <ReadwiseApiConnectionRow
-        migration={props.migrationMode || props.migrationActive}
-        onConnected={props.onConnected}
-      />
-      <ReadwiseCommonRows
-        cleanupDisabled={props.settings.cleanupDisabled || migrationActive}
-        config={props.settings.config}
-        onChange={(_field, value) => props.settings.onChangeFrequency(value as ReadwiseSyncFrequency)}
-        onCleanup={props.settings.onCleanup}
-        onSync={props.settings.onSync}
-        syncActionLabel={task.actionLabel}
-        syncDisabled={props.settings.syncDisabled || migrationActive || task.running}
-        syncIsRunning={!migrationActive && (props.settings.syncIsRunning || task.running)}
-        syncLoadingLabel={task.loadingLabel}
-        syncStatus={migrationActive ? IDLE_SYNC_STATUS : props.settings.syncStatus}
-      />
-    </>
+    <ReadwiseCommonRows
+      cleanupDisabled={props.settings.cleanupDisabled || migrationActive}
+      config={props.settings.config}
+      onChange={(_field, value) => props.settings.onChangeFrequency(value as ReadwiseSyncFrequency)}
+      onCleanup={props.settings.onCleanup}
+      onSync={props.settings.onSync}
+      syncActionLabel={task.actionLabel}
+      syncDisabled={props.settings.syncDisabled || migrationActive || task.running}
+      syncIsRunning={!migrationActive && (props.settings.syncIsRunning || task.running)}
+      syncLoadingLabel={task.loadingLabel}
+      syncStatus={migrationActive ? IDLE_SYNC_STATUS : props.settings.syncStatus}
+    />
   );
 }

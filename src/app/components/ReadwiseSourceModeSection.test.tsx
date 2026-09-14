@@ -67,23 +67,28 @@ it('shows Off, Obsidian relay, and API as one source selector', async () => {
   expect(onCommitMode).toHaveBeenCalledWith('off');
 });
 
-it('opens migration confirmation from API selection without a separate migration row', async () => {
+it('opens API setup from source selection before migration', async () => {
   const onChange = vi.fn();
+  const onCommitMode = vi.fn();
   render(
     <LocalizationProvider>
-      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} />
+      <ReadwiseSourceModeSection committedMode="folder" mode="folder" onChange={onChange} onCommitMode={onCommitMode} />
     </LocalizationProvider>
   );
 
+  await waitFor(() => expect(cutover.preview).toHaveBeenCalledTimes(1));
+  cutover.preview.mockClear();
   fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
   await waitFor(() => expect(confirmation.request).toHaveBeenCalledWith(expect.objectContaining({
-    confirmLabel: 'Switch and migrate',
+    confirmLabel: 'Continue setup',
     description: expect.arrayContaining([
-      '12 Topics were imported through the current Obsidian relay folders on this device.'
+      'Review each import rule below and connect Readwise. The defaults include PDFs and EPUBs; adjust them as needed.'
     ])
   })));
   expect(onChange).toHaveBeenCalledWith('api');
-  expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
+  expect(onCommitMode).not.toHaveBeenCalled();
+  expect(cutover.preview).not.toHaveBeenCalled();
+  expect(cutover.run).not.toHaveBeenCalled();
 });
 
 it('keeps the token link in the description and connects without exposing it to the renderer', async () => {
@@ -206,7 +211,7 @@ it('keeps migration visible while the initial import is incomplete, regardless o
   expect(migrationStatus).toHaveTextContent('Migrating · Indexing');
   expect(migrationStatus).not.toHaveTextContent('failed');
   expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
-  expect(screen.getByRole('radiogroup').parentElement).toContainElement(migrationStatus);
+  expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' }).parentElement).toContainElement(migrationStatus);
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {
@@ -219,8 +224,8 @@ it('uses the same instruction for a missing or invalid token', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();
   expect(runtime.connect).toHaveBeenCalledWith('continue', 'migration');
-  expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Switch to API mode' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Migrate to API mode…' })).toBeDisabled();
+  expect(screen.getByText('Connect Readwise first.')).toBeInTheDocument();
 });
 
 it('locks the source selector after the API cutover', async () => {

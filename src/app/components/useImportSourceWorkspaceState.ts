@@ -154,6 +154,11 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
 
 export function useImportSourceWorkspaceState() {
   const [settings, setSettings] = usePersistedImportSourceWorkspaceSettings();
+  async function handleCommitReadwiseApiPolicy(policy: ReadwiseAutoImportPolicy) {
+    const nextSettings = { ...settings, readwiseAutoImportPolicy: policy };
+    setSettings(nextSettings);
+    await saveImportSourceWorkspaceSettings(nextSettings);
+  }
   return {
     detailsOpen: settings.detailsOpen,
     ...createGenericSourceActions(setSettings, selectFolderPath),
@@ -162,6 +167,7 @@ export function useImportSourceWorkspaceState() {
     ...createReadwiseSourceActions(setSettings),
     ...createWorkspaceMetaActions(setSettings),
     readwiseReaderConfig: settings.readwiseReaderConfig,
+    handleCommitReadwiseApiPolicy,
     readwiseAutoImportPolicy: settings.readwiseAutoImportPolicy,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSourceMode: settings.readwiseSourceMode,

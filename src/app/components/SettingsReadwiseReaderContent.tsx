@@ -22,7 +22,7 @@ import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSync
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
-import { ReadwiseBehaviorSection, ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
+import { ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
@@ -52,6 +52,7 @@ interface SettingsReadwiseReaderContentProps {
     field: Exclude<keyof ReadwiseAutoImportPolicy, 'version'>,
     value: ReadwiseImportDestination | string
   ) => void;
+  onCommitApiPolicy?: (policy: ReadwiseAutoImportPolicy) => Promise<void> | void;
   policy?: ReadwiseAutoImportPolicy;
   readwiseRootPath: string;
   readwiseSourceMode?: ReadwiseSourceMode;
@@ -73,18 +74,7 @@ function ReadwiseSelectedModeContent(props: {
   sourceMode: ReadwiseSourceMode;
 }) {
   if (props.sourceMode === 'off') return null;
-  if (props.sourceMode === 'api') {
-    return (
-      <>
-        <ReadwiseBehaviorSection
-          onChange={props.settings.onChangePolicy ?? (() => undefined)}
-          onChangeImportTag={(value) => props.settings.onChangePolicy?.('importTag', value)}
-          policy={props.settings.policy ?? createDefaultReadwiseAutoImportPolicy()}
-          sourceMode="api"
-        />
-      </>
-    );
-  }
+  if (props.sourceMode === 'api') return null;
   return (
     <ReadwiseFolderSettingsSections
       canPreview={props.setup.canPreview}
@@ -147,7 +137,9 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         apiSettings={apiSettings}
         mode={sourceMode}
         onChange={setSourceMode}
-        onConnected={() => undefined}
+        {...(props.onChangePolicy ? { onChangePolicy: props.onChangePolicy } : {})}
+        {...(props.onCommitApiPolicy ? { onCommitApiPolicy: props.onCommitApiPolicy } : {})}
+        policy={props.policy ?? createDefaultReadwiseAutoImportPolicy()}
         {...(props.onChangeSourceMode ? { onCommitMode: props.onChangeSourceMode } : {})}
       />
       <ReadwiseSelectedModeContent

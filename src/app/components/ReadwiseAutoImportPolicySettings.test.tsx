@@ -36,7 +36,7 @@ function expectSelection(groupName: string, optionName: string) {
 it('keeps the folder policy on article and book rows backed by article and EPUB fields', () => {
   const onChangePolicy = renderPolicy('folder');
   expectSelection('Articles with highlights destination', 'Inbox');
-  expectSelection('Articles without highlights destination', 'Off');
+  expectSelection('Articles without highlights destination', "Don't import");
   expectSelection('Books with highlights destination', 'Inbox');
   expectSelection('Books without highlights destination', 'Inbox');
 
@@ -54,10 +54,10 @@ it('shows fourteen exact defaults across the seven API parent categories', async
   })).toBeInTheDocument());
 
   const selected = [
-    ['Articles', 'Inbox', 'Off'], ['Emails', 'Inbox', 'Off'],
-    ['RSS', 'Inbox', 'Off'], ['PDFs', 'Inbox', 'Inbox'],
-    ['EPUBs', 'Inbox', 'Inbox'], ['Videos', 'Inbox', 'Off'],
-    ['Tweets', 'Inbox', 'Off']
+    ['Articles', 'Inbox', "Don't import"], ['Emails', 'Inbox', "Don't import"],
+    ['RSS', 'Inbox', "Don't import"], ['PDFs', 'Inbox', 'Inbox'],
+    ['EPUBs', 'Inbox', 'Inbox'], ['Videos', 'Inbox', "Don't import"],
+    ['Tweets', 'Inbox', "Don't import"]
   ] as const;
   selected.forEach(([category, withHighlights, withoutHighlights]) => {
     expectSelection(`${category} with highlights destination`, withHighlights);

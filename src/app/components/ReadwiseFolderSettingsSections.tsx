@@ -30,6 +30,7 @@ type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 type PolicyField = Exclude<keyof ReadwiseAutoImportPolicy, 'version'>;
 
 export function ReadwiseBehaviorSection(props: {
+  disabled?: boolean;
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
   onChangeImportTag: (value: string) => void;
   policy: ReadwiseAutoImportPolicy;
@@ -39,6 +40,7 @@ export function ReadwiseBehaviorSection(props: {
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
       <ReadwiseReaderImportBehavior
+        {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
         onChange={props.onChange}
         onChangeImportTag={props.onChangeImportTag}
         policy={props.policy}

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRe
 
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
-import { loadReadwiseApiConnectionFromRuntime } from '../../shared/platform/import/readwiseApiConnectionRuntimeRepository';
 import {
   previewReadwiseSourceCutoverInRuntime,
   runReadwiseSourceCutoverInRuntime
@@ -73,8 +72,10 @@ export function useReadwiseSourceMigration(input: {
     }
   }, [input.committedMode, input.onCommitMode]);
   useResumeReadwiseMigration(input.committedMode, resumeAttemptedRef, setRequired, setProgress, start);
-  const selectApi = () => selectReadwiseApi(input, setRequired, setProgress, start);
-  return { ...progress, pending, required, selectApi, start };
+  const selectApi = () => selectReadwiseApi(input);
+  const requestStart = (beforeStart: () => Promise<void> | void) =>
+    requestReadwiseApiMigration(input.t, beforeStart, start);
+  return { ...progress, pending, required, requestStart, selectApi, start };
 }
 
 function applyMigrationProgress(
@@ -106,17 +107,21 @@ function migrationCompletedCount(progress: ReadwiseReaderImportProgressPayload) 
 }
 
 async function selectReadwiseApi(
-  input: Parameters<typeof useReadwiseSourceMigration>[0],
-  setRequired: Dispatch<SetStateAction<boolean>>,
-  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
+  input: Parameters<typeof useReadwiseSourceMigration>[0]
+) {
+  if (!await confirmApiSetup(input.t)) return;
+  input.onSelectApi();
+}
+
+async function requestReadwiseApiMigration(
+  t: Translate,
+  beforeStart: () => Promise<void> | void,
   start: () => Promise<void>
 ) {
   const preview = await previewReadwiseSourceCutoverInRuntime();
-  if (preview.status !== 'ready' || !await confirmMigration(preview.topic_count, input.t)) return;
-  input.onSelectApi();
-  setRequired(true);
-  setProgress({ completedCount: 0, errorReason: null, failed: false, phase: null, totalCount: null });
-  if ((await loadReadwiseApiConnectionFromRuntime()).state === 'connected') void start();
+  if (preview.status !== 'ready' || !await confirmMigration(preview.topic_count, t)) return;
+  await beforeStart();
+  await start();
 }
 
 function useResumeReadwiseMigration(
@@ -154,5 +159,17 @@ async function confirmMigration(topicCount: number, t: Translate) {
       t('desktop.readwise.cutover.experimental')
     ],
     title: t('desktop.readwise.cutover.title')
+  });
+}
+
+async function confirmApiSetup(t: Translate) {
+  return requestAppConfirmation({
+    cancelLabel: t('shared.confirm.cancel'),
+    confirmLabel: t('desktop.readwise.api.setup.continue'),
+    description: [
+      t('desktop.readwise.api.setup.description'),
+      t('desktop.readwise.api.setup.effect')
+    ],
+    title: t('desktop.readwise.api.setup.title')
   });
 }

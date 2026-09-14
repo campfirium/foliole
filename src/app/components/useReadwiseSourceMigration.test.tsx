@@ -67,7 +67,7 @@ it('commits API mode before waiting for a long migration run to finish', async (
   const onCommitMode = vi.fn();
 
   render(<Probe committedMode="folder" onCommitMode={onCommitMode} />);
-  fireEvent.click(screen.getByRole('button', { name: 'select-api' }));
+  fireEvent.click(screen.getByRole('button', { name: 'start-migration' }));
 
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
   expect(onCommitMode).toHaveBeenCalledWith('api');
@@ -106,5 +106,6 @@ function Probe(props: {
       {migration.phase ?? 'none'}:{migration.completedCount}/{migration.totalCount ?? 'none'}
     </div>
     <button onClick={() => void migration.selectApi()} type="button">select-api</button>
+    <button onClick={() => void migration.requestStart(() => undefined)} type="button">start-migration</button>
   </>;
 }

@@ -33,6 +33,7 @@ const FOLDER_ROWS = [
 ] as const;
 
 export function ReadwiseReaderImportBehavior(props: {
+  disabled?: boolean;
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
   onChangeImportTag: (value: string) => void;
   policy: ReadwiseAutoImportPolicy;
@@ -48,6 +49,7 @@ export function ReadwiseReaderImportBehavior(props: {
     return (
       <SettingsSegmentedControl
         ariaLabel={ariaLabel}
+        {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
         onChange={(value) => props.onChange(field, value as ReadwiseImportDestination)}
         options={options}
         value={props.policy[field]}
@@ -86,6 +88,7 @@ export function ReadwiseReaderImportBehavior(props: {
 }
 
 function ReadwiseImportTagRow(props: {
+  disabled?: boolean;
   onChangeImportTag: (value: string) => void;
   policy: ReadwiseAutoImportPolicy;
 }) {
@@ -96,12 +99,17 @@ function ReadwiseImportTagRow(props: {
       title={t('desktop.readwise.behavior.importTag.title')}
     >
       <SettingsControlSlot>
-        <AppInput
-          aria-label={t('desktop.readwise.behavior.importTag.aria')}
-          onChange={(event) => props.onChangeImportTag(event.target.value)}
-          placeholder={t('desktop.readwise.behavior.importTag.placeholder')}
-          value={props.policy.importTag}
-        />
+        <div className="flex min-w-0 items-stretch">
+          <span aria-hidden="true" className="flex h-10 items-center rounded-l-md border border-r-0 border-settings-control-border bg-settings-control px-3 text-ui-input text-foreground/60">#</span>
+          <AppInput
+            aria-label={t('desktop.readwise.behavior.importTag.aria')}
+            className="rounded-l-none"
+            disabled={props.disabled}
+            onChange={(event) => props.onChangeImportTag(event.target.value)}
+            placeholder={t('desktop.readwise.behavior.importTag.placeholder')}
+            value={props.policy.importTag}
+          />
+        </div>
       </SettingsControlSlot>
     </SettingsRow>
   );
