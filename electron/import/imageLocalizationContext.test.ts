@@ -35,11 +35,12 @@ beforeEach(() => {
   mocks.fetchRemoteImageResource.mockResolvedValue({
     resource: {
       bytes: largePngBytes,
+      intrinsicSize: { height: 960, width: 1280 },
       mimeType: 'image/png',
       originalName: 'image.png',
       sourceUrl: 'https://cdn.example.com/image.png'
     },
-    status: 'ok'
+    status: 'ready'
   });
   mocks.importImageAttachmentResource.mockResolvedValue({
     attachment_id: 'attachment-large-image',
@@ -59,6 +60,28 @@ it('turns localized large inline images into independent blocks', async () => {
     degradedMessages: [],
     text: `Lead\n\n![](asset://${'a'.repeat(64)}.png)\n\ntrailing`
   });
+  expect(mocks.importImageAttachmentResource).toHaveBeenCalledOnce();
+});
+
+it('omits 1x1 tracking images before attachment persistence', async () => {
+  mocks.fetchRemoteImageResource.mockResolvedValue({
+    resource: {
+      bytes: new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00]),
+      intrinsicSize: null,
+      mimeType: 'image/gif',
+      originalName: 'stat',
+      sourceUrl: 'https://cdn.example.com/stat'
+    },
+    status: 'ready'
+  });
+  const context = new ImageLocalizationContext();
+
+  await expect(context.localizeMarkdown('Lead![tracking](https://cdn.example.com/stat)tail')).resolves.toEqual({
+    attachmentIds: [],
+    degradedMessages: [],
+    text: 'Leadtail'
+  });
+  expect(mocks.importImageAttachmentResource).not.toHaveBeenCalled();
 });
 
 it('bypasses the failure cache and retries once for import-time localization', async () => {
@@ -70,6 +93,7 @@ it('bypasses the failure cache and retries once for import-time localization', a
     .mockResolvedValueOnce({
       resource: {
         bytes: largePngBytes,
+        intrinsicSize: { height: 960, width: 1280 },
         mimeType: 'image/png',
         originalName: 'image.png',
         sourceUrl: 'https://cdn.example.com/image.png'

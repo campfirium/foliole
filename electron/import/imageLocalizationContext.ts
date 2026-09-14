@@ -22,6 +22,8 @@ interface LocalizedImage {
   size: ImageIntrinsicSize | null;
 }
 
+type RemoteImageResolution = LocalizedImage | 'omit' | null;
+
 export interface ImageLocalizationResult {
   attachmentIds: string[];
   degradedMessages: string[];
@@ -70,6 +72,10 @@ function buildLocalizedMarkdownImage(token: MarkdownImageToken, markdownUrl: str
   return `![${token.alt}](${markdownUrl}${suffix})`;
 }
 
+function isTrackingPixel(size: ImageIntrinsicSize | null) {
+  return size?.width === 1 && size.height === 1;
+}
+
 export function linkLocalizedImagesToNode(nodeId: string, attachmentIds: string[]) {
   Array.from(new Set(attachmentIds)).forEach((attachmentId) => {
     createNodeAttachmentLink({ attachmentId, nodeId, role: 'image' });
@@ -77,7 +83,7 @@ export function linkLocalizedImagesToNode(nodeId: string, attachmentIds: string[
 }
 
 export class ImageLocalizationContext {
-  private readonly resultByUrl = new Map<string, Promise<LocalizedImage | null>>();
+  private readonly resultByUrl = new Map<string, Promise<RemoteImageResolution>>();
   private readonly degradedByUrl = new Map<string, string>();
 
   constructor(private readonly options: ImageLocalizationContextOptions = {}) {}
@@ -93,7 +99,10 @@ export class ImageLocalizationContext {
     for (const match of matches) {
       const textBeforeImage = markdown.slice(cursor, match.from);
       const localization = await this.resolveRemoteImage(match.sourceUrl);
-      if (localization) {
+      if (localization === 'omit') {
+        localized += textBeforeImage;
+        cursor = match.to;
+      } else if (localization) {
         attachmentIds.add(localization.attachmentId);
         const imageMarkdown = buildLocalizedMarkdownImage(match, localization.markdownUrl);
         const layout = options.layoutLargeImages === false
@@ -129,12 +138,14 @@ export class ImageLocalizationContext {
     return this.resultByUrl.get(sourceUrl)!;
   }
 
-  private async importRemoteImage(sourceUrl: string): Promise<LocalizedImage | null> {
+  private async importRemoteImage(sourceUrl: string): Promise<RemoteImageResolution> {
     const fetched = await this.fetchRemoteImage(sourceUrl);
     if (fetched.status === 'error') {
       this.degradedByUrl.set(sourceUrl, fetched.error.status === 'error' ? fetched.error.message : 'The remote image could not be imported.');
       return null;
     }
+    const size = fetched.resource.intrinsicSize ?? readImageIntrinsicSize(fetched.resource.bytes);
+    if (isTrackingPixel(size)) return 'omit';
     const imported = await importImageAttachmentResource({
       bytes: fetched.resource.bytes,
       errorSource: fetched.resource.sourceUrl,
@@ -148,7 +159,7 @@ export class ImageLocalizationContext {
     return {
       attachmentId: imported.attachment_id,
       markdownUrl: buildAssetMarkdownUrl(imported.storage_key),
-      size: readImageIntrinsicSize(fetched.resource.bytes)
+      size
     };
   }
 
