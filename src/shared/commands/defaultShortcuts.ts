@@ -38,6 +38,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.createSelectionHighlight]: { primary: { key: 'z', altKey: true } },
   [APP_COMMAND_IDS.createSelectionCloze]: { primary: { key: 'x', altKey: true } },
   [APP_COMMAND_IDS.addSelectionNote]: { primary: { key: 'a', altKey: true } },
+  [APP_COMMAND_IDS.cleanFormatting]: { primary: { key: 'f', altKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.enterPriorityMode]: { primary: { key: 'm', ctrlKey: true }, secondary: { key: 'm', metaKey: true } },
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: { primary: { key: '\\', ctrlKey: true }, secondary: { key: '\\', metaKey: true } },
   [APP_COMMAND_IDS.toggleImmersiveMode]: { primary: { key: 'F11' } },

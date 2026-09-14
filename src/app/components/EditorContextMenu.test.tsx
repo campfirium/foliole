@@ -79,6 +79,22 @@ it('renders selection annotation actions as a floating toolbar', () => {
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 });
 
+it('opens clean formatting settings from the editor context menu', () => {
+  const onConfigureFormatCleanup = vi.fn();
+  renderWithLocalization(
+    <EditorContextMenu
+      kind="selection"
+      left={16}
+      mode="context-menu"
+      top={24}
+      {...requiredActionProps({ onConfigureFormatCleanup })}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Clean formatting...' }));
+  expect(onConfigureFormatCleanup).toHaveBeenCalledTimes(1);
+});
+
 it('shows an app panel before creating a long cloze front', () => {
   const onCreateCloze = vi.fn();
   const onCreateHighlight = vi.fn();

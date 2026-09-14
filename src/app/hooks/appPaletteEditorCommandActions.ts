@@ -1,4 +1,6 @@
 export interface PaletteEditorCommandRunnerArgs {
+  cleanFormatting: () => void;
+  configureCleanFormatting: () => void;
   addSelectionNote: () => void;
   createSelectionCloze: () => void;
   createSelectionHighlight: () => void;
@@ -16,6 +18,8 @@ export interface PaletteEditorCommandRunnerArgs {
 
 export function createPaletteEditorCommandActions(args: PaletteEditorCommandRunnerArgs) {
   return {
+    cleanFormatting: args.cleanFormatting,
+    configureCleanFormatting: args.configureCleanFormatting,
     addSelectionNote: args.addSelectionNote,
     createSelectionCloze: args.createSelectionCloze,
     createSelectionHighlight: args.createSelectionHighlight,

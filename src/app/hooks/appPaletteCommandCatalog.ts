@@ -33,6 +33,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
   canRepairTable: boolean;
+  canCleanFormatting?: boolean;
   canAnnotateSelection: boolean;
   canRenameNode: boolean;
   canReimportSelectedTopic: boolean;
@@ -162,6 +163,9 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.repairTable) {
     return options.canRepairTable;
+  }
+  if (id === APP_COMMAND_IDS.cleanFormatting || id === APP_COMMAND_IDS.configureCleanFormatting) {
+    return Boolean(options.canCleanFormatting);
   }
   if (id === APP_COMMAND_IDS.scrollDocumentTop || id === APP_COMMAND_IDS.scrollDocumentBottom) {
     return Boolean(options.canScrollCurrentDocument);

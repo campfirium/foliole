@@ -1,3 +1,4 @@
+import { requestFormatCleanup } from '../../features/editor/model/formatCleanupRequests';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -187,6 +188,8 @@ type PaletteRunnerArgs = {
 
 export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
   return {
+    cleanFormatting: () => requestFormatCleanup('clean'),
+    configureCleanFormatting: () => requestFormatCleanup('configure'),
     clearSettingsRequest: () => clearSettingsRequest(args.runtime),
     closeTrashView: args.trash.closeTrashView,
     demoOperationTranslate: args.demoOperationTranslate,

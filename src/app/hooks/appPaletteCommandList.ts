@@ -50,6 +50,8 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.createSelectionCloze, title: 'Cloze Selection', section: 'Editor', keywords: ['cloze', 'selection', 'item'] },
   { id: APP_COMMAND_IDS.addSelectionNote, title: 'Annotate Selection', section: 'Editor', keywords: ['highlight', 'selection', 'annotation'] },
   { id: APP_COMMAND_IDS.repairTable, title: 'Repair Table', section: 'Editor', keywords: ['markdown', 'table', 'repair'] },
+  { id: APP_COMMAND_IDS.cleanFormatting, title: 'Clean formatting', section: 'Editor', keywords: ['clean', 'format', 'flatten', 'text'] },
+  { id: APP_COMMAND_IDS.configureCleanFormatting, title: 'Clean formatting...', section: 'Editor', keywords: ['clean', 'format', 'rules', 'settings'] },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle Left Sidebar', section: 'Workspace', keywords: ['sidebar', 'left'] },
   { id: APP_COMMAND_IDS.toggleRightSidebar, title: 'Toggle Right Sidebar', section: 'Workspace', keywords: ['sidebar', 'right', 'inspector'] },

@@ -1,5 +1,6 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { isTextAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
@@ -107,6 +108,10 @@ export function DocumentPanelSectionOverlays(args: DocumentPanelSectionOverlaysP
         onDeleteExistingHighlight={props.onDeleteExistingHighlight ?? (() => undefined)}
         onOpenExistingHighlight={props.onOpenExistingHighlight ?? (() => undefined)}
         onRepairTable={props.onRepairTable ?? (() => false)}
+        onConfigureFormatCleanup={() => {
+          props.onCloseContextMenu();
+          props.onRunDocumentCommand?.(APP_COMMAND_IDS.configureCleanFormatting);
+        }}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}

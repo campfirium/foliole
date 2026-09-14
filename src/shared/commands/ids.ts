@@ -28,6 +28,8 @@ export const APP_COMMAND_IDS = {
   createSelectionCloze: 'editor.createSelectionCloze',
   addSelectionNote: 'editor.addSelectionNote',
   repairTable: 'editor.repairTable',
+  cleanFormatting: 'editor.cleanFormatting',
+  configureCleanFormatting: 'editor.configureCleanFormatting',
   goParent: FOUR_WAY_NAVIGATION_COMMAND_IDS.goParent,
   goToLastChild: FOUR_WAY_NAVIGATION_COMMAND_IDS.goToLastChild,
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',

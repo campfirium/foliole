@@ -1,4 +1,4 @@
-import { CheckCircle2, MessageCircle, Search, Table, XCircle } from 'lucide-react';
+import { CheckCircle2, Eraser, MessageCircle, Search, Table, XCircle } from 'lucide-react';
 import { useState, type MouseEvent, type PointerEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -19,6 +19,7 @@ interface WebLookupSelectionMenuProps {
   left: number;
   onClose: () => void;
   onRepairTable?: () => void;
+  onConfigureFormatCleanup?: () => void;
   repairTableAvailable?: boolean;
   selectionPayload?: SelectionCommandPayload | null | undefined;
   titleText?: string | null | undefined;
@@ -164,7 +165,7 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
   const entries = resolveWebLookupEntries(props, selectionText);
 
-  if (entries.length === 0 && !props.repairTableAvailable) {
+  if (entries.length === 0 && !props.repairTableAvailable && !props.onConfigureFormatCleanup) {
     return null;
   }
 
@@ -206,7 +207,13 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           <span className="min-w-0 truncate">{t('desktop.webLookup.repairTable')}</span>
         </AppSelectionDropdownMenuItem>
       ) : null}
-      {!confirmation && props.repairTableAvailable && entries.length > 0 ? <SelectionMenuSeparator /> : null}
+      {!confirmation && props.onConfigureFormatCleanup ? (
+        <AppSelectionDropdownMenuItem onClick={props.onConfigureFormatCleanup}>
+          <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} />
+          <span className="min-w-0 truncate">{t('desktop.command.configureCleanFormatting')}</span>
+        </AppSelectionDropdownMenuItem>
+      ) : null}
+      {!confirmation && (props.repairTableAvailable || props.onConfigureFormatCleanup) && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation ? <WebLookupActionItems entries={entries} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
       {!confirmation && notice && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation && notice ? <WebLookupNotice message={notice.message} tone={notice.tone} /> : null}

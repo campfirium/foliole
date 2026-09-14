@@ -14,6 +14,7 @@ interface DocumentPanelContextMenuProps {
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight: () => void;
   onRepairTable: () => void;
+  onConfigureFormatCleanup: () => void;
   onCreateCloze: (options?: LongClozeGuardOptions) => void;
   onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
@@ -31,6 +32,7 @@ export function DocumentPanelContextMenu({
   onDeleteExistingHighlight,
   onOpenExistingHighlight,
   onRepairTable,
+  onConfigureFormatCleanup,
   onCreateCloze,
   onCreateClozeFromPayload,
   onCreateHighlightFromPayload,
@@ -63,6 +65,7 @@ export function DocumentPanelContextMenu({
       onDeleteExistingHighlight={onDeleteExistingHighlight}
       onOpenExistingHighlight={onOpenExistingHighlight}
       onRepairTable={onRepairTable}
+      onConfigureFormatCleanup={onConfigureFormatCleanup}
       onCutImage={onCutImage}
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}

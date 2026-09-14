@@ -29,6 +29,8 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.createSelectionCloze]: 'desktop.command.clozeSelection',
   [APP_COMMAND_IDS.addSelectionNote]: 'desktop.command.annotateSelection',
   [APP_COMMAND_IDS.repairTable]: 'desktop.command.repairTable',
+  [APP_COMMAND_IDS.cleanFormatting]: 'desktop.command.cleanFormatting',
+  [APP_COMMAND_IDS.configureCleanFormatting]: 'desktop.command.configureCleanFormatting',
   [APP_COMMAND_IDS.restartApp]: 'desktop.command.restartApp',
   [APP_COMMAND_IDS.toggleList]: 'desktop.command.toggleLeftSidebar',
   [APP_COMMAND_IDS.toggleRightSidebar]: 'desktop.command.toggleRightSidebar',

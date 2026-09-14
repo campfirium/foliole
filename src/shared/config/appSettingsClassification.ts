@@ -39,6 +39,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'documentHeaderMenuItems',
   'appLanguage',
   'customCopyOverrides',
+  'formatCleanup',
   'appDisplayScalePercent',
   'macOsFontSmoothing',
   'contentRegionScales',

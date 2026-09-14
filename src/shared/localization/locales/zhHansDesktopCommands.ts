@@ -41,6 +41,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.clozeSelection': '挖空所选内容',
   'desktop.command.annotateSelection': '批注所选内容',
   'desktop.command.repairTable': '修复表格',
+  'desktop.command.cleanFormatting': '清理格式',
+  'desktop.command.configureCleanFormatting': '清理格式...',
   'desktop.command.restartApp': '重启应用',
   'desktop.command.toggleLeftSidebar': '切换左侧栏',
   'desktop.command.toggleRightSidebar': '切换右侧栏',

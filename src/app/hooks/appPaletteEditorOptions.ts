@@ -74,6 +74,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
     canPublishToWordPress: canUseCurrentTopic,
     canSplitCurrentTopic: canUseCurrentTopic && !args.isEditorReadOnly,
     canRepairTable: canAnnotateSelection(args),
+    canCleanFormatting: canAnnotateSelection(args) && !args.isEditorReadOnly && !args.isExternalViewOpen && !args.isReviewOnly,
     canScrollCurrentDocument:
       canUseCurrentTopic &&
       !args.isExternalViewOpen &&

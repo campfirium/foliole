@@ -14,6 +14,8 @@ import {
 } from './appPaletteCommandCatalog';
 
 interface RunAppCommandActions {
+  cleanFormatting?: () => void;
+  configureCleanFormatting?: () => void;
   undo: () => boolean | void;
   redo: () => boolean | void;
   importDirectory: () => void | Promise<void>;
@@ -157,6 +159,8 @@ function createWorkspaceCommandHandlers(
     [APP_COMMAND_IDS.createSelectionCloze]: actions.createSelectionCloze,
     [APP_COMMAND_IDS.addSelectionNote]: actions.addSelectionNote,
     [APP_COMMAND_IDS.repairTable]: actions.repairTable,
+    [APP_COMMAND_IDS.cleanFormatting]: actions.cleanFormatting ?? (() => false),
+    [APP_COMMAND_IDS.configureCleanFormatting]: actions.configureCleanFormatting ?? (() => false),
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleRightSidebar]: actions.toggleRightSidebar,

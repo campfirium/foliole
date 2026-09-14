@@ -24,6 +24,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   documentHeaderMenuItems: 'foliole-document-header-menu-items',
   appLanguage: 'foliole-app-language',
   customCopyOverrides: 'foliole-custom-copy-overrides-v1',
+  formatCleanup: 'foliole-format-cleanup-v1',
   appDisplayScalePercent: 'foliole-app-display-scale-percent',
   macOsFontSmoothing: 'foliole-macos-font-smoothing-enabled',
   contentRegionScales: 'foliole-content-region-scales',

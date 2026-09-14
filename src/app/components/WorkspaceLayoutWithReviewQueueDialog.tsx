@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import { FormatCleanupDialogHost } from '../../features/editor/components/FormatCleanupDialogHost';
 import { continueToNextDemoPreviewDay } from '../../shared/platform/runtime/demoRuntime';
 import type { useAppController } from '../hooks/useAppController';
 import {
@@ -60,6 +61,10 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
         onClose={dialog.close}
         onExitReviewMode={handleExitReviewModeDialog}
         open={dialog.isOpen}
+      />
+      <FormatCleanupDialogHost
+        canClean={Boolean(controller.layoutProps.document.editorNodeId) && !controller.layoutProps.document.isEditorReadOnly}
+        editorRef={controller.layoutProps.document.editorAdapterRef}
       />
     </>
   );

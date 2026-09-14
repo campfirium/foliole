@@ -160,6 +160,22 @@ describe('native annotation menu projection', () => {
       expect(collectMenuItems(items).some((item) => item.role === 'selectAll')).toBe(true);
     }
   });
+
+  it('projects direct and configurable format cleanup actions onto the Editor menu', () => {
+    syncAppMenuState(
+      ['editor.cleanFormatting', 'editor.configureCleanFormatting'],
+      [{ accelerator: 'Option+Shift+F', commandId: 'editor.cleanFormatting' }],
+      'darwin'
+    );
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'editor.cleanFormatting')).toMatchObject({
+      accelerator: 'Option+Shift+F', enabled: true, label: 'Clean formatting'
+    });
+    expect(findMenuItem(items, 'editor.configureCleanFormatting')).toMatchObject({
+      enabled: true, label: 'Clean formatting…'
+    });
+  });
 });
 
 describe('native app menu platform roles', () => {

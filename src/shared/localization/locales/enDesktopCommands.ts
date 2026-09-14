@@ -39,6 +39,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.clozeSelection': 'Cloze Selection',
   'desktop.command.annotateSelection': 'Annotate Selection',
   'desktop.command.repairTable': 'Repair Table',
+  'desktop.command.cleanFormatting': 'Clean formatting',
+  'desktop.command.configureCleanFormatting': 'Clean formatting...',
   'desktop.command.restartApp': 'Restart App',
   'desktop.command.toggleLeftSidebar': 'Toggle Left Sidebar',
   'desktop.command.toggleRightSidebar': 'Toggle Right Sidebar',
