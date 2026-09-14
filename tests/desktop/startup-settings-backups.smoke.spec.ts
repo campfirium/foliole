@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import type { Page } from '@playwright/test';
 
@@ -13,6 +14,9 @@ const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
 const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db\.gz$/;
 const SAFETY_BACKUP_FILE_NAME = /^pre-restore-.*\.db\.gz$/;
 const RESTORE_DRIFT_NODE_ID = 'desktop-backup-restore-drift';
+const RESTORE_SETTINGS_ARTIFACT_PATH = path.join(
+  process.cwd(), '.tmp/artifacts/desktop-acceptance/backup-restore-current-settings.png'
+);
 
 test.describe('desktop smoke', () => {
   test('startup renders the desktop workspace shell', async ({ desktopSession, desktopWindow }) => {
@@ -56,6 +60,61 @@ test.describe('desktop smoke', () => {
   });
 
 });
+
+test.describe('backup restore controls', () => {
+  test('restores content while keeping current backup controls', async ({ desktopSession, desktopWindow }, testInfo) => {
+    await expectWorkspaceShell(desktopWindow);
+    const libraryHome = desktopSession.launchOptions.env.FOLIOLE_LIBRARY_HOME;
+    if (!libraryHome) throw new Error('Missing isolated Library home.');
+    const oldBackupDir = path.join(libraryHome, 'old-backups');
+    const currentBackupDir = path.join(libraryHome, 'current-backups');
+    await saveBackupControls(desktopWindow, {
+      backup_dir: oldBackupDir,
+      daily_max_count: 2,
+      hourly_max_count: 2
+    });
+    const backup = await desktopWindow.evaluate(async () =>
+      window.electronAPI.invoke('backup_sqlite_database', {})) as { destinationPath: string };
+
+    await saveBackupControls(desktopWindow, {
+      backup_dir: currentBackupDir,
+      daily_max_count: 4,
+      extra_backup_dir: path.join(libraryHome, 'current-extra-backups'),
+      extra_backup_max_count: 3,
+      hourly_max_count: 6,
+      retention_priority: ['daily', 'weekly', 'hourly', 'monthly'],
+      safety_max_count: 3,
+      weekly_max_count: 2
+    });
+    const current = await loadBackupControls(desktopWindow);
+    await createRestoreDriftTopic(desktopWindow);
+    await desktopWindow.evaluate(async (sourcePath) =>
+      window.electronAPI.invoke('restore_sqlite_database', { sourcePath }), backup.destinationPath);
+
+    await expect(hasRestoreDriftTopic(desktopWindow)).resolves.toBe(false);
+    const restored = await loadBackupControls(desktopWindow);
+    expect({ ...restored, updated_at: '' }).toEqual({ ...current, updated_at: '' });
+    expect((await fs.readdir(currentBackupDir)).some((name) => SAFETY_BACKUP_FILE_NAME.test(name))).toBe(true);
+    await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
+
+    const dialog = await openBackupsSection(desktopWindow);
+    await fs.mkdir(path.dirname(RESTORE_SETTINGS_ARTIFACT_PATH), { recursive: true });
+    await dialog.screenshot({ path: RESTORE_SETTINGS_ARTIFACT_PATH });
+    await testInfo.attach('backup-restore-current-settings', {
+      contentType: 'image/png', path: RESTORE_SETTINGS_ARTIFACT_PATH
+    });
+  });
+});
+
+async function loadBackupControls(desktopWindow: Page) {
+  return desktopWindow.evaluate(async () =>
+    window.electronAPI.invoke('load_backup_settings')) as Promise<Record<string, unknown>>;
+}
+
+async function saveBackupControls(desktopWindow: Page, settings: Record<string, unknown>) {
+  return desktopWindow.evaluate(async (value) =>
+    window.electronAPI.invoke('save_backup_settings', { settings: value }), settings) as Promise<Record<string, unknown>>;
+}
 
 async function createRestoreDriftTopic(desktopWindow: Page) {
   await desktopWindow.evaluate(async (nodeId) => {

@@ -171,6 +171,20 @@ export function saveBackupSettings(
   return normalized;
 }
 
+export function reapplyBackupSettingsAfterRestore(
+  settings: NativeBackupSettings,
+  updatedAt = new Date().toISOString()
+) {
+  const reapplied = {
+    ...settings,
+    overridden_fields: [...settings.overridden_fields],
+    retention_priority: [...settings.retention_priority],
+    updated_at: updatedAt
+  };
+  saveStoredBackupSettings(reapplied);
+  return reapplied;
+}
+
 export function resolveManagedBackupDirectory(
   settings = normalizeBackupSettings(readStoredBackupSettings())
 ) {

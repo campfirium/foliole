@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-backup-restore-rollback';
 const initializeState = vi.hoisted(() => ({ failNext: false }));
+const backupSettingsState = vi.hoisted(() => ({ failNextReapply: false }));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -30,8 +31,22 @@ vi.mock('./migrate.js', async (importOriginal) => {
     }
   };
 });
+vi.mock('./backupSettings.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./backupSettings.js')>();
+  return {
+    ...original,
+    reapplyBackupSettingsAfterRestore: (...args: Parameters<typeof original.reapplyBackupSettingsAfterRestore>) => {
+      if (backupSettingsState.failNextReapply) {
+        backupSettingsState.failNextReapply = false;
+        throw new Error('injected backup settings reapply failure');
+      }
+      return original.reapplyBackupSettingsAfterRestore(...args);
+    }
+  };
+});
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
+import { loadBackupSettings, saveBackupSettings } from './backupSettings.js';
 import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection
@@ -43,6 +58,7 @@ import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  backupSettingsState.failNextReapply = false;
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-restore-rollback-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
@@ -50,6 +66,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   initializeState.failNext = false;
+  backupSettingsState.failNextReapply = false;
   clearDatabaseConnectionUnavailable();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
@@ -87,6 +104,25 @@ it('disables database access when restored initialization and rollback both fail
   } finally {
     renameSpy.mockRestore();
   }
+});
+
+it('rolls back the library when current backup controls cannot be reapplied', async () => {
+  seedNode('# backup');
+  const backup = await createApplicationDatabaseBackup();
+  saveBackupSettings({
+    backup_dir: path.join(tempRoot, 'current-backups'),
+    daily_max_count: 4,
+    hourly_max_count: 6
+  });
+  const current = loadBackupSettings();
+  seedNode('# current');
+  backupSettingsState.failNextReapply = true;
+
+  await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+    .rejects.toThrow('Your current library has been restored');
+
+  expect(currentContent()).toBe('# current');
+  expect(loadBackupSettings()).toEqual(current);
 });
 
 function currentContent() {

@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
+
 import { listManagedDatabaseBackups } from './backupCatalog.js';
 import { moveManagedBackupToTrash } from './backupFileDisposition.js';
 import { loadBackupSettings, resolveManagedBackupDirectory } from './backupSettings.js';
@@ -20,13 +22,15 @@ export async function discardRestoreSafetySnapshot(snapshot: ManagedSafetySnapsh
 
 export async function settleRestoreSafetySnapshots(
   snapshot: ManagedSafetySnapshot,
-  restoreSourcePath: string
+  restoreSourcePath: string,
+  context?: { backupDirectory: string; settings: NativeBackupSettings }
 ) {
   snapshot.release();
   await waitForManagedSafetySnapshotSettlements();
   try {
-    const settings = loadBackupSettings();
-    const entries = await listManagedDatabaseBackups(resolveManagedBackupDirectory(settings));
+    const settings = context?.settings ?? loadBackupSettings();
+    const backupDirectory = context?.backupDirectory ?? resolveManagedBackupDirectory(settings);
+    const entries = await listManagedDatabaseBackups(backupDirectory);
     const retained = new Set(entries
       .filter((entry) => entry.kind === 'snapshot')
       .slice(0, settings.safety_max_count)

@@ -6,6 +6,11 @@ import {
   discardRestoreSafetySnapshot,
   settleRestoreSafetySnapshots
 } from './backupSafetyRetention.js';
+import {
+  loadBackupSettings,
+  reapplyBackupSettingsAfterRestore,
+  resolveManagedBackupDirectory
+} from './backupSettings.js';
 import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import {
   clearDatabaseConnectionUnavailable,
@@ -29,6 +34,8 @@ export async function restoreDatabaseBackupInMaintenance(
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
   const targetPath = connection.dbPath;
+  const backupSettings = loadBackupSettings();
+  const backupDirectory = resolveManagedBackupDirectory(backupSettings);
   let materialized: Awaited<ReturnType<typeof materializeCompressedSqliteBackup>> | null = null;
   let safetySnapshot: ManagedSafetySnapshot | null = null;
   let connectionClosed = false;
@@ -37,6 +44,7 @@ export async function restoreDatabaseBackupInMaintenance(
     materialized = await materializeCompressedSqliteBackup(sourcePath, path.dirname(targetPath));
     verifySqliteDatabaseFile(materialized.databasePath);
     safetySnapshot = await createManagedSafetySnapshotWithBackup({
+      destinationDirectory: backupDirectory,
       reason: 'pre-restore',
       sourceDatabase: connection.sqlite,
       sourcePath: targetPath
@@ -46,6 +54,7 @@ export async function restoreDatabaseBackupInMaintenance(
     const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
     replacementComplete = true;
     initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
+    reapplyBackupSettingsAfterRestore(backupSettings);
     clearDatabaseConnectionUnavailable();
     return { ...result, sourcePath: path.resolve(sourcePath) };
   } catch (error) {
@@ -64,7 +73,10 @@ export async function restoreDatabaseBackupInMaintenance(
     await materialized?.cleanup();
     if (safetySnapshot) {
       if (replacementComplete) {
-        await settleRestoreSafetySnapshots(safetySnapshot, sourcePath);
+        await settleRestoreSafetySnapshots(safetySnapshot, sourcePath, {
+          backupDirectory,
+          settings: backupSettings
+        });
       } else {
         await discardRestoreSafetySnapshot(safetySnapshot);
       }
