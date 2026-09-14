@@ -55,24 +55,17 @@ export function selectOrdinaryRestorePoints(
   settings: NativeBackupSettings
 ): RestorePointsByTier {
   const selected: RestorePointsByTier = { hourly: [], daily: [], weekly: [], monthly: [] };
-  const assigned = new Set<string>();
   const newestFirst = [...entries].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 
   for (const tier of BACKUP_RETENTION_TIERS) {
     const limit = retentionLimit(settings, tier);
     if (limit <= 0) continue;
-    const coveredBuckets = new Set(
-      newestFirst
-        .filter((entry) => assigned.has(entry.filePath))
-        .map((entry) => frequencyBucketKey(new Date(entry.updatedAt), tier))
-    );
+    const coveredBuckets = new Set<string>();
     for (const entry of newestFirst) {
       if (selected[tier].length >= limit) break;
-      if (assigned.has(entry.filePath)) continue;
       const bucket = frequencyBucketKey(new Date(entry.updatedAt), tier);
       if (coveredBuckets.has(bucket)) continue;
       coveredBuckets.add(bucket);
-      assigned.add(entry.filePath);
       selected[tier].push(entry);
     }
   }

@@ -102,6 +102,31 @@ export async function compressSqliteFile(sourcePath: string, destinationPath: st
   }
 }
 
+export async function commitVerifiedCompressedSqliteFile(sourcePath: string, destinationPath: string) {
+  await assertCompressionSpace(sourcePath, path.dirname(destinationPath));
+  const temporaryPath = siblingTemporaryPath(destinationPath, 'pending.db.gz');
+  activeTemporaryPaths.add(temporaryPath);
+  try {
+    await writeCompressedSqliteFile(sourcePath, temporaryPath);
+    const materialized = await materializeCompressedSqliteBackup(
+      temporaryPath,
+      path.dirname(destinationPath)
+    );
+    try {
+      verifySqliteDatabaseFile(materialized.databasePath);
+    } finally {
+      await materialized.cleanup();
+    }
+    await fs.link(temporaryPath, destinationPath);
+  } finally {
+    try {
+      await fs.rm(temporaryPath, { force: true });
+    } finally {
+      activeTemporaryPaths.delete(temporaryPath);
+    }
+  }
+}
+
 async function writeCompressedSqliteFile(sourcePath: string, destinationPath: string) {
   await pipeline(
     createReadStream(sourcePath),

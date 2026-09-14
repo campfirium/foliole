@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 const startupMocks = vi.hoisted(() => ({
   resumePendingPdfAttachmentIndexing: vi.fn(),
+  startAutomaticBackupScheduler: vi.fn(),
   startExternalSearchBackgroundRefresh: vi.fn(),
   startKeepImportMonitor: vi.fn(),
   startReadwiseApiScheduler: vi.fn(),
@@ -11,7 +12,9 @@ const startupMocks = vi.hoisted(() => ({
   startDesktopTaskWatchdog: vi.fn()
 }));
 
-vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackups: vi.fn() }));
+vi.mock('./automaticBackupScheduler.js', () => ({
+  startAutomaticBackupScheduler: startupMocks.startAutomaticBackupScheduler
+}));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: startupMocks.resumePendingPdfAttachmentIndexing }));
 vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({ startExternalSearchBackgroundRefresh: startupMocks.startExternalSearchBackgroundRefresh }));
 vi.mock('./import/keepImportMonitor.js', () => ({ startKeepImportMonitor: startupMocks.startKeepImportMonitor }));
@@ -31,6 +34,7 @@ it('starts desktop followup tasks without a Readwise Books inventory write path'
   await Promise.resolve();
 
   expect(startupMocks.startDesktopTaskWatchdog).toHaveBeenCalledTimes(1);
+  expect(startupMocks.startAutomaticBackupScheduler).toHaveBeenCalledTimes(1);
   expect(startupMocks.resumePendingPdfAttachmentIndexing).toHaveBeenCalledTimes(1);
   expect(startupMocks.startSearchIndexInvalidationScheduler).toHaveBeenCalledTimes(1);
   expect(startupMocks.startExternalSearchBackgroundRefresh).toHaveBeenCalledTimes(1);

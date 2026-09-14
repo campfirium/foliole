@@ -135,7 +135,7 @@ it('uses the saved tier priority when the capacity cannot fit every selected poi
   await writeFixture('manual-2026-08-13_10-00-00-000.db', 10, '2026-08-13T10:00:00.000Z');
   const configured = {
     ...settings(20),
-    daily_max_count: 1,
+    daily_max_count: 2,
     hourly_max_count: 2,
     retention_priority: ['daily', 'hourly', 'weekly', 'monthly'] as NativeBackupSettings['retention_priority']
   };
@@ -145,6 +145,25 @@ it('uses the saved tier priority when the capacity cannot fit every selected poi
   expect((await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName)).toEqual([
     'manual-2026-08-13_10-00-00-000.db',
     'manual-2026-08-12_08-00-00-000.db'
+  ]);
+});
+
+it('changes only the capacity gap when the saved tier priority changes', async () => {
+  await writeFixture('manual-2026-08-12_08-00-00-000.db', 10, '2026-08-12T08:00:00.000Z');
+  await writeFixture('manual-2026-08-13_09-00-00-000.db', 10, '2026-08-13T09:00:00.000Z');
+  await writeFixture('manual-2026-08-13_10-00-00-000.db', 10, '2026-08-13T10:00:00.000Z');
+  const configured = {
+    ...settings(20),
+    daily_max_count: 2,
+    hourly_max_count: 2,
+    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'] as NativeBackupSettings['retention_priority']
+  };
+
+  await pruneManagedDatabaseBackups(backupDirectory, configured, { disposeFile: removeFixture });
+
+  expect((await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName)).toEqual([
+    'manual-2026-08-13_10-00-00-000.db',
+    'manual-2026-08-13_09-00-00-000.db'
   ]);
 });
 

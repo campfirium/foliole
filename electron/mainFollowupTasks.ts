@@ -1,4 +1,4 @@
-import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
+import { startAutomaticBackupScheduler } from './automaticBackupScheduler.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { startSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { submitDesktopOperation } from './desktopOperations.js';
@@ -27,11 +27,7 @@ function startLightService(label: string, task: () => Promise<unknown> | unknown
 
 export function startFollowupTasks() {
   ensureDesktopTaskWatchdog();
-  const backupHandle = submitDesktopOperation('automatic-backup', {
-    failureLabel: '[backup] automatic backup reconcile failed',
-    run: () => reconcileAutomaticDatabaseBackups()
-  });
-  void backupHandle.promise.catch(() => undefined);
+  startAutomaticBackupScheduler();
   const mirrorHandle = submitDesktopOperation('mirror-backfill', {
     failureLabel: '[mirror] startup resume failed',
     run: resumePendingMirrorOutput

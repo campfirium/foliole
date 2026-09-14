@@ -28,7 +28,7 @@ function entry(fileName: string, date: Date): ApplicationDatabaseBackupEntry {
   };
 }
 
-it('selects the latest ordinary point per bucket and assigns each file only once', () => {
+it('selects each tier independently and lets one file satisfy multiple tiers', () => {
   const older = entry('foliole-auto-backup-260713-081000.db', new Date(2026, 6, 13, 8, 10));
   const latest = entry('foliole-auto-backup-260713-084000.db', new Date(2026, 6, 13, 8, 40));
   const previousHour = entry('foliole-auto-backup-260713-074000.db', new Date(2026, 6, 13, 7, 40));
@@ -41,8 +41,27 @@ it('selects the latest ordinary point per bucket and assigns each file only once
     latest.filePath,
     previousHour.filePath
   ]);
-  expect(retained.daily.map((item) => item.filePath)).toEqual([previousDay.filePath]);
+  expect(retained.daily.map((item) => item.filePath)).toEqual([latest.filePath, previousDay.filePath]);
+  expect(retained.weekly.map((item) => item.filePath)).toEqual([latest.filePath]);
+  expect(retained.monthly.map((item) => item.filePath)).toEqual([latest.filePath]);
   expect(Object.values(retained).flat()).not.toContain(older);
+});
+
+it('counts only natural buckets that contain restore points', () => {
+  const currentWeek = entry('current.db', new Date(2026, 6, 13, 8, 10));
+  const oldWeek = entry('old.db', new Date(2026, 5, 1, 8, 10));
+  const retained = selectOrdinaryRestorePoints([currentWeek, oldWeek], {
+    ...settings,
+    daily_max_count: 0,
+    hourly_max_count: 0,
+    monthly_max_count: 0,
+    weekly_max_count: 2
+  });
+
+  expect(retained.weekly.map((item) => item.filePath)).toEqual([
+    currentWeek.filePath,
+    oldWeek.filePath
+  ]);
 });
 
 it('uses Monday as the start of a local week', () => {

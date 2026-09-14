@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
 
 import {
+  frequencyBucketKey,
   selectOrdinaryRestorePoints,
   type RestorePointsByTier
 } from './backupRetentionPolicy.js';
@@ -120,9 +121,13 @@ function selectCapacityRetainedPaths(
     .reduce((total, entry) => total + entry.sizeBytes, 0);
   for (const tier of settings.retention_priority) {
     for (const entry of selectedOrdinary[tier]) {
-      if (retainedPaths.has(entry.filePath)) continue;
+      const bucket = frequencyBucketKey(new Date(entry.updatedAt), tier);
+      const coveredForFree = ordinaryEntries.some((candidate) =>
+        retainedPaths.has(candidate.filePath) &&
+        frequencyBucketKey(new Date(candidate.updatedAt), tier) === bucket);
+      if (coveredForFree) continue;
       if (settings.total_size_limit_bytes > 0 && retainedBytes + entry.sizeBytes > settings.total_size_limit_bytes) {
-        continue;
+        break;
       }
       retainedPaths.add(entry.filePath);
       retainedBytes += entry.sizeBytes;

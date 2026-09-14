@@ -77,10 +77,7 @@ it('uses the finest enabled layer as the only automatic backup cadence', async (
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 5, 0));
 
   const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
-  expect(backupNames).toEqual([
-    'foliole-auto-backup-260402-101500.db.gz',
-    'foliole-auto-backup-260402-110500.db.gz'
-  ]);
+  expect(backupNames).toEqual(['foliole-auto-backup-260402-101500.db.gz']);
 });
 
 it('falls back to daily cadence when hourly retention is disabled', async () => {
@@ -96,10 +93,7 @@ it('falls back to daily cadence when hourly retention is disabled', async () => 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 3, 9, 0, 0));
 
   const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
-  expect(backupNames).toEqual([
-    'foliole-auto-backup-260402-101500.db.gz',
-    'foliole-auto-backup-260403-090000.db.gz'
-  ]);
+  expect(backupNames).toEqual(['foliole-auto-backup-260402-101500.db.gz']);
 });
 
 it.each([
@@ -125,7 +119,7 @@ it.each([
   await reconcileAutomaticDatabaseBackups(next);
 
   const backupNames = await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()));
-  expect(backupNames).toHaveLength(2);
+  expect(backupNames).toHaveLength(1);
 });
 
 it('does not create automatic restore points when every layer is disabled', async () => {

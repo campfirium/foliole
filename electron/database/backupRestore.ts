@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
+import { commitAutomaticBackupWhenChanged } from './automaticBackupCandidate.js';
 import {
   listManagedDatabaseBackups,
   pruneManagedDatabaseBackups,
@@ -52,6 +53,7 @@ export interface RestoreApplicationDatabaseBackupOptions {
 export type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
 let restoreInProgress = false;
+const reconciledCadenceBuckets = new Map<string, string>();
 
 async function pruneBackupsNow() {
   await waitForManagedSafetySnapshotSettlements();
@@ -64,7 +66,11 @@ async function pruneBackupsNow() {
   showBackupCleanupNotification(result);
 }
 
-async function createAutomaticBackup(now: Date, backupDirectory: string) {
+async function createAutomaticBackup(
+  now: Date,
+  backupDirectory: string,
+  latestOrdinary: ApplicationDatabaseBackupEntry | null
+) {
   const settings = loadBackupSettings();
   const destinationPath = path.join(backupDirectory, automaticBackupFileName(now));
   if (existsSync(destinationPath)) {
@@ -72,11 +78,13 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
     return false;
   }
   const connection = openDatabaseConnection();
-  const result = await backupCompressedSqliteDatabase({
+  const result = await commitAutomaticBackupWhenChanged({
     destinationPath,
+    latestOrdinary,
     sourceDatabase: connection.sqlite,
     sourcePath: connection.dbPath
   });
+  if (!result) return false;
   await fs.utimes(result.destinationPath, now, now);
   await copyExtraBackup({
     disposeFile: moveManagedBackupToTrash,
@@ -93,21 +101,26 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
 export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
+  const cadence = finestEnabledFrequency(settings);
+  const connection = openDatabaseConnection();
+  const noCleanup = { deletedCount: 0, failedCount: 0, releasedBytes: 0 };
   const backupDirectory = ensureManagedBackupDirectory(settings);
+  if (!cadence) return noCleanup;
+  const cadenceBucket = frequencyBucketKey(now, cadence);
+  if (reconciledCadenceBuckets.get(connection.dbPath) === cadenceBucket) return noCleanup;
   const temporaryCleanup = await cleanupOrphanedBackupTemporaryFiles(backupDirectory);
   if (temporaryCleanup.deletedCount > 0) {
     console.info('[backup] removed interrupted compression files', temporaryCleanup);
   }
   const existingEntries = await listManagedDatabaseBackups(backupDirectory);
 
-  const cadence = finestEnabledFrequency(settings);
-  const alreadyExists = cadence
-    ? existingEntries.some((entry) =>
-        entry.kind === 'automatic' &&
-        frequencyBucketKey(new Date(entry.updatedAt), cadence) === frequencyBucketKey(now, cadence)
-      )
-    : true;
-  const created = !alreadyExists && await createAutomaticBackup(now, backupDirectory);
+  const alreadyExists = existingEntries.some((entry) =>
+    entry.kind === 'automatic' &&
+    frequencyBucketKey(new Date(entry.updatedAt), cadence) === cadenceBucket);
+  const latestOrdinary = existingEntries.find((entry) =>
+    entry.kind === 'automatic' || entry.kind === 'manual') ?? null;
+  const created = !alreadyExists && await createAutomaticBackup(now, backupDirectory, latestOrdinary);
+  reconciledCadenceBuckets.set(connection.dbPath, cadenceBucket);
   if (created) {
     const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
       disposeFile: moveManagedBackupToTrash
