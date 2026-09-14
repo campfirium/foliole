@@ -11,6 +11,7 @@ import type { DesktopDnsSdSession } from './desktopDnsSd.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import {
   clearDesktopSyncGroupRoutes,
   loadDesktopSyncGroupRoutes,
@@ -43,6 +44,7 @@ export function startDesktopSyncGroupAutoSync() {
       updateDesktopSyncFreshness(
         state.role === 'member' && loadDesktopSyncGroupRoutes(group.group_id).length > 0
       );
+      notifyDesktopSyncGroupOverviewChanged();
     }
   });
 }

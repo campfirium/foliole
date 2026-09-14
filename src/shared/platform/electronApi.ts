@@ -95,6 +95,7 @@ export interface ElectronAPI {
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onSyncGroupJoinRequestsChanged?: (handler: () => void) => () => void;
+  onSyncGroupOverviewChanged?: (handler: () => void) => () => void;
   onSyncGroupDiscoveryChanged?: (handler: (payload: SyncGroupDiscoverySnapshot) => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onAssistantTurnEvent?: (handler: (payload: NativeAssistantTurnEvent) => void) => () => void;

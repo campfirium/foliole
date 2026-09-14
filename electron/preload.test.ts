@@ -114,6 +114,7 @@ const sanitizedCompletedReadwiseProgressPayload = {
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
         onSyncGroupJoinRequestsChanged: expect.any(Function),
+        onSyncGroupOverviewChanged: expect.any(Function),
         onSyncGroupDiscoveryChanged: expect.any(Function),
         onExternalDocumentFileOpened: expect.any(Function),
         onReadwiseReaderImportProgress: expect.any(Function),
