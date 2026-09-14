@@ -70,13 +70,17 @@ it('fails closed on host errors and ignores callbacks after stop', () => {
   expect(onError).not.toHaveBeenCalled();
 });
 
-it('reports resolve errors without producing a route', () => {
+it('ignores one failed service resolve without stopping discovery', () => {
   const onError = vi.fn();
   const onService = vi.fn();
   startDesktopDnsSdSession({ onError, onService });
   runtime.browseCallback?.({ kind: 'found', service: unresolved });
   runtime.resolveCallbacks[0]?.({ code: 'resolve_failed', kind: 'error', message: 'offline' });
+  const another = { ...unresolved, fqdn: 'Another._foliole-sync._tcp.local.', name: 'Another' };
+  runtime.browseCallback?.({ kind: 'found', service: another });
+  runtime.resolveCallbacks[1]?.({ kind: 'found', service: { ...resolved, ...another } });
 
-  expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'resolve_failed: offline' }));
-  expect(onService).not.toHaveBeenCalled();
+  expect(onError).not.toHaveBeenCalled();
+  expect(runtime.browseCancel).not.toHaveBeenCalled();
+  expect(onService).toHaveBeenCalledWith(expect.objectContaining({ kind: 'found' }));
 });

@@ -55,6 +55,17 @@ function failSession(state: SessionState, event: Extract<DesktopDnsSdEvent, { ki
   state.callbacks.onError(new Error(`${event.code}: ${event.message}`));
 }
 
+function ignoreResolveFailure(
+  state: SessionState,
+  key: string,
+  event: Extract<DesktopDnsSdEvent, { kind: 'error' }>
+) {
+  state.pending.delete(key);
+  logDesktopDnsSdDiagnostic('resolve_error_ignored', {
+    code: event.code, message: event.message, sessionId: state.sessionId
+  });
+}
+
 function beginResolve(state: SessionState, service: DesktopDnsSdService) {
   const key = serviceKey(service);
   state.pending.get(key)?.handle?.cancel();
@@ -67,8 +78,7 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
     name: service.name }, (event) => {
     if (state.stopped || state.pending.get(key) !== token) return;
     if (event.kind === 'error') {
-      state.pending.delete(key);
-      failSession(state, event);
+      ignoreResolveFailure(state, key, event);
       return;
     }
     if (event.kind !== 'found' && event.kind !== 'changed') return;
