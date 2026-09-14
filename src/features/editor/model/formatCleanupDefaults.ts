@@ -15,16 +15,7 @@ export const DEFAULT_FORMAT_CLEANUP_RULES: FormatCleanupRule[] = [
   lineStartRule('line-heading', '#'),
   lineStartRule('line-quote', '>'),
   lineStartRule('line-plus', '+'),
-  lineStartRule('line-bullet', '•'),
-  {
-    enabled: true,
-    find: '*',
-    follow: '',
-    id: 'single-asterisk',
-    not: '**',
-    replace: '',
-    scope: 'any'
-  }
+  lineStartRule('line-bullet', '•')
 ];
 
 export function createDefaultFormatCleanupSettings(): FormatCleanupSettings {

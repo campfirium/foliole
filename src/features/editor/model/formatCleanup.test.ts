@@ -12,9 +12,9 @@ describe('cleanFormatting', () => {
     );
   });
 
-  it('removes single asterisks while preserving double asterisks', () => {
-    expect(cleanFormatting('*italic* and **bold**', createDefaultFormatCleanupSettings())).toBe(
-      'italic and **bold**'
+  it('keeps inline asterisks unless the user adds a custom rule', () => {
+    expect(cleanFormatting('*italic* and **bold** and 3 * 5', createDefaultFormatCleanupSettings())).toBe(
+      '*italic* and **bold** and 3 * 5'
     );
   });
 
