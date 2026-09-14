@@ -14,7 +14,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -43,7 +43,7 @@ function prepareV81() {
 it('adds explicit External reference columns while preserving local-path defaults', () => {
   const connection = prepareV81();
   initializeDatabaseSchema(connection.sqlite);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.sqlite.prepare("SELECT name FROM pragma_table_info('external_documents') WHERE name='reference_kind'").get())
     .toEqual({ name: 'reference_kind' });
   connection.sqlite.prepare(`INSERT INTO external_documents (

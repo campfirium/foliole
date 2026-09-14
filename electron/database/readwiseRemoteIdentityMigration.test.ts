@@ -14,7 +14,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -54,7 +54,7 @@ it('adds remote identity columns and uniqueness without rewriting historical pat
 
   initializeDatabaseSchema(connection.sqlite);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.sqlite.prepare(`SELECT source_locator, source_location, remote_annotations_json
     FROM import_sources WHERE source_fingerprint = 'one'`).get()).toEqual({
     remote_annotations_json: '[]', source_location: 'One.md', source_locator: '/old/one'

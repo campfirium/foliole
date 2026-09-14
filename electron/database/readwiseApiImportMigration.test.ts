@@ -14,7 +14,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -44,7 +44,7 @@ function prepareV80() {
 it('adds restart-safe API staging and synced materialization state', () => {
   const connection = prepareV80();
   initializeDatabaseSchema(connection.sqlite);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.sqlite.prepare(
     "SELECT name FROM pragma_table_info('import_sources') WHERE name='remote_import_state_json'"
   ).get()).toEqual({ name: 'remote_import_state_json' });

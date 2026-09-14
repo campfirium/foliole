@@ -1,6 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  readDataMigrationState,
+  writeDataMigrationState
+} from '../../lib/core/database/dataMigrationState.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { rewriteCanonicalAssetMarkdownTargets } from '../../lib/platform/canonicalAssetMarkdownMigration.js';
@@ -17,12 +22,15 @@ import { hashFile, type AttachmentFileEvidence } from './canonicalAttachmentPref
 export type CanonicalAttachmentJournalStage =
   | 'planned' | 'targets_prepared' | 'database_committed' | 'verified' | 'finalized';
 
+export const CANONICAL_ATTACHMENT_MIGRATION_ID = 'canonical-attachment-v1';
+
 interface CanonicalAttachmentJournal {
   createdTargets: string[];
   plan: CanonicalAttachmentMigrationPlan;
+  runId?: string;
   stagedAliases: Array<{ originalPath: string; sha256: string; stagedPath: string }>;
   stage: CanonicalAttachmentJournalStage;
-  version: 1;
+  version: 1 | 2;
 }
 
 function assetPath(assetsDir: string, name: string) {
@@ -164,23 +172,43 @@ export function runCanonicalAttachmentMigration(args: {
   journalPath: string;
   sqlite: SqliteDatabase;
 }) {
+  if (args.dryRun) return buildCanonicalAttachmentMigrationPlan(args.sqlite, args.assetsDir);
+  const state = readDataMigrationState(args.sqlite, CANONICAL_ATTACHMENT_MIGRATION_ID);
   const existing = readJournal(args.journalPath);
-  const isReadOnlyTerminal = existing?.stage === 'finalized'
-    || (existing?.version === 1 && existing.stage === 'verified');
-  if (isReadOnlyTerminal || args.dryRun) {
-    return existing?.plan ?? buildCanonicalAttachmentMigrationPlan(args.sqlite, args.assetsDir);
+  if (state?.status === 'completed') {
+    return existing?.plan ?? null;
   }
-  const journal = existing ?? {
-    createdTargets: [], plan: buildCanonicalAttachmentMigrationPlan(args.sqlite, args.assetsDir),
-    stagedAliases: [], stage: 'planned' as const, version: 1 as const
+  const canResume = state?.status === 'running'
+    && existing?.version === 2
+    && existing.runId === state.run_id;
+  const runId = canResume ? state.run_id : randomUUID();
+  const journal: CanonicalAttachmentJournal = canResume && existing ? existing : {
+    createdTargets: [], plan: buildCanonicalAttachmentMigrationPlan(args.sqlite, args.assetsDir), runId,
+    stagedAliases: [], stage: 'planned', version: 2
   };
   const conflicts = journal.plan.residualBlockers.filter((item) =>
     item.reasons.includes('canonical_target_conflict')).map((item) => item.attachmentId);
   if (conflicts.length) throw new Error(`canonical_attachment_target_conflict:${conflicts.join(',')}`);
-  writeJournal(args.journalPath, journal);
+  if (!canResume) {
+    writeDataMigrationState(args.sqlite, {
+      migration_id: CANONICAL_ATTACHMENT_MIGRATION_ID,
+      run_id: runId,
+      status: 'running',
+      updated_at: new Date().toISOString()
+    });
+    writeJournal(args.journalPath, journal);
+  }
   if (journal.stage === 'planned') prepareTargets(args.journalPath, journal);
   if (journal.stage === 'targets_prepared') commitDatabase(args.sqlite, args.journalPath, journal);
   if (journal.stage === 'database_committed') stageAliases(args.assetsDir, args.journalPath, journal);
+  if (journal.stage === 'verified' || journal.stage === 'finalized') {
+    writeDataMigrationState(args.sqlite, {
+      migration_id: CANONICAL_ATTACHMENT_MIGRATION_ID,
+      run_id: runId,
+      status: 'completed',
+      updated_at: new Date().toISOString()
+    });
+  }
   return journal.plan;
 }
 

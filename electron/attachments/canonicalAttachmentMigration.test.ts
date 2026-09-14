@@ -19,7 +19,11 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
-import { finalizeCanonicalAttachmentMigration, runCanonicalAttachmentMigration } from './canonicalAttachmentMigration.js';
+import {
+  CANONICAL_ATTACHMENT_MIGRATION_ID,
+  finalizeCanonicalAttachmentMigration,
+  runCanonicalAttachmentMigration
+} from './canonicalAttachmentMigration.js';
 import * as canonicalAttachmentMigrationPlan from './canonicalAttachmentMigrationPlan.js';
 
 let root = '';
@@ -29,6 +33,8 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(root, 'app-data');
   mockedDocumentsDir = path.join(root, 'documents');
   initializeDatabase();
+  openDatabaseConnection().sqlite.prepare('DELETE FROM data_migration_state WHERE migration_id = ?')
+    .run(CANONICAL_ATTACHMENT_MIGRATION_ID);
 });
 
 afterEach(async () => { closeDatabaseConnection(); await fs.rm(root, { recursive: true, force: true }); });
@@ -79,7 +85,7 @@ it('dry-runs without mutation, then prepares, commits, stages, resumes, and fina
   const args = { assetsDir, journalPath, sqlite: openDatabaseConnection().sqlite };
 
   const dryRun = runCanonicalAttachmentMigration({ ...args, dryRun: true });
-  expect(dryRun.residualBlockers).toEqual([]);
+  expect(dryRun?.residualBlockers).toEqual([]);
   await expect(fs.access(journalPath)).rejects.toThrow();
   runCanonicalAttachmentMigration(args);
   expect(JSON.parse(await fs.readFile(journalPath, 'utf8')).stage).toBe('verified');
@@ -92,7 +98,7 @@ it('dry-runs without mutation, then prepares, commits, stages, resumes, and fina
   expect(JSON.parse(await fs.readFile(journalPath, 'utf8')).stage).toBe('finalized');
 });
 
-it('treats verified and finalized version 1 journals as read-only terminal states', async () => {
+it('uses the database completion record instead of repeatedly planning a completed migration', async () => {
   const prepared = await prepareJournalAt('planned');
   runCanonicalAttachmentMigration(prepared.args);
   const planner = vi.spyOn(canonicalAttachmentMigrationPlan, 'buildCanonicalAttachmentMigrationPlan');
@@ -124,7 +130,7 @@ it('treats verified and finalized version 1 journals as read-only terminal state
 });
 
 it.each(['planned', 'targets_prepared', 'database_committed'] as const)(
-  'resumes a %s version 1 journal through verified',
+  'replans an unowned %s version 1 journal for the current database',
   async (stage) => {
     const prepared = await prepareJournalAt(stage);
     runCanonicalAttachmentMigration(prepared.args);
@@ -137,6 +143,47 @@ it.each(['planned', 'targets_prepared', 'database_committed'] as const)(
       .toEqual({ storage_key: `${prepared.hash}.jpg` });
   }
 );
+
+it('replans a terminal journal when a restored database has no completion record', async () => {
+  const assetsDir = path.join(root, 'Assets-restored');
+  const journalPath = path.join(root, 'restored.json');
+  await fs.mkdir(assetsDir);
+  const bytes = Buffer.from([0xff, 0xd8, 0xff, ...Buffer.from('restored')]);
+  const hash = seed(bytes, hashPlaceholder(bytes));
+  await fs.writeFile(path.join(assetsDir, hash), bytes);
+  const sqlite = openDatabaseConnection().sqlite;
+
+  runCanonicalAttachmentMigration({ assetsDir, journalPath, sqlite });
+  const firstJournal = JSON.parse(await fs.readFile(journalPath, 'utf8'));
+  sqlite.prepare('UPDATE attachment_blobs SET storage_key = ? WHERE attachment_id = ?')
+    .run(hash, 'attachment-1');
+  sqlite.prepare('DELETE FROM data_migration_state WHERE migration_id = ?')
+    .run(CANONICAL_ATTACHMENT_MIGRATION_ID);
+
+  runCanonicalAttachmentMigration({ assetsDir, journalPath, sqlite });
+  const nextJournal = JSON.parse(await fs.readFile(journalPath, 'utf8'));
+  expect(nextJournal).toMatchObject({ stage: 'verified', version: 2 });
+  expect(nextJournal.runId).not.toBe(firstJournal.runId);
+  expect(sqlite.prepare('SELECT storage_key FROM attachment_blobs').get())
+    .toEqual({ storage_key: `${hash}.jpg` });
+  expect(sqlite.prepare('SELECT status, run_id FROM data_migration_state WHERE migration_id = ?')
+    .get(CANONICAL_ATTACHMENT_MIGRATION_ID))
+    .toEqual({ status: 'completed', run_id: nextJournal.runId });
+});
+
+it('resumes only a journal owned by the running database migration', async () => {
+  const prepared = await prepareJournalAt('planned');
+  const runId = 'matching-run';
+  const journal = JSON.parse(await fs.readFile(prepared.args.journalPath, 'utf8'));
+  await fs.writeFile(prepared.args.journalPath, JSON.stringify({ ...journal, runId, version: 2 }, null, 2));
+  prepared.args.sqlite.prepare(`INSERT INTO data_migration_state
+    (migration_id, run_id, status, updated_at) VALUES (?, ?, 'running', ?)`)
+    .run(CANONICAL_ATTACHMENT_MIGRATION_ID, runId, '2026-09-14T00:00:00.000Z');
+
+  runCanonicalAttachmentMigration(prepared.args);
+  expect(prepared.args.sqlite.prepare('SELECT status, run_id FROM data_migration_state WHERE migration_id = ?')
+    .get(CANONICAL_ATTACHMENT_MIGRATION_ID)).toEqual({ status: 'completed', run_id: runId });
+});
 
 it('blocks before database commit when a canonical target has different bytes', async () => {
   const assetsDir = path.join(root, 'Assets-conflict');

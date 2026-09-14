@@ -16,7 +16,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -62,7 +62,7 @@ it('adds an empty import tag and advances the Host gate atomically from v85', ()
   )!.value) as Record<string, unknown>;
   expect(policy).toMatchObject({ importTag: '', version: 3 });
   expect(migratedHost).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(() => connection.driver.execute(
     "UPDATE settings SET value = '{\"version\":4}' WHERE key = 'readwise_import_settings'"
   )).toThrow('readwise_host_settings_version_unsupported');

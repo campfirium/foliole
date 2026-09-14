@@ -16,7 +16,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -93,7 +93,7 @@ it('atomically migrates the legacy article grid to seven categories', () => {
   expect(global).not.toHaveProperty('readwiseReaderConfig');
   expect(host).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
   expect(host.readwiseReaderConfig).not.toHaveProperty('withHighlightsDestination');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(86);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.driver.queryAll<{ sync_dirty: number }>(
     "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'setting'"
   ).every((row) => row.sync_dirty === 1)).toBe(true);

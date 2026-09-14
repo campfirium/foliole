@@ -1,4 +1,5 @@
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
+import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
@@ -33,5 +34,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 83, migrate: migrateReadwiseApiReconcile },
   { version: 84, migrate: migrateReadwiseAutoImportPolicy },
   { version: 85, migrate: migrateReadwiseSevenCategoryPolicy },
-  { version: 86, migrate: migrateReadwiseAutoImportPolicy }
+  { version: 86, migrate: migrateReadwiseAutoImportPolicy },
+  { version: 87, migrate: createDataMigrationStateTable }
 ];
