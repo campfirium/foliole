@@ -40,6 +40,7 @@ export function readwiseApiScopePolicySignature(
 export function buildReadwiseApiScopeUrl(input: {
   checkpoint: string | null;
   cursor: string | null;
+  includeParentContent?: boolean;
   importTag: string;
   scope: ReadwiseApiIndexScope;
 }) {
@@ -50,11 +51,13 @@ export function buildReadwiseApiScopeUrl(input: {
   url.searchParams.set('limit', '100');
   if (input.scope === 'reader:tag') {
     url.searchParams.set('tag', input.importTag.trim());
-    url.searchParams.set('withHtmlContent', 'true');
+    if (input.includeParentContent !== false) url.searchParams.set('withHtmlContent', 'true');
   } else {
     const category = input.scope.slice('reader:'.length);
     url.searchParams.set('category', category);
-    if (isParentCategory(category)) url.searchParams.set('withHtmlContent', 'true');
+    if (input.includeParentContent !== false && isParentCategory(category)) {
+      url.searchParams.set('withHtmlContent', 'true');
+    }
   }
   return url;
 }

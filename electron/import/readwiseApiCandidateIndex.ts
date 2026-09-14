@@ -9,7 +9,6 @@ import {
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex,
   loadReadwiseApiReaderIndex,
-  saveReadwiseApiAnnotationContentStates,
   saveReadwiseApiExportIndexPage,
   saveReadwiseApiReaderIndexPage
 } from '../database/readwiseApiIndexStage.js';
@@ -20,7 +19,7 @@ import {
 
 import { indexReadwiseApiAnnotationGraph } from './readwiseApiAnnotationGraph.js';
 import { resolveReadwiseApiNoteParents } from './readwiseApiAnnotationParentResolution.js';
-import { resolveReadwiseApiCandidateParent } from './readwiseApiCandidateParent.js';
+import { resolveAndSaveReadwiseApiCandidateParent } from './readwiseApiCandidateParent.js';
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import {
   READER_PARENT_CATEGORIES,
@@ -31,11 +30,16 @@ import {
   createReadwiseApiRequest,
   type ReadwiseApiFetchDependencies
 } from './readwiseApiImportFetch.js';
+import {
+  indexReadwiseApiExportAnnotationContent,
+  indexReadwiseApiExportMatches
+} from './readwiseApiIndexExportFacts.js';
 import { buildReadwiseApiScopeUrl } from './readwiseApiIndexPlan.js';
 
 export async function buildReadwiseApiCandidateIndex(input: {
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
+  includeParentContent?: boolean;
   onProgress?: (processed: number) => void;
   settings: ImportManagerSettings;
 }) {
@@ -50,7 +54,9 @@ export async function buildReadwiseApiCandidateIndex(input: {
     run.roundStartedAt
   );
   for (const initial of ledgers) await fetchScope(input, initial, request);
-  await assembleCandidates(input.connectionRef, input.settings, request, input.onProgress);
+  await assembleCandidates(
+    input.connectionRef, input.settings, request, input.includeParentContent !== false, input.onProgress
+  );
   saveReadwiseApiCandidateCursor({ connectionRef: input.connectionRef, cursor: null, phase: 'ready' });
 }
 
@@ -65,6 +71,8 @@ async function fetchScope(
     const url = buildReadwiseApiScopeUrl({
       checkpoint: ledger.checkpoint,
       cursor: ledger.cursor,
+      ...(input.includeParentContent === undefined
+        ? {} : { includeParentContent: input.includeParentContent }),
       importTag: input.settings.readwiseAutoImportPolicy.importTag,
       scope: ledger.scope
     });
@@ -115,7 +123,8 @@ function savePage(
 
 async function assembleCandidates(
   connectionRef: string, settings: ImportManagerSettings,
-  request: ReturnType<typeof createReadwiseApiRequest>, onProgress?: (processed: number) => void
+  request: ReturnType<typeof createReadwiseApiRequest>, includeParentContent: boolean,
+  onProgress?: (processed: number) => void
 ) {
   const run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
   await resolveReadwiseApiNoteParents({
@@ -129,11 +138,8 @@ async function assembleCandidates(
   const annotations = loadReadwiseApiAnnotationLedger(connectionRef);
   const graph = indexReadwiseApiAnnotationGraph(annotations, run.roundStartedAt);
   const exportBooks = loadReadwiseApiExportIndex(connectionRef);
-  saveReadwiseApiAnnotationContentStates(connectionRef, new Set(exportBooks.flatMap((book) =>
-    book.highlights.filter((item) => !item.isDeleted && Boolean(item.text || item.note))
-      .map((item) => item.externalId)
-  )), run.roundStartedAt);
-  const exportIdsByParent = indexExportMatches(annotations, exportBooks);
+  indexReadwiseApiExportAnnotationContent(connectionRef, exportBooks, run.roundStartedAt);
+  const exportIdsByParent = indexReadwiseApiExportMatches(annotations, exportBooks);
   const parentIds = new Set([
     ...documents.filter((item) => isParentCategory(item.category)).map((item) => item.id),
     ...graph.affectedParents,
@@ -148,10 +154,12 @@ async function assembleCandidates(
     ])];
     const hasHighlights = graph.highlightedParents.has(parentId);
     if (!parent && (hasHighlights || exportIdsByParent.has(parentId))) {
-      parent = await resolveReadwiseApiCandidateParent(connectionRef, parentId, settings, request, run.roundStartedAt);
+      parent = await resolveAndSaveReadwiseApiCandidateParent({
+        connectionRef, id: parentId, includeContent: includeParentContent,
+        onResolved: () => reportIndexProgress(connectionRef, onProgress), request,
+        runStartedAt: run.roundStartedAt, settings
+      });
       if (!parent) continue;
-      saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
-      reportIndexProgress(connectionRef, onProgress);
       byId.set(parent.id, parent);
     }
     if (!parent || !isParentCategory(parent.category)) continue;
@@ -176,22 +184,6 @@ async function assembleCandidates(
 
 function reportIndexProgress(connectionRef: string, onProgress?: (processed: number) => void) {
   if (onProgress) onProgress(countReadwiseApiIndexedRecords(connectionRef));
-}
-
-function indexExportMatches(
-  annotations: ReturnType<typeof loadReadwiseApiAnnotationLedger>,
-  exportBooks: ReturnType<typeof loadReadwiseApiExportIndex>
-) {
-  const highlightParentById = new Map(annotations.filter((item) =>
-    item.category === 'highlight' && item.resolution !== 'article-parent-unavailable')
-    .map((item) => [item.remoteId, item.parentId]));
-  return new Map(exportBooks.flatMap((book) => {
-    const matched = book.highlightExternalIds.filter((id) => highlightParentById.has(id));
-    if (book.externalId && matched.some((id) => highlightParentById.get(id) !== book.externalId)) {
-      throw new Error('readwise_api_annotation_identity_conflict');
-    }
-    return book.externalId && matched.length ? [[book.externalId, matched] as const] : [];
-  }));
 }
 
 function candidate(

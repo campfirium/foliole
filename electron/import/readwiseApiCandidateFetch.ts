@@ -16,7 +16,8 @@ export async function ensureReadwiseApiCandidateIndex(
 ) {
   assertReadwiseApiScopeAllowed(purpose);
   await buildReadwiseApiCandidateIndex({
-    connectionRef, dependencies, ...(onIndexProgress ? { onProgress: onIndexProgress } : {}), settings
+    connectionRef, dependencies, includeParentContent: purpose !== 'cutover',
+    ...(onIndexProgress ? { onProgress: onIndexProgress } : {}), settings
   });
   return loadReadwiseApiCandidates(connectionRef);
 }

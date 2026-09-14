@@ -4,6 +4,10 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { openDatabaseConnection } from './connection.js';
+import {
+  clearReadwiseApiNodeDisposition,
+  recordReadwiseApiNodeDisposition
+} from './readwiseApiSourceDispositions.js';
 
 export type SourceDisposition = 'dismissed' | 'hard_deleted' | 'soft_deleted';
 
@@ -128,6 +132,9 @@ export function recordNodeSourceDispositionWithDriver(
   disposition: SourceDisposition,
   updatedAt: string
 ) {
+  if (recordReadwiseApiNodeDisposition(driver, nodeId, disposition, updatedAt)) {
+    return;
+  }
   const key = readSourceKeyForNode(driver, nodeId);
   if (!key) {
     return;
@@ -141,6 +148,7 @@ export function recordNodeSourceDisposition(nodeId: string, disposition: SourceD
 
 export function clearNodeSourceDisposition(nodeId: string) {
   const connection = openDatabaseConnection();
+  clearReadwiseApiNodeDisposition(connection.driver, nodeId);
   const key = readSourceKeyForNode(connection.driver, nodeId);
   if (!key) {
     return;

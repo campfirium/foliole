@@ -4,6 +4,7 @@ import { enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds } from '../..
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
+import { isReadwiseApiSourceScope, readwiseApiSourceScope } from './readwiseApiSourceDispositions.js';
 import type { SourceDisposition, SourceDispositionKey, SourceDispositionRestoreResult, SourceKeyRow } from './sourceDispositionStates.js';
 import {
   readReadwiseRuleIds,
@@ -20,6 +21,15 @@ interface SourceCandidateRow extends SourceKeyRow {
 
 interface SourceDispositionRow extends DatabaseRow, SourceDispositionKey {
   disposition: SourceDisposition;
+}
+
+interface ApiSourceCandidateRow extends DatabaseRow {
+  deleted_at: string | null;
+  node_id: string;
+  original_title: string;
+  reading_state: string | null;
+  remote_connection_ref: string;
+  remote_document_id: string;
 }
 
 const VALID_DISPOSITIONS = new Set<string>(['dismissed', 'hard_deleted', 'soft_deleted']);
@@ -48,10 +58,26 @@ function readSourceCandidates(driver: DatabaseDriver) {
        ON reading.node_id = nodes.id`
   );
   const readwiseRuleIds = readReadwiseRuleIds();
-  return rows.flatMap((row) => {
+  const folderCandidates = rows.flatMap((row) => {
     const key = toSourceDispositionKey(row, readwiseRuleIds);
     return key ? [{ ...key, nodeId: row.node_id, deletedAt: row.deleted_at, readingState: row.reading_state }] : [];
   });
+  const apiCandidates = driver.queryAll<ApiSourceCandidateRow>(
+    `SELECT i.remote_connection_ref, i.remote_document_id, nodes.title AS original_title,
+            nodes.id AS node_id, nodes.deleted_at, reading.state AS reading_state
+     FROM import_sources i INNER JOIN nodes ON nodes.id = i.latest_node_id
+     LEFT JOIN node_reading reading ON reading.node_id = nodes.id
+     WHERE i.remote_provider = 'readwise' AND i.remote_connection_ref IS NOT NULL
+       AND i.remote_document_id IS NOT NULL`
+  ).map((row) => ({
+    deletedAt: row.deleted_at,
+    nodeId: row.node_id,
+    originalTitle: row.original_title,
+    readingState: row.reading_state,
+    sourceKind: 'readwise' as const,
+    sourceScope: readwiseApiSourceScope(row.remote_connection_ref, row.remote_document_id)
+  }));
+  return [...folderCandidates, ...apiCandidates];
 }
 
 function isCurrentActiveCandidate(candidate: { deletedAt: string | null; readingState: string | null }) {
@@ -129,12 +155,18 @@ export function restoreSourceDispositions(): SourceDispositionRestoreResult {
   const updatedAt = new Date().toISOString();
   const hostName = loadOrCreateDesktopHostName(updatedAt);
   return withTransaction(connection.driver, () => {
-    const dispositionsByKey = new Map(readDispositionRows(connection.driver).map((row) => [sourceDispositionKeyId(row), row.disposition]));
+    const dispositionRows = readDispositionRows(connection.driver);
+    const dispositionsByKey = new Map(dispositionRows.map((row) => [sourceDispositionKeyId(row), row.disposition]));
+    const apiDispositionsByScope = new Map(dispositionRows.filter((row) =>
+      row.sourceKind === 'readwise' && isReadwiseApiSourceScope(row.sourceScope)
+    ).map((row) => [row.sourceScope, row.disposition]));
     const dismissedNodeIds: string[] = [];
     const trashNodeIds: string[] = [];
     for (const candidate of readSourceCandidates(connection.driver)) {
       if (!isCurrentActiveCandidate(candidate)) continue;
-      const disposition = dispositionsByKey.get(sourceDispositionKeyId(candidate));
+      const disposition = isReadwiseApiSourceScope(candidate.sourceScope)
+        ? apiDispositionsByScope.get(candidate.sourceScope)
+        : dispositionsByKey.get(sourceDispositionKeyId(candidate));
       if (disposition === 'dismissed') dismissedNodeIds.push(candidate.nodeId);
       if (disposition === 'hard_deleted' || disposition === 'soft_deleted') trashNodeIds.push(candidate.nodeId);
     }

@@ -30,15 +30,19 @@ export async function produceReadwiseApiCandidateFacts(
   input: ReadwiseApiCandidatePipelineInput,
   candidates: ReturnType<typeof loadReadwiseApiCandidates>,
   consumer: CandidateQueue,
+  stats: CandidateStats,
   total: number
 ) {
+  markSkippedCandidates(input, candidates, stats, total);
+  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate.documentId));
   const fetchFacts = createReadwiseApiCandidateFactFetcher(input.connectionRef, input.dependencies);
-  let frozenCount = candidates.filter(hasLocalReadwiseApiCandidateFacts).length;
+  let frozenCount = candidates.length - activeCandidates.length
+    + activeCandidates.filter(hasLocalReadwiseApiCandidateFacts).length;
   if (!input.freezeCandidateResources) input.onCandidateFactsProgress?.(frozenCount, total);
   if (!input.deferCommitUntilAllFacts) {
-    for (const candidate of candidates.filter(hasLocalReadwiseApiCandidateFacts)) consumer.enqueue(candidate.documentId);
+    for (const candidate of activeCandidates.filter(hasLocalReadwiseApiCandidateFacts)) consumer.enqueue(candidate.documentId);
   }
-  for (const candidate of candidates.filter(shouldFetchReadwiseApiCandidateFacts)) {
+  for (const candidate of activeCandidates.filter(shouldFetchReadwiseApiCandidateFacts)) {
     try {
       input.assertEligible();
       await fetchFacts(candidate);
@@ -62,12 +66,13 @@ export async function prepareDeferredReadwiseApiCandidates(
 ) {
   if (!input.deferCommitUntilAllFacts) return null;
   const candidates = loadReadwiseApiCandidates(input.connectionRef);
-  if (candidates.some((candidate) => !hasLocalReadwiseApiCandidateFacts(candidate))) {
+  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate.documentId));
+  if (activeCandidates.some((candidate) => !hasLocalReadwiseApiCandidateFacts(candidate))) {
     return incompleteReadwiseApiCandidateResult(stats, candidates);
   }
   const resources = new Map<string, ReadwiseApiPreparedResources>();
   let preparedCount = 0;
-  for (const candidate of candidates) {
+  for (const candidate of activeCandidates) {
     const document = loadPreparedReadwiseApiCandidate(input.connectionRef, candidate.documentId);
     if (!document) throw new Error('readwise_api_candidate_incomplete');
     if (input.freezeCandidateResources) {
@@ -81,4 +86,19 @@ export async function prepareDeferredReadwiseApiCandidates(
     consumer.enqueue(candidate.documentId, resources.get(candidate.documentId));
   }
   return null;
+}
+
+function markSkippedCandidates(
+  input: ReadwiseApiCandidatePipelineInput,
+  candidates: ReturnType<typeof loadReadwiseApiCandidates>,
+  stats: CandidateStats,
+  total: number
+) {
+  for (const candidate of candidates) {
+    if (candidate.status === 'completed' || !input.shouldSkipCandidate?.(candidate.documentId)) continue;
+    setReadwiseApiCandidateStatus(input.connectionRef, candidate.documentId, 'completed', null);
+    stats.completedCount += 1;
+    stats.skippedCount += 1;
+    input.onProgress?.(stats.completedCount, total);
+  }
 }

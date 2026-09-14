@@ -44,10 +44,6 @@ export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
   if (!sameSet(expectedAnnotations, annotationTerminals)) {
     throw new Error('readwise_source_cutover_annotation_terminals_incomplete');
   }
-  if (current.documents.some((item) => item.status === 'suppressed')
-    || current.annotations.some((item) => item.status === 'suppressed')) {
-    throw new Error('readwise_source_cutover_legacy_suppression_present');
-  }
   if (countPendingReadwiseSourceBodies(connectionRef) > 0) {
     throw new Error('readwise_source_cutover_pending_bodies');
   }

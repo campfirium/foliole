@@ -3,6 +3,7 @@ import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/read
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import { markReadwiseApiArticleParentUnavailable } from '../database/readwiseApiAnnotationLedger.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
+import { saveReadwiseApiReaderIndexPage } from '../database/readwiseApiIndexStage.js';
 
 import {
   READER_PARENT_CATEGORIES,
@@ -18,14 +19,15 @@ export async function resolveReadwiseApiCandidateParent(
   id: string,
   settings: ImportManagerSettings,
   request: ReturnType<typeof createReadwiseApiRequest>,
-  runStartedAt: string
+  runStartedAt: string,
+  includeContent = true
 ) {
   const existing = existingParent(connectionRef, id);
   if (existing) return existing;
   const allHighlightedEnabled = READER_PARENT_CATEGORIES.every((category) =>
     resolveReadwiseAutoImportDestination(settings.readwiseAutoImportPolicy, category, true) !== 'off'
   );
-  const first = await fetchExact(id, allHighlightedEnabled, request);
+  const first = await fetchExact(id, includeContent && allHighlightedEnabled, request);
   if (!first) {
     markReadwiseApiArticleParentUnavailable(connectionRef, id, runStartedAt);
     return null;
@@ -34,8 +36,27 @@ export async function resolveReadwiseApiCandidateParent(
   const destination = resolveReadwiseAutoImportDestination(
     settings.readwiseAutoImportPolicy, first.category, true
   );
-  if (destination === 'off' || allHighlightedEnabled || first.htmlContent) return first;
+  if (!includeContent || destination === 'off' || allHighlightedEnabled || first.htmlContent) return first;
   return fetchExact(id, true, request);
+}
+
+export async function resolveAndSaveReadwiseApiCandidateParent(input: {
+  connectionRef: string;
+  id: string;
+  includeContent: boolean;
+  onResolved: () => void;
+  request: ReturnType<typeof createReadwiseApiRequest>;
+  runStartedAt: string;
+  settings: ImportManagerSettings;
+}) {
+  const parent = await resolveReadwiseApiCandidateParent(
+    input.connectionRef, input.id, input.settings, input.request,
+    input.runStartedAt, input.includeContent
+  );
+  if (!parent) return null;
+  saveReadwiseApiReaderIndexPage(input.connectionRef, [parent]);
+  input.onResolved();
+  return parent;
 }
 
 function existingParent(connectionRef: string, id: string) {

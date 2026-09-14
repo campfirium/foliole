@@ -63,7 +63,8 @@ export function migrationFetch() {
       return Response.json({ results: [{
         category: 'article',
         created_at: '2026-09-10T00:00:00.000Z',
-        html_content: '<p>API body with remembered phrase. It also contains new phrase.</p>',
+        html_content: url.searchParams.has('withHtmlContent')
+          ? '<p>API body with remembered phrase. It also contains new phrase.</p>' : null,
         id,
         parent_id: null,
         title: 'Sample'
@@ -102,13 +103,13 @@ export function epubMigrationFetch() {
     if (url.searchParams.has('category')) return Response.json({ nextPageCursor: null, results: [] });
     return Response.json({ results: [{
       category: 'epub',
-      html_content: [
+      html_content: url.searchParams.has('withHtmlContent') ? [
         '<p>Cover matter</p>',
         '<h1 data-rw-epub-toc="chapter-1">Chapter 1</h1>',
         '<p>API body with remembered phrase.</p>',
         '<h1 data-rw-epub-toc="chapter-2">Chapter 2</h1>',
         '<p>Second chapter body.</p>'
-      ].join(''),
+      ].join('') : null,
       id: 'document-1', parent_id: null, title: 'Sample'
     }] });
   });

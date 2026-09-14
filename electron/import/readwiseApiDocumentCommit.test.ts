@@ -29,6 +29,11 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { softDeleteNodes } from '../database/nodeMutations.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
+import {
+  readReadwiseApiSourceDisposition,
+  writeReadwiseApiSourceDisposition
+} from '../database/readwiseApiSourceDispositions.js';
+import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 
@@ -108,8 +113,52 @@ it('localizes the PDF again when the user explicitly reimports a deleted Topic',
   await commitReadwiseApiDocument(input);
   const original = loadReadwiseApiImportSource('connection', 'document-1')!;
   softDeleteNodes({ nodeIds: [original.nodeId!], deletedAt: '2026-09-10T00:00:00Z' });
+  expect(readReadwiseApiSourceDisposition(
+    openDatabaseConnection().driver, 'connection', 'document-1'
+  )).toBe('soft_deleted');
   expect((await commitReadwiseApiDocument({ ...input, reimportDeleted: true })).status).toBe('imported');
   expect(prepareOriginal).toHaveBeenCalledTimes(2);
   expect(persistOriginal).toHaveBeenCalledTimes(2);
   expect(loadReadwiseApiImportSource('connection', 'document-1')?.nodeDeleted).toBe(false);
+});
+
+it('skips handled API documents until the user explicitly reimports them', async () => {
+  prepareOriginal.mockResolvedValue({ bytes: null, state: {
+    attachmentId: null, contentHash: null, mimeType: null, reason: 'original_file_not_distributed',
+    sizeBytes: null, status: 'unavailable'
+  } });
+  const driver = openDatabaseConnection().driver;
+  writeReadwiseApiSourceDisposition(
+    driver, 'connection', 'document-1', 'Remote PDF', 'dismissed', '2026-09-10T00:00:00.000Z'
+  );
+  const input = { config: createDefaultReadwiseReaderConfig(), connectionRef: 'connection',
+    destination: 'inbox' as const, document: documentFixture('Readable PDF') };
+
+  expect((await commitReadwiseApiDocument(input)).status).toBe('skipped');
+  expect(prepareOriginal).not.toHaveBeenCalled();
+  expect(loadReadwiseApiImportSource('connection', 'document-1')).toBeNull();
+
+  expect((await commitReadwiseApiDocument({ ...input, reimportDeleted: true })).status).toBe('imported');
+  expect(readReadwiseApiSourceDisposition(driver, 'connection', 'document-1')).toBeNull();
+});
+
+it('restores an imported API disposition by remote identity rather than title', async () => {
+  prepareOriginal.mockResolvedValue({ bytes: null, state: {
+    attachmentId: null, contentHash: null, mimeType: null, reason: 'original_file_not_distributed',
+    sizeBytes: null, status: 'unavailable'
+  } });
+  await commitReadwiseApiDocument({
+    config: createDefaultReadwiseReaderConfig(), connectionRef: 'connection',
+    destination: 'inbox', document: documentFixture('Readable PDF')
+  });
+  const driver = openDatabaseConnection().driver;
+  writeReadwiseApiSourceDisposition(
+    driver, 'connection', 'document-1', 'An older exported title', 'dismissed', '2026-09-10T00:00:00.000Z'
+  );
+
+  expect(restoreSourceDispositions()).toMatchObject({ dismissedCount: 1 });
+  const nodeId = loadReadwiseApiImportSource('connection', 'document-1')?.nodeId;
+  if (!nodeId) throw new Error('missing imported Topic');
+  expect(driver.queryOne<{ state: string }>('SELECT state FROM node_reading WHERE node_id = ?', [nodeId])?.state)
+    .toBe('dismissed');
 });

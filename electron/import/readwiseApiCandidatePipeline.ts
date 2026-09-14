@@ -52,6 +52,7 @@ export type ReadwiseApiCandidatePipelineInput = {
   onProgress?: (processed: number, total: number) => void;
   purpose?: ReadwiseApiScopePurpose;
   settings: ImportManagerSettings;
+  shouldSkipCandidate?: (documentId: string) => boolean;
 };
 
 export async function runReadwiseApiCandidatePipeline(input: ReadwiseApiCandidatePipelineInput) {
@@ -69,7 +70,7 @@ export async function runReadwiseApiCandidatePipeline(input: ReadwiseApiCandidat
   };
   reportReadwiseApiCandidateProgress(input.onCandidateCount, candidates, stats.completedCount);
   const consumer = createCandidateConsumer(input, total, stats);
-  await produceReadwiseApiCandidateFacts(input, candidates, consumer, total);
+  await produceReadwiseApiCandidateFacts(input, candidates, consumer, stats, total);
   const incomplete = await prepareDeferredReadwiseApiCandidates(input, consumer, stats, total);
   if (incomplete) return incomplete;
   await consumer.wait();

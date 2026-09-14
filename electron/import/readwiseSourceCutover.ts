@@ -11,6 +11,7 @@ import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState
 import { prepareReadwiseApiFrozenResources } from './readwiseApiFrozenBatch.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
+import { recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
 import { prepareReadwiseSourceCutoverIdentity } from './readwiseSourceCutoverIdentity.js';
 import {
   completeReadwiseSourceCutoverMigration,
@@ -88,6 +89,12 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
   });
   const settings = loadImportManagerSettings();
   const dependencies = input.dependencies ?? {};
+  const existingCutover = loadReadwiseSourceCutover();
+  let suppressedDocumentIds = new Set(existingCutover?.version === 2
+    ? existingCutover.documents
+      .filter((item) => item.status === 'suppressed' || item.status === 'blocked')
+      .map((item) => item.remoteId)
+    : []);
   return runReadwiseApiCandidatePipeline({
     assertEligible: () => assertMigrationEligible(connectionRef),
     afterCommit: migration.afterCommit,
@@ -104,6 +111,9 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     }),
     onCandidateIndex: (documentIds) => {
       promoteReadwiseSourceCutoverCohort(documentIds);
+      const migrated = identity.migrateDispositions(documentIds);
+      suppressedDocumentIds = new Set([...suppressedDocumentIds, ...migrated]);
+      recordReadwiseSuppressedCutoverDocuments(connectionRef, migrated);
     },
     onCandidateFactsComplete: (total) => {
       setReadwiseSourceCutoverPhase('merging');
@@ -114,7 +124,8 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
       publishProgress(input.window, processed, total, 'indexing'),
     onProgress: (completed, total) => publishProgress(input.window, completed, total, 'merging'),
     purpose: 'cutover',
-    settings
+    settings,
+    shouldSkipCandidate: (documentId) => suppressedDocumentIds.has(documentId)
   });
 }
 

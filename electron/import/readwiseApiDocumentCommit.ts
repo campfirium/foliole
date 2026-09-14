@@ -3,10 +3,15 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import {
   loadReadwiseApiImportSource,
   saveReadwiseApiImportSource
 } from '../database/readwiseApiImportState.js';
+import {
+  clearReadwiseApiSourceDisposition,
+  readReadwiseApiSourceDisposition
+} from '../database/readwiseApiSourceDispositions.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import {
@@ -42,6 +47,9 @@ export interface ReadwiseApiPreparedResources {
 }
 
 export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommitInput) {
+  if (shouldSkipHandledDocument(input)) {
+    return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
+  }
   const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
   if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
   input = { ...input, document: guardedDocument };
@@ -96,6 +104,15 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   }
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
+}
+
+function shouldSkipHandledDocument(input: ReadwiseApiDocumentCommitInput) {
+  const driver = openDatabaseConnection().driver;
+  const disposition = readReadwiseApiSourceDisposition(driver, input.connectionRef, input.document.id);
+  if (!disposition) return false;
+  if (!input.reimportDeleted) return true;
+  clearReadwiseApiSourceDisposition(driver, input.connectionRef, input.document.id);
+  return false;
 }
 
 async function prepareEpubResources(

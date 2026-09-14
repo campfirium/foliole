@@ -1,7 +1,9 @@
 import { normalizeImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract.js';
 import type { NativeReadwiseApiRunTrigger } from '../../lib/platform/nativeReadwiseApiImportContract.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
+import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
@@ -111,7 +113,8 @@ async function runNow(
         updateReadwiseApiTrackedRunProgress(processed, total);
         publishProgress(input?.window, processed, total, 'writing');
       },
-      settings
+      settings,
+      shouldSkipCandidate: (documentId) => shouldSkipApiDocument(connectionRef, documentId)
     });
     updateReadwiseApiTrackedRunStage('completion');
     assertEligible(signal, connectionRef);
@@ -141,6 +144,14 @@ async function runNow(
     publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'failed');
     throw error;
   }
+}
+
+function shouldSkipApiDocument(connectionRef: string, documentId: string) {
+  if (readReadwiseApiSourceDisposition(openDatabaseConnection().driver, connectionRef, documentId)) return true;
+  const cutover = loadReadwiseSourceCutover();
+  return Boolean(cutover?.version === 2 && cutover.documents.some((item) =>
+    item.remoteId === documentId && (item.status === 'suppressed' || item.status === 'blocked')
+  ));
 }
 
 function requireConnectionRef() {

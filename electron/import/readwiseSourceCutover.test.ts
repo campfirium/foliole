@@ -162,7 +162,44 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
-  expect(documentRequests).toHaveLength(1);
-  expect(documentRequests[0]?.searchParams.get('withHtmlContent')).toBe('true');
+  expect(documentRequests).toHaveLength(2);
+  expect(documentRequests[0]?.searchParams.has('withHtmlContent')).toBe(false);
+  expect(documentRequests[1]?.searchParams.get('withHtmlContent')).toBe('true');
   expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
 }, 20_000);
+
+it.each(['dismissed', 'hard_deleted'] as const)(
+  'migrates %s folder sources to Readwise ids without fetching or materializing them', async (disposition) => {
+    await seedMigratableSource(state.sourcePath);
+    const driver = openDatabaseConnection().driver;
+    driver.execute(`INSERT INTO keep_import_items (
+      rule_id,source_path,source_mtime_ms,source_size_bytes,source_state,local_node_state,
+      has_source_update,last_node_id,last_status,first_seen_at,last_seen_at,last_imported_at
+    ) VALUES ('local','Sample.md',1,1,'present','active',0,'topic-1','imported','old','old','old')`);
+    driver.execute(`INSERT INTO keep_import_item_cache (
+      rule_id,source_path,title,source_mtime_ms,source_size_bytes,refreshed_at
+    ) VALUES ('local','Sample.md','Sample',1,1,'old')`);
+    driver.execute(`INSERT INTO source_disposition_states
+      (source_kind,source_scope,original_title,disposition,updated_at)
+      VALUES ('readwise','local:.','Sample',?,'old')`, [disposition]);
+    const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+    const fetchImpl = migrationFetch();
+
+    await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+      .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 1 });
+
+    expect(driver.queryAll<{ disposition: string; source_scope: string }>(
+      'SELECT disposition,source_scope FROM source_disposition_states'
+    )).toEqual([{ disposition, source_scope: `api/${remote.connectionRef}/document-1` }]);
+    expect(driver.queryOne<{ count: number }>(
+      "SELECT COUNT(*) count FROM import_sources WHERE remote_document_id='document-1'"
+    )).toEqual({ count: 0 });
+    const journal = JSON.parse(driver.queryOne<{ value: string }>(
+      "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+    )?.value ?? '{}');
+    expect(journal.documents).toEqual([{ nodeId: null, remoteId: 'document-1', status: 'suppressed' }]);
+    expect(fetchImpl.mock.calls.map(([input]) => new URL(String(input))).filter((url) =>
+      url.searchParams.get('id') === 'document-1' && url.searchParams.get('withHtmlContent') === 'true'
+    )).toHaveLength(0);
+  }
+);

@@ -10,6 +10,7 @@ import type {
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   listSourceDispositionRecords,
+  mergeSourceDispositionRecords,
   mergeImportedSourceDispositionRecords,
   type SourceDisposition,
   type SourceDispositionImportRecord,
@@ -18,7 +19,7 @@ import {
 } from '../database/sourceDispositionStates.js';
 
 const EXPORT_SCHEMA = 'foliole.savedSourceTopicHandling';
-const EXPORT_VERSION = 1;
+const EXPORT_VERSION = 2;
 
 type ExportSourceKind = 'readwise_reader' | 'watched_folder';
 type ExportState = 'deleted' | 'dismissed';
@@ -28,6 +29,7 @@ interface SourceDispositionExportFile {
   app: 'Foliole';
   exportedAt: string;
   topics: ExportGroups;
+  records: SourceDispositionRecord[];
   schema: typeof EXPORT_SCHEMA;
   version: typeof EXPORT_VERSION;
 }
@@ -101,6 +103,7 @@ export function renderSourceDispositionText(records: SourceDispositionRecord[], 
     app: 'Foliole',
     exportedAt,
     schema: EXPORT_SCHEMA,
+    records,
     topics: toExportGroups(records),
     version: EXPORT_VERSION
   };
@@ -116,10 +119,22 @@ export function parseSourceDispositionText(text: string) {
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const file = parsed as Record<string, unknown>;
-  if (file.app !== 'Foliole' || file.schema !== EXPORT_SCHEMA || file.version !== EXPORT_VERSION) {
+  if (file.app !== 'Foliole' || file.schema !== EXPORT_SCHEMA || (file.version !== 1 && file.version !== EXPORT_VERSION)) {
     return null;
   }
-  return parseExportGroups(file.topics);
+  if (file.version === 1) return { exact: [], legacy: parseExportGroups(file.topics) };
+  if (!Array.isArray(file.records)) return null;
+  const exact = file.records.flatMap((value): SourceDispositionRecord[] => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+    const row = value as Record<string, unknown>;
+    if ((row.sourceKind !== 'keep' && row.sourceKind !== 'readwise') ||
+      (row.disposition !== 'dismissed' && row.disposition !== 'hard_deleted' && row.disposition !== 'soft_deleted') ||
+      typeof row.sourceScope !== 'string' || !row.sourceScope ||
+      typeof row.originalTitle !== 'string' || !row.originalTitle ||
+      typeof row.updatedAt !== 'string' || !row.updatedAt) return [];
+    return [row as unknown as SourceDispositionRecord];
+  });
+  return exact.length === file.records.length ? { exact, legacy: [] } : null;
 }
 
 export async function exportSourceDispositions(window: BrowserWindow | null): Promise<NativeExportSourceDispositionResult> {
@@ -169,16 +184,17 @@ export async function importSourceDispositions(window: BrowserWindow | null): Pr
     return { importedCount: 0, status: 'cancelled', summary: null };
   }
   try {
-    const records = parseSourceDispositionText(await fs.readFile(filePath, 'utf8'));
-    if (!records) {
+    const parsed = parseSourceDispositionText(await fs.readFile(filePath, 'utf8'));
+    if (!parsed || !parsed.legacy) {
       return { importedCount: 0, status: 'invalid_file', summary: null };
     }
-    const mergeResult = mergeImportedSourceDispositionRecords(records);
+    if (parsed.exact.length) mergeSourceDispositionRecords(parsed.exact);
+    const mergeResult = mergeImportedSourceDispositionRecords(parsed.legacy);
     const restoreResult = restoreSourceDispositions();
     return {
       appliedDeletedCount: restoreResult.trashedCount,
       appliedDismissedCount: restoreResult.dismissedCount,
-      importedCount: mergeResult.importedCount,
+      importedCount: parsed.exact.length + mergeResult.importedCount,
       status: 'imported',
       summary: mergeResult.summary
     };

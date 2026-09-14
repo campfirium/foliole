@@ -99,7 +99,10 @@ function prepareReadwiseDocumentCommit(
   pending: Map<string, ReadwiseSourceCutoverIdentityBinding | null>
 ) {
   const classification = requireReadwiseSourceCutoverV2().documents.find((item) => item.remoteId === document.id);
-  if (classification?.status === 'suppressed') return { skip: true };
+  if (classification?.status === 'suppressed') {
+    pending.set(document.id, null);
+    return { skip: true };
+  }
   const existing = loadReadwiseSourceCutoverBinding(connectionRef, document.id);
   if (classification?.status === 'bound' && !existing) throw new Error('readwise_source_cutover_binding_missing');
   const discovered = input.bindingFor(document);
