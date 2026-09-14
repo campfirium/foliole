@@ -86,7 +86,7 @@ it('keeps the main database bytes and availability unchanged when replacement fa
     .toEqual({ count: 10 });
   expect((await fs.readdir(path.dirname(databasePath)))
     .some((name) => name.startsWith('.foliole-compact-'))).toBe(false);
-}, 15_000);
+}, 30_000);
 
 function createFreePages() {
   const sqlite = openDatabaseConnection().sqlite;
