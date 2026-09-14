@@ -33,7 +33,8 @@ vi.mock('../shared/platform/runtimeBootTelemetry', async (importOriginal) => ({
   reportRuntimeBootStage: vi.fn()
 }));
 vi.mock('../features/settings/context/AppearanceSettingsProvider', () => ({
-  AppearanceSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+  AppearanceSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAppearanceSettings: () => ({ editorAppearanceKey: 'test' })
 }));
 vi.mock('../features/settings/context/MouseGestureSettingsProvider', () => ({
   MouseGestureSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>

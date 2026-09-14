@@ -1,4 +1,11 @@
 export const allowedRegexInventory = [
+  { path: 'src/features/editor/adapters/codeMirrorListTaskCommands.ts', line: "const insert = /x/i.test(marker) ? '[ ]' : '[x]';", owner: 'structured list task editing', reason: 'Cycles the parser-identified task marker without parsing arbitrary Markdown.' },
+  { path: 'src/features/editor/adapters/codeMirrorListTaskCommands.ts', line: "if (!/^\\[[ xX]\\]$/.test(marker)) return false;", owner: 'structured list task editing', reason: 'Validates the bounded parser-identified task marker before editing it.' },
+  { path: 'src/features/editor/adapters/codeMirrorListTaskCommands.ts', line: "insertionFrom = /[\\t ]/.test(state.sliceDoc(to, to + 1)) ? to + 1 : to;", owner: 'structured list task editing', reason: 'Preserves the local blockquote separator when inserting a list marker.' },
+  { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "contentFrom = /[\\t ]/.test(separator) ? to + 1 : to;", owner: 'structured list editing', reason: 'Locates list content after a parser-identified blockquote separator.' },
+  { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "if (!indentation || !/^[\\t ]+$/.test(indentation)) return null;", owner: 'structured list editing', reason: 'Restricts outdent changes to whitespace before a parser-identified list marker.' },
+  { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "taskState: /x/i.test(markerText) ? 'checked' as const : 'unchecked' as const", owner: 'structured list editing', reason: 'Reads the state of a parser-identified task marker.' },
+  { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "while (position < limit && /[\\t ]/.test(state.sliceDoc(position, position + 1))) position += 1;", owner: 'structured list editing', reason: 'Finds content after a bounded parser-identified list prefix.' },
   { path: 'src/features/editor/adapters/codeMirrorTextHistory.ts', line: '!USER_TEXT_EVENT.test(userEvent)', owner: 'editor text history', reason: 'Limits native history capture to CodeMirror user text events.' },
   {
     path: 'src/features/editor/adapters/markdownInputAssist.ts',
@@ -66,6 +73,16 @@ export const allowedRegexInventory = [
     owner: 'color setting validation'
   },
   { path: 'src/features/editor/model/editorTextOperationGrouping.ts', line: 'JOINABLE_USER_EVENT.test(next.userEvent) &&', owner: 'editor text history', reason: 'Groups adjacent typing and delete events without parsing Markdown.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: 'const matcher = new RegExp(`^(?:${pattern.source})`, pattern.flags);', owner: 'format cleanup', reason: 'Compiles the user-configured local exclusion rule.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: 'function escapeRegExp(value: string) {', owner: 'format cleanup', reason: 'Escapes literal user-configured cleanup text before compilation.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: "if (settings.collapseBlankLines) result = result.replace(/\\n[ \\t]*\\n(?:[ \\t]*\\n)+/g, '\\n\\n');", owner: 'format cleanup', reason: 'Applies the explicit blank-line cleanup setting outside protected ranges.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: "if (settings.removeIndentation) result = result.replace(/^[ \\t]+/gm, (match, offset) => offset === 0 && !part.startsAtLineStart ? match : '');", owner: 'format cleanup', reason: 'Applies the explicit indentation cleanup setting outside protected ranges.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: 'return matcher.test(text.slice(offset)) || matcher.test(text.slice(offset + match.length));', owner: 'format cleanup', reason: 'Checks the bounded text adjacent to a candidate cleanup match.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: 'return new RegExp(source, `${find.flags}${follow.flags}gm`.split(\'\').filter((flag, index, flags) => flags.indexOf(flag) === index).join(\'\'));', owner: 'format cleanup', reason: 'Compiles one user-configured cleanup rule with normalized flags.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: "return value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');", owner: 'format cleanup', reason: 'Escapes literal cleanup tokens before regular-expression compilation.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: 'return value.replace(/[␠␣⇥↵]/g, (token) => DISPLAY_TOKENS[token] ?? token);', owner: 'format cleanup', reason: 'Decodes the documented cleanup display tokens.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: "return { flags: '', isRegex: false, source: escapeRegExp(decoded) };", owner: 'format cleanup', reason: 'Treats plain cleanup input as escaped literal text.' },
+  { path: 'src/features/editor/model/formatCleanup.ts', line: "return { flags: flags.replace(/[gyd]/g, ''), isRegex: true, source };", owner: 'format cleanup', reason: 'Removes stateful flags from user-configured cleanup patterns.' },
   {
     path: 'src/features/editor/model/highlightAnnotationPrefixSetting.ts',
     line: "const normalized = (value ?? '').replace(/\\r\\n?/g, '\\n').split('\\n')[0]?.slice(0, HIGHLIGHT_ANNOTATION_PREFIX_MAX_LENGTH) ?? '';",

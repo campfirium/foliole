@@ -16,6 +16,7 @@ const controlledElectronSqliteTests = [
   'electron/database/companionOpaqueSyncRefMigration.test.ts',
   'electron/database/companionSourceHostOwnershipMigration.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
+  'electron/database/dataMigrationState.test.ts',
   'electron/database/deliveryAuthorizationMigration.test.ts',
   'electron/database/deviceIdentity.systemProfile.test.ts',
   'electron/database/desktopSourceOwnershipMigration.test.ts',

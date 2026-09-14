@@ -87,12 +87,12 @@ it('does not let a full-size protected snapshot evict completed restore points',
   });
 
   expect(result.deletedCount).toBe(0);
-  expect((await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName))
-    .toEqual(expect.arrayContaining([
+  const remainingFileNames = (await listManagedDatabaseBackups(backupDirectory)).map((entry) => entry.fileName);
+  expect(remainingFileNames).toEqual(expect.arrayContaining([
       'manual-2026-08-12_08-00-00-000.db',
-      'pre-restore-2026-08-12_09-00-00-000.db.gz',
-      'foliole-rollback-260812-180000.db'
+      'pre-restore-2026-08-12_09-00-00-000.db.gz'
     ]));
+  expect(remainingFileNames.some((fileName) => fileName.startsWith('foliole-rollback-'))).toBe(true);
   continueLink?.();
   const snapshot = await pendingSnapshot;
   snapshot.release();

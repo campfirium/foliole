@@ -1,6 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { definedProps } from '../shared/lib/definedProps';
 
 import { resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
@@ -113,7 +112,7 @@ it('keeps local creation side effects when runtime accepts the created root node
 
   expect(createdNodeId).toContain('node-');
   expect(harness.getState().activeNodeId).toBe(createdNodeId);
-  expect(harness.getState().untitledSequenceByParent[INBOX_NODE_ID]).toBe(1);
+  expect(harness.getState().untitledSequenceByParent.__global__).toBe(1);
 });
 
 it('rolls back root creation when native persistence rejects the canonical mutation', async () => {

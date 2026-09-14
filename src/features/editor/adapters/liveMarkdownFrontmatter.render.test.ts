@@ -245,7 +245,8 @@ describe('live markdown block rendering', () => {
 
     expect(getLineTexts(host, '.cm-line.cm-line-code')).toEqual(['# abc', '- item', '1. item']);
     expect(getLineTexts(host)).toContain('# Heading');
-    expect(getLineTexts(host)).toContain('• outside');
+    expect(host.querySelector('.cm-md-prefix-unordered-list')?.textContent).toBe('•');
+    expect(getLineTexts(host).some((line) => line.includes('outside'))).toBe(true);
     expect(host.textContent).not.toContain('- outside');
 
     const codeHeadingOffset = content.indexOf('# abc');

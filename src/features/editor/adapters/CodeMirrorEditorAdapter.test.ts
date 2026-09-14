@@ -77,6 +77,9 @@ vi.mock('@codemirror/state', () => ({
   Facet: {
     define: mockFacetDefine
   },
+  Prec: {
+    highest: vi.fn((value) => value)
+  },
   StateEffect: {
     define: mockStateEffectDefine
   },

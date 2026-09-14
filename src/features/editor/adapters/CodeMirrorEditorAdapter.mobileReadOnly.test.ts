@@ -21,6 +21,9 @@ vi.mock('@codemirror/state', () => ({
     allowMultipleSelections: { of: vi.fn(() => 'multiple-selections') },
     readOnly: { of: mockReadOnlyOf }
   },
+  Prec: {
+    highest: vi.fn((value) => value)
+  },
   RangeSetBuilder: vi.fn().mockImplementation(() => ({
     add: vi.fn(),
     finish: vi.fn(() => [])
