@@ -8,7 +8,10 @@ const sampleContent = `# List Layout
 - Level one
   - Level two
     - Level three
-      - [ ] Level four task`;
+      - [ ] Level four task
+
+- [ ] Open task
+- [x] Completed task`;
 
 test('renders nested list rhythm in character-relative steps', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
@@ -20,7 +23,7 @@ test('renders nested list rhythm in character-relative steps', async ({ desktopW
 
   const editor = desktopWindow.locator('.prompt-editor-host');
   const markers = editor.locator('[data-md-list-depth]');
-  await expect(markers).toHaveCount(4);
+  await expect(markers).toHaveCount(6);
   const layout = await markers.evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node);
     const fontSize = Number.parseFloat(style.fontSize);
@@ -36,7 +39,9 @@ test('renders nested list rhythm in character-relative steps', async ({ desktopW
     { depth: '0', gapEm: 0.5, levelStartEm: 0, markerColumnEm: 2 },
     { depth: '1', gapEm: 0.5, levelStartEm: 2, markerColumnEm: 2 },
     { depth: '2', gapEm: 0.5, levelStartEm: 4, markerColumnEm: 2 },
-    { depth: '3', gapEm: 0.5, levelStartEm: 6, markerColumnEm: 2 }
+    { depth: '3', gapEm: 0.5, levelStartEm: 6, markerColumnEm: 2 },
+    { depth: '0', gapEm: 0.5, levelStartEm: 0, markerColumnEm: 2 },
+    { depth: '0', gapEm: 0.5, levelStartEm: 0, markerColumnEm: 2 }
   ]);
   await testInfo.attach('markdown-list-layout', { body: JSON.stringify(layout, null, 2), contentType: 'application/json' });
   await mkdir('.tmp/artifacts', { recursive: true });

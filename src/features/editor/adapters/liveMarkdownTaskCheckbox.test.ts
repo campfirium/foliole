@@ -28,7 +28,11 @@ describe('live Markdown task checkbox', () => {
       onDocumentInput
     });
     adapter.setNodeId('node-1');
-    const checkbox = host.querySelector('.cm-md-task-checkbox');
+    const checkbox = host.querySelector<HTMLInputElement>('.cm-md-task-checkbox');
+
+    expect(checkbox?.type).toBe('checkbox');
+    expect(checkbox?.checked).toBe(false);
+    expect(checkbox?.getAttribute('aria-label')).toBe('Todo');
 
     checkbox?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     checkbox?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

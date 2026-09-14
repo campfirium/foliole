@@ -151,22 +151,39 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: 'var(--color-text-secondary)', fontWeight: '500', opacity: '0.95' },
   '.cm-md-prefix-task-list': { height: '1em', verticalAlign: '-0.08em' },
   '.cm-md-task-checkbox': {
+    appearance: 'none',
+    backgroundColor: 'transparent',
     border: '1px solid rgb(var(--color-border-strong) / 0.72)',
-    borderRadius: 'var(--editor-radius-sm)',
+    borderRadius: liveMarkdownSpacing.taskCheckboxRadius,
     boxSizing: 'border-box',
     cursor: 'pointer',
     display: 'inline-block',
     height: liveMarkdownSpacing.taskCheckboxSize,
+    margin: 0,
+    padding: 0,
     position: 'relative',
+    WebkitAppearance: 'none',
     width: liveMarkdownSpacing.taskCheckboxSize
+  },
+  '.cm-md-task-checkbox:hover': {
+    backgroundColor: 'rgb(var(--color-foreground) / 0.04)',
+    borderColor: 'rgb(var(--color-border-strong) / 0.95)'
+  },
+  '.cm-md-task-checkbox:focus-visible': {
+    outline: '0.1em solid color-mix(in srgb, var(--app-accent-color) 72%, transparent)',
+    outlineOffset: '0.1em'
   },
   '.cm-md-task-checkbox[data-md-task-checked="true"]': {
     backgroundColor: 'var(--app-accent-color)',
     borderColor: 'var(--app-accent-color)'
   },
+  '.cm-md-task-checkbox[data-md-task-checked="true"]:hover': {
+    backgroundColor: 'color-mix(in srgb, var(--app-accent-color) 88%, rgb(var(--color-foreground)))',
+    borderColor: 'color-mix(in srgb, var(--app-accent-color) 88%, rgb(var(--color-foreground)))'
+  },
   '.cm-md-task-checkbox[data-md-task-checked="true"]::after': {
-    borderBottom: '1.5px solid rgb(var(--color-bg-elevated))',
-    borderRight: '1.5px solid rgb(var(--color-bg-elevated))',
+    borderBottom: `${liveMarkdownSpacing.taskCheckStroke} solid rgb(var(--color-bg-elevated))`,
+    borderRight: `${liveMarkdownSpacing.taskCheckStroke} solid rgb(var(--color-bg-elevated))`,
     content: '""',
     height: liveMarkdownSpacing.taskCheckHeight,
     left: liveMarkdownSpacing.taskCheckLeft,

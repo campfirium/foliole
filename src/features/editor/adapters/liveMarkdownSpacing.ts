@@ -30,9 +30,11 @@ const FONT_RELATIVE_GEOMETRY = {
   footnoteMarkerFontSize: '0.72em',
   taskCheckHeight: '0.42em',
   taskCheckLeft: '0.27em',
+  taskCheckStroke: '0.09em',
   taskCheckTop: '0.08em',
-  taskCheckWidth: '0.22em',
-  taskCheckboxSize: '0.86em'
+  taskCheckWidth: '0.24em',
+  taskCheckboxRadius: '0.22em',
+  taskCheckboxSize: '0.9em'
 } as const;
 
 export const liveMarkdownSpacing = {
@@ -55,8 +57,10 @@ export const liveMarkdownSpacing = {
   sectionDividerPadding: `${LOCAL_MARKDOWN_RHYTHM.sectionDividerBlockStart} 0 ${LOCAL_MARKDOWN_RHYTHM.sectionDividerBlockEnd}`,
   taskCheckHeight: FONT_RELATIVE_GEOMETRY.taskCheckHeight,
   taskCheckLeft: FONT_RELATIVE_GEOMETRY.taskCheckLeft,
+  taskCheckStroke: FONT_RELATIVE_GEOMETRY.taskCheckStroke,
   taskCheckTop: FONT_RELATIVE_GEOMETRY.taskCheckTop,
   taskCheckWidth: FONT_RELATIVE_GEOMETRY.taskCheckWidth,
+  taskCheckboxRadius: FONT_RELATIVE_GEOMETRY.taskCheckboxRadius,
   taskCheckboxSize: FONT_RELATIVE_GEOMETRY.taskCheckboxSize,
   thematicBreakMargin: `${LOCAL_MARKDOWN_RHYTHM.thematicBreakBlock} 0`
 } as const;

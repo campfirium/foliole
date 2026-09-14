@@ -133,7 +133,6 @@ class PrefixWidget extends WidgetType {
     }
     if (this.kind === 'task-list') {
       marker.dataset.mdTaskChecked = this.checked ? 'true' : 'false';
-      marker.setAttribute('aria-hidden', 'true');
       marker.append(createTaskCheckboxElement(view, this.checked, this.taskMarkerFrom, this.taskMarkerTo));
       return marker;
     }
@@ -149,9 +148,15 @@ function addPrefixWidget(ranges: Range<Decoration>[], match: PrefixWidgetMatch) 
 }
 
 function createTaskCheckboxElement(view: import('@codemirror/view').EditorView, checked: boolean, from?: number, to?: number) {
-  const checkbox = document.createElement('span');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = checked;
   checkbox.className = 'cm-md-task-checkbox';
   checkbox.dataset.mdTaskChecked = checked ? 'true' : 'false';
+  if (to !== undefined) {
+    const line = view.state.doc.lineAt(to);
+    checkbox.setAttribute('aria-label', view.state.sliceDoc(to, line.to).trim() || 'Task');
+  }
   checkbox.addEventListener('mousedown', (event) => event.preventDefault());
   checkbox.addEventListener('click', (event) => {
     event.preventDefault();
