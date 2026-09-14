@@ -11,7 +11,8 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
-  AppSwitch
+  AppSwitch,
+  ToolbarActionGroup
 } from '../../../shared/ui';
 import type { FormatCleanupRule, FormatCleanupSettings } from '../model/formatCleanupTypes';
 
@@ -45,14 +46,13 @@ function updateRules(
 function WhitespaceRules(props: FormatCleanupDialogSurfaceProps) {
   const update = (change: Partial<FormatCleanupSettings>) => props.onChange({ ...props.settings, ...change, customized: true });
   return (
-    <section className="border-t border-settings-divider/70 pt-4">
-      <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.whitespace')}</h2>
-      <div className="mt-2 px-2 text-ui-md">
-        <div className="flex min-h-11 items-center justify-between py-2">
+    <section className="border-t border-settings-divider/70 pt-3">
+      <div className="grid grid-cols-2 gap-8 px-2 text-ui-md">
+        <div className="flex min-h-10 items-center justify-between gap-4 py-1.5">
           <span>{props.t('desktop.formatCleanup.removeIndentation')}</span>
           <AppSwitch aria-label={props.t('desktop.formatCleanup.removeIndentation')} checked={props.settings.removeIndentation} onCheckedChange={(removeIndentation) => update({ removeIndentation })} />
         </div>
-        <div className="flex min-h-11 items-center justify-between border-t border-settings-divider/55 py-2">
+        <div className="flex min-h-10 items-center justify-between gap-4 py-1.5">
           <span>{props.t('desktop.formatCleanup.collapseBlankLines')}</span>
           <AppSwitch aria-label={props.t('desktop.formatCleanup.collapseBlankLines')} checked={props.settings.collapseBlankLines} onCheckedChange={(collapseBlankLines) => update({ collapseBlankLines })} />
         </div>
@@ -63,22 +63,24 @@ function WhitespaceRules(props: FormatCleanupDialogSurfaceProps) {
 
 function SpecialValueButtons(props: { onInsert: (value: string) => void; t: Translate }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 text-ui-xs text-foreground/58">
+    <div className="mt-2 flex flex-wrap items-center gap-2 pl-14 text-ui-xs text-foreground/58">
       <span>{props.t('desktop.formatCleanup.insert')}</span>
-      {([
-        ['␣', 'desktop.formatCleanup.space'], ['⇥', 'desktop.formatCleanup.tab'], ['↵', 'desktop.formatCleanup.lineBreak']
-      ] as const).map(([value, key]) => (
-        <AppButton key={value} onClick={() => props.onInsert(value)} size="sm" variant="default">
-          <span className="font-mono font-medium">{value}</span>{props.t(key)}
-        </AppButton>
-      ))}
+      <ToolbarActionGroup className="gap-0 overflow-hidden border-settings-control-border">
+        {([
+          ['␣', 'desktop.formatCleanup.space'], ['⇥', 'desktop.formatCleanup.tab'], ['↵', 'desktop.formatCleanup.lineBreak']
+        ] as const).map(([value, key], index) => (
+          <AppButton className={`min-h-7 rounded-none px-2.5 text-ui-xs ${index > 0 ? 'border-l border-settings-divider/70' : ''}`} key={value} onClick={() => props.onInsert(value)} size="sm" variant="ghost">
+            <span className="font-mono font-medium">{value}</span>{props.t(key)}
+          </AppButton>
+        ))}
+      </ToolbarActionGroup>
     </div>
   );
 }
 
 function CustomRules(props: FormatCleanupDialogSurfaceProps & { onTarget: (target: TargetField) => void }) {
   return (
-    <section className="border-t border-settings-divider/70 pt-4">
+    <section className="border-t border-settings-divider/70 pt-3">
       <div className="flex items-baseline gap-2">
         <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.customRules')}</h2>
         <span className="text-ui-xs text-foreground/48">({props.t('desktop.formatCleanup.regexSupported')})</span>
@@ -124,15 +126,15 @@ export function FormatCleanupDialogSurface(props: FormatCleanupDialogSurfaceProp
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="h-[min(48rem,calc(100dvh-2rem))] w-[min(62rem,calc(100vw-2rem))] max-w-none" layout="task">
+        <AppDialogContent className="h-[min(48rem,calc(100dvh-2rem))] w-[min(62rem,calc(100vw-2rem))] max-w-none [&>[data-app-dialog-actions]]:px-8 [&>[data-app-dialog-body]]:px-8 [&>[data-app-dialog-title]]:px-8" layout="task">
           <AppDialogTitle>{props.t('desktop.formatCleanup.title')}</AppDialogTitle>
           <AppDialogBody className="flex-1 overflow-auto">
             <AppDialogDescription className="mb-4">{props.t('desktop.formatCleanup.description')}</AppDialogDescription>
             <FormatCleanupRuleTable onChange={(index, rule) => updateRules(props, false, (rules) => rules.map((item, ruleIndex) => ruleIndex === index ? rule : item))} onTargetField={(index, field, start, end) => { targetRef.current = { custom: false, end, field, index, start }; }} rules={props.settings.builtInRules} t={props.t} />
-            <div className="mt-4"><WhitespaceRules {...props} /></div>
-            <div className="mt-4"><CustomRules {...props} onTarget={(target) => { targetRef.current = target; }} /></div>
+            <div className="mt-3"><WhitespaceRules {...props} /></div>
+            <div className="mt-3"><CustomRules {...props} onTarget={(target) => { targetRef.current = target; }} /></div>
             <SpecialValueButtons onInsert={insertValue} t={props.t} />
-            <p className="mt-2 text-ui-xs text-foreground/48">{props.t('desktop.formatCleanup.inputHelp')}</p>
+            <p className="mt-1.5 pl-14 text-ui-xs text-foreground/48">{props.t('desktop.formatCleanup.inputHelp')}</p>
             <div className="mt-4"><Preview preview={props.preview} t={props.t} /></div>
           </AppDialogBody>
           <AppDialogActions>
