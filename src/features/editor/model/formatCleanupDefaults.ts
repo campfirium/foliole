@@ -3,7 +3,7 @@ import type { FormatCleanupRule, FormatCleanupSettings } from './formatCleanupTy
 const lineStartRule = (id: string, find: string): FormatCleanupRule => ({
   enabled: true,
   find,
-  follow: '␣',
+  follow: '␠',
   id,
   not: '',
   replace: '',

@@ -67,9 +67,9 @@ function SpecialValueButtons(props: { onInsert: (value: string) => void; t: Tran
       <span>{props.t('desktop.formatCleanup.specialCharacters')}</span>
       <ToolbarActionGroup className="gap-0 overflow-hidden border-settings-control-border">
         {([
-          ['␣', 'desktop.formatCleanup.space'], ['⇥', 'desktop.formatCleanup.tab'], ['↵', 'desktop.formatCleanup.lineBreak']
+          ['␠', 'desktop.formatCleanup.space'], ['⇥', 'desktop.formatCleanup.tab'], ['↵', 'desktop.formatCleanup.lineBreak']
         ] as const).map(([value, key], index) => (
-          <AppButton className={`min-h-7 rounded-none px-2.5 text-ui-xs ${index > 0 ? 'border-l border-settings-divider/70' : ''}`} key={value} onClick={() => props.onInsert(value)} size="sm" variant="ghost">
+          <AppButton className={`min-h-8 rounded-none px-2.5 text-ui-xs ${index > 0 ? 'border-l border-settings-divider/70' : ''}`} key={value} onClick={() => props.onInsert(value)} size="sm" variant="ghost">
             <span className="font-mono font-medium">{value}</span>{props.t(key)}
           </AppButton>
         ))}

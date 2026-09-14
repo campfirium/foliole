@@ -53,11 +53,11 @@ function RuleField(props: {
     <AppInput
       aria-label={props.t('desktop.formatCleanup.field', { field: props.t(FIELD_LABEL_KEYS[props.field]), number: props.index + 1 })}
       autoComplete="off"
-      className={`h-7 min-w-0 bg-transparent px-2 font-mono text-ui-md ${props.className ?? ''}`}
+      className={`h-8 min-w-0 bg-transparent px-2 font-mono text-ui-md ${props.className ?? ''}`}
       onChange={(event) => props.onChange(event.target.value)}
       onFocus={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
       onSelect={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
-      value={props.value}
+      value={props.value.replaceAll('␣', '␠')}
     />
   );
 }
@@ -72,7 +72,7 @@ function RuleScopeField(props: {
     <div className="relative min-w-0">
       <select
         aria-label={props.t('desktop.formatCleanup.field', { field: props.t('desktop.formatCleanup.when'), number: props.index + 1 })}
-        className="h-7 w-full appearance-none rounded-md border border-settings-control-border bg-transparent pl-2 pr-7 text-ui-md text-foreground"
+        className="h-8 w-full appearance-none rounded-md border border-settings-control-border bg-transparent pl-2 pr-7 text-ui-md text-foreground"
         onChange={(event) => props.onChange(event.target.value as FormatCleanupRule['scope'])}
         value={props.scope}
       >

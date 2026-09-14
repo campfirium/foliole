@@ -1,9 +1,9 @@
 import type { FormatCleanupRule, FormatCleanupSettings } from './formatCleanupTypes';
 
-const DISPLAY_TOKENS: Record<string, string> = { '␣': ' ', '⇥': '\t', '↵': '\n' };
+const DISPLAY_TOKENS: Record<string, string> = { '␠': ' ', '␣': ' ', '⇥': '\t', '↵': '\n' };
 
 function decodeDisplayTokens(value: string) {
-  return value.replace(/[␣⇥↵]/g, (token) => DISPLAY_TOKENS[token] ?? token);
+  return value.replace(/[␠␣⇥↵]/g, (token) => DISPLAY_TOKENS[token] ?? token);
 }
 
 function escapeRegExp(value: string) {

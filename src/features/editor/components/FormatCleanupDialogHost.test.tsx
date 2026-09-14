@@ -74,8 +74,8 @@ describe('FormatCleanupDialogHost', () => {
     fireEvent.change(customFind, { target: { value: 'ab' } });
     customFind.setSelectionRange(1, 1);
     fireEvent.select(customFind);
-    fireEvent.click(screen.getByRole('button', { name: '␣ Space' }));
+    fireEvent.click(screen.getByRole('button', { name: '␠ Space' }));
 
-    expect(customFind).toHaveValue('a␣b');
+    expect(customFind).toHaveValue('a␠b');
   });
 });

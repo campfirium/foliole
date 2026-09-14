@@ -42,10 +42,18 @@ describe('cleanFormatting', () => {
     settings.removeIndentation = false;
     settings.collapseBlankLines = false;
     settings.customRules = [
-      { ...createEmptyCustomCleanupRule('spaces'), find: '/ {2,}/', replace: '␣' },
+      { ...createEmptyCustomCleanupRule('spaces'), find: '/ {2,}/', replace: '␠' },
       { ...createEmptyCustomCleanupRule('break'), find: '↵↵', replace: '↵' }
     ];
 
     expect(cleanFormatting('A   B\n\nC', settings)).toBe('A B\nC');
+  });
+
+  it('keeps the earlier visible space token compatible', () => {
+    const settings = createDefaultFormatCleanupSettings();
+    settings.builtInRules = [];
+    settings.customRules = [{ ...createEmptyCustomCleanupRule('legacy-space'), find: 'x', replace: '␣' }];
+
+    expect(cleanFormatting('AxB', settings)).toBe('A B');
   });
 });
