@@ -32,6 +32,7 @@ export interface BackupSqliteDatabaseOptions {
 
 export interface RestoreSqliteDatabaseOptions {
   sourcePath: string;
+  sourceVerified?: boolean;
   targetPath: string;
 }
 
@@ -92,6 +93,7 @@ export async function backupSqliteDatabase({
 
 export async function restoreSqliteDatabase({
   sourcePath,
+  sourceVerified = false,
   targetPath
 }: RestoreSqliteDatabaseOptions): Promise<SqliteRestoreResult> {
   const resolvedSourcePath = path.resolve(sourcePath);
@@ -112,7 +114,7 @@ export async function restoreSqliteDatabase({
   const sqlite = new BetterSqlite3(resolvedSourcePath, { fileMustExist: true, readonly: true });
   let metadata: Awaited<ReturnType<import('better-sqlite3').Database['backup']>>;
   try {
-    verifyDatabaseIntegrity(sqlite);
+    if (!sourceVerified) verifyDatabaseIntegrity(sqlite);
     metadata = await sqlite.backup(tempTargetPath);
   } finally {
     sqlite.close();

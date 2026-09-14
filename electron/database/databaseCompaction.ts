@@ -17,10 +17,12 @@ import {
   runWithDatabaseConnectionMaintenance,
   type SqliteDatabase
 } from './connection.js';
+import { runDatabaseCompactionInWorker } from './databaseCompactionWorkerClient.js';
+import type { DatabaseCompactionWorkerInput } from './databaseCompactionWorkerCore.js';
 import { recoverCurrentDatabaseAfterRestoreFailure } from './databaseRestoreRecovery.js';
 import { createManagedSafetySnapshotWithBackup, type ManagedSafetySnapshot } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
-import { restoreSqliteDatabase, verifySqliteDatabaseFile } from './sqliteBackupRestore.js';
+import { restoreSqliteDatabase } from './sqliteBackupRestore.js';
 
 let compactionInProgress = false;
 
@@ -29,20 +31,26 @@ export async function loadApplicationDatabaseSpaceStatus(): Promise<NativeDataba
   return readDatabaseSpaceStatus(connection.sqlite, connection.dbPath);
 }
 
-export async function compactApplicationDatabase(): Promise<NativeDatabaseCompactionResult> {
+type CompactCandidate = (input: DatabaseCompactionWorkerInput) => Promise<void>;
+
+export async function compactApplicationDatabase(
+  compactCandidate: CompactCandidate = runDatabaseCompactionInWorker
+): Promise<NativeDatabaseCompactionResult> {
   if (compactionInProgress) throw new Error('Database compaction is already in progress.');
   compactionInProgress = true;
   let resumeLibraryTasks: (() => void) | null = null;
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
-    return await runWithDatabaseConnectionMaintenance(compactDatabaseInMaintenance);
+    return await runWithDatabaseConnectionMaintenance(() => compactDatabaseInMaintenance(compactCandidate));
   } finally {
     resumeLibraryTasks?.();
     compactionInProgress = false;
   }
 }
 
-export async function compactDatabaseInMaintenance(): Promise<NativeDatabaseCompactionResult> {
+export async function compactDatabaseInMaintenance(
+  compactCandidate: CompactCandidate = runDatabaseCompactionInWorker
+): Promise<NativeDatabaseCompactionResult> {
   const connection = openDatabaseConnection();
   const targetPath = connection.dbPath;
   const candidatePath = path.join(path.dirname(targetPath), `.foliole-compact-${randomUUID()}.db`);
@@ -54,11 +62,10 @@ export async function compactDatabaseInMaintenance(): Promise<NativeDatabaseComp
     safetySnapshot = await createManagedSafetySnapshotWithBackup({
       reason: 'pre-compact', sourceDatabase: connection.sqlite, sourcePath: targetPath
     });
-    connection.sqlite.exec(`VACUUM main INTO ${toSqliteStringLiteral(candidatePath)}`);
-    verifySqliteDatabaseFile(candidatePath);
+    await compactCandidate({ candidatePath, sourcePath: targetPath });
     closeDatabaseConnection();
     connectionClosed = true;
-    await restoreSqliteDatabase({ sourcePath: candidatePath, targetPath });
+    await restoreSqliteDatabase({ sourcePath: candidatePath, sourceVerified: true, targetPath });
     replacementComplete = true;
     initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
     clearDatabaseConnectionUnavailable();
@@ -103,8 +110,4 @@ function readPragmaNumber(sqlite: SqliteDatabase, pragma: string) {
     throw new Error(`SQLite returned an invalid ${pragma}.`);
   }
   return value;
-}
-
-function toSqliteStringLiteral(value: string) {
-  return `'${value.replace(/'/g, "''")}'`;
 }

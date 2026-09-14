@@ -24,6 +24,7 @@ vi.mock('./backupFileDisposition.js', () => ({
 import { loadBackupSettings } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { compactApplicationDatabase, loadApplicationDatabaseSpaceStatus } from './databaseCompaction.js';
+import { compactAndVerifyDatabaseCandidate } from './databaseCompactionWorkerCore.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -56,7 +57,7 @@ it('compacts the database, preserves data, and keeps a verified Safety snapshot'
   createFreePages();
   const before = await loadApplicationDatabaseSpaceStatus();
 
-  const result = await compactApplicationDatabase();
+  const result = await compactApplicationDatabase(async (input) => compactAndVerifyDatabaseCandidate(input));
 
   expect(result.before).toEqual(before);
   expect(result.after.database_size_bytes).toBeLessThan(before.database_size_bytes);
@@ -77,7 +78,8 @@ it('keeps the main database bytes and availability unchanged when replacement fa
   const before = await fs.readFile(databasePath);
   vi.spyOn(fs, 'rename').mockRejectedValueOnce(new Error('injected atomic replacement failure'));
 
-  await expect(compactApplicationDatabase()).rejects.toThrow('current library has been restored');
+  await expect(compactApplicationDatabase(async (input) => compactAndVerifyDatabaseCandidate(input)))
+    .rejects.toThrow('current library has been restored');
 
   expect(await fs.readFile(databasePath)).toEqual(before);
   expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM compact_fixture').get())
