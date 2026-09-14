@@ -8,13 +8,21 @@ import type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 import { frequencyBucketKey, selectOrdinaryRestorePoints } from './backupRetentionPolicy.js';
 
 const settings = {
+  backup_dir: '',
   daily_max_count: 2,
+  extra_backup_dir: '',
+  extra_backup_max_count: 10,
   hourly_max_count: 2,
   monthly_max_count: 1,
   retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
-  schema_version: 2,
+  schema_version: 3,
+  defaults_version: 1,
+  overridden_fields: [],
+  safety_max_count: 2,
+  total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
+  updated_at: '2026-09-13T00:00:00.000Z',
   weekly_max_count: 1
-} as NativeBackupSettings;
+} satisfies NativeBackupSettings;
 
 function entry(fileName: string, date: Date): ApplicationDatabaseBackupEntry {
   return {

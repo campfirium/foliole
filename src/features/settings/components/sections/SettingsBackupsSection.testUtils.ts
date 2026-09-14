@@ -2,7 +2,9 @@ import type { NativeBackupSettings } from '../../../../../lib/platform/nativeUti
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 
 export const defaultSettings: NativeBackupSettings = {
-  schema_version: 2,
+  schema_version: 3,
+  defaults_version: 1,
+  overridden_fields: [],
   daily_max_count: 5,
   hourly_max_count: 8,
   monthly_max_count: 0,

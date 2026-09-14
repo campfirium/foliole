@@ -3,20 +3,29 @@ import path from 'node:path';
 
 import { normalizeLibraryPath } from '../../lib/platform/libraryPaths.js';
 import type {
-  NativeBackupRetentionTier,
+  NativeBackupSettingOverride,
   NativeBackupSettings
 } from '../../lib/platform/nativeUtilityContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
+import {
+  DEFAULT_BACKUP_SETTINGS,
+  LEGACY_DEFAULTS,
+  normalizeOverrideFields,
+  normalizeRetentionPriority,
+  sameSettingValue,
+  SETTING_FIELDS,
+  settingValue,
+  withCurrentDefaults
+} from './backupSettingsDefaults.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const BACKUP_SETTINGS_KEY = 'backup_settings';
-const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
-const GIGABYTE_BYTES = 1024 * 1024 * 1024;
-const RETENTION_TIERS: NativeBackupRetentionTier[] = ['hourly', 'daily', 'weekly', 'monthly'];
 
 interface StoredBackupSettings {
   schema_version?: unknown;
+  defaults_version?: unknown;
+  overridden_fields?: unknown;
   daily_max_count?: unknown;
   hourly_max_count?: unknown;
   monthly_max_count?: unknown;
@@ -36,21 +45,6 @@ interface StoredBackupSettings {
   updated_at?: unknown;
 }
 
-const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
-  schema_version: 2,
-  daily_max_count: 5,
-  hourly_max_count: 8,
-  monthly_max_count: 0,
-  weekly_max_count: 1,
-  backup_dir: '',
-  extra_backup_dir: '',
-  extra_backup_max_count: 10,
-  retention_priority: [...RETENTION_TIERS],
-  safety_max_count: 2,
-  total_size_limit_bytes: 2 * GIGABYTE_BYTES,
-  updated_at: DEFAULT_UPDATED_AT
-};
-
 function readStoredBackupSettings() {
   return loadJsonSetting(BACKUP_SETTINGS_KEY);
 }
@@ -62,13 +56,16 @@ function normalizePositiveInteger(value: unknown, fallback: number) {
   return Math.max(0, Math.round(value));
 }
 
-function normalizeRetentionPriority(value: unknown) {
-  if (!Array.isArray(value)) return [...RETENTION_TIERS];
-  const result = value.filter((entry): entry is NativeBackupRetentionTier =>
-    typeof entry === 'string' && RETENTION_TIERS.includes(entry as NativeBackupRetentionTier));
-  return result.length === RETENTION_TIERS.length && new Set(result).size === RETENTION_TIERS.length
-    ? result
-    : [...RETENTION_TIERS];
+function inferLegacyOverrides(value: StoredBackupSettings) {
+  const overrides: NativeBackupSettingOverride[] = [];
+  if (normalizeLibraryPath(value.backup_dir)) overrides.push('backup_dir');
+  if (normalizeLibraryPath(value.extra_backup_dir)) overrides.push('extra_backup_dir');
+  if (typeof value.extra_backup_max_count === 'number' && value.extra_backup_max_count !== LEGACY_DEFAULTS.extra_backup_max_count) overrides.push('extra_backup_max_count');
+  const safety = legacyValue(value, 'safety_max_count', 'snapshot_max_count');
+  if (typeof safety === 'number' && safety !== LEGACY_DEFAULTS.safety_max_count && safety !== DEFAULT_BACKUP_SETTINGS.safety_max_count) overrides.push('safety_max_count');
+  if (typeof value.total_size_limit_bytes === 'number' && value.total_size_limit_bytes !== LEGACY_DEFAULTS.total_size_limit_bytes) overrides.push('total_size_limit_bytes');
+  if (value.schema_version === 2 && !sameSettingValue(normalizeRetentionPriority(value.retention_priority), DEFAULT_BACKUP_SETTINGS.retention_priority)) overrides.push('retention_priority');
+  return overrides;
 }
 
 function legacyValue(value: StoredBackupSettings, currentKey: keyof StoredBackupSettings, legacyKey: keyof StoredBackupSettings) {
@@ -77,11 +74,12 @@ function legacyValue(value: StoredBackupSettings, currentKey: keyof StoredBackup
 
 export function normalizeBackupSettings(payload: unknown): NativeBackupSettings {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return { ...DEFAULT_BACKUP_SETTINGS, retention_priority: [...RETENTION_TIERS] };
+    return { ...DEFAULT_BACKUP_SETTINGS, retention_priority: [...DEFAULT_BACKUP_SETTINGS.retention_priority], overridden_fields: [] };
   }
   const value = payload as StoredBackupSettings;
-  return {
-    schema_version: 2,
+  const normalized: NativeBackupSettings = {
+    schema_version: 3,
+    defaults_version: 1,
     daily_max_count: normalizePositiveInteger(
       legacyValue(value, 'daily_max_count', 'auto_daily_days'),
       DEFAULT_BACKUP_SETTINGS.daily_max_count
@@ -122,11 +120,17 @@ export function normalizeBackupSettings(payload: unknown): NativeBackupSettings 
         DEFAULT_BACKUP_SETTINGS.total_size_limit_bytes
       )
     ),
+    overridden_fields: [],
     updated_at:
       typeof value.updated_at === 'string' && value.updated_at.trim().length > 0
         ? value.updated_at
         : DEFAULT_BACKUP_SETTINGS.updated_at
   };
+  const overrides = value.schema_version === 3
+    ? normalizeOverrideFields(value.overridden_fields)
+    : inferLegacyOverrides(value);
+  normalized.overridden_fields = overrides;
+  return withCurrentDefaults(normalized, overrides);
 }
 
 function saveStoredBackupSettings(settings: NativeBackupSettings) {
@@ -137,7 +141,8 @@ export function loadBackupSettings(): NativeBackupSettings {
   const stored = readStoredBackupSettings();
   const normalized = normalizeBackupSettings(stored);
   if (!stored || typeof stored !== 'object' || Array.isArray(stored) ||
-      (stored as StoredBackupSettings).schema_version !== 2) {
+      (stored as StoredBackupSettings).schema_version !== 3 ||
+      (stored as StoredBackupSettings).defaults_version !== DEFAULT_BACKUP_SETTINGS.defaults_version) {
     saveStoredBackupSettings(normalized);
   }
   return normalized;
@@ -147,11 +152,21 @@ export function saveBackupSettings(
   settings: Partial<NativeBackupSettings> & { updated_at?: string }
 ): NativeBackupSettings {
   const current = loadBackupSettings();
-  const normalized = normalizeBackupSettings({
+  const incoming = normalizeBackupSettings({
     ...current,
     ...settings,
+    overridden_fields: SETTING_FIELDS,
     updated_at: settings.updated_at ?? new Date().toISOString()
   });
+  const overrides = new Set(current.overridden_fields);
+  for (const field of SETTING_FIELDS) {
+    const nextValue = settingValue(incoming, field);
+    if (sameSettingValue(nextValue, settingValue(current, field))) continue;
+    if (sameSettingValue(nextValue, settingValue(DEFAULT_BACKUP_SETTINGS, field))) overrides.delete(field);
+    else overrides.add(field);
+  }
+  const normalized = withCurrentDefaults(incoming, [...overrides]);
+  normalized.overridden_fields = [...overrides];
   saveStoredBackupSettings(normalized);
   return normalized;
 }

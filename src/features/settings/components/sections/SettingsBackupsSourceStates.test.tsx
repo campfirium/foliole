@@ -37,7 +37,9 @@ import { SettingsBackupsSection } from './SettingsBackupsSection';
 beforeEach(() => {
   vi.mocked(areDatabaseBackupActionsAvailable).mockReturnValue(true);
   vi.mocked(loadDatabaseBackupSettings).mockResolvedValue({
-    schema_version: 2,
+    schema_version: 3,
+    defaults_version: 1,
+    overridden_fields: [],
     daily_max_count: 7,
     hourly_max_count: 24,
     monthly_max_count: 0,

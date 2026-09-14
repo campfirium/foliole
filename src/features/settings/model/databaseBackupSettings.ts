@@ -8,7 +8,8 @@ import {
 export type DatabaseBackupSettings = RuntimeBackupSettings;
 
 const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
-  schema_version: 2,
+  schema_version: 3,
+  defaults_version: 1,
   daily_max_count: 5,
   hourly_max_count: 8,
   monthly_max_count: 0,
@@ -19,6 +20,7 @@ const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
   retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
   safety_max_count: 2,
   total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
+  overridden_fields: [],
   updated_at: '1970-01-01T00:00:00.000Z'
 };
 
@@ -32,7 +34,8 @@ function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings
   }
   const payload = value as Record<string, unknown>;
   return {
-    schema_version: 2,
+    schema_version: 3,
+    defaults_version: 1,
     daily_max_count: isFiniteNumber(payload.daily_max_count) ? Math.max(0, Math.round(payload.daily_max_count)) : 5,
     hourly_max_count: isFiniteNumber(payload.hourly_max_count) ? Math.max(0, Math.round(payload.hourly_max_count)) : 8,
     monthly_max_count: isFiniteNumber(payload.monthly_max_count) ? Math.max(0, Math.round(payload.monthly_max_count)) : 0,
@@ -44,8 +47,18 @@ function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings
     safety_max_count: isFiniteNumber(payload.safety_max_count) ? Math.max(1, Math.round(payload.safety_max_count)) : 2,
     total_size_limit_bytes:
       isFiniteNumber(payload.total_size_limit_bytes) ? Math.max(0, Math.round(payload.total_size_limit_bytes)) : DEFAULT_BACKUP_SETTINGS.total_size_limit_bytes,
+    overridden_fields: normalizeOverrideFields(payload.overridden_fields),
     updated_at: typeof payload.updated_at === 'string' && payload.updated_at.trim().length > 0 ? payload.updated_at : DEFAULT_BACKUP_SETTINGS.updated_at
   };
+}
+
+function normalizeOverrideFields(value: unknown): DatabaseBackupSettings['overridden_fields'] {
+  const allowed: DatabaseBackupSettings['overridden_fields'] = [
+    'hourly', 'daily', 'weekly', 'monthly', 'backup_dir', 'extra_backup_dir',
+    'extra_backup_max_count', 'retention_priority', 'safety_max_count', 'total_size_limit_bytes'
+  ];
+  if (!Array.isArray(value)) return [];
+  return allowed.filter((field) => value.includes(field));
 }
 
 function normalizeRetentionPriority(value: unknown): DatabaseBackupSettings['retention_priority'] {

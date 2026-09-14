@@ -99,7 +99,9 @@ vi.mock('../database/backupRetentionStatus.js', () => ({ loadBackupRetentionStat
 vi.mock('../database/backupSettings.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/backupSettings.js')>(),
   loadBackupSettings: vi.fn(() => ({
-    schema_version: 2,
+    schema_version: 3,
+    defaults_version: 1,
+    overridden_fields: [],
     backup_dir: '/app/Backups',
     daily_max_count: 5,
     extra_backup_dir: '',

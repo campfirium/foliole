@@ -190,35 +190,13 @@ export type NativeExtraBackupResult =
       destinationPath: null;
       errorMessage: string;
     };
-export type NativeBackupRetentionTier = 'hourly' | 'daily' | 'weekly' | 'monthly';
-
-export interface NativeBackupSettings {
-  schema_version: 2;
-  daily_max_count: number;
-  hourly_max_count: number;
-  monthly_max_count: number;
-  weekly_max_count: number;
-  backup_dir: string;
-  extra_backup_dir: string;
-  extra_backup_max_count: number;
-  retention_priority: NativeBackupRetentionTier[];
-  safety_max_count: number;
-  total_size_limit_bytes: number;
-  updated_at: string;
-}
-
-export interface NativeBackupCleanupStatus {
-  failedCount: number;
-  movedToTrashCount: number;
-  remainingBytesOverLimit: number;
-}
-
-export interface NativeBackupRetentionStatus {
-  counts: Record<NativeBackupRetentionTier, number>;
-  lastCleanup: NativeBackupCleanupStatus | null;
-  safetyCount: number;
-  totalSizeBytes: number;
-}
+export type {
+  NativeBackupCleanupStatus,
+  NativeBackupRetentionStatus,
+  NativeBackupRetentionTier,
+  NativeBackupSettingOverride,
+  NativeBackupSettings
+} from './nativeBackupContract.js';
 
 
 export interface NativeSqliteBackupEntry {
