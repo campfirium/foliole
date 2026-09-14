@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const store = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
@@ -47,7 +49,7 @@ it('uses the current count defaults when legacy time-window rules changed meanin
   const settings = loadBackupSettings();
 
   expect(settings).toMatchObject({
-    backup_dir: '/Custom Backups',
+    backup_dir: path.normalize('/Custom Backups'),
     daily_max_count: 5,
     hourly_max_count: 8,
     monthly_max_count: 0,
