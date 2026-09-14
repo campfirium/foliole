@@ -1,6 +1,7 @@
 // Foundation controls: reusable across desktop workbench surfaces and companion shell.
 export { AppBreadcrumb, type AppBreadcrumbItem } from './Breadcrumb';
 export { AppButton } from './Button';
+export { AppSwitch } from './AppSwitch';
 export { AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
@@ -62,7 +63,6 @@ export { ReviewActionBar } from './ReviewActionBar';
 // Settings patterns: shared only because settings pages reuse them; do not treat as generic controls.
 export { SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME, SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME, settingsActionTableAddButtonClassName, settingsActionTableClassName, settingsActionTableHeaderClassName, settingsActionTableRowClassName } from './SettingsActionTable';
 export { SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME, SETTINGS_INPUT_WIDTH_CLASS_NAME, SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME, SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME, SETTINGS_RANGE_WIDTH_CLASS_NAME, SETTINGS_SELECT_WIDTH_CLASS_NAME, SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME, SETTINGS_VALUE_WIDTH_CLASS_NAME, SettingsButton, SettingsControlSlot, SettingsRow, SettingsSection, settingsButtonClassName, settingsColorSwatchClassName, settingsCompactButtonClassName, settingsCompactFieldClassName, settingsCompactUtilityIconButtonClassName, settingsControlValueClassName, settingsFieldClassName, settingsHotkeyChipClassName, settingsHotkeyChipClearClassName, settingsHotkeyRowClassName, settingsHotkeySearchFieldClassName, settingsHotkeySearchPanelClassName, settingsIconGridButtonClassName, settingsPaletteButtonClassName, settingsPickerTrackClassName, settingsRangeClassName, settingsReadOnlyFieldClassName, settingsResetButtonClassName, settingsSelectableOptionClassName, settingsSidebarBadgeClassName, settingsSidebarItemClassName, settingsSwitchClassName, settingsSwitchKnobClassName, settingsUtilityIconButtonClassName, settingsValueBoxClassName } from './SettingsLayout';
-export { SettingsSwitch } from './SettingsSwitch';
 export { SettingsFlow, SettingsFlowItem } from './SettingsFlow';
 
 export { SettingsSegmentedControl, SettingsSegmentedRow } from './SettingsSegmentedControl';

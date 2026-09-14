@@ -11,7 +11,7 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
-  SettingsSwitch
+  AppSwitch
 } from '../../../shared/ui';
 import type { FormatCleanupRule, FormatCleanupSettings } from '../model/formatCleanupTypes';
 
@@ -47,15 +47,14 @@ function WhitespaceRules(props: FormatCleanupDialogSurfaceProps) {
   return (
     <section className="border-t border-settings-divider/70 pt-4">
       <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.whitespace')}</h2>
-      <div className="mt-2 overflow-hidden rounded-md bg-settings-group text-ui-md">
-        <div className="flex min-h-12 items-center justify-between px-4 py-2.5">
+      <div className="mt-2 px-2 text-ui-md">
+        <div className="flex min-h-11 items-center justify-between py-2">
           <span>{props.t('desktop.formatCleanup.removeIndentation')}</span>
-          <SettingsSwitch aria-label={props.t('desktop.formatCleanup.removeIndentation')} checked={props.settings.removeIndentation} onCheckedChange={(removeIndentation) => update({ removeIndentation })} />
+          <AppSwitch aria-label={props.t('desktop.formatCleanup.removeIndentation')} checked={props.settings.removeIndentation} onCheckedChange={(removeIndentation) => update({ removeIndentation })} />
         </div>
-        <div className="mx-4 border-t border-settings-divider/70" />
-        <div className="flex min-h-12 items-center justify-between px-4 py-2.5">
+        <div className="flex min-h-11 items-center justify-between border-t border-settings-divider/55 py-2">
           <span>{props.t('desktop.formatCleanup.collapseBlankLines')}</span>
-          <SettingsSwitch aria-label={props.t('desktop.formatCleanup.collapseBlankLines')} checked={props.settings.collapseBlankLines} onCheckedChange={(collapseBlankLines) => update({ collapseBlankLines })} />
+          <AppSwitch aria-label={props.t('desktop.formatCleanup.collapseBlankLines')} checked={props.settings.collapseBlankLines} onCheckedChange={(collapseBlankLines) => update({ collapseBlankLines })} />
         </div>
       </div>
     </section>

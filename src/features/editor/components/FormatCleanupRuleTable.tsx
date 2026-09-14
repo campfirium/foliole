@@ -3,13 +3,10 @@ import type { ReactNode } from 'react';
 
 import type { Translate } from '../../../shared/localization/LocalizationProvider';
 import {
+  AppButton,
   AppIconButton,
   AppInput,
-  SettingsSwitch,
-  settingsActionTableAddButtonClassName,
-  settingsActionTableClassName,
-  settingsActionTableHeaderClassName,
-  settingsActionTableRowClassName
+  AppSwitch
 } from '../../../shared/ui';
 import type { FormatCleanupRule } from '../model/formatCleanupTypes';
 
@@ -34,7 +31,7 @@ interface FormatCleanupRuleTableProps {
 
 function RuleHeader(props: { t: Translate }) {
   return (
-    <div aria-hidden="true" className={settingsActionTableHeaderClassName(COLUMNS, 'gap-3 py-2.5')}>
+    <div aria-hidden="true" className={`grid ${COLUMNS} items-center gap-3 px-2 pb-2 text-ui-xs font-medium uppercase tracking-[0.08em] text-foreground/42`}>
       <span /><span>{props.t('desktop.formatCleanup.find')}</span><span>{props.t('desktop.formatCleanup.when')}</span>
       <span>{props.t('desktop.formatCleanup.follow')}</span><span>{props.t('desktop.formatCleanup.not')}</span>
       <span /><span>{props.t('desktop.formatCleanup.replace')}</span><span />
@@ -53,7 +50,8 @@ function RuleField(props: {
   return (
     <AppInput
       aria-label={props.t('desktop.formatCleanup.field', { field: props.t(FIELD_LABEL_KEYS[props.field]), number: props.index + 1 })}
-      className="h-8 min-w-0 bg-canvas/72 px-2 font-mono text-ui-md"
+      autoComplete="off"
+      className="h-8 min-w-0 bg-transparent px-2 font-mono text-ui-md"
       onChange={(event) => props.onChange(event.target.value)}
       onFocus={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
       onSelect={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
@@ -65,10 +63,10 @@ function RuleField(props: {
 function RuleRow(props: FormatCleanupRuleTableProps & { index: number; rule: FormatCleanupRule }) {
   const update = (change: Partial<FormatCleanupRule>) => props.onChange(props.index, { ...props.rule, ...change });
   return (
-    <div className={settingsActionTableRowClassName(COLUMNS, 'gap-3 border-t border-settings-divider/45 py-2')}>
-      <SettingsSwitch aria-label={props.t('desktop.formatCleanup.ruleEnabled', { number: props.index + 1 })} checked={props.rule.enabled} compact onCheckedChange={(enabled) => update({ enabled })} />
+    <div className={`grid ${COLUMNS} items-center gap-3 px-2 py-1.5`}>
+      <AppSwitch aria-label={props.t('desktop.formatCleanup.ruleEnabled', { number: props.index + 1 })} checked={props.rule.enabled} compact onCheckedChange={(enabled) => update({ enabled })} />
       <RuleField field="find" index={props.index} onChange={(find) => update({ find })} onTarget={(start, end) => props.onTargetField(props.index, 'find', start, end)} t={props.t} value={props.rule.find} />
-      <select aria-label={props.t('desktop.formatCleanup.field', { field: props.t('desktop.formatCleanup.when'), number: props.index + 1 })} className="h-8 min-w-0 rounded-md border border-settings-control-border bg-canvas/72 px-2 text-ui-md" onChange={(event) => update({ scope: event.target.value as FormatCleanupRule['scope'] })} value={props.rule.scope}>
+      <select aria-label={props.t('desktop.formatCleanup.field', { field: props.t('desktop.formatCleanup.when'), number: props.index + 1 })} className="h-8 min-w-0 rounded-md border border-settings-control-border bg-transparent px-2 text-ui-md text-foreground" onChange={(event) => update({ scope: event.target.value as FormatCleanupRule['scope'] })} value={props.rule.scope}>
         <option value="any" />
         <option value="line-start">{props.t('desktop.formatCleanup.lineStart')}</option>
       </select>
@@ -80,16 +78,14 @@ function RuleRow(props: FormatCleanupRuleTableProps & { index: number; rule: For
 
 export function FormatCleanupRuleTable(props: FormatCleanupRuleTableProps) {
   return (
-    <div className={settingsActionTableClassName()}>
+    <div className="w-full min-w-0">
       <RuleHeader t={props.t} />
       {props.rules.map((rule, index) => <RuleRow {...props} index={index} key={rule.id} rule={rule} />)}
       {props.custom ? (
-        <div className={settingsActionTableRowClassName(COLUMNS, 'border-t border-settings-divider/45 pb-3 pt-2')}>
-          <button className={settingsActionTableAddButtonClassName()} onClick={props.onAdd} type="button">
+        <AppButton className="ml-11 mt-1 px-2" onClick={props.onAdd} size="sm" variant="ghost">
             <Plus aria-hidden="true" className="size-3.5" />
             {props.t('desktop.formatCleanup.addRule')}
-          </button>
-        </div>
+        </AppButton>
       ) : null}
     </div>
   );
