@@ -156,7 +156,7 @@ it('auto-saves a keyboard priority reorder', async () => {
 
   await waitFor(() => {
     expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(expect.objectContaining({
-      retention_priority: ['daily', 'hourly', 'weekly', 'monthly']
+      retention_priority: ['daily', 'weekly', 'hourly', 'monthly']
     }));
   });
 });

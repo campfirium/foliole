@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   ObjectConfigPathControl,
   SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
@@ -19,15 +19,10 @@ import {
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
-const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  hour12: false
-});
-
 const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
-type Translate = ReturnType<typeof useTranslation>;
+type Localization = ReturnType<typeof useLocalization>;
+type Translate = Localization['t'];
 
 function describeBackupKind(entry: DatabaseBackupEntry, t: Translate) {
   if (entry.kind === 'manual') return t('settings.backups.kind.manual');
@@ -38,10 +33,14 @@ function describeBackupKind(entry: DatabaseBackupEntry, t: Translate) {
   return t('settings.backups.kind.snapshot');
 }
 
-function formatBackupMeta(entry: DatabaseBackupEntry, t: Translate) {
+function formatBackupMeta(entry: DatabaseBackupEntry, locale: Localization['locale'], t: Translate) {
   const updatedAt = Number.isNaN(Date.parse(entry.updatedAt))
     ? entry.updatedAt
-    : BACKUP_DATE_FORMATTER.format(new Date(entry.updatedAt));
+    : new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      hour12: false
+    }).format(new Date(entry.updatedAt));
   const sizeInMegabytes = `${Math.max(1, Math.round(entry.sizeBytes / (1024 * 1024)))} MB`;
   return `${describeBackupKind(entry, t)} · ${updatedAt} · ${sizeInMegabytes}`;
 }
@@ -150,7 +149,7 @@ export function BackupListSection(props: {
   createBackup: () => void;
   restoreBackup: (entry: DatabaseBackupEntry) => void;
 }) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   const [isExpanded, setIsExpanded] = useState(false);
   const visibleBackups = isExpanded ? props.backups : props.backups.slice(0, 3);
 
@@ -172,7 +171,7 @@ export function BackupListSection(props: {
       {props.isBackupActionsAvailable && props.isLoadingBackups ? <SettingsLoadingState /> : null}
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length === 0 ? <SettingsEmptyState description={t('settings.backups.empty.description')} title={t('settings.backups.empty.title')} /> : null}
       {visibleBackups.map((entry) => (
-        <SettingsRow description={formatBackupMeta(entry, t)} key={entry.filePath} title={entry.fileName}>
+        <SettingsRow description={formatBackupMeta(entry, locale, t)} key={entry.filePath} title={entry.fileName}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} loading={props.restoringPath === entry.filePath} loadingLabel={t('settings.backups.restore.restoring')} onClick={() => props.restoreBackup(entry)}>
               {t('settings.backups.restore.action')}
