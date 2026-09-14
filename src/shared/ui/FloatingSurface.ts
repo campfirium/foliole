@@ -55,12 +55,12 @@ const floatingWorkspaceInputBaseClassName = [
 const floatingWorkspaceListBaseClassName =
   'app-scrollbar min-h-0 flex-1 overflow-y-auto border-t border-[var(--app-floating-divider-color)] px-2 py-2 [--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]';
 const floatingWorkspacePreviewBaseClassName = 'min-h-0 bg-canvas';
-const floatingWorkspaceItemBaseClassName = 'grid gap-1.5';
+const floatingWorkspaceItemBaseClassName = 'grid gap-1';
 const floatingWorkspaceItemHeadingBaseClassName = 'flex min-w-0 items-center gap-2';
 const floatingWorkspaceItemTitleBaseClassName = 'min-w-0 flex-1 truncate text-ui-md font-semibold text-foreground';
 const floatingWorkspaceItemContextBaseClassName = 'block truncate text-ui-xs text-foreground/52';
-const floatingWorkspaceItemSummaryBaseClassName = 'line-clamp-2 block text-ui-base text-foreground/65';
-const floatingWorkspaceItemMetaBaseClassName = 'block truncate font-mono text-ui-xs text-foreground/45';
+const floatingWorkspaceItemSummaryBaseClassName = 'line-clamp-1 block text-ui-base text-foreground/65';
+const floatingWorkspaceItemMetaBaseClassName = 'flex min-w-0 items-center justify-between gap-2 text-ui-xs text-foreground/45';
 const floatingWorkspaceStateBaseClassName = 'px-3 py-5 text-left text-ui-md text-foreground/60';
 
 export function appFloatingSurfaceClassName(

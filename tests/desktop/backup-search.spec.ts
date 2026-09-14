@@ -112,8 +112,9 @@ test('searches managed backups one document at a time without changing source da
   await dialog.getByRole('button', { name: /^(Search|搜索)$/ }).click();
 
   await expect(dialog.getByRole('button', { name: new RegExp(`${QUERY} title result`) })).toBeVisible();
-  await expect(dialog.getByText(/^(In Trash|在废纸篓)$/)).toBeVisible();
-  await expect(dialog.getByText(matchingBackupName, { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByLabel(/^(In Trash|在废纸篓)$/)).toBeVisible();
+  await expect(dialog.getByTitle(matchingBackupName)).toBeVisible();
+  await expect(dialog.getByText(matchingBackupName, { exact: true })).toHaveCount(0);
   await expect(dialog.locator('.markdown-editor-host')).toContainText('Complete deleted backup body.');
   await expect.poll(() => privateDatabaseCount(searchRoot)).toBe(1);
 

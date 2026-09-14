@@ -74,11 +74,15 @@ it('shows accumulated results at left and only original content at right', () =>
   });
   expect(screen.getByRole('article')).toHaveAttribute('data-read-only', 'true');
   expect(screen.getByRole('article')).toHaveTextContent('# Full original');
-  expect(screen.getByRole('button', { name: /Topic/ })).toHaveTextContent('manual-2026-09-10.db.gz');
-  expect(screen.getByText('In Trash')).toBeInTheDocument();
+  const result = screen.getByRole('button', { name: /Topic/ });
+  expect(result).not.toHaveTextContent('manual-2026-09-10.db.gz');
+  expect(screen.getByTitle('manual-2026-09-10.db.gz')).toBeInTheDocument();
+  expect(screen.getByLabelText('In Trash')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Topic/ }));
   expect(handlers.onSelect).toHaveBeenCalledWith(0);
-  fireEvent.click(screen.getByRole('button', { name: 'Continue search' }));
+  const continueButton = screen.getByRole('button', { name: 'Continue search' });
+  expect(continueButton).toHaveTextContent('');
+  fireEvent.click(continueButton);
   expect(handlers.onContinue).toHaveBeenCalledTimes(1);
   expect(screen.queryByText(/Backup from/)).not.toBeInTheDocument();
 });

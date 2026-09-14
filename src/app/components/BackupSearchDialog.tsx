@@ -1,3 +1,4 @@
+import { ArrowRight, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
@@ -6,12 +7,12 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { DatabaseBackupSearchMatch } from '../../shared/platform/backupSearch/databaseBackupSearchRuntimeRepository';
 import {
-  AppButton,
   AppDialog,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
+  AppIconButton,
   appFloatingWorkspaceClassName,
   appFloatingWorkspaceFormClassName,
   appFloatingWorkspaceHeaderClassName,
@@ -93,9 +94,22 @@ function BackupSearchForm(props: {
     <form className={appFloatingWorkspaceFormClassName()} onSubmit={submit}>
       <label className="sr-only" htmlFor="backup-search-query">{t('settings.backups.search.input')}</label>
       <input autoFocus className={appFloatingWorkspaceInputClassName()} disabled={busy} id="backup-search-query" onChange={(event) => props.onQueryChange(event.target.value)} placeholder={t('settings.backups.search.placeholder')} value={props.state.query} />
-      <AppButton disabled={!busy && (!props.state.query.trim() || complete)} onClick={busy ? props.onCancel : undefined} type={busy ? 'button' : 'submit'}>
-        {busy ? t('settings.backups.search.cancel') : complete ? t('settings.backups.search.noMoreResults') : canContinue ? t('settings.backups.search.continue') : t('settings.backups.search.submit')}
-      </AppButton>
+      <AppIconButton
+        className="text-foreground/40 hover:text-foreground/60"
+        disabled={!busy && (!props.state.query.trim() || complete)}
+        icon={busy
+          ? <X aria-hidden="true" size={15} strokeWidth={1.8} />
+          : <ArrowRight aria-hidden="true" size={15} strokeWidth={1.8} />}
+        label={busy
+          ? t('settings.backups.search.cancel')
+          : complete
+            ? t('settings.backups.search.noMoreResults')
+            : canContinue
+              ? t('settings.backups.search.continue')
+              : t('settings.backups.search.submit')}
+        onClick={busy ? props.onCancel : undefined}
+        type={busy ? 'button' : 'submit'}
+      />
     </form>
   );
 }

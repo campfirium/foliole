@@ -16,9 +16,9 @@ function normalizeMatch(value: unknown): NativeBackupSearchMatch | null {
   const backupUpdatedAt = readString(payload.backup_updated_at);
   const content = typeof payload.content === 'string' ? payload.content : null;
   const nodeId = readString(payload.node_id);
-  const path = readString(payload.path);
+  const path = typeof payload.path === 'string' ? payload.path : null;
   const title = readString(payload.title);
-  if (!backupName || !backupUpdatedAt || content === null || !nodeId || !path || !title || typeof payload.deleted !== 'boolean') {
+  if (!backupName || !backupUpdatedAt || content === null || !nodeId || path === null || !title || typeof payload.deleted !== 'boolean') {
     return null;
   }
   return {

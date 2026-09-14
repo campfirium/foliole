@@ -26,7 +26,9 @@ beforeEach(() => {
     INSERT INTO nodes (id, parent_id, title, content, deleted_at)
       VALUES ('folder', NULL, 'Archive', '', NULL);
     INSERT INTO nodes (id, parent_id, title, content, deleted_at)
-      VALUES ('body', 'folder', 'A body result', 'needle in inline body', NULL);
+      VALUES ('section', 'folder', 'Section', '', NULL);
+    INSERT INTO nodes (id, parent_id, title, content, deleted_at)
+      VALUES ('body', 'section', 'A body result', 'needle in inline body', NULL);
     INSERT INTO nodes (id, parent_id, title, content, deleted_at)
       VALUES ('title', 'folder', 'Needle title', 'ordinary body', '2026-09-01T00:00:00.000Z');
     INSERT INTO content_blob_data (hash, data) VALUES ('blob-hash', 'complete blob needle body');
@@ -51,9 +53,10 @@ it('searches title before inline and blob bodies while retaining deleted rows an
 
   expect(first).toMatchObject({
     backup_name: 'manual-2026-09-10.db.gz', content: 'ordinary body', deleted: true,
-    node_id: 'title', path: 'Archive / Needle title', title: 'Needle title'
+    node_id: 'title', path: '', title: 'Needle title'
   });
   expect([second?.node_id, third?.node_id].sort()).toEqual(['blob', 'body']);
+  expect([second, third].find((match) => match?.node_id === 'body')?.path).toBe('Section');
   expect(third?.content === 'complete blob needle body' || second?.content === 'complete blob needle body').toBe(true);
 });
 

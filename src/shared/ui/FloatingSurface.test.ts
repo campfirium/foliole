@@ -15,6 +15,8 @@ import {
   appFloatingWorkspaceClassName,
   appFloatingWorkspaceInputClassName,
   appFloatingWorkspaceItemClassName,
+  appFloatingWorkspaceItemMetaClassName,
+  appFloatingWorkspaceItemSummaryClassName,
   appFloatingWorkspaceListClassName
 } from './FloatingSurface';
 
@@ -73,6 +75,8 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingWorkspaceListClassName()).toContain('border-[var(--app-floating-divider-color)]');
   expect(appFloatingWorkspaceItemClassName()).toContain('hover:bg-[var(--app-floating-item-hover-bg)]');
   expect(appFloatingWorkspaceItemClassName()).toContain('data-[active=true]:bg-[var(--app-floating-item-active-bg)]');
+  expect(appFloatingWorkspaceItemMetaClassName()).toContain('justify-between');
+  expect(appFloatingWorkspaceItemSummaryClassName()).toContain('line-clamp-1');
 });
 
 it('keeps split-search visual decisions out of the feature surface', () => {

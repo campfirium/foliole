@@ -61,8 +61,8 @@ function stringContent(value: Buffer | string | null) {
 }
 
 function nodePath(sqlite: SqliteDatabase, row: BackupSearchRow, schema: BackupSearchSchema) {
-  const titles = [row.title?.trim() || row.id];
-  if (!schema.hasParentId) return titles[0] ?? row.id;
+  const titles: string[] = [];
+  if (!schema.hasParentId) return '';
   const parentQuery = sqlite.prepare('SELECT id, parent_id, title FROM nodes WHERE id = ?');
   const seen = new Set([row.id]);
   let parentId = row.parent_id;
@@ -73,7 +73,7 @@ function nodePath(sqlite: SqliteDatabase, row: BackupSearchRow, schema: BackupSe
     titles.unshift(parent.title?.trim() || parent.id);
     parentId = parent.parent_id;
   }
-  return titles.join(' / ');
+  return titles.slice(1).join(' / ');
 }
 
 export function findBackupSearchMatch(args: {

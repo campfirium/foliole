@@ -8,7 +8,7 @@ vi.mock('../runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 beforeEach(() => vi.mocked(getRuntimeInvoke).mockReset());
 
-it('keeps the managed backup file name on a valid match', async () => {
+it('keeps the managed backup file name and accepts a root-level match without a parent path', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue({
     match: {
       backup_name: 'manual-2026-09-10.db.gz',
@@ -16,7 +16,7 @@ it('keeps the managed backup file name on a valid match', async () => {
       content: 'body',
       deleted: false,
       node_id: 'node-1',
-      path: 'Archive / Topic',
+      path: '',
       title: 'Topic'
     },
     skipped_backup_count: 0,
@@ -24,7 +24,7 @@ it('keeps the managed backup file name on a valid match', async () => {
   }));
 
   await expect(nextDatabaseBackupSearch('session-1')).resolves.toMatchObject({
-    match: { backup_name: 'manual-2026-09-10.db.gz' },
+    match: { backup_name: 'manual-2026-09-10.db.gz', path: '' },
     status: 'match'
   });
 });
