@@ -138,6 +138,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-group-discovery-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-join-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-provider-contract.test.mjs',
+  'scripts/ios/ios-sync-group-provider-registration.test.mjs',
   'scripts/ios/ios-sync-pack-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-participation-host-contract.test.mjs',
   'scripts/ios/ios-sync-trigger-acceptance-runner.test.mjs',
