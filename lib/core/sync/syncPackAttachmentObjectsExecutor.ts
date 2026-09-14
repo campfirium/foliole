@@ -11,7 +11,11 @@ export async function applySyncPackAttachmentObjectsWithDbPort(
 ) {
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'attachment' || record.object_type === 'pdf_page_text');
-  for (const record of records) {
+  const dependencyOrderedRecords = [
+    ...records.filter((record) => record.object_type === 'attachment'),
+    ...records.filter((record) => record.object_type === 'pdf_page_text')
+  ];
+  for (const record of dependencyOrderedRecords) {
     await applySyncObjectPayloadWithDbPort(port, record);
   }
   return records.length;
