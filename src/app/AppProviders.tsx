@@ -12,6 +12,8 @@ import type { AppLanguagePreference } from '../shared/localization/appLanguage';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { AppConfirmationProvider } from '../shared/ui';
 
+import { BackupSearchDialogHost } from './components/BackupSearchDialogHost';
+
 interface AppProvidersProps {
   children: ReactNode;
   initialLanguagePreference?: AppLanguagePreference | undefined;
@@ -30,6 +32,7 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
                   <AppConfirmationProvider>
                     {children}
                     <CustomCopyDialogHost />
+                    <BackupSearchDialogHost />
                   </AppConfirmationProvider>
                 </DocumentHeaderMenuSettingsProvider>
               </WorkspaceRailSettingsProvider>

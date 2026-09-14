@@ -14,6 +14,7 @@ const CONTRACT_FILES = [
   'nativeAssistantByokContract.ts',
   'nativeAssistantCommandContract.ts',
   'nativeAssistantModelSettingsContract.ts',
+  'nativeBackupSearchContract.ts',
   'nativeContract.ts',
   'nativeDiscoursePublishContract.ts',
   'nativeDisplayScaleContract.ts',

@@ -1,5 +1,6 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './zhHansSettingsBackups';
 import { ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS } from './zhHansSettingsPublishing';
 import { ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS } from './zhHansSettingsStorage';
 import { ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './zhHansSettingsSyncGroup';
@@ -175,6 +176,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.search.gestureThreshold.title': '方向阈值（px）',
   'settings.search.gestureThreshold.description': '接受方向前所需的最小移动距离。',
   ...ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS,
+  ...ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS,
   'settings.webLookup.sectionAria': '右键菜单项设置区',

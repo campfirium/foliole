@@ -33,6 +33,7 @@ import {
   type InitialLibrarySetupPreparation
 } from './initialLibrarySetup.js';
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
+import { disposeBackupSearchSessions } from './ipc/backupSearchSessions.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
 import { wasOpenedAtLogin } from './loginItemSettings.js';
@@ -82,6 +83,7 @@ function installBeforeQuitLifecycle() {
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   const coordinateBeforeQuit = createBeforeQuitCoordinator({
     flush: async () => {
+      await disposeBackupSearchSessions();
       await flushMirrorSync();
       await desktopTaskScheduler.pauseResource('library');
     },

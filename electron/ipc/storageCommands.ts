@@ -1,3 +1,5 @@
+import { type WebContents } from 'electron';
+
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
@@ -36,7 +38,8 @@ import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.j
 export async function handleStorageCommand(
   command: string,
   args: Record<string, unknown>,
-  window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
+  window: Parameters<typeof handleStorageAttachmentCommand>[2] = null,
+  owner?: WebContents
 ): Promise<unknown> {
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
@@ -49,7 +52,7 @@ export async function handleStorageCommand(
   if (nodeMutationResult !== undefined) {
     return nodeMutationResult;
   }
-  const sqliteMaintenanceResult = handleSqliteMaintenanceCommand(command, args);
+  const sqliteMaintenanceResult = handleSqliteMaintenanceCommand(command, args, owner);
   if (sqliteMaintenanceResult !== undefined) {
     return sqliteMaintenanceResult;
   }

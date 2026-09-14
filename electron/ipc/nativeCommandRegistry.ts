@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 import type { CommandRouteFamily } from './commandRoutes.js';
 import type { CommandSecurityCapability } from './commandSecurityCapabilities.js';
 import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
+import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
@@ -14,6 +15,7 @@ export interface NativeCommandRegistryEntry {
 export const NATIVE_COMMAND_REGISTRY = [
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
+  ...NATIVE_BACKUP_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.appGetVersion, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },
@@ -95,9 +97,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.resolveAppPaths, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadLibraryPathSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadDatabaseMaintenanceStatus, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.loadDatabaseSpaceStatus, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.loadBackupSettings, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.loadBackupRetentionStatus, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.rebuildMirrorOutput, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.rebuildMirrorAttachmentLinks, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.exportCurrentArticleMirror, route: 'storage', capability: 'dataMutation' },
@@ -138,7 +137,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.publishTopicToWordPress, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.clearLinkPanelBrowsingData, route: 'windowAndUtility', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.updateLibraryPathSetting, route: 'storage', capability: 'settingsMutation' },
-  { command: NATIVE_COMMANDS.saveBackupSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.reviewGrade, route: 'review', capability: 'read' },
   { command: NATIVE_COMMANDS.reviewPreview, route: 'review', capability: 'read' },
   { command: NATIVE_COMMANDS.syncAppMenuState, route: 'windowAndUtility', capability: 'diagnostic' },
@@ -195,10 +193,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.saveNodeReadingState, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.saveNodeReviewState, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.resetImportData, route: 'storage', capability: 'importMutation' },
-  { command: NATIVE_COMMANDS.listSqliteBackups, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.backupSqliteDatabase, route: 'storage', capability: 'filesystemWrite' },
-  { command: NATIVE_COMMANDS.restoreSqliteDatabase, route: 'storage', capability: 'restoreMutation' },
-  { command: NATIVE_COMMANDS.compactSqliteDatabase, route: 'storage', capability: 'restoreMutation' },
   { command: NATIVE_COMMANDS.loadSourceDispositionSummary, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.exportSourceDispositions, route: 'storage', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.importSourceDispositions, route: 'storage', capability: 'restoreMutation' },

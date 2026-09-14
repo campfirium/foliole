@@ -1,10 +1,16 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
+  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsErrorState,
   SettingsLoadingState,
+  SettingsButton,
+  SettingsControlSlot,
+  SettingsRow,
   SettingsSection,
   SettingsStateAction
 } from '../../../../shared/ui';
+import { requestBackupSearchDialogOpen } from '../../model/backupSearchDialogRequests';
 
 import { BackupRestoreSuccessDialog } from './BackupRestoreSuccessDialog';
 import { BackupRetentionRulesSection } from './BackupRetentionRulesSection';
@@ -78,6 +84,7 @@ export function SettingsBackupsSection() {
         onClose={state.clearRestoreSuccess}
       />
       <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
+      <BackupSearchSettings isDesktopRuntime={state.isDesktopRuntime} />
       <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>
         <SourceDispositionStateRow
           isDesktopRuntime={state.isDesktopRuntime}
@@ -116,5 +123,20 @@ export function SettingsBackupsSection() {
         />
       </SettingsSection>
     </>
+  );
+}
+
+function BackupSearchSettings(props: { isDesktopRuntime: boolean }) {
+  const t = useTranslation();
+  return (
+    <SettingsSection ariaLabel={t('settings.backups.search.sectionAria')} title={t('settings.backups.search.sectionTitle')}>
+      <SettingsRow description={t('settings.backups.search.description')} title={t('settings.backups.search.rowTitle')}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={requestBackupSearchDialogOpen}>
+            {t('settings.backups.search.action')}
+          </SettingsButton>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
   );
 }

@@ -90,7 +90,7 @@ function dispatchRoutedCommand(
   }
   if (route === 'storage') {
     const execute = () => handleStorageCommand(
-      request.command, args, resolveTargetWindow(context)
+      request.command, args, resolveTargetWindow(context), context?.sender
     );
     return shouldCoordinateStorageDispatch(request.command)
       ? runWithDatabaseConnectionOwner(execute)
@@ -111,6 +111,9 @@ function shouldCoordinateStorageDispatch(command: string) {
 
 const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
   NATIVE_COMMANDS.completeSyncGroupJoin,
+  NATIVE_COMMANDS.startBackupSearch,
+  NATIVE_COMMANDS.nextBackupSearch,
+  NATIVE_COMMANDS.cancelBackupSearch,
   NATIVE_COMMANDS.compactSqliteDatabase,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,

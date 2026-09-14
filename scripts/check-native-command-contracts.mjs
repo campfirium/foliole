@@ -8,6 +8,7 @@ const CONTRACT_FILES = [
   'lib/platform/nativeAssistantContract.ts',
   'lib/platform/nativeAssistantCommandContract.ts',
   'lib/platform/nativeAssistantImageContract.ts',
+  'lib/platform/nativeBackupSearchContract.ts',
   'lib/platform/nativeContract.ts',
   'lib/platform/nativeDiscoursePublishContract.ts',
   'lib/platform/nativeDisplayScaleContract.ts',
@@ -52,7 +53,10 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/windowControlCommands.ts',
   'electron/ipc/windowCommands.ts'
 ];
-const REGISTRY_FILE = 'electron/ipc/nativeCommandRegistry.ts';
+const REGISTRY_FILES = [
+  'electron/ipc/nativeCommandRegistry.ts',
+  'electron/ipc/nativeBackupCommandRegistry.ts'
+];
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,12 +80,15 @@ function collectNativeCommandKeys(source) {
 }
 
 function collectRegistry(repoRoot) {
-  const source = readFile(repoRoot, REGISTRY_FILE);
-  return [...source.matchAll(/\{\s*command:\s*NATIVE_COMMANDS\.([A-Za-z0-9_]+),([^}]*)\}/g)].map((match) => ({
-    key: match[1],
-    route: match[2].match(/route:\s*'([^']+)'/)?.[1] ?? null,
-    capability: match[2].match(/capability:\s*'([^']+)'/)?.[1] ?? null
-  }));
+  return REGISTRY_FILES.flatMap((file) => {
+    if (!fs.existsSync(path.join(repoRoot, file))) return [];
+    const source = readFile(repoRoot, file);
+    return [...source.matchAll(/\{\s*command:\s*NATIVE_COMMANDS\.([A-Za-z0-9_]+),([^}]*)\}/g)].map((match) => ({
+      key: match[1],
+      route: match[2].match(/route:\s*'([^']+)'/)?.[1] ?? null,
+      capability: match[2].match(/capability:\s*'([^']+)'/)?.[1] ?? null
+    }));
+  });
 }
 
 function collectReferencedCommandKeys(repoRoot, files) {

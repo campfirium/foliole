@@ -1,3 +1,4 @@
+import { EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './enSettingsBackups';
 import { EN_SETTINGS_PUBLISHING_TRANSLATIONS } from './enSettingsPublishing';
 import { EN_SETTINGS_STORAGE_TRANSLATIONS } from './enSettingsStorage';
 import { EN_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './enSettingsSyncGroup';
@@ -173,6 +174,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.search.gestureThreshold.title': 'Direction threshold (px)',
   'settings.search.gestureThreshold.description': 'Minimum movement before a direction is accepted.',
   ...EN_SETTINGS_STORAGE_TRANSLATIONS,
+  ...EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS,
   ...EN_SETTINGS_PUBLISHING_TRANSLATIONS,
   ...EN_SETTINGS_SYNC_GROUP_TRANSLATIONS,
   'settings.webLookup.sectionAria': 'Right-click menu items settings section',

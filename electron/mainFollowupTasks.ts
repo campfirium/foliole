@@ -7,6 +7,7 @@ import { startExternalSearchBackgroundRefresh } from './externalSearchBackground
 import { startKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { startReadwiseApiScheduler } from './import/readwiseApiScheduler.js';
+import { cleanupOrphanedBackupSearchSessions } from './ipc/backupSearchSessions.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { resumePendingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
@@ -49,4 +50,5 @@ export function startFollowupTasks() {
   startLightService('[keep-import] startup monitor failed', startKeepImportMonitor);
   startLightService('[readwise-api] startup scheduler failed', startReadwiseApiScheduler);
   startLightService('[external-search] background refresh scheduler failed', startExternalSearchBackgroundRefresh);
+  startLightService('[backup-search] orphan cleanup failed', cleanupOrphanedBackupSearchSessions);
 }

@@ -1,3 +1,5 @@
+import type { WebContents } from 'electron';
+
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
   createApplicationDatabaseBackup,
@@ -11,6 +13,11 @@ import {
   loadApplicationDatabaseSpaceStatus
 } from '../database/databaseCompaction.js';
 
+import {
+  cancelBackupSearchSession,
+  nextBackupSearchSession,
+  startBackupSearchSession
+} from './backupSearchSessions.js';
 import { asNullableString, asString } from './commandParsers.js';
 
 export function readSettingsObject(settings: unknown) {
@@ -27,7 +34,23 @@ export function readObjectArg(value: unknown, field: string) {
   return value as Record<string, unknown>;
 }
 
-export function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
+export function handleSqliteMaintenanceCommand(
+  command: string,
+  args: Record<string, unknown>,
+  owner?: WebContents
+) {
+  if (command === NATIVE_COMMANDS.startBackupSearch) {
+    if (!owner) throw new Error('backup search requires a renderer owner');
+    return startBackupSearchSession(asString(args.query, 'query'), owner);
+  }
+  if (command === NATIVE_COMMANDS.nextBackupSearch) {
+    if (!owner) throw new Error('backup search requires a renderer owner');
+    return nextBackupSearchSession(asString(args.session_id, 'session_id'), owner);
+  }
+  if (command === NATIVE_COMMANDS.cancelBackupSearch) {
+    if (!owner) throw new Error('backup search requires a renderer owner');
+    return cancelBackupSearchSession(asString(args.session_id, 'session_id'), owner).then(() => null);
+  }
   if (command === NATIVE_COMMANDS.listSqliteBackups) {
     return listApplicationDatabaseBackups();
   }
