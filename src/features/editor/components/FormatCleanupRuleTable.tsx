@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 
 import type { Translate } from '../../../shared/localization/LocalizationProvider';
 import {
-  AppButton,
   AppIconButton,
   AppInput,
-  AppSwitch
+  AppSwitch,
+  settingsActionTableAddButtonClassName
 } from '../../../shared/ui';
 import type { FormatCleanupRule } from '../model/formatCleanupTypes';
 
@@ -101,10 +101,12 @@ export function FormatCleanupRuleTable(props: FormatCleanupRuleTableProps) {
       <RuleHeader t={props.t} />
       {props.rules.map((rule, index) => <RuleRow {...props} index={index} key={rule.id} rule={rule} />)}
       {props.custom ? (
-        <AppButton className="ml-14 mt-1 px-2" onClick={props.onAdd} size="sm" variant="ghost">
+        <div className={`grid ${COLUMNS} gap-3 px-2 pt-2`}>
+          <button className={settingsActionTableAddButtonClassName()} onClick={props.onAdd} type="button">
             <Plus aria-hidden="true" className="size-3.5" />
             {props.t('desktop.formatCleanup.addRule')}
-        </AppButton>
+          </button>
+        </div>
       ) : null}
     </div>
   );
