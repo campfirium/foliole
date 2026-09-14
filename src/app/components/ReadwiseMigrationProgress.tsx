@@ -69,5 +69,6 @@ function migrationPresentation(
 }
 
 function withProgress(text: string, completedCount: number, totalCount: number | null) {
+  if (completedCount === 0 && totalCount === null) return text;
   return `${text} · ${completedCount}${totalCount === null ? '' : ` / ${totalCount}`}`;
 }

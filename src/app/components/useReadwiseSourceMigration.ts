@@ -37,6 +37,7 @@ export function useReadwiseSourceMigration(input: {
   const start = useCallback(async () => {
     if (startingRef.current) return;
     startingRef.current = true;
+    if (input.committedMode !== 'api') input.onCommitMode?.('api');
     setPending(true);
     setProgress((current) => ({ ...current, errorReason: null, failed: false }));
     let unsubscribe: (() => void) | null = null;
@@ -70,7 +71,7 @@ export function useReadwiseSourceMigration(input: {
       setPending(false);
       startingRef.current = false;
     }
-  }, [input.onCommitMode]);
+  }, [input.committedMode, input.onCommitMode]);
   useResumeReadwiseMigration(input.committedMode, resumeAttemptedRef, setRequired, setProgress, start);
   const selectApi = () => selectReadwiseApi(input, setRequired, setProgress, start);
   return { ...progress, pending, required, selectApi, start };
@@ -126,7 +127,7 @@ function useResumeReadwiseMigration(
   start: () => Promise<void>
 ) {
   useEffect(() => {
-    if (committedMode !== 'api' || attempted.current) return;
+    if (attempted.current) return;
     attempted.current = true;
     void previewReadwiseSourceCutoverInRuntime().then((state) => {
       if (state.status !== 'migration_in_progress') return;

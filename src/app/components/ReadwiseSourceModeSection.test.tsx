@@ -124,7 +124,7 @@ it('shows indeterminate indexing below the API source selector', async () => {
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  expect(await screen.findByText('Migrating · Indexing · 0')).toBeInTheDocument();
+  expect(await screen.findByText('Migrating · Indexing')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });
@@ -174,7 +174,7 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.getByText('Migrating · Indexing · 0')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
 });
 
 it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
@@ -203,7 +203,7 @@ it('keeps migration visible while the initial import is incomplete, regardless o
   expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
   const migrationStatus = screen.getByRole('status');
-  expect(migrationStatus).toHaveTextContent('Migrating · Indexing · 0');
+  expect(migrationStatus).toHaveTextContent('Migrating · Indexing');
   expect(migrationStatus).not.toHaveTextContent('failed');
   expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
   expect(screen.getByRole('radiogroup').parentElement).toContainElement(migrationStatus);
