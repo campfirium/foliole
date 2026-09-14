@@ -112,6 +112,10 @@ export function onDesktopSyncGroupJoinRequestsChanged(handler: () => void) {
   return getElectronAPI()?.onSyncGroupJoinRequestsChanged?.(handler) ?? null;
 }
 
+export function onDesktopSyncGroupOverviewChanged(handler: () => void) {
+  return getElectronAPI()?.onSyncGroupOverviewChanged?.(handler) ?? null;
+}
+
 export function onDesktopSyncGroupDiscoveryChanged(handler: (payload: SyncGroupDiscoverySnapshot) => void) {
   return getElectronAPI()?.onSyncGroupDiscoveryChanged?.(handler) ?? null;
 }

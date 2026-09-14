@@ -4,6 +4,7 @@ const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
   discovery: vi.fn(),
   freshness: vi.fn(),
+  notifyOverviewChanged: vi.fn(),
   group: {
     devices: [
       { device_identity_key: 'desktop-a', device_name: 'Mac', platform: 'darwin', state: 'active' },
@@ -37,6 +38,9 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
 vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator }));
 vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
+vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
+  notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged
+}));
 
 import {
   runDesktopManualSyncWithDiscovery,
@@ -68,6 +72,15 @@ it('keeps exactly one qualified desktop anchor as the automatic route', async ()
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
     endpoint_url: 'http://windows:38641', peer_device_id: 'desktop-b'
   })]);
+});
+
+it('invalidates the renderer overview whenever topology state changes', () => {
+  startDesktopSyncGroupAutoSync();
+  const onState = runtime.sessionArgs?.onState as (state: { role: string }) => void;
+
+  onState({ role: 'member' });
+
+  expect(runtime.notifyOverviewChanged).toHaveBeenCalledOnce();
 });
 
 it('does not make an anchor poll another anchor unless demotion requires a sync', async () => {

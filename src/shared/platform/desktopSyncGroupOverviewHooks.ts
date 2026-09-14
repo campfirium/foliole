@@ -2,7 +2,11 @@ import { useCallback, useEffect } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 
-import { loadDesktopSyncGroupOverview, onDesktopSyncGroupJoinRequestsChanged } from './desktopSyncGroupRuntimeRepository';
+import {
+  loadDesktopSyncGroupOverview,
+  onDesktopSyncGroupJoinRequestsChanged,
+  onDesktopSyncGroupOverviewChanged
+} from './desktopSyncGroupRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
 export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload = {
@@ -49,8 +53,14 @@ export function useSyncGroupPushRefresh(refresh: () => Promise<DesktopSyncGroupO
     if (!isDesktopRuntime()) {
       return undefined;
     }
-    return onDesktopSyncGroupJoinRequestsChanged(() => {
+    const refreshOverview = () => {
       void refresh();
-    }) ?? undefined;
+    };
+    const unsubscribeJoinRequests = onDesktopSyncGroupJoinRequestsChanged(refreshOverview);
+    const unsubscribeOverview = onDesktopSyncGroupOverviewChanged(refreshOverview);
+    return () => {
+      unsubscribeJoinRequests?.();
+      unsubscribeOverview?.();
+    };
   }, [refresh]);
 }
