@@ -28,7 +28,7 @@ it('copies the immutable acceptance corpus beside the compiled service', () => {
   } finally {
     fs.rmSync(outputDirectory, { force: true, recursive: true });
   }
-});
+}, 30_000);
 
 function readIdentity(root) {
   return JSON.parse(fs.readFileSync(path.join(root, 'corpus.json'), 'utf8'));

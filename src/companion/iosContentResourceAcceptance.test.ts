@@ -69,6 +69,11 @@ it('joins, applies, downloads resources, and reads all three domains on the firs
   });
   expect(mocks.pullContent).toHaveBeenCalledOnce();
   expect(mocks.pullAttachments).toHaveBeenCalledOnce();
+  expect(mocks.resolveResource).toHaveBeenCalledTimes(4);
+  expect(mocks.resolveResource.mock.calls.map(([url]) => url)).toEqual(expect.arrayContaining([
+    expect.stringMatching(/^asset:\/\/[a-f0-9]{64}\.pdf$/u),
+    expect.stringMatching(/^asset:\/\/[a-f0-9]{64}\.png$/u)
+  ]));
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
     evidence: expect.objectContaining({
       body_failures: { corrupt: 'failed', missing: 'failed' },

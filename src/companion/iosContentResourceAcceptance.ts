@@ -28,7 +28,12 @@ const TOKENS = {
   pdf: 'pdf-cobalt-token',
   topic: 'topic-amber-token'
 } as const;
-const VALID_RESOURCE_KEY = '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d.pdf';
+const RESOURCE_KEYS = {
+  corrupt: '5703850972e2da20d5cd065cbb73c20c5d18778148a664b1238ce99120b1d301.png',
+  failed: 'e4bd1f4f95e08bac38c59af1b1ef34aeb05e77d1e54492c14c12b1ac570e2318.png',
+  missing: '654aa8b756a2aa8b8acc8db2d4cee7746dd98a07ca7f2f2d5f19c1777bc37e2d.png',
+  valid: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d.pdf'
+} as const;
 
 async function applyStructure(endpoint: string, peer: { sourceHostName: string; sourcePeerId: string }) {
   await applyCompanionDesktopSyncPack({
@@ -49,10 +54,10 @@ async function loadReadEvidence() {
     searchCompanionFullText(TOKENS.topic),
     searchCompanionFullText(TOKENS.pdf),
     searchCompanionFullText(TOKENS.external),
-    resolveRuntimeAttachmentResource(`asset://${VALID_RESOURCE_KEY}`),
-    resolveRuntimeAttachmentResource(`asset://${IDS.corrupt}.png`),
-    resolveRuntimeAttachmentResource(`asset://${IDS.failed}.png`),
-    resolveRuntimeAttachmentResource(`asset://${IDS.missing}.png`)
+    resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.valid}`),
+    resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.corrupt}`),
+    resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.failed}`),
+    resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.missing}`)
   ]);
   if (valid?.status !== 'ready') throw new Error('The valid acceptance attachment was not readable.');
   return {

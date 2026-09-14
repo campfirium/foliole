@@ -12,7 +12,7 @@ import org.junit.Test;
 
 public final class FolioleCanonicalAttachmentPreflightFixtureTest {
     private static final Map<String, String> EXTENSIONS = Map.of(
-        "application/pdf", ".pdf", "image/gif", ".gif", "image/jpeg", ".jpg",
+        "application/epub+zip", ".epub", "application/pdf", ".pdf", "image/gif", ".gif", "image/jpeg", ".jpg",
         "image/png", ".png", "image/webp", ".webp"
     );
 
@@ -27,7 +27,7 @@ public final class FolioleCanonicalAttachmentPreflightFixtureTest {
             assertEquals(optionalField(entry, "canonicalExtension"), EXTENSIONS.get(kind));
             count++;
         }
-        assertEquals(9, count);
+        assertEquals(10, count);
     }
 
     private static Path findFixture() {
