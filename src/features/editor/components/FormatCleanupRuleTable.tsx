@@ -29,17 +29,19 @@ interface FormatCleanupRuleTableProps {
   t: Translate;
 }
 
-function RuleHeader(props: { t: Translate }) {
+function RuleHeader(props: { custom: boolean; t: Translate }) {
   return (
     <div aria-hidden="true" className={`grid ${COLUMNS} items-center gap-3 px-2 pb-2 text-ui-xs font-medium uppercase tracking-[0.08em] text-foreground/42`}>
       <span /><span>{props.t('desktop.formatCleanup.find')}</span><span>{props.t('desktop.formatCleanup.when')}</span>
       <span>{props.t('desktop.formatCleanup.follow')}</span><span>{props.t('desktop.formatCleanup.not')}</span>
-      <span /><span>{props.t('desktop.formatCleanup.replace')}</span><span />
+      <span /><span className={props.custom ? undefined : 'col-span-2'}>{props.t('desktop.formatCleanup.replace')}</span>
+      {props.custom ? <span /> : null}
     </div>
   );
 }
 
 function RuleField(props: {
+  className?: string | undefined;
   field: typeof FIELDS[number];
   index: number;
   onChange: (value: string) => void;
@@ -51,7 +53,7 @@ function RuleField(props: {
     <AppInput
       aria-label={props.t('desktop.formatCleanup.field', { field: props.t(FIELD_LABEL_KEYS[props.field]), number: props.index + 1 })}
       autoComplete="off"
-      className="h-7 min-w-0 bg-transparent px-2 font-mono text-ui-md"
+      className={`h-7 min-w-0 bg-transparent px-2 font-mono text-ui-md ${props.className ?? ''}`}
       onChange={(event) => props.onChange(event.target.value)}
       onFocus={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
       onSelect={(event) => props.onTarget(event.currentTarget.selectionStart ?? 0, event.currentTarget.selectionEnd ?? 0)}
@@ -89,8 +91,8 @@ function RuleRow(props: FormatCleanupRuleTableProps & { index: number; rule: For
       <AppSwitch aria-label={props.t('desktop.formatCleanup.ruleEnabled', { number: props.index + 1 })} checked={props.rule.enabled} compact onCheckedChange={(enabled) => update({ enabled })} />
       <RuleField field="find" index={props.index} onChange={(find) => update({ find })} onTarget={(start, end) => props.onTargetField(props.index, 'find', start, end)} t={props.t} value={props.rule.find} />
       <RuleScopeField index={props.index} onChange={(scope) => update({ scope })} scope={props.rule.scope} t={props.t} />
-      {FIELDS.slice(1).map((field) => <RuleField field={field} index={props.index} key={field} onChange={(value) => update({ [field]: value })} onTarget={(start, end) => props.onTargetField(props.index, field, start, end)} t={props.t} value={props.rule[field]} />).reduce<ReactNode[]>((items, field, index) => index === 2 ? [...items, <span className="text-center text-foreground/42" key="arrow">→</span>, field] : [...items, field], [])}
-      {props.custom ? <AppIconButton icon={<Trash2 className="size-3.5" />} label={props.t('desktop.formatCleanup.removeRule')} onClick={() => props.onRemove?.(props.index)} /> : <span />}
+      {FIELDS.slice(1).map((field) => <RuleField className={field === 'replace' && !props.custom ? 'col-span-2' : undefined} field={field} index={props.index} key={field} onChange={(value) => update({ [field]: value })} onTarget={(start, end) => props.onTargetField(props.index, field, start, end)} t={props.t} value={props.rule[field]} />).reduce<ReactNode[]>((items, field, index) => index === 2 ? [...items, <span className="text-center text-foreground/42" key="arrow">→</span>, field] : [...items, field], [])}
+      {props.custom ? <AppIconButton icon={<Trash2 className="size-3.5" />} label={props.t('desktop.formatCleanup.removeRule')} onClick={() => props.onRemove?.(props.index)} /> : null}
     </div>
   );
 }
@@ -98,7 +100,7 @@ function RuleRow(props: FormatCleanupRuleTableProps & { index: number; rule: For
 export function FormatCleanupRuleTable(props: FormatCleanupRuleTableProps) {
   return (
     <div className="w-full min-w-0">
-      <RuleHeader t={props.t} />
+      <RuleHeader custom={Boolean(props.custom)} t={props.t} />
       {props.rules.map((rule, index) => <RuleRow {...props} index={index} key={rule.id} rule={rule} />)}
       {props.custom ? (
         <div className={`grid ${COLUMNS} gap-3 px-2 pt-2`}>

@@ -63,8 +63,8 @@ function WhitespaceRules(props: FormatCleanupDialogSurfaceProps) {
 
 function SpecialValueButtons(props: { onInsert: (value: string) => void; t: Translate }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 pl-14 text-ui-xs text-foreground/58">
-      <span>{props.t('desktop.formatCleanup.insert')}</span>
+    <div className="mt-2 flex flex-wrap items-center gap-2 px-2 text-ui-xs text-foreground/58">
+      <span>{props.t('desktop.formatCleanup.specialCharacters')}</span>
       <ToolbarActionGroup className="gap-0 overflow-hidden border-settings-control-border">
         {([
           ['␣', 'desktop.formatCleanup.space'], ['⇥', 'desktop.formatCleanup.tab'], ['↵', 'desktop.formatCleanup.lineBreak']
@@ -74,6 +74,7 @@ function SpecialValueButtons(props: { onInsert: (value: string) => void; t: Tran
           </AppButton>
         ))}
       </ToolbarActionGroup>
+      <span className="text-foreground/48">{props.t('desktop.formatCleanup.inputHelp')}</span>
     </div>
   );
 }
@@ -81,10 +82,7 @@ function SpecialValueButtons(props: { onInsert: (value: string) => void; t: Tran
 function CustomRules(props: FormatCleanupDialogSurfaceProps & { onTarget: (target: TargetField) => void }) {
   return (
     <section className="border-t border-settings-divider/70 pt-3">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.customRules')}</h2>
-        <span className="text-ui-xs text-foreground/48">({props.t('desktop.formatCleanup.regexSupported')})</span>
-      </div>
+      <h2 className="text-ui-md font-medium text-foreground/72">{props.t('desktop.formatCleanup.customRules')}</h2>
       <div className="mt-2">
         <FormatCleanupRuleTable
           custom
@@ -134,7 +132,6 @@ export function FormatCleanupDialogSurface(props: FormatCleanupDialogSurfaceProp
             <div className="mt-3"><WhitespaceRules {...props} /></div>
             <div className="mt-3"><CustomRules {...props} onTarget={(target) => { targetRef.current = target; }} /></div>
             <SpecialValueButtons onInsert={insertValue} t={props.t} />
-            <p className="mt-1.5 pl-14 text-ui-xs text-foreground/48">{props.t('desktop.formatCleanup.inputHelp')}</p>
             <div className="mt-4"><Preview preview={props.preview} t={props.t} /></div>
           </AppDialogBody>
           <AppDialogActions>
