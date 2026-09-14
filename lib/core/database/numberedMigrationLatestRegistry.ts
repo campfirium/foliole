@@ -9,6 +9,7 @@ import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
+import { repairSyncObjectStateBaseContentHash } from './numberedMigrationSyncStateBaseHash.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -37,5 +38,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 85, migrate: migrateReadwiseSevenCategoryPolicy },
   { version: 86, migrate: migrateReadwiseAutoImportPolicy },
   { version: 87, migrate: createDataMigrationStateTable },
-  { version: 88, migrate: migrateReadwiseSourceMode }
+  { version: 88, migrate: migrateReadwiseSourceMode },
+  { version: 89, migrate: repairSyncObjectStateBaseContentHash }
 ];
