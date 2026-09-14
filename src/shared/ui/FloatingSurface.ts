@@ -38,6 +38,30 @@ const floatingToolbarBaseClassName = [
   'pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4',
   'rounded-full px-4 py-2 transition-[opacity,transform] duration-200 ease-out'
 ].join(' ');
+const floatingWorkspaceBaseClassName =
+  'grid h-floating-workspace max-h-floating-workspace w-floating-workspace max-w-floating-workspace grid-cols-floating-workspace overflow-hidden p-0';
+const floatingWorkspaceSidebarBaseClassName =
+  'flex min-h-0 flex-col border-r border-[var(--app-floating-divider-color)] bg-[var(--app-floating-surface-bg)]';
+const floatingWorkspaceHeaderBaseClassName = 'flex shrink-0 flex-col gap-3 p-settings-panel-x';
+const floatingWorkspaceTitleBaseClassName = 'text-ui-md font-normal text-foreground';
+const floatingWorkspaceFormBaseClassName = 'flex items-center gap-2';
+const floatingWorkspaceInputBaseClassName = [
+  'h-9 min-w-0 flex-1 appearance-none rounded-md border border-[var(--app-floating-border-color)]',
+  'bg-[var(--app-floating-input-bg)] px-3 text-ui-md text-foreground outline-none transition-colors',
+  'placeholder:text-foreground/42 hover:bg-[var(--app-floating-item-hover-bg)]',
+  'focus-visible:border-border-strong focus-visible:ring-1 focus-visible:ring-ring',
+  'disabled:cursor-not-allowed disabled:opacity-45'
+].join(' ');
+const floatingWorkspaceListBaseClassName =
+  'app-scrollbar min-h-0 flex-1 overflow-y-auto border-t border-[var(--app-floating-divider-color)] px-2 py-2 [--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]';
+const floatingWorkspacePreviewBaseClassName = 'min-h-0 bg-canvas';
+const floatingWorkspaceItemBaseClassName = 'grid gap-1.5';
+const floatingWorkspaceItemHeadingBaseClassName = 'flex min-w-0 items-center gap-2';
+const floatingWorkspaceItemTitleBaseClassName = 'min-w-0 flex-1 truncate text-ui-md font-semibold text-foreground';
+const floatingWorkspaceItemContextBaseClassName = 'block truncate text-ui-xs text-foreground/52';
+const floatingWorkspaceItemSummaryBaseClassName = 'line-clamp-2 block text-ui-base text-foreground/65';
+const floatingWorkspaceItemMetaBaseClassName = 'block truncate font-mono text-ui-xs text-foreground/45';
+const floatingWorkspaceStateBaseClassName = 'px-3 py-5 text-left text-ui-md text-foreground/60';
 
 export function appFloatingSurfaceClassName(
   elevation: 'panel' | 'popover' = 'popover',
@@ -82,4 +106,64 @@ export function appFloatingMetaBadgeClassName(className?: string) {
 
 export function appFloatingToolbarClassName(className?: string) {
   return cn(appFloatingSurfaceClassName('popover'), floatingToolbarBaseClassName, className);
+}
+
+export function appFloatingWorkspaceClassName(className?: string) {
+  return cn(floatingWorkspaceBaseClassName, className);
+}
+
+export function appFloatingWorkspaceSidebarClassName(className?: string) {
+  return cn(floatingWorkspaceSidebarBaseClassName, className);
+}
+
+export function appFloatingWorkspaceHeaderClassName(className?: string) {
+  return cn(floatingWorkspaceHeaderBaseClassName, className);
+}
+
+export function appFloatingWorkspaceTitleClassName(className?: string) {
+  return cn(floatingWorkspaceTitleBaseClassName, className);
+}
+
+export function appFloatingWorkspaceFormClassName(className?: string) {
+  return cn(floatingWorkspaceFormBaseClassName, className);
+}
+
+export function appFloatingWorkspaceInputClassName(className?: string) {
+  return cn(floatingWorkspaceInputBaseClassName, className);
+}
+
+export function appFloatingWorkspaceListClassName(className?: string) {
+  return cn(floatingWorkspaceListBaseClassName, className);
+}
+
+export function appFloatingWorkspacePreviewClassName(className?: string) {
+  return cn(floatingWorkspacePreviewBaseClassName, className);
+}
+
+export function appFloatingWorkspaceItemTitleClassName(className?: string) {
+  return cn(floatingWorkspaceItemTitleBaseClassName, className);
+}
+
+export function appFloatingWorkspaceItemClassName(className?: string) {
+  return appFloatingItemClassName(cn(floatingWorkspaceItemBaseClassName, className));
+}
+
+export function appFloatingWorkspaceItemHeadingClassName(className?: string) {
+  return cn(floatingWorkspaceItemHeadingBaseClassName, className);
+}
+
+export function appFloatingWorkspaceItemContextClassName(className?: string) {
+  return cn(floatingWorkspaceItemContextBaseClassName, className);
+}
+
+export function appFloatingWorkspaceItemSummaryClassName(className?: string) {
+  return cn(floatingWorkspaceItemSummaryBaseClassName, className);
+}
+
+export function appFloatingWorkspaceItemMetaClassName(className?: string) {
+  return cn(floatingWorkspaceItemMetaBaseClassName, className);
+}
+
+export function appFloatingWorkspaceStateClassName(className?: string) {
+  return cn(floatingWorkspaceStateBaseClassName, className);
 }

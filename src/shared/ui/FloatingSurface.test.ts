@@ -11,7 +11,11 @@ import {
   appFloatingOverlayClassName,
   appFloatingStateSurfaceClassName,
   appFloatingSurfaceClassName,
-  appFloatingToolbarClassName
+  appFloatingToolbarClassName,
+  appFloatingWorkspaceClassName,
+  appFloatingWorkspaceInputClassName,
+  appFloatingWorkspaceItemClassName,
+  appFloatingWorkspaceListClassName
 } from './FloatingSurface';
 
 function readWorkspaceFile(path: string) {
@@ -63,6 +67,25 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingToolbarClassName()).toContain('border-[var(--app-floating-border-color)]');
   expect(appFloatingToolbarClassName()).toContain('rounded-full');
   expect(appFloatingToolbarClassName()).not.toContain('bg-bg-elevated');
+  expect(appFloatingWorkspaceClassName()).toContain('grid-cols-floating-workspace');
+  expect(appFloatingWorkspaceClassName()).toContain('max-h-floating-workspace');
+  expect(appFloatingWorkspaceInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
+  expect(appFloatingWorkspaceListClassName()).toContain('border-[var(--app-floating-divider-color)]');
+  expect(appFloatingWorkspaceItemClassName()).toContain('hover:bg-[var(--app-floating-item-hover-bg)]');
+  expect(appFloatingWorkspaceItemClassName()).toContain('data-[active=true]:bg-[var(--app-floating-item-active-bg)]');
+});
+
+it('keeps split-search visual decisions out of the feature surface', () => {
+  const source = [
+    'src/app/components/BackupSearchDialog.tsx',
+    'src/app/components/BackupSearchResultList.tsx'
+  ].map(readWorkspaceFile).join('\n');
+
+  expect(source).not.toContain('settingsFieldClassName');
+  expect(source).not.toContain('--app-selection-color');
+  expect(source).not.toContain('--app-selection-surface-color');
+  expect(source).not.toContain('hover:bg-foreground');
+  expect(source).not.toMatch(/(?:h|w|text)-\[/u);
 });
 
 it('keeps formal floating menus from defining private surface colors', () => {

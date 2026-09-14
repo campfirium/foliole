@@ -5,7 +5,21 @@ import type { BackupSearchStatus } from '../../features/settings/components/sect
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { DatabaseBackupSearchMatch } from '../../shared/platform/backupSearch/databaseBackupSearchRuntimeRepository';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsFieldClassName } from '../../shared/ui';
+import {
+  AppButton,
+  AppDialog,
+  AppDialogContent,
+  AppDialogOverlay,
+  AppDialogPortal,
+  AppDialogTitle,
+  appFloatingWorkspaceClassName,
+  appFloatingWorkspaceFormClassName,
+  appFloatingWorkspaceHeaderClassName,
+  appFloatingWorkspaceInputClassName,
+  appFloatingWorkspacePreviewClassName,
+  appFloatingWorkspaceSidebarClassName,
+  appFloatingWorkspaceTitleClassName
+} from '../../shared/ui';
 
 import { BackupSearchResultList } from './BackupSearchResultList';
 
@@ -37,16 +51,16 @@ export function BackupSearchDialog(props: {
     <AppDialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="grid h-[min(760px,calc(100vh-32px))] w-[min(1040px,calc(100vw-32px))] overflow-hidden !bg-canvas p-0 [grid-template-columns:minmax(0,var(--workspace-list-width,300px))_minmax(0,1fr)]" layout="bare">
+        <AppDialogContent aria-describedby={undefined} className={appFloatingWorkspaceClassName()} layout="bare">
           <AppDialogTitle className="sr-only">{t('settings.backups.search.title')}</AppDialogTitle>
-          <section className="flex min-h-0 flex-col border-r border-[var(--app-floating-divider-color)] bg-[var(--app-floating-surface-bg)]">
-            <div className="shrink-0 px-5 pb-4 pt-5">
-              <h2 className="text-ui-lg font-normal text-foreground">{t('settings.backups.search.title')}</h2>
+          <section className={appFloatingWorkspaceSidebarClassName()}>
+            <div className={appFloatingWorkspaceHeaderClassName()}>
+              <h2 className={appFloatingWorkspaceTitleClassName()}>{t('settings.backups.search.title')}</h2>
               <BackupSearchForm {...props} />
             </div>
             <BackupSearchResultList currentIndex={props.state.currentIndex} history={props.state.history} message={statusMessage(props.state, t)} onSelect={props.onSelect} status={props.state.status} />
           </section>
-          <section className="min-h-0 bg-canvas">
+          <section className={appFloatingWorkspacePreviewClassName()}>
             {current ? (
               <MarkdownEditor className="h-full" key={`backup-search-${editorAppearanceKey}-${current.backup_name}-${current.node_id}`} nodeId={null} onChange={() => undefined} readOnly value={current.content} />
             ) : null}
@@ -76,9 +90,9 @@ function BackupSearchForm(props: {
     else props.onSubmit();
   };
   return (
-    <form className="mt-3 flex items-center gap-2" onSubmit={submit}>
+    <form className={appFloatingWorkspaceFormClassName()} onSubmit={submit}>
       <label className="sr-only" htmlFor="backup-search-query">{t('settings.backups.search.input')}</label>
-      <input autoFocus className={settingsFieldClassName('min-w-0 flex-1')} disabled={busy} id="backup-search-query" onChange={(event) => props.onQueryChange(event.target.value)} placeholder={t('settings.backups.search.placeholder')} value={props.state.query} />
+      <input autoFocus className={appFloatingWorkspaceInputClassName()} disabled={busy} id="backup-search-query" onChange={(event) => props.onQueryChange(event.target.value)} placeholder={t('settings.backups.search.placeholder')} value={props.state.query} />
       <AppButton disabled={!busy && (!props.state.query.trim() || complete)} onClick={busy ? props.onCancel : undefined} type={busy ? 'button' : 'submit'}>
         {busy ? t('settings.backups.search.cancel') : complete ? t('settings.backups.search.noMoreResults') : canContinue ? t('settings.backups.search.continue') : t('settings.backups.search.submit')}
       </AppButton>
