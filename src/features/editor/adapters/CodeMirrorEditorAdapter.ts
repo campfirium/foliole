@@ -225,8 +225,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setScrollTop(scrollTop: number) { setEditorScrollTop(this.view, scrollTop); }
   getScrollMetrics(): EditorScrollMetrics { return readEditorScrollMetrics(this.view); }
   replaceSelection(content: string) { const { from, to } = this.view.state.selection.main; this.replaceRange(from, to, content); }
-  replaceRange(from: number, to: number, content: string) {
-    replaceCodeMirrorRange({ content, from: this.clampPosition(from), to: this.clampPosition(to), view: this.view });
+  replaceRange(from: number, to: number, content: string, options?: import('./EditorAdapter').EditorReplaceRangeOptions) {
+    replaceCodeMirrorRange({ content, from: this.clampPosition(from), ...(options ? { options } : {}), to: this.clampPosition(to), view: this.view });
   }
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null) {
     setCodeMirrorDiffDecorations({ diffDecorations, view: this.view });

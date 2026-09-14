@@ -10,7 +10,7 @@ import {
 } from './codeMirrorEditorMutations';
 import { applyTextAnchorDecorationsWithHighlightPreview, type HighlightRangePreview } from './codeMirrorHighlightRangePreview';
 import { createCodeMirrorSelection } from './codeMirrorSelectionRanges';
-import type { EditorSelection, EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorReplaceRangeOptions, EditorSelection, EditorTextAnchorDecoration } from './EditorAdapter';
 
 export function setCodeMirrorContent(args: {
   content: string;
@@ -46,10 +46,17 @@ export function setCodeMirrorSelectionRanges(
 export function replaceCodeMirrorRange(args: {
   content: string;
   from: number;
+  options?: EditorReplaceRangeOptions;
   to: number;
   view: EditorView;
 }) {
-  replaceEditorRange(args);
+  replaceEditorRange({
+    content: args.content,
+    from: args.from,
+    to: args.to,
+    ...(args.options?.userEvent ? { userEvent: args.options.userEvent } : {}),
+    view: args.view
+  });
 }
 
 export function applyCodeMirrorTextAnchorDecorationsWithPreview(args: {

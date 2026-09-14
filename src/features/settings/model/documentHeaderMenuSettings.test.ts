@@ -27,6 +27,7 @@ it('keeps the default editor menu order when no setting is stored', () => {
     APP_COMMAND_IDS.splitTopic,
     APP_COMMAND_IDS.toggleComparisonView,
     APP_COMMAND_IDS.toggleEditorDisplayMode,
+    APP_COMMAND_IDS.configureCleanFormatting,
     APP_COMMAND_IDS.customizeDocumentMenu
   ]);
 });

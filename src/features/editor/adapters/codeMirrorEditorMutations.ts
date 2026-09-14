@@ -27,11 +27,13 @@ export function replaceEditorRange(args: {
   content: string;
   from: number;
   to: number;
+  userEvent?: string;
   view: EditorView;
 }) {
   args.view.dispatch({
     changes: { from: args.from, to: args.to, insert: args.content },
-    selection: { anchor: args.from + args.content.length }
+    selection: { anchor: args.from + args.content.length },
+    ...(args.userEvent ? { userEvent: args.userEvent } : {})
   });
 }
 

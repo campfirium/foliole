@@ -120,3 +120,27 @@ it('preserves the delayed user buffer when history evidence no longer matches', 
   expect(onChange).toHaveBeenCalledWith('old content draft newer', { nodeId: 'node-A' });
   adapter.destroy();
 });
+
+it('captures an explicitly marked range replacement for undo and redo', () => {
+  const { adapter, onDocumentInput } = createAdapter();
+  adapter.setNodeId('node-A');
+
+  adapter.replaceRange(0, 'old content'.length, 'clean content', {
+    userEvent: 'input.format-cleanup'
+  });
+
+  const meta = onDocumentInput.mock.calls[0]?.[0] as {
+    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+  };
+  const entry = meta.textTransactions?.[0];
+  expect(entry).toMatchObject({
+    afterContent: 'clean content',
+    beforeContent: 'old content',
+    userEvent: 'input.format-cleanup'
+  });
+  expect(adapter.applyTextHistory(entry!, 'undo')).toBe(true);
+  expect(adapter.getContent()).toBe('old content');
+  expect(adapter.applyTextHistory(entry!, 'redo')).toBe(true);
+  expect(adapter.getContent()).toBe('clean content');
+  adapter.destroy();
+});

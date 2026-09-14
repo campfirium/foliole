@@ -71,10 +71,23 @@ it('exposes every publishing command from the editor menu', async () => {
   expect(screen.getByRole('menuitem', { name: 'Publish to WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to Discourse' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Split Topic' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Clean formatting...' })).toBeInTheDocument();
   expect(screen.queryByRole('separator')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Publish to WordPress' }));
   expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.publishToWordPress);
+});
+
+it('opens format cleanup configuration from the document menu', async () => {
+  const onRunDocumentCommand = vi.fn();
+  renderWithLocalization(
+    <PublishHeaderActions onRunDocumentCommand={onRunDocumentCommand} showPublishActions={false} />
+  );
+
+  await openDocumentActionsMenu();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Clean formatting...' }));
+
+  expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.configureCleanFormatting);
 });
 
 it('renders configured editor menu separators', async () => {

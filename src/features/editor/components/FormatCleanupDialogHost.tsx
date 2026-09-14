@@ -42,7 +42,7 @@ export function FormatCleanupDialogHost(props: {
     if (!props.canClean || !editor) return false;
     const before = editor.getContent();
     const after = cleanFormatting(before, currentSettings);
-    if (after !== before) editor.replaceRange(0, before.length, after);
+    if (after !== before) editor.replaceRange(0, before.length, after, { userEvent: 'input.format-cleanup' });
     return true;
   };
 

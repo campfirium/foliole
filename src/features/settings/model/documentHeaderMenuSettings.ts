@@ -21,7 +21,8 @@ export const DEFAULT_DOCUMENT_HEADER_MENU_ITEMS: DocumentHeaderMenuItemConfig[] 
   { id: 'system.split-topic', commandId: APP_COMMAND_IDS.splitTopic, order: 3, source: 'system', visible: true },
   { id: 'system.compare-draft', commandId: APP_COMMAND_IDS.toggleComparisonView, order: 4, source: 'system', visible: true },
   { id: 'system.toggle-source', commandId: APP_COMMAND_IDS.toggleEditorDisplayMode, order: 5, source: 'system', visible: true },
-  { id: 'system.customize-menu', commandId: APP_COMMAND_IDS.customizeDocumentMenu, order: 6, source: 'system', visible: true }
+  { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 6, source: 'system', visible: true },
+  { id: 'system.customize-menu', commandId: APP_COMMAND_IDS.customizeDocumentMenu, order: 7, source: 'system', visible: true }
 ];
 
 const SYSTEM_ITEM_IDS = new Set(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) => item.id));

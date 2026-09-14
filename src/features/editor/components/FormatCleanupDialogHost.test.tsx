@@ -28,7 +28,9 @@ describe('FormatCleanupDialogHost', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Clean' }));
     expect(editor.replaceRange).toHaveBeenCalledTimes(1);
-    expect(editor.replaceRange).toHaveBeenCalledWith(0, 18, 'First\n\nSecond');
+    expect(editor.replaceRange).toHaveBeenCalledWith(0, 18, 'First\n\nSecond', {
+      userEvent: 'input.format-cleanup'
+    });
   });
 
   it('previews without modifying the editor', async () => {

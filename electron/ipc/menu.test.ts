@@ -161,7 +161,7 @@ describe('native annotation menu projection', () => {
     }
   });
 
-  it('projects direct and configurable format cleanup actions onto the Editor menu', () => {
+  it('projects format cleanup configuration onto the Editor menu', () => {
     syncAppMenuState(
       ['editor.cleanFormatting', 'editor.configureCleanFormatting'],
       [],
@@ -169,10 +169,7 @@ describe('native annotation menu projection', () => {
     );
 
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
-    expect(findMenuItem(items, 'editor.cleanFormatting')).toMatchObject({
-      enabled: true, label: 'Clean formatting'
-    });
-    expect(findMenuItem(items, 'editor.cleanFormatting')?.accelerator).toBeUndefined();
+    expect(findMenuItem(items, 'editor.cleanFormatting')).toBeNull();
     expect(findMenuItem(items, 'editor.configureCleanFormatting')).toMatchObject({
       enabled: true, label: 'Clean formatting…'
     });

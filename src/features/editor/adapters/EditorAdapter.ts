@@ -43,6 +43,10 @@ export interface EditorScrollEvent {
   userInitiated: boolean;
 }
 
+export interface EditorReplaceRangeOptions {
+  userEvent?: string;
+}
+
 export type { EditorDiffDecorations } from './lineDiffDecorations';
 
 export interface EditorAdapter {
@@ -73,7 +77,7 @@ export interface EditorAdapter {
   getScrollTop(): number;
   setScrollTop(scrollTop: number): void;
   getScrollMetrics(): EditorScrollMetrics;
-  replaceRange(from: number, to: number, content: string): void;
+  replaceRange(from: number, to: number, content: string, options?: EditorReplaceRangeOptions): void;
   replaceSelection(content: string): void;
   setTextAnchorDecorations?(textAnchorDecorations: readonly EditorTextAnchorDecoration[]): void;
   setHighlightRangePreview?(nodeId: string, range: EditorSelection | null): void;
