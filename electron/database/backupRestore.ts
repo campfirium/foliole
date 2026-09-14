@@ -26,6 +26,7 @@ import {
   runWithDatabaseConnectionMaintenance
 } from './connection.js';
 import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.js';
+import { beginApplicationDatabaseRestore } from './databaseRestoreSettlement.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
@@ -52,7 +53,6 @@ export interface RestoreApplicationDatabaseBackupOptions {
 
 export type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
-let restoreInProgress = false;
 const reconciledCadenceBuckets = new Map<string, string>();
 
 async function pruneBackupsNow() {
@@ -181,10 +181,7 @@ function reportSidecarCleanup(result: Awaited<ReturnType<typeof cleanupOrphanedB
 export async function restoreApplicationDatabaseBackup(
   options: RestoreApplicationDatabaseBackupOptions
 ): Promise<SqliteRestoreResult> {
-  if (restoreInProgress) {
-    throw new Error('Another backup restore is already in progress.');
-  }
-  restoreInProgress = true;
+  const finishRestore = beginApplicationDatabaseRestore();
   let resumeLibraryTasks: (() => void) | null = null;
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
@@ -192,7 +189,7 @@ export async function restoreApplicationDatabaseBackup(
       restoreDatabaseBackupInMaintenance(options.sourcePath));
   } finally {
     resumeLibraryTasks?.();
-    restoreInProgress = false;
+    finishRestore();
   }
 }
 

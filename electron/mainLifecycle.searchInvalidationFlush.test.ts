@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn(() => new Promise(() => undefined))
   },
-  flushCoalescedWorkspaceSearchInvalidations: vi.fn()
+  flushCoalescedWorkspaceSearchInvalidations: vi.fn(),
+  waitForApplicationDatabaseRestoreSettlement: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('electron', () => ({
@@ -18,6 +19,9 @@ vi.mock('electron', () => ({
 }));
 vi.mock('./database/searchIndexInvalidationCoalescer.js', () => ({
   flushCoalescedWorkspaceSearchInvalidations: mocks.flushCoalescedWorkspaceSearchInvalidations
+}));
+vi.mock('./database/databaseRestoreSettlement.js', () => ({
+  waitForApplicationDatabaseRestoreSettlement: mocks.waitForApplicationDatabaseRestoreSettlement
 }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/searchIndexInvalidationScheduler.js', () => ({ stopSearchIndexInvalidationScheduler: vi.fn() }));
@@ -82,7 +86,15 @@ vi.mock('./ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(und
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: vi.fn() }));
 vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' })) }));
 
-it('flushes coalesced search invalidations before quitting', async () => {
+it('keeps the current window alive until restore settles before quitting', async () => {
+  let finishRestore = () => {};
+  const restoreSettlement = new Promise<void>((resolve) => {
+    finishRestore = resolve;
+  });
+  mocks.waitForApplicationDatabaseRestoreSettlement.mockReturnValueOnce(restoreSettlement);
+  mocks.flushCoalescedWorkspaceSearchInvalidations.mockImplementationOnce(() => {
+    throw new Error('sqlite connection is owned by restore maintenance');
+  });
   const { installMainLifecycle } = await import('./mainLifecycle.js');
 
   installMainLifecycle({
@@ -93,9 +105,15 @@ it('flushes coalesced search invalidations before quitting', async () => {
     runtimeMode: { allowParallelInstance: true } as never
   });
   const beforeQuitHandler = mocks.app.on.mock.calls.find((call) => call[0] === 'before-quit')?.[1];
+  const preventDefault = vi.fn();
 
   expect(beforeQuitHandler).toBeDefined();
-  beforeQuitHandler?.({ preventDefault: vi.fn() });
+  beforeQuitHandler?.({ preventDefault });
 
+  expect(preventDefault).toHaveBeenCalledOnce();
   expect(mocks.flushCoalescedWorkspaceSearchInvalidations).toHaveBeenCalledTimes(1);
+  expect(mocks.app.quit).not.toHaveBeenCalled();
+
+  finishRestore();
+  await vi.waitFor(() => expect(mocks.app.quit).toHaveBeenCalledOnce());
 });

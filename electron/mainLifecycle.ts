@@ -7,6 +7,7 @@ import { shouldShowInitialWindow } from './backgroundStartup.js';
 import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
 import { runWithDatabaseConnectionOwner } from './database/connection.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
+import { waitForApplicationDatabaseRestoreSettlement } from './database/databaseRestoreSettlement.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
@@ -82,29 +83,31 @@ function installBeforeQuitLifecycle() {
   const devRestartIntentWatcher = installDevRestartIntentWatcher({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   const coordinateBeforeQuit = createBeforeQuitCoordinator({
+    prepare: () => {
+      markAppQuittingForBackgroundPresence();
+      devRestartIntentWatcher?.close();
+      devRendererReloadIntentWatcher?.close();
+      stopExternalSearchBackgroundRefresh();
+      stopSearchIndexInvalidationScheduler();
+      stopReadwiseBackgroundServices();
+      stopDesktopSecurityScopedAccess();
+      disposeAssistantCommandAdapter();
+      void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
+      void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
+      void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
+      flushCoalescedWorkspaceSearchInvalidations();
+    },
     flush: async () => {
+      await waitForApplicationDatabaseRestoreSettlement();
       await disposeBackupSearchSessions();
       await flushMirrorSync();
       await desktopTaskScheduler.pauseResource('library');
     },
+    onPrepareError: (error) => appendMainProcessDiagnosticLog('before_quit_prepare_failed', { error }),
     onFlushError: (error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error }),
     quit: () => app.quit()
   });
-  app.on('before-quit', (event) => {
-    markAppQuittingForBackgroundPresence();
-    devRestartIntentWatcher?.close();
-    devRendererReloadIntentWatcher?.close();
-    stopExternalSearchBackgroundRefresh();
-    flushCoalescedWorkspaceSearchInvalidations();
-    stopSearchIndexInvalidationScheduler();
-    stopReadwiseBackgroundServices();
-    stopDesktopSecurityScopedAccess();
-    disposeAssistantCommandAdapter();
-    void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
-    void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
-    void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
-    coordinateBeforeQuit(event);
-  });
+  app.on('before-quit', coordinateBeforeQuit);
 }
 
 async function initializeRuntimeServices() {
