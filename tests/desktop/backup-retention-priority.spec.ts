@@ -27,14 +27,14 @@ test('shows live retention counts and persists drag priority', async ({ desktopW
   const monthlyHandle = rules.locator('[data-retention-tier="monthly"] button[draggable="true"]');
   const hourlyRow = rules.locator('[data-retention-tier="hourly"]');
   await monthlyHandle.dragTo(hourlyRow);
-  await expect.poll(() => loadPriority(desktopWindow)).toEqual(['monthly', 'hourly', 'daily', 'weekly']);
+  await expect.poll(() => loadPriority(desktopWindow)).toEqual(['daily', 'monthly', 'hourly', 'weekly']);
 
   await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
   await rules.screenshot({ path: ARTIFACT_PATH });
   await testInfo.attach('backup-retention-priority', { contentType: 'image/png', path: ARTIFACT_PATH });
 
   await rules.getByRole('button', { name: /^(Reset|重置)$/ }).click();
-  await expect.poll(() => loadPriority(desktopWindow)).toEqual(['hourly', 'daily', 'weekly', 'monthly']);
+  await expect.poll(() => loadPriority(desktopWindow)).toEqual(['daily', 'hourly', 'weekly', 'monthly']);
 });
 
 test('shows database space and compacts only after the explicit action', async ({ desktopWindow }, testInfo) => {

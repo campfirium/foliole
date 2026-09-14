@@ -100,7 +100,7 @@ vi.mock('../database/backupSettings.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/backupSettings.js')>(),
   loadBackupSettings: vi.fn(() => ({
     schema_version: 3,
-    defaults_version: 1,
+    defaults_version: 2,
     overridden_fields: [],
     backup_dir: '/app/Backups',
     daily_max_count: 5,
@@ -108,7 +108,7 @@ vi.mock('../database/backupSettings.js', async (importOriginal) => ({
     extra_backup_max_count: 10,
     hourly_max_count: 8,
     monthly_max_count: 0,
-    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+    retention_priority: ['daily', 'hourly', 'weekly', 'monthly'],
     safety_max_count: 2,
     total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
     updated_at: '2026-09-13T00:00:00.000Z',

@@ -16,7 +16,7 @@ const settings = {
   monthly_max_count: 1,
   retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
   schema_version: 3,
-  defaults_version: 1,
+  defaults_version: 2,
   overridden_fields: [],
   safety_max_count: 2,
   total_size_limit_bytes: 2 * 1024 * 1024 * 1024,

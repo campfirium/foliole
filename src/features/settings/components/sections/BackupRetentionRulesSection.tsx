@@ -13,7 +13,7 @@ import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings'
 
 type RetentionTier = DatabaseBackupSettings['retention_priority'][number];
 
-const DEFAULT_PRIORITY: RetentionTier[] = ['hourly', 'daily', 'weekly', 'monthly'];
+const DEFAULT_PRIORITY: RetentionTier[] = ['daily', 'hourly', 'weekly', 'monthly'];
 const FIELD_BY_TIER: Record<RetentionTier, keyof DatabaseBackupSettings> = {
   hourly: 'hourly_max_count',
   daily: 'daily_max_count',

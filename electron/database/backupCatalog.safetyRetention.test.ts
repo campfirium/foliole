@@ -169,7 +169,7 @@ it('changes only the capacity gap when the saved tier priority changes', async (
 
 function settings(totalSizeLimitBytes: number): NativeBackupSettings {
   return {
-    schema_version: 3, defaults_version: 1, overridden_fields: [],
+    schema_version: 3, defaults_version: 2, overridden_fields: [],
     daily_max_count: 0, hourly_max_count: 0, monthly_max_count: 0, weekly_max_count: 0,
     backup_dir: backupDirectory, extra_backup_dir: '', extra_backup_max_count: 10,
     retention_priority: ['hourly', 'daily', 'weekly', 'monthly'], safety_max_count: 1,

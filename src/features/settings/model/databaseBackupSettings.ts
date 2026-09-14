@@ -9,7 +9,7 @@ export type DatabaseBackupSettings = RuntimeBackupSettings;
 
 const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
   schema_version: 3,
-  defaults_version: 1,
+  defaults_version: 2,
   daily_max_count: 5,
   hourly_max_count: 8,
   monthly_max_count: 0,
@@ -17,7 +17,7 @@ const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
   backup_dir: '',
   extra_backup_dir: '',
   extra_backup_max_count: 10,
-  retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+  retention_priority: ['daily', 'hourly', 'weekly', 'monthly'],
   safety_max_count: 2,
   total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
   overridden_fields: [],
@@ -35,7 +35,7 @@ function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupSettings
   const payload = value as Record<string, unknown>;
   return {
     schema_version: 3,
-    defaults_version: 1,
+    defaults_version: 2,
     daily_max_count: isFiniteNumber(payload.daily_max_count) ? Math.max(0, Math.round(payload.daily_max_count)) : 5,
     hourly_max_count: isFiniteNumber(payload.hourly_max_count) ? Math.max(0, Math.round(payload.hourly_max_count)) : 8,
     monthly_max_count: isFiniteNumber(payload.monthly_max_count) ? Math.max(0, Math.round(payload.monthly_max_count)) : 0,

@@ -50,7 +50,7 @@ it('keeps Safety fixed and reorders ordinary tiers by keyboard or drag', () => {
   expect(within(safetyRow as HTMLElement).queryByRole('button', { name: /^Move / })).not.toBeInTheDocument();
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Move Hourly backups kept' }), { key: 'ArrowDown' });
-  expect(onChangePriority).toHaveBeenLastCalledWith(['daily', 'hourly', 'weekly', 'monthly']);
+  expect(onChangePriority).toHaveBeenLastCalledWith(['daily', 'weekly', 'hourly', 'monthly']);
 
   const transfer = new Map<string, string>();
   const dataTransfer = {
@@ -60,7 +60,7 @@ it('keeps Safety fixed and reorders ordinary tiers by keyboard or drag', () => {
   };
   fireEvent.dragStart(screen.getByRole('button', { name: 'Move Monthly backups kept' }), { dataTransfer });
   fireEvent.drop(screen.getByText('Hourly backups kept').closest('[data-settings-row]') as HTMLElement, { dataTransfer });
-  expect(onChangePriority).toHaveBeenLastCalledWith(['monthly', 'hourly', 'daily', 'weekly']);
+  expect(onChangePriority).toHaveBeenLastCalledWith(['daily', 'monthly', 'hourly', 'weekly']);
 });
 
 it('resets priority and reports cleanup outcomes', () => {
@@ -76,5 +76,5 @@ it('resets priority and reports cleanup outcomes', () => {
   expect(screen.getByText(/1 could not be moved/)).toBeInTheDocument();
   expect(screen.getByText(/0.5 GB still over the limit/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-  expect(onChangePriority).toHaveBeenCalledWith(['hourly', 'daily', 'weekly', 'monthly']);
+  expect(onChangePriority).toHaveBeenCalledWith(['daily', 'hourly', 'weekly', 'monthly']);
 });

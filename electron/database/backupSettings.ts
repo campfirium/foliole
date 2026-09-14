@@ -79,7 +79,7 @@ export function normalizeBackupSettings(payload: unknown): NativeBackupSettings 
   const value = payload as StoredBackupSettings;
   const normalized: NativeBackupSettings = {
     schema_version: 3,
-    defaults_version: 1,
+    defaults_version: 2,
     daily_max_count: normalizePositiveInteger(
       legacyValue(value, 'daily_max_count', 'auto_daily_days'),
       DEFAULT_BACKUP_SETTINGS.daily_max_count

@@ -20,12 +20,12 @@ beforeEach(() => {
 
 it('uses compact count defaults for a new installation', () => {
   expect(normalizeBackupSettings(null)).toMatchObject({
-    defaults_version: 1,
+    defaults_version: 2,
     daily_max_count: 5,
     hourly_max_count: 8,
     monthly_max_count: 0,
     overridden_fields: [],
-    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+    retention_priority: ['daily', 'hourly', 'weekly', 'monthly'],
     safety_max_count: 2,
     schema_version: 3,
     weekly_max_count: 1
@@ -100,17 +100,19 @@ it('repairs provenance-less v2 settings without treating migrated counts as over
 it('applies current defaults to unoverridden fields in a versioned setting', () => {
   const settings = normalizeBackupSettings({
     schema_version: 3,
-    defaults_version: 0,
+    defaults_version: 1,
     hourly_max_count: 99,
     daily_max_count: 3,
+    retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
     overridden_fields: ['daily']
   });
 
   expect(settings).toMatchObject({
-    defaults_version: 1,
+    defaults_version: 2,
     hourly_max_count: 8,
     daily_max_count: 3,
-    overridden_fields: ['daily']
+    overridden_fields: ['daily'],
+    retention_priority: ['daily', 'hourly', 'weekly', 'monthly']
   });
 });
 

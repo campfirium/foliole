@@ -10,6 +10,10 @@ export const RETENTION_TIERS: NativeBackupRetentionTier[] = [
   'hourly', 'daily', 'weekly', 'monthly'
 ];
 
+export const DEFAULT_RETENTION_PRIORITY: NativeBackupRetentionTier[] = [
+  'daily', 'hourly', 'weekly', 'monthly'
+];
+
 export const SETTING_FIELDS: NativeBackupSettingOverride[] = [
   ...RETENTION_TIERS,
   'backup_dir',
@@ -22,7 +26,7 @@ export const SETTING_FIELDS: NativeBackupSettingOverride[] = [
 
 export const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
   schema_version: 3,
-  defaults_version: 1,
+  defaults_version: 2,
   daily_max_count: 5,
   hourly_max_count: 8,
   monthly_max_count: 0,
@@ -30,7 +34,7 @@ export const DEFAULT_BACKUP_SETTINGS: NativeBackupSettings = {
   backup_dir: '',
   extra_backup_dir: '',
   extra_backup_max_count: 10,
-  retention_priority: [...RETENTION_TIERS],
+  retention_priority: [...DEFAULT_RETENTION_PRIORITY],
   safety_max_count: 2,
   total_size_limit_bytes: 2 * GIGABYTE_BYTES,
   overridden_fields: [],
@@ -44,12 +48,12 @@ export const LEGACY_DEFAULTS = {
 };
 
 export function normalizeRetentionPriority(value: unknown) {
-  if (!Array.isArray(value)) return [...RETENTION_TIERS];
+  if (!Array.isArray(value)) return [...DEFAULT_RETENTION_PRIORITY];
   const result = value.filter((entry): entry is NativeBackupRetentionTier =>
     typeof entry === 'string' && RETENTION_TIERS.includes(entry as NativeBackupRetentionTier));
   return result.length === RETENTION_TIERS.length && new Set(result).size === RETENTION_TIERS.length
     ? result
-    : [...RETENTION_TIERS];
+    : [...DEFAULT_RETENTION_PRIORITY];
 }
 
 export function normalizeOverrideFields(value: unknown) {

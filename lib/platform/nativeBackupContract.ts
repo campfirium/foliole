@@ -11,7 +11,7 @@ export type NativeBackupSettingOverride =
 
 export interface NativeBackupSettings {
   schema_version: 3;
-  defaults_version: 1;
+  defaults_version: 2;
   daily_max_count: number;
   hourly_max_count: number;
   monthly_max_count: number;

@@ -50,7 +50,7 @@ async function createBackup(fileName: string, timestamp: string, size: number) {
 function settings(): NativeBackupSettings {
   return {
     schema_version: 3,
-    defaults_version: 1,
+    defaults_version: 2,
     overridden_fields: [],
     backup_dir: tempRoot,
     daily_max_count: 0,

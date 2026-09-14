@@ -3,7 +3,7 @@ import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 
 export const defaultSettings: NativeBackupSettings = {
   schema_version: 3,
-  defaults_version: 1,
+  defaults_version: 2,
   overridden_fields: [],
   daily_max_count: 5,
   hourly_max_count: 8,
@@ -12,7 +12,7 @@ export const defaultSettings: NativeBackupSettings = {
   backup_dir: '/app/Backups',
   extra_backup_dir: '',
   extra_backup_max_count: 10,
-  retention_priority: ['hourly', 'daily', 'weekly', 'monthly'],
+  retention_priority: ['daily', 'hourly', 'weekly', 'monthly'],
   safety_max_count: 2,
   total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
   updated_at: '2026-04-02T10:00:00.000Z'

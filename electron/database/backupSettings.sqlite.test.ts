@@ -33,7 +33,7 @@ afterEach(async () => {
 
 it('persists a priority override through the real settings store', () => {
   expect(loadBackupSettings().retention_priority).toEqual([
-    'hourly', 'daily', 'weekly', 'monthly'
+    'daily', 'hourly', 'weekly', 'monthly'
   ]);
 
   saveBackupSettings({
