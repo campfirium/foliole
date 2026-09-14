@@ -61,14 +61,7 @@ function DiscoveryStatusRow(props: {
   if (discovery.status === 'searching') {
     return <span className="text-ui-sm text-muted-foreground">{t('settings.companionSync.group.discovery.searching')}</span>;
   }
-  if (discovery.status === 'stopped') {
-    return (
-      <button className="ml-auto rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-        disabled={props.disabled} onClick={props.onDiscover} type="button">
-        {t('settings.companionSync.group.find')}
-      </button>
-    );
-  }
+  if (discovery.status === 'stopped') return null;
   return (
     <div className="flex w-full items-center justify-between gap-4">
       <span className="text-ui-sm text-muted-foreground">{t(discoveryMessageKey(discovery.status))}</span>
@@ -80,50 +73,74 @@ function DiscoveryStatusRow(props: {
   );
 }
 
+function CurrentDeviceSummary(props: { device: { device_name: string; platform: string } }) {
+  const t = useTranslation();
+  return (
+    <div aria-label={t('settings.companionSync.group.devices.title')}
+      className="border-t border-settings-divider/65" role="list">
+      <div className="flex min-h-14 items-baseline gap-2 py-2.5" role="listitem">
+        <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
+        <span className="shrink-0 text-ui-sm text-muted-foreground">
+          {displaySyncGroupPlatform(props.device.platform)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function JoinCandidateRow(props: {
+  candidate: DesktopSyncGroupJoinCandidatePayload;
+  disabled: boolean;
+  onRequestJoin(endpointUrl: string): void;
+}) {
+  const t = useTranslation();
+  return (
+    <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5">
+      <span className="truncate text-ui-md font-medium text-foreground">
+        {t('settings.companionSync.group.named', { name: props.candidate.group_display_name })}
+      </span>
+      <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+        disabled={props.disabled} onClick={() => props.onRequestJoin(props.candidate.endpoint_url)} type="button">
+        {t('settings.companionSync.group.join')}
+      </button>
+    </div>
+  );
+}
+
 function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
   const t = useTranslation();
   const discovery = props.discovery ?? STOPPED_SYNC_GROUP_DISCOVERY;
   const groups = Array.from(new Map(props.candidates.map((candidate) => [candidate.group_id, candidate])).values());
+  const hasDiscoveryStatus = groups.length === 0 && discovery.status !== 'stopped';
+  const hasContent = Boolean(props.currentDevice || groups.length || hasDiscoveryStatus || props.joinRequest);
   return (
-    <div className="px-settings-panel-x pt-1">
-      <div className="flex min-h-11 items-center justify-between gap-5">
-        <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
-        <SettingsButton className="h-8" disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
-          {t('settings.companionSync.group.create')}
-        </SettingsButton>
-      </div>
-      <div className="border-b border-settings-divider/65">
-        {props.currentDevice ? (
-          <div aria-label={t('settings.companionSync.group.devices.title')}
-            className="border-t border-settings-divider/65" role="list">
-            <div className="flex min-h-14 items-baseline gap-2 py-2.5" role="listitem">
-              <span className="truncate text-ui-md font-normal text-foreground">
-                {props.currentDevice.device_name}
-              </span>
-              <span className="shrink-0 text-ui-sm text-muted-foreground">
-                {displaySyncGroupPlatform(props.currentDevice.platform)}
-              </span>
-            </div>
-          </div>
-        ) : null}
+    <>
+      <SettingsRow description={t('settings.companionSync.group.empty.description')}
+        title={t('settings.companionSync.group.title')}>
+        <SettingsControlSlot className="flex-wrap">
+          <SettingsButton disabled={props.isBusy || discovery.status === 'searching'}
+            loading={discovery.status === 'searching'} loadingLabel={t('companion.sync.discovery.searching')}
+            onClick={props.onDiscover}>
+            {t('settings.companionSync.group.find')}
+          </SettingsButton>
+          <SettingsButton disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
+            {t('settings.companionSync.group.create')}
+          </SettingsButton>
+        </SettingsControlSlot>
+      </SettingsRow>
+      {hasContent ? <div className="px-settings-panel-x">
+        <div className="border-b border-settings-divider/65">
+        {props.currentDevice ? <CurrentDeviceSummary device={props.currentDevice} /> : null}
         {groups.map((candidate) => (
-          <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5"
-            key={candidate.group_id}>
-            <span className="truncate text-ui-md font-medium text-foreground">
-              {t('settings.companionSync.group.named', { name: candidate.group_display_name })}
-            </span>
-            <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-              disabled={props.isBusy} onClick={() => props.onRequestJoin(candidate.endpoint_url)} type="button">
-              {t('settings.companionSync.group.join')}
-            </button>
-          </div>
+          <JoinCandidateRow candidate={candidate} disabled={props.isBusy} key={candidate.group_id}
+            onRequestJoin={props.onRequestJoin} />
         ))}
         {groups.length > 0 && !['results', 'searching', 'stopped'].includes(discovery.status) ? (
           <div className="border-t border-settings-divider/65 py-2.5 text-ui-sm text-muted-foreground">
             {t(discoveryMessageKey(discovery.status as Exclude<typeof discovery.status, 'stopped'>))}
           </div>
         ) : null}
-        {groups.length === 0 ? (
+        {hasDiscoveryStatus ? (
           <div className="flex min-h-14 items-center border-t border-settings-divider/65 py-2.5">
             <DiscoveryStatusRow discovery={discovery} disabled={props.isBusy} onDiscover={props.onDiscover} />
           </div>
@@ -133,8 +150,9 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
             {t('settings.companionSync.group.join.waiting')}
           </div>
         ) : null}
-      </div>
-    </div>
+        </div>
+      </div> : null}
+    </>
   );
 }
 

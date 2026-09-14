@@ -1,7 +1,10 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
+import {
+  STOPPED_SYNC_GROUP_DISCOVERY,
+  type SyncGroupDiscoverySnapshot
+} from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW } from '../../../../shared/platform/desktopSyncGroupOverviewHooks';
 
@@ -17,14 +20,20 @@ beforeEach(() => {
   useDesktopSyncGroupMock.mockReset();
 });
 
-function renderSyncSection(syncEnabled: boolean) {
+function renderSyncSection(
+  syncEnabled: boolean,
+  discovery: SyncGroupDiscoverySnapshot = STOPPED_SYNC_GROUP_DISCOVERY
+) {
+  const createSyncGroup = vi.fn();
   const disableSync = vi.fn();
+  const discoverSyncGroups = vi.fn();
   const enableSync = vi.fn();
   useDesktopSyncGroupMock.mockReturnValue({
     acceptRequest: vi.fn(),
-    createSyncGroup: vi.fn(),
-    discovery: STOPPED_SYNC_GROUP_DISCOVERY,
+    createSyncGroup,
+    discovery,
     disableSync,
+    discoverSyncGroups,
     enableSync,
     error: null,
     isDesktopRuntime: true,
@@ -39,7 +48,7 @@ function renderSyncSection(syncEnabled: boolean) {
     syncNow: vi.fn()
   });
   renderWithLocalization(<SettingsCompanionSyncSection />);
-  return { disableSync, enableSync };
+  return { createSyncGroup, disableSync, discoverSyncGroups, enableSync };
 }
 
 it('shows network sync as a switch with its current state', () => {
@@ -52,4 +61,33 @@ it('shows network sync as a switch with its current state', () => {
 
   expect(disableSync).toHaveBeenCalledOnce();
   expect(screen.queryByRole('button', { name: 'Turn Off' })).not.toBeInTheDocument();
+});
+
+it('presents finding and creating as equal commands with the empty-state description', () => {
+  const { createSyncGroup, discoverSyncGroups } = renderSyncSection(true);
+
+  expect(screen.getByText('Create a new Sync Group or join one from an active Device on this network.')).toBeVisible();
+  const findButton = screen.getByRole('button', { name: 'Find Sync Group' });
+  const createButton = screen.getByRole('button', { name: 'Create Sync Group' });
+  expect(findButton.className).toBe(createButton.className);
+  expect(screen.queryByText('Searching for Sync Groups…')).not.toBeInTheDocument();
+
+  fireEvent.click(findButton);
+  fireEvent.click(createButton);
+
+  expect(discoverSyncGroups).toHaveBeenCalledOnce();
+  expect(createSyncGroup).toHaveBeenCalledOnce();
+});
+
+it('keeps creation available while discovery is searching', () => {
+  renderSyncSection(true, {
+    candidates: [],
+    change: 'started',
+    error_code: null,
+    status: 'searching'
+  });
+
+  expect(screen.getByRole('button', { name: 'Searching...' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Create Sync Group' })).toBeEnabled();
+  expect(screen.getByText('Searching for Sync Groups…')).toBeVisible();
 });
