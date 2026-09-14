@@ -20,7 +20,7 @@ afterEach(async () => {
 
 it('permanently removes only proven orphaned sidecars with managed backup names', async () => {
   const orphanWal = 'manual-2026-09-13_10-00-00-000.db-wal';
-  const orphanShm = 'foliole-auto-backup-260913-100000.db-shm';
+  const orphanShm = 'foliole-rollback-260913-100000-2.db-shm';
   const retainedByDatabase = 'auto-hourly-2026-09-13_11-00-00-000.db-wal';
   const retainedByCompressed = 'pre-restore-2026-09-13_12-00-00-000.db-shm';
   const unrelated = 'other-2026-09-13_10-00-00-000.db-wal';

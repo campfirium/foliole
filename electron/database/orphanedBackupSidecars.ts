@@ -15,7 +15,7 @@ interface CleanupOptions {
 }
 
 const TIMESTAMP = String.raw`\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3}`;
-const BACKUP_STEM = String.raw`(?:auto-(?:hourly|daily|weekly|monthly)-${TIMESTAMP}|foliole-auto-backup-\d{6}-\d{6}|(?:manual|foliole)-${TIMESTAMP}|pre-(?:migration|restore|compact)-${TIMESTAMP})\.db`;
+const BACKUP_STEM = String.raw`(?:auto-(?:hourly|daily|weekly|monthly)-${TIMESTAMP}|foliole-(?:auto|manual|rollback)-\d{6}-\d{6}(?:-\d+)?|foliole-auto-backup-\d{6}-\d{6}|(?:manual|foliole)-${TIMESTAMP}|pre-(?:migration|restore|compact)-${TIMESTAMP})\.db`;
 const SIDECAR_PATTERN = new RegExp(String.raw`^(${BACKUP_STEM})-(?:shm|wal)$`);
 
 export async function cleanupOrphanedBackupSidecars(

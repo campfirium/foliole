@@ -91,7 +91,7 @@ it('does not let a full-size protected snapshot evict completed restore points',
     .toEqual(expect.arrayContaining([
       'manual-2026-08-12_08-00-00-000.db',
       'pre-restore-2026-08-12_09-00-00-000.db.gz',
-      'pre-migration-2026-08-12_10-00-00-000.db'
+      'foliole-rollback-260812-180000.db'
     ]));
   continueLink?.();
   const snapshot = await pendingSnapshot;

@@ -36,6 +36,8 @@ export interface BackupPruneOptions {
 
 const LEGACY_AUTO_FILE_PATTERN =
   /^auto-(hourly|daily|weekly|monthly)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
+const MANAGED_RESTORE_POINT_PATTERN =
+  /^foliole-(auto|manual|rollback)-(\d{6})-(\d{6})(?:-(\d+))?\.db(?:\.gz)?$/;
 const AUTO_RESTORE_POINT_PATTERN = /^foliole-auto-backup-(\d{6})-(\d{6})\.db(?:\.gz)?$/;
 const SNAPSHOT_FILE_PATTERN =
   /^(pre-compact|pre-migration|pre-restore)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
@@ -46,6 +48,16 @@ function parseEntryFromFileName(fileName: string): Pick<
   ApplicationDatabaseBackupEntry,
   'autoFrequency' | 'kind' | 'snapshotReason'
 > | null {
+  const managedMatch = fileName.match(MANAGED_RESTORE_POINT_PATTERN);
+  if (managedMatch?.[1] === 'auto') {
+    return { autoFrequency: null, kind: 'automatic', snapshotReason: null };
+  }
+  if (managedMatch?.[1] === 'manual') {
+    return { autoFrequency: null, kind: 'manual', snapshotReason: null };
+  }
+  if (managedMatch?.[1] === 'rollback') {
+    return { autoFrequency: null, kind: 'snapshot', snapshotReason: null };
+  }
   if (AUTO_RESTORE_POINT_PATTERN.test(fileName)) {
     return { autoFrequency: null, kind: 'automatic', snapshotReason: null };
   }

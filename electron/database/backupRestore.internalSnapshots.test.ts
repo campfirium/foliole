@@ -87,12 +87,12 @@ it('creates a pre-restore snapshot and keeps only the configured safety count', 
   seedNode('node-1', '# mutated');
   await restoreApplicationDatabaseBackup({ sourcePath: manualBackup.destinationPath });
 
-  const snapshotNames = (await fs.readdir(snapshotDirectory))
-    .filter((fileName) => fileName.startsWith('pre-restore-'))
-    .sort();
+  const snapshots = (await listApplicationDatabaseBackups())
+    .filter((entry) => entry.kind === 'snapshot');
+  const snapshotNames = snapshots.map((entry) => entry.fileName).sort();
   const backupDirectoryNames = await fs.readdir(snapshotDirectory);
   expect(snapshotNames).toHaveLength(2);
-  expect(snapshotNames.some((fileName) => fileName.startsWith('pre-restore-'))).toBe(true);
+  expect(snapshotNames.some((fileName) => /^foliole-rollback-\d{6}-\d{6}\.db\.gz$/.test(fileName))).toBe(true);
   expect(backupDirectoryNames).not.toContain('foliole-external.db');
   expect(backupDirectoryNames).not.toContain(path.basename(connection.searchDbPath));
   await expect(fs.access(staleSnapshotPaths[0] as string)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -133,8 +133,8 @@ it('restores through a complete sqlite safety snapshot when compression lacks sp
 
   expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# original');
   const snapshot = (await listApplicationDatabaseBackups()).find((entry) =>
-    entry.snapshotReason === 'pre-restore');
-  expect(snapshot?.fileName).toMatch(/^pre-restore-.*\.db$/);
+    entry.kind === 'snapshot');
+  expect(snapshot?.fileName).toMatch(/^foliole-rollback-\d{6}-\d{6}\.db$/);
   await expect(readSnapshotState(snapshot?.filePath)).resolves.toEqual({
     content: '# current', userVersion: DATABASE_SCHEMA_VERSION
   });
@@ -152,20 +152,24 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
   await restoreApplicationDatabaseBackup({ sourcePath: oldBackupPath });
 
   const snapshots = (await listApplicationDatabaseBackups()).filter((entry) => entry.kind === 'snapshot');
-  const preRestore = snapshots.find((entry) => entry.snapshotReason === 'pre-restore');
-  const preMigration = snapshots.find((entry) => entry.snapshotReason === 'pre-migration');
-  expect(preRestore?.fileName).toMatch(/^pre-restore-.*\.db\.gz$/);
-  expect(preMigration?.fileName).toMatch(/^pre-migration-.*\.db\.gz$/);
-  await expect(readSnapshotState(preRestore?.filePath)).resolves.toEqual({
-    content: '# current state', userVersion: DATABASE_SCHEMA_VERSION
-  });
-  await expect(readSnapshotState(preMigration?.filePath)).resolves.toEqual({
-    content: '# restored old state', userVersion: DATABASE_SCHEMA_VERSION - 1
-  });
+  expect(snapshots).toHaveLength(2);
+  const snapshotNames = snapshots.map((entry) => entry.fileName);
+  expect(snapshotNames).toEqual(expect.arrayContaining([
+    expect.stringMatching(/^foliole-rollback-\d{6}-\d{6}\.db\.gz$/),
+    expect.stringMatching(/^foliole-rollback-\d{6}-\d{6}-2\.db\.gz$/)
+  ]));
+  const states = await Promise.all(snapshots.map(async (entry) => ({
+    entry,
+    state: await readSnapshotState(entry.filePath)
+  })));
+  const preRestore = states.find(({ state }) => state.content === '# current state');
+  const preMigration = states.find(({ state }) => state.content === '# restored old state');
+  expect(preRestore?.state.userVersion).toBe(DATABASE_SCHEMA_VERSION);
+  expect(preMigration?.state.userVersion).toBe(DATABASE_SCHEMA_VERSION - 1);
 
-  await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.filePath ?? '' });
+  await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.entry.filePath ?? '' });
   expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# current state');
-  await expect(fs.access(preRestore?.filePath ?? '')).resolves.toBeUndefined();
+  await expect(fs.access(preRestore?.entry.filePath ?? '')).resolves.toBeUndefined();
 });
 
 async function readSnapshotState(filePath: string | undefined) {

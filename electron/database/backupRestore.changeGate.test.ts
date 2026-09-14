@@ -77,7 +77,7 @@ it('creates once in the next finest bucket after a persisted change', async () =
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 0));
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 30));
 
-  expect(await ordinaryBackupNames()).toEqual(['foliole-auto-backup-260402-110000.db.gz']);
+  expect(await ordinaryBackupNames()).toEqual(['foliole-auto-260402-110000.db.gz']);
 });
 
 it('uses a successful managed manual backup as the next automatic change baseline', async () => {
@@ -86,11 +86,12 @@ it('uses a successful managed manual backup as the next automatic change baselin
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 0));
 
   expect(await ordinaryBackupNames()).toHaveLength(1);
-  expect((await ordinaryBackupNames())[0]).toMatch(/^manual-/);
+  expect((await ordinaryBackupNames())[0]).toMatch(/^foliole-manual-/);
 });
 
 async function ordinaryBackupNames() {
   const directory = resolveManagedBackupDirectory(loadBackupSettings());
   return (await fs.readdir(directory)).filter((name) =>
-    name.startsWith('foliole-auto-backup-') || name.startsWith('manual-'));
+    name.startsWith('foliole-auto-') || name.startsWith('foliole-manual-')
+      || name.startsWith('foliole-auto-backup-') || name.startsWith('manual-'));
 }

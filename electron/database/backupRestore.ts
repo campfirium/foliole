@@ -139,7 +139,7 @@ export async function createApplicationDatabaseBackup(
   const settings = loadBackupSettings();
   const backupDirectory = ensureManagedBackupDirectory(settings);
   const destinationPath =
-    options.destinationPath ?? buildManagedBackupPath('manual', now, backupDirectory);
+    options.destinationPath ?? buildManagedBackupPath(now, backupDirectory);
   const backupOptions = {
     sourcePath: connection.dbPath,
     destinationPath,

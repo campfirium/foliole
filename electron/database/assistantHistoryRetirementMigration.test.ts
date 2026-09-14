@@ -98,7 +98,8 @@ it('snapshots v57 Aide rows before v59 removes them from the main library', asyn
   expectLegacyAssistantTablesRemoved();
 
   const backupDirectory = resolveManagedBackupDirectory();
-  const snapshotName = (await fs.readdir(backupDirectory)).find((name) => name.startsWith('pre-migration-'));
+  const snapshotName = (await fs.readdir(backupDirectory)).find((name) =>
+    /^foliole-rollback-\d{6}-\d{6}(?:-\d+)?\.db\.gz$/.test(name));
   expect(snapshotName).toBeDefined();
   const materialized = await materializeCompressedSqliteBackup(
     path.join(backupDirectory, snapshotName ?? ''), tempRoot

@@ -52,7 +52,7 @@ it('reclaims interrupted private compression files before creating the next rest
     releasedBytes: 13
   });
   expect((await fs.readdir(backupDirectory)).sort()).toEqual([
-    'foliole-auto-backup-260402-101500.db.gz',
+    'foliole-auto-260402-101500.db.gz',
     'manual-2026-04-02_09-00-00-000.db'
   ]);
 });

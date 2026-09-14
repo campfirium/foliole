@@ -23,9 +23,9 @@ afterEach(async () => {
 });
 
 it('removes only exact inactive private files and reports actual bytes idempotently', async () => {
-  const exactSource = `.foliole-auto-backup-260812-120000.db.gz-${UUID_A}.source.db`;
-  const exactCompressed = `.pre-restore-2026-08-12_12-00-00-000.db.gz-${UUID_B}.compressed.tmp`;
-  const exactPending = `.manual-2026-08-12_12-00-00-000.db.gz-${UUID_A}.pending.db.gz`;
+  const exactSource = `.foliole-auto-260812-120000.db.gz-${UUID_A}.source.db`;
+  const exactCompressed = `.foliole-rollback-260812-120000-2.db.gz-${UUID_B}.compressed.tmp`;
+  const exactPending = `.foliole-manual-260812-120000.db.gz-${UUID_A}.pending.db.gz`;
   const emptySource = `.manual-2026-08-12_10-00-00-000.db.gz-${UUID_B}.source.db`;
   const retained = [
     'manual-2026-08-12_11-00-00-000.db',

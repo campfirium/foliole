@@ -74,7 +74,7 @@ it('restores library content without rolling back current backup controls', asyn
 
   expect(currentContent()).toBe('# backup content');
   expect(withoutUpdatedAt(loadBackupSettings())).toEqual(withoutUpdatedAt(current));
-  expect((await fs.readdir(currentBackupDir)).some((name) => name.startsWith('pre-restore-'))).toBe(true);
+  expect((await fs.readdir(currentBackupDir)).some((name) => name.startsWith('foliole-rollback-'))).toBe(true);
   await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
 });
 

@@ -14,7 +14,7 @@ interface BackupTemporaryFileCleanupOptions {
 
 const TIMESTAMP = String.raw`\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3}`;
 const UUID = String.raw`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`;
-const MANAGED_DESTINATION = String.raw`(?:foliole-auto-backup-\d{6}-\d{6}|manual-${TIMESTAMP}|pre-(?:compact|migration|restore)-${TIMESTAMP})\.db\.gz`;
+const MANAGED_DESTINATION = String.raw`(?:foliole-(?:auto|manual|rollback)-\d{6}-\d{6}(?:-\d+)?|foliole-auto-backup-\d{6}-\d{6}|manual-${TIMESTAMP}|pre-(?:compact|migration|restore)-${TIMESTAMP})\.db\.gz`;
 const PRIVATE_TEMPORARY_FILE = new RegExp(
   String.raw`^\.${MANAGED_DESTINATION}-${UUID}\.(?:source\.db|compressed\.tmp|pending\.db\.gz)$`
 );

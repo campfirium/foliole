@@ -1,4 +1,4 @@
-import { existsSync, promises as fs, rmSync } from 'node:fs';
+import { promises as fs, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -36,7 +36,7 @@ export interface ManagedSafetySnapshot {
 export async function createManagedSafetySnapshotWithBackup(
   options: SafetySnapshotOptions
 ): Promise<ManagedSafetySnapshot> {
-  const normalizedOptions = withAvailableSnapshotTimestamp(options);
+  const normalizedOptions = withStableSnapshotTimestamp(options);
   const protection = protectSnapshotPaths(normalizedOptions);
   try {
     const snapshot = await createInternalDatabaseSnapshotWithBackup(normalizedOptions);
@@ -49,7 +49,7 @@ export async function createManagedSafetySnapshotWithBackup(
 }
 
 export function createManagedSafetySnapshotForMigration(options: SafetySnapshotOptions) {
-  const normalizedOptions = withAvailableSnapshotTimestamp(options);
+  const normalizedOptions = withStableSnapshotTimestamp(options);
   const protection = protectSnapshotPaths(normalizedOptions);
   try {
     const snapshot = createInternalDatabaseSnapshot(normalizedOptions);
@@ -130,16 +130,8 @@ function protectSnapshotPaths(options: SafetySnapshotOptions): ManagedSafetySnap
   };
 }
 
-function withAvailableSnapshotTimestamp(options: SafetySnapshotOptions): SafetySnapshotOptions {
-  const initialNow = options.now ?? new Date();
-  for (let offset = 0; offset < 1000; offset += 1) {
-    const now = new Date(initialNow.getTime() + offset);
-    const databasePath = buildInternalDatabaseSnapshotPath({ ...options, now });
-    if (!existsSync(databasePath) && !existsSync(`${databasePath}.gz`)) {
-      return { ...options, now };
-    }
-  }
-  throw new Error(`failed to allocate a unique ${options.reason} snapshot path`);
+function withStableSnapshotTimestamp(options: SafetySnapshotOptions): SafetySnapshotOptions {
+  return options.now ? options : { ...options, now: new Date() };
 }
 
 function assertSqliteSnapshotIntegrity(filePath: string) {

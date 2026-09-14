@@ -61,7 +61,7 @@ it('creates one automatic restore point for all enabled retention layers', async
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
   const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
 
-  expect(backupNames).toEqual(['foliole-auto-backup-260402-101500.db.gz']);
+  expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
 
 it('uses the finest enabled layer as the only automatic backup cadence', async () => {
@@ -77,7 +77,7 @@ it('uses the finest enabled layer as the only automatic backup cadence', async (
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 5, 0));
 
   const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
-  expect(backupNames).toEqual(['foliole-auto-backup-260402-101500.db.gz']);
+  expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
 
 it('falls back to daily cadence when hourly retention is disabled', async () => {
@@ -93,7 +93,7 @@ it('falls back to daily cadence when hourly retention is disabled', async () => 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 3, 9, 0, 0));
 
   const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
-  expect(backupNames).toEqual(['foliole-auto-backup-260402-101500.db.gz']);
+  expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
 
 it.each([
@@ -142,7 +142,7 @@ it('does not overwrite an existing automatic restore point in the same second', 
   await fs.mkdir(backupDirectory, { recursive: true });
   await createBackupFixture(
     backupDirectory,
-    'foliole-auto-backup-260406-101500.db',
+    'foliole-auto-260406-101500.db',
     'existing',
     now.toISOString()
   );
@@ -155,7 +155,7 @@ it('does not overwrite an existing automatic restore point in the same second', 
 
   await reconcileAutomaticDatabaseBackups(now);
 
-  await expect(fs.readFile(path.join(backupDirectory, 'foliole-auto-backup-260406-101500.db'), 'utf8'))
+  await expect(fs.readFile(path.join(backupDirectory, 'foliole-auto-260406-101500.db'), 'utf8'))
     .resolves.toBe('existing');
   await expect(fs.readFile(path.join(backupDirectory, 'manual-2026-04-06_10-05-00-000.db'), 'utf8'))
     .resolves.toBe('surplus');
@@ -185,7 +185,7 @@ it('treats legacy frequency files as one shared restore point collection', async
   const backupNames = (await fs.readdir(backupDirectory)).sort();
   expect(backupNames).toEqual([
     'auto-daily-2026-04-06_10-15-00-000.db',
-    'foliole-auto-backup-260406-111500.db.gz'
+    'foliole-auto-260406-111500.db.gz'
   ]);
   expect(notificationMocks.show).toHaveBeenCalledTimes(1);
   expect(notificationMocks.show).toHaveBeenCalledWith(expect.objectContaining({

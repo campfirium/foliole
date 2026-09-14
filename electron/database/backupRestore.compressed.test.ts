@@ -70,7 +70,7 @@ it('keeps the current database available when a compressed backup is truncated',
   expect(currentContent()).toBe('# current');
   expect(trashItem).not.toHaveBeenCalled();
   expect((await fs.readdir(path.dirname(backup.destinationPath)))
-    .some((fileName) => fileName.startsWith('pre-restore-'))).toBe(false);
+    .some((fileName) => fileName.startsWith('foliole-rollback-'))).toBe(false);
   await expectNoRestoreSources(path.dirname(mockedAppDataDir));
 });
 
@@ -107,7 +107,7 @@ it('restores the current library when database replacement fails', async () => {
       .rejects.toThrow('Your current library has been restored');
     expect(currentContent()).toBe('# current');
     expect(targetExistedBeforeCommit).toBe(true);
-    expect(trashItem).toHaveBeenCalledWith(expect.stringContaining('pre-restore-'));
+    expect(trashItem).toHaveBeenCalledWith(expect.stringContaining('foliole-rollback-'));
   } finally {
     renameSpy.mockRestore();
   }

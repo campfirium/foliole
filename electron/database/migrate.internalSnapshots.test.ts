@@ -68,9 +68,9 @@ it('creates a managed safety snapshot before numbered schema migrations', async 
   initializeDatabase();
 
   const snapshotNames = (await listApplicationDatabaseBackups())
-    .filter((entry) => entry.snapshotReason === 'pre-migration')
+    .filter((entry) => entry.kind === 'snapshot')
     .map((entry) => entry.fileName);
-  expect(snapshotNames.some((name) => name.startsWith('pre-migration-') && name.endsWith('.db.gz'))).toBe(true);
+  expect(snapshotNames.some((name) => /^foliole-rollback-\d{6}-\d{6}(?:-\d+)?\.db\.gz$/.test(name))).toBe(true);
   expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 

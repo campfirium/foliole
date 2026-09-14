@@ -11,8 +11,8 @@ const CREATE_BACKUP_BUTTON_NAME = /^(Create backup|创建备份)$/;
 const RESTORE_BUTTON_NAME = /^(Restore|恢复)$/;
 const RESTORE_SUCCESS_TITLE = /^(Backup restored|备份已恢复)$/;
 const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
-const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db\.gz$/;
-const SAFETY_BACKUP_FILE_NAME = /^pre-restore-.*\.db\.gz$/;
+const AUTO_BACKUP_FILE_NAME = /^foliole-auto-\d{6}-\d{6}\.db\.gz$/;
+const SAFETY_BACKUP_FILE_NAME = /^foliole-rollback-\d{6}-\d{6}(?:-\d+)?\.db\.gz$/;
 const RESTORE_DRIFT_NODE_ID = 'desktop-backup-restore-drift';
 const RESTORE_SETTINGS_ARTIFACT_PATH = path.join(
   process.cwd(), '.tmp/artifacts/desktop-acceptance/backup-restore-current-settings.png'

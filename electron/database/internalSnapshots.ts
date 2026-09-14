@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { promises as fsPromises } from 'node:fs';
 import path from 'node:path';
 
+import { buildRollbackBackupPath } from './backupFileNames.js';
 import { ensureManagedBackupDirectory, resolveManagedBackupDirectory } from './backupSettings.js';
 import type { SqliteDatabase } from './connection.js';
 import { backupSqliteDatabase } from './sqliteBackupRestore.js';
@@ -35,6 +36,9 @@ export function buildInternalDatabaseSnapshotPath({
   const resolvedDestinationDirectory = destinationDirectory
     ? path.resolve(destinationDirectory)
     : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
+  if (reason !== 'pre-cleanup') {
+    return buildRollbackBackupPath(now, resolvedDestinationDirectory);
+  }
   return path.join(resolvedDestinationDirectory, `${reason}-${snapshotTimestamp(now)}.db`);
 }
 
