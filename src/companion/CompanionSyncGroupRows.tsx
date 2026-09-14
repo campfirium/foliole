@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import { displaySyncGroupPlatform } from '../../lib/platform/syncGroupPlatform';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
@@ -52,15 +53,6 @@ function LeaveSyncGroup(props: { onLeave(): Promise<unknown> }) {
   );
 }
 
-const PLATFORM_LABELS: Record<string, string> = {
-  android: 'Android', darwin: 'macOS', ios: 'iOS', linux: 'Linux', win32: 'Windows'
-};
-
-function platformFor(kind: string) {
-  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
-  return key ? PLATFORM_LABELS[key]! : kind;
-}
-
 function SyncGroupDevices(props: {
   group: SyncGroupPayload;
   onTogglePause(): void;
@@ -76,7 +68,9 @@ function SyncGroupDevices(props: {
           <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={device.device_identity_key} role="listitem">
             <span className="flex min-w-0 items-baseline gap-2">
               <span className="truncate text-sm font-semibold text-foreground">{device.device_name}</span>
-              <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(device.platform)}</span>
+              <span className="shrink-0 text-xs text-companion-text-tertiary">
+                {displaySyncGroupPlatform(device.platform)}
+              </span>
             </span>
             {isLocal ? (
               <button className="min-h-11 shrink-0 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent disabled:opacity-45"

@@ -10,6 +10,7 @@ import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const EVIDENCE_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance');
 const SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'settings-sync-group-discovery.png');
+const FIND_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'settings-sync-group-find.png');
 
 async function sendDiscovery(electronApp: ElectronApplication, snapshot: SyncGroupDiscoverySnapshot) {
   await electronApp.evaluate(({ BrowserWindow }, payload) => BrowserWindow.getAllWindows()
@@ -29,6 +30,9 @@ test('keeps Find Sync Group explainable until the settings surface closes', asyn
   await expectWorkspaceShell(desktopWindow);
   const settings = await openSettingsCategory(desktopWindow, 'Sync');
   const section = settings.getByLabel(/^(Sync section|同步设置区)$/);
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  const findScreenshot = await section.screenshot({ path: FIND_SCREENSHOT_PATH });
+  await testInfo.attach('settings-sync-group-find', { body: findScreenshot, contentType: 'image/png' });
   await section.getByRole('button', { name: /^(Find Sync Group|查找同步组)$/ }).click();
   await expect(section.getByText(/^(Searching for Sync Groups…|正在查找同步组…)$/)).toBeVisible();
 
@@ -62,7 +66,6 @@ test('keeps Find Sync Group explainable until the settings surface closes', asyn
     });
     await expect(section.getByText(message)).toBeVisible();
   }
-  await mkdir(EVIDENCE_DIR, { recursive: true });
   const screenshot = await section.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('settings-sync-group-discovery', { body: screenshot, contentType: 'image/png' });
 

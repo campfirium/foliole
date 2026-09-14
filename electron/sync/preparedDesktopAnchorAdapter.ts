@@ -9,6 +9,7 @@ import {
   type DesktopAnchorRole,
   type PreparedAnchorEvidence
 } from '../../lib/platform/syncAnchorTopologyContract.js';
+import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 
 export const projectPreparedDesktopTopologyStatus = projectPreparedTopologySyncStatus;
 
@@ -43,7 +44,7 @@ function evidence(
     group_id: String(value.group_id ?? ''),
     group_tag: String(value.group_tag ?? ''),
     provider_device_id: String(value[deviceKey] ?? ''),
-    provider_kind: isDesktop(platform) ? 'desktop' : 'mobile',
+    provider_kind: isDesktopSyncGroupPlatform(platform) ? 'desktop' : 'mobile',
     protocol: value.protocol && typeof value.protocol === 'object'
       ? value.protocol as PreparedAnchorEvidence['protocol']
       : parsePreparedAnchorAdvertisementProtocol(value) ?? invalidProtocol(),
@@ -53,8 +54,4 @@ function evidence(
 
 function invalidProtocol(): PreparedAnchorEvidence['protocol'] {
   return { capabilities: [], max_supported_version: 1, min_supported_version: 1, version: 1 };
-}
-
-function isDesktop(platform: string) {
-  return ['desktop', 'darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
 }

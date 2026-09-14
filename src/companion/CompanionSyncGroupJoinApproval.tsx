@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { displaySyncGroupPlatform } from '../../lib/platform/syncGroupPlatform';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   acceptCompanionSyncGroupJoinRequest,
@@ -27,15 +28,6 @@ export function useSyncGroupProviderState(enabled = true) {
   return { refresh, setState, state };
 }
 
-const PLATFORM_LABELS: Record<string, string> = {
-  android: 'Android', darwin: 'macOS', ios: 'iOS', linux: 'Linux', win32: 'Windows'
-};
-
-function platformFor(kind: string) {
-  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
-  return key ? PLATFORM_LABELS[key]! : kind;
-}
-
 function PendingJoinRequest(props: {
   onState(next: CompanionSyncGroupProviderState): void;
   request: CompanionSyncGroupProviderState['pending_requests'][number];
@@ -61,7 +53,7 @@ function PendingJoinRequest(props: {
       <div className="flex items-baseline justify-between gap-3">
         <span className="truncate text-sm font-semibold text-foreground">{props.request.device_name}</span>
         <span className="shrink-0 text-xs text-companion-text-tertiary">
-          {platformFor(props.request.platform)}
+          {displaySyncGroupPlatform(props.request.platform)}
         </span>
       </div>
       <p className="mt-1 text-sm leading-6 text-companion-text-secondary">

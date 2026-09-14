@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { displaySyncGroupPlatform } from '../../lib/platform/syncGroupPlatform';
 import {
   SYNC_GROUP_JOIN_COPY,
   syncGroupJoinRequestDescription,
@@ -27,7 +28,9 @@ export function CompanionSyncGroupJoinRequests(props: {
     <p className="mt-1 text-sm leading-6 text-companion-text-secondary">
       {syncGroupJoinRequestDescription(request.device_name)}
     </p>
-    <p className="mt-1 text-xs text-companion-text-tertiary">{request.platform}</p>
+    <p className="mt-1 text-xs text-companion-text-tertiary">
+      {displaySyncGroupPlatform(request.platform)}
+    </p>
     <div className="mt-3 flex gap-2">
       <button className="min-h-11 flex-1 rounded-md border border-companion-divider px-3 py-2 text-sm font-semibold disabled:opacity-45"
         disabled={busy} onClick={() => void resolve(props.onReject)} type="button">

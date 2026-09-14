@@ -2,6 +2,7 @@ import type { DesktopDnsSdService } from '@foliole/desktop-dnssd';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract.js';
+import { normalizeDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
@@ -166,9 +167,7 @@ function isMobile(platform: string) {
 }
 
 function desktopKind(platform: string) {
-  if (platform === 'macOS') return 'darwin';
-  if (platform === 'Windows') return 'win32';
-  return platform ? platform.toLowerCase() : 'desktop';
+  return normalizeDesktopSyncGroupPlatform(platform);
 }
 
 function text(value: unknown) {

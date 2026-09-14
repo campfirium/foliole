@@ -29,7 +29,7 @@ beforeEach(() => {
   const state = {
     lifecycle_active: true, participating: true,
     pending_requests: [{
-      device_name: 'Waiting client', platform: 'win32', request_id: 'request-2',
+      device_name: 'Waiting client', platform: 'Windows 11', request_id: 'request-2',
       requested_at: '2026-08-24T00:00:00.000Z'
     }], port: 38641,
     state: 'running', sync_enabled: true, sync_paused: false
@@ -56,7 +56,7 @@ it('shows persistent membership and keeps Leave independent from participation c
   expect(screen.getByText("Studio's Sync Group")).toBeInTheDocument();
   expect(screen.getByText('Pixel')).toBeInTheDocument();
   expect(await screen.findByText('Waiting client')).toBeInTheDocument();
-  expect(screen.getByText('Windows')).toBeInTheDocument();
+  expect(screen.getByText('Windows 11')).toBeInTheDocument();
   fireEvent.click(screen.getByTestId('companion-sync-group-approve'));
   await waitFor(() => expect(providerMocks.approve).toHaveBeenCalledWith('request-2'));
   await waitFor(() => expect(screen.queryByText('Waiting client')).not.toBeInTheDocument());

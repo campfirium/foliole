@@ -10,6 +10,7 @@ import {
 } from '../../../../../lib/platform/syncGroupContract';
 import type { SyncGroupDiscoverySnapshot } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
+import { displaySyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -19,19 +20,6 @@ import {
 } from '../../../../shared/ui';
 
 import { SettingsSyncGroupJoinRequests } from './SettingsSyncGroupJoinRequests';
-
-const PLATFORM_LABELS: Record<string, string> = {
-  android: 'Android',
-  darwin: 'macOS',
-  ios: 'iOS',
-  linux: 'Linux',
-  win32: 'Windows'
-};
-
-function platformFor(kind: string) {
-  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
-  return key ? PLATFORM_LABELS[key]! : kind;
-}
 
 function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'], 'stopped'>) {
   return `settings.companionSync.group.discovery.${status}` as const;
@@ -51,7 +39,7 @@ function DeviceRow(props: {
     <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
       <div className="flex min-w-0 items-baseline gap-2">
         <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
-        <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.device.platform)}</span>
+        <span className="shrink-0 text-ui-sm text-muted-foreground">{displaySyncGroupPlatform(props.device.platform)}</span>
       </div>
       <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
         disabled={props.disabled || !local} onClick={props.onTogglePause} type="button">
@@ -75,7 +63,7 @@ function DiscoveryStatusRow(props: {
   }
   if (discovery.status === 'stopped') {
     return (
-      <button className="rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+      <button className="ml-auto rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
         disabled={props.disabled} onClick={props.onDiscover} type="button">
         {t('settings.companionSync.group.find')}
       </button>
@@ -113,7 +101,7 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
                 {props.currentDevice.device_name}
               </span>
               <span className="shrink-0 text-ui-sm text-muted-foreground">
-                {platformFor(props.currentDevice.platform)}
+                {displaySyncGroupPlatform(props.currentDevice.platform)}
               </span>
             </div>
           </div>

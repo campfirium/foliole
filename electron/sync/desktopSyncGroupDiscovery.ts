@@ -1,4 +1,5 @@
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
+import { normalizeDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import {
   evaluateSyncProtocolCompatibility,
   parseSyncProtocolTxt,
@@ -113,9 +114,7 @@ function isMobile(platform: string) {
 }
 
 function desktopKind(platform: string) {
-  if (platform === 'macOS') return 'darwin';
-  if (platform === 'Windows') return 'win32';
-  return platform ? platform.toLowerCase() : 'desktop';
+  return normalizeDesktopSyncGroupPlatform(platform);
 }
 
 function text(value: unknown) {

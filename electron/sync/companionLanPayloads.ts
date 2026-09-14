@@ -1,6 +1,7 @@
 import os from 'node:os';
 
 import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
+import { resolveDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
@@ -31,12 +32,11 @@ export function buildWorkspaceVersionPayload(appVersion: string, peerId: string,
   };
 }
 
-function resolveDesktopPlatformLabel() {
-  const platform = os.platform();
-  if (platform === 'win32') return 'Windows';
-  if (platform === 'darwin') return 'macOS';
-  if (platform === 'linux') return 'Linux';
-  return platform;
+export function resolveDesktopPlatformLabel(
+  platform = os.platform(),
+  release = os.release()
+) {
+  return resolveDesktopSyncGroupPlatform(platform, release);
 }
 
 export function resolveDesktopHostName() {

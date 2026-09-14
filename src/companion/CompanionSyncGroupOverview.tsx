@@ -1,18 +1,10 @@
 import { resolveSyncGroupDisplayDeviceName, type SyncGroupDevicePayload, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import { displaySyncGroupPlatform, isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppSpinner } from '../shared/ui';
 
-const PLATFORM_LABELS: Record<string, string> = {
-  android: 'Android', darwin: 'macOS', ios: 'iOS', linux: 'Linux', win32: 'Windows'
-};
-
-function platformFor(kind: string) {
-  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
-  return key ? PLATFORM_LABELS[key]! : kind;
-}
-
 function isDesktopDevice(device: SyncGroupDevicePayload) {
-  return ['darwin', 'linux', 'win32'].some((kind) => device.platform.toLowerCase().includes(kind));
+  return isDesktopSyncGroupPlatform(device.platform);
 }
 
 function overviewDevice(group: SyncGroupPayload) {
@@ -50,7 +42,9 @@ export function CompanionSyncGroupOverview(props: {
           data-testid="companion-sync-group-device">
           <span className="flex min-w-0 items-baseline gap-2">
             <span className="truncate text-sm font-semibold text-foreground">{device.device_name}</span>
-            <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(device.platform)}</span>
+            <span className="shrink-0 text-xs text-companion-text-tertiary">
+              {displaySyncGroupPlatform(device.platform)}
+            </span>
           </span>
           {props.isSyncing && device.device_name === props.sourceHostName ? (
             <span className="flex shrink-0 items-center gap-2 text-sm text-companion-text-secondary"

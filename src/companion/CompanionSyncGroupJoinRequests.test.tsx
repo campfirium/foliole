@@ -12,3 +12,12 @@ it('keeps the inactive companion request surface on Sync Group and Device langua
   expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
   expect(document.body.textContent ?? '').not.toMatch(/pair|member|manager|connect|revoke/iu);
 });
+
+it('does not expose internal Windows platform identifiers', () => {
+  render(<CompanionSyncGroupJoinRequests onAccept={vi.fn()} onReject={vi.fn()} requests={[{
+    device_name: 'Studio PC', platform: 'win32', request_id: 'request-windows'
+  }]} />);
+
+  expect(screen.getByText('Windows')).toBeInTheDocument();
+  expect(screen.queryByText('win32')).not.toBeInTheDocument();
+});

@@ -7,7 +7,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
-import { resolveDesktopHostName } from './companionLanPayloads.js';
+import { resolveDesktopHostName, resolveDesktopPlatformLabel } from './companionLanPayloads.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { requestJson } from './desktopSyncGroupHttp.js';
 import {
@@ -21,6 +21,10 @@ import {
 import { removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
+
+type CompleteDesktopSyncGroupJoinOptions = {
+  onMembershipCommitted?(): void;
+};
 
 export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   const state = loadDesktopSyncGroupJoinState();
@@ -40,7 +44,7 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
         device_anchor: identity.device_anchor,
         device_name: resolveDesktopHostName(),
         path_flavor: process.platform === 'win32' ? 'windows' : 'posix',
-        platform: process.platform
+        platform: resolveDesktopPlatformLabel()
       },
       ephemeral_public_key: key.publicKey,
       group_id: candidate.group_id
@@ -61,16 +65,16 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   });
 }
 
-export async function completeDesktopSyncGroupJoin() {
+export async function completeDesktopSyncGroupJoin(options: CompleteDesktopSyncGroupJoinOptions = {}) {
   if (joinCompletionInFlight) return await joinCompletionInFlight;
-  const work = completeDesktopSyncGroupJoinOnce().finally(() => {
+  const work = completeDesktopSyncGroupJoinOnce(options).finally(() => {
     if (joinCompletionInFlight === work) joinCompletionInFlight = null;
   });
   joinCompletionInFlight = work;
   return await work;
 }
 
-async function completeDesktopSyncGroupJoinOnce() {
+async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGroupJoinOptions) {
   const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
   if (!pending) throw new Error('sync_group_join_not_pending');
   if (Date.now() >= new Date(pending.request.expires_at).getTime()) {
@@ -94,7 +98,7 @@ async function completeDesktopSyncGroupJoinOnce() {
     });
     const group = joinDesktopSyncGroup({
       device: identity, deviceName: resolveDesktopHostName(),
-      displayName: groupInfo.display_name, platform: process.platform,
+      displayName: groupInfo.display_name, platform: resolveDesktopPlatformLabel(),
       workgroupKey: groupInfo.workgroup_key
     });
     saveDesktopSyncGroupPendingJoin(null);
@@ -108,6 +112,7 @@ async function completeDesktopSyncGroupJoinOnce() {
       route_kind: isMobileProvider(pending.candidate.provider_platform) ? 'mobile_guide' : 'anchor'
     });
   });
+  options.onMembershipCommitted?.();
   await runDesktopSyncCoordinator('initial', route);
   if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());

@@ -55,7 +55,10 @@ vi.mock('../database/syncGroupStore.js', () => ({
 vi.mock('../deviceAnchorStore.js', () => ({
   loadDesktopDeviceIdentity: async () => ({ identity: DEVICE })
 }));
-vi.mock('./companionLanPayloads.js', () => ({ resolveDesktopHostName: () => 'Desktop B' }));
+vi.mock('./companionLanPayloads.js', () => ({
+  resolveDesktopHostName: () => 'Desktop B',
+  resolveDesktopPlatformLabel: () => 'macOS'
+}));
 vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: mocks.coordinator }));
 vi.mock('./desktopSyncGroupHttp.js', () => ({ requestJson: mocks.requestJson }));
 vi.mock('./desktopSyncGroupJoinCrypto.js', () => ({
@@ -71,6 +74,7 @@ vi.mock('./desktopSyncGroupRoutes.js', () => ({
   saveDesktopSyncGroupRoute: mocks.route
 }));
 
+import { resolveDesktopPlatformLabel } from './companionLanPayloads.js';
 import {
   completeDesktopSyncGroupJoin,
   requestDesktopSyncGroupJoin
@@ -94,7 +98,7 @@ it('requests a Device-scoped join without retired library or authorization metad
       canonical_library_path: DEVICE.canonical_library_path,
       device_anchor: DEVICE.device_anchor,
       device_name: 'Desktop B', path_flavor: process.platform === 'win32' ? 'windows' : 'posix',
-      platform: process.platform
+      platform: resolveDesktopPlatformLabel()
     },
     ephemeral_public_key: 'public', group_id: 'group-1'
   });
@@ -119,6 +123,23 @@ it('activates the provider Device route and initial coordinator after acceptance
     route_kind: 'anchor'
   });
   expect(mocks.coordinator).toHaveBeenCalledWith('initial', expect.any(Object));
+});
+
+it('announces committed membership even when the initial sync fails', async () => {
+  mocks.state.pending = {
+    candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
+    request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
+      group_id: 'group-1', request_id: 'request-1', status: 'pending' }
+  };
+  mocks.existingGroup = JOINED_GROUP;
+  mocks.coordinator.mockRejectedValueOnce(new Error('initial_sync_failed'));
+  const onMembershipCommitted = vi.fn();
+
+  await expect(completeDesktopSyncGroupJoin({ onMembershipCommitted }))
+    .rejects.toThrow('initial_sync_failed');
+
+  expect(onMembershipCommitted).toHaveBeenCalledOnce();
+  expect(mocks.savePending).toHaveBeenCalledWith(null);
 });
 
 it('drops the one-time mobile guide route after initial convergence', async () => {

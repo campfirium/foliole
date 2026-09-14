@@ -32,3 +32,19 @@ it('does not let desktop waiting or incompatibility look synced', () => {
   expect(projectPreparedDesktopTopologyStatus({ availability: 'incompatible',
     last_synced_at: '2026-09-09T00:00:00.000Z', syncing: false })).toBe('incompatible');
 });
+
+it('recognizes a readable Windows 11 platform as a desktop anchor', () => {
+  const evidence = {
+    group_id: 'group-1',
+    group_tag: 'tag-1',
+    provider_device_id: 'windows-device',
+    provider_platform: 'Windows 11',
+    protocol: PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR,
+    topology_role: 'anchor'
+  };
+  expect(qualifyPreparedDesktopAnchorCandidate({
+    endpoint_url: 'http://windows-11:38641',
+    http: evidence,
+    txt: { ...evidence, device_id: 'windows-device' }
+  }).eligible).toBe(true);
+});

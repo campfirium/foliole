@@ -12,7 +12,7 @@ import {
 } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 import { getMainWindow } from '../mainWindowRegistry.js';
-import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
+import { resolveDesktopHostName, resolveDesktopPlatformLabel } from '../sync/companionLanPayloads.js';
 import {
   activateDesktopCompanionSync,
   assertDesktopCompanionSyncParticipating,
@@ -30,7 +30,10 @@ import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '.
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 
 import { asString } from './commandParsers.js';
-import { IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL } from './contracts.js';
+import {
+  IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL,
+  IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL
+} from './contracts.js';
 
 const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
   saveDesktopSyncGroupCandidates(snapshot.candidates);
@@ -72,7 +75,11 @@ async function createGroup() {
   const connection = openDatabaseConnection();
   const groupId = newSyncGroupId();
   const { identity } = await loadDesktopDeviceIdentity({ groupId, libraryPath: connection.dbPath });
-  createDesktopSyncGroup({ device: identity, deviceName: resolveDesktopHostName(), platform: process.platform });
+  createDesktopSyncGroup({
+    device: identity,
+    deviceName: resolveDesktopHostName(),
+    platform: resolveDesktopPlatformLabel()
+  });
   await activateDesktopCompanionSync(runtimeIdentity());
   return overview();
 }
@@ -105,7 +112,11 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
     return overview();
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin) {
-    await completeDesktopSyncGroupJoin();
+    await completeDesktopSyncGroupJoin({
+      onMembershipCommitted: () => {
+        getMainWindow()?.webContents.send(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL);
+      }
+    });
     return runWithDatabaseConnectionOwner(async () => {
       await activateDesktopCompanionSync(runtimeIdentity());
       return overview();
