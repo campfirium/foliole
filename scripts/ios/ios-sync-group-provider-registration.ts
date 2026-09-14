@@ -6,7 +6,9 @@ type Discovery = {
   group_tag: string;
   protocol: Parameters<typeof serializeSyncProtocolTxt>[0];
   provider_device_id: string;
+  provider_platform: string;
   runtime_instance_id: string;
+  topology_role: 'anchor';
 };
 type RegistrationEvent = {
   code?: string;
@@ -36,6 +38,8 @@ export function hostedRegistrationInput(discovery: Discovery, port: number) {
       [IOS_HOSTED_DISCOVERY_TXT_KEYS.groupId]: required(discovery.group_id, 'group_id'),
       [IOS_HOSTED_DISCOVERY_TXT_KEYS.groupTag]: required(discovery.group_tag, 'group_tag'),
       [IOS_HOSTED_DISCOVERY_TXT_KEYS.runtimeInstanceId]: runtime,
+      provider_platform: required(discovery.provider_platform, 'provider_platform'),
+      topology_role: discovery.topology_role,
       ...serializeSyncProtocolTxt(discovery.protocol)
     },
     type: '_foliole-sync._tcp'

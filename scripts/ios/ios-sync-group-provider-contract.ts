@@ -87,7 +87,7 @@ function createProviderDiscovery(groupTag: string, runtimeInstanceId: string) {
     app_version: '0.7.9', group_display_name: GROUP_NAME, group_id: IOS_HOSTED_SYNC_GROUP_ID,
     group_tag: groupTag, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     provider_device_id: IOS_HOSTED_PROVIDER_DEVICE_ID, provider_device_name: IOS_HOSTED_PROVIDER_NAME,
-    provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId
+    provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId, topology_role: 'anchor'
   };
 }
 
