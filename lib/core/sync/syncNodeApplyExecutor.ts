@@ -17,6 +17,7 @@ import {
   type SyncNodeApplyOperation
 } from './syncNodeApplyRules.js';
 import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
+import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalence.js';
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { applyRemoteNodeTombstone, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
@@ -104,6 +105,19 @@ async function handleTombstoneGuard(input: {
   return false;
 }
 
+async function decideNodeApply(
+  port: DbPort,
+  localNode: LocalSyncNodeStateRow | null,
+  record: NativeSyncNodeRecord,
+  operation: SyncNodeApplyOperation | undefined
+) {
+  const decision = decideIncomingNodeApply(localNode, record, operation);
+  if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
+  return await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)
+    ? 'apply_fast_forward'
+    : decision;
+}
+
 export async function applySyncNodesWithDbPort(
   port: DbPort,
   records: NativeSyncNodeRecord[],
@@ -131,7 +145,7 @@ export async function applySyncNodesWithDbPort(
         continue;
       }
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
-      const decision = decideIncomingNodeApply(localNode, record, options.operation);
+      const decision = await decideNodeApply(tx, localNode, record, options.operation);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
         await applyAcceptedRemoteNode({
           invalidatedAt, localNode, operation: options.operation ?? 'remote_sync', options, preparedTextBodyHashes,
