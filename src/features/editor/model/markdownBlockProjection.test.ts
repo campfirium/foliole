@@ -54,9 +54,9 @@ describe('markdownBlockProjection', () => {
     }))).toEqual([
       { checked: undefined, from: 0, kind: 'heading', lineFrom: 0, markerText: '', to: 2 },
       { checked: undefined, from: 19, kind: 'quote', lineFrom: 19, markerText: '', to: 21 },
-      { checked: undefined, from: 27, kind: 'unordered-list', lineFrom: 27, markerText: '• ', to: 29 },
+      { checked: undefined, from: 27, kind: 'unordered-list', lineFrom: 27, markerText: '•', to: 29 },
       { checked: true, from: 34, kind: 'task-list', lineFrom: 34, markerText: '', to: 40 },
-      { checked: undefined, from: 45, kind: 'ordered-list', lineFrom: 45, markerText: '1. ', to: 48 }
+      { checked: undefined, from: 45, kind: 'ordered-list', lineFrom: 45, markerText: '1.', to: 48 }
     ]);
   });
 

@@ -1,5 +1,6 @@
 const EDITOR_SPACE_XS = 'var(--editor-space-xs)';
 const EDITOR_SPACE_MD = 'var(--editor-space-md)';
+const LIST_LEVEL_INLINE_STEP_EM = 2;
 
 // Local rhythm values preserve the existing CodeMirror markdown spacing while
 // keeping the theme object free of scattered spacing literals.
@@ -15,10 +16,10 @@ const LOCAL_MARKDOWN_RHYTHM = {
   h3BlockStart: '0.5rem',
   imageBlock: '0.24rem',
   imageInline: '0.18rem',
-  listInlineStart: '0.2rem',
+  listMarkerColumnInlineSize: `${LIST_LEVEL_INLINE_STEP_EM}em`,
+  listMarkerInlineEnd: '0.5em',
   sectionDividerBlockEnd: '0.85rem',
   sectionDividerBlockStart: '0.9rem',
-  taskPrefixInlineEnd: '0.1rem',
   thematicBreakBlock: '0.72rem'
 } as const;
 
@@ -48,13 +49,14 @@ export const liveMarkdownSpacing = {
   imageBlockMargin: LOCAL_MARKDOWN_RHYTHM.imageBlock,
   imageInlineMargin: `0 ${LOCAL_MARKDOWN_RHYTHM.imageInline}`,
   imageInlineStatusPadding: `0 ${IMAGE_INLINE_STATUS_PADDING_INLINE}`,
-  listInlineStart: LOCAL_MARKDOWN_RHYTHM.listInlineStart,
+  listLevelInlineStart: (depth: number) => `${depth * LIST_LEVEL_INLINE_STEP_EM}em`,
+  listMarkerColumnInlineSize: LOCAL_MARKDOWN_RHYTHM.listMarkerColumnInlineSize,
+  listMarkerInlineEnd: LOCAL_MARKDOWN_RHYTHM.listMarkerInlineEnd,
   sectionDividerPadding: `${LOCAL_MARKDOWN_RHYTHM.sectionDividerBlockStart} 0 ${LOCAL_MARKDOWN_RHYTHM.sectionDividerBlockEnd}`,
   taskCheckHeight: FONT_RELATIVE_GEOMETRY.taskCheckHeight,
   taskCheckLeft: FONT_RELATIVE_GEOMETRY.taskCheckLeft,
   taskCheckTop: FONT_RELATIVE_GEOMETRY.taskCheckTop,
   taskCheckWidth: FONT_RELATIVE_GEOMETRY.taskCheckWidth,
   taskCheckboxSize: FONT_RELATIVE_GEOMETRY.taskCheckboxSize,
-  taskPrefixInlineEnd: LOCAL_MARKDOWN_RHYTHM.taskPrefixInlineEnd,
   thematicBreakMargin: `${LOCAL_MARKDOWN_RHYTHM.thematicBreakBlock} 0`
 } as const;

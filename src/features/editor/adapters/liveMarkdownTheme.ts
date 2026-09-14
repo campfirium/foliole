@@ -44,7 +44,6 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: liveMarkdownSpacing.h1BlockEnd, paddingTop: liveMarkdownSpacing.h1BlockStart },
   '.cm-line.cm-line-h2': { fontSize: 'var(--content-panel-h2-font-size, 1.25rem)', fontWeight: '700', paddingBottom: liveMarkdownSpacing.h2BlockEnd, paddingTop: liveMarkdownSpacing.h2BlockStart },
   '.cm-line.cm-line-h3': { fontSize: 'var(--content-panel-h3-font-size, 1.08rem)', fontWeight: '650', paddingTop: liveMarkdownSpacing.h3BlockStart },
-  '.cm-line.cm-line-list, .cm-line.cm-line-list-unordered': { paddingLeft: liveMarkdownSpacing.listInlineStart },
   '.cm-line.cm-line-quote': { borderLeft: 'var(--editor-border-width-accent) solid var(--app-accent-color)', color: 'var(--color-text-primary)', paddingBottom: 'var(--editor-space-xxs)', paddingTop: 'var(--editor-space-xxs)', paddingLeft: 'var(--editor-space-md)' },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgb(var(--color-foreground) / 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: liveMarkdownSpacing.codeLinePadding },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
@@ -141,8 +140,16 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-anchor-tag-attr': { color: 'var(--app-accent-color)', opacity: '0.75' },
   '.cm-md-anchor-tag-id': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },
   '.cm-md-prefix-widget': { color: 'var(--color-text-secondary)', display: 'inline-block', whiteSpace: 'pre' },
+  '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list, .cm-md-prefix-task-list': {
+    alignItems: 'center',
+    boxSizing: 'border-box',
+    display: 'inline-flex',
+    inlineSize: liveMarkdownSpacing.listMarkerColumnInlineSize,
+    justifyContent: 'flex-end',
+    paddingInlineEnd: liveMarkdownSpacing.listMarkerInlineEnd
+  },
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: 'var(--color-text-secondary)', fontWeight: '500', opacity: '0.95' },
-  '.cm-md-prefix-task-list': { display: 'inline-flex', alignItems: 'center', height: '1em', marginRight: liveMarkdownSpacing.taskPrefixInlineEnd, verticalAlign: '-0.08em' },
+  '.cm-md-prefix-task-list': { height: '1em', verticalAlign: '-0.08em' },
   '.cm-md-task-checkbox': {
     border: '1px solid rgb(var(--color-border-strong) / 0.72)',
     borderRadius: 'var(--editor-radius-sm)',

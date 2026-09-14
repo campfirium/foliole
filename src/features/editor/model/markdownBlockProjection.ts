@@ -30,6 +30,7 @@ export interface MarkdownPrefixRange {
   from: number;
   hiddenRanges?: MarkdownHeadingPrefixRange['hiddenRanges'];
   kind: MarkdownPrefixKind;
+  listDepth?: number;
   lineFrom: number;
   markerText: string;
   taskMarkerFrom?: number;
@@ -110,6 +111,7 @@ function addPrefixRange(
 }
 
 function visitPrefixNodes(args: {
+  listDepth: number;
   node: MarkdownSyntaxNode;
   offset: number;
   parentName: string | null;
@@ -138,12 +140,14 @@ function visitPrefixNodes(args: {
       offset: args.offset,
       parentName: args.node.name,
       prefixes: args.prefixes,
+      listDepth: args.listDepth + (args.node.name === 'BulletList' || args.node.name === 'OrderedList' ? 1 : 0),
       source: args.source
     });
   }
 }
 
 function collectListItemPrefix(args: {
+  listDepth: number;
   node: MarkdownSyntaxNode;
   parentName: string | null;
   prefixes: MarkdownPrefixRange[];
@@ -162,6 +166,7 @@ function collectListItemPrefix(args: {
       checked: args.source.slice(taskMarker.from, taskMarker.to).toLowerCase().includes('x'),
       from: args.node.from,
       kind: 'task-list',
+      listDepth: args.listDepth,
       markerText: '',
       taskMarkerFrom: taskMarker.from,
       taskMarkerTo: taskMarker.to,
@@ -171,14 +176,16 @@ function collectListItemPrefix(args: {
     addPrefixRange(args.prefixes, args.source, args.offset, {
       from: args.node.from,
       kind: 'unordered-list',
-      markerText: '• ',
+      listDepth: args.listDepth,
+      markerText: '•',
       to: paragraph?.from ?? extendTrailingSpaces(args.source, listMark.to)
     });
   } else if (args.parentName === 'OrderedList') {
     addPrefixRange(args.prefixes, args.source, args.offset, {
       from: args.node.from,
       kind: 'ordered-list',
-      markerText: `${args.source.slice(listMark.from, listMark.to)} `,
+      listDepth: args.listDepth,
+      markerText: args.source.slice(listMark.from, listMark.to),
       to: paragraph?.from ?? extendTrailingSpaces(args.source, listMark.to)
     });
   }
@@ -256,6 +263,7 @@ export function collectMarkdownPrefixRanges(text: string, offset = 0): MarkdownP
 export function collectMarkdownPrefixRangesFromTree(tree: MarkdownSyntaxTree, text: string, offset = 0): MarkdownPrefixRange[] {
   const prefixes: MarkdownPrefixRange[] = [];
   visitPrefixNodes({
+    listDepth: -1,
     node: tree.topNode,
     offset,
     parentName: null,

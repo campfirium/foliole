@@ -6,6 +6,7 @@ import type { MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockPro
 
 import { toggleTaskMarkerAt } from './codeMirrorListTaskCommands';
 import { addMark, addReplace } from './liveMarkdownPrimitives';
+import { liveMarkdownSpacing } from './liveMarkdownSpacing';
 
 type PrefixWidgetKind = 'unordered-list' | 'ordered-list' | 'task-list' | 'callout';
 
@@ -13,6 +14,7 @@ interface PrefixWidgetMatch {
   checked?: boolean;
   from: number;
   kind: PrefixWidgetKind;
+  listDepth?: number;
   markerText: string;
   taskMarkerFrom?: number;
   taskMarkerTo?: number;
@@ -77,8 +79,9 @@ function addParserPrefixDecoration(
   if (!widgetRange) return;
   addPrefixMatch(ranges, {
     ...(widgetRange.checked !== undefined ? { checked: widgetRange.checked } : {}),
-    from: widgetRange.from,
+    from: showSyntax || quoteRanges.length > 0 ? widgetRange.from : widgetRange.lineFrom,
     kind: widgetRange.kind,
+    ...(widgetRange.listDepth !== undefined ? { listDepth: widgetRange.listDepth } : {}),
     markerText: widgetRange.markerText,
     ...(widgetRange.taskMarkerFrom !== undefined ? { taskMarkerFrom: widgetRange.taskMarkerFrom } : {}),
     ...(widgetRange.taskMarkerTo !== undefined ? { taskMarkerTo: widgetRange.taskMarkerTo } : {}),
@@ -101,31 +104,37 @@ function addPrefixMatch(ranges: Range<Decoration>[], match: PrefixWidgetMatch, s
 class PrefixWidget extends WidgetType {
   readonly checked: boolean;
   readonly kind: PrefixWidgetKind;
+  readonly listDepth: number;
   readonly markerText: string;
   readonly taskMarkerFrom: number | undefined;
   readonly taskMarkerTo: number | undefined;
 
-  constructor(kind: PrefixWidgetKind, markerText: string, checked = false, taskMarkerFrom?: number, taskMarkerTo?: number) {
+  constructor(kind: PrefixWidgetKind, markerText: string, checked = false, listDepth = 0, taskMarkerFrom?: number, taskMarkerTo?: number) {
     super();
     this.checked = checked;
     this.kind = kind;
+    this.listDepth = listDepth;
     this.markerText = markerText;
     this.taskMarkerFrom = taskMarkerFrom;
     this.taskMarkerTo = taskMarkerTo;
   }
 
   override eq(other: PrefixWidget) {
-    return this.checked === other.checked && this.kind === other.kind && this.markerText === other.markerText
+    return this.checked === other.checked && this.kind === other.kind && this.listDepth === other.listDepth && this.markerText === other.markerText
       && this.taskMarkerFrom === other.taskMarkerFrom && this.taskMarkerTo === other.taskMarkerTo;
   }
 
   override toDOM(view: import('@codemirror/view').EditorView) {
     const marker = document.createElement('span');
     marker.className = `cm-md-prefix-widget cm-md-prefix-${this.kind}`;
+    if (this.kind !== 'callout') {
+      marker.dataset.mdListDepth = String(this.listDepth);
+      marker.style.marginInlineStart = liveMarkdownSpacing.listLevelInlineStart(this.listDepth);
+    }
     if (this.kind === 'task-list') {
       marker.dataset.mdTaskChecked = this.checked ? 'true' : 'false';
       marker.setAttribute('aria-hidden', 'true');
-      marker.append(createTaskCheckboxElement(view, this.checked, this.taskMarkerFrom, this.taskMarkerTo), document.createTextNode(' '));
+      marker.append(createTaskCheckboxElement(view, this.checked, this.taskMarkerFrom, this.taskMarkerTo));
       return marker;
     }
     if (this.kind === 'callout') marker.classList.add('cm-md-callout-title');
@@ -135,7 +144,7 @@ class PrefixWidget extends WidgetType {
 }
 
 function addPrefixWidget(ranges: Range<Decoration>[], match: PrefixWidgetMatch) {
-  const widget = new PrefixWidget(match.kind, match.markerText, match.checked, match.taskMarkerFrom, match.taskMarkerTo);
+  const widget = new PrefixWidget(match.kind, match.markerText, match.checked, match.listDepth, match.taskMarkerFrom, match.taskMarkerTo);
   ranges.push(Decoration.replace({ widget, inclusive: false }).range(match.from, match.to));
 }
 
