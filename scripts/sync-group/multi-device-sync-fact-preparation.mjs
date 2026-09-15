@@ -35,7 +35,7 @@ export async function runAOfflineAdmissionPrelude({
         await close();
         reportProgress('a-offline');
         await waitForProvider(listener.sync_group);
-        reportProgress('b-anchor-discoverable');
+        reportProgress('b-provider-discoverable');
         windowsWork = startWindows(); reportProgress('c-join-started'); windowsStarted();
       }
     });

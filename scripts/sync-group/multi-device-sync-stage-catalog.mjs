@@ -25,7 +25,7 @@ const stages = [
   { action: 'admit-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-c',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
-      'b-fact-received', 'a-offline', 'b-anchor-discoverable', 'c-join-started',
+      'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
       'b-approval-completed',
       'c-provider-discoverable', 'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
     progressDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,

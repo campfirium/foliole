@@ -28,7 +28,7 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
   expect(close).toHaveBeenCalledTimes(1);
   expect(milestones).toEqual([
     'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
-    'b-fact-received', 'a-offline', 'b-anchor-discoverable', 'c-join-started',
+    'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
     'b-approval-completed'
   ]);
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });

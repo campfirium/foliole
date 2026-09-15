@@ -85,9 +85,9 @@ export function waitForAdmittedCProvider(group, waitForProvider = waitForCurrent
   });
 }
 
-export function waitForCurrentAndroidAnchor(group, waitForProvider = waitForCurrentProvider) {
+export function waitForCurrentAndroidProvider(group, waitForProvider = waitForCurrentProvider) {
   if (!group?.group_id) throw new Error('Android B Sync Group identity is unavailable.');
-  return waitForProvider({ groupId: group.group_id, topologyRole: 'anchor' });
+  return waitForProvider({ groupId: group.group_id, topologyRole: 'member' });
 }
 
 async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {
@@ -135,7 +135,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       },
       reportProgress,
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId),
-      waitForProvider: (group) => waitForCurrentAndroidAnchor(group),
+      waitForProvider: (group) => waitForCurrentAndroidProvider(group),
       waitForListener: async (session) => {
         await observeMacosAnchorAfterElection(session);
         return session.load();
