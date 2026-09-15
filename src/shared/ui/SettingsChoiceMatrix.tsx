@@ -16,7 +16,7 @@ export function SettingsChoiceMatrix(props: {
     >
       <span aria-hidden="true" />
       {props.columns.map((column) => (
-        <span className="text-sm text-foreground/65" key={column}>{column}</span>
+        <span className="text-center text-sm text-foreground/65" key={column}>{column}</span>
       ))}
       {props.rows.flatMap((row) => [
         <span className="text-sm font-medium text-foreground" key={`${row.label}:label`}>
