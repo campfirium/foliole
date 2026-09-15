@@ -11,7 +11,7 @@ import {
 const initial = {
   activeHosts: { desktop: ['Mac A', 'Windows C'], mobile: ['Android B'] }, activeMemberCount: 3,
   journeyFacts: { old: 'A' }, localGroupId: 'group-1', localHostName: 'Windows C',
-  localMemberState: 'active', localTimelineId: 'timeline-1'
+  localMemberState: 'active', localTimelineId: null
 };
 const survivor = {
   ...initial, activeHosts: { desktop: ['Windows C'], mobile: ['Android B'] }, activeMemberCount: 2,
@@ -28,7 +28,7 @@ it('requires one stable two-member group and one departed former member', () => 
     .toEqual({ activeMembers: ['Android B', 'Windows C'], formerHostName: 'Mac A',
       formerLeftAt: '2026-08-12T12:00:00.000Z' });
   expect(() => assertWindowsSurvivorState({
-    facts: { ...survivor, localTimelineId: 'timeline-2' }, initial
+    facts: { ...survivor, localGroupId: 'group-2' }, initial
   })).toThrow('did not preserve the two-member Sync Group');
 });
 

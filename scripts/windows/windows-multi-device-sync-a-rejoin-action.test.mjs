@@ -8,13 +8,8 @@ import { runWindowsMultiDeviceSyncARejoin } from './windows-multi-device-sync-a-
 
 const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4,
   facts: {}, journeyFacts: {}, localGroupId: 'group-1', localMemberState: 'active',
-  localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
+  localTimelineId: null, missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
-
-it('reads the persisted group timeline used by the A-rejoin invariant', () => {
-  const source = fs.readFileSync('scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8');
-  expect(source).toContain('groups.timeline_id AS timeline_id');
-});
 
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));

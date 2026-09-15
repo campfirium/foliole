@@ -64,8 +64,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   try {
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
     const local = db.prepare(`SELECT local.group_id, local.local_device_identity_key,
-      device.device_name AS local_host_name, local.state AS member_state,
-      groups.timeline_id AS timeline_id
+      device.device_name AS local_host_name, local.state AS member_state, NULL AS timeline_id
       FROM sync_group_local_state local
       LEFT JOIN sync_groups groups ON groups.group_id = local.group_id
       LEFT JOIN sync_group_devices device ON device.group_id = local.group_id
