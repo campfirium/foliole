@@ -91,7 +91,7 @@ it('atomically migrates the legacy article grid to seven categories', () => {
     videoWithHighlights: 'inbox', videoWithoutHighlights: 'off'
   });
   expect(global).not.toHaveProperty('readwiseReaderConfig');
-  expect(host).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
+  expect(host).toMatchObject({ autoImportPolicyVersion: 3, version: 6 });
   expect(host.readwiseReaderConfig).not.toHaveProperty('withHighlightsDestination');
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.driver.queryAll<{ sync_dirty: number }>(

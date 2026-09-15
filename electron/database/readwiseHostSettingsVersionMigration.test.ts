@@ -70,12 +70,13 @@ it('migrates legacy Host settings to explicit folder mode and blocks v1 writes',
   expect(projection).toMatchObject({
     autoImportPolicyVersion: 3,
     apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
-    readwiseRootPath: '/Readwise', readwiseSourceMode: 'folder', version: 5
+    readwiseRootPath: '/Readwise', version: 6
   });
+  expect(projection).not.toHaveProperty('readwiseSourceMode');
   expect(canonical).toEqual(projection);
   expect(connection.driver.queryOne<{ state_seq: number; sync_dirty: number }>(
     "SELECT state_seq, sync_dirty FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE '%readwise_import_settings'"
-  )).toMatchObject({ state_seq: 11, sync_dirty: 1 });
+  )).toMatchObject({ state_seq: 12, sync_dirty: 1 });
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(() => connection.driver.execute(
     "UPDATE settings SET value = '{\"version\":1}' WHERE key = 'readwise_import_settings'"

@@ -5,6 +5,7 @@ import type { NativeSyncPeer } from '../../lib/platform/nativeStorageContract.js
 import { resetDatabaseReadinessForTests } from '../database/databaseReadiness.js';
 
 const globalClipShortcutMocks = vi.hoisted(() => ({ refreshGlobalClipShortcutFromSettings: vi.fn() }));
+const readwiseApiSchedulerMocks = vi.hoisted(() => ({ refreshReadwiseApiScheduler: vi.fn() }));
 const syncPeerMocks = vi.hoisted(() => ({
   loadSyncPeers: vi.fn(() => [{ last_seen_version_cursor: 'desktop-1#42',
     last_synced_at: '2026-04-21T16:30:00.000Z', peer_id: 'android-1', status: 'paired',
@@ -26,6 +27,7 @@ vi.mock('electron', () => ({
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('../globalClipShortcut.js', () => globalClipShortcutMocks);
+vi.mock('../import/readwiseApiScheduler.js', () => readwiseApiSchedulerMocks);
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',

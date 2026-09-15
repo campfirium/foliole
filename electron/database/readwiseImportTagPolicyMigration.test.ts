@@ -61,7 +61,7 @@ it('adds an empty import tag and advances the Host gate atomically from v85', ()
     "SELECT value FROM settings WHERE key = 'readwise_import_settings'"
   )!.value) as Record<string, unknown>;
   expect(policy).toMatchObject({ importTag: '', version: 3 });
-  expect(migratedHost).toMatchObject({ autoImportPolicyVersion: 3, version: 5 });
+  expect(migratedHost).toMatchObject({ autoImportPolicyVersion: 3, version: 6 });
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(() => connection.driver.execute(
     "UPDATE settings SET value = '{\"version\":4}' WHERE key = 'readwise_import_settings'"
