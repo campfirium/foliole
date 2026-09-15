@@ -118,6 +118,13 @@ async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity
     } });
 }
 
+export async function refreshMacosProviderAfterJoin(session, {
+  observe = observeMacosAnchorAfterElection
+} = {}) {
+  await session.enable();
+  return observe(session);
+}
+
 export async function establishFreshAB({ execute, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
@@ -140,6 +147,7 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
         groupIdentity: providerOverview.sync_group, paths, session });
+      await refreshMacosProviderAfterJoin(session);
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },

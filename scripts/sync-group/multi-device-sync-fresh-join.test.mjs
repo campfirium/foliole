@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import {
-  performFreshJoinSequence, prepareA5ForFreshJoin
+  performFreshJoinSequence, prepareA5ForFreshJoin, refreshMacosProviderAfterJoin
 } from './multi-device-sync-fresh-join.mjs';
 
 it('joins as a Device before requesting public Sync Now and proves the exact fact after restart', async () => {
@@ -39,6 +39,20 @@ it('keeps the formal A-B journey on the Device request contract', () => {
   expect(source).toContain('expectedGroupId: groupIdentity.group_id');
   expect(source).toContain('expectedGroupTag: groupIdentity.group_tag');
   expect(source).not.toMatch(/PairSync|pair_request|paired_authorizations/u);
+});
+
+it('refreshes the Mac anchor advertisement after the Device joins', async () => {
+  const order = [];
+  const session = { enable: vi.fn(async () => { order.push('registered'); }) };
+  const observe = vi.fn(async (value) => {
+    expect(value).toBe(session);
+    order.push('anchor-ready');
+    return { role: 'anchor', status: 'ready' };
+  });
+  await expect(refreshMacosProviderAfterJoin(session, { observe })).resolves.toEqual({
+    role: 'anchor', status: 'ready'
+  });
+  expect(order).toEqual(['registered', 'anchor-ready']);
 });
 
 it('leaves a previously joined A5 through the product before a fresh formal join', async () => {
