@@ -128,6 +128,14 @@ it('creates fresh A and B facts after the Windows baseline and before its sessio
   expect(bFact).toBeLessThan(session);
 });
 
+it('waits for fresh A and B on macOS before releasing the Windows session', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const converged = source.indexOf("waitUntil('macOS A fresh A/B fact identities'");
+  const release = source.indexOf("await windowsProvider.release('consumer_complete')");
+  expect(converged).toBeGreaterThan(-1);
+  expect(converged).toBeLessThan(release);
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);

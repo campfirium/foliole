@@ -127,6 +127,12 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartProvider();
+    const preWindowsIds = await waitUntil('macOS A fresh A/B fact identities', async () =>
+      freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
+    (value) => ['A', 'B'].every((origin) => value[origin]),
+    'two_facts_missing');
+    if (preWindowsIds.A !== aFact.factId) throw productFailure('macos-a',
+      'macos_a_rejoin_fact_identity_mismatch', 'macOS A reported a different fresh A fact.');
     await windowsProvider.release('consumer_complete');
     await windowsProvider.waitForProgress('c-session-opened');
     await windowsProvider.waitForProgress('c-fact-created');
