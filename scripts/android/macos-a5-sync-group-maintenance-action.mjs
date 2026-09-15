@@ -71,7 +71,8 @@ function instrumentationReportedFailure(stdout) {
 export async function runMacosA5InstrumentationMechanics({
   appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
   expectedGroupId, expectedGroupTag, instrumentationArgs = [],
-  needsTransport = false, observeConcurrently = false, observeWhileTransportOpen, paths,
+  instrumentationOwnsActivity = false, needsTransport = false, observeConcurrently = false,
+  observeWhileTransportOpen, paths,
   releaseAfterObservation = false, restartApp = false, serial, testClass,
   testClassPrefix = APP_ID, validateInstrumentation
 }) {
@@ -114,7 +115,10 @@ export async function runMacosA5InstrumentationMechanics({
         options, 'transport open')).output);
       reverseCreated = true;
     }
-    await foregroundInstrumentationTarget(execute, paths, serial, appId, options);
+    if (instrumentationOwnsActivity) output.push((await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'am', 'force-stop', appId],
+      options, 'instrumentation activity reset')).output);
+    else await foregroundInstrumentationTarget(execute, paths, serial, appId, options);
     const identityArgs = expectedGroupId && expectedGroupTag
       ? ['-e', 'expectedGroupId', expectedGroupId, '-e', 'expectedGroupTag', expectedGroupTag] : [];
     if ((expectedGroupId || expectedGroupTag)

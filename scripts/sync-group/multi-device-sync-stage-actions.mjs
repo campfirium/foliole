@@ -69,6 +69,7 @@ export async function syncAdmittedCToAndroid({
   const sync = await runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
     appId: MULTI_DEVICE_ANDROID_APP_ID,
     evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
+    instrumentationOwnsActivity: true,
     observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
     paths, serial: A5_SERIAL, transportRequired: false });
   await restartAndroid({ appId: MULTI_DEVICE_ANDROID_APP_ID, env, execute, paths });

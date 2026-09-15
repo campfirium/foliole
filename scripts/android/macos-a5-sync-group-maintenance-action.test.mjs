@@ -102,6 +102,27 @@ it('can exercise public Sync Now through the discovered LAN anchor without adb r
   expect(mechanics).toHaveBeenCalledWith(expect.objectContaining({ needsTransport: false }));
 });
 
+it('lets instrumentation own the only Activity during post-admission Sync Now', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'instrumentation',
+    stdout: [
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed"}',
+      'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+      'INSTRUMENTATION_CODE: -1'
+    ].join('\n')
+  } : successfulAdbResult(args));
+  await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity: 'owned-activity',
+    env: {}, evidenceRoot: root, execute, instrumentationOwnsActivity: true,
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
+    serial: '87a33a4b', transportRequired: false });
+  const commands = execute.mock.calls.map(([, args]) => args.join(' '));
+  expect(commands).toContain('-s 87a33a4b shell am force-stop com.foliole.android');
+  expect(commands.some((command) => command.includes('dumpsys activity activities'))).toBe(false);
+});
+
 it('quotes journey counts across the adb shell boundary', async () => {
   const root = createTestRoot();
   roots.push(root);

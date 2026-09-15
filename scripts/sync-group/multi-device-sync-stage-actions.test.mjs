@@ -50,7 +50,7 @@ it('uses public Android Sync Now to consume the admitted C fact', async () => {
   })).resolves.toEqual({ restarted: 'observed-c', sync: 'observed-c' });
   expect(runSyncNow).toHaveBeenCalledWith(expect.objectContaining({
     action: 'sync-now', appId: 'com.foliole.android.acceptance',
-    buildIdentity: 'run-1', installMain: false
+    buildIdentity: 'run-1', installMain: false, instrumentationOwnsActivity: true
   }));
   expect(restartAndroid).toHaveBeenCalledWith({ appId: 'com.foliole.android.acceptance',
     env: {}, execute: expect.any(Function), paths: {} });
