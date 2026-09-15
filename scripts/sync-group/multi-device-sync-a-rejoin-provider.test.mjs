@@ -115,6 +115,18 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   expect(created).toBeLessThan(identities);
 });
 
+it('pushes fresh member facts through product sync before waiting on the anchor', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const bCreated = source.indexOf("reportProgress('b-fact-created')");
+  const aSync = source.indexOf("await session.invoke('sync_companion_now')", bCreated);
+  const bSync = source.indexOf('await syncAndroidFact(', bCreated);
+  const cCreated = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
+  expect(bCreated).toBeGreaterThan(-1);
+  expect(aSync).toBeGreaterThan(bCreated);
+  expect(bSync).toBeGreaterThan(aSync);
+  expect(cCreated).toBeGreaterThan(bSync);
+});
+
 it('runs the rejoining Mac product sync only after Windows C opens its session', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const opened = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
