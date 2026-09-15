@@ -16,7 +16,8 @@ final class FolioleCompanionSyncGroupRequestAuth {
         Context context,
         FolioleCompanionHttpRequest request,
         String groupId,
-        FolioleCompanionSyncGroupDataBridge bridge
+        FolioleCompanionSyncGroupDataBridge bridge,
+        boolean allowUnknownDevice
     ) throws Exception {
         String deviceId = request.header("x-device-id");
         String nonce = request.header("x-nonce");
@@ -35,9 +36,11 @@ final class FolioleCompanionSyncGroupRequestAuth {
             throw new SecurityException("invalid_signature");
         }
         long now = System.currentTimeMillis();
-        JSONObject verified = bridge.request("verify_device", new org.json.JSONObject()
-            .put("group_id", groupId).put("device_id", deviceId));
-        if (!verified.optBoolean("active")) throw new SecurityException("sync_group_device_not_active");
+        if (!allowUnknownDevice) {
+            JSONObject verified = bridge.request("verify_device", new org.json.JSONObject()
+                .put("group_id", groupId).put("device_id", deviceId));
+            if (!verified.optBoolean("active")) throw new SecurityException("sync_group_device_not_active");
+        }
         consumeNonce(context, groupId + ":" + deviceId + ":" + timestamp + ":" + nonce, now);
         return deviceId;
     }

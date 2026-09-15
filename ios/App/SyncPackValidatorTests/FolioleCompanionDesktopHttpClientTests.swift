@@ -79,6 +79,6 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v6.json")
+            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v7.json")
     }
 }

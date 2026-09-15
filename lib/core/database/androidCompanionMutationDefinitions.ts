@@ -81,6 +81,8 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   companionMetaDeleteExceptDeviceId: "DELETE FROM companion_meta WHERE key <> 'device_id'",
   companionMetaUpsert: 'INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
   appDataClearSyncGroupLocalState: 'DELETE FROM sync_group_local_state',
+  appDataClearSyncGroupRemovalConfirmations: 'DELETE FROM sync_group_removal_confirmations',
+  appDataClearSyncGroupRemovalDecisions: 'DELETE FROM sync_group_removal_decisions',
   appDataClearSyncGroupDevices: 'DELETE FROM sync_group_devices',
   appDataClearSyncGroupNonceLedger: 'DELETE FROM sync_group_nonce_ledger',
   appDataClearSyncGroups: 'DELETE FROM sync_groups',

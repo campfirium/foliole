@@ -1,3 +1,4 @@
+import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
@@ -68,7 +69,15 @@ function useSyncGroupConfirmationActions(
     })) return;
     await state.leaveSyncGroup();
   };
-  return { confirmLeave };
+  const confirmRemove = async (device: SyncGroupDevicePayload) => {
+    if (!await requestAppConfirmation({
+      confirmLabel: t('settings.companionSync.group.remove'),
+      description: t('settings.companionSync.group.remove.confirm.description', { name: device.device_name }),
+      title: t('settings.companionSync.group.remove.confirm.title')
+    })) return;
+    await state.removeSyncGroupDevice(device.device_identity_key);
+  };
+  return { confirmLeave, confirmRemove };
 }
 
 export function SettingsCompanionSyncSection() {
@@ -79,7 +88,7 @@ export function SettingsCompanionSyncSection() {
     : undefined;
   const group = state.overview.sync_group;
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
-  const { confirmLeave } = useSyncGroupConfirmationActions(state, groupName);
+  const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
   return (
     <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
       {syncError ? (
@@ -102,6 +111,7 @@ export function SettingsCompanionSyncSection() {
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         isCreating={state.pendingActionId === 'create-sync-group'}
         onLeave={() => void confirmLeave()}
+        onRemove={(device) => void confirmRemove(device)}
         onTogglePause={() => void (state.overview.sync_paused ? state.resumeSync() : state.pauseSync())}
         onCreate={() => void state.createSyncGroup()}
         onDiscover={() => void state.discoverSyncGroups()}
@@ -113,6 +123,7 @@ export function SettingsCompanionSyncSection() {
         topologyRole={state.overview.server_status.topology_role}
         topologyStatus={state.overview.server_status.topology_status}
         syncPaused={state.overview.sync_paused}
+        removingDeviceIds={state.overview.removing_device_ids}
       />
       {state.error ? (
         <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />

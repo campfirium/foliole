@@ -1,8 +1,10 @@
 import type http from 'node:http';
 
+import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
+import { isDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
@@ -18,7 +20,8 @@ interface CompanionRequestAuthSuccess {
 
 interface CompanionRequestAuthFailure {
   error: 'expired_timestamp' | 'invalid_signature' | 'missing_headers' |
-    'replayed_nonce' | 'sync_group_device_not_active' | 'sync_group_workgroup_key_missing';
+    'replayed_nonce' | 'sync_group_device_not_active' | 'sync_group_member_state_required' |
+    'sync_group_workgroup_key_missing';
   ok: false;
   status_code: 401 | 409;
 }
@@ -30,16 +33,16 @@ export function clearCompanionRequestNonceCache() {
 }
 
 export function authenticateCompanionRequest(args: {
+  allowUnknownDevice?: boolean;
   bodyText?: string;
   nowMs?: number;
+  requireMemberState?: boolean;
   request: http.IncomingMessage;
 }): CompanionRequestAuthResult {
   const headers = readAuthenticationHeaders(args.request);
   if (!headers.deviceId || !headers.groupId || !headers.nonce || !headers.signature || !headers.timestamp) {
     return failure('missing_headers', 401);
   }
-  const device = validateActiveDevice(headers.groupId, headers.deviceId);
-  if (!device) return failure('sync_group_device_not_active', 401);
   const workgroupKey = loadDesktopWorkgroupKey(headers.groupId);
   if (!workgroupKey) return failure('sync_group_workgroup_key_missing', 401);
   const nowMs = args.nowMs ?? Date.now();
@@ -55,11 +58,17 @@ export function authenticateCompanionRequest(args: {
       || !consumeDesktopWorkgroupNonce(headers.groupId, `${headers.timestamp}:${headers.nonce}`, nowMs)) {
     return failure('replayed_nonce', 409);
   }
-  return { device_id: device.device_identity_key, device_name: device.device_name, ok: true };
+  const device = validateActiveDevice(headers.groupId, headers.deviceId);
+  if (!device && !args.allowUnknownDevice) return failure('sync_group_device_not_active', 401);
+  if (device && args.requireMemberState && !isDesktopSyncGroupMemberStateReady(headers.deviceId)) {
+    return failure('sync_group_member_state_required', 409);
+  }
+  return { device_id: headers.deviceId, device_name: device?.device_name ?? headers.deviceId, ok: true };
 }
 
 function validateActiveDevice(groupId: string, deviceId: string) {
   const group = loadDesktopSyncGroup();
+  if (isDesktopSyncGroupDeviceBlocked(groupId, deviceId)) return null;
   return group?.group_id === groupId
     ? group.devices.find((device) => device.device_identity_key === deviceId && device.state === 'active') ?? null
     : null;

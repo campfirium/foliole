@@ -1,3 +1,4 @@
+import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
@@ -11,6 +12,10 @@ import type { DesktopDnsSdSession } from './desktopDnsSd.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
+import {
+  exchangeAllDesktopSyncGroupMemberStates,
+  startDesktopSyncGroupMemberStateSession
+} from './desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import {
   clearDesktopSyncGroupRoutes,
@@ -21,6 +26,7 @@ import {
 } from './desktopSyncGroupRoutes.js';
 
 let runtime: DesktopDnsSdSession | null = null;
+let memberStateRuntime: DesktopDnsSdSession | null = null;
 let manualRun: Promise<unknown> | null = null;
 const inFlight = new Map<string, Promise<boolean>>();
 
@@ -47,11 +53,15 @@ export function startDesktopSyncGroupAutoSync() {
       notifyDesktopSyncGroupOverviewChanged();
     }
   });
+  memberStateRuntime = startDesktopSyncGroupMemberStateSession(group, () =>
+    notifyDesktopSyncGroupOverviewChanged());
 }
 
 export function stopDesktopSyncGroupAutoSync() {
   runtime?.stop();
   runtime = null;
+  memberStateRuntime?.stop();
+  memberStateRuntime = null;
   clearDesktopSyncGroupRoutes();
   updateDesktopSyncFreshness(false);
 }
@@ -65,6 +75,7 @@ export function runDesktopManualSyncWithDiscovery() {
 async function runDesktopManualSync() {
   const group = loadDesktopSyncGroup();
   if (!group) return runDesktopSyncCoordinator('manual');
+  await exchangeAllDesktopSyncGroupMemberStates();
   if (loadDesktopAnchorTopologyState().role === 'anchor') return null;
   const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
   if (current) return runDesktopSyncCoordinator('manual', current);
@@ -124,18 +135,25 @@ function routeFromTarget(
 
 function routeFromCandidate(
   group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  candidate: { endpoint_url: string; group_id: string; provider_device_id: string }
+  candidate: {
+    endpoint_url: string;
+    group_id: string;
+    provider_device_id: string;
+    provider_device_name?: string;
+    provider_platform?: string;
+  }
 ): DesktopSyncGroupPeer | null {
   const remote = group.devices.find((device) =>
     device.device_identity_key === candidate.provider_device_id && device.state === 'active');
-  if (!remote || candidate.group_id !== group.group_id) return null;
+  if (candidate.group_id !== group.group_id ||
+      isDesktopSyncGroupDeviceBlocked(group.group_id, candidate.provider_device_id)) return null;
   return {
     endpoint_url: candidate.endpoint_url,
     group_id: group.group_id,
     local_device_id: group.local_device_identity_key,
-    peer_device_id: remote.device_identity_key,
-    peer_device_name: remote.device_name,
-    peer_platform: remote.platform,
+    peer_device_id: candidate.provider_device_id,
+    peer_device_name: remote?.device_name ?? candidate.provider_device_name ?? candidate.provider_device_id,
+    peer_platform: remote?.platform ?? candidate.provider_platform ?? 'desktop',
     route_kind: 'anchor'
   };
 }

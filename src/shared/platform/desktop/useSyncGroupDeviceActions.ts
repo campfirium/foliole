@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
-import { leaveDesktopSyncGroup } from '../desktopSyncGroupRuntimeRepository';
+import { leaveDesktopSyncGroup, removeDesktopSyncGroupDevice } from '../desktopSyncGroupRuntimeRepository';
 
 interface DeviceActionState {
   setError(value: string | null): void;
@@ -11,10 +11,11 @@ interface DeviceActionState {
 }
 
 export function useSyncGroupDeviceActions(state: DeviceActionState) {
-  const run = useCallback(async () => {
-    state.setPendingActionId('leave-sync-group');
+  const run = useCallback(async (deviceId?: string) => {
+    state.setPendingActionId(deviceId ?? 'leave-sync-group');
     try {
-      const overview = await leaveDesktopSyncGroup();
+      const overview = deviceId
+        ? await removeDesktopSyncGroupDevice(deviceId) : await leaveDesktopSyncGroup();
       state.setOverview(overview);
       state.setError(null);
       return overview;
@@ -27,6 +28,7 @@ export function useSyncGroupDeviceActions(state: DeviceActionState) {
     }
   }, [state]);
   return {
-    leave: run
+    leave: () => run(),
+    remove: (deviceId: string) => run(deviceId)
   };
 }

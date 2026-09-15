@@ -27,6 +27,7 @@ vi.mock('./companionLanRequestHandler.js', () => ({
   DISCOVERY_ENDPOINT_PATH: '/discovery',
   SYNC_GROUP_JOIN_ACCEPTANCE_PATH: '/accept',
   SYNC_GROUP_JOIN_REQUESTS_PATH: '/requests',
+  SYNC_GROUP_MEMBER_STATE_PATH: '/member-state',
   SYNC_DIAGNOSTICS_PATH: '/diagnostics',
   SYNC_PACK_PATH: '/sync-pack',
   WORKSPACE_SNAPSHOT_PATH: '/snapshot',

@@ -67,6 +67,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopSyncGroupOverviewPayload;
   };
+  [NATIVE_COMMANDS.removeSyncGroupDevice]: {
+    args: { device_identity_key: string };
+    result: DesktopSyncGroupOverviewPayload;
+  };
   [NATIVE_COMMANDS.discoverSyncGroups]: {
     args: undefined;
     result: SyncGroupDiscoverySnapshot;

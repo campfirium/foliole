@@ -104,6 +104,11 @@ export function registerSyncGroupDevice(args: {
       last_seen_at = excluded.last_seen_at, updated_at = excluded.updated_at`,
     deviceValues(args.device, args.deviceName, args.platform, now)
   );
+  openDatabaseConnection().driver.execute(
+    `UPDATE sync_group_removal_decisions SET superseded_at = ?
+     WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL`,
+    [now, args.device.group_id, args.device.identity_key]
+  );
   return loadDesktopSyncGroup()!;
 }
 

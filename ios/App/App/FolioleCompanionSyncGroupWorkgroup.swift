@@ -12,7 +12,7 @@ enum FolioleCompanionSyncGroupWorkgroup {
 
     static func authenticate(
         _ request: FolioleCompanionHttpMessage, groupId: String, workgroupKey: String,
-        dataBridge: FolioleCompanionSyncGroupDataRequesting
+        dataBridge: FolioleCompanionSyncGroupDataRequesting, allowUnknownDevice: Bool = false
     ) throws -> String {
         let deviceId = try header(request, "x-device-id")
         let nonce = try header(request, "x-nonce")
@@ -27,8 +27,10 @@ enum FolioleCompanionSyncGroupWorkgroup {
             for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
         ).map { String(format: "%02x", $0) }.joined()
         guard constantTimeEqual(expected, signature) else { throw invalid("invalid_signature") }
-        let verified = try dataBridge.request("verify_device", ["group_id": groupId, "device_id": deviceId])
-        guard verified["active"] as? Bool == true else { throw invalid("sync_group_device_not_active") }
+        if !allowUnknownDevice {
+            let verified = try dataBridge.request("verify_device", ["group_id": groupId, "device_id": deviceId])
+            guard verified["active"] as? Bool == true else { throw invalid("sync_group_device_not_active") }
+        }
         try consumeNonce("\(groupId):\(deviceId):\(timestamp):\(nonce)")
         return deviceId
     }

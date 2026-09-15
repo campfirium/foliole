@@ -187,6 +187,7 @@ export function useDesktopSyncGroup() {
       isDesktopRuntime: isDesktopRuntime(),
       isLoading: state.isLoading,
       leaveSyncGroup: actions.device.leave,
+      removeSyncGroupDevice: actions.device.remove,
       overview: state.overview,
       pauseSync: () => actions.togglePause(true),
       pendingActionId: state.pendingActionId,

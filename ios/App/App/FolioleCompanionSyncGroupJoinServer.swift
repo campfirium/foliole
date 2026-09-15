@@ -7,6 +7,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     private let listener: NWListener
     private let provider: FolioleCompanionSyncGroupJoinProvider
     private let snapshots: FolioleCompanionSyncGroupSnapshot?
+    private var memberStateReady = Set<String>()
     private let queue = DispatchQueue(label: "com.foliole.ios.sync-group-provider")
     private let stateChanged: () -> Void
     private(set) var port: UInt16?
@@ -84,7 +85,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         let route = request.path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? request.path
         if request.method == "GET" && route == "/health" { return try send(connection, 200, ["ok": true]) }
         if request.method == "GET" && route == "/companion/discovery" {
-            return try send(connection, 200, discoveryPayload())
+            return try send(connection, 200, FolioleCompanionSyncGroupDiscoveryPayload.make(discovery))
         }
         if request.method == "POST" && route == "/sync-group/join-requests" {
             let created = try provider.receive(request.body)
@@ -98,6 +99,18 @@ final class FolioleCompanionSyncGroupJoinServer {
             }
             stateChanged()
             return try send(connection, 200, accepted)
+        }
+        if request.method == "POST" && route == "/sync-group/member-state" {
+            guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+            let accepted = try FolioleCompanionSyncGroupMemberStateEndpoint.accept(
+                request, bridge: dataBridge, groupId: provider.groupId,
+                groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
+                workgroupKey: provider.workgroupKey
+            )
+            memberStateReady.insert(accepted.peer)
+            try sendWorkgroup(connection, request, "application/json; charset=utf-8", accepted.body)
+            stateChanged()
+            return
         }
         if request.method == "GET" && route == "/companion/sync-pack" {
             guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
@@ -138,9 +151,14 @@ final class FolioleCompanionSyncGroupJoinServer {
 
     private func authenticate(_ request: FolioleCompanionHttpMessage) throws -> String {
         guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-        return try FolioleCompanionSyncGroupWorkgroup.authenticate(
-            request, groupId: provider.groupId, workgroupKey: provider.workgroupKey, dataBridge: dataBridge
+        let peer = try FolioleCompanionSyncGroupWorkgroup.authenticate(
+            request, groupId: provider.groupId, workgroupKey: provider.workgroupKey,
+            dataBridge: dataBridge
         )
+        guard memberStateReady.contains(peer) else {
+            throw Self.invalid("sync_group_member_state_required")
+        }
+        return peer
     }
 
     private func sendResource(
@@ -177,22 +195,11 @@ final class FolioleCompanionSyncGroupJoinServer {
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
     }
 
-    private func discoveryPayload() -> [String: Any] {
-        var result = discovery
-        result["protocol"] = ["version": discovery["protocol_version"] as Any,
-            "min_supported_version": discovery["protocol_min_version"] as Any,
-            "max_supported_version": discovery["protocol_max_version"] as Any,
-            "capabilities": discovery["protocol_capabilities"] as Any]
-        for key in ["protocol_version", "protocol_min_version",
-                    "protocol_max_version", "protocol_capabilities"] { result.removeValue(forKey: key) }
-        return result
-    }
-
     private func respondError(_ connection: NWConnection, _ error: Error) {
         let message = error.localizedDescription
         let status = (error as NSError).domain == "FolioleCompanionSyncGroupWorkgroup" ? 401 :
             message == "request_too_large" ? 413 :
-            message.contains("identity_mismatch") ? 409 : 400
+            message.contains("identity_mismatch") || message == "sync_group_member_state_required" ? 409 : 400
         try? send(connection, status, ["error": message])
     }
 

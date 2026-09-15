@@ -1,4 +1,5 @@
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
+import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { beginNativeCompanionSyncRun } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -65,6 +66,9 @@ async function runOwnedTarget(args: {
     args.syncArgs.setError(null);
     args.syncArgs.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     await bindCompanionWorkspaceSyncTarget(args.target);
+    const memberState = await exchangeCompanionSyncGroupMemberState(args.target);
+    if (memberState.localExited) throw new Error('sync_group_local_device_removed');
+    if (memberState.peerRemoved) return 'skipped';
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     await recordCompanionWorkspaceSyncEvent({
       endpointUrl, kind: 'run_started', message: 'Sync started.',

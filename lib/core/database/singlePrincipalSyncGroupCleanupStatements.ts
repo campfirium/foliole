@@ -15,6 +15,8 @@ const RETIRED_SYNC_TABLES = [
   'sync_group_host_aliases',
   'sync_group_member_departures',
   'sync_group_members',
+  'sync_group_removal_confirmations',
+  'sync_group_removal_decisions',
   'sync_group_devices',
   'sync_group_local_state',
   'sync_group_nonce_ledger',

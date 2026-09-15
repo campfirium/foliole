@@ -38,7 +38,9 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     sync_group: normalizeSyncGroup(raw.sync_group),
     sync_enabled: raw.sync_enabled === true,
     sync_paused: raw.sync_paused === true,
-    participating: raw.participating === true
+    participating: raw.participating === true,
+    removing_device_ids: Array.isArray(raw.removing_device_ids)
+      ? raw.removing_device_ids.filter((item): item is string => typeof item === 'string') : []
   };
 }
 
@@ -46,6 +48,7 @@ type SyncGroupCommand =
   | typeof NATIVE_COMMANDS.loadSyncGroupOverview
   | typeof NATIVE_COMMANDS.createSyncGroup
   | typeof NATIVE_COMMANDS.leaveSyncGroup
+  | typeof NATIVE_COMMANDS.removeSyncGroupDevice
   | typeof NATIVE_COMMANDS.requestSyncGroupJoin
   | typeof NATIVE_COMMANDS.completeSyncGroupJoin
   | typeof NATIVE_COMMANDS.enableCompanionSync
@@ -71,6 +74,12 @@ export function createDesktopSyncGroup() {
 
 export function leaveDesktopSyncGroup() {
   return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.leaveSyncGroup);
+}
+
+export function removeDesktopSyncGroupDevice(deviceIdentityKey: string) {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.removeSyncGroupDevice, {
+    device_identity_key: deviceIdentityKey
+  });
 }
 
 export function requestDesktopSyncGroupJoin(endpointUrl: string) {

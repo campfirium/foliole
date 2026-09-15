@@ -21,6 +21,8 @@ import {
   invalidateLegacyReadwiseSourceCompletion,
   migrateReadwiseSourceMode
 } from './readwiseSourceModeMigration.js';
+import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
+import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 70, migrate: migrateHostPermanentState },
@@ -43,5 +45,14 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 87, migrate: createDataMigrationStateTable },
   { version: 88, migrate: migrateReadwiseSourceMode },
   { version: 89, migrate: repairSyncObjectStateBaseContentHash },
-  { version: 90, migrate: invalidateLegacyReadwiseSourceCompletion }
+  { version: 90, migrate: invalidateLegacyReadwiseSourceCompletion },
+  {
+    version: 91,
+    migrate: (sqlite) => {
+      for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS.slice(-3)) sqlite.exec(statement);
+      for (const name of ['trg_sync_delivery_state_insert', 'trg_sync_delivery_state_update',
+        'trg_sync_delivery_review_insert']) sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
+      for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+    }
+  }
 ];

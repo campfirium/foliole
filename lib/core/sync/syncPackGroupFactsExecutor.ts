@@ -99,7 +99,14 @@ async function mergeDevice(port: DbPort, device: DeviceRow) {
       device_name = excluded.device_name, platform = excluded.platform,
       state = excluded.state, left_at = excluded.left_at,
       last_seen_at = excluded.last_seen_at, updated_at = excluded.updated_at
-    WHERE excluded.updated_at > updated_at`,
+    WHERE excluded.updated_at > updated_at
+      AND NOT (excluded.state = 'active' AND EXISTS (
+        SELECT 1 FROM main.sync_group_removal_decisions removal
+        WHERE removal.group_id = excluded.group_id
+          AND removal.target_device_identity_key = excluded.device_identity_key
+          AND removal.superseded_at IS NULL
+      ))
+      AND NOT (sync_group_devices.state = 'left' AND excluded.state = 'active')`,
     [device.group_id, device.device_identity_key, device.device_anchor,
       device.canonical_library_path, device.device_name, device.platform, device.state,
       device.joined_at, device.left_at, device.last_seen_at, device.updated_at]

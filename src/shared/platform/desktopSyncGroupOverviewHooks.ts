@@ -25,7 +25,8 @@ export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload 
   sync_group: null,
   sync_enabled: false,
   sync_paused: false,
-  participating: false
+  participating: false,
+  removing_device_ids: []
 };
 
 export function useSyncGroupOverviewRefresh(

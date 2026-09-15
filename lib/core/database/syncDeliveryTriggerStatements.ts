@@ -14,6 +14,10 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_devices device
      JOIN sync_group_local_state local ON local.group_id = device.group_id AND local.singleton_id = 1
      WHERE device.state = 'active' AND device.device_identity_key <> local.local_device_identity_key
+       AND NOT EXISTS (SELECT 1 FROM sync_group_removal_decisions removal
+         WHERE removal.group_id = device.group_id
+           AND removal.target_device_identity_key = device.device_identity_key
+           AND removal.superseded_at IS NULL)
        AND NEW.updated_at >= device.joined_at;
    END`,
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_state_update
@@ -31,6 +35,10 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_devices device
      JOIN sync_group_local_state local ON local.group_id = device.group_id AND local.singleton_id = 1
      WHERE device.state = 'active' AND device.device_identity_key <> local.local_device_identity_key
+       AND NOT EXISTS (SELECT 1 FROM sync_group_removal_decisions removal
+         WHERE removal.group_id = device.group_id
+           AND removal.target_device_identity_key = device.device_identity_key
+           AND removal.superseded_at IS NULL)
        AND NEW.updated_at >= device.joined_at;
    END`,
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_device_leave
@@ -48,6 +56,10 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_devices device
      JOIN sync_group_local_state local ON local.group_id = device.group_id AND local.singleton_id = 1
      WHERE device.state = 'active' AND device.device_identity_key <> local.local_device_identity_key
+       AND NOT EXISTS (SELECT 1 FROM sync_group_removal_decisions removal
+         WHERE removal.group_id = device.group_id
+           AND removal.target_device_identity_key = device.device_identity_key
+           AND removal.superseded_at IS NULL)
        AND NEW.reviewed_at >= device.joined_at;
    END`
 ] as const;

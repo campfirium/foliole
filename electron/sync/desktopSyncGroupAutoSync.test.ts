@@ -20,6 +20,9 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
+vi.mock('../database/syncGroupMemberStateStore.js', () => ({
+  isDesktopSyncGroupDeviceBlocked: () => false
+}));
 vi.mock('./desktopAnchorTopologyRole.js', () => ({
   loadDesktopAnchorTopologyState: () => ({ role: runtime.role })
 }));
@@ -40,6 +43,10 @@ vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runti
 vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged
+}));
+vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
+  exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
+  startDesktopSyncGroupMemberStateSession: () => ({ stop: vi.fn() })
 }));
 
 import {

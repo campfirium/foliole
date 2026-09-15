@@ -30,6 +30,9 @@ const contentBlobMock = vi.hoisted(() => ({
 const syncPushMock = vi.hoisted(() => ({
   handleCompanionSyncPush: vi.fn()
 }));
+const memberStateMock = vi.hoisted(() => ({
+  accept: vi.fn(() => ({ localExited: false, state: { contract_version: 1 } }))
+}));
 const workgroupHttpMock = vi.hoisted(() => ({
   decryptWorkgroupRequestBody: vi.fn((_request, body: string) => Buffer.from(body)),
   writeWorkgroupBinary: vi.fn()
@@ -50,6 +53,13 @@ vi.mock('./companionLanSyncObjects.js', () => ({
 vi.mock('./companionLanSyncPush.js', () => ({
   SYNC_PUSH_PATH: '/companion/sync-push',
   handleCompanionSyncPush: syncPushMock.handleCompanionSyncPush
+}));
+vi.mock('./desktopSyncGroupMemberState.js', () => ({
+  SYNC_GROUP_MEMBER_STATE_PATH: '/sync-group/member-state',
+  acceptDesktopSyncGroupMemberState: memberStateMock.accept
+}));
+vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
+  notifyDesktopSyncGroupOverviewChanged: vi.fn()
 }));
 vi.mock('./companionLanResponses.js', () => ({
   writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
@@ -160,5 +170,28 @@ it('serves signed content body blob batches', async () => {
   expect(contentBlobMock.loadCompanionContentBlobBatch).toHaveBeenCalledWith(requestBody);
   expect(workgroupHttpMock.writeWorkgroupBinary).toHaveBeenCalledWith(
     request, response, 200, Buffer.from('multipart-body'), 'multipart/mixed; boundary=foliole-test'
+  );
+});
+
+it('allows an unknown key holder to exchange member state before data sync', async () => {
+  authMock.authenticateCompanionRequest.mockReturnValue({
+    device_id: 'device-new', device_name: 'device-new', ok: true
+  } as never);
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const requestBody = JSON.stringify({ contract_version: 1 });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = '/sync-group/member-state';
+
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+
+  expect(authMock.authenticateCompanionRequest).toHaveBeenCalledWith({
+    allowUnknownDevice: true, bodyText: requestBody, request, requireMemberState: false
+  });
+  expect(memberStateMock.accept).toHaveBeenCalledWith(requestBody, 'device-new');
+  expect(writeJson).toHaveBeenCalledWith(
+    request, response, 200, { contract_version: 1 }, 'POST, OPTIONS'
   );
 });

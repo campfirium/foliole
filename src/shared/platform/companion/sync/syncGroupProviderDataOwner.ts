@@ -5,10 +5,16 @@ import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
   type CompanionSyncGroupDataRequest
 } from '../../../../../lib/platform/companionSyncGroupDataContract';
+import { parseSyncGroupMemberState } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
+
+import {
+  applyCompanionSyncGroupMemberState,
+  loadCompanionSyncGroupMemberState
+} from './syncGroupMemberStateStore';
 
 let listenerReady: Promise<void> | null = null;
 
@@ -29,7 +35,9 @@ export function ensureCompanionSyncGroupDataOwner() {
 async function handleRequest(request: CompanionSyncGroupDataRequest) {
   try {
     const result = await dispatch(request.operation, request.payload);
-    await dataPlugin().resolveSyncGroupDataRequest({ request_id: request.request_id, result });
+    await dataPlugin().resolveSyncGroupDataRequest({
+      request_id: request.request_id, result: { ...result }
+    });
   } catch (error) {
     await dataPlugin().resolveSyncGroupDataRequest({
       error: error instanceof Error ? error.message : String(error), request_id: request.request_id
@@ -39,8 +47,15 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.createSnapshot) return createSnapshot(payload);
+  if (operation === CONTRACT.operations.applyMemberState) {
+    return applyCompanionSyncGroupMemberState(
+      parseSyncGroupMemberState(payload.state),
+      requiredText(payload.authenticated_device_id)
+    );
+  }
   if (operation === CONTRACT.operations.loadCurrentCredential) return loadCurrentCredential(payload);
   if (operation === CONTRACT.operations.loadGroup) return loadGroupPayload();
+  if (operation === CONTRACT.operations.loadMemberState) return loadCompanionSyncGroupMemberState();
   if (operation === CONTRACT.operations.registerDevice) return registerDevice(payload);
   if (operation === CONTRACT.operations.verifyDevice) return verifyDevice(payload);
   if (operation === CONTRACT.operations.recordSupplyCursor) return recordSupplyCursor(payload);
@@ -96,6 +111,9 @@ async function registerDevice(payload: Record<string, unknown>) {
   }
   const now = new Date().toISOString();
   return writer(async (db) => {
+    await db.run(`UPDATE sync_group_removal_decisions SET superseded_at = ?
+      WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL`,
+    [now, groupId, identity.identity_key]);
     await db.run(
       `INSERT INTO sync_group_devices (
         group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
@@ -116,8 +134,13 @@ async function verifyDevice(payload: Record<string, unknown>) {
   const deviceId = requiredText(payload.device_id);
   return getIosCompanionDatabaseOwner().read(async (db) => {
     const row = (await db.query<DbRow>(
-      `SELECT device_name FROM sync_group_devices
-       WHERE group_id = ? AND device_identity_key = ? AND state = 'active' LIMIT 1`,
+      `SELECT d.device_name FROM sync_group_devices d
+       WHERE d.group_id = ? AND d.device_identity_key = ? AND d.state = 'active'
+         AND NOT EXISTS (
+           SELECT 1 FROM sync_group_removal_decisions r
+           WHERE r.group_id = d.group_id AND r.target_device_identity_key = d.device_identity_key
+             AND r.superseded_at IS NULL
+         ) LIMIT 1`,
       [groupId, deviceId]
     ))[0];
     return { active: Boolean(row), ...(row ? { device_name: requiredText(row.device_name) } : {}) };

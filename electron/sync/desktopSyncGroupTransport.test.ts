@@ -5,6 +5,7 @@ const runtime = vi.hoisted(() => ({
   assertResourcesComplete: vi.fn(),
   downloadPack: vi.fn(),
   downloadResources: vi.fn(),
+  exchangeMemberState: vi.fn(),
   getPeerCursor: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
@@ -31,6 +32,9 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({
 }));
 vi.mock('./desktopSyncGroupPackApply.js', () => ({
   downloadAndApplyDesktopSyncGroupPack: runtime.downloadPack
+}));
+vi.mock('./desktopSyncGroupMemberState.js', () => ({
+  exchangeDesktopSyncGroupMemberState: runtime.exchangeMemberState
 }));
 vi.mock('./desktopSyncGroupPeerCompatibility.js', () => ({
   assertDesktopSyncGroupPeerCompatible: runtime.assertCompatible
@@ -62,6 +66,15 @@ beforeEach(() => {
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
   runtime.assertCompatible.mockResolvedValue(undefined);
+  runtime.exchangeMemberState.mockResolvedValue({ localExited: false, peerBlocked: false });
+});
+
+it('stops before content when member state marks the peer removed', async () => {
+  runtime.exchangeMemberState.mockResolvedValueOnce({ localExited: false, peerBlocked: true });
+
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: false, cursor: 0 });
+  expect(runtime.downloadPack).not.toHaveBeenCalled();
+  expect(runtime.downloadResources).not.toHaveBeenCalled();
 });
 
 it('does not fetch or advance a cursor for an incompatible peer', async () => {

@@ -5,17 +5,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const group = vi.hoisted(() => ({
   devices: [
-    { device_identity_key: 'device-a', device_name: 'A5', state: 'active' },
-    { device_identity_key: 'device-b', device_name: 'Phone', state: 'active' }
-  ] as Array<{ device_identity_key: string; device_name: string; state: 'active' | 'left' }>
+    { device_identity_key: 'device-a', device_name: 'A5', platform: 'darwin', state: 'active' },
+    { device_identity_key: 'device-b', device_name: 'Phone', platform: 'ios-capacitor', state: 'active' }
+  ] as Array<{ device_identity_key: string; device_name: string; platform: string; state: 'active' | 'left' }>
 }));
 const workgroup = vi.hoisted(() => ({
   consumeDesktopWorkgroupNonce: vi.fn(() => true),
   loadDesktopWorkgroupKey: vi.fn((): { group_key: string } | null => ({ group_key: 'group-secret' }))
 }));
+const membership = vi.hoisted(() => ({ blocked: vi.fn(() => false) }));
+const readiness = vi.hoisted(() => ({ ready: vi.fn(() => false) }));
 
+vi.mock('../database/syncGroupMemberStateStore.js', () => ({
+  isDesktopSyncGroupDeviceBlocked: membership.blocked
+}));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: () => ({ group_id: 'group-1', devices: group.devices })
+}));
+vi.mock('./desktopSyncGroupMemberStateReadiness.js', () => ({
+  isDesktopSyncGroupMemberStateReady: readiness.ready
 }));
 vi.mock('./workgroupKeyStore.js', () => workgroup);
 
@@ -29,11 +37,13 @@ afterEach(() => {
   clearCompanionRequestNonceCache();
   vi.clearAllMocks();
   group.devices = [
-    { device_identity_key: 'device-a', device_name: 'A5', state: 'active' },
-    { device_identity_key: 'device-b', device_name: 'Phone', state: 'active' }
+    { device_identity_key: 'device-a', device_name: 'A5', platform: 'darwin', state: 'active' },
+    { device_identity_key: 'device-b', device_name: 'Phone', platform: 'ios-capacitor', state: 'active' }
   ];
   workgroup.loadDesktopWorkgroupKey.mockReturnValue({ group_key: 'group-secret' });
   workgroup.consumeDesktopWorkgroupNonce.mockReturnValue(true);
+  membership.blocked.mockReturnValue(false);
+  readiness.ready.mockReturnValue(false);
 });
 
 function signature(deviceId: string, nonce: string, secret = 'group-secret') {
@@ -71,6 +81,38 @@ describe('Sync Group request authentication', () => {
       .toEqual({ error: 'sync_group_device_not_active', ok: false, status_code: 401 });
   });
 
+  it('authenticates an unknown key holder only for member-state exchange', () => {
+    expect(authenticateCompanionRequest({
+      allowUnknownDevice: true, nowMs: NOW_MS, request: request('device-new', 'unknown')
+    })).toEqual({ device_id: 'device-new', device_name: 'device-new', ok: true });
+  });
+
+  it('blocks normal data requests after a removal decision', () => {
+    membership.blocked.mockReturnValue(true);
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: request('device-a', 'removed') }))
+      .toEqual({ error: 'sync_group_device_not_active', ok: false, status_code: 401 });
+  });
+});
+
+describe('Sync Group member-state data gate', () => {
+  it('requires desktop peers to exchange member state before data requests', () => {
+    expect(authenticateCompanionRequest({
+      nowMs: NOW_MS, request: request('device-a', 'not-ready'), requireMemberState: true
+    })).toEqual({ error: 'sync_group_member_state_required', ok: false, status_code: 409 });
+    readiness.ready.mockReturnValue(true);
+    expect(authenticateCompanionRequest({
+      nowMs: NOW_MS, request: request('device-a', 'ready'), requireMemberState: true
+    })).toMatchObject({ device_id: 'device-a', ok: true });
+  });
+
+  it('requires mobile peers to exchange member state before data requests', () => {
+    expect(authenticateCompanionRequest({
+      nowMs: NOW_MS, request: request('device-b', 'mobile'), requireMemberState: true
+    })).toEqual({ error: 'sync_group_member_state_required', ok: false, status_code: 409 });
+  });
+});
+
+describe('Sync Group signed request replay protection', () => {
   it('fails closed when the Group key is unavailable', () => {
     workgroup.loadDesktopWorkgroupKey.mockReturnValue(null);
     expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: request('device-a', 'missing-key') }))

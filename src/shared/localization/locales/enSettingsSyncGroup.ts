@@ -41,10 +41,11 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.resume': 'Resume Sync',
   'settings.companionSync.group.leave': 'Leave Sync Group',
   'settings.companionSync.group.remove': 'Remove from Sync Group',
+  'settings.companionSync.group.remove.pending': 'Removing…',
   'settings.companionSync.group.leave.confirm.title': 'Leave Sync Group?',
   'settings.companionSync.group.leave.confirm.description': 'This device will leave {name} and stop syncing with its devices.',
   'settings.companionSync.group.remove.confirm.title': 'Remove device?',
-  'settings.companionSync.group.remove.confirm.description': '{name} will be removed from this Sync Group and must join again to sync.',
+  'settings.companionSync.group.remove.confirm.description': '{name} will stop syncing after it confirms the removal, or after every other device in your current list confirms it.',
   'settings.companionSync.group.member.active': 'Joined',
   'settings.companionSync.group.member.provisioning': 'Setting up'
 } as const;

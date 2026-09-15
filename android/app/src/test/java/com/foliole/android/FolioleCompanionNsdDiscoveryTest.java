@@ -84,9 +84,9 @@ public class FolioleCompanionNsdDiscoveryTest {
     private static Path sharedFixturePath() {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         return firstExistingPath(
-            root.resolve("lib/platform/fixtures/sync-anchor-topology-v6.json"),
-            root.resolve("../lib/platform/fixtures/sync-anchor-topology-v6.json").normalize(),
-            root.resolve("../../lib/platform/fixtures/sync-anchor-topology-v6.json").normalize()
+            root.resolve("lib/platform/fixtures/sync-anchor-topology-v7.json"),
+            root.resolve("../lib/platform/fixtures/sync-anchor-topology-v7.json").normalize(),
+            root.resolve("../../lib/platform/fixtures/sync-anchor-topology-v7.json").normalize()
         );
     }
 

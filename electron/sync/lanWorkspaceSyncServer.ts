@@ -8,6 +8,7 @@ import {
   DISCOVERY_ENDPOINT_PATH,
   SYNC_GROUP_JOIN_ACCEPTANCE_PATH,
   SYNC_GROUP_JOIN_REQUESTS_PATH,
+  SYNC_GROUP_MEMBER_STATE_PATH,
   SYNC_DIAGNOSTICS_PATH,
   SYNC_PACK_PATH,
   WORKSPACE_SNAPSHOT_PATH,
@@ -22,6 +23,7 @@ import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
+import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -135,6 +137,7 @@ function logRunningStatus() {
       DISCOVERY_ENDPOINT_PATH,
       SYNC_GROUP_JOIN_REQUESTS_PATH,
       SYNC_GROUP_JOIN_ACCEPTANCE_PATH,
+      SYNC_GROUP_MEMBER_STATE_PATH,
       SYNC_PACK_PATH,
       SYNC_DIAGNOSTICS_PATH,
       ATTACHMENT_RESOURCE_PATH,
@@ -210,6 +213,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
 
 export async function stopLanWorkspaceSyncServer() {
   stopDesktopSyncGroupAutoSync();
+  clearDesktopSyncGroupMemberStateReadiness();
   await activeStart?.catch(() => undefined);
   if (!activeServer) {
     activeStatus = {

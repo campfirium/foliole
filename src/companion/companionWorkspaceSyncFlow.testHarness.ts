@@ -21,8 +21,15 @@ export const syncObjectsMock = {
   syncCompanionObjectsFromDesktop: vi.fn()
 };
 
+export const memberStateMock = {
+  exchangeCompanionSyncGroupMemberState: vi.fn(async () => ({
+    localExited: false, peerRemoved: false
+  }))
+};
+
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
+vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => memberStateMock);
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({ reason, run_id: runId, runtime: 'android' }))
 }));
@@ -107,6 +114,9 @@ export function createSyncState(overrides: Partial<NativeCompanionWorkspaceSyncS
 
 export function resetCompanionWorkspaceSyncFlowMocks() {
   vi.resetAllMocks();
+  memberStateMock.exchangeCompanionSyncGroupMemberState.mockResolvedValue({
+    localExited: false, peerRemoved: false
+  });
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult());
   syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
   syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());

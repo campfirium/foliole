@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
-import fixture from './fixtures/sync-anchor-topology-v6.json' with { type: 'json' };
+import fixture from './fixtures/sync-anchor-topology-v7.json' with { type: 'json' };
 import {
   PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR,
   parseDesktopAnchorRole,
@@ -25,7 +25,7 @@ function evidence(overrides: Partial<PreparedAnchorEvidence> = {}): PreparedAnch
   };
 }
 
-it('uses the prepared v6 topology as the production sync contract while preserving join v1', () => {
+it('uses the prepared v7 topology as the production sync contract while preserving join v1', () => {
   expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.production_protocol_version);
   expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.prepared_protocol_version);
   expect(SYNC_GROUP_JOIN_CONTRACT_VERSION).toBe(fixture.join_contract_version);

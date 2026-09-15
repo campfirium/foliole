@@ -5,6 +5,10 @@ import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContrac
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
+  initiateDesktopSyncGroupDeviceRemoval,
+  loadPendingDesktopSyncGroupRemovalDeviceIds
+} from '../database/syncGroupMemberStateStore.js';
+import {
   createDesktopSyncGroup,
   leaveDesktopSyncGroupDevice,
   loadDesktopSyncGroup,
@@ -27,6 +31,8 @@ import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscov
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
+import { exchangeAllDesktopSyncGroupMemberStates } from '../sync/desktopSyncGroupMemberStateSession.js';
+import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 
 import { asString } from './commandParsers.js';
@@ -42,7 +48,8 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 
 const COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.createSyncGroup,
-  NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.discoverSyncGroups,
+  NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice,
+  NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.stopDiscoverSyncGroups, NATIVE_COMMANDS.requestSyncGroupJoin,
   NATIVE_COMMANDS.completeSyncGroupJoin, NATIVE_COMMANDS.enableCompanionSync,
   NATIVE_COMMANDS.disableCompanionSync, NATIVE_COMMANDS.pauseCompanionSync,
@@ -67,6 +74,7 @@ function overview() {
     join_requests: loadDesktopSyncGroupJoinProvider()?.pending() ?? [],
     server_status: getLanWorkspaceSyncServerStatus(),
     sync_group: group,
+    removing_device_ids: group ? loadPendingDesktopSyncGroupRemovalDeviceIds(group.group_id) : [],
     ...loadDesktopCompanionSyncParticipation()
   };
 }
@@ -91,11 +99,24 @@ async function leaveGroup() {
   return overview();
 }
 
+async function removeGroupDevice(args: Record<string, unknown>) {
+  const deviceId = asString(args.device_identity_key, 'device_identity_key');
+  await runWithDatabaseConnectionOwner(() => {
+    initiateDesktopSyncGroupDeviceRemoval(deviceId);
+    removeDesktopSyncGroupRoute(deviceId);
+  });
+  await exchangeAllDesktopSyncGroupMemberStates();
+  return runWithDatabaseConnectionOwner(() => overview());
+}
+
 async function mutateJoinRequest(command: string, args: Record<string, unknown>) {
   const provider = loadDesktopSyncGroupJoinProvider();
   if (!provider) throw new Error('sync_group_not_available');
   const requestId = asString(args.request_id, 'request_id');
-  if (command === NATIVE_COMMANDS.acceptSyncGroupJoinRequest) await provider.accept(requestId);
+  if (command === NATIVE_COMMANDS.acceptSyncGroupJoinRequest) {
+    await provider.accept(requestId);
+    setImmediate(() => { void exchangeAllDesktopSyncGroupMemberStates(); });
+  }
   else provider.reject(requestId);
   return overview();
 }
@@ -104,6 +125,7 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadSyncGroupOverview) return overview();
   if (command === NATIVE_COMMANDS.createSyncGroup) return createGroup();
   if (command === NATIVE_COMMANDS.leaveSyncGroup) return leaveGroup();
+  if (command === NATIVE_COMMANDS.removeSyncGroupDevice) return removeGroupDevice(args);
   if (command === NATIVE_COMMANDS.discoverSyncGroups) return discovery.start();
   if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) return discovery.stop();
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
@@ -136,7 +158,8 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
-  if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow) {
+  if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow ||
+      command === NATIVE_COMMANDS.removeSyncGroupDevice) {
     return handleOwned(command, args);
   }
   return runWithDatabaseConnectionOwner(() => handleOwned(command, args));

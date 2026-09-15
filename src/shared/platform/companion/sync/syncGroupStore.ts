@@ -121,6 +121,9 @@ async function saveDevice(
   platform: string,
   now: string
 ) {
+  await db.run(`UPDATE sync_group_removal_decisions SET superseded_at = ?
+    WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL`,
+  [now, device.group_id, device.identity_key]);
   await db.run(
     `INSERT INTO sync_group_devices (
       group_id, device_identity_key, device_anchor, canonical_library_path, device_name,

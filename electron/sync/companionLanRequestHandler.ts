@@ -33,6 +33,7 @@ import {
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { SYNC_GROUP_MEMBER_STATE_PATH } from './desktopSyncGroupMemberState.js';
 import {
   handleSyncGroupJoinAcceptance,
   handleSyncGroupJoinRequest
@@ -53,6 +54,7 @@ export {
   SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
   SYNC_REVIEW_LOG_PATH,
+  SYNC_GROUP_MEMBER_STATE_PATH,
   SYNC_STATE_PATH
 };
 
@@ -200,7 +202,9 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, 200, { ok: true });
       return;
     }
-    const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({ request }));
+    const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
+      request, requireMemberState: true
+    }));
     if (!auth.ok) {
       await runWithDatabaseConnectionOwner(() => {
         writeJson(request, response, auth.status_code, { error: auth.error });

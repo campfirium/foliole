@@ -16,10 +16,10 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 }
 
 describe('syncProtocolContract', () => {
-  it('accepts the exact v6 descriptor and returns a negotiated version', () => {
+  it('accepts the exact v7 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({
       missing_capabilities: [],
-      negotiated_version: 6,
+      negotiated_version: 7,
       reason: null,
       status: 'compatible'
     });
@@ -30,7 +30,7 @@ describe('syncProtocolContract', () => {
     [{}, 'protocol_metadata_invalid'],
     [descriptor({ max_supported_version: 2, min_supported_version: 2, version: 2 }), 'protocol_version_unsupported'],
     [descriptor({ version: 2 }), 'protocol_version_unsupported'],
-    [descriptor({ min_supported_version: 7 }), 'protocol_metadata_invalid'],
+    [descriptor({ min_supported_version: 8 }), 'protocol_metadata_invalid'],
     [descriptor({ max_supported_version: 5, min_supported_version: 5, version: 5 }), 'protocol_version_unsupported']
   ])('rejects %j as %s', (remote, reason) => {
     expect(evaluateSyncProtocolCompatibility(remote)).toMatchObject({ reason, status: 'incompatible' });
@@ -43,7 +43,7 @@ describe('syncProtocolContract', () => {
         'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
       'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
       'readwise-library-source-mode-v1',
-      'source-host-ownership-v1', 'sync-group-device-facts-v1',
+      'source-host-ownership-v1', 'sync-group-device-facts-v1', 'sync-group-member-state-v1',
         'system-entry-display-names-v1', 'workgroup-aead-v1'
       ],
       negotiated_version: null,
@@ -57,7 +57,7 @@ describe('syncProtocolContract', () => {
     const hint = parseSyncProtocolTxt(txt);
     expect(txt).not.toHaveProperty('protocol_capabilities');
     expect(Object.entries(txt).every(([key, value]) => Buffer.byteLength(`${key}=${value}`) <= 255)).toBe(true);
-    expect(hint).toEqual({ max_supported_version: 6, min_supported_version: 6, version: 6 });
+    expect(hint).toEqual({ max_supported_version: 7, min_supported_version: 7, version: 7 });
     expect(evaluateSyncProtocolVersionHint(hint)).toMatchObject({ status: 'compatible' });
     expect(syncProtocolVersionHintMatchesDescriptor(hint, CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
   });
@@ -65,14 +65,14 @@ describe('syncProtocolContract', () => {
   it('rejects malformed descriptors rather than repairing them', () => {
     expect(parseSyncProtocolDescriptor({
       capabilities: [''],
-      max_supported_version: 6,
-      min_supported_version: 6,
-      version: 6
+      max_supported_version: 7,
+      min_supported_version: 7,
+      version: 7
     })).toBeNull();
   });
 });
 
-it('requires the display-name contract as part of the exact v6 generation', () => {
+it('requires the display-name contract as part of the exact v7 generation', () => {
   const legacyV2 = descriptor({
     max_supported_version: 2,
     min_supported_version: 2,
@@ -87,5 +87,5 @@ it('requires the display-name contract as part of the exact v6 generation', () =
     status: 'incompatible'
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
-    .toMatchObject({ negotiated_version: 6, status: 'compatible' });
+    .toMatchObject({ negotiated_version: 7, status: 'compatible' });
 });

@@ -13,12 +13,13 @@
       "readwise-library-source-mode-v1",
       "source-host-ownership-v1",
       "sync-group-device-facts-v1",
+      "sync-group-member-state-v1",
       "system-entry-display-names-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 6,
-    "min_supported_version": 6,
-    "version": 6
+    "max_supported_version": 7,
+    "min_supported_version": 7,
+    "version": 7
   },
   "pushAck": {
     "clientOpIdKeys": [

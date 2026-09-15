@@ -39,6 +39,7 @@ function renderSyncSection(
     isDesktopRuntime: true,
     isLoading: false,
     leaveSyncGroup: vi.fn(),
+    removeSyncGroupDevice: vi.fn(),
     overview: { ...EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW, sync_enabled: syncEnabled },
     pauseSync: vi.fn(),
     pendingActionId: null,

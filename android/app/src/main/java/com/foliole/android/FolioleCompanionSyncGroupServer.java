@@ -8,6 +8,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,6 +23,7 @@ final class FolioleCompanionSyncGroupServer {
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
     private final Runnable stateChanged;
+    private final Set<String> memberStateReady = ConcurrentHashMap.newKeySet();
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
@@ -54,7 +57,8 @@ final class FolioleCompanionSyncGroupServer {
                 FolioleCompanionHttpRequest request = FolioleCompanionHttpRequest.read(owned.getInputStream());
                 route(request, owned.getOutputStream());
             } catch (SecurityException error) {
-                FolioleCompanionHttpResponse.json(owned.getOutputStream(), 401, error(error.getMessage()));
+                int status = "sync_group_member_state_required".equals(error.getMessage()) ? 409 : 401;
+                FolioleCompanionHttpResponse.json(owned.getOutputStream(), status, error(error.getMessage()));
             } catch (IllegalArgumentException error) {
                 FolioleCompanionHttpResponse.json(owned.getOutputStream(), 400, error(error.getMessage()));
             } catch (Exception error) {
@@ -69,6 +73,7 @@ final class FolioleCompanionSyncGroupServer {
         if (request.method.equals("GET") && path.equals("/companion/discovery")) discovery(output);
         else if (request.method.equals("POST") && path.equals("/sync-group/join-requests")) createJoin(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
+        else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack")) syncPack(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/content-blobs")) contentBlobs(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/content-blob")) contentBlob(request, output);
@@ -115,6 +120,16 @@ final class FolioleCompanionSyncGroupServer {
         workgroupBytes(request, output, "application/zip", pack.body);
     }
 
+    private void memberState(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
+        String peer = authenticate(request, true);
+        JSONObject incoming = new JSONObject(decryptRequest(request));
+        JSONObject applied = dataBridge.request("apply_member_state", new JSONObject()
+            .put("authenticated_device_id", peer).put("state", incoming));
+        memberStateReady.add(peer);
+        workgroupJson(request, output, 200, applied.getJSONObject("state"));
+        stateChanged.run();
+    }
+
     private void contentBlob(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         String peer = authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
@@ -140,8 +155,14 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private String authenticate(FolioleCompanionHttpRequest request) throws Exception {
+        String peer = authenticate(request, false);
+        if (!memberStateReady.contains(peer)) throw new SecurityException("sync_group_member_state_required");
+        return peer;
+    }
+
+    private String authenticate(FolioleCompanionHttpRequest request, boolean allowUnknown) throws Exception {
         return FolioleCompanionSyncGroupRequestAuth.authenticate(context, request,
-            config.getJSONObject("sync_group").getString("group_id"), dataBridge);
+            config.getJSONObject("sync_group").getString("group_id"), dataBridge, allowUnknown);
     }
 
     private String decryptRequest(FolioleCompanionHttpRequest request) throws Exception {

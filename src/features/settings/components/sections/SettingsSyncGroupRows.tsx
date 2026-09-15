@@ -19,36 +19,11 @@ import {
   SettingsRow
 } from '../../../../shared/ui';
 
+import { SettingsSyncGroupDeviceRow } from './SettingsSyncGroupDeviceRow';
 import { SettingsSyncGroupJoinRequests } from './SettingsSyncGroupJoinRequests';
 
 function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'], 'stopped'>) {
   return `settings.companionSync.group.discovery.${status}` as const;
-}
-
-function DeviceRow(props: {
-  disabled: boolean;
-  device: SyncGroupDevicePayload;
-  group: SyncGroupPayload;
-  onTogglePause(): void;
-  syncPaused: boolean;
-  topologyLabel: string | undefined;
-}) {
-  const t = useTranslation();
-  const local = props.device.device_identity_key === props.group.local_device_identity_key;
-  return (
-    <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
-        <span className="shrink-0 text-ui-sm text-muted-foreground">{displaySyncGroupPlatform(props.device.platform)}</span>
-      </div>
-      <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-        disabled={props.disabled || !local} onClick={props.onTogglePause} type="button">
-        {local && props.topologyLabel ? props.topologyLabel
-          : local ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause')
-            : t('companion.sync.member.active')}
-      </button>
-    </div>
-  );
 }
 
 function DiscoveryStatusRow(props: {
@@ -168,11 +143,13 @@ type SettingsSyncGroupRowsProps = {
   onCreate(): void;
   onDiscover(): void;
   onLeave(): void;
+  onRemove(device: SyncGroupDevicePayload): void;
   onReject(id: string): void;
   onRequestJoin(endpointUrl: string): void;
   onTogglePause(): void;
   joinRequests: DesktopSyncGroupJoinRequestSummaryPayload[];
   syncPaused: boolean;
+  removingDeviceIds: string[];
   topologyRole: 'anchor' | 'member' | 'observing';
   topologyStatus: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
 };
@@ -208,8 +185,10 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
             {group.devices.filter((device) => device.state === 'active').map((device) => (
-              <DeviceRow device={device} disabled={props.isBusy} group={group} key={device.device_identity_key}
+              <SettingsSyncGroupDeviceRow device={device} disabled={props.isBusy} group={group}
+                key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
+                removing={props.removingDeviceIds.includes(device.device_identity_key)}
                 topologyLabel={device.device_identity_key === group.local_device_identity_key
                   ? t(topologyKey) : undefined} />
             ))}

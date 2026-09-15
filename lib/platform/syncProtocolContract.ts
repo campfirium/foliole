@@ -9,6 +9,7 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 export const COMPLETE_MEMBER_DATA_PLANE_CAPABILITY = 'complete-member-data-plane';
 export const DESKTOP_SOFT_ANCHOR_CAPABILITY = 'desktop-soft-anchor-v1';
 export const READWISE_LIBRARY_SOURCE_MODE_CAPABILITY = 'readwise-library-source-mode-v1';
+export const SYNC_GROUP_MEMBER_STATE_CAPABILITY = 'sync-group-member-state-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
@@ -23,13 +24,14 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     READWISE_LIBRARY_SOURCE_MODE_CAPABILITY,
     'source-host-ownership-v1',
     'sync-group-device-facts-v1',
+    SYNC_GROUP_MEMBER_STATE_CAPABILITY,
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
   ].sort()),
-  max_supported_version: 6,
-  min_supported_version: 6,
-  version: 6
+  max_supported_version: 7,
+  min_supported_version: 7,
+  version: 7
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

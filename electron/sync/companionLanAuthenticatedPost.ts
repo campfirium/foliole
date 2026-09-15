@@ -13,6 +13,11 @@ import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import {
+  acceptDesktopSyncGroupMemberState,
+  SYNC_GROUP_MEMBER_STATE_PATH
+} from './desktopSyncGroupMemberState.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
 type WriteJson = (
@@ -27,6 +32,7 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
+  if (parsedRequestUrl.pathname === SYNC_GROUP_MEMBER_STATE_PATH) return 'member-state';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
 }
@@ -73,6 +79,20 @@ async function handleAuthenticatedRoute(args: {
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
       }, 'POST, OPTIONS');
     }
+  } else if (route === 'member-state') {
+    try {
+      const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
+      writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
+      notifyDesktopSyncGroupOverviewChanged();
+      if (applied.localExited) setImmediate(() => {
+        void import('./lanWorkspaceSyncServer.js').then(({ stopLanWorkspaceSyncServer }) =>
+          stopLanWorkspaceSyncServer());
+      });
+    } catch (error) {
+      writeJson(request, response, 400, {
+        error: error instanceof Error ? error.message : 'sync_group_member_state_invalid'
+      }, 'POST, OPTIONS');
+    }
   }
 }
 
@@ -100,7 +120,10 @@ export async function handleAuthenticatedPost(
     return true;
   }
   await runWithDatabaseConnectionOwner(async () => {
-    const auth = authenticateCompanionRequest({ bodyText, request });
+    const auth = authenticateCompanionRequest({
+      allowUnknownDevice: route === 'member-state', bodyText, request,
+      requireMemberState: route !== 'member-state'
+    });
     if (!auth.ok) {
       writeJson(request, response, auth.status_code, { error: auth.error });
       return;

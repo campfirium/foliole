@@ -4,6 +4,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
+import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
@@ -31,6 +32,14 @@ export async function continueDesktopSyncGroupSync(peer?: DesktopSyncGroupPeer) 
 
 async function continuePeerSync(target: DesktopSyncGroupPeer) {
   await assertDesktopSyncGroupPeerCompatible(target);
+  const memberState = await runPeerSyncStage('member_state', () =>
+    exchangeDesktopSyncGroupMemberState(target));
+  if (memberState.localExited) {
+    void import('./lanWorkspaceSyncServer.js').then(({ stopLanWorkspaceSyncServer }) =>
+      stopLanWorkspaceSyncServer());
+    throw new Error('sync_group_local_device_removed');
+  }
+  if (memberState.peerBlocked) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
@@ -42,7 +51,7 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
   return { complete, cursor: nextCursor };
 }
 
-async function runPeerSyncStage<T>(stage: 'resources' | 'sync_pack', execute: () => Promise<T>) {
+async function runPeerSyncStage<T>(stage: 'member_state' | 'resources' | 'sync_pack', execute: () => Promise<T>) {
   try {
     return await execute();
   } catch (error) {

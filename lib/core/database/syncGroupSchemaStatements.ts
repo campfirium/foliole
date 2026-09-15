@@ -34,5 +34,27 @@ export const SYNC_GROUP_SCHEMA_STATEMENTS = [
     identity TEXT NOT NULL,
     expires_at INTEGER NOT NULL,
     PRIMARY KEY (group_id, identity)
+  )`,
+  `CREATE TABLE IF NOT EXISTS sync_group_removal_decisions (
+    group_id TEXT NOT NULL REFERENCES sync_groups(group_id) ON DELETE CASCADE,
+    decision_id TEXT NOT NULL,
+    target_device_identity_key TEXT NOT NULL,
+    initiated_by_device_identity_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    superseded_at TEXT,
+    PRIMARY KEY (group_id, decision_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_group_removal_target
+    ON sync_group_removal_decisions (group_id, target_device_identity_key, completed_at)`,
+  `CREATE TABLE IF NOT EXISTS sync_group_removal_confirmations (
+    group_id TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    confirming_device_identity_key TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('enforced', 'target_exit')),
+    confirmed_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, decision_id, confirming_device_identity_key),
+    FOREIGN KEY (group_id, decision_id) REFERENCES sync_group_removal_decisions(group_id, decision_id)
+      ON DELETE CASCADE
   )`
 ] as const;
