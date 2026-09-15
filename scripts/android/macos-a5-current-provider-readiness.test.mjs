@@ -54,3 +54,26 @@ it('rejects a discovery payload that belongs to another Device', async () => {
 
   await expect(waiting).rejects.toThrow('Current A5 Device provider was not published');
 });
+
+it('requires the current topology role when the caller identifies one', async () => {
+  let collect;
+  const waiting = waitForCurrentA5Provider({
+    deviceId: 'device-a5', groupId: 'group-a', topologyRole: 'anchor'
+  }, {
+    createBonjour: () => ({ destroy: vi.fn(), find: (_query, callback) => {
+      collect = callback;
+      return { stop: vi.fn() };
+    } }),
+    fetchProvider: async () => ({ json: async () => ({
+      group_id: 'group-a', provider_device_id: 'device-a5', topology_role: 'anchor'
+    }), ok: true }),
+    interfaces: {},
+    timeoutMs: 1_000
+  });
+  await collect({ addresses: ['192.168.0.8'], port: 38641,
+    txt: { device_id: 'device-a5', group_id: 'group-a', topology_role: 'observing' } });
+  await collect({ addresses: ['192.168.0.9'], port: 38641,
+    txt: { device_id: 'device-a5', group_id: 'group-a', topology_role: 'anchor' } });
+
+  await expect(waiting).resolves.toMatchObject({ endpointUrl: 'http://192.168.0.9:38641' });
+});

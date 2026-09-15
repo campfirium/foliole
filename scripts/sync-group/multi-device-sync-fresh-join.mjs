@@ -12,6 +12,7 @@ import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { waitForCurrentA5Provider } from '../android/macos-a5-current-provider-readiness.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -118,11 +119,12 @@ async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity
     } });
 }
 
-export async function refreshMacosProviderAfterJoin(session, {
-  observe = observeMacosAnchorAfterElection
+export async function waitForMacosProviderAfterJoin(session, group, {
+  observe = observeMacosAnchorAfterElection, waitForProvider = waitForCurrentA5Provider
 } = {}) {
-  await session.enable();
-  return observe(session);
+  await observe(session);
+  return waitForProvider({ deviceId: group.local_device_identity_key,
+    groupId: group.group_id, topologyRole: 'anchor' });
 }
 
 export async function establishFreshAB({ execute, reportProgress, repoRoot, runId }) {
@@ -147,7 +149,7 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
         groupIdentity: providerOverview.sync_group, paths, session });
-      await refreshMacosProviderAfterJoin(session);
+      await waitForMacosProviderAfterJoin(session, providerOverview.sync_group);
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },

@@ -13,7 +13,8 @@ function serviceIpv4Candidates(service) {
 
 async function probeCurrentProvider(service, expected, fetchProvider) {
   if (service.txt?.group_id !== expected.groupId
-      || service.txt?.device_id !== expected.deviceId || !Number(service.port)) return null;
+      || service.txt?.device_id !== expected.deviceId || !Number(service.port)
+      || (expected.topologyRole && service.txt?.topology_role !== expected.topologyRole)) return null;
   for (const host of serviceIpv4Candidates(service)) {
     try {
       const endpointUrl = `http://${host}:${service.port}`;
@@ -22,7 +23,8 @@ async function probeCurrentProvider(service, expected, fetchProvider) {
       });
       const payload = response.ok ? await response.json() : null;
       if (payload?.group_id === expected.groupId
-          && payload?.provider_device_id === expected.deviceId) return endpointUrl;
+          && payload?.provider_device_id === expected.deviceId
+          && (!expected.topologyRole || payload?.topology_role === expected.topologyRole)) return endpointUrl;
     } catch { /* Try the next address from this Device advertisement. */ }
   }
   return null;
