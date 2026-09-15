@@ -64,7 +64,7 @@ it('uses public Android Sync Now to consume the admitted C fact', async () => {
 it('waits for the admitted Windows anchor to be externally discoverable', async () => {
   const waitForProvider = vi.fn(async (expected) => expected);
   await expect(waitForAdmittedCProvider({ group_id: 'group-1' }, waitForProvider))
-    .resolves.toEqual({ groupId: 'group-1', providerPlatform: 'win32', topologyRole: 'anchor' });
+    .resolves.toEqual({ advertisedPlatform: 'win32', groupId: 'group-1', topologyRole: 'anchor' });
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

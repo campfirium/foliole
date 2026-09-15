@@ -59,6 +59,19 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   }]);
 });
 
+it('routes a Windows 11 desktop using its product-facing discovery label', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://windows:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-windows',
+      provider_device_name: 'Windows PC', provider_platform: 'Windows 11' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
+    deviceId: 'device-windows', deviceName: 'Windows PC', endpointUrl: 'http://windows:38641',
+    groupId: 'group-1'
+  }]);
+});
+
 it('does not route companion sync through a discovered mobile Device', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',

@@ -81,7 +81,7 @@ export async function syncAdmittedCToAndroid({
 export function waitForAdmittedCProvider(group, waitForProvider = waitForCurrentProvider) {
   if (!group?.group_id) throw new Error('Admitted C Sync Group identity is unavailable.');
   return waitForProvider({
-    groupId: group.group_id, providerPlatform: 'win32', topologyRole: 'anchor'
+    advertisedPlatform: 'win32', groupId: group.group_id, topologyRole: 'anchor'
   });
 }
 

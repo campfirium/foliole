@@ -77,3 +77,26 @@ it('requires the current topology role when the caller identifies one', async ()
 
   await expect(waiting).resolves.toMatchObject({ endpointUrl: 'http://192.168.0.9:38641' });
 });
+
+it('accepts the product-facing Windows label behind a win32 advertisement', async () => {
+  let collect;
+  const waiting = waitForCurrentA5Provider({
+    advertisedPlatform: 'win32', groupId: 'group-a', topologyRole: 'anchor'
+  }, {
+    createBonjour: () => ({ destroy: vi.fn(), find: (_query, callback) => {
+      collect = callback;
+      return { stop: vi.fn() };
+    } }),
+    fetchProvider: async () => ({ json: async () => ({
+      group_id: 'group-a', provider_device_id: 'device-windows',
+      provider_platform: 'Windows 11', topology_role: 'anchor'
+    }), ok: true }),
+    interfaces: {},
+    timeoutMs: 1_000
+  });
+  await collect({ addresses: ['192.168.0.11'], port: 38641,
+    txt: { device_id: 'device-windows', group_id: 'group-a', provider_platform: 'win32',
+      topology_role: 'anchor' } });
+
+  await expect(waiting).resolves.toMatchObject({ endpointUrl: 'http://192.168.0.11:38641' });
+});

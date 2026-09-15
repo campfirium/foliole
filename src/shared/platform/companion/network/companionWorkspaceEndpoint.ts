@@ -1,4 +1,5 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
+import { isDesktopSyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
@@ -15,10 +16,6 @@ export interface CompanionWorkspaceSyncTarget {
   deviceName?: string;
   endpointUrl: string;
   groupId?: string;
-}
-
-function isDesktopDevice(platform: string) {
-  return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
 }
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
@@ -39,7 +36,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
       device.device_identity_key === candidate.discovery.provider_device_id);
     return candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && isDesktopDevice(candidate.discovery.provider_platform ?? known?.platform ?? '')
+      && isDesktopSyncGroupPlatform(candidate.discovery.provider_platform ?? known?.platform ?? '')
       && candidate.discovery.provider_device_id !== group.local_device_identity_key;
   });
   if (!match) {
