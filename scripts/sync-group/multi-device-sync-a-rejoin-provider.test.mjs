@@ -118,10 +118,14 @@ it('starts the local identity deadline only after Windows C creates its fact', (
 it('runs the rejoining Mac product sync only after Windows C opens its session', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const opened = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
+  const discoverable = source.indexOf('await waitForCurrentProvider(');
+  const macosOpened = source.indexOf('session = await openMacosSyncGroupDesktopSession(sessionOptions)');
   const sync = source.indexOf("await session.invoke('sync_companion_now')");
   const convergence = source.indexOf("waitUntil('macOS A three-member convergence'");
   expect(opened).toBeGreaterThan(-1);
-  expect(opened).toBeLessThan(sync);
+  expect(opened).toBeLessThan(discoverable);
+  expect(discoverable).toBeLessThan(macosOpened);
+  expect(macosOpened).toBeLessThan(sync);
   expect(sync).toBeLessThan(convergence);
 });
 

@@ -23,6 +23,7 @@ import {
   productFailure, waitForThreeDeviceProof, waitUntil
 } from './multi-device-sync-three-device-proof.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
 
 /* global process */
 
@@ -91,14 +92,20 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root
   });
-  let session = await openMacosSyncGroupDesktopSession(sessionOptions);
+  let session = null;
   try {
+    await windowsProvider.waitForProgress('c-session-opened');
+    const androidGroupId = (await androidSnapshot(paths)).database?.inspection?.syncGroupId;
+    if (!androidGroupId) throw productFailure('android-b', 'android_group_identity_missing',
+      'Android B Sync Group identity is unavailable before A rejoins.');
+    await waitForCurrentProvider({ advertisedPlatform: 'win32', groupId: androidGroupId,
+      topologyRole: 'anchor' });
+    session = await openMacosSyncGroupDesktopSession(sessionOptions);
     const enabled = await session.enable();
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',
       'a_product_listener_unavailable', 'macOS A sync listener is unavailable.');
     reportProgress('a-listener-ready');
     await restartProvider();
-    await windowsProvider.waitForProgress('c-session-opened');
     await session.invoke('sync_companion_now');
     await waitUntil('macOS A three-member convergence', async () =>
       (await session.load()).sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
