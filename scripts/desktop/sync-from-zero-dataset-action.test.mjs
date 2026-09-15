@@ -14,7 +14,8 @@ it('creates every bounded fixture only through registered desktop product comman
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
     if (command === 'import_clipboard_image_attachment') {
       attachmentBytes.push(args.bytesBase64);
-      return { attachment_id: `attachment-${attachmentBytes.length}`, status: 'imported' };
+      return { attachment_id: `attachment-${attachmentBytes.length}`, status: 'imported',
+        storage_key: `${String(attachmentBytes.length).repeat(64)}.png` };
     }
     return { status: 'ready' };
   });
@@ -33,6 +34,11 @@ it('creates every bounded fixture only through registered desktop product comman
     'resolve_attachment_resource', 'resolve_attachment_resource'
   ]);
   expect(new Set(attachmentBytes).size).toBe(3);
+  expect(invoke.mock.calls.slice(-3).map(([, args]) => args)).toEqual([
+    { storage_key: `${'1'.repeat(64)}.png` },
+    { storage_key: `${'2'.repeat(64)}.png` },
+    { storage_key: `${'3'.repeat(64)}.png` }
+  ]);
   expect(progress).toEqual([
     { completed: 2, phase: 'nodes', total: 2 },
     { completed: 3, phase: 'attachments', total: 3 }

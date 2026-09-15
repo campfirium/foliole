@@ -118,8 +118,8 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   const contentHashes = datasetReceipt.nodeIds.map((id) => snapshot.nodesById?.[id]?.bodyBlobHash ?? '');
   let readyAttachmentCount = 0;
-  for (const attachmentId of datasetReceipt.attachmentIds) {
-    const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });
+  for (const storageKey of datasetReceipt.storageKeys) {
+    const resolved = await session.invoke('resolve_attachment_resource', { storage_key: storageKey });
     if (resolved?.status === 'ready') readyAttachmentCount += 1;
   }
   const overview = await session.load();
