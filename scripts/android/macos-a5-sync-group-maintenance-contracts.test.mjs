@@ -100,6 +100,11 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('catch (SQLiteReadOnlyDatabaseException error)');
   expect(action).toContain('lastReadConflict');
   expect(action).toContain('latestProjection=');
+  const projection = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceSyncEventProjection.java',
+    'utf8'
+  );
+  expect(projection).toContain('put("source_runs", sourceRuns)');
   expect(action).toContain('JSONObject stable = readState(instrumentation, webView)');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
