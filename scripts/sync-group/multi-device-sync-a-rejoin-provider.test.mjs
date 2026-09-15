@@ -125,6 +125,15 @@ it('creates fresh A and B facts only after Windows C captures its baseline', () 
   expect(baseline).toBeLessThan(bFact);
 });
 
+it('pushes the fresh Android B fact before waiting for Windows convergence', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const create = source.indexOf('await createAndroidFact');
+  const sync = source.indexOf('await syncAndroidFact');
+  const windows = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
+  expect(create).toBeLessThan(sync);
+  expect(sync).toBeLessThan(windows);
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);
