@@ -24,6 +24,23 @@ async function checked(execute, paths, args, stage) {
   throw failure(String(detail).trim(), 64, stage, result);
 }
 
+async function inspectDevBranch(execute, paths) {
+  const options = { cwd: paths.repoRoot, timeoutCode: 'repo_timeout', timeoutMs: PULL_TIMEOUT_MS,
+    windowsHide: true };
+  const branch = await execute(paths.gitPath,
+    ['-C', paths.repoRoot, 'branch', '--show-current'], options);
+  if (branch.code === 0) {
+    if (branch.stdout.trim() === 'dev') return false;
+    throw failure('Windows DEV repository must stay on dev', 64, 'repo', branch);
+  }
+  const symbolic = await execute(paths.gitPath,
+    ['-C', paths.repoRoot, 'symbolic-ref', '--short', 'HEAD'], options);
+  if (symbolic.code !== 0 || symbolic.stdout.trim() !== 'dev') {
+    throw failure('Windows DEV repository HEAD is not recoverable as dev', 64, 'repo', symbolic);
+  }
+  return true;
+}
+
 export async function runWindowsDevPull({
   execute = executeBounded, fsApi = fs, paths = windowsDevPaths(), platform = process.platform
 } = {}) {
@@ -36,10 +53,11 @@ export async function runWindowsDevPull({
     if (actual.toLowerCase() !== expected.toLowerCase()) {
       throw failure('Windows DEV script and Git top-level differ', 64, 'repo');
     }
-    const branch = (await checked(execute, paths, ['branch', '--show-current'], 'repo')).stdout.trim();
-    if (branch !== 'dev') throw failure('Windows DEV repository must stay on dev', 64, 'repo');
+    const repairBranch = await inspectDevBranch(execute, paths);
     await checked(execute, paths, ['fetch', '--no-tags', paths.bareRepository, 'dev'], 'fetch');
-    const aligned = await checked(execute, paths, ['reset', '--hard', 'FETCH_HEAD'], 'align');
+    const aligned = await checked(execute, paths, repairBranch
+      ? ['checkout', '-f', '-B', 'dev', 'FETCH_HEAD']
+      : ['reset', '--hard', 'FETCH_HEAD'], 'align');
     const cleaned = await checked(execute, paths, ['clean', '-fd'], 'align');
     const status = await checked(
       execute, paths, ['status', '--porcelain', '--untracked-files=all'], 'align'
