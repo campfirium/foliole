@@ -28,11 +28,15 @@ final class FolioleCompanionSyncGroupResources {
         try (Cursor cursor = db.rawQuery(
             "SELECT content_hash, storage_key, mime_type FROM attachment_blobs WHERE attachment_id = ?",
             new String[] { attachmentId })) {
-            if (!cursor.moveToFirst() || !contentHash.matches("[a-f0-9]{64}") || !contentHash.equals(cursor.getString(0)) ||
-                cursor.isNull(1) || !contentHash.equals(cursor.getString(1))) return null;
-            File file = new File(new File(context.getFilesDir(), "attachments"), contentHash);
+            if (!cursor.moveToFirst() || cursor.isNull(0) || cursor.isNull(1) || cursor.isNull(2)) return null;
+            String storedHash = cursor.getString(0);
+            String storageKey = cursor.getString(1);
+            String mimeType = cursor.getString(2);
+            if (!contentHash.equals(storedHash) ||
+                !FolioleCompanionCanonicalAttachmentKey.matches(storedHash, mimeType, storageKey)) return null;
+            File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
             if (!file.isFile()) return null;
-            return new Resource(cursor.isNull(2) ? "application/octet-stream" : cursor.getString(2), readAll(file));
+            return new Resource(mimeType, readAll(file));
         } finally { db.close(); }
     }
 

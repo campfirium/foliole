@@ -1,10 +1,12 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -47,14 +49,17 @@ public class FolioleCompanionBatchDataPlaneTest {
             output.write(bytes);
         }
         String hash = FolioleCompanionAttachmentResourceHash.digestHex(context, temp);
-        File target = new File(new File(context.getFilesDir(), "attachments"), hash);
+        String storageKey = hash + ".png";
+        File target = new File(new File(context.getFilesDir(), "attachments"), storageKey);
         target.delete();
         Map<String, File> files = new HashMap<>();
         files.put("attachment-1", temp);
         Map<String, String> hashes = new HashMap<>();
         hashes.put("attachment-1", hash);
+        Map<String, String> mimeTypes = Collections.singletonMap("attachment-1", "image/png");
+        Map<String, String> storageKeys = Collections.singletonMap("attachment-1", storageKey);
         String token = FolioleCompanionAttachmentResourceBatchSessions.create(
-            files, hashes, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList()
+            files, hashes, mimeTypes, storageKeys, Collections.emptyList()
         );
 
         FolioleCompanionAttachmentFileStage.stage(context, token);
@@ -62,5 +67,37 @@ public class FolioleCompanionBatchDataPlaneTest {
         FolioleCompanionAttachmentFileStage.finish(token, false);
         assertFalse(target.exists());
         assertFalse(temp.exists());
+    }
+
+    @Test
+    public void servesAttachmentFromItsCanonicalStorageKey() throws Exception {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bytes = "provider attachment bytes".getBytes(StandardCharsets.UTF_8);
+        File source = new File(context.getCacheDir(), "sync-group-provider-attachment.bin");
+        try (FileOutputStream output = new FileOutputStream(source)) { output.write(bytes); }
+        String hash = FolioleCompanionAttachmentResourceHash.digestHex(context, source);
+        String storageKey = hash + ".png";
+        File directory = new File(context.getFilesDir(), "attachments");
+        assertTrue(directory.exists() || directory.mkdirs());
+        File target = new File(directory, storageKey);
+        try (FileOutputStream output = new FileOutputStream(target)) { output.write(bytes); }
+        File snapshot = new File(context.getCacheDir(), "sync-group-provider-resource.db");
+        snapshot.delete();
+        SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(snapshot, null);
+        try {
+            database.execSQL("CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, " +
+                "content_hash TEXT, storage_key TEXT, mime_type TEXT)");
+            database.execSQL("INSERT INTO attachment_blobs VALUES (?, ?, ?, ?)",
+                new Object[] { "attachment-1", hash, storageKey, "image/png" });
+        } finally { database.close(); }
+        try {
+            FolioleCompanionSyncGroupResources.Resource resource =
+                FolioleCompanionSyncGroupResources.attachment(
+                    context, snapshot.getAbsolutePath(), "attachment-1", hash);
+            assertEquals("image/png", resource.mimeType);
+            assertArrayEquals(bytes, resource.body);
+        } finally {
+            target.delete(); snapshot.delete(); source.delete();
+        }
     }
 }
