@@ -1,21 +1,14 @@
-import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
-import {
-  collectMarkdownImageReferences
-} from '../../lib/core/import/markdownImageReferences.js';
-import {
-  prepareReadwiseApiDocuments,
-  stableReadwiseEpubNodeId
-} from '../../lib/core/readwise/readwiseApiImport.js';
-import { openDatabaseConnection } from '../database/connection.js';
-import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
-import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
+import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
 
-import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
-import { isReadwiseApiEpubCoverLine } from './readwiseApiEpubCoverBody.js';
+import { prepareReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
 import type { ReadwiseApiEpubCoverRemote } from './readwiseApiEpubCoverRepair.js';
-import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 import { prepareReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
-import { loadReadwiseSourceResyncTarget } from './readwiseSourceResyncTarget.js';
+import { mergeRetainedReadwiseAnnotations } from './readwiseOriginalEpubAnnotations.js';
+import { commitFrozenReadwiseSourceResync } from './readwiseSourceResyncCommit.js';
+import {
+  captureReadwiseSourceResyncSnapshot,
+  loadReadwiseSourceResyncTarget
+} from './readwiseSourceResyncTarget.js';
 
 interface ReadwiseApiEpubBodyRemote extends ReadwiseApiEpubCoverRemote {
   author?: string | null;
@@ -34,17 +27,26 @@ export async function repairReadwiseApiEpubBodiesFromRemote(
   if (!target || target.documentId !== remote.id) throw new Error('readwise_body_repair_target_missing');
   const prepared = prepareReadwiseApiDocuments([toContract(remote, target.title)], [])[0];
   if (!prepared?.epubStructure) throw new Error('readwise_body_repair_structure_missing');
-  const images = await prepareReadwiseApiEpubImages(prepared);
-  if (!images) return { nodeId, status: 'unchanged' as const };
-  const before = readCurrentBodies(nodeId);
-  const desired = buildDesiredBodies(target, before, images);
-  commitBodies(target.title, before, desired);
+  const document = {
+    ...prepared,
+    annotations: mergeRetainedReadwiseAnnotations(target, prepared.annotations)
+  };
+  const [cover, images] = await Promise.all([
+    prepareReadwiseApiEpubCover(document),
+    prepareReadwiseApiEpubImages(document)
+  ]);
+  const expectedSnapshot = captureReadwiseSourceResyncSnapshot(target);
+  commitFrozenReadwiseSourceResync({
+    candidate: { cover, document, images },
+    expectedSnapshot,
+    importedAt: new Date().toISOString(),
+    target
+  });
   return {
-    accounting: images.accounting,
-    degradedReason: images.degradedReason,
+    accounting: images?.accounting ?? null,
+    degradedReason: images?.degradedReason ?? cover.degradedReason,
     nodeId,
-    status: desired.some((item) => item.content !== before.get(item.nodeId)!.content)
-      ? 'repaired' as const : 'unchanged' as const
+    status: 'repaired' as const
   };
 }
 
@@ -56,106 +58,4 @@ function toContract(remote: ReadwiseApiEpubBodyRemote, title: string) {
     sourceUrl: remote.sourceUrl ?? null, summary: null, title,
     updatedAt: remote.updatedAt ?? null, url: remote.url ?? null
   };
-}
-
-function readCurrentBodies(rootNodeId: string) {
-  const rows = openDatabaseConnection().driver.queryAll<{
-    content: string;
-    id: string;
-    title: string;
-  }>(`WITH RECURSIVE tree(id, content, title) AS (
-      SELECT id, content, title FROM nodes WHERE id = ? AND deleted_at IS NULL
-      UNION ALL SELECT child.id, child.content, child.title FROM nodes child
-      JOIN tree ON child.parent_id = tree.id WHERE child.deleted_at IS NULL
-    ) SELECT id, content, title FROM tree WHERE id = ? OR id LIKE 'node-epub-%'`,
-  [rootNodeId, rootNodeId]);
-  return new Map(rows.map((row) => [row.id, row]));
-}
-
-function buildDesiredBodies(
-  target: NonNullable<ReturnType<typeof loadReadwiseSourceResyncTarget>>,
-  before: ReturnType<typeof readCurrentBodies>,
-  images: NonNullable<Awaited<ReturnType<typeof prepareReadwiseApiEpubImages>>>
-) {
-  const root = before.get(target.nodeId);
-  if (!root) throw new Error('readwise_body_repair_root_missing');
-  assertCoverage(rootBodyContent(root.content, target.title), images.rootBody, target.nodeId);
-  const desired = [{
-    attachmentIds: referencedRootAttachmentIds(target.nodeId, root.content, images.rootAttachmentIds),
-    content: rebuildRoot(root.content, target.title, images.rootBody),
-    nodeId: target.nodeId,
-    title: target.title
-  }];
-  for (const node of buildReadwiseApiEpubBookNodes(images.sections)) {
-    const nodeId = stableReadwiseEpubNodeId(target.connectionRef, target.documentId, node.key);
-    const current = before.get(nodeId);
-    if (!current) throw new Error(`readwise_body_repair_node_missing:${nodeId}`);
-    assertCoverage(current.content, node.content, nodeId);
-    desired.push({ attachmentIds: node.attachmentIds, content: node.content, nodeId, title: current.title });
-  }
-  if (desired.length !== before.size) throw new Error('readwise_body_repair_node_scope_changed');
-  return desired;
-}
-
-function assertCoverage(current: string, desired: string, nodeId: string) {
-  if (normalizeBodyCoverage(current) !== normalizeBodyCoverage(desired)) {
-    throw new Error(`readwise_body_repair_text_changed:${nodeId}`);
-  }
-}
-
-function rootBodyContent(value: string, title: string) {
-  const blocks = value.trim().split(/\n{2,}/u);
-  if (blocks[0]?.match(/^#{1,6}\s+(.+)$/u)?.[1]?.trim() === title) blocks.shift();
-  if (/^\[Open in Reader\]/u.test(blocks.at(-1) ?? '')) blocks.pop();
-  return blocks.filter((block) => !isReadwiseApiEpubCoverLine(block)).join('\n\n');
-}
-
-function normalizeBodyCoverage(value: string) {
-  let text = value;
-  for (const image of collectMarkdownImageReferences(text).reverse()) {
-    text = `${text.slice(0, image.start)}${text.slice(image.end)}`;
-  }
-  return text.replace(/\*\*Image unavailable\.\*\*/gu, '').replace(/\s+/gu, ' ').trim();
-}
-
-function rebuildRoot(current: string, title: string, body: string) {
-  const blocks = current.trim().split(/\n{2,}/u);
-  const trailing = /^\[Open in Reader\]/u.test(blocks.at(-1) ?? '') ? blocks.pop() : null;
-  const heading = blocks[0]?.match(/^#{1,6}\s+(.+)$/u)?.[1]?.trim() === title ? blocks.shift() : null;
-  const cover = blocks.find(isReadwiseApiEpubCoverLine) ?? null;
-  return [heading, cover, body, trailing].filter(Boolean).join('\n\n');
-}
-
-function referencedRootAttachmentIds(rootNodeId: string, content: string, bodyAttachmentIds: string[]) {
-  const rows = openDatabaseConnection().driver.queryAll<{
-    attachment_id: string;
-    storage_key: string;
-  }>(`SELECT na.attachment_id, ab.storage_key FROM node_attachments na
-      JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
-      WHERE na.node_id = ? AND na.role = 'image'`, [rootNodeId]);
-  const retained = rows.filter((row) => content.includes(`asset://${row.storage_key}`))
-    .map((row) => row.attachment_id);
-  return [...new Set([...retained, ...bodyAttachmentIds])];
-}
-
-function commitBodies(
-  _title: string,
-  before: ReturnType<typeof readCurrentBodies>,
-  desired: ReturnType<typeof buildDesiredBodies>
-) {
-  const driver = openDatabaseConnection().driver;
-  const now = new Date().toISOString();
-  driver.transaction(() => {
-    const current = readCurrentBodies(desired[0]!.nodeId);
-    for (const item of desired) {
-      if (current.get(item.nodeId)?.content !== before.get(item.nodeId)?.content) {
-        throw new Error('readwise_body_repair_target_changed');
-      }
-      writeNodeBody({ content: item.content, driver, nodeId: item.nodeId, title: item.title, updatedAt: now });
-      driver.execute(`UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
-        [loadOrCreateDesktopHostName(now), item.nodeId]);
-      replaceReadwiseApiEpubImageLinks(item.nodeId, item.attachmentIds);
-      flushNodeSyncVersion(item.nodeId, now);
-    }
-  });
 }

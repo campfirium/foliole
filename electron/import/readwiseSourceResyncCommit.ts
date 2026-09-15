@@ -22,9 +22,20 @@ export function commitReadwiseSourceResync(input: {
   importedAt: string;
   target: ReadwiseSourceResyncTarget;
 }) {
+  return commitVerifiedReadwiseSourceResync(input, true);
+}
+
+export function commitFrozenReadwiseSourceResync(input: Parameters<typeof commitReadwiseSourceResync>[0]) {
+  return commitVerifiedReadwiseSourceResync(input, false);
+}
+
+function commitVerifiedReadwiseSourceResync(
+  input: Parameters<typeof commitReadwiseSourceResync>[0],
+  requireRuntimeReady: boolean
+) {
   const driver = openDatabaseConnection().driver;
   return driver.transaction(() => {
-    if (readReadwiseSourceResyncRuntimeStatus(input.target) !== 'ready'
+    if ((requireRuntimeReady && readReadwiseSourceResyncRuntimeStatus(input.target) !== 'ready')
       || captureReadwiseSourceResyncSnapshot(input.target) !== input.expectedSnapshot) {
       throw new Error('readwise_resync_target_changed');
     }
