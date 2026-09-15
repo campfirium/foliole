@@ -100,7 +100,14 @@ async function runDesktopManualSync() {
   await exchangeAllDesktopSyncGroupMemberStates();
   if (loadDesktopAnchorTopologyState().role === 'anchor') return null;
   const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
-  if (current) return runDesktopSyncCoordinator('manual', current);
+  if (current) {
+    try {
+      return await runDesktopSyncCoordinator('manual', current);
+    } catch (error) {
+      if (!isStaleAnchorRoute(error)) throw error;
+      removeDesktopSyncGroupRoute(current.peer_device_id);
+    }
+  }
   const candidates = await discoverDesktopSyncGroups();
   const candidate = candidates.find((value) => value.group_id === group.group_id
     && value.provider_device_id !== group.local_device_identity_key
@@ -114,6 +121,10 @@ async function runDesktopManualSync() {
   } finally {
     removeDesktopSyncGroupRoute(route.peer_device_id);
   }
+}
+
+function isStaleAnchorRoute(error: unknown) {
+  return error instanceof Error && error.message === 'sync_group_peer_not_anchor';
 }
 
 function activateAnchorRoute(

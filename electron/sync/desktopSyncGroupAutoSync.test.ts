@@ -61,7 +61,9 @@ import {
   startDesktopSyncGroupAutoSync,
   stopDesktopSyncGroupAutoSync
 } from './desktopSyncGroupAutoSync.js';
-import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
+import {
+  loadDesktopSyncGroupRoutes, saveDesktopSyncGroupRoute
+} from './desktopSyncGroupRoutes.js';
 
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
@@ -136,6 +138,27 @@ it('uses only the selected anchor for an on-demand manual sync', async () => {
 
   expect(runtime.coordinator).toHaveBeenCalledWith('manual', expect.objectContaining({
     peer_device_id: 'desktop-b'
+  }));
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
+});
+
+it('rediscovers after a cached desktop route stops being the anchor', async () => {
+  runtime.role = 'member';
+  saveDesktopSyncGroupRoute({ endpoint_url: 'http://stale:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b', peer_device_name: 'Windows',
+    peer_platform: 'win32', route_kind: 'anchor' });
+  runtime.discovery.mockResolvedValue([{ endpoint_url: 'http://current:38641',
+    group_id: 'group-1', provider_device_id: 'desktop-b', provider_platform: 'win32' }]);
+  runtime.coordinator.mockRejectedValueOnce(new Error('sync_group_peer_not_anchor'))
+    .mockResolvedValueOnce({ status: 'completed' });
+
+  await runDesktopManualSyncWithDiscovery();
+
+  expect(runtime.coordinator).toHaveBeenNthCalledWith(1, 'manual', expect.objectContaining({
+    endpoint_url: 'http://stale:38641'
+  }));
+  expect(runtime.coordinator).toHaveBeenNthCalledWith(2, 'manual', expect.objectContaining({
+    endpoint_url: 'http://current:38641'
   }));
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([]);
 });
