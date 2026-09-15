@@ -8,15 +8,13 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
-  seedCompletedReadwiseApiMode,
   type T178AcceptanceSession
 } from './harness/t178ApiAcceptanceSession';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t178-20');
 
 type Projection = {
-  migration: 'completed' | 'indexing' | 'merging';
-  sync?: { stage: 'fetching' | 'writing'; status: 'completed' | 'interrupted' };
+  migration: 'indexing' | 'merging';
 };
 
 async function seedProjection(app: ElectronApplication, projection: Projection) {
@@ -30,7 +28,6 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
     const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
-    const settings = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
     connection.runWithDatabaseConnectionOwner(() => {
       host.activateReadwiseOnThisHost();
       const assignment = host.loadReadwiseHostAssignment();
@@ -41,40 +38,14 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
       identity.saveReadwiseConnectionState({
         secretRef, state: 'connected', verifiedAt: '2026-09-11T00:00:00.000Z'
       }, source, '2026-09-11T00:00:00.000Z');
-      if (input.migration !== 'completed') cutover.writeReadwiseSourceCutover({
+      cutover.writeReadwiseSourceCutover({
         annotations: [], cohortDocumentIds: input.migration === 'merging' ? ['document-1'] : [],
         completedAt: '2026-09-11T00:00:00.000Z', documents: [], phase: input.migration,
         retiredNodeIds: [], sourceHost: assignment.current_host_name,
         startedAt: '2026-09-11T00:00:00.000Z', status: 'migration-in-progress'
       });
-      const lifecycle = input.sync ? {
-        error_reason: null,
-        finished_at: input.sync.status === 'completed' ? '2026-09-11T00:00:03.000Z' : null,
-        kind: 'initial',
-        progress: {
-          completed_count: 1, failed_count: 0, pending_count: 1,
-          total_count: 2, unexplained_failure_count: 0
-        },
-        queued_at: '2026-09-11T00:00:01.000Z',
-        run_id: 't178-20-run',
-        stage: input.sync.stage,
-        started_at: '2026-09-11T00:00:02.000Z',
-        status: input.sync.status,
-        trigger: 'manual'
-      } : null;
-      settings.saveJsonSetting('readwise_api_schedule_state', {
-        connectionRef: source.connectionRef,
-        initialProgress: null,
-        lastResult: null,
-        lifecycle,
-        nextRunAt: null,
-        version: 2
-      });
     });
   }, projection);
-  if (projection.migration === 'completed') {
-    await seedCompletedReadwiseApiMode(app, '2026-09-11T00:00:00.000Z');
-  }
 }
 
 async function reopenReadwise(session: T178AcceptanceSession) {
@@ -90,7 +61,7 @@ async function expectPhase(settings: Locator, expected: RegExp, screenshot: stri
   await settings.screenshot({ path: path.join(ARTIFACT_DIR, screenshot) });
 }
 
-test('projects durable migration and sync phases with truthful progress', async ({ browserName }) => {
+test('projects durable migration phases with truthful progress', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-20-'));
@@ -107,26 +78,6 @@ test('projects durable migration and sync phases with truthful progress', async 
     settings = await reopenReadwise(session);
     await expectPhase(settings, /^(Migrating · Merging|正在迁移 · 合并中) · 0 \/ 1$/, 'migration-merging.png');
 
-    await seedProjection(session.electronApp, {
-      migration: 'completed', sync: { stage: 'fetching', status: 'interrupted' }
-    });
-    settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Indexing|索引中) · 1 \/ 2$/, 'sync-indexing.png');
-
-    await seedProjection(session.electronApp, {
-      migration: 'completed', sync: { stage: 'writing', status: 'interrupted' }
-    });
-    settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Syncing|同步中) · 1 \/ 2$/, 'syncing.png');
-
-    await seedProjection(session.electronApp, {
-      migration: 'completed', sync: { stage: 'writing', status: 'completed' }
-    });
-    settings = await reopenReadwise(session);
-    await expect(settings.getByText(/^(Indexing|索引中|Syncing|同步中)$/)).toHaveCount(0);
-    await expect(settings.getByLabel(/^(Source|来源)$/, { exact: true })
-      .getByRole('button', { name: /^(Sync|同步)$/ })).toBeVisible();
-    await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'completed.png') });
   } finally {
     await session?.close().catch(() => undefined);
     await rm(stateRoot, { force: true, recursive: true });

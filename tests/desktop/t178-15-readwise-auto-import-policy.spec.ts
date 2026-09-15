@@ -105,6 +105,7 @@ async function runApiFixture(app: ElectronApplication) {
     const connection = require(pathApi.join(input.cwd, 'dist/electron/database/connection.js'));
     const identity = require(pathApi.join(input.cwd, 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(input.cwd, 'dist/electron/import/readwiseApiSecret.js'));
+    const settings = require(pathApi.join(input.cwd, 'dist/electron/database/settingsStore.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const source = identity.createReadwiseRemoteSource('2026-09-10T00:00:00.000Z');
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000015.bin';
@@ -114,6 +115,10 @@ async function runApiFixture(app: ElectronApplication) {
         source,
         '2026-09-10T00:00:00.000Z'
       );
+      settings.saveJsonSetting('import_manager_settings', {
+        ...(settings.loadJsonSetting('import_manager_settings') ?? {}),
+        readwiseAutoImportPolicy: input.policy
+      });
     });
   }, { cwd: process.cwd(), policy: POLICY });
 }
@@ -156,10 +161,12 @@ test('routes four representative folder and API inputs through the same policy',
       }
       await expect.poll(async () => {
         try {
-          await session!.firstWindow.evaluate(async (nextSettings) => {
-            await window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings });
+          await session!.firstWindow.evaluate(async ({ mode: nextMode, settings: nextSettings }) => {
+            if (nextMode === 'folder') {
+              await window.electronAPI.invoke('save_import_manager_settings', { settings: nextSettings });
+            }
             return window.electronAPI.invoke('run_readwise_reader_import', { settings: nextSettings });
-          }, settings);
+          }, { mode, settings });
           return 'completed';
         } catch (error) {
           if (String(error).includes('sqlite connection is owned')) return 'waiting';
