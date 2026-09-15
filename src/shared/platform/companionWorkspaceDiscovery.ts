@@ -5,6 +5,10 @@ import {
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
+import {
+  desktopAnchorAdvertisements,
+  waitForCompanionDesktopAdvertisements
+} from './companion/companionDesktopDiscoveryWait';
 import { qualifyPreparedCompanionAnchorCandidate } from './companion/preparedAnchorDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
@@ -67,9 +71,11 @@ async function loadNativeDiscoveryCandidates(
   }
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const native = (payload.candidates ?? [])
-      .filter((candidate) => !isMobileProvider(candidate.protocol_txt)
-        && candidate.protocol_txt?.topology_role === 'anchor')
+    const immediate = desktopAnchorAdvertisements(payload);
+    const discovered = immediate.length > 0
+      ? immediate
+      : await waitForCompanionDesktopAdvertisements(FolioleCompanionSync);
+    const native = discovered
       .map((candidate) => ({
         endpointUrl: candidate.endpoint_url,
         protocolTxt: candidate.protocol_txt ?? null,
@@ -154,10 +160,6 @@ function abortableNativeDiscoveryRequest(url: string, signal: AbortSignal) {
       .then(resolve, reject)
       .finally(() => signal.removeEventListener('abort', abort));
   });
-}
-
-function isMobileProvider(protocolTxt: Record<string, string> | null | undefined) {
-  return ['android-capacitor', 'ios-capacitor'].includes(protocolTxt?.provider_platform ?? '');
 }
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
