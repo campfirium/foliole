@@ -24,7 +24,7 @@ async function checked(execute, paths, args, stage) {
   throw failure(String(detail).trim(), 64, stage, result);
 }
 
-async function inspectDevBranch(execute, paths) {
+async function inspectDevBranch(execute, paths, fsApi) {
   const options = { cwd: paths.repoRoot, timeoutCode: 'repo_timeout', timeoutMs: PULL_TIMEOUT_MS,
     windowsHide: true };
   const branch = await execute(paths.gitPath,
@@ -33,10 +33,10 @@ async function inspectDevBranch(execute, paths) {
     if (branch.stdout.trim() === 'dev') return false;
     throw failure('Windows DEV repository must stay on dev', 64, 'repo', branch);
   }
-  const symbolic = await execute(paths.gitPath,
-    ['-C', paths.repoRoot, 'symbolic-ref', '--short', 'HEAD'], options);
-  if (symbolic.code !== 0 || symbolic.stdout.trim() !== 'dev') {
-    throw failure('Windows DEV repository HEAD is not recoverable as dev', 64, 'repo', symbolic);
+  const headPath = path.join(paths.repoRoot, '.git', 'HEAD');
+  const head = fsApi.existsSync(headPath) ? fsApi.readFileSync(headPath, 'utf8').trim() : '';
+  if (head !== 'ref: refs/heads/dev') {
+    throw failure('Windows DEV repository HEAD is not recoverable as dev', 64, 'repo', branch);
   }
   return true;
 }
@@ -53,7 +53,7 @@ export async function runWindowsDevPull({
     if (actual.toLowerCase() !== expected.toLowerCase()) {
       throw failure('Windows DEV script and Git top-level differ', 64, 'repo');
     }
-    const repairBranch = await inspectDevBranch(execute, paths);
+    const repairBranch = await inspectDevBranch(execute, paths, fsApi);
     await checked(execute, paths, ['fetch', '--no-tags', paths.bareRepository, 'dev'], 'fetch');
     const aligned = await checked(execute, paths, repairBranch
       ? ['checkout', '-f', '-B', 'dev', 'FETCH_HEAD']
