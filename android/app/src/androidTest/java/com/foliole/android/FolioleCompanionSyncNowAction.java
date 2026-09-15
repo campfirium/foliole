@@ -26,7 +26,7 @@ final class FolioleCompanionSyncNowAction {
             instrumentation, webView, before.optString("runId"), 30_000
         );
         JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
-        requireCompletedTerminal(terminal);
+        requireCompletedTerminal(instrumentation, terminal);
         waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
@@ -36,9 +36,36 @@ final class FolioleCompanionSyncNowAction {
             .put("errorText", terminal.optString("errorText"));
     }
 
-    private static void requireCompletedTerminal(JSONObject terminal) {
+    private static void requireCompletedTerminal(
+        Instrumentation instrumentation, JSONObject terminal
+    ) throws Exception {
         if ("completed".equals(terminal.optString("terminalResult"))) return;
-        throw new IllegalStateException("Sync Now failed before projection: " + terminal);
+        throw new IllegalStateException(
+            "Sync Now failed before projection: " + terminal
+                + "; discovery=" + diagnoseDiscovery(instrumentation)
+        );
+    }
+
+    private static JSONArray diagnoseDiscovery(Instrumentation instrumentation) throws Exception {
+        JSONArray results = new JSONArray();
+        String endpointKey = FolioleCompanionHostBridgeContractDefinitions
+            .networkEndpointUrlCandidateKey(instrumentation.getTargetContext());
+        for (JSONObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(
+            instrumentation.getTargetContext()
+        )) {
+            JSONObject result = new JSONObject().put("candidate", candidate);
+            String endpoint = candidate.optString(endpointKey);
+            try {
+                result.put("http", FolioleCompanionDesktopHttpClient.request(
+                    instrumentation.getTargetContext(), endpoint + "/companion/discovery",
+                    "GET", null, null
+                ));
+            } catch (Exception error) {
+                result.put("http_error", String.valueOf(error));
+            }
+            results.put(result);
+        }
+        return results;
     }
 
     private static JSONObject readState(
