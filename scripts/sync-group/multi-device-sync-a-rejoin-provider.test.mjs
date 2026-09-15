@@ -143,6 +143,15 @@ it('creates the fresh Android fact without replacing its joined application data
   expect(create).toContain('installMain: false');
 });
 
+it('restarts macOS after Windows creates C before requiring all fresh facts', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const created = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
+  const restarted = source.indexOf('await session.close(); session = null;', created);
+  const converged = source.indexOf("waitUntil('macOS A fresh fact identities'", created);
+  expect(created).toBeLessThan(restarted);
+  expect(restarted).toBeLessThan(converged);
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);
