@@ -2,16 +2,25 @@ import { createHash } from 'node:crypto';
 
 import { formatHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
 import { extractReadwiseSidecarHighlights, normalizeReadwiseText } from '../../lib/core/import/readwiseReaderParsing.js';
-import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import {
+  resolveReaderBodyAncestor,
+  type ReaderDocumentContract
+} from '../../lib/core/readwise/readwiseApiContract.js';
+import {
+  prepareReadwiseApiDocuments,
+  type PreparedReadwiseApiDocument
+} from '../../lib/core/readwise/readwiseApiImport.js';
 import { extractReaderLinkIds } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 
 import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { readReadwiseApiSecret } from './readwiseApiSecret.js';
-import { fetchReadwiseIdentityDocuments } from './readwiseIdentityApi.js';
+import {
+  fetchReadwiseIdentityDocument,
+  fetchReadwiseIdentityDocuments
+} from './readwiseIdentityApi.js';
 import {
   loadReadwiseSourceArtifacts,
   type ReadwiseSourceArtifact
@@ -35,18 +44,25 @@ export async function prepareReadwiseSourceCutoverIdentity(
   ]))];
   const secretRef = loadStoredReadwiseHostSettings().apiConnection.secretRef;
   if (ids.length > 0 && !secretRef) throw new Error('readwise_api_token_missing');
-  const documents = ids.length > 0 ? (await fetchReadwiseIdentityDocuments({
+  const identity = ids.length > 0 ? await fetchReadwiseIdentityDocuments({
     ...(dependencies.fetchImpl ? { fetchImpl: dependencies.fetchImpl } : {}),
     ids,
     ...(dependencies.minIntervalMs === undefined ? {} : { minIntervalMs: dependencies.minIntervalMs }),
     token: readReadwiseApiSecret(secretRef!)
-  })).documents : new Map();
+  }) : null;
+  const documents = identity?.documents ?? new Map<string, ReaderDocumentContract>();
   const index = resolveReadwiseSourceIdentityIndex(artifacts, documents);
+  for (const documentId of new Set(index.artifacts.flatMap((artifact) =>
+    artifact.nodeActive && !artifact.disposition ? [artifact.remoteDocumentId] : []))) {
+    const document = await fetchReadwiseIdentityDocument(documentId, identity!.request, true);
+    if (!document) throw new Error('readwise_source_cutover_identity_unmatched');
+    documents.set(document.id, document);
+  }
   return {
     bindingFor(document: PreparedReadwiseApiDocument): ReadwiseSourceCutoverIdentityBinding | null {
       const match = index.byDocument.get(document.id);
       if (match?.disposition || !match?.nodeActive) return null;
-      return match ? bindingFor(match, document, loadReadwiseApiAnnotationLedger(connectionRef)) : null;
+      return match ? bindingFor(match, document, documents) : null;
     },
     assertCandidateCoverage(documentIds: string[]) {
       const candidates = new Set(documentIds);
@@ -56,6 +72,19 @@ export async function prepareReadwiseSourceCutoverIdentity(
     },
     candidatePriority(documentId: string) {
       return index.byDocument.has(documentId) ? 0 : 1;
+    },
+    migrationDocuments() {
+      const parentIds = new Set(index.artifacts.map((artifact) => artifact.remoteDocumentId));
+      return prepareReadwiseApiDocuments(
+        [...documents.values()].filter((document) => parentIds.has(document.id)),
+        []
+      ).map((document) => {
+        const artifact = index.byDocument.get(document.id);
+        return artifact ? {
+          ...document,
+          annotations: legacyAnnotationsFor(artifact, document.id, documents)
+        } : document;
+      });
     },
     migrateDispositions(documentIds: string[]) {
       return migrateReadwiseSourceDispositions(connectionRef, documentIds, index.artifacts.map((artifact) => ({
@@ -69,7 +98,7 @@ export async function prepareReadwiseSourceCutoverIdentity(
 function bindingFor(
   artifact: ReadwiseSourceArtifact,
   document: PreparedReadwiseApiDocument,
-  annotationFacts: ReturnType<typeof loadReadwiseApiAnnotationLedger>
+  exactDocuments: ReadonlyMap<string, ReaderDocumentContract>
 ): ReadwiseSourceCutoverIdentityBinding {
   const ids = extractReaderLinkIds(artifact.raw);
   const highlights = extractReadwiseSidecarHighlights(
@@ -80,42 +109,53 @@ function bindingFor(
     ? highlights.flatMap((highlight, index) => resolveAnnotation(
       artifact.latestNodeId,
       highlight.text,
-      document.annotations.find((item) => item.remoteId === ids[index])
+      exactAnnotation(ids[index], document.id, exactDocuments)
     ))
     : [];
   return {
     annotations,
-    legacyAnnotations: highlights.length === ids.length ? highlights.flatMap((highlight, index) => {
-      const remoteId = ids[index];
-      const remote = remoteId ? document.annotations.find((item) => item.remoteId === remoteId) : null;
-      const fact = remoteId ? annotationFacts.find((item) => item.remoteId === remoteId) : null;
-      const confirmedFallback = fact?.category === 'highlight'
-        && (fact.documentId === document.id || fact.parentId === document.id);
-      if (!remoteId || (!remote && !confirmedFallback)) return [];
-      const content = formatHighlightCardContent({
-        ...(highlight.note === undefined ? {} : { note: highlight.note }),
-        text: highlight.text
-      });
-      return [{
-        content,
-        contentHash: createHash('sha256').update(content).digest('hex'),
-        kind: 'highlight' as const,
-        locatorText: highlight.text,
-        parentRemoteId: document.id,
-        remoteId,
-        updatedAt: remote?.updatedAt ?? fact?.updatedAt ?? null
-      }];
-    }) : [],
+    legacyAnnotations: legacyAnnotationsFor(artifact, document.id, exactDocuments),
     nodeId: artifact.latestNodeId,
     remoteDocumentId: document.id,
     sourceFingerprint: artifact.sourceFingerprint ?? ''
   };
 }
 
+function legacyAnnotationsFor(
+  artifact: ReadwiseSourceArtifact,
+  documentId: string,
+  exactDocuments: ReadonlyMap<string, ReaderDocumentContract>
+) {
+  const ids = extractReaderLinkIds(artifact.raw);
+  const highlights = extractReadwiseSidecarHighlights(
+    artifact.raw,
+    loadStoredReadwiseHostSettings().readwiseReaderConfig
+  );
+  if (highlights.length !== ids.length) return [];
+  return highlights.flatMap((highlight, index) => {
+    const remoteId = ids[index];
+    const remote = exactAnnotation(remoteId, documentId, exactDocuments);
+    if (!remoteId || !remote) return [];
+    const content = formatHighlightCardContent({
+      ...(highlight.note === undefined ? {} : { note: highlight.note }),
+      text: highlight.text
+    });
+    return [{
+      content,
+      contentHash: createHash('sha256').update(content).digest('hex'),
+      kind: remote.kind,
+      locatorText: highlight.text,
+      parentRemoteId: documentId,
+      remoteId,
+      updatedAt: remote.updatedAt
+    }];
+  });
+}
+
 function resolveAnnotation(
   nodeId: string,
   text: string,
-  remote: PreparedReadwiseApiDocument['annotations'][number] | undefined
+  remote: { kind: 'highlight' | 'note'; remoteId: string } | null
 ) {
   if (!remote) return [];
   const children = openDatabaseConnection().driver.queryAll<{
@@ -132,6 +172,18 @@ function resolveAnnotation(
   return matches.length === 1
     ? [{ kind: remote.kind, nodeId: matches[0]!.id, remoteId: remote.remoteId }]
     : [];
+}
+
+function exactAnnotation(
+  remoteId: string | undefined,
+  documentId: string,
+  documents: ReadonlyMap<string, ReaderDocumentContract>
+) {
+  if (!remoteId) return null;
+  const fact = documents.get(remoteId);
+  if ((fact?.category !== 'highlight' && fact?.category !== 'note')
+    || resolveReaderBodyAncestor(remoteId, documents).documentId !== documentId) return null;
+  return { kind: fact.category, remoteId, updatedAt: fact.updatedAt };
 }
 
 function resolveLegacyHighlightText(child: { anchor_link: string | null; content: string; title: string }) {

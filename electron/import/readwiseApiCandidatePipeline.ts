@@ -15,6 +15,7 @@ import {
   prepareDeferredReadwiseApiCandidates,
   produceReadwiseApiCandidateFacts
 } from './readwiseApiCandidateProduction.js';
+import type { ReadwiseApiCandidate } from './readwiseApiCandidateTypes.js';
 import {
   commitReadwiseApiDocument,
   type ReadwiseApiPreparedResources
@@ -54,7 +55,7 @@ export type ReadwiseApiCandidatePipelineInput = {
   onProgress?: (processed: number, total: number) => void;
   purpose?: ReadwiseApiScopePurpose;
   settings: ImportManagerSettings;
-  shouldSkipCandidate?: (documentId: string) => boolean;
+  shouldSkipCandidate?: (candidate: ReadwiseApiCandidate) => boolean;
 };
 
 export async function runReadwiseApiCandidatePipeline(input: ReadwiseApiCandidatePipelineInput) {
@@ -88,7 +89,7 @@ function finalizeCandidatePipeline(
   const failedCount = candidates.filter((candidate) => candidate.status === 'failed').length;
   const remainingCount = candidates.filter((candidate) => candidate.status !== 'completed').length;
   if (remainingCount === 0 && input.purpose !== 'cutover') {
-    completeReadwiseApiCandidateRun(input.connectionRef, 'sync');
+    completeReadwiseApiCandidateRun(input.connectionRef);
   }
   return { ...stats, failedCount, remainingCount, totalCount: total };
 }

@@ -2,7 +2,10 @@ import { normalizeImportManagerSettings } from '../../lib/core/import/importMana
 import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract.js';
 import type { NativeReadwiseApiRunTrigger } from '../../lib/platform/nativeReadwiseApiImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
+import {
+  loadReadwiseApiCompletedThrough,
+  loadReadwiseApiImportSource
+} from '../database/readwiseApiImportState.js';
 import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -13,6 +16,7 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { ensureReadwiseApiCandidateIndex } from './readwiseApiCandidateFetch.js';
 import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { buildReadwiseApiCandidatePreview } from './readwiseApiCandidatePreview.js';
+import type { ReadwiseApiCandidate } from './readwiseApiCandidateTypes.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { createCancelledReadwiseApiImportResult } from './readwiseApiImportResults.js';
 import {
@@ -114,7 +118,7 @@ async function runNow(
         publishProgress(input?.window, processed, total, 'writing');
       },
       settings,
-      shouldSkipCandidate: (documentId) => shouldSkipApiDocument(connectionRef, documentId)
+      shouldSkipCandidate: (candidate) => shouldSkipApiDocument(connectionRef, candidate)
     });
     updateReadwiseApiTrackedRunStage('completion');
     assertEligible(signal, connectionRef);
@@ -146,12 +150,17 @@ async function runNow(
   }
 }
 
-function shouldSkipApiDocument(connectionRef: string, documentId: string) {
+function shouldSkipApiDocument(connectionRef: string, candidate: ReadwiseApiCandidate) {
+  const documentId = candidate.documentId;
   if (readReadwiseApiSourceDisposition(openDatabaseConnection().driver, connectionRef, documentId)) return true;
   const cutover = loadReadwiseSourceCutover();
-  return Boolean(cutover?.version === 2 && cutover.documents.some((item) =>
+  if (cutover?.version === 2 && cutover.documents.some((item) =>
     item.remoteId === documentId && (item.status === 'suppressed' || item.status === 'blocked')
-  ));
+  )) return true;
+  const existing = loadReadwiseApiImportSource(connectionRef, documentId);
+  if (!existing) return false;
+  const known = new Set(existing.annotations.map((item) => item.remoteId));
+  return [...candidate.highlightIds, ...(candidate.noteIds ?? [])].every((id) => known.has(id));
 }
 
 function requireConnectionRef() {

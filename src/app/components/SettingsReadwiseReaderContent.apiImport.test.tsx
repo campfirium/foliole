@@ -54,7 +54,8 @@ it('keeps sync and cleanup alongside import rules', async () => {
   );
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Sync' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Clean up...' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Reader document import tag' })).toHaveValue('');

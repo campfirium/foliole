@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '';
+const state = vi.hoisted(() => ({ sourcePath: '' }));
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: path.join(mockedAppDataDir, 'cache'),
@@ -18,10 +19,28 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: true })
 }));
-vi.mock('./readwiseApiConnectionState.js', () => ({
-  isStoredReadwiseApiConnectionReady: () => true
-}));
+vi.mock('./readwiseApiConnectionState.js', async () => {
+  const { createDefaultReadwiseReaderConfig } = await import('../../lib/core/import/readwiseReaderSettings.js');
+  return {
+    isStoredReadwiseApiConnectionReady: () => true,
+    loadStoredReadwiseHostSettings: () => ({
+      apiConnection: { secretRef: 'readwise-secret', state: 'connected' },
+      readwiseReaderConfig: createDefaultReadwiseReaderConfig()
+    })
+  };
+});
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
+vi.mock('./importManagerSettings.js', async () => {
+  const { createDefaultImportManagerSettings } = await import('../../lib/core/import/importManagerSettings.js');
+  const settings = createDefaultImportManagerSettings();
+  return { loadImportManagerSettings: () => ({
+    ...settings,
+    readwiseSources: [{
+      highlightMode: 'split', highlightPath: state.sourcePath, id: 'local', keepState: 'enabled',
+      kind: 'articles', primaryPath: state.sourcePath
+    }]
+  }) };
+});
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -29,14 +48,21 @@ import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentit
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
+import { seedMigratableSource } from './readwiseSourceCutoverTestSupport.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-cutover-failure-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  state.sourcePath = path.join(tempRoot, 'Readwise');
+  await fs.mkdir(state.sourcePath, { recursive: true });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+  openDatabaseConnection().driver.execute(
+    "INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ('readwise_source_mode',?,'old')",
+    [JSON.stringify({ mode: 'relay', version: 1 })]
+  );
 });
 
 afterEach(async () => {
@@ -46,6 +72,7 @@ afterEach(async () => {
 });
 
 it('keeps the irreversible migration state after a network failure', async () => {
+  await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
 

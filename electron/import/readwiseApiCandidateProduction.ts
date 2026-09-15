@@ -34,7 +34,7 @@ export async function produceReadwiseApiCandidateFacts(
   total: number
 ) {
   markSkippedCandidates(input, candidates, stats, total);
-  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate.documentId));
+  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate));
   const fetchFacts = createReadwiseApiCandidateFactFetcher(input.connectionRef, input.dependencies);
   let frozenCount = candidates.length - activeCandidates.length
     + activeCandidates.filter(hasLocalReadwiseApiCandidateFacts).length;
@@ -67,7 +67,7 @@ export async function prepareDeferredReadwiseApiCandidates(
   if (!input.deferCommitUntilAllFacts) return null;
   const candidates = loadReadwiseApiCandidates(input.connectionRef).sort((left, right) =>
     (input.candidatePriority?.(left.documentId) ?? 0) - (input.candidatePriority?.(right.documentId) ?? 0));
-  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate.documentId));
+  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate));
   if (activeCandidates.some((candidate) => !hasLocalReadwiseApiCandidateFacts(candidate))) {
     return incompleteReadwiseApiCandidateResult(stats, candidates);
   }
@@ -96,7 +96,7 @@ function markSkippedCandidates(
   total: number
 ) {
   for (const candidate of candidates) {
-    if (candidate.status === 'completed' || !input.shouldSkipCandidate?.(candidate.documentId)) continue;
+    if (candidate.status === 'completed' || !input.shouldSkipCandidate?.(candidate)) continue;
     setReadwiseApiCandidateStatus(input.connectionRef, candidate.documentId, 'completed', null);
     stats.completedCount += 1;
     stats.skippedCount += 1;

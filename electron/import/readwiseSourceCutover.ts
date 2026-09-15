@@ -10,19 +10,13 @@ import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportProgressEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
-import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
-import { prepareReadwiseApiFrozenResources } from './readwiseApiFrozenBatch.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
-import { recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
-import { prepareReadwiseSourceCutoverIdentity } from './readwiseSourceCutoverIdentity.js';
+import { runReadwiseSourceCutoverExact } from './readwiseSourceCutoverExactRun.js';
 import {
   completeReadwiseSourceCutoverMigration,
-  createReadwiseDocumentMigration,
-  promoteReadwiseSourceCutoverCohort,
-  requireReadwiseSourceCutoverV2,
-  setReadwiseSourceCutoverPhase
+  requireReadwiseSourceCutoverV2
 } from './readwiseSourceCutoverJournal.js';
 import { firstReadwiseCandidateFailureReason } from './readwiseSourceCutoverPreview.js';
 import { restartIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
@@ -72,7 +66,6 @@ async function runNow(
   if (restartRequired) {
     restartIncompleteReadwiseSourceCutover({
       connectionRef: source.connectionRef,
-      policy: loadImportManagerSettings().readwiseAutoImportPolicy,
       sourceHost: assignment.current_host_name,
       startedAt
     });
@@ -85,7 +78,7 @@ async function runNow(
     if (output.remainingCount > 0) {
       return result('failed', progress.migratedCount, progress.unmatchedCount, firstReadwiseCandidateFailureReason());
     }
-    completeReadwiseSourceCutoverMigration(source.connectionRef);
+    completeReadwiseSourceCutoverMigration(source.connectionRef, output.documents);
     const completed = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
     return result('completed', completed.migratedCount, completed.unmatchedCount);
   } catch (error) {
@@ -100,51 +93,12 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     ...input.dependencies,
     allowFolderModeForCutover: true
   };
-  const identity = await prepareReadwiseSourceCutoverIdentity(connectionRef, dependencies);
-  const migration = createReadwiseDocumentMigration(identity, connectionRef, {
-    forceSourceProjection: true
-  });
-  const existingCutover = loadReadwiseSourceCutover();
-  let suppressedDocumentIds = new Set(existingCutover?.version === 2
-    ? existingCutover.documents
-      .filter((item) => item.status === 'suppressed' || item.status === 'blocked')
-      .map((item) => item.remoteId)
-    : []);
-  return runReadwiseApiCandidatePipeline({
+  return runReadwiseSourceCutoverExact({
     assertEligible: () => assertMigrationEligible(connectionRef),
-    afterCommit: migration.afterCommit,
-    beforeCommit: migration.beforeCommit,
     connectionRef,
-    deferCommitUntilAllFacts: true,
     dependencies,
-    failFastCandidate: (documentId) => identity.candidatePriority(documentId) === 0,
-    freezeCandidateResources: (document, destination) => prepareReadwiseApiFrozenResources({
-      config: settings.readwiseReaderConfig,
-      connectionRef,
-      dependencies,
-      destination,
-      document
-    }),
-    onCandidateIndex: (documentIds) => {
-      identity.assertCandidateCoverage(documentIds);
-      promoteReadwiseSourceCutoverCohort(documentIds);
-      const migrated = identity.migrateDispositions(documentIds);
-      suppressedDocumentIds = new Set([...suppressedDocumentIds, ...migrated]);
-      recordReadwiseSuppressedCutoverDocuments(connectionRef, migrated);
-      publishProgress(input.window, 0, documentIds.length, 'indexing');
-    },
-    onCandidateFactsComplete: (total) => {
-      setReadwiseSourceCutoverPhase('merging');
-      const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
-      publishProgress(input.window, progress.completedCandidateCount, total, 'merging');
-    },
-    onCandidateFactsProgress: (processed, total) =>
-      publishProgress(input.window, processed, total, 'indexing'),
-    onProgress: (completed, total) => publishProgress(input.window, completed, total, 'merging'),
-    purpose: 'cutover',
-    candidatePriority: identity.candidatePriority,
-    settings,
-    shouldSkipCandidate: (documentId) => suppressedDocumentIds.has(documentId)
+    onProgress: (completed, total, phase) => publishProgress(input.window, completed, total, phase),
+    readwiseReaderConfig: settings.readwiseReaderConfig
   });
 }
 

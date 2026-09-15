@@ -95,12 +95,10 @@ export function epubMigrationFetch() {
         ], source: 'reader'
       }] });
     }
-    if (url.searchParams.get('category') === 'highlight') {
-      return Response.json({ nextPageCursor: null, results: [
-        { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
-      ] });
-    }
-    if (url.searchParams.has('category')) return Response.json({ nextPageCursor: null, results: [] });
+    const id = url.searchParams.get('id');
+    if (id === 'highlight-1') return Response.json({ results: [{
+      category: 'highlight', id, parent_id: 'document-1'
+    }] });
     return Response.json({ results: [{
       category: 'epub',
       html_content: url.searchParams.has('withHtmlContent') ? [
@@ -110,7 +108,7 @@ export function epubMigrationFetch() {
         '<h1 data-rw-epub-toc="chapter-2">Chapter 2</h1>',
         '<p>Second chapter body.</p>'
       ].join('') : null,
-      id: 'document-1', parent_id: null, title: 'Sample'
+      id: id ?? 'document-1', parent_id: null, title: 'Sample'
     }] });
   });
 }

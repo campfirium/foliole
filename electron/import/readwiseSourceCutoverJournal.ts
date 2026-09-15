@@ -6,7 +6,6 @@ import {
   type ReadwiseSourceCutover
 } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { completeReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import {
   confirmReadwiseIdentityBindings,
@@ -31,8 +30,7 @@ import {
   type ReadwiseSourceCutoverIdentityBinding
 } from './readwiseSourceCutoverIdentity.js';
 import {
-  assertReadwiseSourceCutoverComplete,
-  recordReadwiseUnavailableAnnotationTerminals
+  assertReadwiseSourceCutoverComplete
 } from './readwiseSourceCutoverTerminal.js';
 import {
   applyReadwiseSourceProjection,
@@ -190,11 +188,13 @@ function adoptBookSource(
   });
 }
 
-export function completeReadwiseSourceCutoverMigration(connectionRef: string) {
+export function completeReadwiseSourceCutoverMigration(
+  connectionRef: string,
+  documents: PreparedReadwiseApiDocument[]
+) {
   openDatabaseConnection().driver.transaction((driver) => {
     requireReadwiseSourceCutoverV2();
-    recordReadwiseUnavailableAnnotationTerminals(connectionRef);
-    assertReadwiseSourceCutoverComplete(connectionRef);
+    assertReadwiseSourceCutoverComplete(connectionRef, documents);
     const completedAt = new Date().toISOString();
     const latest = requireReadwiseSourceCutoverV2();
     writeReadwiseSourceCutoverWithDriver(driver, {
@@ -204,7 +204,8 @@ export function completeReadwiseSourceCutoverMigration(connectionRef: string) {
       phase: null,
       status: 'api'
     }, completedAt);
-    completeReadwiseApiCandidateRun(connectionRef, 'cutover', completedAt);
+    driver.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ?', [connectionRef]);
+    driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]);
     writeReadwiseSourceMode(driver, 'api', completedAt, {
       batchId: latest.batchId ?? null,
       completedAt,

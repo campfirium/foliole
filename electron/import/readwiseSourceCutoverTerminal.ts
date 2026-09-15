@@ -1,39 +1,15 @@
 import { matchesReadwiseApiEpubProjection } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
+import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiCandidates, loadPreparedReadwiseApiCandidate } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
-import {
-  loadReadwiseApiAnnotationLedger,
-  loadReadwiseApiExportIndex
-} from '../database/readwiseApiIndexStage.js';
-import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-export function recordReadwiseUnavailableAnnotationTerminals(connectionRef: string) {
+export function assertReadwiseSourceCutoverComplete(
+  connectionRef: string,
+  documents: PreparedReadwiseApiDocument[]
+) {
   const current = requireActiveCutover();
-  const classified = new Set(current.annotations.map((item) => item.remoteId));
-  const materializable = materializableAnnotationIds(connectionRef);
-  const unavailable = unavailableAnnotationFacts(connectionRef).filter((item) =>
-    !classified.has(item.remoteId) && !materializable.has(item.remoteId)
-  );
-  if (unavailable.length === 0) return current;
-  return writeReadwiseSourceCutover({
-    ...current,
-    annotations: [...current.annotations, ...unavailable.map((item) => ({
-      nodeId: null,
-      reason: item.reason,
-      remoteId: item.remoteId,
-      status: 'unavailable' as const
-    }))]
-  });
-}
-
-export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
-  const current = requireActiveCutover();
-  const candidates = loadReadwiseApiCandidates(connectionRef);
-  const candidateIds = new Set(candidates.map((item) => item.documentId));
-  if (candidates.some((item) => item.status !== 'completed')) {
-    throw new Error('readwise_source_cutover_candidates_incomplete');
-  }
+  const candidateIds = new Set(documents.map((item) => item.id));
   if (!sameSet(candidateIds, new Set(current.cohortDocumentIds))) {
     throw new Error('readwise_source_cutover_cohort_incomplete');
   }
@@ -41,7 +17,8 @@ export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
   if (!sameSet(candidateIds, documentTerminals)) {
     throw new Error('readwise_source_cutover_document_terminals_incomplete');
   }
-  const expectedAnnotations = allAnnotationIds(connectionRef);
+  const expectedAnnotations = new Set(documents.flatMap((document) =>
+    document.annotations.map((annotation) => annotation.remoteId)));
   const annotationTerminals = new Set(current.annotations.map((item) => item.remoteId));
   if (!sameSet(expectedAnnotations, annotationTerminals)) {
     throw new Error('readwise_source_cutover_annotation_terminals_incomplete');
@@ -49,64 +26,24 @@ export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
   if (countPendingReadwiseSourceBodies(connectionRef) > 0) {
     throw new Error('readwise_source_cutover_pending_bodies');
   }
-  assertCurrentEpubProjections(connectionRef, candidates, current.documents);
+  assertCurrentEpubProjections(connectionRef, documents, current.documents);
 }
 
 function assertCurrentEpubProjections(
   connectionRef: string,
-  candidates: ReturnType<typeof loadReadwiseApiCandidates>,
+  documents: PreparedReadwiseApiDocument[],
   terminals: ReturnType<typeof requireActiveCutover>['documents']
 ) {
   const statusById = new Map(terminals.map((item) => [item.remoteId, item.status]));
-  for (const candidate of candidates) {
-    const status = statusById.get(candidate.documentId);
+  for (const document of documents) {
+    const status = statusById.get(document.id);
     if (status !== 'bound' && status !== 'materialized') continue;
-    const document = loadPreparedReadwiseApiCandidate(connectionRef, candidate.documentId);
-    if (document?.category !== 'epub') continue;
-    const source = loadReadwiseApiImportSource(connectionRef, candidate.documentId);
+    if (document.category !== 'epub') continue;
+    const source = loadReadwiseApiImportSource(connectionRef, document.id);
     if (!matchesReadwiseApiEpubProjection(source?.state.epubProjection ?? null, document)) {
       throw new Error('readwise_source_cutover_epub_projection_incomplete');
     }
   }
-}
-
-function allAnnotationIds(connectionRef: string) {
-  return new Set([
-    ...materializableAnnotationIds(connectionRef),
-    ...unavailableAnnotationFacts(connectionRef).map((item) => item.remoteId)
-  ]);
-}
-
-function materializableAnnotationIds(connectionRef: string) {
-  const ids = new Set<string>();
-  for (const candidate of loadReadwiseApiCandidates(connectionRef)) {
-    const document = loadPreparedReadwiseApiCandidate(connectionRef, candidate.documentId);
-    for (const annotation of document?.annotations ?? []) ids.add(annotation.remoteId);
-  }
-  return ids;
-}
-
-function unavailableAnnotationFacts(connectionRef: string) {
-  const facts = loadReadwiseApiAnnotationLedger(connectionRef);
-  const ledgerIds = new Set(facts.map((item) => item.remoteId));
-  const result = facts.flatMap((item) => {
-    if (item.resolution === 'parent-and-content-unavailable'
-      || item.resolution === 'article-parent-unavailable') {
-      return [{ remoteId: item.remoteId, reason: item.resolution }];
-    }
-    if (item.contentStatus === 'unavailable') {
-      return [{ remoteId: item.remoteId, reason: 'content-unavailable' }];
-    }
-    return [];
-  });
-  for (const book of loadReadwiseApiExportIndex(connectionRef)) {
-    for (const remoteId of book.highlightExternalIds) {
-      if (!ledgerIds.has(remoteId)) {
-        result.push({ remoteId, reason: 'unresolvable-without-v3-parent' });
-      }
-    }
-  }
-  return uniqueFacts(result);
 }
 
 export function countPendingReadwiseSourceBodies(connectionRef: string) {
@@ -116,10 +53,6 @@ export function countPendingReadwiseSourceBodies(connectionRef: string) {
        AND json_extract(remote_import_state_json, '$.sourceUpdate.status') = 'pending'`,
     [connectionRef]
   )?.count ?? 0;
-}
-
-function uniqueFacts(values: Array<{ reason: string; remoteId: string }>) {
-  return [...new Map(values.map((item) => [item.remoteId, item])).values()];
 }
 
 function requireActiveCutover() {

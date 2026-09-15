@@ -46,6 +46,7 @@ import {
   readerDocument,
   response
 } from './readwiseApiImportRun.testSupport.js';
+import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 
 let tempRoot = '';
 
@@ -111,12 +112,18 @@ it('uses V3 parent categories and obtains each highlighted parent body once', as
     if (id && !id.endsWith('highlight')) {
       parentRequestOrder.push(`${id}:${url.searchParams.has('withHtmlContent') ? 'body' : 'metadata'}`);
     }
-    return response([readerDocument(id, id === 'article' ? 'epub' : 'article')]);
+    return response([readerDocument(
+      id,
+      id === 'article' ? 'epub' : 'article',
+      url.searchParams.has('withHtmlContent')
+    )]);
   }) as typeof fetch;
 
   await runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off') });
 
-  expect(parentRequestOrder).toEqual(['article:body', 'book:body']);
+  expect(parentRequestOrder).toEqual([
+    'article:metadata', 'book:metadata', 'article:body', 'book:body'
+  ]);
 });
 
 it('keeps bodyless PDF and EPUB documents writable for original-file resolution', async () => {
@@ -161,7 +168,7 @@ it('processes more than 50 parent candidates without an artificial pause', async
   expect(importedReadwiseApiCount()).toBe(51);
 });
 
-it('indexes enabled no-highlight categories with bodies and deduplicates highlighted parents', async () => {
+it('indexes enabled no-highlight categories without downloading their bodies', async () => {
   const urls: URL[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
@@ -183,8 +190,44 @@ it('indexes enabled no-highlight categories with bodies and deduplicates highlig
   expect(urls.filter((url) => url.searchParams.has('category'))).toHaveLength(9);
   expect(urls.filter((url) => ['article', 'email', 'epub', 'pdf', 'rss', 'tweet', 'video']
     .includes(url.searchParams.get('category') ?? '')).every(
-    (url) => url.searchParams.get('withHtmlContent') === 'true'
+    (url) => !url.searchParams.has('withHtmlContent')
   )).toBe(true);
+});
+
+it('imports new first-sync documents without refetching an unchanged migrated body', async () => {
+  const settings = apiSettings('inbox');
+  materializeReadwiseApiDocument({
+    config: settings.readwiseReaderConfig,
+    connectionRef: 'connection',
+    destination: 'inbox',
+    document: {
+      annotations: [], body: 'Migrated body', category: 'article', coverImageUrl: null,
+      degradedReason: null, id: 'migrated',
+      metadata: { author: null, category: 'article', readerUrl: null, sourceUrl: null, title: 'Migrated' },
+      title: 'Migrated', unmatchedAnnotationCount: 0, updatedAt: '2026-09-10T00:00:00.000Z'
+    }
+  });
+  const exactIds: string[] = [];
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes('/v2/export/')) return response([]);
+    if (url.searchParams.get('category') === 'article') {
+      return response([
+        readerDocument('migrated', 'article', false),
+        readerDocument('new-category-document', 'article', false)
+      ]);
+    }
+    if (url.searchParams.has('category')) return response([]);
+    const id = url.searchParams.get('id');
+    if (id) exactIds.push(id);
+    return response(id ? [readerDocument(id, 'article', true)] : []);
+  }) as typeof fetch;
+
+  await expect(runReadwiseApiImport({
+    dependencies: { fetchImpl, minIntervalMs: 0 }, settings
+  })).resolves.toMatchObject({ committed_count: 1, skipped_count: 1, status: 'completed' });
+  expect(exactIds).toEqual(['new-category-document']);
+  expect(importedReadwiseApiCount()).toBe(2);
 });
 
 it('does not request annotation documents individually after indexing them', async () => {

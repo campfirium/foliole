@@ -22,7 +22,7 @@ export async function resolveReadwiseApiCandidateParent(
   runStartedAt: string,
   includeContent = true
 ) {
-  const existing = existingParent(connectionRef, id);
+  const existing = loadReadwiseApiExistingParent(connectionRef, id);
   if (existing) return existing;
   const allHighlightedEnabled = READER_PARENT_CATEGORIES.every((category) =>
     resolveReadwiseAutoImportDestination(settings.readwiseAutoImportPolicy, category, true) !== 'off'
@@ -59,7 +59,7 @@ export async function resolveAndSaveReadwiseApiCandidateParent(input: {
   return parent;
 }
 
-function existingParent(connectionRef: string, id: string) {
+export function loadReadwiseApiExistingParent(connectionRef: string, id: string) {
   const existing = loadReadwiseApiImportSource(connectionRef, id);
   const metadata = existing?.state.metadata;
   if (!existing?.body || !metadata || !isReaderParentCategory(metadata.category)) return null;

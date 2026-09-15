@@ -99,7 +99,8 @@ function ReadwiseSelectedModeContent(props: {
 function createApiModeSettings(
   setup: ReturnType<typeof useReadwiseSetupController>,
   cleanup: ReturnType<typeof useReadwiseCleanup>,
-  onChangeFrequency: (frequency: ReadwiseSyncFrequency) => void
+  onChangeFrequency: (frequency: ReadwiseSyncFrequency) => void,
+  syncAvailable: boolean
 ): ReadwiseApiModeSettings {
   return {
     cleanupDisabled: cleanup.cleanupDisabled,
@@ -107,7 +108,7 @@ function createApiModeSettings(
     onChangeFrequency,
     onCleanup: () => void cleanup.openCleanupDialog(),
     onSync: () => void setup.handleRunSync(),
-    syncDisabled: setup.syncDisabled,
+    syncDisabled: !syncAvailable || setup.syncIsRunning,
     syncIsRunning: setup.syncIsRunning,
     syncStatus: setup.manualSyncStatus
   };
@@ -138,7 +139,7 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
     draft.updateConfig('syncFrequency', syncFrequency);
     props.onSave(createReadwiseSetupPayload(draft, config, draft.draftSources));
   }
-  const apiSettings = createApiModeSettings(setup, cleanup, saveApiFrequency);
+  const apiSettings = createApiModeSettings(setup, cleanup, saveApiFrequency, Boolean(props.onRunSync));
   return (
     <>
       <ReadwiseSourceModeSection

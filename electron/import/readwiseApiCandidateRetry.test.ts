@@ -94,21 +94,21 @@ it('resumes a failed parent fetch without refetching completed scopes', async ()
     if (id === 'a' && fail && url.searchParams.has('withHtmlContent')) {
       return new Response('{}', { status: 500 });
     }
-    return response([readerDocument(id, 'article')]);
+    return response([readerDocument(id, 'article', url.searchParams.has('withHtmlContent'))]);
   }) as typeof fetch;
 
   await expect(runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
-  })).rejects.toThrow('readwise_api_http_500');
-  expect(importedReadwiseApiCount()).toBe(0);
+  })).resolves.toMatchObject({ committed_count: 1, remaining_count: 1, status: 'failed' });
+  expect(importedReadwiseApiCount()).toBe(1);
 
   fail = false;
   requestedParents.length = 0;
   const second = await runReadwiseApiImport({
     dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off')
   });
-  expect(second).toMatchObject({ committed_count: 2, remaining_count: 0, status: 'completed' });
-  expect(requestedParents).toEqual(['a', 'b']);
+  expect(second).toMatchObject({ committed_count: 1, remaining_count: 0, status: 'completed' });
+  expect(requestedParents).toEqual(['a']);
   expect(importedReadwiseApiCount()).toBe(2);
 });
 
@@ -133,7 +133,7 @@ it('honors Retry-After without refetching an already completed candidate', async
       limited = false;
       return new Response('{}', { headers: { 'Retry-After': '1' }, status: 429 });
     }
-    return response([readerDocument(id, 'article')]);
+    return response([readerDocument(id, 'article', url.searchParams.has('withHtmlContent'))]);
   }) as typeof fetch;
 
   const result = await runReadwiseApiImport({

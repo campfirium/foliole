@@ -21,19 +21,21 @@ export async function fetchReadwiseIdentityEvidence(input: {
 export async function fetchReadwiseIdentityDocuments(input: {
   fetchImpl?: typeof fetch;
   ids: string[];
+  includeContent?: boolean;
   minIntervalMs?: number;
   token: string;
 }) {
   const request = rateLimitedRequest(input.token, input.fetchImpl ?? fetch, input.minIntervalMs ?? 3_100);
   const documents = new Map<string, ReaderDocumentContract>();
-  for (const id of input.ids) await fetchChain(id, documents, request);
+  for (const id of input.ids) await fetchChain(id, documents, request, Boolean(input.includeContent));
   return { documents, request };
 }
 
 async function fetchChain(
   id: string,
   documents: Map<string, ReaderDocumentContract>,
-  request: (url: URL) => Promise<Record<string, unknown>>
+  request: (url: URL) => Promise<Record<string, unknown>>,
+  includeContent: boolean
 ) {
   let nextId: string | null = id;
   const seen = new Set<string>();
@@ -41,12 +43,26 @@ async function fetchChain(
     seen.add(nextId);
     const url = new URL(READER_URL);
     url.searchParams.set('id', nextId);
+    if (includeContent) url.searchParams.set('withHtmlContent', 'true');
     const payload = await request(url);
     const document = normalizeReaderDocument(Array.isArray(payload.results) ? payload.results[0] : null);
     if (!document || document.id !== nextId) return;
     documents.set(document.id, document);
     nextId = document.category === 'highlight' || document.category === 'note' ? document.parentId : null;
   }
+}
+
+export async function fetchReadwiseIdentityDocument(
+  id: string,
+  request: (url: URL) => Promise<Record<string, unknown>>,
+  includeContent = false
+) {
+  const url = new URL(READER_URL);
+  url.searchParams.set('id', id);
+  if (includeContent) url.searchParams.set('withHtmlContent', 'true');
+  const payload = await request(url);
+  return (Array.isArray(payload.results) ? payload.results : [])
+    .map(normalizeReaderDocument).find((document) => document?.id === id) ?? null;
 }
 
 async function fetchExportIds(request: (url: URL) => Promise<Record<string, unknown>>) {

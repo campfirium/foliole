@@ -2,7 +2,6 @@ import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwi
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import type { ReadwiseSourceCutoverClassificationStatus } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
@@ -33,24 +32,24 @@ export function recordReadwiseSourceCutoverClassification(
 }
 
 export function recordReadwiseSuppressedCutoverDocuments(
-  connectionRef: string,
+  documents: PreparedReadwiseApiDocument[],
   documentIds: ReadonlySet<string>
 ) {
   if (documentIds.size === 0) return;
   const current = requireCutoverV2();
   const existingDocuments = new Set(current.documents.map((item) => item.remoteId));
   const existingAnnotations = new Set(current.annotations.map((item) => item.remoteId));
-  const candidates = loadReadwiseApiCandidates(connectionRef)
-    .filter((item) => documentIds.has(item.documentId) && !existingDocuments.has(item.documentId));
+  const candidates = documents.filter((item) =>
+    documentIds.has(item.id) && !existingDocuments.has(item.id));
   writeReadwiseSourceCutover({
     ...current,
     annotations: [...current.annotations, ...candidates.flatMap((candidate) =>
-      [...candidate.highlightIds, ...(candidate.noteIds ?? [])]
+      candidate.annotations.map((item) => item.remoteId)
         .filter((remoteId) => !existingAnnotations.has(remoteId))
         .map((remoteId) => ({ nodeId: null, remoteId, status: 'suppressed' as const })))],
     documents: [...current.documents, ...candidates.map((candidate) => ({
       nodeId: null,
-      remoteId: candidate.documentId,
+      remoteId: candidate.id,
       status: 'suppressed' as const
     }))]
   });

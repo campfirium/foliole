@@ -1,23 +1,20 @@
-import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
-import {
-  loadOrCreateReadwiseApiCandidateRun,
-  restartReadwiseApiCandidateRun
-} from '../database/readwiseApiCandidateRun.js';
-import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 export function restartIncompleteReadwiseSourceCutover(input: {
   connectionRef: string;
-  policy: ReadwiseAutoImportPolicy;
   sourceHost: string;
   startedAt: string;
 }) {
   const restartedAt = new Date().toISOString();
-  const frozenCandidates = loadReadwiseApiCandidates(input.connectionRef);
+  openDatabaseConnection().driver.transaction((driver) => {
+    driver.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ?', [input.connectionRef]);
+    driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [input.connectionRef]);
+  });
   const state = writeReadwiseSourceCutover({
     annotations: [],
     batchId: `${input.connectionRef}:${input.startedAt}`,
-    cohortDocumentIds: frozenCandidates.map((candidate) => candidate.documentId),
+    cohortDocumentIds: [],
     completedAt: restartedAt,
     documents: [],
     phase: 'indexing',
@@ -26,10 +23,5 @@ export function restartIncompleteReadwiseSourceCutover(input: {
     startedAt: input.startedAt,
     status: 'migration-in-progress'
   }, restartedAt);
-  if (frozenCandidates.length > 0) {
-    loadOrCreateReadwiseApiCandidateRun(input.connectionRef, input.policy, input.startedAt);
-  } else {
-    restartReadwiseApiCandidateRun(input.connectionRef, input.policy, input.startedAt);
-  }
   return state;
 }

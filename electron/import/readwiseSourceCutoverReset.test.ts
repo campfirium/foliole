@@ -40,7 +40,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('reuses a complete fetched candidate set instead of clearing it and downloading again', () => {
+it('clears ordinary candidate state before starting an exact-id cutover', () => {
   const policy = createDefaultReadwiseAutoImportPolicy();
   restartReadwiseApiCandidateRun('connection', policy, '2026-09-09T00:00:00.000Z');
   saveReadwiseApiCandidates('connection', [{
@@ -50,12 +50,12 @@ it('reuses a complete fetched candidate set instead of clearing it and downloadi
   }]);
 
   restartIncompleteReadwiseSourceCutover({
-    connectionRef: 'connection', policy, sourceHost: 'This Mac',
+    connectionRef: 'connection', sourceHost: 'This Mac',
     startedAt: '2026-09-09T00:00:00.000Z'
   });
 
-  expect(loadReadwiseApiCandidates('connection')).toHaveLength(1);
+  expect(loadReadwiseApiCandidates('connection')).toHaveLength(0);
   expect(loadReadwiseSourceCutover()).toMatchObject({
-    cohortDocumentIds: ['document-1'], phase: 'indexing', status: 'migration-in-progress'
+    cohortDocumentIds: [], phase: 'indexing', status: 'migration-in-progress'
   });
 });

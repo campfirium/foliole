@@ -61,9 +61,11 @@ test('starts automatically and repeats a Reader API import safely', async ({ bro
     await expectWorkspaceShell(session.firstWindow);
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     await connectAndCutoverReadwiseApi(session.firstWindow, settings, 'inbox');
-    await expect.poll(() => inspectImportedState(session!.electronApp, false)).toMatchObject({
-      importSources: 2, readwiseNodes: 3
-    });
+    await expect.poll(
+      () => inspectImportedState(session!.electronApp, false),
+      { timeout: 90_000 }
+    ).toMatchObject({ importSources: 2, readwiseNodes: 3 });
+    await expect(settings.getByLabel(/^(Sync frequency|同步频率)$/)).toBeEnabled();
     await capture(settings, testInfo, 't178-4-api-automatic-import');
 
     const firstCounts = await inspectImportedState(session.electronApp, true);

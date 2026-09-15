@@ -5,6 +5,7 @@ import {
   saveReadwiseApiReaderIndexPage
 } from '../database/readwiseApiIndexStage.js';
 
+import { loadReadwiseApiExistingParent } from './readwiseApiCandidateParent.js';
 import type { ReadwiseApiCandidate } from './readwiseApiCandidateTypes.js';
 import {
   createReadwiseApiRequest,
@@ -20,6 +21,7 @@ export function createReadwiseApiCandidateFactFetcher(
   return async (candidate: ReadwiseApiCandidate) => {
     let indexed = loadReadwiseApiReaderIndex(connectionRef);
     let parent = indexed.find((item) => item.id === candidate.documentId && item.htmlContent) ?? null;
+    if (!parent) parent = loadReadwiseApiExistingParent(connectionRef, candidate.documentId);
     if (!parent) {
       parent = await fetchExact(candidate.documentId, true, request);
       if (parent) saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
