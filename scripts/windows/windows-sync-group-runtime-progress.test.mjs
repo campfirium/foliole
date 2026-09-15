@@ -8,12 +8,12 @@ import { PassThrough } from 'node:stream';
 import { expect, it, vi } from 'vitest';
 
 import {
-  captureWindowsSyncRuntimeProgress, RECEIVE_CURSOR_COMMITTED_EVENT
+  captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog, RECEIVE_CURSOR_COMMITTED_EVENT
 } from './windows-sync-group-runtime-progress.mjs';
 
 it('observes a split committed-cursor event and preserves the runtime log', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-runtime-progress-'));
-  const logPath = path.join(root, 'runtime.log');
+  const logPath = path.join(root, 'sync-group-runtime.log');
   const child = { stderr: new PassThrough(), stdout: new PassThrough() };
   const progress = captureWindowsSyncRuntimeProgress(child, logPath);
   const midpoint = Math.floor(RECEIVE_CURSOR_COMMITTED_EVENT.length / 2);
@@ -25,12 +25,13 @@ it('observes a split committed-cursor event and preserves the runtime log', asyn
 
 it('preserves multiline failure details after a sync runtime label', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-runtime-progress-'));
-  const logPath = path.join(root, 'runtime.log');
+  const logPath = path.join(root, 'sync-group-runtime.log');
   const child = { stderr: new PassThrough(), stdout: new PassThrough() };
   captureWindowsSyncRuntimeProgress(child, logPath);
   child.stdout.write('[sync-group] initial sync waiting for provider {\n');
   child.stdout.write("  error: 'sync_group_sync_pack_failed: fetch failed'\n}\n");
   expect(fs.readFileSync(logPath, 'utf8')).toContain('sync_group_sync_pack_failed: fetch failed');
+  expect(readWindowsSyncRuntimeLog(root)).toContain('sync_group_sync_pack_failed: fetch failed');
 });
 
 it('does not resolve for unrelated sync runtime output', async () => {
