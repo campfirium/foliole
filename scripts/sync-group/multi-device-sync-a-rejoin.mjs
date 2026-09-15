@@ -139,6 +139,8 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     await session.close(); session = null;
     session = await openMacosSyncGroupDesktopSession(sessionOptions);
     await session.enable();
+    await windowsProvider.waitForProgress('c-session-restarted');
+    await session.invoke('sync_companion_now');
     const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
     (value) => ['A', 'B', 'C'].every((origin) => value[origin]),
