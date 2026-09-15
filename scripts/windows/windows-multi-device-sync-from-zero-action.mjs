@@ -50,13 +50,18 @@ function isAndroidProvider(candidate) {
 
 async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
-  const observe = createSyncProgressWatchdog({ label, stallMs: 90_000 });
+  const observe = createSyncProgressWatchdog({ label, stallMs: 3 * 60_000 });
   let facts = null;
   while (Date.now() < deadline) {
     facts = await inspect();
     const state = [facts.receiveCursor, facts.datasetNodeCount,
       facts.datasetCachedContentBlobCount, facts.datasetCachedAttachmentCount];
-    observe(JSON.stringify(state), facts);
+    observe(JSON.stringify(state), {
+      datasetCachedAttachmentCount: facts.datasetCachedAttachmentCount,
+      datasetCachedContentBlobCount: facts.datasetCachedContentBlobCount,
+      datasetNodeCount: facts.datasetNodeCount,
+      receiveCursor: facts.receiveCursor
+    });
     onObserved(facts);
     if (accept(facts)) return facts;
     await delay(250);
@@ -177,7 +182,10 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
         runtimeLog: () => readWindowsSyncRuntimeLog(evidenceRoot)
       })
     });
-  } catch (error) { primaryError = error; }
+  } catch (error) {
+    primaryError = error;
+    primaryError.message += `; runtime=${readWindowsSyncRuntimeLog(evidenceRoot)}`;
+  }
   try {
     await restoreWindowsNativeClient({ control: controlWindowsNativeClient, execute, paths, suspended });
   } catch (error) {
