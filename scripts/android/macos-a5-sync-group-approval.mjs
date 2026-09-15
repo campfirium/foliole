@@ -13,6 +13,7 @@ import {
 
 const APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${APP_ID}.FolioleCompanionSyncGroupApprovalTest`;
+const PROVIDER_READY_PREFIX = 'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=';
 
 function requireSuccess(result, stage) {
   if (result.code === 0) return result;
@@ -65,6 +66,36 @@ export function finalizeSyncGroupApprovalEvidence({
   return { output, receipt: parseSyncGroupApprovalReceipt(output, controlled) };
 }
 
+export function hasSyncGroupApprovalProviderReady(output) {
+  return String(output).includes(PROVIDER_READY_PREFIX);
+}
+
+async function runApprovalInstrumentation({
+  cancelInstrumentation, env, instrumentationExecute, onReady, paths
+}) {
+  let markReady;
+  const ready = new Promise((resolve) => { markReady = resolve; });
+  const runWork = instrumentationExecute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
+    '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`,
+    `${paths.appId ?? APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`], {
+    env, onOutput: ({ output }) => {
+      if (hasSyncGroupApprovalProviderReady(output)) markReady();
+    }, timeoutMs: 15 * 60_000
+  });
+  const first = await Promise.race([ready.then(() => 'ready'), runWork.then(() => 'completed')]);
+  if (first !== 'ready') {
+    const run = await runWork;
+    throw Object.assign(new Error('Approval instrumentation ended before provider readiness.'), { run });
+  }
+  try { await onReady(); }
+  catch (error) {
+    cancelInstrumentation();
+    await runWork.catch(() => undefined);
+    throw error;
+  }
+  return runWork;
+}
+
 export async function startMacosA5SyncGroupApprovalProvider({
   appId = APP_ID, execute, onProviderStopped, onReady, paths, env
 }) {
@@ -90,7 +121,7 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
   appId = APP_ID,
   allowControlledCancellation = false, instrumentationExecute = execute,
   assertFixed = assertFixedA5, mainMatches = installedMainMatches,
-  startProvider = startMacosA5SyncGroupApprovalProvider }) {
+  startProvider = startMacosA5SyncGroupApprovalProvider, cancelInstrumentation = () => {} }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixed(paths);
@@ -117,12 +148,10 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
-    await startProvider({ appId, execute, onProviderStopped, onReady, paths, env });
-    const testAppId = `${appId}.test`;
-    const testRunner = `${testAppId}/androidx.test.runner.AndroidJUnitRunner`;
-    const run = await instrumentationExecute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
-      '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, testRunner], {
-      env, timeoutMs: 15 * 60_000
+    await onProviderStopped();
+    const run = await runApprovalInstrumentation({
+      cancelInstrumentation, env, instrumentationExecute, onReady,
+      paths: { ...paths, appId }
     });
     const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
       '-v', 'time', 'FolioleSyncProvider:V', '*:S'], { env, timeoutMs: 30_000 }), 'provider-log');

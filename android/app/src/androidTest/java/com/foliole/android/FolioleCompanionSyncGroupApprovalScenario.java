@@ -14,12 +14,16 @@ import java.util.concurrent.TimeUnit;
 final class FolioleCompanionSyncGroupApprovalScenario {
     private FolioleCompanionSyncGroupApprovalScenario() {}
 
-    static JSONObject approveForeground(Instrumentation instrumentation) throws Exception {
+    static JSONObject approveForeground(
+        Instrumentation instrumentation, Runnable onProviderReady
+    ) throws Exception {
         Activity activity = start(instrumentation);
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView);
+        waitForProviderRunning();
+        onProviderReady.run();
         waitForProviderRequest();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
@@ -84,6 +88,17 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Provider request unavailable: " + latest);
+    }
+
+    private static void waitForProviderRunning() throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            latest = FolioleCompanionSyncGroupProvider.state();
+            if ("running".equals(latest.optString("state")) && latest.optInt("port", 0) > 0) return;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Provider unavailable after Activity restart: " + latest);
     }
 
     private static String pendingRequestId() throws Exception {

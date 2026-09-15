@@ -86,7 +86,9 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
   const execute = actionExecute(evidenceRoot, signal, stage);
   const executeApprovalAction = actionExecute(evidenceRoot, approvalSignal, stage);
   const executeApproval = (command, args, options = {}) => executeApprovalAction(command, args, {
-    ...options, onOutput: approvalRelease.capture
+    ...options, onOutput: (event) => {
+      approvalRelease.capture(event); options.onOutput?.(event);
+    }
   });
   const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
@@ -108,7 +110,8 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       })),
       runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
         appId: MULTI_DEVICE_ANDROID_APP_ID,
-        allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
+        allowControlledCancellation: true, cancelInstrumentation: () => approvalController.abort(),
+        execute, instrumentationExecute: executeApproval,
         ...lifecycle, prepare: () => {}, repoRoot
       }),
       startWindows: async () => {
