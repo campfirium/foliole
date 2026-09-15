@@ -109,6 +109,8 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   );
   expect(projection).toContain('put("source_runs", sourceRuns)');
   expect(action).toContain('JSONObject stable = readState(instrumentation, webView)');
+  expect(action).toContain('waitUntilEnabled(instrumentation, webView, TERMINAL_TIMEOUT_MS)');
+  expect(action).toContain('"Timed out waiting for public Sync Now: " + latest');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
 

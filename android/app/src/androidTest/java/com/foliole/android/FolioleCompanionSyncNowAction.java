@@ -17,7 +17,7 @@ final class FolioleCompanionSyncNowAction {
 
     static JSONObject perform(Instrumentation instrumentation, WebView webView) throws Exception {
         JSONObject before = readState(instrumentation, webView);
-        waitUntilEnabled(instrumentation, webView, 30_000);
+        waitUntilEnabled(instrumentation, webView, TERMINAL_TIMEOUT_MS);
         JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
             instrumentation, webView, TEST_ID, "click", ""
         );
@@ -88,16 +88,17 @@ final class FolioleCompanionSyncNowAction {
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
-            JSONObject state = readState(instrumentation, webView);
-            if (state.optBoolean("found") && !state.optBoolean("disabled")) {
+            latest = readState(instrumentation, webView);
+            if (latest.optBoolean("found") && !latest.optBoolean("disabled")) {
                 Thread.sleep(500);
                 JSONObject stable = readState(instrumentation, webView);
                 if (stable.optBoolean("found") && !stable.optBoolean("disabled")) return;
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for public Sync Now.");
+        throw new IllegalStateException("Timed out waiting for public Sync Now: " + latest);
     }
 
     private static JSONObject waitUntilStarted(

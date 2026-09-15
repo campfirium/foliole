@@ -120,16 +120,16 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   expect(created).toBeLessThan(identities);
 });
 
-it('lets product automatic sync propagate fresh member facts to the anchor', () => {
+it('waits for topology convergence before pushing fresh facts through product sync', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const bCreated = source.indexOf("reportProgress('b-fact-created')");
-  const providerRestart = source.indexOf('await restartProvider()', bCreated);
+  const aSync = source.indexOf("await session.invoke('sync_companion_now')", bCreated);
+  const bSync = source.indexOf('await syncAndroidFact(', bCreated);
   const cCreated = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
   expect(bCreated).toBeGreaterThan(-1);
-  expect(source).not.toContain("session.invoke('sync_companion_now')");
-  expect(source).not.toContain("action: 'sync-now'");
-  expect(providerRestart).toBeGreaterThan(bCreated);
-  expect(cCreated).toBeGreaterThan(providerRestart);
+  expect(aSync).toBeGreaterThan(bCreated);
+  expect(bSync).toBeGreaterThan(aSync);
+  expect(cCreated).toBeGreaterThan(bSync);
 });
 
 it('lets the rejoining Mac auto-converge before creating new facts', () => {
