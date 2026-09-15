@@ -79,6 +79,12 @@ async function installApiFixture(app: ElectronApplication) {
         { external_id: 'api-article-highlighted', highlights: [{ external_id: 'api-highlight-a', text: 'article quote' }], source: 'reader' },
         { external_id: 'api-book-highlighted', highlights: [{ external_id: 'api-highlight-b', text: 'book quote' }], source: 'reader' }
       ] });
+      const category = url.searchParams.get('category');
+      if (category === 'highlight') return Response.json({ nextPageCursor: null, results: [
+        { category: 'highlight', id: 'api-highlight-a', parent_id: 'api-article-highlighted' },
+        { category: 'highlight', id: 'api-highlight-b', parent_id: 'api-book-highlighted' }
+      ] });
+      if (category === 'note') return Response.json({ nextPageCursor: null, results: [] });
       const id = url.searchParams.get('id');
       if (id?.startsWith('api-highlight-')) return Response.json({ results: [{
         category: 'highlight', id, parent_id: id.endsWith('a') ? 'api-article-highlighted' : 'api-book-highlighted'
@@ -88,7 +94,6 @@ async function installApiFixture(app: ElectronApplication) {
         return Response.json({ results: [{ ...item, id,
           ...(url.searchParams.has('withHtmlContent') ? { html_content: `<p>${item.title} body</p>` } : {}) }] });
       }
-      const category = url.searchParams.get('category');
       const result = category === 'article' ? [{ ...documents['api-article-plain'], id: 'api-article-plain' }]
         : category === 'epub' ? [{ ...documents['api-book-plain'], id: 'api-book-plain' }] : [];
       return Response.json({ nextPageCursor: null, results: result });
