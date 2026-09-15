@@ -16,6 +16,9 @@ import {
   controlWindowsNativeClient, discoverUniqueGroup, inspectWindowsSyncGroupDatabase,
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, resetOwnedClient
 } from './windows-sync-group-recovery-action.mjs';
+import { readWindowsSyncRuntimeLog } from './windows-sync-group-runtime-progress.mjs';
+
+const FIRST_CURSOR_COMMIT_TIMEOUT_MS = 3 * 60_000;
 
 function assertEmptyCursor(facts) {
   if (facts.receiveCursor !== 0 || facts.syncPeerCursorCount !== 0
@@ -59,10 +62,12 @@ async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeo
   throw new Error(`${label} timed out: ${JSON.stringify(facts)}`);
 }
 
-function waitForCursorCommitSignal(signal, timeoutMs = 45_000) {
+export function waitForCursorCommitSignal(signal, {
+  runtimeLog = () => 'unavailable', timeoutMs = FIRST_CURSOR_COMMIT_TIMEOUT_MS
+} = {}) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error('Windows C did not report its first committed cursor.'));
+      reject(new Error(`Windows C did not report its first committed cursor; runtime=${runtimeLog()}`));
     }, timeoutMs);
     signal.then((value) => {
       clearTimeout(timer); resolve(value);
@@ -147,7 +152,9 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       ),
       reset: () => resetOwnedClient(paths, evidenceRoot, execute),
       waitForComplete: (report) => waitForCompleteFacts(inspect, report),
-      waitForCursorCommitted: waitForCursorCommitSignal
+      waitForCursorCommitted: (signal) => waitForCursorCommitSignal(signal, {
+        runtimeLog: () => readWindowsSyncRuntimeLog(evidenceRoot)
+      })
     });
   } catch (error) { primaryError = error; }
   try {

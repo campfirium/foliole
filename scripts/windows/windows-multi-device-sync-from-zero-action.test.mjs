@@ -2,7 +2,9 @@
 
 import { expect, it, vi } from 'vitest';
 
-import { runWindowsSyncFromZeroJourney } from './windows-multi-device-sync-from-zero-action.mjs';
+import {
+  runWindowsSyncFromZeroJourney, waitForCursorCommitSignal
+} from './windows-multi-device-sync-from-zero-action.mjs';
 import { discoverUniqueGroup } from './windows-sync-group-recovery-action.mjs';
 
 const dataset = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
@@ -11,6 +13,12 @@ const dataset = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
 function session(events, name) {
   return { app: { close: async () => { events.push(`${name}-closed`); } }, page: { name } };
 }
+
+it('reports runtime evidence when the first cursor commit stalls', async () => {
+  await expect(waitForCursorCommitSignal(new Promise(() => undefined), {
+    runtimeLog: () => 'sync pack pending', timeoutMs: 1
+  })).rejects.toThrow('runtime=sync pack pending');
+});
 
 it('selects the fixed Android provider without occupying unrelated desktop groups', async () => {
   const candidates = [
