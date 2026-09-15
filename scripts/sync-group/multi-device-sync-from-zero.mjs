@@ -10,6 +10,7 @@ import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-de
 import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-action.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import {
   assertSyncFromZeroFinalProof, inspectMacosSyncFromZeroDataset,
   waitForAndroidSyncFromZeroDataset, waitForAndroidSyncFromZeroProofSnapshot
@@ -67,16 +68,17 @@ function windowsProgressCapture(reportActivity) {
 }
 
 async function syncDatasetToAndroid(context) {
-  await stopMacosA5SyncGroupApprovalProvider(context);
+  await stopMacosA5SyncGroupApprovalProvider({ ...context, appId: MULTI_DEVICE_ANDROID_APP_ID });
   context.reportProgress('b-provider-stopped');
   await startMacosA5SyncGroupApprovalProvider({
-    ...context, onProviderStopped: async () => {}, onReady: async () => {}
+    ...context, appId: MULTI_DEVICE_ANDROID_APP_ID,
+    onProviderStopped: async () => {}, onReady: async () => {}
   });
   context.reportProgress('b-anchor-sync-ready');
   const snapshot = await waitForAndroidSyncFromZeroDataset(
     context.paths, context.reportActivity, context.reportProgress
   );
-  await stopMacosA5SyncGroupApprovalProvider(context);
+  await stopMacosA5SyncGroupApprovalProvider({ ...context, appId: MULTI_DEVICE_ANDROID_APP_ID });
   return snapshot;
 }
 
@@ -94,7 +96,8 @@ async function admitWindowsFromZero(context) {
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
   const approvalWork = runMacosA5SyncGroupApproval({ allowControlledCancellation: true,
-    execute: context.execute, instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
+    appId: MULTI_DEVICE_ANDROID_APP_ID, execute: context.execute,
+    instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
     onProviderStopped: async () => {}, onReady: async () => {
       windowsWork = runWindows(); context.reportProgress('windows-join-started'); windowsStarted();
     } });

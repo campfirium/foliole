@@ -88,3 +88,13 @@ it('ends the stale provider lifecycle before every staged Android restart', asyn
   });
   expect(order).toEqual(['stopped', 'started', 'ready']);
 });
+
+it('binds every staged Android restart to the isolated acceptance application', async () => {
+  let observedAppId;
+  await restartARejoinAndroidProvider({
+    env: {}, execute: async () => ({ code: 0 }), paths: { adb: 'adb' },
+    startProvider: async ({ appId }) => { observedAppId = appId; },
+    stopProvider: async () => {}
+  });
+  expect(observedAppId).toBe('com.foliole.android.acceptance');
+});

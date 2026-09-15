@@ -18,6 +18,7 @@ import {
 import {
   macosAcceptanceEnv, macosAcceptanceSessionOptions
 } from './multi-device-sync-macos-channel.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { readNonemptyAdmissionMaterial } from './multi-device-sync-nonempty-admission-proof.mjs';
 import {
   productFailure, waitForThreeDeviceProof, waitUntil
@@ -26,7 +27,7 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
@@ -44,7 +45,8 @@ function androidSnapshot(paths) {
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
-    buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
+    appId: APP_ID, buildIdentity: runId, env,
+    evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
     paths, serial: A5_SERIAL });
   const receipt = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8')).receipt;
   if (typeof receipt?.factText !== 'string' || !receipt.factText) {

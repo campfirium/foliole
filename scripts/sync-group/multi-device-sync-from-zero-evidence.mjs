@@ -10,9 +10,10 @@ import {
 } from './sync-from-zero-contract.mjs';
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { assertExactDatasetConvergence } from './sync-scenario-predicate.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function peerProgress(database) {
   return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
