@@ -11,6 +11,11 @@ const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4
   localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
 
+it('reads the persisted group timeline used by the A-rejoin invariant', () => {
+  const source = fs.readFileSync('scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8');
+  expect(source).toContain('groups.timeline_id AS timeline_id');
+});
+
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));
   const ids = { A: 'multi-device-sync-a-new', B: 'multi-device-sync-b-new',
