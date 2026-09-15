@@ -69,7 +69,6 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.readwiseResync': 'Resync from Readwise',
   'desktop.nodeList.menu.readwiseResync.reconnect': 'Resync from Readwise — reconnect Readwise first',
   'desktop.nodeList.menu.readwiseResync.running': 'Resyncing from Readwise…',
-  'desktop.nodeList.menu.readwiseResync.sourceInactive': 'Resync from Readwise — this device does not handle Readwise imports',
   'desktop.nodeList.readwiseResync.confirm.title': 'Resync from Readwise',
   'desktop.nodeList.readwiseResync.confirm.description': 'Source content processing is still being improved. If the layout looks wrong, you can try processing it again.',
   'desktop.nodeList.readwiseResync.confirm.epub': 'Its cover, body images, and table of contents will also be rebuilt.',

@@ -7,6 +7,7 @@ import { clearAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 
 const runtime = vi.hoisted(() => ({
   confirmation: vi.fn(),
+  loadState: vi.fn(),
   notice: vi.fn(),
   noticeId: null as number | null,
   resync: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock('../../../shared/platform/import/readwiseOriginalEpubRuntimeRepository',
   useRuntimeReadwiseOriginalEpub: vi.fn()
 }));
 vi.mock('../../../shared/platform/import/readwiseSourceResyncRuntimeRepository', () => ({
-  loadRuntimeReadwiseSourceResyncActionState: async (nodeId: string) => ({ node_id: nodeId, ...runtime.state }),
+  loadRuntimeReadwiseSourceResyncActionState: runtime.loadState,
   resyncRuntimeReadwiseSource: runtime.resync
 }));
 vi.mock('../../../shared/ui/appConfirmation', () => ({ requestAppConfirmation: runtime.confirmation }));
@@ -38,6 +39,10 @@ import { NodeListContextMenu } from './NodeListContextMenu';
 
 beforeEach(() => {
   runtime.confirmation.mockReset().mockResolvedValue(false);
+  runtime.loadState.mockReset().mockImplementation(async (nodeId: string) => ({
+    node_id: nodeId,
+    ...runtime.state
+  }));
   runtime.notice.mockReset();
   runtime.resync.mockReset().mockResolvedValue({ node_id: 'source', status: 'completed' });
   Object.assign(runtime.state, { body_authority: 'reader_html', category: 'article', status: 'ready' });
@@ -111,10 +116,9 @@ it('keeps the success notice through 4200ms and expires it at 8000ms', async () 
   runtime.noticeId = null;
 });
 
-it('keeps an ineligible source visible with its reason and disables the action', async () => {
+it('hides the resync action when this device does not handle Readwise imports', async () => {
   Object.assign(runtime.state, { status: 'source_inactive' });
   renderWithLocalization(<Menu />);
-  expect(await screen.findByRole('menuitem', {
-    name: 'Resync from Readwise — this device does not handle Readwise imports'
-  })).toHaveAttribute('data-disabled');
+  await waitFor(() => expect(runtime.loadState).toHaveBeenCalledWith('source'));
+  expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
 });

@@ -42,14 +42,14 @@ export function ReadwiseSourceResyncMenuItem(props: {
     return () => { active = false; };
   }, [props.nodeId]);
 
-  if (!props.nodeId || !state || state.status === 'not_applicable') return null;
+  if (!props.nodeId || !state || state.status === 'not_applicable' || state.status === 'source_inactive') {
+    return null;
+  }
   const label = state.status === 'reconnect_required'
     ? t('desktop.nodeList.menu.readwiseResync.reconnect')
     : state.status === 'running'
       ? t('desktop.nodeList.menu.readwiseResync.running')
-      : state.status === 'source_inactive'
-        ? t('desktop.nodeList.menu.readwiseResync.sourceInactive')
-        : t('desktop.nodeList.menu.readwiseResync');
+      : t('desktop.nodeList.menu.readwiseResync');
   const run = async () => {
     if (state.status !== 'ready' || !props.nodeId) return;
     const confirmed = await requestAppConfirmation({
