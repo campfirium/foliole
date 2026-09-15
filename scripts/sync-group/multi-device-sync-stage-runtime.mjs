@@ -17,12 +17,15 @@ export async function runBoundedStageAction({ action, run, stage }) {
   const progress = [];
   let lastProgressAt = new Date().toISOString();
   let terminal = null;
+  let rejectTerminal;
+  const terminalWork = new Promise((_resolve, reject) => { rejectTerminal = reject; });
   let hardTimer; let progressTimer;
+  const stop = (error) => { terminal = error; controller.abort(); rejectTerminal(error); };
   const armProgress = () => {
     clearTimeout(progressTimer);
     progressTimer = setTimeout(() => {
       if (terminal) return;
-      terminal = progressDeadline(stage, progress.at(-1) || 'stage_started'); controller.abort();
+      stop(progressDeadline(stage, progress.at(-1) || 'stage_started'));
     }, stage.progressDeadlineMs);
   };
   const reportProgress = (milestone) => {
@@ -36,12 +39,14 @@ export async function runBoundedStageAction({ action, run, stage }) {
   };
   hardTimer = setTimeout(() => {
     if (terminal) return;
-    terminal = controllerFailure(stage, 'stage_hard_deadline', progress.at(-1) || 'stage_started',
-      `Stage ${stage.name} exceeded its hard deadline.`); controller.abort();
+    stop(controllerFailure(stage, 'stage_hard_deadline', progress.at(-1) || 'stage_started',
+      `Stage ${stage.name} exceeded its hard deadline.`));
   }, stage.hardDeadlineMs);
   armProgress();
   try {
-    const result = await action({ reportActivity, reportProgress, run, signal: controller.signal, stage });
+    const result = await Promise.race([
+      action({ reportActivity, reportProgress, run, signal: controller.signal, stage }), terminalWork
+    ]);
     if (terminal) throw terminal;
     if (progress.length === 0 && Array.isArray(result?.progress)) {
       result.progress.forEach(reportProgress);

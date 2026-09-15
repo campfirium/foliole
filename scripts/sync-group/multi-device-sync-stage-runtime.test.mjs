@@ -25,6 +25,12 @@ it('classifies an expired controller hard deadline separately from product stall
       missingFact: 'stage_hard_deadline' });
 });
 
+it('returns the hard deadline when an adapter ignores cancellation', async () => {
+  await expect(runBoundedStageAction({ action: () => new Promise(() => {}), run: {},
+    stage: stage({ hardDeadlineMs: 20, progressDeadlineMs: 100 }) }))
+    .rejects.toMatchObject({ missingFact: 'stage_hard_deadline' });
+});
+
 it('preserves completed milestones when the stage progress envelope expires', async () => {
   await expect(runBoundedStageAction({ action: ({ reportProgress, signal }) => {
     reportProgress('started');
