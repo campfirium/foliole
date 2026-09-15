@@ -68,7 +68,8 @@ async function loadNativeDiscoveryCandidates(
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
     const native = (payload.candidates ?? [])
-      .filter((candidate) => !isMobileProvider(candidate.protocol_txt))
+      .filter((candidate) => !isMobileProvider(candidate.protocol_txt)
+        && candidate.protocol_txt?.topology_role === 'anchor')
       .map((candidate) => ({
         endpointUrl: candidate.endpoint_url,
         protocolTxt: candidate.protocol_txt ?? null,

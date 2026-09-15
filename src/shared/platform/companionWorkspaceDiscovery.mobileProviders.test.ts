@@ -57,6 +57,23 @@ it('does not probe a mobile provider while finding desktop sync targets', async 
   );
 });
 
+it('does not probe a stale member advertisement whose platform metadata is missing', async () => {
+  runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
+    candidates: [{
+      endpoint_url: 'http://stale-phone.local:38644',
+      protocol_txt: {
+        ...serializeSyncProtocolTxt(protocol),
+        device_id: 'stale-phone', group_id: 'group-1', group_tag: 'group-tag-1',
+        topology_role: 'member'
+      },
+      source: 'nsd'
+    }]
+  });
+
+  await expect(discoverCompanionDesktops('http://old-desktop.local:38641')).resolves.toEqual([]);
+  expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalled();
+});
+
 it('does not let a stalled native probe block a reachable iOS desktop', async () => {
   vi.useFakeTimers();
   runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
