@@ -14,7 +14,7 @@ it('keeps the bounded product dataset beyond every existing ordinary sync batch 
   expect(SYNC_FROM_ZERO_DATASET.nodeCount).toBeGreaterThan(SYNC_OBJECT_APPLY_BATCH_SIZE);
   expect(SYNC_FROM_ZERO_DATASET.nodeCount).toBeGreaterThan(CONTENT_BLOB_BATCH_LIMIT);
   expect(SYNC_FROM_ZERO_DATASET.attachmentCount).toBeGreaterThan(ATTACHMENT_RESOURCE_BATCH_LIMIT);
-  expect(SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS).toBe(180_000);
+  expect(SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS).toBe(240_000);
 });
 
 it('requires exact dataset resources instead of accepting generic nonempty facts', () => {
