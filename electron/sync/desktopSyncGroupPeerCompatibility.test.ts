@@ -9,10 +9,10 @@ const peer = {
   peer_device_id: 'peer-1', peer_device_name: 'Peer', peer_platform: 'darwin'
 };
 
-function response(protocol: unknown = CURRENT_SYNC_PROTOCOL_DESCRIPTOR) {
+function response(protocol: unknown = CURRENT_SYNC_PROTOCOL_DESCRIPTOR, topologyRole = 'anchor') {
   return {
     json: vi.fn(async () => ({ group_id: 'group-1', protocol, provider_device_id: 'peer-1',
-      provider_platform: 'darwin', topology_role: 'anchor' })),
+      provider_platform: 'darwin', topology_role: topologyRole })),
     ok: true,
     status: 200
   } as unknown as Response;
@@ -24,6 +24,13 @@ it('accepts a peer only when its complete descriptor and identity match', async 
   expect(request).toHaveBeenCalledWith('http://peer.local/companion/discovery', {
     signal: expect.any(AbortSignal)
   });
+});
+
+it('accepts an explicit desktop member collection route', async () => {
+  await expect(assertDesktopSyncGroupPeerCompatible(
+    { ...peer, route_kind: 'member' },
+    vi.fn(async () => response(CURRENT_SYNC_PROTOCOL_DESCRIPTOR, 'member')) as typeof fetch
+  )).resolves.toBeUndefined();
 });
 
 it('rejects a v4 peer missing the complete member capability', async () => {

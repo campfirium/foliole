@@ -9,7 +9,7 @@ export interface DesktopSyncGroupPeer {
   peer_device_id: string;
   peer_device_name: string;
   peer_platform: string;
-  route_kind?: 'anchor' | 'mobile_guide';
+  route_kind?: 'anchor' | 'member' | 'mobile_guide';
 }
 
 const routes = new Map<string, DesktopSyncGroupPeer>();

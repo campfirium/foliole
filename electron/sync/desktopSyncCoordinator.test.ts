@@ -18,7 +18,8 @@ import {
   subscribeDesktopSyncCompleted
 } from './desktopSyncCoordinator.js';
 
-const peer = { peer_authorization_id: 'peer-a' } as never;
+const peer = { peer_device_id: 'peer-a' } as never;
+const peerB = { peer_device_id: 'peer-b' } as never;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -46,6 +47,20 @@ it('joins manual sync to an active automatic run and persists one owned result',
   ]);
   expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledOnce();
   expect(settings.saveJsonSetting).toHaveBeenCalledOnce();
+});
+
+it('queues a different preferred Device behind the active run', async () => {
+  const work = deferred<{ complete: boolean; cursor: number }>();
+  transport.continueDesktopSyncGroupSync.mockReturnValueOnce(work.promise);
+
+  const first = runDesktopSyncCoordinator('automatic', peer);
+  const second = runDesktopSyncCoordinator('automatic', peerB);
+  expect(second).not.toBe(first);
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledWith(peer);
+
+  work.resolve({ complete: true, cursor: 9 });
+  await second;
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenNthCalledWith(2, peerB);
 });
 
 it('persists a manual failure while leaving transport cursor ownership unchanged', async () => {
