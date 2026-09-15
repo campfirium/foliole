@@ -16,6 +16,7 @@ import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs'
 import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, process */
 
@@ -26,7 +27,7 @@ function memberHosts(database, state) {
 }
 
 function androidSnapshot(paths) {
-  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: MULTI_DEVICE_ANDROID_APP_ID,
     includeEvents: false, serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
       activeMemberHosts: memberHosts(database, 'active'),

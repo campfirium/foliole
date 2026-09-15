@@ -21,6 +21,7 @@ import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
   WINDOWS_SYNC_FROM_ZERO_PROGRESS
 } from './sync-from-zero-contract.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, AbortSignal, process */
 
@@ -98,6 +99,7 @@ async function admitWindowsFromZero(context) {
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
   const approvalWork = runMacosA5SyncGroupApproval({ allowControlledCancellation: true,
+    appId: MULTI_DEVICE_ANDROID_APP_ID,
     cancelInstrumentation: () => approvalController.abort(), execute: context.execute,
     instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
     onProviderStopped: async () => {}, onReady: async () => {
@@ -128,7 +130,7 @@ function createContext(options) {
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(options.repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     options.runId, 'sync-from-zero');
-  return { ...options, env, evidenceRoot, owned, paths };
+  return { ...options, appId: MULTI_DEVICE_ANDROID_APP_ID, env, evidenceRoot, owned, paths };
 }
 
 export async function proveSyncFromZero(options) {

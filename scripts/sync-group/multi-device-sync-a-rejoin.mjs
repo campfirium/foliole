@@ -24,10 +24,11 @@ import {
 } from './multi-device-sync-three-device-proof.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global process */
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,

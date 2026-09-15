@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import { cleanupPassedState } from './multi-device-sync-cli.mjs';
@@ -67,4 +68,16 @@ it('preserves passed host state while retaining only formal run evidence', async
   expect(removeRun).not.toHaveBeenCalled();
   await cleanupPassedState({ clearHosts, mode: 'diagnostic', options, removeRun });
   expect(removeRun).toHaveBeenCalledWith(options);
+});
+
+it('keeps every formal Android stage on the isolated acceptance application', () => {
+  for (const name of [
+    'multi-device-sync-a-rejoin.mjs', 'multi-device-sync-a-leave.mjs',
+    'multi-device-sync-participation.mjs', 'multi-device-sync-from-zero-evidence.mjs',
+    'multi-device-sync-from-zero.mjs'
+  ]) {
+    const source = fs.readFileSync(`scripts/sync-group/${name}`, 'utf8');
+    expect(source).toContain('MULTI_DEVICE_ANDROID_APP_ID');
+    expect(source).not.toMatch(/['"]com\.foliole\.android['"]/u);
+  }
 });

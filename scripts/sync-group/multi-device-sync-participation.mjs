@@ -19,10 +19,11 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertPauseResumeContinuity, factObservation
 } from './sync-scenario-predicate.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global process */
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function productFailure(host, missingFact, message) {
   return Object.assign(new Error(message), { failureOwner: 'product', host, missingFact });

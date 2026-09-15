@@ -11,8 +11,9 @@ import {
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 import { assertExactDatasetConvergence } from './sync-scenario-predicate.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function peerProgress(database) {
   return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
@@ -125,7 +126,7 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const overview = await session.load();
   const nodeIds = datasetReceipt.nodeIds.filter((id) => snapshot.nodesById?.[id]);
   return {
-    activeMemberCount: overview.sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
+    activeMemberCount: overview.sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
     datasetDigest: syncFromZeroDatasetDigest({
       attachmentIds: datasetReceipt.attachmentIds, contentHashes, nodeIds
     }),
