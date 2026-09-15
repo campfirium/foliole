@@ -116,6 +116,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     (value) => value === 3,
       'three_members_missing');
     reportProgress('three-members-converged');
+    await windowsProvider.waitForProgress('c-session-opened');
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
     const excluded = existingJourneyFactIds(
       (await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts
