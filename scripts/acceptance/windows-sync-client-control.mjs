@@ -26,7 +26,7 @@ export function parseWindowsSyncClientArgs(argv) {
   }
   const { values } = parseArgs({ args: argv.slice(1), allowPositionals: false, strict: true,
     options: { instance: { type: 'string', default: 'a' }, port: { type: 'string', default: '9222' },
-      revision: { type: 'string' }, 'state-root': { type: 'string' } } });
+      revision: { type: 'string' } } });
   if (action === 'facts') return { action };
   const port = Number.parseInt(values.port, 10);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('port is invalid');
@@ -36,18 +36,7 @@ export function parseWindowsSyncClientArgs(argv) {
   if (action === 'align') return { action, revision };
   const instance = values.instance?.toLowerCase();
   if (!['a', 'b'].includes(instance)) throw new Error('instance must be a or b');
-  const stateRoot = values['state-root']?.trim()
-    ? path.win32.resolve(ROOT, values['state-root'].trim()) : null;
-  if (stateRoot) {
-    const artifactsRoot = path.win32.join(ROOT, '.tmp', 'artifacts');
-    const relative = path.win32.relative(artifactsRoot, stateRoot);
-    const parentRelative = path.win32.relative(artifactsRoot, path.win32.dirname(stateRoot));
-    if (!relative || relative.startsWith('..') || path.win32.isAbsolute(relative)
-        || !parentRelative || parentRelative.startsWith('..') || path.win32.isAbsolute(parentRelative)) {
-      throw new Error('state root must be nested inside the Windows sync artifacts root');
-    }
-  }
-  return { action, instance, port, revision, stateRoot };
+  return { action, instance, port, revision };
 }
 
 function preflight(revision) {
@@ -97,11 +86,8 @@ Write-Output ("aligned=" + $head)
 }
 
 function startScript(config) {
-  const defaultArtifactRoot = `${ROOT}\\.tmp\\artifacts\\client-pair`
-    + `\\candidate-${config.revision.slice(0, 10)}\\instance-${config.instance}\\windows`;
-  const stateRoot = config.stateRoot ?? `${defaultArtifactRoot}\\state`;
-  const artifactRoot = config.stateRoot ? path.win32.dirname(stateRoot) : defaultArtifactRoot;
-  const resultPath = path.win32.join(artifactRoot, `client-control-${config.port}.json`);
+  const artifactRoot = `${ROOT}\\.tmp\\artifacts\\client-pair\\candidate-${config.revision.slice(0, 10)}`
+    + `\\instance-${config.instance}\\windows`;
   return `${preflight(config.revision)}
 & ${quote(NPM)} run build
 if ($LASTEXITCODE -ne 0) { throw 'Windows renderer build failed' }
@@ -109,8 +95,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Windows renderer build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Windows Electron compile failed' }
 & ${quote(NODE)} scripts/acceptance/launch-isolated-desktop.mjs ` +
     `--artifact-root ${quote(artifactRoot)} ` +
-    `--state-root ${quote(stateRoot)} ` +
-    `--result ${quote(resultPath)} ` +
+    `--state-root ${quote(`${artifactRoot}\\state`)} ` +
+    `--result ${quote(`${artifactRoot}\\launch.json`)} ` +
     `--revision ${quote(config.revision)} --cdp-port ${config.port}
 exit $LASTEXITCODE
 `;
