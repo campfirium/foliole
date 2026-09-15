@@ -20,6 +20,7 @@ vi.mock('./desktopDnsSd.js', () => ({
 vi.mock('./syncGroupRuntimeInstance.js', () => ({ loadSyncGroupRuntimeInstanceId: () => 'runtime-local' }));
 
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
+import { DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS } from './desktopSyncGroupDiscoveryTiming.js';
 
 beforeEach(() => {
   runtime.onError = null;
@@ -60,7 +61,7 @@ describe('desktop Sync Group discovery', () => {
         ...serializePreparedAnchorTxt('member')
       }, type: '_foliole-sync._tcp'
     } });
-    await vi.advanceTimersByTimeAsync(1_800);
+    await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
 
     await expect(discovery).resolves.toEqual([{
       endpoint_url: 'http://192.168.0.107:41187',
@@ -94,7 +95,7 @@ describe('desktop Sync Group bounded route selection', () => {
       txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
         ...serializePreparedAnchorTxt('anchor'),
         ipv4_addresses: '192.168.0.10,169.254.161.89' } } });
-    await vi.advanceTimersByTimeAsync(1_800);
+    await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
 
     await expect(discovery).resolves.toEqual([]);
   });
@@ -128,7 +129,7 @@ describe('desktop Sync Group provider selection', () => {
         device_id: 'device-b', group_id: 'group-1', group_tag: 'tag-1',
         provider_platform: 'android-capacitor', ...serializePreparedAnchorTxt('member')
       } } });
-    await vi.advanceTimersByTimeAsync(1_800);
+    await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
 
     await expect(discovery).resolves.toEqual([expect.objectContaining({
       endpoint_url: 'http://192.168.0.12:38641',

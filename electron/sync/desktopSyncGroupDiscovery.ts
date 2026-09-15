@@ -8,11 +8,12 @@ import {
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession } from './desktopDnsSd.js';
+import {
+  DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
+  DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
+} from './desktopSyncGroupDiscoveryTiming.js';
 import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
-
-const DISCOVERY_MS = 1_800;
-const DISCOVERY_PROBE_MS = 2_000;
 
 type ProbedCandidate = DesktopSyncGroupJoinCandidatePayload & {
   kind: 'anchor' | 'mobile_guide';
@@ -33,7 +34,7 @@ export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = f
       if (endpointUrl) services.set(service.fqdn, { endpointUrl, name: service.name, txt });
     }
   });
-  await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
+  await new Promise((resolve) => setTimeout(resolve, DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS));
   runtime.stop();
   if (failure) throw failure;
   const candidates = (await Promise.all([...services.values()].map((service) =>
@@ -49,7 +50,7 @@ async function probeCandidate(
 ): Promise<ProbedCandidate | null> {
   try {
     const response = await fetchDiscovery(`${service.endpointUrl}/companion/discovery`, {
-      signal: AbortSignal.timeout(DISCOVERY_PROBE_MS)
+      signal: AbortSignal.timeout(DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS)
     });
     if (!response.ok) return null;
     const payload = await response.json() as Record<string, unknown>;

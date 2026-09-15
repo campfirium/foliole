@@ -17,12 +17,13 @@ import {
   saveDesktopAnchorTopologyState
 } from './desktopAnchorTopologyRole.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
+import {
+  DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
+  DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
+} from './desktopSyncGroupDiscoveryTiming.js';
 import { isCurrentGroupPeerService, readSyncGroupServiceDeviceId } from './desktopSyncGroupPeerService.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
-
-export const DESKTOP_ANCHOR_OBSERVATION_MS = 1_800;
-const PROBE_TIMEOUT_MS = 2_000;
 
 export interface DesktopAnchorTarget {
   endpointUrl: string;
@@ -45,7 +46,9 @@ export function startDesktopAnchorTopologySession(args: SessionArgs): DesktopDns
 class DesktopAnchorTopologyController {
   private active = true;
   private currentAnchor: { service: DesktopDnsSdService; target: DesktopAnchorTarget } | null = null;
+  private discoveryGraceElapsed = false;
   private observationTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingAnchorProbes = 0;
   private runtime: DesktopDnsSdSession | null = null;
   private readonly fetchDiscovery: typeof fetch;
   private readonly localId: string;
@@ -78,6 +81,7 @@ class DesktopAnchorTopologyController {
     if (evaluateDiscoveredSyncProtocol(service.txt as Record<string, unknown>).status === 'incompatible') {
       if (this.observationTimer) clearTimeout(this.observationTimer);
       this.observationTimer = null;
+      this.discoveryGraceElapsed = false;
       this.publish(this.transition({ incompatible_group_seen: true, observation_complete: true,
         observed_desktops: [], previous_anchor_reachability: 'unknown' }));
       return;
@@ -103,30 +107,43 @@ class DesktopAnchorTopologyController {
   }
 
   private async handleFound(service: DesktopDnsSdService, target: DesktopAnchorTarget) {
-    if (!await probeAnchor(this.fetchDiscovery, service, target.endpointUrl) || !this.active) return;
-    this.currentAnchor = { service, target };
-    if (this.observationTimer) clearTimeout(this.observationTimer);
-    this.observationTimer = null;
-    const observation = [{ device_id: target.peerDeviceId, reachable: true, role: 'anchor' as const }];
-    const next = this.transition({ incompatible_group_seen: false, observation_complete: true,
-      observed_desktops: observation, previous_anchor_reachability: 'reachable' });
-    this.publish(next);
-    const requireSync = next.status === 'sync_before_demote';
-    const synced = await this.args.onAnchor(target, requireSync);
-    if (!this.active || !requireSync || !synced) return;
-    this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
-      observed_desktops: observation, previous_anchor_reachability: 'reachable',
-      sync_before_demote_completed: true }));
+    this.pendingAnchorProbes += 1;
+    try {
+      if (!await probeAnchor(this.fetchDiscovery, service, target.endpointUrl) || !this.active) return;
+      this.currentAnchor = { service, target };
+      if (this.observationTimer) clearTimeout(this.observationTimer);
+      this.observationTimer = null;
+      const observation = [{ device_id: target.peerDeviceId, reachable: true, role: 'anchor' as const }];
+      const next = this.transition({ incompatible_group_seen: false, observation_complete: true,
+        observed_desktops: observation, previous_anchor_reachability: 'reachable' });
+      this.publish(next);
+      const requireSync = next.status === 'sync_before_demote';
+      const synced = await this.args.onAnchor(target, requireSync);
+      if (!this.active || !requireSync || !synced) return;
+      this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
+        observed_desktops: observation, previous_anchor_reachability: 'reachable',
+        sync_before_demote_completed: true }));
+    } finally {
+      this.pendingAnchorProbes -= 1;
+      this.completeObservationIfSettled();
+    }
   }
 
   private observe() {
     if (this.observationTimer) clearTimeout(this.observationTimer);
+    this.discoveryGraceElapsed = false;
     this.observationTimer = setTimeout(() => {
       this.observationTimer = null;
-      if (!this.active || this.currentAnchor) return;
-      this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
-        observed_desktops: [], previous_anchor_reachability: 'unreachable' }));
-    }, DESKTOP_ANCHOR_OBSERVATION_MS);
+      this.discoveryGraceElapsed = true;
+      this.completeObservationIfSettled();
+    }, DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
+  }
+
+  private completeObservationIfSettled() {
+    if (!this.active || this.currentAnchor || !this.discoveryGraceElapsed || this.pendingAnchorProbes > 0) return;
+    this.discoveryGraceElapsed = false;
+    this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
+      observed_desktops: [], previous_anchor_reachability: 'unreachable' }));
   }
 
   private transition(input: DesktopAnchorTopologyInput) {
@@ -142,7 +159,7 @@ class DesktopAnchorTopologyController {
 async function probeAnchor(fetchDiscovery: typeof fetch, service: DesktopDnsSdService, endpointUrl: string) {
   try {
     const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, {
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS)
+      signal: AbortSignal.timeout(DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS)
     });
     if (!response.ok) return false;
     return qualifyPreparedDesktopAnchorCandidate({ endpoint_url: endpointUrl,

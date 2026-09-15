@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { serializePreparedAnchorTxt } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract.js';
@@ -20,12 +20,15 @@ vi.mock('./desktopDnsSd.js', () => ({
 vi.mock('./syncGroupRuntimeInstance.js', () => ({ loadSyncGroupRuntimeInstanceId: () => 'runtime-local' }));
 
 import { DesktopSyncGroupDiscoverySession } from './desktopSyncGroupDiscoverySession.js';
+import { DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS } from './desktopSyncGroupDiscoveryTiming.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.onError = null;
   runtime.onService = null;
 });
+
+afterEach(() => vi.useRealTimers());
 
 it('publishes found, changed, and lost until explicitly stopped', async () => {
   const snapshots: Array<{ change: string; status: string }> = [];
@@ -90,4 +93,32 @@ it('ends a failed resolved route without probing advertised address fallbacks', 
 
   await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('connection_failed'));
   expect(fetchDiscovery).toHaveBeenCalledOnce();
+});
+
+it('keeps discovery open while a found provider probe is still pending', async () => {
+  vi.useFakeTimers();
+  let finishProbe!: (response: Response) => void;
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  const session = new DesktopSyncGroupDiscoverySession(
+    (snapshot) => snapshots.push(snapshot),
+    vi.fn(() => new Promise<Response>((resolve) => { finishProbe = resolve; }))
+  );
+  const service = { addresses: ['192.168.0.12'], domain: 'local.', fqdn: 'daily',
+    host: 'daily.local.', interfaceIndex: 1, name: 'Daily', port: 38641,
+    type: '_foliole-sync._tcp', txt: { device_id: 'device-a', group_id: 'group-1',
+      group_tag: 'tag-1', provider_platform: 'darwin', runtime_instance_id: 'remote',
+      ...serializePreparedAnchorTxt('anchor') } };
+
+  session.start();
+  runtime.onService?.({ kind: 'found', service });
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
+  expect(snapshots.map(({ change }) => change)).toEqual(['started']);
+
+  finishProbe(new Response(JSON.stringify({
+    group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1',
+    provider_device_id: 'device-a', provider_platform: 'darwin', topology_role: 'anchor',
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  })));
+  await vi.waitFor(() => expect(snapshots.some(({ change }) => change === 'found')).toBe(true));
+  session.stop();
 });
