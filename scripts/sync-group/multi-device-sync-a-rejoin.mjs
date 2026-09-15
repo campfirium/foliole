@@ -98,6 +98,8 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
       'a_product_listener_unavailable', 'macOS A sync listener is unavailable.');
     reportProgress('a-listener-ready');
     await restartProvider();
+    await windowsProvider.waitForProgress('c-session-opened');
+    await session.invoke('sync_companion_now');
     await waitUntil('macOS A three-member convergence', async () =>
       (await session.load()).sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
     (value) => value === 3,
