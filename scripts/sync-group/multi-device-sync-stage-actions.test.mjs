@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   cancelAdmissionSibling, createDiagnosticStageActions, syncAdmittedCToAndroid,
-  waitForAdmittedCProvider, windowsJoinFailure
+  waitForAdmittedCProvider, waitForCurrentAndroidAnchor, windowsJoinFailure
 } from './multi-device-sync-stage-actions.mjs';
 
 /* global process */
@@ -65,6 +65,12 @@ it('waits for the admitted Windows anchor to be externally discoverable', async 
   const waitForProvider = vi.fn(async (expected) => expected);
   await expect(waitForAdmittedCProvider({ group_id: 'group-1' }, waitForProvider))
     .resolves.toEqual({ advertisedPlatform: 'win32', groupId: 'group-1', topologyRole: 'anchor' });
+});
+
+it('waits for the elected Android anchor to be externally discoverable', async () => {
+  const waitForProvider = vi.fn(async (expected) => expected);
+  await expect(waitForCurrentAndroidAnchor({ group_id: 'group-1' }, waitForProvider))
+    .resolves.toEqual({ groupId: 'group-1', topologyRole: 'anchor' });
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

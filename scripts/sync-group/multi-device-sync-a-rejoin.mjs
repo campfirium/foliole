@@ -99,7 +99,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('a-listener-ready');
     await restartProvider();
     await waitUntil('macOS A three-member convergence', async () =>
-      (await session.load()).sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
+      (await session.load()).sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
     (value) => value === 3,
       'three_members_missing');
     reportProgress('three-members-converged');

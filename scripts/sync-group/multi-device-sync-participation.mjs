@@ -73,7 +73,7 @@ async function proveMacosParticipation(context) {
   let session = await context.openSession();
   const initial = await session.load();
   const groupId = initial.sync_group?.group_id;
-  if (!groupId || initial.sync_group.members.filter(({ state }) => state === 'active').length !== 3) {
+  if (!groupId || initial.sync_group.devices.filter(({ state }) => state === 'active').length !== 3) {
     throw productFailure('macos-a', 'macos_three_member_input_missing', 'macOS three-member input is missing.');
   }
   const androidBefore = await androidSnapshot(context.paths);

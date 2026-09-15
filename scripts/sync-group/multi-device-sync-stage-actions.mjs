@@ -85,6 +85,11 @@ export function waitForAdmittedCProvider(group, waitForProvider = waitForCurrent
   });
 }
 
+export function waitForCurrentAndroidAnchor(group, waitForProvider = waitForCurrentProvider) {
+  if (!group?.group_id) throw new Error('Android B Sync Group identity is unavailable.');
+  return waitForProvider({ groupId: group.group_id, topologyRole: 'anchor' });
+}
+
 async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-c');
@@ -130,6 +135,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       },
       reportProgress,
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId),
+      waitForProvider: (group) => waitForCurrentAndroidAnchor(group),
       waitForListener: async (session) => {
         await observeMacosAnchorAfterElection(session);
         return session.load();

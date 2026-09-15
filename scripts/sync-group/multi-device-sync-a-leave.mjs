@@ -69,11 +69,12 @@ function assertMacosRetention(before, after, factIds) {
   }
 }
 
-function assertActiveThreeMemberInput(overview, baseline) {
+function assertActiveThreeMemberInput(overview, facts, baseline) {
   const group = overview.sync_group;
-  if (group?.group_id !== baseline.groupId || group.timeline_id !== baseline.timelineId
-      || group.local_member_state !== 'active'
-      || group.members.filter(({ state }) => state === 'active').length !== 3) {
+  if (group?.group_id !== baseline.groupId
+      || group.devices.filter(({ state }) => state === 'active').length !== 3
+      || facts.localGroupId !== baseline.groupId || facts.localTimelineId !== baseline.timelineId
+      || facts.localMemberState !== 'active') {
     throw new Error('macOS A does not have the required three-member input.');
   }
 }
@@ -95,8 +96,8 @@ async function leaveAndRestartA(context) {
   try {
     await restartARejoinAndroidProvider({ env, execute, paths });
     reportProgress('survivor-provider-ready');
-    assertActiveThreeMemberInput(await session.load(), rejoin.groupContext);
     const before = await macosFacts(execute, repoRoot, databasePath, Object.values(rejoin.factIds));
+    assertActiveThreeMemberInput(await session.load(), before, rejoin.groupContext);
     const afterLeave = await session.leave();
     if (afterLeave.sync_group !== null || afterLeave.join_requests.length !== 0) {
       throw new Error('macOS A did not leave through the product action.');

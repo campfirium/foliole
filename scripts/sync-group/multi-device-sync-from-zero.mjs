@@ -140,7 +140,7 @@ export async function proveSyncFromZero(options) {
   }));
   try {
     const overview = await session.enable();
-    if (overview.sync_group?.members.filter(({ state }) => state === 'active').length !== 2) {
+    if (overview.sync_group?.devices.filter(({ state }) => state === 'active').length !== 2) {
       throw productFailure('macos-a', 'a_b_group_input_missing', 'A/B Sync Group input is missing.');
     }
     const datasetReceipt = await createSyncFromZeroDataset({

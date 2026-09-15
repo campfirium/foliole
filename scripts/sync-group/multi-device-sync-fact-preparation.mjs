@@ -2,7 +2,7 @@ import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 
 export async function runAOfflineAdmissionPrelude({
   cancelSiblings = () => {}, createFact, openSession, reportProgress = () => {},
-  runApproval, startWindows, waitForFact,
+  runApproval, startWindows, waitForFact, waitForProvider = async () => {},
   waitForListener = async (_session, listener) => listener
 }) {
   const session = await openSession();
@@ -34,6 +34,8 @@ export async function runAOfflineAdmissionPrelude({
         reportProgress('b-fact-received');
         await close();
         reportProgress('a-offline');
+        await waitForProvider(listener.sync_group);
+        reportProgress('b-anchor-discoverable');
         windowsWork = startWindows(); reportProgress('c-join-started'); windowsStarted();
       }
     });
