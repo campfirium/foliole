@@ -4,7 +4,6 @@ export interface RepairBody {
   nodeId: string;
   parentId: string | null;
   title: string;
-  unlocatedNodeId: string;
 }
 
 export interface RepairHighlight {
@@ -32,13 +31,16 @@ export interface ReadwiseEpubBookRepair {
   headingCount: number;
   highlights: RepairHighlight[];
   moves: RepairMove[];
+  projectionProof: import('../../lib/core/readwise/readwiseApiEpubProjection.js').ReadwiseApiEpubProjectionProof;
   rootNodeId: string;
   sourceCoverageHash: string;
+  sourceChanged: boolean;
   currentCoverageHash: string;
   newCoverageHash: string;
   reusedNodeIds: string[];
   staleNodeIds: string[];
   title: string;
+  unlocatedNodeId: string;
 }
 
 export interface ReadwiseEpubStructureRepairPlan {
@@ -52,6 +54,7 @@ export interface ReadwiseEpubStructureRepairPlan {
     highlights: number;
     moves: number;
     rootHighlights: number;
+    sourceChangedBooks: number;
     staleNodes: number;
     unlocatedHighlights: number;
     unanchoredHighlights: number;

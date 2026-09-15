@@ -88,6 +88,7 @@ function applyBook(driver: DatabaseDriver, book: ReadwiseEpubBookRepair, now: st
     driver.execute('UPDATE nodes SET updated_at = ?, sync_dirty = 1 WHERE id = ?', [now, attachment.nodeId]);
     changed.add(attachment.nodeId);
   });
+  writeProjectionProof(driver, book);
   if (book.staleNodeIds.length === 0) return;
   const marks = book.staleNodeIds.map(() => '?').join(', ');
   driver.execute(
@@ -95,6 +96,21 @@ function applyBook(driver: DatabaseDriver, book: ReadwiseEpubBookRepair, now: st
      WHERE id IN (${marks}) AND deleted_at IS NULL`, [now, now, ...book.staleNodeIds]
   );
   book.staleNodeIds.forEach((nodeId) => changed.add(nodeId));
+}
+
+function writeProjectionProof(driver: DatabaseDriver, book: ReadwiseEpubBookRepair) {
+  const row = driver.queryOne<{ remote_import_state_json: string }>(
+    'SELECT remote_import_state_json FROM import_sources WHERE latest_node_id = ?', [book.rootNodeId]
+  );
+  if (!row) throw new Error(`readwise_epub_repair_source_missing:${book.rootNodeId}`);
+  const state = JSON.parse(row.remote_import_state_json) as Record<string, unknown>;
+  state.epubProjection = book.projectionProof;
+  state.version = 6;
+  const result = driver.execute(
+    'UPDATE import_sources SET remote_import_state_json = ? WHERE latest_node_id = ?',
+    [JSON.stringify(state), book.rootNodeId]
+  );
+  if (result.changes !== 1) throw new Error(`readwise_epub_repair_proof_failed:${book.documentId}`);
 }
 
 function applyBody(
@@ -124,6 +140,7 @@ export function verifyReadwiseEpubStructureRepair(
   plan: ReadwiseEpubStructureRepairPlan
 ) {
   for (const book of plan.books) {
+    verifyProjectionProof(driver, book);
     verifyBookBodies(driver, book);
     verifyBookDepth(driver, book);
     for (const highlight of book.highlights) {
@@ -152,6 +169,16 @@ export function verifyReadwiseEpubStructureRepair(
     if (visible !== 0) throw new Error(`readwise_epub_repair_stale_visible:${book.documentId}`);
   }
   return { books: plan.books.length, headings: plan.counts.headings, staleNodes: plan.counts.staleNodes };
+}
+
+function verifyProjectionProof(driver: DatabaseDriver, book: ReadwiseEpubBookRepair) {
+  const row = driver.queryOne<{ remote_import_state_json: string }>(
+    'SELECT remote_import_state_json FROM import_sources WHERE latest_node_id = ?', [book.rootNodeId]
+  );
+  const state = JSON.parse(row?.remote_import_state_json ?? '{}') as Record<string, unknown>;
+  if (JSON.stringify(state.epubProjection) !== JSON.stringify(book.projectionProof) || state.version !== 6) {
+    throw new Error(`readwise_epub_repair_proof_verification_failed:${book.documentId}`);
+  }
 }
 
 function readConnectionRef(driver: DatabaseDriver, rootNodeId: string) {

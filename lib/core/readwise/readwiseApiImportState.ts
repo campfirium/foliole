@@ -1,9 +1,10 @@
+import type { ReadwiseApiEpubProjectionProof } from './readwiseApiEpubProjection.js';
 import {
   normalizeReadwiseRemoteLifecycle,
   type ReadwiseRemoteLifecycleState
 } from './readwiseRemoteLifecycle.js';
 
-export const READWISE_API_IMPORT_STATE_VERSION = 5;
+export const READWISE_API_IMPORT_STATE_VERSION = 6;
 
 export type ReadwiseApiOriginalFileState =
   | { attachmentId: string; contentHash: string; mimeType: string; reason: null; sizeBytes: number; status: 'localized' }
@@ -25,6 +26,7 @@ export interface ReadwiseApiDocumentImportState {
   bodyAuthority: 'original_epub' | 'reader_html';
   bodyState: 'materialized' | 'unavailable';
   documentBlockedAt: string | null;
+  epubProjection?: ReadwiseApiEpubProjectionProof | null;
   metadata: Record<string, unknown>;
   remoteLifecycle: ReadwiseRemoteLifecycleState | null;
   originalFile: ReadwiseApiOriginalFileState | null;
@@ -48,6 +50,7 @@ export function normalizeReadwiseApiDocumentImportState(value: unknown): Readwis
     bodyAuthority: row.bodyAuthority === 'original_epub' ? 'original_epub' : 'reader_html',
     bodyState: row.bodyState === 'unavailable' ? 'unavailable' : 'materialized',
     documentBlockedAt: text(row.documentBlockedAt),
+    epubProjection: normalizeEpubProjection(row.epubProjection),
     metadata: record(row.metadata),
     originalFile: normalizeOriginalFileState(row.originalFile),
     remoteLifecycle: normalizeReadwiseRemoteLifecycle(row.remoteLifecycle),
@@ -55,6 +58,14 @@ export function normalizeReadwiseApiDocumentImportState(value: unknown): Readwis
     sourceUpdate: normalizeSourceUpdate(row.sourceUpdate),
     version: READWISE_API_IMPORT_STATE_VERSION
   };
+}
+
+function normalizeEpubProjection(value: unknown): ReadwiseApiEpubProjectionProof | null {
+  const row = record(value);
+  const sourceHash = text(row.sourceHash);
+  return sourceHash && Number.isSafeInteger(row.version) && Number(row.version) > 0
+    ? { sourceHash, version: Number(row.version) }
+    : null;
 }
 
 function normalizeSourceUpdate(value: unknown): ReadwiseApiSourceUpdateState | null {

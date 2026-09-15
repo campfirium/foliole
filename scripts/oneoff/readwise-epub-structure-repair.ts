@@ -72,6 +72,7 @@ function planSummary(plan: ReturnType<typeof buildReadwiseEpubStructureRepairPla
       oldStructureCount: book.headingCount + book.staleNodeIds.length,
       retiredNodeIds: book.staleNodeIds,
       reusedNodeIds: book.reusedNodeIds,
+      sourceChanged: book.sourceChanged,
       title: book.title
     })),
     counts: plan.counts,

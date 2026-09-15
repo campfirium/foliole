@@ -1,4 +1,5 @@
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { createReadwiseApiEpubProjectionProof } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import {
   type PreparedReadwiseApiAnnotation,
   type PreparedReadwiseApiDocument
@@ -77,6 +78,9 @@ export function materializeReadwiseApiEpub(input: {
         bodyAuthority: input.previousState?.bodyAuthority ?? 'reader_html',
         bodyState: 'materialized',
         documentBlockedAt: null,
+        epubProjection: !input.rootNodeId || input.rebuildRoot
+          ? createReadwiseApiEpubProjectionProof(input.document)
+          : input.previousState?.epubProjection ?? null,
         metadata: input.document.metadata,
         originalFile: input.previousState?.originalFile ?? null,
         remoteLifecycle: input.previousState?.remoteLifecycle ?? null,

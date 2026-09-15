@@ -70,6 +70,10 @@ beforeEach(async () => {
   await fs.mkdir(state.sourcePath, { recursive: true });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+  openDatabaseConnection().driver.execute(
+    "INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ('readwise_source_mode',?,'old')",
+    [JSON.stringify({ mode: 'relay', version: 1 })]
+  );
 });
 
 afterEach(async () => {
@@ -107,6 +111,9 @@ it('writes the API body before materializing a legacy fallback highlight', async
 
 it('builds a bound EPUB as chapters during the cutover instead of keeping the flat root body', async () => {
   await seedMigratableSource(state.sourcePath);
+  const seeded = openDatabaseConnection().driver;
+  seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+    VALUES ('node-epub-legacy','topic-1','topic','Legacy',0,'Legacy body','old','old')`);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
 
   await expect(runReadwiseSourceCutover({
@@ -124,6 +131,14 @@ it('builds a bound EPUB as chapters during the cutover instead of keeping the fl
   expect(driver.queryOne<{ parent_id: string }>(
     "SELECT parent_id FROM nodes WHERE content='remembered phrase' AND deleted_at IS NULL"
   )?.parent_id).not.toBe('topic-1');
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM nodes WHERE id='node-epub-legacy' AND deleted_at IS NULL"
+  )?.count).toBe(0);
+  const source = driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
+  );
+  expect(JSON.parse(source?.remote_import_state_json ?? '{}').epubProjection)
+    .toMatchObject({ sourceHash: expect.stringMatching(/^[0-9a-f]{64}$/u), version: 1 });
 });
 
 it('adds later API highlights without creating a source-update workflow', async () => {

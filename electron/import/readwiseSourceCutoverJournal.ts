@@ -1,4 +1,5 @@
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
+import { requiresReadwiseApiEpubProjection } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
   READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
@@ -6,8 +7,10 @@ import {
 } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { completeReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
+import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import {
-  confirmReadwiseIdentityBindings
+  confirmReadwiseIdentityBindings,
+  loadReadwiseRemoteSource
 } from '../database/readwiseRemoteIdentity.js';
 import {
   loadReadwiseSourceCutover,
@@ -140,9 +143,13 @@ function prepareReadwiseDocumentCommit(
 }
 
 function shouldBuildBoundEpub(nodeId: string, document: PreparedReadwiseApiDocument) {
-  return document.category === 'epub'
-    && Boolean(document.epubStructure?.sections.length)
-    && !hasPersistedReadwiseApiEpubStructure(nodeId);
+  const source = loadReadwiseRemoteSource();
+  const imported = source ? loadReadwiseApiImportSource(source.connectionRef, document.id) : null;
+  return requiresReadwiseApiEpubProjection(
+    imported?.state.epubProjection ?? null,
+    document,
+    hasPersistedReadwiseApiEpubStructure(nodeId)
+  );
 }
 
 function adoptBookSource(

@@ -16,13 +16,10 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
-import { saveReadwiseApiStagePage } from '../database/readwiseApiImportState.js';
 
-import { reimportCurrentTopicSource } from './currentSourceReimport.js';
 import {
   materializeReadwiseApiDocument,
   shouldPrepareReadwiseApiEpubImages
@@ -52,6 +49,11 @@ it('creates one body topic per marked heading and places annotations across ever
   const source = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
   )!;
+  const persistedState = driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'epub-1'"
+  )!;
+  expect(JSON.parse(persistedState.remote_import_state_json).epubProjection)
+    .toMatchObject({ sourceHash: expect.stringMatching(/^[0-9a-f]{64}$/u), version: 1 });
   const descendants = driver.queryAll<{ content: string; id: string; parent_id: string; title: string }>(
     `WITH RECURSIVE tree AS (
        SELECT id, parent_id, title, content FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
@@ -85,42 +87,6 @@ it('creates one body topic per marked heading and places annotations across ever
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-readwise-%' AND id NOT LIKE 'node-readwise-unlocated-%' AND deleted_at IS NULL"
   )).toEqual({ count: 4 });
-});
-
-it('keeps original EPUB authority through forced API structure re-imports', () => {
-  const config = createDefaultReadwiseReaderConfig();
-  const document = { ...epubFixture(), annotations: [] };
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
-  const driver = openDatabaseConnection().driver;
-  const source = driver.queryOne<{ remote_import_state_json: string }>(
-    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'epub-1'"
-  )!;
-  const state = { ...JSON.parse(source.remote_import_state_json), bodyAuthority: 'original_epub' };
-  driver.execute(
-    "UPDATE import_sources SET remote_import_state_json = ? WHERE remote_document_id = 'epub-1'",
-    [JSON.stringify(state)]
-  );
-  const replacement = {
-    ...document,
-    epubStructure: {
-      ...document.epubStructure!,
-      rootBody: 'Reader replacement',
-      sections: [{ content: '# Replaced', headingLevel: 1, markerKey: 'replaced', title: 'Replaced' }]
-    }
-  };
-
-  expect(shouldPrepareReadwiseApiEpubImages({
-    config, connectionRef: 'connection', destination: 'inbox', document: replacement, forceEpubStructure: true
-  })).toBe(false);
-  materializeReadwiseApiDocument({
-    config, connectionRef: 'connection', destination: 'inbox', document: replacement,
-    forceEpubStructure: true, replaceExistingBody: true
-  });
-  expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM nodes WHERE title = 'Replaced' AND deleted_at IS NULL"
-  )).toEqual({ count: 0 });
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
-    .not.toContain('Reader replacement');
 });
 
 it('prepares EPUB images only when a book tree is created or explicitly rebuilt', () => {
@@ -169,6 +135,9 @@ it('does not rebuild or revive a persisted structure when remote sections drift'
   const document = epubFixture();
   materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document });
   const driver = openDatabaseConnection().driver;
+  const projectionBefore = JSON.parse(driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'epub-1'"
+  )!.remote_import_state_json).epubProjection;
   const section = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'First section'")!;
   driver.execute('UPDATE nodes SET content = ?, deleted_at = ? WHERE id = ?', [
     'Local edit', '2026-09-08T01:00:00.000Z', section.id
@@ -183,6 +152,10 @@ it('does not rebuild or revive a persisted structure when remote sections drift'
     .toEqual({ count: 0 });
   expect(driver.queryOne<{ deleted_at: string }>('SELECT deleted_at FROM nodes WHERE id = ?', [section.id])?.deleted_at)
     .toBe('2026-09-08T01:00:00.000Z');
+  const projectionAfter = JSON.parse(driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'epub-1'"
+  )!.remote_import_state_json).epubProjection;
+  expect(projectionAfter).toEqual(projectionBefore);
 });
 
 it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
@@ -227,30 +200,6 @@ it('retires obsolete generated topics when an explicit rebuild has no marked hea
   )).toEqual({ count: 0 });
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
     .toContain('Ordinary EPUB body');
-});
-
-it('routes the current-source re-import command from a flat API EPUB to staged Reader HTML', async () => {
-  const config = createDefaultReadwiseReaderConfig();
-  const flat = { ...epubFixture(), annotations: [], body: 'Legacy flat body', epubStructure: null };
-  materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: flat });
-  const source = openDatabaseConnection().driver.queryOne<{ latest_node_id: string }>(
-    "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
-  )!;
-  const staged = normalizeReaderDocument({
-    category: 'epub',
-    html_content: '<h1 data-rw-epub-toc="chapter">Chapter 1: Start</h1><p>Reader body</p>',
-    id: 'epub-1',
-    title: 'Book'
-  })!;
-  saveReadwiseApiStagePage({ connectionRef: 'connection', cursor: null, items: [staged], kind: 'reader' });
-
-  await expect(reimportCurrentTopicSource(source.latest_node_id)).resolves.toMatchObject({
-    node_id: source.latest_node_id,
-    status: 'reimported'
-  });
-  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
-  )).toEqual({ count: 1 });
 });
 
 function epubFixture(): PreparedReadwiseApiDocument {

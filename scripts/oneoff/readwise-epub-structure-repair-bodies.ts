@@ -14,6 +14,7 @@ interface ExistingBody {
 }
 
 interface DesiredBody {
+  content: string;
   key: string;
   nodeId: string;
   parentKey: string | null;
@@ -26,19 +27,34 @@ export function buildRepairBodies(input: {
   documentId: string;
   oldGenerated: ExistingBody[];
   root: ExistingBody;
-  rootBody: string;
   structure: PreparedReadwiseApiEpubStructure;
 }) {
+  const sourceContent = [
+    input.structure.legacyRootBody ?? '',
+    ...(input.structure.legacySections ?? []).map((section) => section.content)
+  ].join('\n\n');
+  const currentContent = [
+    rootSourceContent(input.root.content, input.root.title), ...input.oldGenerated.map((row) => row.content)
+  ].join('\n\n');
+  const sourceCoverageHash = coverageHash(sourceContent);
+  const currentCoverageHash = coverageHash(currentContent);
+  const sourceChanged = currentCoverageHash !== sourceCoverageHash;
   const bodies: RepairBody[] = [
     {
       content: rebuildRootContent(
-        input.root.content, input.rootBody, input.contentById.get(input.root.id)
+        input.root.content,
+        sourceChanged
+          ? input.structure.rootBody
+          : rootSourceContent(input.root.content, input.root.title),
+        sourceChanged ? undefined : input.contentById.get(input.root.id),
+        input.root.title
       ),
       isTitleManual: input.root.is_title_manual,
       nodeId: input.root.id, parentId: input.root.parent_id, title: input.root.title
     },
     ...input.desired.map((node) => ({
-      content: joinChunks(input.contentById.get(node.nodeId)), nodeId: node.nodeId,
+      content: sourceChanged ? node.content : joinChunks(input.contentById.get(node.nodeId)),
+      nodeId: node.nodeId,
       isTitleManual: input.oldGenerated.find((row) => row.id === node.nodeId)!.is_title_manual,
       parentId: node.parentKey
         ? input.desired.find((item) => item.key === node.parentKey)?.nodeId ?? input.root.id
@@ -46,37 +62,26 @@ export function buildRepairBodies(input: {
       title: node.title
     }))
   ];
-  const sourceCoverageHash = coverageHash([
-    input.structure.legacyRootBody ?? '',
-    ...(input.structure.legacySections ?? []).map((section) => section.content)
-  ].join('\n\n'));
-  const currentCoverageHash = coverageHash([
-    rootSourceContent(input.root.content), ...input.oldGenerated.map((row) => row.content)
-  ].join('\n\n'));
   const newCoverageHash = coverageHash([
-    rootSourceContent(bodies[0]!.content), ...bodies.slice(1).map((item) => item.content)
+    rootSourceContent(bodies[0]!.content, input.root.title), ...bodies.slice(1).map((item) => item.content)
   ].join('\n\n'));
-  assertCoverage(input, bodies, currentCoverageHash, sourceCoverageHash, newCoverageHash);
-  return { bodies, currentCoverageHash, newCoverageHash, sourceCoverageHash };
+  assertCoverage(input, bodies, sourceCoverageHash, newCoverageHash);
+  return { bodies, currentCoverageHash, newCoverageHash, sourceChanged, sourceCoverageHash };
 }
 
 function assertCoverage(
   input: Parameters<typeof buildRepairBodies>[0],
   bodies: RepairBody[],
-  currentCoverageHash: string,
   sourceCoverageHash: string,
   newCoverageHash: string
 ) {
-  if (currentCoverageHash !== sourceCoverageHash) {
-    throw new Error(`readwise_epub_source_body_coverage_mismatch:${input.documentId}`);
-  }
   if (sourceCoverageHash !== newCoverageHash || bodies.length !== input.desired.length + 1) {
     const sourceContent = [
       input.structure.legacyRootBody ?? '',
       ...(input.structure.legacySections ?? []).map((section) => section.content)
     ].join('\n\n');
     const projectedContent = [
-      rootSourceContent(bodies[0]!.content), ...bodies.slice(1).map((item) => item.content)
+      rootSourceContent(bodies[0]!.content, input.root.title), ...bodies.slice(1).map((item) => item.content)
     ].join('\n\n');
     throw new Error([
       'readwise_epub_reprojected_body_coverage_mismatch', input.documentId,
@@ -87,18 +92,31 @@ function assertCoverage(
   }
 }
 
-function rebuildRootContent(current: string, sourceRoot: string, added: string[] | undefined) {
+function rebuildRootContent(
+  current: string,
+  sourceRoot: string,
+  added: string[] | undefined,
+  rootTitle: string
+) {
   const blocks = current.trim().split(/\n{2,}/u);
   const trailingLinks = blocks.at(-1)?.includes('[Open in Reader]') ? blocks.pop() : null;
-  const title = /^#\s/u.test(blocks[0] ?? '') ? blocks.shift() : null;
+  const title = headingText(blocks[0]) === rootTitle ? blocks.shift() : null;
   const localized = blocks.join('\n\n');
   const root = normalizeCoverage(localized) === normalizeCoverage(sourceRoot)
-    ? localized : removeRemoteImages(sourceRoot);
+    ? localized : localizeRemoteImages(sourceRoot, localized);
   return [title, root, joinChunks(added), trailingLinks].filter(Boolean).join('\n\n');
 }
 
-function removeRemoteImages(content: string) {
-  return content.replace(/!\[[^\]]*\]\(https?:\/\/[^)]*\)/giu, '**Image unavailable.**');
+function localizeRemoteImages(content: string, localized: string) {
+  const assets = localized.match(/!\[[^\]]*\]\(asset:\/\/[^)]*\)/giu) ?? [];
+  let index = 0;
+  return content.replace(/!\[[^\]]*\]\(https?:\/\/[^)]*\)/giu, () => (
+    assets[index++] ?? '**Image unavailable.**'
+  ));
+}
+
+function headingText(value: string | undefined) {
+  return value?.match(/^#{1,6}\s+(.+)$/u)?.[1]?.trim() ?? null;
 }
 
 function joinChunks(chunks: string[] | undefined) {

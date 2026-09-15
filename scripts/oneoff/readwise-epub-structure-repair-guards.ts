@@ -69,11 +69,15 @@ export function coverageHash(value: string) {
   return createHash('sha256').update(normalizeCoverage(value)).digest('hex');
 }
 
-export function rootSourceContent(value: string) {
+export function rootSourceContent(value: string, rootTitle: string) {
   const blocks = value.trim().split(/\n{2,}/u);
-  if (/^#\s/u.test(blocks[0] ?? '')) blocks.shift();
+  if (headingText(blocks[0]) === rootTitle) blocks.shift();
   if (/^\[Open in Reader\]/u.test(blocks.at(-1) ?? '')) blocks.pop();
   return blocks.join('\n\n');
+}
+
+function headingText(value: string | undefined) {
+  return value?.match(/^#{1,6}\s+(.+)$/u)?.[1]?.trim() ?? null;
 }
 
 function descendants(driver: DatabaseDriver, rootNodeIds: string[]) {

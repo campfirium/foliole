@@ -1,5 +1,7 @@
+import { matchesReadwiseApiEpubProjection } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiCandidates, loadPreparedReadwiseApiCandidate } from '../database/readwiseApiCandidateStage.js';
+import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import {
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex
@@ -46,6 +48,25 @@ export function assertReadwiseSourceCutoverComplete(connectionRef: string) {
   }
   if (countPendingReadwiseSourceBodies(connectionRef) > 0) {
     throw new Error('readwise_source_cutover_pending_bodies');
+  }
+  assertCurrentEpubProjections(connectionRef, candidates, current.documents);
+}
+
+function assertCurrentEpubProjections(
+  connectionRef: string,
+  candidates: ReturnType<typeof loadReadwiseApiCandidates>,
+  terminals: ReturnType<typeof requireActiveCutover>['documents']
+) {
+  const statusById = new Map(terminals.map((item) => [item.remoteId, item.status]));
+  for (const candidate of candidates) {
+    const status = statusById.get(candidate.documentId);
+    if (status !== 'bound' && status !== 'materialized') continue;
+    const document = loadPreparedReadwiseApiCandidate(connectionRef, candidate.documentId);
+    if (document?.category !== 'epub') continue;
+    const source = loadReadwiseApiImportSource(connectionRef, candidate.documentId);
+    if (!matchesReadwiseApiEpubProjection(source?.state.epubProjection ?? null, document)) {
+      throw new Error('readwise_source_cutover_epub_projection_incomplete');
+    }
   }
 }
 

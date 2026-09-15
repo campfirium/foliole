@@ -11,6 +11,7 @@ it('normalizes synced materialization and intake-blocking state deterministicall
       nodeId: 'node-1', parentRemoteId: 'doc', remoteId: 'highlight-1', sourceUpdatedAt: null
     }],
     bodyState: 'materialized',
+    epubProjection: { sourceHash: 'projection-hash', version: 1 },
     bodyAuthority: 'reader_html',
     documentBlockedAt: null,
     metadata: { title: 'Title' },
@@ -25,8 +26,18 @@ it('normalizes synced materialization and intake-blocking state deterministicall
     originalFile: null,
     remoteLifecycle: null,
     sourceUpdate: null,
-    version: 5
+    epubProjection: { sourceHash: 'projection-hash', version: 1 },
+    version: 6
   });
+});
+
+it('rejects incomplete EPUB projection proofs', () => {
+  expect(normalizeReadwiseApiDocumentImportState({
+    epubProjection: { sourceHash: '', version: 1 }
+  }).epubProjection).toBeNull();
+  expect(normalizeReadwiseApiDocumentImportState({
+    epubProjection: { sourceHash: 'hash', version: 0 }
+  }).epubProjection).toBeNull();
 });
 
 it('keeps only complete localized or explicit degraded original-file states', () => {

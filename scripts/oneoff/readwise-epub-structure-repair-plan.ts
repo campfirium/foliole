@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { requireResolvedNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
 import { buildReadwiseApiEpubBookNodes } from '../../lib/core/readwise/readwiseApiEpubBookTree.js';
+import { createReadwiseApiEpubStructureProjectionProof } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import { prepareReadwiseApiEpubStructure } from '../../lib/core/readwise/readwiseApiEpubStructure.js';
 import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
@@ -17,6 +18,7 @@ import {
   hasResolvedRepairHighlight,
   relocateRepairHighlight
 } from './readwise-epub-structure-repair-highlights.js';
+import { assertPristineGeneratedProjection } from './readwise-epub-structure-repair-pristine.js';
 import type {
   ReadwiseEpubBookRepair,
   ReadwiseEpubStructureRepairPlan
@@ -48,12 +50,15 @@ export function buildReadwiseEpubStructureRepairPlan(input: {
       AND json_extract(remote_import_state_json, '$.metadata.category') = 'epub'
       AND json_extract(remote_import_state_json, '$.bodyState') = 'materialized'
       ORDER BY remote_document_id`);
-  if (sources.length !== 28) throw new Error(`readwise_epub_repair_scope_mismatch:${sources.length}`);
+  if (sources.length < 28 || sources.length > 29) {
+    throw new Error(`readwise_epub_repair_scope_mismatch:${sources.length}`);
+  }
   const corpusAudit = auditReadwiseEpubCorpus(input.sourceByDocumentId);
   if (corpusAudit.books.length !== 29) throw new Error(`readwise_epub_corpus_scope_mismatch:${corpusAudit.books.length}`);
   const books = sources.map((source) => buildBook(input.driver, source, input.sourceByDocumentId));
   const scopedIds = new Set(sources.map((source) => source.remote_document_id));
-  if (corpusAudit.books.filter((book) => !scopedIds.has(book.documentId)).length !== 1) {
+  const extraCount = corpusAudit.books.filter((book) => !scopedIds.has(book.documentId)).length;
+  if (extraCount !== 29 - sources.length) {
     throw new Error('readwise_epub_corpus_extra_document_mismatch');
   }
   const highlights = books.flatMap((book) => book.highlights);
@@ -65,6 +70,7 @@ export function buildReadwiseEpubStructureRepairPlan(input: {
     rootHighlights: books.reduce((total, book) => (
       total + book.highlights.filter((item) => item.parentId === book.rootNodeId).length
     ), 0),
+    sourceChangedBooks: books.filter((book) => book.sourceChanged).length,
     staleNodes: sum(books, 'staleNodeIds'),
     unlocatedHighlights: books.reduce((total, book) => (
       total + book.highlights.filter((item) => item.parentId === book.unlocatedNodeId).length
@@ -93,7 +99,7 @@ function buildBook(
   const desired = projected.map((node) => ({
     ...node, nodeId: stableReadwiseEpubNodeId(source.remote_connection_ref, source.remote_document_id, node.key)
   }));
-  const projectionState = assertPristineGeneratedProjection(
+  assertPristineGeneratedProjection(
     source, structure.legacyMarkerKeys ?? [], desired.map((node) => node.key), oldGenerated
   );
   const desiredIds = new Set(desired.map((node) => node.nodeId));
@@ -102,19 +108,11 @@ function buildBook(
       throw new Error(`readwise_epub_heading_not_materialized:${source.remote_document_id}:${node.key}`);
     }
   });
-  const contentById = new Map<string, string[]>([[root.id, []]]);
-  let targetId = root.id;
-  oldGenerated.forEach((row) => {
-    if (desiredIds.has(row.id)) targetId = row.id;
-    const chunks = contentById.get(targetId) ?? [];
-    chunks.push(body(row));
-    contentById.set(targetId, chunks);
-  });
+  const contentById = buildContentById(root.id, oldGenerated, desiredIds);
   const coverage = buildRepairBodies({
     contentById, desired, documentId: source.remote_document_id,
     oldGenerated: oldGenerated.map((row) => ({ ...row, content: body(row) })),
     root: { ...root, content: body(root) },
-    rootBody: projectionState === 'projected' ? structure.rootBody : structure.legacyRootBody ?? '',
     structure
   });
   const staleNodeIds = oldGenerated.map((row) => row.id).filter((id) => !desiredIds.has(id));
@@ -131,10 +129,24 @@ function buildBook(
   return {
     attachmentCopies, bodies: coverage.bodies, documentId: source.remote_document_id, headingCount: desired.length,
     currentCoverageHash: coverage.currentCoverageHash, highlights, moves, newCoverageHash: coverage.newCoverageHash,
+    projectionProof: createReadwiseApiEpubStructureProjectionProof(structure),
     reusedNodeIds: desired.map((node) => node.nodeId), rootNodeId: root.id,
-    sourceCoverageHash: coverage.sourceCoverageHash, staleNodeIds, title: root.title,
+    sourceChanged: coverage.sourceChanged, sourceCoverageHash: coverage.sourceCoverageHash,
+    staleNodeIds, title: root.title,
     unlocatedNodeId
   };
+}
+
+function buildContentById(rootId: string, rows: NodeRow[], desiredIds: ReadonlySet<string>) {
+  const contentById = new Map<string, string[]>([[rootId, []]]);
+  let targetId = rootId;
+  rows.forEach((row) => {
+    if (desiredIds.has(row.id)) targetId = row.id;
+    const chunks = contentById.get(targetId) ?? [];
+    chunks.push(body(row));
+    contentById.set(targetId, chunks);
+  });
+  return contentById;
 }
 
 function orderGeneratedRows(
@@ -165,23 +177,6 @@ function buildRepairHighlights(
     row.id.startsWith('node-readwise-') && row.id !== rootId && !isReadwiseUnlocatedNodeId(row.id)
   )).map((row) => relocateRepairHighlight(row, bodies, rootId, unlocatedNodeId));
   return { highlights, unlocatedNodeId };
-}
-
-function assertPristineGeneratedProjection(
-  source: { remote_connection_ref: string; remote_document_id: string },
-  legacyMarkerKeys: string[],
-  projectedMarkerKeys: string[],
-  rows: NodeRow[]
-) {
-  const ids = (keys: string[]) => keys.map((key) => (
-    stableReadwiseEpubNodeId(source.remote_connection_ref, source.remote_document_id, key)
-  ));
-  const actual = rows.map((row) => row.id);
-  const matches = (expected: string[]) => expected.length === actual.length
-    && expected.every((id, index) => actual[index] === id);
-  if (matches(ids(projectedMarkerKeys))) return 'projected';
-  if (matches(ids(legacyMarkerKeys))) return 'legacy';
-  throw new Error(`readwise_epub_generated_projection_not_pristine:${source.remote_document_id}`);
 }
 
 function readTree(driver: DatabaseDriver, rootNodeId: string) {

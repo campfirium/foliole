@@ -177,18 +177,7 @@ function collectStructuralLabel(element: HtmlElement) {
   const directLabel = element.childNodes.map((child) => (
     'tagName' in child && BLOCK_TAGS.has(child.tagName) ? '' : collectInlineText(child)
   )).join(' ');
-  if (directLabel.trim()) return directLabel;
-  return collectBoundaryBlockLabel(element);
-}
-
-function collectBoundaryBlockLabel(element: HtmlElement) {
-  const labels = element.childNodes.flatMap((child) => {
-    if (!('tagName' in child) || !BLOCK_TAGS.has(child.tagName)) return [];
-    const label = collectInlineText(child).replace(/\s+/gu, ' ').trim();
-    return label ? [label] : [];
-  });
-  if (/^︿.*﹀$/u.test(labels[0] ?? '') && labels[1]) return `${labels[0]}${labels[1]}`;
-  return labels[0] ?? '';
+  return directLabel;
 }
 
 function collectInlineText(node: HtmlNode): string {
