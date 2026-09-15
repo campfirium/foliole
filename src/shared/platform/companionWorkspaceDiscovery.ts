@@ -166,10 +166,12 @@ function getDiscoveryKey(result: CompanionDiscoveryResult) {
   return result.discovery.runtime_instance_id?.trim() || deviceId || result.endpointUrl;
 }
 
-function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
+export function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
   const key = getDiscoveryKey(result);
   const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
   if (existingIndex < 0) return void results.push(result);
+  if (results[existingIndex]?.compatibility.status === 'incompatible'
+      && result.compatibility.status === 'compatible') results[existingIndex] = result;
 }
 
 export async function discoverCompanionDesktops(
