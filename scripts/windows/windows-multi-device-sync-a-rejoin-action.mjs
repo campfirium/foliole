@@ -20,6 +20,24 @@ function assertComplete(facts, ids) {
   }
 }
 
+export async function syncWindowsAfterAnchorSettles(invoke, page, {
+  attempts = 30, pause = delay
+} = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await invoke(page, 'sync_companion_now');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!['sync_group_peer_not_anchor', 'sync_group_peer_unavailable']
+        .some((code) => message.includes(code))) throw error;
+      lastError = error;
+      await pause(1_000);
+    }
+  }
+  throw lastError;
+}
+
 async function waitForFreshFacts(execute, inspect, paths, excluded, origins, factIds = [],
   timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
@@ -74,7 +92,7 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
         invoke: (command, args) => invoke(page, command, args)
       } });
       reportProgress({ factId: 'a-rejoin', milestone: 'c-fact-created' });
-      await invoke(page, 'sync_companion_now');
+      await syncWindowsAfterAnchorSettles(invoke, page);
       const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
