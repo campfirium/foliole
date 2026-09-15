@@ -18,7 +18,7 @@ import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { applySyncPackVersionedNodesWithDbPort } from './syncPackNodeConvergence.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
-import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
+import { clearConfirmedSyncPackPushAcks } from './syncPackPushAckClear.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
 import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
@@ -143,7 +143,7 @@ async function applySyncPackSurfaceInTransaction(
   toStateSeq: number
 ) {
   if (!shouldApply) {
-    await clearConfirmedSyncPushAcks(port, options, toStateSeq);
+    await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
     return {
       appliedBlobCount: 0,
       appliedGroupFactCount: 0,
@@ -173,6 +173,8 @@ async function applySyncPackSurfaceInTransaction(
   await applySyncPackNodeTextAlternativesWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
+  remainingNodeOptions.excludedNodeIds = nodeConvergence.processedNodeIds
+    .filter((nodeId) => !nodeConvergence.newNodeIds.includes(nodeId));
   await applySyncPackNodeAttachmentsWithDbPort(port, remainingNodeOptions);
   await applySyncPackViewStateObjectsWithDbPort(port, options);
   const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
@@ -180,7 +182,7 @@ async function applySyncPackSurfaceInTransaction(
     ...remainingNodeOptions,
     objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
   });
-  await clearConfirmedSyncPushAcks(port, options, toStateSeq);
+  await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   return {
     appliedBlobCount,
     appliedGroupFactCount: groupFacts.appliedFactCount,
@@ -206,18 +208,6 @@ async function applyVersionedNodeStage(
     options.hostName,
     options.incomingAlias
   );
-}
-
-function clearConfirmedSyncPushAcks(
-  port: DbPort,
-  options: SyncPackNodeSurfaceApplyOptions,
-  toStateSeq: number
-) {
-  return clearConfirmedSyncPushAcksWithDbPort(port, {
-    ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
-    sourcePeerId: options.sourcePeerId!,
-    toStateSeq
-  });
 }
 
 const SYNC_PACK_SURFACE_OBJECT_TYPES = [

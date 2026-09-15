@@ -37,6 +37,8 @@ export async function applyConvergentSyncNodesWithDbPort(
       ...records.filter((record) => !knownNodeIds.has(record.object_id)).map((record) => record.object_id)
     ]).size,
     handledConflictCount: conflicts.length,
+    newNodeIds: records.filter((record) => !knownNodeIds.has(record.object_id))
+      .map((record) => record.object_id),
     processedNodeIds: [...new Set(records.map((record) => record.object_id))]
   };
 }

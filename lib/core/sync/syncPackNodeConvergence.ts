@@ -38,7 +38,8 @@ export async function applySyncPackVersionedNodesWithDbPort(
     });
   }
   if (records.length === 0) {
-    return { appliedNodeCount: 0, handledConflictCount: 0, processedNodeIds: SPECIAL_ROOT_NODE_IDS };
+    return { appliedNodeCount: 0, handledConflictCount: 0, newNodeIds: [],
+      processedNodeIds: SPECIAL_ROOT_NODE_IDS };
   }
   const result = await applyConvergentSyncNodesWithDbPort(port, records);
   for (const record of records) {
