@@ -3,17 +3,20 @@ import path from 'node:path';
 
 import type { Page } from '@playwright/test';
 
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
+
 import { expectBridgeBackedControlEnabled } from './harness/bridgeBackedControls';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openBackupsSection } from './harness/settings';
 
 const CREATE_BACKUP_BUTTON_NAME = /^(Create backup|创建备份)$/;
 const RESTORE_BUTTON_NAME = /^(Restore|恢复)$/;
-const RESTORE_SUCCESS_TITLE = /^(Backup restored|备份已恢复)$/;
-const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
+const RESTORE_SUCCESS_NOTICE = /^(The backup .+ has been restored\.|已恢复备份 .+。)$/;
 const AUTO_BACKUP_FILE_NAME = /^foliole-auto-\d{6}-\d{6}\.db\.gz$/;
 const SAFETY_BACKUP_FILE_NAME = /^foliole-rollback-\d{6}-\d{6}(?:-\d+)?\.db\.gz$/;
 const RESTORE_DRIFT_NODE_ID = 'desktop-backup-restore-drift';
+const POST_RESTORE_TOPIC_TITLE = 'T198 post-restore edit';
+const POST_RESTORE_TOPIC_CONTENT = `# ${POST_RESTORE_TOPIC_TITLE}\n\nSaved after the restored session became active.`;
 const RESTORE_SETTINGS_ARTIFACT_PATH = path.join(
   process.cwd(), '.tmp/artifacts/desktop-acceptance/backup-restore-current-settings.png'
 );
@@ -49,14 +52,28 @@ test.describe('desktop smoke', () => {
 
     const restoreButton = desktopWindow.getByRole('button', { name: RESTORE_BUTTON_NAME }).first();
     await restoreButton.click();
-    await expect(desktopWindow.getByRole('dialog').getByRole('heading', { name: RESTORE_SUCCESS_TITLE })).toBeVisible();
+    await expect(desktopWindow.getByText(RESTORE_SUCCESS_NOTICE)).toBeVisible();
     await expect(hasRestoreDriftTopic(desktopWindow)).resolves.toBe(false);
-    await expect(desktopWindow.locator('button').filter({ hasText: RESTORE_BUTTON_NAME }).first()).toBeEnabled();
-    await desktopWindow.screenshot({ path: '.tmp/artifacts/desktop-acceptance/backup-restore-success-dialog.png' });
-    await desktopWindow.getByRole('button', { name: RESTORE_DONE_BUTTON_NAME }).click();
-    await expect(desktopWindow.getByRole('heading', { name: RESTORE_SUCCESS_TITLE })).not.toBeVisible();
+    await expect(desktopWindow.getByText('Backup restore drift')).toHaveCount(0);
+    await desktopWindow.screenshot({ path: '.tmp/artifacts/desktop-acceptance/backup-restore-success-notice.png' });
+    await createPostRestoreTopic(desktopWindow);
+    await expect.poll(() => hasTopic(desktopWindow, POST_RESTORE_TOPIC_TITLE)).toBe(true);
+    await openBackupsSection(desktopWindow);
     await verifyCompressedSafetyBackup(desktopWindow);
     await expectWorkspaceShell(desktopWindow);
+
+    const stateRoot = desktopSession.target.runtimeStateRoot;
+    await desktopSession.electronApp.close();
+    const restarted = await launchDesktopSession({
+      env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot }
+    });
+    try {
+      await expectWorkspaceShell(restarted.firstWindow);
+      await expect(restarted.firstWindow.getByRole('treeitem', { name: POST_RESTORE_TOPIC_TITLE })).toBeVisible();
+      await expect(hasRestoreDriftTopic(restarted.firstWindow)).resolves.toBe(false);
+    } finally {
+      await restarted.electronApp.close();
+    }
   });
 
 });
@@ -140,6 +157,21 @@ async function createRestoreDriftTopic(desktopWindow: Page) {
   }, RESTORE_DRIFT_NODE_ID);
 }
 
+async function createPostRestoreTopic(desktopWindow: Page) {
+  const beforeId = await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  await desktopWindow.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();
+  await expect.poll(() => desktopWindow.evaluate((previousId) => {
+    const activeId = window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null;
+    return activeId && activeId !== previousId ? activeId : null;
+  }, beforeId)).not.toBeNull();
+  await expect.poll(() => desktopWindow.evaluate(() => (
+    window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0) ?? false
+  ))).toBe(true);
+  await desktopWindow.locator('.prompt-editor-host .cm-content').click();
+  await desktopWindow.keyboard.insertText(POST_RESTORE_TOPIC_CONTENT);
+  await expect(desktopWindow.getByRole('treeitem', { name: POST_RESTORE_TOPIC_TITLE })).toBeVisible();
+}
+
 async function hasRestoreDriftTopic(desktopWindow: Page) {
   return desktopWindow.evaluate(async (nodeId) => {
     const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_list_snapshot', {}) as {
@@ -147,6 +179,15 @@ async function hasRestoreDriftTopic(desktopWindow: Page) {
     };
     return nodeId in snapshot.nodesById;
   }, RESTORE_DRIFT_NODE_ID);
+}
+
+async function hasTopic(desktopWindow: Page, title: string) {
+  return desktopWindow.evaluate(async (expectedTitle) => {
+    const snapshot = await window.electronAPI.invoke('load_workspace_list_snapshot', {}) as {
+      nodesById: Record<string, { title?: string }>;
+    };
+    return Object.values(snapshot.nodesById).some((node) => node.title === expectedTitle);
+  }, title);
 }
 
 async function readPrefix(filePath: string) {
@@ -171,9 +212,6 @@ async function verifyCompressedSafetyBackup(desktopWindow: Page) {
   await desktopWindow.screenshot({
     path: '.tmp/artifacts/desktop-acceptance/compressed-safety-backup-restore-point.png'
   });
-  await expect(desktopWindow.evaluate(async (sourcePath) =>
-    globalThis.window?.electronAPI?.invoke('restore_sqlite_database', { sourcePath }),
-  safetyBackup?.filePath ?? '')).resolves.toMatchObject({ sourcePath: safetyBackup?.filePath });
 }
 
 test.describe('automatic backup restore points', () => {

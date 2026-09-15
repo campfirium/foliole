@@ -7,6 +7,7 @@ import {
   useReviewModeStartupSessionRestore
 } from './useReviewModeStartupSessionRestore';
 import { useReviewQueueDocumentPrefetch } from './useReviewQueueDocumentPrefetch';
+import { useWorkspaceRestoreCompletionNotice } from './useWorkspaceRestoreCompletionNotice';
 
 function openNotesViewForRestoredReviewMode(controller: ReturnType<typeof useWorkspaceControllerState>) {
   controller.runtime.flushPendingEditorDraft();
@@ -25,6 +26,7 @@ export function useControllerStartupEffects(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const isRestoredReviewSessionCompleted = isReviewSessionCompleted(args.ws.reviewSession);
+  useWorkspaceRestoreCompletionNotice(args.isWorkspaceHydrated);
   useReviewQueueDocumentPrefetch(args.ws.reviewSession);
   useReviewModeRestoredSessionAutoOpen({
     isReviewSessionCompleted: isRestoredReviewSessionCompleted,

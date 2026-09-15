@@ -2,7 +2,11 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../shared/platform/folderSelectionRuntimeRepository', () => ({ selectRuntimeFolder: vi.fn() }));
-vi.mock('../../../../store/workspaceRefreshScheduler', () => ({ refreshWorkspaceState: vi.fn() }));
+vi.mock('../../../../store/workspaceRestoreSession', () => ({
+  beginWorkspaceRestoreSession: vi.fn(),
+  cancelWorkspaceRestoreSession: vi.fn(),
+  completeWorkspaceRestoreSession: vi.fn()
+}));
 vi.mock('../../model/databaseBackupSettings', () => ({
   loadDatabaseBackupSettings: vi.fn(),
   saveDatabaseBackupSettings: vi.fn()
@@ -19,7 +23,11 @@ vi.mock('../../model/databaseBackups', () => ({
 }));
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
-import { refreshWorkspaceState } from '../../../../store/workspaceRefreshScheduler';
+import {
+  beginWorkspaceRestoreSession,
+  cancelWorkspaceRestoreSession,
+  completeWorkspaceRestoreSession
+} from '../../../../store/workspaceRestoreSession';
 import { listDatabaseBackups, loadBackupRetentionStatus, loadSourceDispositionSummary, restoreDatabaseBackup } from '../../model/databaseBackups';
 import { loadDatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
@@ -31,7 +39,9 @@ beforeEach(() => {
   vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
   vi.mocked(loadBackupRetentionStatus).mockResolvedValue(defaultRetentionStatus);
   vi.mocked(loadSourceDispositionSummary).mockResolvedValue({ recordCount: 0, sizeBytes: 0 });
-  vi.mocked(refreshWorkspaceState).mockReset().mockResolvedValue();
+  vi.mocked(beginWorkspaceRestoreSession).mockReset().mockResolvedValue(true);
+  vi.mocked(cancelWorkspaceRestoreSession).mockReset();
+  vi.mocked(completeWorkspaceRestoreSession).mockReset();
   vi.mocked(restoreDatabaseBackup).mockReset().mockResolvedValue({
     ok: true,
     value: {
@@ -43,7 +53,7 @@ beforeEach(() => {
   });
 });
 
-it('ends the restoring state and shows a completion dialog after workspace refresh', async () => {
+it('rebuilds the renderer session after a successful restore', async () => {
   const initialBackup = defaultBackups[0];
   if (!initialBackup) throw new Error('backup fixture is required');
   const safetySnapshot = {
@@ -62,12 +72,28 @@ it('ends the restoring state and shows a completion dialog after workspace refre
   fireEvent.click(restoreButton);
 
   await waitFor(() => expect(restoreDatabaseBackup).toHaveBeenCalledWith(defaultBackups[0]?.filePath));
-  expect(await screen.findByRole('dialog')).toHaveTextContent('Backup restored');
-  expect(screen.queryByText(/Reloading workspace/)).not.toBeInTheDocument();
-  expect(restoreButton).toBeEnabled();
-  expect(refreshWorkspaceState).toHaveBeenCalledWith('backup-restore');
-  expect(listDatabaseBackups).toHaveBeenCalledTimes(2);
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: safetySnapshot.fileName })).toBeInTheDocument();
+  await waitFor(() => expect(completeWorkspaceRestoreSession).toHaveBeenCalledWith(initialBackup.fileName));
+  expect(cancelWorkspaceRestoreSession).not.toHaveBeenCalled();
+  expect(listDatabaseBackups).toHaveBeenCalledTimes(1);
+});
+
+it('does not touch the database when pending workspace changes cannot be saved', async () => {
+  vi.mocked(beginWorkspaceRestoreSession).mockResolvedValue(false);
+  renderWithLocalization(<SettingsBackupsSection />);
+
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+
+  await screen.findByText('Backup restore did not start because recent changes could not be saved.');
+  expect(restoreDatabaseBackup).not.toHaveBeenCalled();
+});
+
+it('unfreezes the current renderer session when restore fails', async () => {
+  vi.mocked(restoreDatabaseBackup).mockResolvedValue({ ok: false, errorMessage: 'Restore failed.' });
+  renderWithLocalization(<SettingsBackupsSection />);
+
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+
+  await screen.findByText('Backup restore failed: Restore failed.');
+  expect(cancelWorkspaceRestoreSession).toHaveBeenCalledOnce();
+  expect(completeWorkspaceRestoreSession).not.toHaveBeenCalled();
 });

@@ -7,7 +7,6 @@ import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry
 import { useWorkspaceStore } from './workspaceStore';
 
 export type WorkspaceRefreshSource =
-  | 'backup-restore'
   | 'content-changed'
   | 'external-document-import'
   | 'formal-import'

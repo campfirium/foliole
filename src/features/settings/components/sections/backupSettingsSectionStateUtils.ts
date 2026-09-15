@@ -116,17 +116,20 @@ export async function runRestoreBackup(
   entry: DatabaseBackupEntry,
   setRestoringPath: (value: string) => void,
   setStatusMessage: (value: string) => void,
-  onRestored: (fileName: string) => Promise<void>
+  onRestored: (fileName: string) => Promise<void>,
+  onFailed: () => void = () => undefined
 ) {
   setStatusMessage('');
   setRestoringPath(entry.filePath);
   const result = await restoreDatabaseBackup(entry.filePath);
   if (!result) {
+    onFailed();
     setStatusMessage('Backup restore failed: Desktop runtime unavailable.');
     setRestoringPath('');
     return;
   }
   if (!result.ok) {
+    onFailed();
     setStatusMessage(`Backup restore failed: ${result.errorMessage}`);
     setRestoringPath('');
     return;

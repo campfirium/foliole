@@ -12,7 +12,6 @@ import {
 } from '../../../../shared/ui';
 import { requestBackupSearchDialogOpen } from '../../model/backupSearchDialogRequests';
 
-import { BackupRestoreSuccessDialog } from './BackupRestoreSuccessDialog';
 import { BackupRetentionRulesSection } from './BackupRetentionRulesSection';
 import {
   BackupListSection,
@@ -79,10 +78,6 @@ export function SettingsBackupsSection() {
 
   return (
     <>
-      <BackupRestoreSuccessDialog
-        fileName={state.restoreSuccessFileName}
-        onClose={state.clearRestoreSuccess}
-      />
       <BackupSearchSettings isDesktopRuntime={state.isDesktopRuntime} />
       <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
       <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>

@@ -5,7 +5,6 @@ import { appendReadingPositionTraceLog } from '../shared/platform/readingPositio
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 import {
   hasWorkspaceRuntimeRepository,
-  loadReadingProgressFromRuntime,
   loadWorkspaceListSnapshotFromRuntime
 } from '../shared/platform/workspaceRuntimeRepository';
 
@@ -21,9 +20,14 @@ import {
   appendWorkspaceHydrateFailedLog,
   appendWorkspaceHydrateStartedLog
 } from './workspacePersistStorageHydrateLogging';
+import { loadReadingProgressForHydrate } from './workspacePersistStorageReadingProgress';
 import { hydrateActiveNodeDocument } from './workspacePersistStorageRuntimeActiveDocumentHydrate';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
+import {
+  isWorkspaceRestoreHydratePending,
+  prepareWorkspaceRestoreHydrate
+} from './workspaceRestoreSession';
 
 function toPersistedStatePayload(value: unknown): string | null {
   if (!value || typeof value !== 'object') {
@@ -32,41 +36,11 @@ function toPersistedStatePayload(value: unknown): string | null {
   return JSON.stringify({ state: value, version: 0 });
 }
 
-async function loadReadingProgressForHydrate(name: string) {
-  const startedAt = Date.now();
-  return loadReadingProgressFromRuntime().then((result) => {
-    appendReadingPositionTraceLog({
-      event: 'reading-progress.hydrate-load',
-      payload: {
-        activeNodeId: result?.activeNodeId ?? null,
-        durationMs: Date.now() - startedAt,
-        nodeViewStateCount:
-          result && typeof result === 'object' && result.nodeViewStateById && typeof result.nodeViewStateById === 'object'
-            ? Object.keys(result.nodeViewStateById).length
-            : 0,
-        storageKey: name
-      },
-      timestamp: Date.now()
-    });
-    return result;
-  }).catch((error) => {
-    logRuntimeWarning('reading progress load failed during workspace hydrate', {
-      area: 'persistence',
-      action: 'hydrate_workspace_state',
-      fallback: 'merge_snapshot_without_reading_progress',
-      storageKey: name,
-      error
-    });
-    return null;
-  });
-}
-
 type RuntimeWorkspaceSnapshotLike = {
   activeNodeId: string | null;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
 };
-
 
 type RuntimeWorkspaceSnapshotInput = Omit<RuntimeWorkspaceSnapshotLike, 'nodesById'> & {
   nodesById: Record<string, unknown>;
@@ -142,15 +116,18 @@ async function loadRuntimeWorkspaceState(name: string) {
   if (!hasWorkspaceRuntimeRepository()) {
     return null;
   }
-
+  const isRestoreHydrate = prepareWorkspaceRestoreHydrate();
   const snapshotStartedAt = Date.now();
   reportWorkspaceHydrateBootStage('runtime_load_start');
   const [snapshot, readingProgress] = await Promise.all([
     loadWorkspaceListSnapshotFromRuntime({
       includePdfOpenings: false
     }),
-    loadReadingProgressForHydrate(name)
+    loadReadingProgressForHydrate(name, isRestoreHydrate)
   ]);
+  if (isRestoreHydrate && !snapshot) {
+    throw new Error('restored workspace snapshot could not be loaded');
+  }
   reportWorkspaceHydrateBootStage('runtime_load_complete', {
     durationMs: Date.now() - snapshotStartedAt,
     nodeCount: snapshot ? Object.keys(snapshot.nodesById).length : 0
@@ -191,10 +168,9 @@ async function loadRuntimeWorkspaceState(name: string) {
     mergedActiveNodeId: mergedSnapshot?.activeNodeId ?? null,
     nodeViewStateCount: countSnapshotNodeViewStates(mergedSnapshot)
   });
-  if (!mergedSnapshot) {
-    return null;
-  }
-  return hydrateActiveNodeDocument(name, mergedSnapshot, hydrateDocumentNodeId);
+  return mergedSnapshot
+    ? hydrateActiveNodeDocument(name, mergedSnapshot, hydrateDocumentNodeId)
+    : null;
 }
 
 export async function getRuntimeWorkspaceState(name: string) {
@@ -224,6 +200,7 @@ export async function getRuntimeWorkspaceState(name: string) {
       storageKey: name,
       error
     });
+    if (isWorkspaceRestoreHydratePending()) throw error;
     return null;
   }
 }

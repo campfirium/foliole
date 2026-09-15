@@ -184,6 +184,11 @@ export function listPendingNodeSyncSnapshots() {
   );
 }
 
+export function discardPendingWorkspaceNodeSync() {
+  writePendingSnapshot({ nodesById: {} });
+  optimisticPendingNodeSyncById.clear();
+}
+
 export function mergePendingNodeSyncIntoSnapshot(
   snapshot: WorkspaceRuntimeSnapshot | null
 ): WorkspaceRuntimeSnapshot | null {

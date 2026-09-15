@@ -210,5 +210,9 @@ export function mergePendingReadingProgress(
 }
 
 export function resetPendingDurableMutationsForTests() {
+  discardPendingWorkspaceDurableMutations();
+}
+
+export function discardPendingWorkspaceDurableMutations() {
   getStorage()?.removeItem(STORAGE_KEY);
 }
