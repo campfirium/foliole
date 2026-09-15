@@ -10,7 +10,7 @@ import {
 } from '../sync/syncGroupMemberStateStore';
 
 import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint';
-import { createSignedRequestHeaders } from './signedRequest';
+import { prepareNativeCompanionWorkgroupRequest } from './signedRequest';
 
 export const COMPANION_SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 
@@ -18,12 +18,11 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
   if (!isNativeCompanionNetworkRuntime()) return { localExited: false, peerRemoved: false };
   if (!target.deviceId || !target.groupId) throw new Error('sync_group_member_state_target_missing');
   const state = await loadCompanionSyncGroupMemberState();
-  const bodyText = JSON.stringify(state);
-  const headers = await createSignedRequestHeaders({
-    bodyText, endpointUrl: target.endpointUrl, method: 'POST',
+  const prepared = await prepareNativeCompanionWorkgroupRequest({
+    bodyText: JSON.stringify(state), endpointUrl: target.endpointUrl, method: 'POST',
     pathWithQuery: COMPANION_SYNC_GROUP_MEMBER_STATE_PATH
   });
-  const response = await post(target.endpointUrl, headers, bodyText);
+  const response = await post(target.endpointUrl, prepared.headers, prepared.body);
   if (response.status >= 400) throw new Error(`sync_group_member_state_failed_${response.status}`);
   const applied = await applyCompanionSyncGroupMemberState(
     parseSyncGroupMemberState(JSON.parse(response.body)) as SyncGroupMemberStatePayload,

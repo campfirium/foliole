@@ -17,7 +17,7 @@ vi.mock('../sync/syncGroupMemberStateStore', () => ({
   isCompanionSyncGroupDeviceBlocked: mocks.blocked,
   loadCompanionSyncGroupMemberState: mocks.load
 }));
-vi.mock('./signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
+vi.mock('./signedRequest', () => ({ prepareNativeCompanionWorkgroupRequest: mocks.sign }));
 
 import { exchangeCompanionSyncGroupMemberState } from './companionSyncGroupMemberState';
 
@@ -32,7 +32,7 @@ const state = {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.load.mockResolvedValue(state);
-  mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
+  mocks.sign.mockResolvedValue({ body: 'encrypted-member-state', headers: { 'X-Signature': 'signed' } });
   mocks.request.mockResolvedValue({ body: JSON.stringify({
     ...state, sender_device_identity_key: 'device-desktop'
   }), status: 200 });
@@ -49,6 +49,7 @@ it('persists member state before allowing companion data sync', async () => {
     bodyText: JSON.stringify(state), pathWithQuery: '/sync-group/member-state'
   }));
   expect(mocks.request).toHaveBeenCalledWith(expect.objectContaining({
+    body: 'encrypted-member-state', headers: { 'X-Signature': 'signed' },
     method: 'POST', url: 'http://mac:38641/sync-group/member-state'
   }));
   expect(mocks.apply).toHaveBeenCalledWith(expect.objectContaining({
