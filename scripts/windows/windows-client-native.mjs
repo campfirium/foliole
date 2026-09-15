@@ -11,7 +11,7 @@ import { restartRuntimeClient } from './windows-client-native-runtime-restart.mj
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
 import { startNativeDevRunner } from './windows-client-native-start-runner.mjs';
 import { createStatusPrinter } from './windows-client-native-status.mjs';
-import { listRepoElectronPids, stopNativeClient } from './windows-client-native-stop.mjs';
+import { stopNativeClient } from './windows-client-native-stop.mjs';
 import { readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
 import { dispatchWindowsNativeClientAction } from './windows-client-native-interactive.mjs';
@@ -91,10 +91,6 @@ async function startClient({ print = true } = {}) {
     }
     await stopClient({ print: false });
   } else {
-    const repoElectronPids = await listRepoElectronPids(repoRoot);
-    if (repoElectronPids.length > 0) {
-      throw new Error(`untrusted repo runtime still running electron_pids=${repoElectronPids.join(',')}`);
-    }
     await stopClient({ print: false });
   }
   await resetMarkers();

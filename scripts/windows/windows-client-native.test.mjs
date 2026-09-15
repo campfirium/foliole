@@ -41,10 +41,10 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');
   expect(script).toContain('await stopClient({ print: false })');
-  expect(script).toContain('listRepoElectronPids(repoRoot)');
-  expect(script).toContain('untrusted repo runtime still running');
+  expect(script).not.toContain('listRepoElectronPids(repoRoot)');
+  expect(script).not.toContain('untrusted repo runtime still running');
   expect(script).not.toContain('listRepoDevShellPids(repoRoot)');
-  expect(script).not.toContain('} else {\n    await stopClient({ print: false });\n  }');
+  expect(script).toContain('} else {\n    await stopClient({ print: false });\n  }');
   expect(script).toContain('stopNativeClient');
   expect(script).toContain('removeShellRestartRequest(shellRestartRequestFile)');
   expect(startScript).toContain('Start-Process');
