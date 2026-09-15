@@ -83,7 +83,8 @@ function assertActiveThreeMemberInput(overview, facts, baseline) {
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   return runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
     appId: MULTI_DEVICE_ANDROID_APP_ID, buildIdentity: runId,
-    env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute, paths, serial: A5_SERIAL });
+    env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
+    installMain: false, paths, serial: A5_SERIAL });
 }
 
 function openMacosSession({ env, owned, repoRoot }) {

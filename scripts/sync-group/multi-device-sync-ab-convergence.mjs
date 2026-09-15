@@ -128,7 +128,7 @@ async function syncDesktopFact({ env, evidenceRoot, execute, factId, paths, runI
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', appId: APP_ID,
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
-    paths, serial: A5_SERIAL });
+    installMain: false, paths, serial: A5_SERIAL });
   const manifest = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'));
   const receipt = manifest.receipt;
   const factText = receipt?.factText;

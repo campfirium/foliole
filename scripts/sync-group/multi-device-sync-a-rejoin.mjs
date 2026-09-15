@@ -46,7 +46,7 @@ function androidSnapshot(paths) {
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
     appId: APP_ID, buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
-    paths, serial: A5_SERIAL });
+    installMain: false, paths, serial: A5_SERIAL });
   const receipt = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8')).receipt;
   if (typeof receipt?.factText !== 'string' || !receipt.factText) {
     throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact receipt is incomplete.');
