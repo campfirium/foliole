@@ -25,12 +25,18 @@ const workspaceSyncMock = vi.hoisted(() => ({
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
+const memberStateMock = vi.hoisted(() => ({
+  exchangeCompanionSyncGroupMemberState: vi.fn(async () => ({
+    localExited: false, peerRemoved: false
+  }))
+}));
 
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
 vi.mock('../shared/platform/companionSyncObjects', () => ({
   loadCompanionSyncNodeConflicts: syncObjectsMock.loadCompanionSyncNodeConflicts
 }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
+vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => memberStateMock);
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({ reason, run_id: runId, runtime: 'android' }))
 }));

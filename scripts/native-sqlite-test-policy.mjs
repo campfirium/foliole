@@ -40,6 +40,8 @@ const controlledElectronSqliteTests = [
   'electron/database/publicDesktopDatabaseUpgrades.test.ts',
   'electron/database/readwiseApiCompanionMigration.test.ts',
   'electron/database/readwiseExternalReferenceCompanionMigration.test.ts',
+  'electron/database/readwiseSourceModeCompletionMigration.test.ts',
+  'electron/database/readwiseSourceModeMigration.test.ts',
   'electron/database/sqliteConnectionCoordinator.maintenance.test.ts',
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
@@ -52,7 +54,10 @@ const controlledElectronSqliteTests = [
   'electron/database/syncGroupStore.test.ts',
   'electron/database/syncGroupLocalIdentityRekey.test.ts',
   'electron/database/syncGroupHostsMigration.test.ts',
+  'electron/database/syncGroupMemberStateStore.test.ts',
+  'electron/database/syncGroupRemovalMigration.test.ts',
   'electron/database/systemEntryDisplayNamesSyncContract.test.ts',
+  'electron/database/syncStateBaseContentHashMigration.test.ts',
   'electron/database/workspaceSearchSidecar.test.ts',
   'electron/ipc/backupSearchWorker.test.ts',
   'electron/sync/syncPackNodeApplyParentOrder.test.ts',
@@ -86,6 +91,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncGroupStore.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
   'src/shared/platform/companion/sync/syncGroupStore.test.ts',
+  'src/shared/platform/companion/sync/syncGroupMemberStateStore.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 

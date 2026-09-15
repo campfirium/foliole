@@ -18,7 +18,7 @@ it('serves one active Group/Device provider surface on the stable LAN port', asy
     '/companion/sync-pack', '/companion/content-blobs', '/companion/content-blob',
     '/companion/attachment-resource'
   ]) expect(server).toContain(`path.equals("${route}")`);
-  expect(server).not.toMatch(/pairing|member|authorization_id|timeline_id/iu);
+  expect(server).not.toMatch(/pairing|authorization_id|timeline_id/iu);
   expect(server).toMatch(/joins\.receive[\s\S]*stateChanged\.run\(\)/u);
 });
 

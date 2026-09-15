@@ -1,6 +1,8 @@
+import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
+import { tableExists } from './numberedMigrationHelpers.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
@@ -23,6 +25,19 @@ import {
 } from './readwiseSourceModeMigration.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+
+const SYNC_DELIVERY_TRIGGER_TARGETS = [
+  'sync_object_state',
+  'sync_object_state',
+  'sync_group_devices',
+  'review_log'
+] as const;
+
+function installAvailableSyncDeliveryTriggers(sqlite: DatabaseMigrationTarget) {
+  SYNC_DELIVERY_TRIGGER_STATEMENTS.forEach((statement, index) => {
+    if (tableExists(sqlite, SYNC_DELIVERY_TRIGGER_TARGETS[index]!)) sqlite.exec(statement);
+  });
+}
 
 export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 70, migrate: migrateHostPermanentState },
@@ -52,7 +67,7 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS.slice(-3)) sqlite.exec(statement);
       for (const name of ['trg_sync_delivery_state_insert', 'trg_sync_delivery_state_update',
         'trg_sync_delivery_review_insert']) sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
-      for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+      installAvailableSyncDeliveryTriggers(sqlite);
     }
   }
 ];
