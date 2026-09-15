@@ -47,7 +47,7 @@ const PROVIDER_ACTIONS = Object.freeze({
   'multi-device-sync-a-rejoin': {
     controllerAction: 'windows-c-a-rejoin', label: 'A-rejoin', missingPrefix: 'windows_a_rejoin',
     progressFactPattern: 'a-rejoin', progressMilestones: [
-      'c-native-suspended', 'c-baseline-captured', 'c-session-opened', 'c-a-b-facts-received',
+      'c-native-suspended', 'c-session-opened', 'c-a-b-facts-received',
       'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'
     ]
   },
@@ -160,8 +160,7 @@ export function startWindowsSyncGroupProvider({
     }, timeoutMs: spec.timeoutMs ?? 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
   let releaseCount = 0;
-  const releaseLimit = ['multi-device-sync-a-rejoin', 'two-device-sync-provider'].includes(action)
-    ? 2 : 1;
+  const releaseLimit = action === 'two-device-sync-provider' ? 2 : 1;
   const release = async (status) => {
     if (releaseCount >= releaseLimit) {
       throw controllerFailure('Windows C provider release limit exceeded.',

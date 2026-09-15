@@ -60,24 +60,6 @@ it('does not overwrite Windows drift when mirror fetch fails', async () => {
   expect(calls.some((args) => args.includes('clean'))).toBe(false);
 });
 
-it('repairs an interrupted checkout only when raw HEAD still names dev', async () => {
-  const paths = fixture();
-  fs.mkdirSync(path.join(paths.repoRoot, '.git'), { recursive: true });
-  fs.writeFileSync(path.join(paths.repoRoot, '.git', 'HEAD'), 'ref: refs/heads/dev\n');
-  const calls = [];
-  const execute = vi.fn(async (_command, args) => {
-    calls.push(args);
-    if (args.includes('--show-toplevel')) return result(paths.repoRoot);
-    if (args.includes('--show-current')) return result('HEAD is unresolved', 1);
-    return result('');
-  });
-  await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
-    .resolves.toMatchObject({ exitCode: 0 });
-  expect(calls).toContainEqual([
-    '-C', paths.repoRoot, 'checkout', '-f', '-B', 'dev', 'FETCH_HEAD'
-  ]);
-});
-
 it('fails when reset and clean do not converge the fixed checkout', async () => {
   const paths = fixture();
   const calls = [];

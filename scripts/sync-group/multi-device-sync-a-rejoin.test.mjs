@@ -2,9 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import {
-  createARejoinProofRequirements, restartARejoinAndroidProvider
-} from './multi-device-sync-a-rejoin.mjs';
+import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
 import {
   assertThreeDeviceProof, waitForThreeDeviceProof
 } from './multi-device-sync-three-device-proof.mjs';
@@ -52,15 +50,6 @@ it('requires the exact pre-join C fact and hash attachment on every restarted ho
     runId: 'run-1', windows: desktop })).toThrow('exact journey attachment');
 });
 
-it('does not require another scenario pre-join receipt during sync from zero', () => {
-  expect(createARejoinProofRequirements(ids, {
-    androidFactId: 'fact-b-before-join', desktopFactId: 'fact-a-before-join'
-  }, null)).toEqual({
-    requiredAttachmentId: undefined,
-    requiredIds: { ...ids, preJoinA: 'fact-a-before-join', preJoinB: 'fact-b-before-join' }
-  });
-});
-
 it('waits for the exact restarted fact instead of accepting a transient older set', async () => {
   let inspections = 0;
   const proof = await waitForThreeDeviceProof({ ids, intervalMs: 0, inspect: async () => {
@@ -87,14 +76,4 @@ it('ends the stale provider lifecycle before every staged Android restart', asyn
     stopProvider: async () => { order.push('stopped'); }
   });
   expect(order).toEqual(['stopped', 'started', 'ready']);
-});
-
-it('binds every staged Android restart to the isolated acceptance application', async () => {
-  let observedAppId;
-  await restartARejoinAndroidProvider({
-    env: {}, execute: async () => ({ code: 0 }), paths: { adb: 'adb' },
-    startProvider: async ({ appId }) => { observedAppId = appId; },
-    stopProvider: async () => {}
-  });
-  expect(observedAppId).toBe('com.foliole.android.acceptance');
 });

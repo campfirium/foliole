@@ -60,11 +60,10 @@ async function createAttachments(session, nodes, dataset, onProgress) {
       bytesBase64: bytes.toString('base64'), mimeType: 'image/png', nodeId,
       originalName: `sync-from-zero-${String(index + 1).padStart(3, '0')}.png`
     });
-    if (result?.status !== 'imported' || typeof result.storage_key !== 'string') {
+    if (result?.status !== 'imported') {
       throw new Error('Desktop product command did not persist a sync-from-zero attachment.');
     }
-    attachments.push({ attachmentId: result.attachment_id, sizeBytes: bytes.length,
-      storageKey: result.storage_key });
+    attachments.push({ attachmentId: result.attachment_id, sizeBytes: bytes.length });
     if ((index + 1) % 8 === 0 || index + 1 === dataset.attachmentCount) {
       onProgress?.({ completed: index + 1, phase: 'attachments', total: dataset.attachmentCount });
     }
@@ -76,8 +75,8 @@ export async function createSyncFromZeroDataset({ dataset = SYNC_FROM_ZERO_DATAS
   now = () => new Date(), onProgress, session }) {
   const nodes = await createNodes(session, dataset, now, onProgress);
   const attachments = await createAttachments(session, nodes, dataset, onProgress);
-  for (const { storageKey } of attachments) {
-    const resolved = await session.invoke('resolve_attachment_resource', { storage_key: storageKey });
+  for (const { attachmentId } of attachments) {
+    const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });
     if (resolved?.status !== 'ready') throw new Error('Desktop dataset attachment resource is unavailable.');
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -87,8 +86,7 @@ export async function createSyncFromZeroDataset({ dataset = SYNC_FROM_ZERO_DATAS
     attachmentBytes: attachments.reduce((sum, item) => sum + item.sizeBytes, 0),
     completedAt: new Date().toISOString(), contentHashes: nodes.map(({ contentHash }) => contentHash),
     nodeCount: nodes.length, nodeIds: nodes.map(({ nodeId }) => nodeId),
-    resultStatus: 'success', schemaVersion: 1,
-    storageKeys: attachments.map(({ storageKey }) => storageKey) };
+    resultStatus: 'success', schemaVersion: 1 };
   fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
   return { ...receipt, receiptPath };
 }

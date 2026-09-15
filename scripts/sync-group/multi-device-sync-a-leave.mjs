@@ -71,7 +71,7 @@ function assertMacosRetention(before, after, factIds) {
 
 function assertActiveThreeMemberInput(overview, baseline) {
   const group = overview.sync_group;
-  if (group?.group_id !== baseline.groupId || (group.timeline_id ?? null) !== baseline.timelineId
+  if (group?.group_id !== baseline.groupId || group.timeline_id !== baseline.timelineId
       || group.local_member_state !== 'active'
       || group.members.filter(({ state }) => state === 'active').length !== 3) {
     throw new Error('macOS A does not have the required three-member input.');

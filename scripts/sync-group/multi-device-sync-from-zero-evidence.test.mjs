@@ -49,13 +49,12 @@ it('reads dataset content identity through the current nodes body blob schema', 
 });
 
 it('uses the desktop body blob identity when list content is intentionally empty', async () => {
-  const receipt = { attachmentIds: ['attachment-1'], contentHashes: ['body-1'], nodeIds: ['node-1'],
-    storageKeys: [`${'1'.repeat(64)}.png`] };
+  const receipt = { attachmentIds: ['attachment-1'], contentHashes: ['body-1'], nodeIds: ['node-1'] };
   const session = {
     invoke: async (channel) => channel === 'load_workspace_list_snapshot'
       ? { nodesById: { 'node-1': { bodyBlobHash: 'body-1', content: '' } } }
       : { status: 'ready' },
-    load: async () => ({ sync_group: { devices: [{ state: 'active' }], group_id: 'group-1',
+    load: async () => ({ sync_group: { group_id: 'group-1', members: [{ state: 'active' }],
       timeline_id: 'timeline-1' } })
   };
   await expect(inspectMacosSyncFromZeroDataset(session, receipt)).resolves.toMatchObject({

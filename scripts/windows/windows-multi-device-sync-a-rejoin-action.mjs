@@ -4,7 +4,6 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
-import { syncDesktopMemberAfterElection } from '../sync-group/multi-device-sync-topology.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 
 function freshFactIds(facts, excluded) {
@@ -14,7 +13,7 @@ function freshFactIds(facts, excluded) {
 
 function assertComplete(facts, ids) {
   if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
-      || !facts.localGroupId || facts.missingAttachmentCount !== 0
+      || !facts.localGroupId || !facts.localTimelineId || facts.missingAttachmentCount !== 0
       || facts.missingContentBlobCount !== 0
       || Object.values(ids).some((id) => facts.facts?.[id] !== true)) {
     throw new Error(`Windows C A-rejoin state is incomplete: ${JSON.stringify(facts)}`);
@@ -66,8 +65,6 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
   try {
     const initial = await inspect(execute, paths);
     const excluded = new Set(Object.keys(initial.journeyFacts ?? {}));
-    reportProgress({ factId: 'a-rejoin', milestone: 'c-baseline-captured' });
-    await waitForConsumerRelease({ action: 'multi-device-sync-a-rejoin', repoRoot: paths.repoRoot });
     const continuous = await withSession(paths, evidenceRoot, openSession, async ({ page }) => {
       const ab = await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B']);
       reportProgress({ factId: 'a-rejoin', milestone: 'c-a-b-facts-received' });
@@ -75,10 +72,6 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
         invoke: (command, args) => invoke(page, command, args)
       } });
       reportProgress({ factId: 'a-rejoin', milestone: 'c-fact-created' });
-      await syncDesktopMemberAfterElection({
-        loadOverview: () => invoke(page, 'load_sync_group_overview'),
-        sync: () => invoke(page, 'sync_companion_now')
-      });
       const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;

@@ -2,12 +2,8 @@
 
 import { expect, it, vi } from 'vitest';
 
-import {
-  completeJoinUntilAccepted, runWindowsSyncFromZeroJourney, waitForCursorCommitSignal
-} from './windows-multi-device-sync-from-zero-action.mjs';
+import { runWindowsSyncFromZeroJourney } from './windows-multi-device-sync-from-zero-action.mjs';
 import { discoverUniqueGroup } from './windows-sync-group-recovery-action.mjs';
-
-/* global AbortController */
 
 const dataset = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
   datasetCachedContentBlobCount: 40, datasetContentBlobCount: 40, datasetNodeCount: 40 };
@@ -16,30 +12,14 @@ function session(events, name) {
   return { app: { close: async () => { events.push(`${name}-closed`); } }, page: { name } };
 }
 
-it('reports runtime evidence when the first cursor commit stalls', async () => {
-  await expect(waitForCursorCommitSignal(new Promise(() => undefined), {
-    runtimeLog: () => 'sync pack pending', timeoutMs: 1
-  })).rejects.toThrow('runtime=sync pack pending');
-});
-
-it('retries join completion until the provider acceptance becomes available', async () => {
-  const invoke = vi.fn()
-    .mockRejectedValueOnce(new Error('sync_group_join_request_pending'))
-    .mockResolvedValueOnce({});
-  await completeJoinUntilAccepted({}, new AbortController().signal, {
-    invoke, pause: async () => {}
-  });
-  expect(invoke).toHaveBeenCalledTimes(2);
-});
-
 it('selects the fixed Android provider without occupying unrelated desktop groups', async () => {
   const candidates = [
-    { group_id: 'user-group', provider_platform: 'darwin' },
-    { group_id: 'acceptance-group', provider_platform: 'android-capacitor' }
+    { group_id: 'user-group', provider_device_kind: 'darwin' },
+    { group_id: 'acceptance-group', provider_device_kind: 'android-capacitor' }
   ];
   const page = { evaluate: vi.fn(async () => ({ join_candidates: candidates })) };
   await expect(discoverUniqueGroup(page, 10,
-    (candidate) => candidate.provider_platform === 'android-capacitor'
+    (candidate) => candidate.provider_device_kind === 'android-capacitor'
   )).resolves.toMatchObject({ group_id: 'acceptance-group' });
 });
 
@@ -55,9 +35,8 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
     closeSession: async (current, options) => {
       events.push(`${current.page.name}-${options?.force ? 'interrupted' : 'closed'}`);
     },
-    completeJoin: async () => { events.push('join-completed'); },
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1',
-      provider_platform: 'android-capacitor' }),
+      provider_device_kind: 'android-capacitor' }),
     enable: async () => { events.push('enabled'); },
     inspect: async () => partial,
     openSession: async (options) => { sessionOptions.push(options); return sessions.shift(); },
@@ -75,7 +54,7 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
   expect(result).toMatchObject({ finalFacts: { receiveCursor: 90 },
     initialFacts: { receiveCursor: 0 }, interruptedFacts: { receiveCursor: 80 },
     restartedFacts: { receiveCursor: 80 } });
-  expect(events).toEqual(['enabled', 'join-requested', 'join-completed', 'cursor-committed',
+  expect(events).toEqual(['enabled', 'join-requested', 'cursor-committed',
     'first-interrupted', 'restarted-closed']);
   expect(sessionOptions).toEqual([{ holdAfterCursorCommit: true }, undefined]);
   expect(progress).toEqual([
@@ -95,7 +74,6 @@ it('rejects a restart that falls behind the committed cursor', async () => {
     .mockResolvedValueOnce({ ...partial, receiveCursor: 0 });
   await expect(runWindowsSyncFromZeroJourney({
     closeSession: async () => {},
-    completeJoin: async () => {},
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1' }),
     enable: vi.fn(), inspect,
     openSession: async () => sessions.shift(), reportProgress: vi.fn(), requestJoin: vi.fn(),
@@ -110,7 +88,6 @@ it('rejects a committed cursor without persisted three-member membership', async
     activeMemberCount: 2, localGroupId: 'group-1', localMemberState: 'active' };
   await expect(runWindowsSyncFromZeroJourney({
     closeSession: vi.fn(),
-    completeJoin: async () => {},
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1' }),
     enable: vi.fn(), inspect: async () => partial,
     openSession: async () => session([], 'first'), reportProgress: vi.fn(), requestJoin: vi.fn(),

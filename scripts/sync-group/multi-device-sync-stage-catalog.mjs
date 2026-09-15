@@ -1,5 +1,4 @@
 import { digest } from './multi-device-sync-contract.mjs';
-import { SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS } from './sync-from-zero-contract.mjs';
 
 /* global structuredClone */
 
@@ -67,8 +66,7 @@ const stages = [
       'windows-structure-batches-complete', 'windows-content-batches-complete',
       'windows-attachment-batches-complete', 'three-host-converged',
       'provider-resources-preserved', 'peer-progress-converged'],
-    outputs: ['fresh_client_converged'],
-    progressDeadlineMs: SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS, siblings: [] }
+    outputs: ['fresh_client_converged'], progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE, siblings: [] }
 ];
 
 export function assertStageTiming(stage) {

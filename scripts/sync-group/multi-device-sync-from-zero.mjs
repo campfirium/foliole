@@ -6,11 +6,10 @@ import {
   runMacosA5SyncGroupApproval, startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
-import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
+import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-action.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
-import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import {
   assertSyncFromZeroFinalProof, inspectMacosSyncFromZeroDataset,
   waitForAndroidSyncFromZeroDataset, waitForAndroidSyncFromZeroProofSnapshot
@@ -68,17 +67,16 @@ function windowsProgressCapture(reportActivity) {
 }
 
 async function syncDatasetToAndroid(context) {
-  await stopMacosA5SyncGroupApprovalProvider({ ...context, appId: MULTI_DEVICE_ANDROID_APP_ID });
+  await stopMacosA5SyncGroupApprovalProvider(context);
   context.reportProgress('b-provider-stopped');
   await startMacosA5SyncGroupApprovalProvider({
-    ...context, appId: MULTI_DEVICE_ANDROID_APP_ID,
-    onProviderStopped: async () => {}, onReady: async () => {}
+    ...context, onProviderStopped: async () => {}, onReady: async () => {}
   });
   context.reportProgress('b-anchor-sync-ready');
   const snapshot = await waitForAndroidSyncFromZeroDataset(
     context.paths, context.reportActivity, context.reportProgress
   );
-  await stopMacosA5SyncGroupApprovalProvider({ ...context, appId: MULTI_DEVICE_ANDROID_APP_ID });
+  await stopMacosA5SyncGroupApprovalProvider(context);
   return snapshot;
 }
 
@@ -96,8 +94,7 @@ async function admitWindowsFromZero(context) {
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
   const approvalWork = runMacosA5SyncGroupApproval({ allowControlledCancellation: true,
-    appId: MULTI_DEVICE_ANDROID_APP_ID, execute: context.execute,
-    instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
+    execute: context.execute, instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
     onProviderStopped: async () => {}, onReady: async () => {
       windowsWork = runWindows(); context.reportProgress('windows-join-started'); windowsStarted();
     } });
@@ -132,13 +129,13 @@ function createContext(options) {
 export async function proveSyncFromZero(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
-  let session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
+  let session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
     libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
     runtimeRoot: context.owned.root
   }));
   try {
     const overview = await session.enable();
-    if (overview.sync_group?.devices.filter(({ state }) => state === 'active').length !== 2) {
+    if (overview.sync_group?.members.filter(({ state }) => state === 'active').length !== 2) {
       throw productFailure('macos-a', 'a_b_group_input_missing', 'A/B Sync Group input is missing.');
     }
     const datasetReceipt = await createSyncFromZeroDataset({
@@ -155,11 +152,11 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('windows-attachment-batches-complete');
     const androidAfterC = await waitForAndroidSyncFromZeroProofSnapshot(context.paths);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
-      requirePreJoinMaterial: false, runId: context.runId,
+      runId: context.runId,
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');
-    session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
+    session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
       runtimeRoot: context.owned.root
     }));

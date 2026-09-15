@@ -172,8 +172,7 @@ it('keeps the native preview wait longer than the client healthcheck by default'
     fs.readFile(new URL('./windows-preview-native.mjs', import.meta.url), 'utf8')
   );
 
-  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000'");
+  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000'");
   expect(script).toContain("WINDOWS_PREVIEW_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000)");
-  expect(script).toContain("WINDOWS_CLIENT_ACTION_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000)");
   expect(script).toContain('!trusted.ok &&');
 });

@@ -6,15 +6,13 @@ import {
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import {
-  assertSyncFromZeroDatasetFacts, syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET,
-  SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS
+  assertSyncFromZeroDatasetFacts, syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
 } from './sync-from-zero-contract.mjs';
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
-import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { assertExactDatasetConvergence } from './sync-scenario-predicate.mjs';
 
-const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
+const APP_ID = 'com.foliole.android';
 
 function peerProgress(database) {
   return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
@@ -84,9 +82,7 @@ export async function waitForAndroidSyncFromZeroProofSnapshot(paths, {
 
 export async function waitForAndroidSyncFromZeroDataset(paths, reportActivity, reportProgress) {
   const deadline = Date.now() + 12 * 60_000;
-  const observe = createSyncProgressWatchdog({
-    label: 'Android B sync-from-zero dataset', stallMs: SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS
-  });
+  const observe = createSyncProgressWatchdog({ label: 'Android B sync-from-zero dataset', stallMs: 60_000 });
   let structureReported = false;
   let contentReported = false;
   let attachmentsReported = false;
@@ -122,14 +118,14 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   const contentHashes = datasetReceipt.nodeIds.map((id) => snapshot.nodesById?.[id]?.bodyBlobHash ?? '');
   let readyAttachmentCount = 0;
-  for (const storageKey of datasetReceipt.storageKeys) {
-    const resolved = await session.invoke('resolve_attachment_resource', { storage_key: storageKey });
+  for (const attachmentId of datasetReceipt.attachmentIds) {
+    const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });
     if (resolved?.status === 'ready') readyAttachmentCount += 1;
   }
   const overview = await session.load();
   const nodeIds = datasetReceipt.nodeIds.filter((id) => snapshot.nodesById?.[id]);
   return {
-    activeMemberCount: overview.sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
+    activeMemberCount: overview.sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
     datasetDigest: syncFromZeroDatasetDigest({
       attachmentIds: datasetReceipt.attachmentIds, contentHashes, nodeIds
     }),

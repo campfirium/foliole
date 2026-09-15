@@ -115,49 +115,6 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   expect(created).toBeLessThan(identities);
 });
 
-it('creates fresh A and B facts after the Windows baseline and before its session opens', () => {
-  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
-  const baseline = source.indexOf("await windowsProvider.waitForProgress('c-baseline-captured')");
-  const aFact = source.indexOf('await createDesktopSyncGroupJourneyFact');
-  const bFact = source.indexOf('await createAndroidFact');
-  const session = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
-  expect(baseline).toBeGreaterThan(-1);
-  expect(baseline).toBeLessThan(aFact);
-  expect(baseline).toBeLessThan(bFact);
-  expect(aFact).toBeLessThan(session);
-  expect(bFact).toBeLessThan(session);
-});
-
-it('waits for fresh A and B on macOS before releasing the Windows session', () => {
-  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
-  const converged = source.indexOf("waitUntil('macOS A fresh A/B fact identities'");
-  const release = source.indexOf("await windowsProvider.release('consumer_complete')");
-  expect(converged).toBeGreaterThan(-1);
-  expect(converged).toBeLessThan(release);
-});
-
-it('creates the fresh Android fact without replacing its joined application data', () => {
-  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
-  const create = source.slice(source.indexOf('async function createAndroidFact'),
-    source.indexOf('async function macosFacts'));
-  expect(create).toContain('installMain: false');
-});
-
-it('syncs restarted macOS after the restarted Windows provider before requiring all fresh facts', () => {
-  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
-  const created = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
-  const macosRestarted = source.indexOf('await session.close(); session = null;', created);
-  const windowsRestarted = source.indexOf(
-    "await windowsProvider.waitForProgress('c-session-restarted')", created
-  );
-  const synced = source.indexOf('await syncDesktopMemberAfterElection', created);
-  const converged = source.indexOf("waitUntil('macOS A fresh fact identities'", created);
-  expect(created).toBeLessThan(macosRestarted);
-  expect(macosRestarted).toBeLessThan(windowsRestarted);
-  expect(windowsRestarted).toBeLessThan(synced);
-  expect(synced).toBeLessThan(converged);
-});
-
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);

@@ -22,7 +22,7 @@ function factIdsSince(facts, notBefore) {
 
 function assertInitialState(facts) {
   if (![2, 3].includes(facts.activeMemberCount) || facts.localMemberState !== 'active'
-      || !facts.localGroupId) {
+      || !facts.localGroupId || !facts.localTimelineId) {
     throw new Error(`Windows C does not have the required survivor input: ${JSON.stringify(facts)}`);
   }
 }

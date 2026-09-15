@@ -19,9 +19,7 @@ export function captureWindowsSyncRuntimeProgress(child, logPath) {
 
 export function readWindowsSyncRuntimeLog(evidenceRoot) {
   const logPath = path.join(evidenceRoot, 'sync-group-runtime.log');
-  if (!fs.existsSync(logPath)) return 'unavailable';
-  const lines = fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u);
-  const relevant = lines.filter((line) =>
-    /\[sync-group\]|sync_group_|\b(?:cause|error):/u.test(line));
-  return (relevant.length > 0 ? relevant : lines).slice(-12).join(' | ');
+  return fs.existsSync(logPath)
+    ? fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).slice(-8).join(' | ')
+    : 'unavailable';
 }
