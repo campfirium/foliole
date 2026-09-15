@@ -37,7 +37,7 @@ export function applyCompanionSyncGroupMemberState(
       for (const removal of await loadRemovals(tx, incoming.group_id)) {
         if (removal.superseded_at || removal.completed_at) continue;
         const targetsLocal = removal.target_device_identity_key === context.localDeviceId;
-        await confirm(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
+        await persistRemovalConfirmation(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
           targetsLocal ? 'target_exit' : 'enforced', now);
         await tx.run('DELETE FROM sync_delivery_receipts WHERE peer_id = ?',
           [removal.target_device_identity_key]);
@@ -117,7 +117,7 @@ async function mergeRemoval(db: DbPort, groupId: string, removal: SyncGroupRemov
     throw new Error('sync_group_removal_decision_mismatch');
   }
   for (const item of removal.confirmations) {
-    await confirm(db, groupId, removal.decision_id, item.confirming_device_identity_key,
+    await persistRemovalConfirmation(db, groupId, removal.decision_id, item.confirming_device_identity_key,
       item.kind, item.confirmed_at);
   }
 }
@@ -158,7 +158,7 @@ async function mergeDevice(db: DbPort, groupId: string, device: SyncGroupDeviceP
     device.last_seen_at, device.updated_at]);
 }
 
-async function confirm(db: DbPort, groupId: string, decisionId: string, deviceId: string,
+async function persistRemovalConfirmation(db: DbPort, groupId: string, decisionId: string, deviceId: string,
   kind: 'enforced' | 'target_exit', confirmedAt: string) {
   await db.run(`INSERT OR IGNORE INTO sync_group_removal_confirmations
     (group_id, decision_id, confirming_device_identity_key, kind, confirmed_at) VALUES (?, ?, ?, ?, ?)`,
