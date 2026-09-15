@@ -17,9 +17,8 @@ import { WorkspaceLayoutWithReviewQueueDialog } from './components/WorkspaceLayo
 import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsOverlay';
+import { useAppBackgroundEffects } from './hooks/useAppBackgroundEffects';
 import { useAppController } from './hooks/useAppController';
-import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
-import { useReleaseUpdateCheck } from './hooks/useReleaseUpdateCheck';
 import { useSystemEntryDisplayNamesHydration } from './hooks/useSystemEntryDisplayNamesHydration';
 import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 import { ensureWorkspaceRuntimeHydrated } from './workspaceRuntimeHydration';
@@ -40,8 +39,6 @@ function AppContent() {
   });
   useWorkspaceSyncAppliedRefresh();
   useWorkspaceContentChangedRefresh();
-  useReadwiseAutoSync();
-  useReleaseUpdateCheck();
   const { isDemo } = useDemoRuntimeState();
   const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
   const isAppReady = Boolean(controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady);
@@ -61,6 +58,7 @@ function AppContent() {
     isWorkspaceHydrated: controller.layoutProps.layoutChrome.isWorkspaceHydrated
   });
   useReportAppReadyWhenHydrated(isAppReady, setHasReportedAppReady);
+  useAppBackgroundEffects({ hasReportedAppReady, isDemo });
   usePrewarmInteractiveSurfacesAfterReady(hasReportedAppReady, isDemo);
 
   return (

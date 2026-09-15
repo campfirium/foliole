@@ -47,6 +47,7 @@ it('keeps the completed merging phase visible before removing migration status',
   cutover.run.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
 
   render(<Probe />);
+  fireEvent.click(screen.getByRole('button', { name: 'run-migration' }));
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
   act(() => events.handler?.({
     phase: 'merging', processedCount: 4, status: 'running', totalCount: 4
@@ -73,7 +74,7 @@ it('keeps relay mode while a long migration is still running', async () => {
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
-it('resumes a durable migration without presenting API as enabled', async () => {
+it('restores a durable migration without making the settings page execute it', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
     topic_count: 12, total_count: null
@@ -84,8 +85,9 @@ it('resumes a durable migration without presenting API as enabled', async () => 
 
   render(<Probe committedMode="relay" onCommitMode={onCommitMode} onSelectApi={onSelectApi} />);
 
-  await waitFor(() => expect(cutover.run).toHaveBeenCalled());
+  await waitFor(() => expect(onSelectApi).toHaveBeenCalledOnce());
   expect(onSelectApi).toHaveBeenCalledOnce();
+  expect(cutover.run).not.toHaveBeenCalled();
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
@@ -100,6 +102,7 @@ it('presents a required reconnection as a retryable migration failure', async ()
   });
 
   render(<Probe committedMode="relay" />);
+  fireEvent.click(screen.getByRole('button', { name: 'run-migration' }));
 
   await waitFor(() => expect(screen.getByTestId('failure')).toHaveTextContent(
     'failed:readwise_api_reconnect_required'
@@ -126,5 +129,6 @@ function Probe(props: {
     </div>
     <button onClick={() => void migration.selectApi()} type="button">select-api</button>
     <button onClick={() => void migration.requestStart(() => undefined)} type="button">start-migration</button>
+    <button onClick={() => void migration.start()} type="button">run-migration</button>
   </>;
 }

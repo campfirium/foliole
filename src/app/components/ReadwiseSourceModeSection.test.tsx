@@ -136,8 +136,7 @@ it('shows indeterminate indexing below the API source selector', async () => {
 });
 
 it('restores merging progress and explains a paused migration in place', async () => {
-  let restore!: (value: { has_credential: true; state: 'connected'; verified_at: string }) => void;
-  runtime.load.mockReturnValue(new Promise((resolve) => { restore = resolve; }));
+  runtime.load.mockResolvedValue({ has_credential: true, state: 'connected', verified_at: 'now' });
   cutover.preview.mockResolvedValue({
     completed_count: 7, error_reason: 'request_failed', phase: 'merging', status: 'migration_in_progress', topic_count: 12, total_count: 31
   });
@@ -150,14 +149,12 @@ it('restores merging progress and explains a paused migration in place', async (
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  await waitFor(() => expect(cutover.run).toHaveBeenCalledTimes(1));
-  restore({ has_credential: true, state: 'connected', verified_at: 'now' });
-  expect(await screen.findByText('Connected')).toBeInTheDocument();
-  expect(cutover.run).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(cutover.preview).toHaveBeenCalled());
+  expect(cutover.run).not.toHaveBeenCalled();
   expect(await screen.findByText('Migrating · Merging failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Retry migration' }));
-  await waitFor(() => expect(cutover.run).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());
 });
 
 it('keeps migration indexing separate from the ordinary sync action', async () => {

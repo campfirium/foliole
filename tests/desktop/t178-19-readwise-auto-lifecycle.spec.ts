@@ -55,6 +55,14 @@ async function installBlockedTransport(app: ElectronApplication) {
   });
 }
 
+async function setRendererOnline(session: T178AcceptanceSession) {
+  const setOnline = () => Object.defineProperty(navigator, 'onLine', {
+    configurable: true, value: true
+  });
+  await session.firstWindow.addInitScript(setOnline);
+  await session.firstWindow.evaluate(setOnline);
+}
+
 async function seedConnectedFolderMode(app: ElectronApplication) {
   await app.evaluate(() => {
     const moduleApi = process.getBuiltinModule('module');
@@ -77,14 +85,15 @@ async function seedConnectedFolderMode(app: ElectronApplication) {
   });
 }
 
-async function expectStableFailure(session: T178AcceptanceSession) {
+async function expectCompletedMigration(session: T178AcceptanceSession) {
+  await expect.poll(() => session.firstWindow.evaluate(async () => {
+    const [preview, settings] = await Promise.all([
+      window.electronAPI.invoke('preview_readwise_source_cutover'),
+      window.electronAPI.invoke('load_import_manager_settings')
+    ]);
+    return { mode: settings.readwiseSourceMode, status: preview.status };
+  }), { timeout: 30_000 }).toEqual({ mode: 'api', status: 'already_completed' });
   await expectWorkspaceShell(session.firstWindow);
-  const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-  await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
-  await expect(settings.getByRole('status').filter({
-    hasText: /^(Migrating · Indexing failed|正在迁移 · 索引失败)/
-  })).toBeVisible();
-  return settings;
 }
 
 async function expectStorageResponsive(session: T178AcceptanceSession) {
@@ -97,8 +106,8 @@ async function expectStorageResponsive(session: T178AcceptanceSession) {
     new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), 2_000))
   ]));
   expect(result).toEqual(expect.objectContaining({
-    connection: expect.objectContaining({ has_credential: true, state: 'connected' }),
-    cutover: expect.objectContaining({ completed_count: 0, status: 'migration_in_progress' })
+    connection: expect.objectContaining({ has_credential: true }),
+    cutover: expect.objectContaining({ completed_count: 0, status: 'already_completed' })
   }));
 }
 
@@ -110,7 +119,7 @@ async function pause(session: T178AcceptanceSession) {
   });
 }
 
-test('restores the credential and resumes a failed migration on restart', async ({ browserName }) => {
+test('restores the credential and completes a pending migration after startup', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-'));
@@ -118,23 +127,15 @@ test('restores the credential and resumes a failed migration on restart', async 
   try {
     session = await createT178ApiAcceptanceSession(stateRoot);
     await seedIncompleteMigration(session.electronApp);
-    await installBlockedTransport(session.electronApp);
+    await setRendererOnline(session);
     await session.firstWindow.reload();
-    await expectStableFailure(session);
+    await expectCompletedMigration(session);
     await expectStorageResponsive(session);
     await session.close();
 
     session = await createT178ApiAcceptanceSession(stateRoot);
-    await installBlockedTransport(session.electronApp);
-    await expectWorkspaceShell(session.firstWindow);
-    const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
-    await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
-    await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Indexing failed|正在迁移 · 索引失败)/
-    })).toBeVisible();
-    expect(await session.electronApp.evaluate(() => Boolean(
-      (globalThis as typeof globalThis & { __t17819Requested?: boolean }).__t17819Requested
-    ))).toBe(true);
+    await setRendererOnline(session);
+    await expectCompletedMigration(session);
     await expectStorageResponsive(session);
   } finally {
     if (session) await pause(session).catch(() => undefined);
@@ -143,7 +144,7 @@ test('restores the credential and resumes a failed migration on restart', async 
   }
 });
 
-test('keeps API preparation selected after navigating away from a failed migration', async ({ browserName }) => {
+test('keeps API preparation selected after navigating away', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-mode-'));
@@ -177,7 +178,6 @@ test('keeps API preparation selected after navigating away from a failed migrati
     });
     await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
     await expect(settings.getByRole('radio', { name: /^(API mode|API 模式)$/ })).toBeChecked();
-    await expect(settings.getByText(/^(Migrating · Indexing failed|正在迁移 · 索引失败)/)).toBeVisible();
 
     await openSettingsCategory(session.firstWindow, 'Appearance');
     settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
@@ -185,7 +185,6 @@ test('keeps API preparation selected after navigating away from a failed migrati
     await expect(settings.getByRole('radio', {
       name: /^(Obsidian relay import|Obsidian 中转导入模式)$/
     })).not.toBeChecked();
-    await expect(settings.getByText(/^(Migrating · Indexing failed|正在迁移 · 索引失败)/)).toBeVisible();
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-after-return.png') });
     await pause(session);
   } finally {

@@ -71,7 +71,7 @@ export function useReadwiseSourceMigration(input: {
     }
   }, [input.committedMode, input.onCommitMode]);
   useResumeReadwiseMigration(
-    input.committedMode, input.onSelectApi, resumeAttemptedRef, setRequired, setProgress, start
+    input.committedMode, input.onSelectApi, resumeAttemptedRef, setRequired, setProgress
   );
   const selectApi = () => selectReadwiseApi(input);
   const requestStart = (beforeStart: () => Promise<void> | void) =>
@@ -130,8 +130,7 @@ function useResumeReadwiseMigration(
   onSelectApi: () => void,
   attempted: MutableRefObject<boolean>,
   setRequired: Dispatch<SetStateAction<boolean>>,
-  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
-  start: () => Promise<void>
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>
 ) {
   useEffect(() => {
     if (attempted.current) return;
@@ -147,9 +146,8 @@ function useResumeReadwiseMigration(
         phase: state.phase,
         totalCount: state.total_count
       });
-      void start();
     });
-  }, [attempted, committedMode, onSelectApi, setProgress, setRequired, start]);
+  }, [attempted, committedMode, onSelectApi, setProgress, setRequired]);
 }
 
 async function confirmMigration(topicCount: number, t: Translate) {
