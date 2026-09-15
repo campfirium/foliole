@@ -103,11 +103,13 @@ final class FolioleCompanionSyncNowAction {
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
         SQLiteReadOnlyDatabaseException lastReadConflict = null;
+        JSONObject latestProjection = new JSONObject();
         while (System.nanoTime() < deadline) {
             try {
-                JSONArray events = FolioleAcceptanceSyncEventProjection.read(
+                latestProjection = FolioleAcceptanceSyncEventProjection.read(
                     instrumentation.getTargetContext()
-                ).getJSONArray("events");
+                );
+                JSONArray events = latestProjection.getJSONArray("events");
                 for (int index = 0; index < events.length(); index += 1) {
                     if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
                 }
@@ -117,7 +119,9 @@ final class FolioleCompanionSyncNowAction {
             Thread.sleep(100);
         }
         throw new IllegalStateException(
-            "Timed out waiting for projected Sync Now run: " + runId, lastReadConflict
+            "Timed out waiting for projected Sync Now run: " + runId
+                + "; latestProjection=" + latestProjection,
+            lastReadConflict
         );
     }
 }

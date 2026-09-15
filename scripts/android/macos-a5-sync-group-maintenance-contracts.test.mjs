@@ -99,6 +99,7 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('FolioleAcceptanceSyncEventProjection.read(');
   expect(action).toContain('catch (SQLiteReadOnlyDatabaseException error)');
   expect(action).toContain('lastReadConflict');
+  expect(action).toContain('latestProjection=');
   expect(action).toContain('JSONObject stable = readState(instrumentation, webView)');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
