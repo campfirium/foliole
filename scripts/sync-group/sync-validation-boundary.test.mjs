@@ -92,6 +92,7 @@ it('keeps multi-device Mac consumers on the source-bound hidden credential sessi
   ].map((name) => read(`scripts/sync-group/${name}`));
   for (const source of consumers) {
     expect(source).not.toContain('userDataPath');
+    expect(source).not.toContain('openMacosPairSyncDesktopSession');
     expect(source).toContain('runtimeRoot');
     expect(source).toContain('owned.root');
   }

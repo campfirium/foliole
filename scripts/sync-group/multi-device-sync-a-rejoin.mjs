@@ -9,7 +9,7 @@ import {
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { readABConvergenceMaterial } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -91,7 +91,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root
   });
-  let session = await openMacosPairSyncDesktopSession(sessionOptions);
+  let session = await openMacosSyncGroupDesktopSession(sessionOptions);
   try {
     const enabled = await session.enable();
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',
@@ -146,7 +146,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('three-facts-converged');
     await session.close(); session = null;
     await restartProvider();
-    session = await openMacosPairSyncDesktopSession(sessionOptions);
+    session = await openMacosSyncGroupDesktopSession(sessionOptions);
     const requiredIds = { ...ids, ...(abMaterial ? {
       preJoinA: abMaterial.desktopFactId, preJoinB: abMaterial.androidFactId
     } : {}), preJoinC: preJoinMaterial.factId };

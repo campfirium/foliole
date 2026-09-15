@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   assertDesktopDepartureData, assertParticipationState, desktopFactObservation
@@ -186,7 +186,7 @@ function createContext(options) {
   const paths = macosA5Paths(repoRoot);
   return { databasePath, env, evidenceRoot, execute,
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
-    openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+    openSession: () => openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       runtimeRoot: owned.root })),
     paths, reportProgress, repoRoot, runId, serial: A5_SERIAL };

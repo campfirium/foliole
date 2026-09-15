@@ -6,7 +6,7 @@ import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-r
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import {
   assertAndroidConsumerComplete, assertSurvivorProof, matchesAndroidSurvivorState,
   projectAndroidConsumerProgress
@@ -84,7 +84,7 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
 }
 
 function openMacosSession({ env, owned, repoRoot }) {
-  return openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+  return openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root }));
 }
@@ -98,15 +98,14 @@ async function leaveAndRestartA(context) {
     assertActiveThreeMemberInput(await session.load(), rejoin.groupContext);
     const before = await macosFacts(execute, repoRoot, databasePath, Object.values(rejoin.factIds));
     const afterLeave = await session.leave();
-    if (afterLeave.sync_group !== null || afterLeave.paired_authorizations.length !== 0) {
+    if (afterLeave.sync_group !== null || afterLeave.join_requests.length !== 0) {
       throw new Error('macOS A did not leave through the product action.');
     }
     reportProgress('a-left');
     await session.close();
     session = await openMacosSession({ env, owned, repoRoot });
     const restartedOverview = await session.load();
-    if (restartedOverview.sync_group !== null
-        || restartedOverview.paired_authorizations.length !== 0) {
+    if (restartedOverview.sync_group !== null || restartedOverview.join_requests.length !== 0) {
       throw new Error('macOS A restored obsolete membership after restart.');
     }
     assertMacosRetention(before, await macosFacts(

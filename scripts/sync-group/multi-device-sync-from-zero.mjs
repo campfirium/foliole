@@ -6,7 +6,7 @@ import {
   runMacosA5SyncGroupApproval, startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-action.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
@@ -134,7 +134,7 @@ function createContext(options) {
 export async function proveSyncFromZero(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
-  let session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+  let session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
     libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
     runtimeRoot: context.owned.root
   }));
@@ -161,7 +161,7 @@ export async function proveSyncFromZero(options) {
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');
-    session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+    session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
       runtimeRoot: context.owned.root
     }));

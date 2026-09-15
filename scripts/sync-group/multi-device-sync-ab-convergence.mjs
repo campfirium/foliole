@@ -7,7 +7,7 @@ import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { startMacosA5SyncGroupApprovalProvider } from '../android/macos-a5-sync-group-approval.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   macosAcceptanceEnv, macosAcceptanceSessionOptions
@@ -91,7 +91,7 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
     inspectAndroidReceived: (desktopFact, androidFact) => androidSnapshot(
       paths, desktopFact.factId, androidFact.factText
     ),
-    openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
+    openSession: () => openMacosSyncGroupDesktopSession(sessionOptions),
     reportProgress,
     restartAndroid: async () => { await stopAndroid(execute, paths, env); await startAndroid(); },
     syncDesktopFact: (factId) => syncDesktopFact({ env, evidenceRoot, execute,
