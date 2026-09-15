@@ -115,29 +115,29 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   expect(created).toBeLessThan(identities);
 });
 
-it('pushes fresh member facts through product sync before waiting on the anchor', () => {
+it('lets product automatic sync propagate fresh member facts to the anchor', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const bCreated = source.indexOf("reportProgress('b-fact-created')");
-  const aSync = source.indexOf("await session.invoke('sync_companion_now')", bCreated);
-  const bSync = source.indexOf('await syncAndroidFact(', bCreated);
+  const providerRestart = source.indexOf('await restartProvider()', bCreated);
   const cCreated = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
   expect(bCreated).toBeGreaterThan(-1);
-  expect(aSync).toBeGreaterThan(bCreated);
-  expect(bSync).toBeGreaterThan(aSync);
-  expect(cCreated).toBeGreaterThan(bSync);
+  expect(source).not.toContain("session.invoke('sync_companion_now')");
+  expect(source).not.toContain("action: 'sync-now'");
+  expect(providerRestart).toBeGreaterThan(bCreated);
+  expect(cCreated).toBeGreaterThan(providerRestart);
 });
 
-it('lets the rejoining Mac auto-converge before any later manual fact sync', () => {
+it('lets the rejoining Mac auto-converge before creating new facts', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const opened = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
   const macosOpened = source.indexOf('session = await openMacosSyncGroupDesktopSession(sessionOptions)');
-  const sync = source.indexOf("await session.invoke('sync_companion_now')");
   const convergence = source.indexOf("waitUntil('macOS A three-member convergence'");
+  const aFact = source.indexOf("device: 'A'");
   expect(opened).toBeGreaterThan(-1);
   expect(source).not.toContain('waitForCurrentProvider');
   expect(opened).toBeLessThan(macosOpened);
   expect(macosOpened).toBeLessThan(convergence);
-  expect(convergence).toBeLessThan(sync);
+  expect(convergence).toBeLessThan(aFact);
 });
 
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
