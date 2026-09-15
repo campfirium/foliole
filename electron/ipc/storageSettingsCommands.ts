@@ -142,7 +142,6 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   if (command === NATIVE_COMMANDS.connectReadwiseApiFromClipboard) {
     const result = await connectReadwiseApiFromClipboard(
       {},
-      args.source_intent === 'replace' ? 'replace' : 'continue',
       args.connection_intent === 'migration' ? 'migration' : 'normal'
     );
     refreshReadwiseApiScheduler();

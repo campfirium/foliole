@@ -89,6 +89,23 @@ it('resumes a durable migration without presenting API as enabled', async () => 
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
+it('presents a required reconnection as a retryable migration failure', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 2, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
+    topic_count: 12, total_count: 12
+  });
+  cutover.run.mockResolvedValue({
+    error_reason: 'readwise_api_reconnect_required', migrated_count: 2,
+    status: 'connection_required', unmatched_count: 0
+  });
+
+  render(<Probe committedMode="relay" />);
+
+  await waitFor(() => expect(screen.getByTestId('failure')).toHaveTextContent(
+    'failed:readwise_api_reconnect_required'
+  ));
+});
+
 function Probe(props: {
   committedMode?: 'api' | 'relay';
   onCommitMode?: (mode: 'api' | 'relay' | 'off') => void;
@@ -103,6 +120,9 @@ function Probe(props: {
   return <>
     <div data-testid="phase">
       {migration.phase ?? 'none'}:{migration.completedCount}/{migration.totalCount ?? 'none'}
+    </div>
+    <div data-testid="failure">
+      {migration.failed ? 'failed' : 'ready'}:{migration.errorReason ?? 'none'}
     </div>
     <button onClick={() => void migration.selectApi()} type="button">select-api</button>
     <button onClick={() => void migration.requestStart(() => undefined)} type="button">start-migration</button>

@@ -23,7 +23,8 @@ import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
   loadReadwiseDeviceConnection,
-  migrateLegacyReadwiseDeviceConnection
+  migrateLegacyReadwiseDeviceConnection,
+  saveReadwiseDeviceConnection
 } from './readwiseDeviceConnection.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
@@ -54,6 +55,34 @@ it('moves a legacy Host connection into the device registry', () => {
 
   migrateLegacyReadwiseDeviceConnection();
 
-  expect(loadReadwiseDeviceConnection('readwise-source')).toEqual(apiConnection);
+  expect(loadReadwiseDeviceConnection()).toEqual(apiConnection);
   expect(loadJsonSetting('readwise_import_settings')).not.toHaveProperty('apiConnection');
+});
+
+it('keeps the current device token when the restored library has another source id', () => {
+  const apiConnection = {
+    secretRef: 'readwise-api-current.bin', state: 'connected' as const, verifiedAt: '2026-09-16T00:00:00.000Z'
+  };
+  saveReadwiseDeviceConnection(apiConnection);
+  saveJsonSetting('readwise_remote_source', {
+    connectionRef: 'readwise-restored', createdAt: 'created', updatedAt: 'updated', version: 1
+  });
+
+  expect(loadReadwiseDeviceConnection()).toEqual(apiConnection);
+});
+
+it('reads the newest token from the former per-source registry', async () => {
+  const configDir = path.join(mockedAppDataDir, 'config');
+  await fs.mkdir(configDir, { recursive: true });
+  await fs.writeFile(path.join(configDir, 'readwise-api-connections-v1.json'), JSON.stringify({
+    connections: {
+      old: { secretRef: 'old.bin', state: 'connected', verifiedAt: '2026-09-14T00:00:00.000Z' },
+      current: { secretRef: 'current.bin', state: 'connected', verifiedAt: '2026-09-16T00:00:00.000Z' }
+    },
+    version: 1
+  }));
+
+  expect(loadReadwiseDeviceConnection()).toEqual({
+    secretRef: 'current.bin', state: 'connected', verifiedAt: '2026-09-16T00:00:00.000Z'
+  });
 });

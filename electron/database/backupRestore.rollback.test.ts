@@ -142,13 +142,13 @@ it('restores Readwise mode and cutover together without restoring device credent
     status: 'api', version: 2
   });
   saveJsonSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
-  saveReadwiseDeviceConnection('readwise-device', {
+  saveReadwiseDeviceConnection({
     secretRef: 'local-secret', state: 'connected', verifiedAt: 'verified'
   });
   const backup = await createApplicationDatabaseBackup();
 
   saveJsonSetting('readwise_source_mode', { completion, mode: 'off', version: 1 });
-  saveReadwiseDeviceConnection('readwise-device', {
+  saveReadwiseDeviceConnection({
     secretRef: 'new-local-secret', state: 'connected', verifiedAt: 'new-verified'
   });
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
@@ -156,7 +156,7 @@ it('restores Readwise mode and cutover together without restoring device credent
   expect(loadReadwiseSourceModeState()).toEqual({
     completion, conflictReasons: [], mode: 'api'
   });
-  expect(loadReadwiseDeviceConnection('readwise-device')).toEqual({
+  expect(loadReadwiseDeviceConnection()).toEqual({
     secretRef: 'new-local-secret', state: 'connected', verifiedAt: 'new-verified'
   });
 });

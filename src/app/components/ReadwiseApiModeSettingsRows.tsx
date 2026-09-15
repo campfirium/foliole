@@ -49,7 +49,6 @@ function resultMessage(result: NativeReadwiseApiConnectionResult, t: Translate) 
     return t('desktop.readwise.api.result.tokenRequired');
   }
   const keys = {
-    account_unverified: 'desktop.readwise.api.result.accountUnverified',
     connection_failed: 'desktop.readwise.api.result.connectionFailed',
     not_active_host: 'desktop.readwise.api.result.notActiveHost',
     rate_limited: 'desktop.readwise.api.result.rateLimited',
@@ -124,7 +123,7 @@ export function ReadwiseApiConnectionRow(props: {
             loadingLabel={actionLabel}
             onClick={() => void state.run(connected
               ? disconnectReadwiseApiInRuntime
-              : () => connectReadwiseApiFromClipboardInRuntime('continue', props.migration ? 'migration' : 'normal'))}
+              : () => connectReadwiseApiFromClipboardInRuntime(props.migration ? 'migration' : 'normal'))}
             size="sm"
             variant={connected ? 'default' : 'emphasis'}
           >

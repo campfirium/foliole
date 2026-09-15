@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
 import {
@@ -55,7 +55,10 @@ function useReadwiseSourceModeState(props: ReadwiseSourceModeSectionProps) {
   const committedMode = props.committedMode ?? props.mode;
   const savedPolicy = props.policy ?? DEFAULT_API_POLICY;
   const [apiDraft, setApiDraft] = useState(savedPolicy);
-  const [apiConnected, setApiConnected] = useState(false);
+  const [apiConnectedState, setApiConnected] = useState<boolean | null>(null);
+  const apiConnected = apiConnectedState === true;
+  const connectionObserved = useRef(false);
+  const connectionWasReady = useRef(false);
   const selectApi = useCallback(() => {
     setApiDraft(savedPolicy);
     props.onChange('api');
@@ -77,6 +80,18 @@ function useReadwiseSourceModeState(props: ReadwiseSourceModeSectionProps) {
   useEffect(() => {
     if (props.mode !== 'api' || committedMode === 'api') setApiDraft(savedPolicy);
   }, [committedMode, props.mode, savedPolicy]);
+
+  useEffect(() => {
+    if (apiConnectedState === null) return;
+    if (!connectionObserved.current) {
+      connectionObserved.current = true;
+      connectionWasReady.current = apiConnectedState;
+      return;
+    }
+    const becameReady = apiConnected && !connectionWasReady.current;
+    connectionWasReady.current = apiConnected;
+    if (becameReady && migration.required && migration.failed) void migration.start();
+  }, [apiConnected, apiConnectedState, migration.failed, migration.required, migration.start]);
 
   function changePolicy(field: PolicyField, value: ReadwiseImportDestination | string) {
     if (preparingApi) setApiDraft((current) => ({ ...current, [field]: value }));
@@ -132,7 +147,11 @@ function ReadwiseSourceSelector(props: {
   ) : props.props.mode === 'api' ? (
     props.state.preparingApi && !props.state.migrationActive
       ? <p className="text-ui-sm text-foreground/58">{t('desktop.readwise.api.setup.pending')}</p>
-      : <ReadwiseMigrationProgress migration={props.state.migration} taskStatus={props.state.taskStatus} />
+      : <ReadwiseMigrationProgress
+          migration={props.state.migration}
+          onRetry={() => void props.state.migration.start()}
+          taskStatus={props.state.taskStatus}
+        />
   ) : null;
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.source.title')}>

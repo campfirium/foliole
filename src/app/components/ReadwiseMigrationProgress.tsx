@@ -1,6 +1,6 @@
 import type { NativeReadwiseApiScheduleStatus } from '../../../lib/platform/nativeReadwiseApiImportContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppSpinner } from '../../shared/ui';
+import { AppButton, AppSpinner } from '../../shared/ui';
 
 import { readwiseFailureReason } from './ReadwiseApiTaskStatus';
 import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
@@ -8,6 +8,7 @@ import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
 export function ReadwiseMigrationProgress(props: {
   compact?: boolean;
   migration: ReadwiseMigrationState;
+  onRetry?: () => void;
   taskStatus: NativeReadwiseApiScheduleStatus | null;
 }) {
   const t = useTranslation();
@@ -30,6 +31,11 @@ export function ReadwiseMigrationProgress(props: {
         ? <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
         : null}
       <span>{presentation.text}</span>
+      {presentation.failed && props.onRetry ? (
+        <AppButton onClick={props.onRetry} size="sm" variant="default">
+          {t('desktop.readwise.cutover.retry')}
+        </AppButton>
+      ) : null}
     </div>
   );
 }

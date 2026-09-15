@@ -54,7 +54,7 @@ export function useReadwiseSourceMigration(input: {
       setProgress({
         completedCount: state.completed_count,
         errorReason: output.error_reason ?? state.error_reason,
-        failed: active && output.status === 'failed',
+        failed: active && output.status !== 'completed' && output.status !== 'already_completed',
         phase: active ? state.phase : null,
         totalCount: active ? state.total_count : null
       });
@@ -147,7 +147,7 @@ function useResumeReadwiseMigration(
         phase: state.phase,
         totalCount: state.total_count
       });
-      if (!state.error_reason) void start();
+      void start();
     });
   }, [attempted, committedMode, onSelectApi, setProgress, setRequired, start]);
 }

@@ -38,6 +38,7 @@ import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentit
 import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 
 import { shouldFetchReadwiseApiCandidateFacts } from './readwiseApiCandidateLifecycle.js';
+import { createReadwiseApiRequest } from './readwiseApiImportFetch.js';
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import {
   apiSettings,
@@ -143,6 +144,17 @@ it('honors Retry-After without refetching an already completed candidate', async
   expect(result).toMatchObject({ committed_count: 2, remaining_count: 0, status: 'completed' });
   expect(requestedParents).toEqual(['a', 'b', 'b']);
   expect(importedReadwiseApiCount()).toBe(2);
+});
+
+it('retries transient transport failures before surfacing an error', async () => {
+  const fetchImpl = vi.fn()
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ results: [] }), { status: 200 }));
+  const request = createReadwiseApiRequest({ fetchImpl, minIntervalMs: 0 });
+
+  await expect(request(new URL('https://readwise.io/api/v3/list/'))).resolves.toEqual({ results: [] });
+  expect(fetchImpl).toHaveBeenCalledTimes(3);
 });
 
 it('records one missing article parent without retrying it on an unchanged run', async () => {

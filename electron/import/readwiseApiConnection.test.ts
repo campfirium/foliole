@@ -8,7 +8,6 @@ import {
 
 const state = vi.hoisted(() => ({
   active: true,
-  documentIds: [] as string[],
   remoteSource: null as null | { connectionRef: string },
   secret: '',
   secure: true,
@@ -31,13 +30,12 @@ vi.mock('../database/readwiseDeviceConnection.js', () => ({
     state.settings = { secretRef: null, state: 'disconnected', verifiedAt: null };
   },
   loadReadwiseDeviceConnection: () => state.settings,
-  saveReadwiseDeviceConnection: (_ref: string, connection: unknown) => { state.settings = connection; }
+  saveReadwiseDeviceConnection: (connection: unknown) => { state.settings = connection; }
 }));
 vi.mock('../database/readwiseRemoteIdentity.js', () => ({
   createReadwiseRemoteSource: () => ({
     connectionRef: 'readwise-new', createdAt: 'created', updatedAt: 'updated', version: 1
   }),
-  loadReadwiseRemoteDocumentIds: () => state.documentIds,
   loadReadwiseRemoteSource: () => state.remoteSource,
   saveReadwiseConnectionState: (connection: unknown, source: typeof state.remoteSource) => {
     state.settings = connection;
@@ -68,7 +66,6 @@ import {
 
 beforeEach(() => {
   state.active = true;
-  state.documentIds = [];
   state.remoteSource = null;
   state.secret = '';
   state.secure = true;
@@ -119,7 +116,7 @@ it('allows an explicit migration connection without committing API mode first', 
   state.sourceMode = 'relay';
   const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
 
-  await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'continue', 'migration'))
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'migration'))
     .resolves.toMatchObject({ status: 'connected' });
   expect(clipboardRead).toHaveBeenCalledTimes(1);
   expect(state.sourceMode).toBe('relay');
@@ -161,39 +158,17 @@ it('restores redacted state after restart and clears the Host credential on disc
   expect(state.secret).toBe('');
 });
 
-it('verifies a known remote document before continuing the existing source', async () => {
+it('replaces the current token without changing the library source identity', async () => {
   state.remoteSource = { connectionRef: 'readwise-existing' };
-  state.documentIds = ['document-1'];
-  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
-    const url = String(input);
-    return url.includes('/api/v2/auth/')
-      ? new Response(null, { status: 204 })
-      : new Response(JSON.stringify({ results: [{ category: 'article', id: 'document-1' }] }), { status: 200 });
-  }) as typeof fetch;
-
-  await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({ status: 'connected' });
-  expect(fetchImpl).toHaveBeenCalledTimes(2);
-  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
-});
-
-it('does not replace an existing source when the new account cannot prove its identity', async () => {
-  state.remoteSource = { connectionRef: 'readwise-existing' };
-  state.documentIds = ['document-1'];
-  const fetchImpl = vi.fn(async (input: string | URL | Request) => String(input).includes('/api/v2/auth/')
-    ? new Response(null, { status: 204 })
-    : new Response(JSON.stringify({ results: [] }), { status: 200 })) as typeof fetch;
-
-  await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({ status: 'account_unverified' });
-  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
-  expect(state.secret).toBe('');
-});
-
-it('creates a new namespace only after an explicit source replacement', async () => {
-  state.remoteSource = { connectionRef: 'readwise-existing' };
-  state.documentIds = ['document-1'];
+  state.settings = {
+    secretRef: 'readwise-api-current.bin', state: 'connected', verifiedAt: '2026-09-15T00:00:00.000Z'
+  };
+  state.secret = 'OLD-SECRET';
+  clipboardRead.mockReturnValue('NEW-SECRET');
   const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
 
-  await expect(connectReadwiseApiFromClipboard({ fetchImpl }, 'replace')).resolves.toMatchObject({ status: 'connected' });
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl })).resolves.toMatchObject({ status: 'connected' });
   expect(fetchImpl).toHaveBeenCalledTimes(1);
-  expect(state.remoteSource).toMatchObject({ connectionRef: 'readwise-new' });
+  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
+  expect(state.secret).toBe('NEW-SECRET');
 });

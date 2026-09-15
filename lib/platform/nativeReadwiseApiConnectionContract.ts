@@ -17,12 +17,10 @@ export interface NativeReadwiseApiConnectionResult {
   status:
     | NativeReadwiseApiConnectionState
     | 'connection_failed'
-    | 'account_unverified'
     | 'not_active_host'
     | 'rate_limited'
     | 'source_mode_mismatch'
     | 'token_missing';
 }
 
-export type NativeReadwiseSourceIntent = 'continue' | 'replace';
 export type NativeReadwiseConnectionIntent = 'migration' | 'normal';

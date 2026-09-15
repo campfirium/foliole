@@ -12,8 +12,7 @@ import { hasReadwiseApiSecret, readReadwiseApiSecret } from './readwiseApiSecret
 
 export function loadStoredReadwiseHostSettings() {
   const settings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
-  const source = loadReadwiseRemoteSource();
-  return { ...settings, apiConnection: loadReadwiseDeviceConnection(source?.connectionRef ?? null) };
+  return { ...settings, apiConnection: loadReadwiseDeviceConnection() };
 }
 
 export function toPublicReadwiseApiConnection(

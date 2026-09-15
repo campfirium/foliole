@@ -7,63 +7,67 @@ import {
   type ReadwiseHostApiConnection,
   withoutReadwiseHostConnection
 } from '../../lib/core/import/readwiseHostSettings.js';
-import {
-  normalizeReadwiseRemoteSource,
-  READWISE_REMOTE_SOURCE_KEY
-} from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const FILE_NAME = 'readwise-api-connections-v1.json';
 
-interface Registry {
+interface LegacyRegistry {
   connections: Record<string, ReadwiseHostApiConnection>;
   version: 1;
 }
 
-export function loadReadwiseDeviceConnection(connectionRef: string | null) {
-  if (!connectionRef) return disconnected();
-  return loadRegistry().connections[connectionRef] ?? disconnected();
+interface Registry {
+  connection: ReadwiseHostApiConnection;
+  version: 2;
 }
 
-export function saveReadwiseDeviceConnection(
-  connectionRef: string,
-  connection: ReadwiseHostApiConnection
-) {
-  const registry = loadRegistry();
-  registry.connections[connectionRef] = connection;
-  writeRegistry(registry);
+export function loadReadwiseDeviceConnection() {
+  return loadRegistry().connection;
 }
 
-export function deleteReadwiseDeviceConnection(connectionRef: string) {
-  const registry = loadRegistry();
-  if (!registry.connections[connectionRef]) return;
-  delete registry.connections[connectionRef];
-  writeRegistry(registry);
+export function saveReadwiseDeviceConnection(connection: ReadwiseHostApiConnection) {
+  writeRegistry({ connection, version: 2 });
+}
+
+export function deleteReadwiseDeviceConnection() {
+  writeRegistry({ connection: disconnected(), version: 2 });
 }
 
 export function migrateLegacyReadwiseDeviceConnection() {
   const raw = loadJsonSetting(READWISE_HOST_SETTINGS_KEY);
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !('apiConnection' in raw)) return;
-  const source = normalizeReadwiseRemoteSource(loadJsonSetting(READWISE_REMOTE_SOURCE_KEY));
   const legacy = normalizeReadwiseHostSettings(raw).apiConnection;
-  if (source && legacy.secretRef && loadReadwiseDeviceConnection(source.connectionRef).secretRef === null) {
-    saveReadwiseDeviceConnection(source.connectionRef, legacy);
+  if (legacy.secretRef && loadReadwiseDeviceConnection().secretRef === null) {
+    saveReadwiseDeviceConnection(legacy);
   }
   saveJsonSetting(READWISE_HOST_SETTINGS_KEY, withoutReadwiseHostConnection(raw));
 }
 
 function loadRegistry(): Registry {
   const filePath = registryPath();
-  if (!fs.existsSync(filePath)) return { connections: {}, version: 1 };
+  if (!fs.existsSync(filePath)) return { connection: disconnected(), version: 2 };
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Registry;
-    return parsed.version === 1 && parsed.connections && typeof parsed.connections === 'object'
-      ? parsed : { connections: {}, version: 1 };
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Registry | LegacyRegistry;
+    if (parsed.version === 2) return parsed;
+    return {
+      connection: newestLegacyConnection(Object.values(parsed.connections ?? {})),
+      version: 2
+    };
   } catch {
     throw new Error('readwise_device_connection_invalid');
   }
+}
+
+function newestLegacyConnection(connections: ReadwiseHostApiConnection[]) {
+  return connections.sort((left, right) => timestamp(right.verifiedAt) - timestamp(left.verifiedAt))[0]
+    ?? disconnected();
+}
+
+function timestamp(value: string | null) {
+  const parsed = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function writeRegistry(registry: Registry) {

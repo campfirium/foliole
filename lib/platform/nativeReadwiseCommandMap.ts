@@ -49,7 +49,7 @@ export type NativeReadwiseCommandMap = {
     result: NativeReadwiseApiScheduleStatus;
   };
   [NATIVE_COMMANDS.connectReadwiseApiFromClipboard]: {
-    args: { connection_intent?: 'migration' | 'normal'; source_intent?: 'continue' | 'replace' } | undefined;
+    args: { connection_intent?: 'migration' | 'normal' } | undefined;
     result: NativeReadwiseApiConnectionResult;
   };
   [NATIVE_COMMANDS.previewReadwiseSourceCutover]: {

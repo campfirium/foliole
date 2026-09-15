@@ -57,10 +57,14 @@ async function runNow(
     return result('failed', 0, 0, 'readwise_source_mode_conflict');
   }
   const assignment = loadReadwiseHostAssignment();
-  if (!assignment.is_active) return result('not_active_host');
+  if (!assignment.is_active) {
+    return result('not_active_host', 0, 0, 'readwise_execution_eligibility_lost');
+  }
   const source = loadReadwiseRemoteSource();
-  if (!source) return result('connection_required');
-  if (!isStoredReadwiseApiConnectionReady()) return result('connection_required');
+  if (!source) return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
+  if (!isStoredReadwiseApiConnectionReady()) {
+    return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
+  }
   const restartRequired = !current || current.status === 'api';
   const startedAt = restartRequired ? new Date().toISOString() : current.startedAt;
   if (restartRequired) {
@@ -122,6 +126,7 @@ function assertMigrationEligible(connectionRef: string) {
 function safeFailureReason(error: unknown) {
   if (!(error instanceof Error)) return 'request_failed';
   if (error.message.startsWith('readwise_api_rate_limited:')) return 'rate_limited';
+  if (error.message === 'readwise_api_import_not_ready') return 'readwise_api_reconnect_required';
   const reasons = [
     'readwise_api_reconnect_required',
     'readwise_source_mode_conflict',

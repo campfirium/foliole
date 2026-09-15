@@ -55,17 +55,17 @@ export function saveReadwiseConnectionState(
 ) {
   const source = remoteSource ?? loadReadwiseRemoteSource();
   if (!source) throw new Error('readwise_remote_source_missing');
-  const previousConnection = loadReadwiseDeviceConnection(source.connectionRef);
-  saveReadwiseDeviceConnection(source.connectionRef, connection);
+  const previousConnection = loadReadwiseDeviceConnection();
+  saveReadwiseDeviceConnection(connection);
   try {
     openDatabaseConnection().driver.transaction((driver) => {
       if (remoteSource) writeJsonSetting(driver, READWISE_REMOTE_SOURCE_KEY, remoteSource, now);
     });
   } catch (error) {
     if (previousConnection.secretRef || previousConnection.state !== 'disconnected') {
-      saveReadwiseDeviceConnection(source.connectionRef, previousConnection);
+      saveReadwiseDeviceConnection(previousConnection);
     } else {
-      deleteReadwiseDeviceConnection(source.connectionRef);
+      deleteReadwiseDeviceConnection();
     }
     throw error;
   }
