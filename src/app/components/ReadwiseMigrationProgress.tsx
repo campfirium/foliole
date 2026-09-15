@@ -42,12 +42,10 @@ function migrationPresentation(
 ) {
   if (!migration.phase) {
     if (taskStatus?.cutover.status === 'completed') {
-      return {
+      return taskStatus.initial_sync.status === 'completed' ? null : {
         active: false,
         failed: false,
-        text: taskStatus.initial_sync.status === 'completed'
-          ? t('desktop.readwise.api.enabled')
-          : `${t('desktop.readwise.api.enabled')} · ${t('desktop.readwise.api.firstSyncPending')}`
+        text: t('desktop.readwise.api.firstSyncPending')
       };
     }
     return taskStatus?.cutover.status === 'in_progress'

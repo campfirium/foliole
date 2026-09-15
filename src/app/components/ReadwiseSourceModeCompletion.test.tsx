@@ -42,7 +42,7 @@ beforeEach(() => {
   });
 });
 
-it('keeps API completion visible before the first routine sync', async () => {
+it('shows only the pending initial sync after API migration completes', async () => {
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
@@ -51,8 +51,35 @@ it('keeps API completion visible before the first routine sync', async () => {
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByText('API enabled · First sync pending')).toBeInTheDocument();
+  expect(await screen.findByText('First sync pending')).toBeInTheDocument();
+  expect(screen.queryByText('API enabled')).not.toBeInTheDocument();
   expect(screen.getByRole('status').querySelector('.animate-spin')).toBeNull();
+});
+
+it('does not repeat the selected API mode after the initial sync completes', async () => {
+  schedule.load.mockResolvedValue({
+    cutover: {
+      completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed',
+      total_count: 31, unexplained_failure_count: 0
+    },
+    eligibility: 'ready',
+    initial_sync: {
+      completed_count: 31, failed_count: 0, lifecycle: null, pending_count: 0,
+      status: 'completed', total_count: 31, unexplained_failure_count: 0
+    },
+    routine_sync: { last_result: null, lifecycle: null, next_run_at: null }
+  });
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiMigrationCompleted
+    apiSettings={createReadwiseApiModeTestSettings()}
+    committedMode="api"
+    mode="api"
+    onChange={() => undefined}
+  /></LocalizationProvider>);
+
+  expect(await screen.findByRole('button', { name: 'Sync' })).toBeInTheDocument();
+  expect(screen.queryByText('API enabled')).not.toBeInTheDocument();
+  expect(screen.queryByText('First sync pending')).not.toBeInTheDocument();
 });
 
 it('turns a completed API source off and enables it again without migration', () => {

@@ -12,7 +12,7 @@ import {
   SettingsChoiceMatrix,
   SettingsControlSlot,
   SettingsRow,
-  SettingsSegmentedControl
+  settingsFieldClassName
 } from '../../shared/ui';
 
 type PolicyField = ReadwiseAutoImportPolicyField;
@@ -47,13 +47,17 @@ export function ReadwiseReaderImportBehavior(props: {
   ];
   function control(field: PolicyField, ariaLabel: string) {
     return (
-      <SettingsSegmentedControl
-        ariaLabel={ariaLabel}
-        {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
-        onChange={(value) => props.onChange(field, value as ReadwiseImportDestination)}
-        options={options}
+      <select
+        aria-label={ariaLabel}
+        className={settingsFieldClassName()}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(field, event.target.value as ReadwiseImportDestination)}
         value={props.policy[field]}
-      />
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
     );
   }
   function row(

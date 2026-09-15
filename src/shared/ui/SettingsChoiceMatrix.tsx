@@ -11,7 +11,7 @@ export function SettingsChoiceMatrix(props: {
   return (
     <div
       aria-label={props.ariaLabel}
-      className="grid w-fit max-w-full grid-cols-[minmax(4rem,auto)_repeat(2,max-content)] items-center gap-x-4 gap-y-3 overflow-x-auto px-settings-panel-x pb-settings-panel-y"
+      className="mx-auto grid w-full max-w-5xl grid-cols-[minmax(5rem,8rem)_repeat(2,minmax(10rem,1fr))] items-center gap-x-4 gap-y-3 overflow-x-auto px-settings-panel-x pb-settings-panel-y"
       role="group"
     >
       <span aria-hidden="true" />

@@ -26,11 +26,10 @@ function renderPolicy(sourceMode: 'api' | 'relay') {
   return onChangePolicy;
 }
 
-function expectSelection(groupName: string, optionName: string) {
-  const group = screen.getByRole('radiogroup', { name: groupName });
-  expect(within(group).getByRole('radio', { name: optionName }))
-    .toHaveAttribute('aria-checked', 'true');
-  expect(within(group).getAllByRole('radio')).toHaveLength(3);
+function expectSelection(selectName: string, optionName: string) {
+  const select = screen.getByRole('combobox', { name: selectName });
+  expect(select).toHaveDisplayValue(optionName);
+  expect(within(select).getAllByRole('option')).toHaveLength(3);
 }
 
 it('keeps the folder policy on article and book rows backed by article and EPUB fields', () => {
@@ -40,8 +39,9 @@ it('keeps the folder policy on article and book rows backed by article and EPUB 
   expectSelection('Books with highlights destination', 'Inbox');
   expectSelection('Books without highlights destination', 'Inbox');
 
-  const group = screen.getByRole('radiogroup', { name: 'Books without highlights destination' });
-  fireEvent.click(within(group).getByRole('radio', { name: 'External document library' }));
+  fireEvent.change(screen.getByRole('combobox', {
+    name: 'Books without highlights destination'
+  }), { target: { value: 'external' } });
   expect(onChangePolicy).toHaveBeenCalledWith('epubWithoutHighlights', 'external');
   expect(screen.queryByRole('textbox', { name: 'Reader document import tag' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
@@ -49,7 +49,7 @@ it('keeps the folder policy on article and book rows backed by article and EPUB 
 
 it('shows fourteen exact defaults across the seven API parent categories', async () => {
   const onChangePolicy = renderPolicy('api');
-  await waitFor(() => expect(screen.getByRole('radiogroup', {
+  await waitFor(() => expect(screen.getByRole('combobox', {
     name: 'EPUBs without highlights destination'
   })).toBeInTheDocument());
 
@@ -63,7 +63,7 @@ it('shows fourteen exact defaults across the seven API parent categories', async
     expectSelection(`${category} with highlights destination`, withHighlights);
     expectSelection(`${category} without highlights destination`, withoutHighlights);
   });
-  expect(screen.queryByRole('radiogroup', {
+  expect(screen.queryByRole('combobox', {
     name: 'Books without highlights destination'
   })).not.toBeInTheDocument();
   const input = screen.getByRole('textbox', { name: 'Reader document import tag' });
