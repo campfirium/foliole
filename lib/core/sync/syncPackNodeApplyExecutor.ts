@@ -173,9 +173,12 @@ async function applySyncPackSurfaceInTransaction(
   await applySyncPackNodeTextAlternativesWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
-  remainingNodeOptions.excludedNodeIds = nodeConvergence.processedNodeIds
-    .filter((nodeId) => !nodeConvergence.newNodeIds.includes(nodeId));
-  await applySyncPackNodeAttachmentsWithDbPort(port, remainingNodeOptions);
+  const attachmentOptions = {
+    ...remainingNodeOptions,
+    excludedNodeIds: nodeConvergence.processedNodeIds
+      .filter((nodeId) => !nodeConvergence.newNodeIds.includes(nodeId))
+  };
+  await applySyncPackNodeAttachmentsWithDbPort(port, attachmentOptions);
   await applySyncPackViewStateObjectsWithDbPort(port, options);
   const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
   const appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
