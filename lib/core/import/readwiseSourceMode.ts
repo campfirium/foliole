@@ -55,6 +55,19 @@ export function isReadwiseSourceMode(value: unknown): value is ReadwiseSourceMod
   return value === 'api' || value === 'off' || value === 'relay';
 }
 
+export function canResolveReadwiseSourceModeConflict(input: {
+  currentMode: ReadwiseSourceMode;
+  hasCompletion: boolean;
+  reasons: string[];
+  targetMode: ReadwiseSourceMode;
+}) {
+  return input.hasCompletion
+    && input.currentMode === 'relay'
+    && input.targetMode !== 'relay'
+    && input.reasons.length > 0
+    && input.reasons.every((reason) => reason === 'completion_conflicts_with_mode');
+}
+
 export function normalizeLegacyReadwiseSourceMode(value: unknown): ReadwiseSourceMode | null {
   if (value === 'folder' || value === 'relay') return 'relay';
   return value === 'api' || value === 'off' ? value : null;

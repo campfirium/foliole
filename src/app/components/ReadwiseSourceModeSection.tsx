@@ -7,6 +7,7 @@ import {
   type ReadwiseAutoImportPolicyField,
   type ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
+import { canResolveReadwiseSourceModeConflict } from '../../../lib/core/import/readwiseSourceMode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { SettingsSection, SettingsSegmentedRow } from '../../shared/ui';
 
@@ -107,6 +108,13 @@ function ReadwiseSourceSelector(props: {
   state: SourceModeState;
 }) {
   const t = useTranslation();
+  const conflictReasons = props.props.conflictReasons ?? [];
+  const canResolveConflict = canResolveReadwiseSourceModeConflict({
+    currentMode: props.state.committedMode,
+    hasCompletion: Boolean(props.props.apiMigrationCompleted),
+    reasons: conflictReasons,
+    targetMode: 'api'
+  });
   async function chooseMode(mode: ReadwiseSourceMode) {
     if (mode === props.props.mode) return;
     if (mode === 'api' && props.state.committedMode !== 'api'
@@ -117,7 +125,7 @@ function ReadwiseSourceSelector(props: {
     props.props.onChange(mode);
     props.props.onCommitMode?.(mode);
   }
-  const footer = props.props.conflictReasons?.length ? (
+  const footer = conflictReasons.length ? (
     <p className="text-ui-sm text-error" role="status">
       {t('desktop.readwise.source.conflict')}
     </p>
@@ -133,7 +141,7 @@ function ReadwiseSourceSelector(props: {
         controlAlignment="description"
         controlFooter={footer}
         description={<>{t('desktop.readwise.source.mode.description')}<span className="mt-4 block">{t('desktop.readwise.source.description')}</span></>}
-        disabled={Boolean(props.props.conflictReasons?.length) || props.state.migrationActive}
+        disabled={Boolean(conflictReasons.length && !canResolveConflict) || props.state.migrationActive}
         label={t('desktop.readwise.source.mode.title')}
         onChange={(value) => void chooseMode(value as ReadwiseSourceMode)}
         options={[

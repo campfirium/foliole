@@ -11,6 +11,7 @@ import type {
   ReadwiseImportDestination
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { canResolveReadwiseSourceModeConflict } from '../../../lib/core/import/readwiseSourceMode';
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 
 import { createGenericSourceActions, replaceSource } from './importSourceGenericActions';
@@ -141,7 +142,16 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
       }));
     },
     handleChangeReadwiseSourceMode(readwiseSourceMode: ReadwiseSourceMode) {
-      setSettings((current) => ({ ...current, readwiseSourceMode }));
+      setSettings((current) => ({
+        ...current,
+        readwiseSourceMode,
+        readwiseSourceModeConflict: canResolveReadwiseSourceModeConflict({
+          currentMode: current.readwiseSourceMode,
+          hasCompletion: current.readwiseApiMigrationCompleted,
+          reasons: current.readwiseSourceModeConflict,
+          targetMode: readwiseSourceMode
+        }) ? [] : current.readwiseSourceModeConflict
+      }));
     },
     setDetailsOpen(updater: (current: boolean) => boolean) {
       setSettings((current) => ({

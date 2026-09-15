@@ -16,7 +16,7 @@ import {
 } from '../database/desktopSources.js';
 import {
   loadReadwiseSourceModeState,
-  writeReadwiseSourceMode
+  writeReadwiseSourceModeSelection
 } from '../database/readwiseSourceMode.js';
 import {
   hydrateCurrentHostReadwiseSources,
@@ -93,9 +93,6 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
   });
   const sourceMode = loadReadwiseSourceModeState();
   normalized = { ...normalized, readwiseSourceModeConflict: sourceMode.conflictReasons };
-  if (sourceMode.conflictReasons.length > 0 && normalized.readwiseSourceMode !== sourceMode.mode) {
-    throw new Error('readwise_source_mode_conflict');
-  }
   assertSafeImportManagerPaths(normalized);
   openDatabaseConnection().driver.transaction((driver) => {
     normalized = {
@@ -115,9 +112,8 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       normalized.updatedAt
     );
     if (normalized.readwiseSourceMode !== sourceMode.mode) {
-      writeReadwiseSourceMode(
-        driver, normalized.readwiseSourceMode, normalized.updatedAt,
-        sourceMode.completion ?? undefined
+      writeReadwiseSourceModeSelection(
+        driver, sourceMode, normalized.readwiseSourceMode, normalized.updatedAt
       );
     }
     const currentHostSettings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
@@ -128,5 +124,8 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       updatedAt: normalized.updatedAt
     })), normalized.updatedAt);
   });
-  return normalized;
+  return {
+    ...normalized,
+    readwiseSourceModeConflict: loadReadwiseSourceModeState().conflictReasons
+  };
 }

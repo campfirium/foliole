@@ -23,7 +23,7 @@ export const EN_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.api.tasks.syncFailed': 'Sync failed',
   'desktop.readwise.api.enabled': 'API enabled',
   'desktop.readwise.api.firstSyncPending': 'First sync pending',
-  'desktop.readwise.source.conflict': 'Readwise settings do not match this library. Import is paused.',
+  'desktop.readwise.source.conflict': 'Readwise settings do not match this library. Choose Off or API mode to continue.',
   'desktop.readwise.api.failure.rateLimited': 'Readwise rate limit reached',
   'desktop.readwise.api.failure.reconnectRequired': 'Reconnect Readwise',
   'desktop.readwise.api.failure.connectionChanged': 'Readwise connection changed',

@@ -78,15 +78,37 @@ it('turns a completed API source off and enables it again without migration', ()
   expect(cutover.run).not.toHaveBeenCalled();
 });
 
-it('shows a library conflict and disables every source choice', async () => {
+it('lets a completed library resolve a relay conflict through the source selector', async () => {
+  const onChange = vi.fn();
+  const onCommitMode = vi.fn();
   render(<LocalizationProvider><ReadwiseSourceModeSection
+    apiMigrationCompleted
     committedMode="relay"
     conflictReasons={['completion_conflicts_with_mode']}
+    mode="relay"
+    onChange={onChange}
+    onCommitMode={onCommitMode}
+  /></LocalizationProvider>);
+
+  expect(await screen.findByText(
+    'Readwise settings do not match this library. Choose Off or API mode to continue.'
+  ))
+    .toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'Obsidian relay import' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
+  expect(onChange).toHaveBeenCalledWith('api');
+  expect(onCommitMode).toHaveBeenCalledWith('api');
+  expect(cutover.run).not.toHaveBeenCalled();
+});
+
+it('keeps unresolved library conflicts disabled', async () => {
+  render(<LocalizationProvider><ReadwiseSourceModeSection
+    committedMode="relay"
+    conflictReasons={['legacy_mode_conflict']}
     mode="relay"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByText('Readwise settings do not match this library. Import is paused.'))
-    .toBeInTheDocument();
+  expect(await screen.findByRole('status')).toBeInTheDocument();
   expect(screen.getAllByRole('radio').every((radio) => radio.hasAttribute('disabled'))).toBe(true);
 });

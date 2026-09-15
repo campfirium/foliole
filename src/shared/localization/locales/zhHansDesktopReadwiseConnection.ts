@@ -23,7 +23,7 @@ export const ZH_HANS_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.api.tasks.syncFailed': '同步失败',
   'desktop.readwise.api.enabled': 'API 已启用',
   'desktop.readwise.api.firstSyncPending': '尚未完成首次同步',
-  'desktop.readwise.source.conflict': 'Readwise 设置与资料库状态不一致，导入已暂停。',
+  'desktop.readwise.source.conflict': 'Readwise 设置与资料库状态不一致。请选择“关闭”或“API 模式”继续。',
   'desktop.readwise.api.failure.rateLimited': '已达到 Readwise 请求频率限制',
   'desktop.readwise.api.failure.reconnectRequired': '请重新连接 Readwise',
   'desktop.readwise.api.failure.connectionChanged': 'Readwise 连接已改变',

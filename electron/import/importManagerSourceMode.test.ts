@@ -78,3 +78,32 @@ it('keeps completion proof while API mode is disabled and enables it again witho
     readwiseApiMigrationCompleted: true, readwiseSourceMode: 'api'
   });
 });
+
+it('resolves a proved relay conflict when the user selects API mode', () => {
+  const completion = {
+    batchId: 'batch-1', completedAt: 'done', sourceHost: 'This Mac', startedAt: 'start'
+  };
+  saveJsonSetting('readwise_source_cutover_v2', {
+    annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
+    completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+    retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
+    status: 'api', version: 2
+  });
+  saveJsonSetting('readwise_source_mode', { completion, mode: 'relay', version: 1 });
+  saveJsonSetting('readwise_source_mode_conflict', {
+    reasons: ['completion_conflicts_with_mode'], version: 1
+  });
+
+  const resolved = saveImportManagerSettings({
+    ...loadImportManagerSettings(), readwiseSourceMode: 'api'
+  });
+
+  expect(resolved).toMatchObject({
+    readwiseApiMigrationCompleted: true,
+    readwiseSourceMode: 'api',
+    readwiseSourceModeConflict: []
+  });
+  expect(loadImportManagerSettings()).toMatchObject({
+    readwiseSourceMode: 'api', readwiseSourceModeConflict: []
+  });
+});

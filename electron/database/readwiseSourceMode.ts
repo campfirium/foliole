@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import {
+  canResolveReadwiseSourceModeConflict,
   normalizeReadwiseSourceMode,
   normalizeReadwiseSourceModeConflict,
   READWISE_SOURCE_MODE_CONFLICT_KEY,
@@ -54,16 +55,31 @@ export function loadReadwiseSourceModeState(): ReadwiseSourceModeState {
 
 export function saveReadwiseSourceMode(mode: ReadwiseSourceMode, now = new Date().toISOString()) {
   const current = loadReadwiseSourceModeState();
-  if (current.conflictReasons.length > 0 && current.mode !== mode) {
-    throw new Error('readwise_source_mode_conflict');
-  }
-  if (mode === 'api') {
-    if (!current.completion) throw new Error('readwise_source_mode_completion_required');
-  }
-  openDatabaseConnection().driver.transaction((driver) => writeMode(
-    driver, mode, now, current.completion ?? undefined
+  openDatabaseConnection().driver.transaction((driver) => writeReadwiseSourceModeSelection(
+    driver, current, mode, now
   ));
   return loadReadwiseSourceModeState();
+}
+
+export function writeReadwiseSourceModeSelection(
+  driver: DatabaseDriver,
+  current: ReadwiseSourceModeState,
+  mode: ReadwiseSourceMode,
+  now = new Date().toISOString()
+) {
+  const resolvesConflict = canResolveReadwiseSourceModeConflict({
+    currentMode: current.mode,
+    hasCompletion: Boolean(current.completion),
+    reasons: current.conflictReasons,
+    targetMode: mode
+  });
+  if (current.conflictReasons.length > 0 && !resolvesConflict) {
+    throw new Error('readwise_source_mode_conflict');
+  }
+  writeMode(driver, mode, now, current.completion ?? undefined);
+  if (resolvesConflict) {
+    writeJsonSetting(driver, READWISE_SOURCE_MODE_CONFLICT_KEY, { reasons: [], version: 1 }, now);
+  }
 }
 
 export function writeReadwiseSourceMode(
