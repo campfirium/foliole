@@ -27,6 +27,7 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
   const openSession = vi.fn(async () => ({ app: { close }, page: {} }));
+  const invoke = vi.fn(async () => ({}));
   const releaseProviders = [];
   const reportProgress = vi.fn();
   const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => {
@@ -35,7 +36,7 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
   const work = runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
     control: vi.fn(), execute: vi.fn(), inspect, paths: {}, suspend: vi.fn(async () => ({ running: false })),
     restore: vi.fn(async () => {}), openSession,
-    invoke: vi.fn(), reportProgress, waitForConsumerRelease,
+    invoke, reportProgress, waitForConsumerRelease,
     createFact: vi.fn(async () => ({ factId: ids.C })) });
   await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledTimes(1));
   expect(openSession).not.toHaveBeenCalled();
@@ -57,6 +58,7 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
   expect(waitForConsumerRelease).toHaveBeenNthCalledWith(2, {
     action: 'multi-device-sync-a-rejoin', repoRoot: undefined
   });
+  expect(invoke).toHaveBeenCalledWith({}, 'sync_companion_now');
   expect(reportProgress.mock.calls.map(([value]) => value.milestone)).toEqual([
     'c-native-suspended', 'c-baseline-captured', 'c-session-opened', 'c-a-b-facts-received',
     'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'

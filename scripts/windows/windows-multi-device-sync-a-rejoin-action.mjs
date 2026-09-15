@@ -74,6 +74,7 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
         invoke: (command, args) => invoke(page, command, args)
       } });
       reportProgress({ factId: 'a-rejoin', milestone: 'c-fact-created' });
+      await invoke(page, 'sync_companion_now');
       const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
