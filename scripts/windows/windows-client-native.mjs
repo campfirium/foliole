@@ -36,7 +36,7 @@ const {
   stateFile,
   windowVisibleFile
 } = resolveWindowsNativePaths();
-const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000', 10);
+const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000', 10);
 
 const { readClientState, readReadyState } = createWindowsClientStateReaders({
   appReadyFile, bootEventLogFile, bridgeReadyFile, nativeState, stateFile, windowVisibleFile

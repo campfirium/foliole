@@ -36,7 +36,7 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).toContain('nativeStartScript');
   expect(script).toContain('dispatchWindowsNativeClientAction');
   expect(script.indexOf('dispatchWindowsNativeClientAction')).toBeLessThan(script.indexOf("if (action === 'status')"));
-  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000'");
+  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000'");
   expect(script).toContain('closeClientLogStreams(logs)');
   expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');

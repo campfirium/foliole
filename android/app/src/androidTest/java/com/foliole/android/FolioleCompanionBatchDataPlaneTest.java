@@ -54,7 +54,7 @@ public class FolioleCompanionBatchDataPlaneTest {
         Map<String, String> hashes = new HashMap<>();
         hashes.put("attachment-1", hash);
         String token = FolioleCompanionAttachmentResourceBatchSessions.create(
-            files, hashes, Collections.emptyList()
+            files, hashes, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList()
         );
 
         FolioleCompanionAttachmentFileStage.stage(context, token);

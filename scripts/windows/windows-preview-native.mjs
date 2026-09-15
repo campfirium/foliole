@@ -25,9 +25,11 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const { appReadyFile, clientScript, nativeAbiScript, reloadDeliveryFile, repoRoot, restartDeliveryFile } =
   resolveWindowsNativePaths();
-const CLIENT_HEALTH_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000', 10);
+const CLIENT_HEALTH_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '180000', 10);
 const PREVIEW_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_PREVIEW_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000), 10);
-const CLIENT_ACTION_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_CLIENT_ACTION_TIMEOUT_MS ?? '120000', 10);
+const CLIENT_ACTION_TIMEOUT_MS = Number.parseInt(
+  process.env.WINDOWS_CLIENT_ACTION_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000), 10
+);
 
 async function ensureFreshElectronDist() {
   const freshness = inspectElectronDistFreshness({ repoRoot });
