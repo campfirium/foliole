@@ -6,12 +6,20 @@ import { readwiseFailureReason } from './ReadwiseApiTaskStatus';
 import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
 
 export function ReadwiseMigrationProgress(props: {
+  compact?: boolean;
   migration: ReadwiseMigrationState;
   taskStatus: NativeReadwiseApiScheduleStatus | null;
 }) {
   const t = useTranslation();
-  const presentation = migrationPresentation(props.migration, props.taskStatus, t);
+  const presentation = migrationPresentation(props.migration, props.taskStatus, t, props.compact ?? false);
   if (!presentation) return null;
+  if (props.compact) {
+    return (
+      <span aria-hidden="true" className="whitespace-nowrap text-ui-sm text-foreground/50">
+        {presentation.text}
+      </span>
+    );
+  }
   return (
     <div
       aria-live="polite"
@@ -29,7 +37,8 @@ export function ReadwiseMigrationProgress(props: {
 function migrationPresentation(
   migration: ReadwiseMigrationState,
   taskStatus: NativeReadwiseApiScheduleStatus | null,
-  t: ReturnType<typeof useTranslation>
+  t: ReturnType<typeof useTranslation>,
+  compact: boolean
 ) {
   if (!migration.phase) {
     if (taskStatus?.cutover.status === 'completed') {
@@ -45,8 +54,8 @@ function migrationPresentation(
       ? {
           active: true,
           failed: false,
-          text: withProgress(
-            `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
+          text: progressText(
+            `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`, compact,
             migration.completedCount,
             null
           )
@@ -60,8 +69,8 @@ function migrationPresentation(
     return {
       active: true,
       failed: false,
-      text: withProgress(
-        `${t('desktop.readwise.cutover.status')} · ${phase}`,
+      text: progressText(
+        `${t('desktop.readwise.cutover.status')} · ${phase}`, compact,
         migration.completedCount,
         migration.totalCount
       )
@@ -74,12 +83,18 @@ function migrationPresentation(
   return {
     active: false,
     failed: true,
-    text: `${withProgress(
-      `${t('desktop.readwise.cutover.status')} · ${failed}`,
-      migration.completedCount,
-      migration.totalCount
-    )}${reason ? ` · ${reason}` : ''}`
+    text: compact
+      ? `${t('desktop.readwise.cutover.status')} · ${failed}`
+      : `${withProgress(
+          `${t('desktop.readwise.cutover.status')} · ${failed}`,
+          migration.completedCount,
+          migration.totalCount
+        )}${reason ? ` · ${reason}` : ''}`
   };
+}
+
+function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null) {
+  return compact ? text : withProgress(text, completedCount, totalCount);
 }
 
 function withProgress(text: string, completedCount: number, totalCount: number | null) {

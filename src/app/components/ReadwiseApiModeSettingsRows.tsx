@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ReadwiseReaderConfig, ReadwiseSyncFrequency } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseApiConnection, NativeReadwiseApiConnectionResult } from '../../../lib/platform/nativeReadwiseApiConnectionContract';
@@ -91,6 +91,7 @@ function useReadwiseApiConnection(t: Translate, onConnectionChange: (connected: 
 
 export function ReadwiseApiConnectionRow(props: {
   migration: boolean;
+  migrationStatus?: ReactNode;
   onConnectionChange: (connected: boolean) => void;
 }) {
   const t = useTranslation();
@@ -114,7 +115,10 @@ export function ReadwiseApiConnectionRow(props: {
         title={t('desktop.readwise.api.connection.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <span className="text-sm text-foreground/60">{t(statusKey(state.connection.state))}</span>
+          <span className="flex flex-col items-end leading-tight max-[1080px]:items-start">
+            <span className="text-sm text-foreground/60">{t(statusKey(state.connection.state))}</span>
+            {connected ? props.migrationStatus : null}
+          </span>
           <AppButton
             className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME}
             disabled={state.pending}

@@ -176,6 +176,9 @@ function ReadwiseApiSettingsSections(props: {
       <SettingsSection ariaLabel={t('desktop.readwise.api.connection.title')}>
         <ReadwiseApiConnectionRow
           migration={state.preparingApi}
+          migrationStatus={state.migration.phase || state.taskStatus?.cutover.status === 'in_progress' ? (
+            <ReadwiseMigrationProgress compact migration={state.migration} taskStatus={state.taskStatus} />
+          ) : null}
           onConnectionChange={state.setApiConnected}
         />
       </SettingsSection>

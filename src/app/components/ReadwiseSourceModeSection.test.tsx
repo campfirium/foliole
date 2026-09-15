@@ -130,7 +130,7 @@ it('shows indeterminate indexing below the API source selector', async () => {
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  expect(await screen.findByText('Migrating · Indexing')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText('Migrating · Indexing')).toHaveLength(2));
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });
