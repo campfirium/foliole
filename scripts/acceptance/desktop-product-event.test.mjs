@@ -42,6 +42,23 @@ it('subscribes before checking the current product state', async () => {
   expect(order).toEqual(['subscribe', 'load']);
 });
 
+it('matches the ready Sync Group topology from the product overview event', async () => {
+  const page = { evaluate: vi.fn(async (callback, args) => {
+    const previous = globalThis.electronAPI;
+    globalThis.electronAPI = {
+      invoke: async () => ({ server_status: {
+        topology_role: 'anchor', topology_status: 'ready'
+      } }),
+      onSyncGroupOverviewChanged: () => () => undefined
+    };
+    try { return await callback(args); }
+    finally { globalThis.electronAPI = previous; }
+  }) };
+  await expect(waitForDesktopProductState(page, { command: 'load_sync_group_overview',
+    condition: { kind: 'sync-group-topology', role: 'anchor', status: 'ready' },
+    eventName: 'onSyncGroupOverviewChanged', timeoutMs: 100 })).resolves.toBeTruthy();
+});
+
 it('rejects controller-defined event names', async () => {
   await expect(waitForDesktopProductEvent({}, 'onFakeReceiptChanged'))
     .rejects.toThrow('Unsupported desktop product event');
