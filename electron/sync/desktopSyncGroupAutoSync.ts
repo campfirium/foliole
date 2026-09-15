@@ -21,6 +21,7 @@ import {
   clearDesktopSyncGroupRoutes,
   loadDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute,
+  restoreDesktopSyncGroupMobileGuideRoute,
   saveDesktopSyncGroupRoute,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
@@ -55,6 +56,8 @@ export function startDesktopSyncGroupAutoSync() {
   });
   memberStateRuntime = startDesktopSyncGroupMemberStateSession(group, () =>
     notifyDesktopSyncGroupOverviewChanged());
+  const mobileGuide = restoreDesktopSyncGroupMobileGuideRoute(group.group_id);
+  if (mobileGuide) resumeMobileGuideRoute(mobileGuide);
 }
 
 export function stopDesktopSyncGroupAutoSync() {
@@ -70,6 +73,25 @@ export function runDesktopManualSyncWithDiscovery() {
   if (manualRun) return manualRun;
   manualRun = runDesktopManualSync().finally(() => { manualRun = null; });
   return manualRun;
+}
+
+function resumeMobileGuideRoute(route: DesktopSyncGroupPeer) {
+  if (inFlight.has(route.peer_device_id)) return;
+  updateDesktopSyncFreshness(true);
+  const work = runDesktopSyncCoordinator('automatic', route)
+    .then(() => {
+      removeDesktopSyncGroupRoute(route.peer_device_id);
+      return true;
+    })
+    .catch((error) => {
+      console.info('[sync-group] mobile guide sync paused until it is available', {
+        error: error instanceof Error ? error.message : String(error),
+        peerDeviceId: route.peer_device_id
+      });
+      return false;
+    })
+    .finally(() => inFlight.delete(route.peer_device_id));
+  inFlight.set(route.peer_device_id, work);
 }
 
 async function runDesktopManualSync() {

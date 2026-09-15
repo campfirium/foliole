@@ -13,6 +13,7 @@ const runtime = vi.hoisted(() => ({
     group_id: 'group-1', local_device_identity_key: 'desktop-a'
   },
   participating: true,
+  persistedRoute: null as null | Record<string, unknown>,
   role: 'observing',
   sessionArgs: null as null | Record<string, (...args: never[]) => unknown>,
   stop: vi.fn(),
@@ -22,6 +23,12 @@ const runtime = vi.hoisted(() => ({
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   isDesktopSyncGroupDeviceBlocked: () => false
+}));
+vi.mock('../database/settingsStore.js', () => ({
+  loadJsonSetting: () => runtime.persistedRoute,
+  saveJsonSetting: (_key: string, value: null | Record<string, unknown>) => {
+    runtime.persistedRoute = value;
+  }
 }));
 vi.mock('./desktopAnchorTopologyRole.js', () => ({
   loadDesktopAnchorTopologyState: () => ({ role: runtime.role })
@@ -60,9 +67,25 @@ beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
   runtime.participating = true;
+  runtime.persistedRoute = null;
   runtime.role = 'observing';
   runtime.sessionArgs = null;
   runtime.discovery.mockResolvedValue([]);
+});
+
+it('resumes an interrupted mobile guide route after restart and clears it on success', async () => {
+  runtime.persistedRoute = {
+    endpoint_url: 'http://android:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'android-b',
+    peer_device_name: 'A5', peer_platform: 'android-capacitor', route_kind: 'mobile_guide'
+  };
+
+  startDesktopSyncGroupAutoSync();
+
+  await vi.waitFor(() => expect(runtime.coordinator).toHaveBeenCalledWith(
+    'automatic', expect.objectContaining({ peer_device_id: 'android-b' })
+  ));
+  await vi.waitFor(() => expect(runtime.persistedRoute).toBeNull());
 });
 
 it('keeps exactly one qualified desktop anchor as the automatic route', async () => {

@@ -18,7 +18,9 @@ import {
   loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupPendingJoin
 } from './desktopSyncGroupJoinState.js';
-import { removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
+import {
+  removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer
+} from './desktopSyncGroupRoutes.js';
 
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
 
@@ -102,7 +104,7 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
       workgroupKey: groupInfo.workgroup_key
     });
     saveDesktopSyncGroupPendingJoin(null);
-    return saveDesktopSyncGroupRoute({
+    return {
       endpoint_url: pending.candidate.endpoint_url,
       group_id: groupInfo.group_id,
       local_device_id: group.local_device_identity_key,
@@ -110,8 +112,9 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
       peer_device_name: pending.candidate.provider_device_name,
       peer_platform: pending.candidate.provider_platform,
       route_kind: isMobileProvider(pending.candidate.provider_platform) ? 'mobile_guide' : 'anchor'
-    });
+    } satisfies DesktopSyncGroupPeer;
   });
+  saveDesktopSyncGroupRoute(route);
   options.onMembershipCommitted?.();
   await runDesktopSyncCoordinator('initial', route);
   if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
