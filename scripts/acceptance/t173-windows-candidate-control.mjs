@@ -21,7 +21,11 @@ const GIT_HOST = `${HOST}:foliole-dev.git`;
 const REMOTE_ACTION = `${T173_WINDOWS_REPO_ROOT_POSIX}/scripts/windows/`
   + 't173-windows-candidate-action.ps1';
 const RECEIPTS = {
+  'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
+  'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',
   'multi-device-sync-c': 'sync-group-recovery-receipt.json',
+  'multi-device-sync-from-zero': 'multi-device-sync-from-zero-receipt.json',
+  'multi-device-sync-participation': 'multi-device-sync-participation-receipt.json',
   'two-device-sync-provider': 'two-device-sync-provider-receipt.json'
 };
 const ACTIVE_ROUTE = '.tmp/artifacts/multi-device-sync/windows-c/t173-active-route.json';
