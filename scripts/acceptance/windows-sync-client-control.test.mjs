@@ -11,6 +11,8 @@ it('parses only fixed Windows sync client actions', () => {
   });
   expect(parseWindowsSyncClientArgs(['stop', '--port', '9222'])).toEqual({ action: 'stop', port: 9222 });
   expect(() => parseWindowsSyncClientArgs(['start', '--revision', 'short'])).toThrow('full commit');
+  expect(() => parseWindowsSyncClientArgs(['start', '--revision', 'a'.repeat(40),
+    '--state-root', '..\\outside'])).toThrow('artifacts root');
 });
 
 it('pins the Windows sync checkout and exact candidate revision', () => {
@@ -21,6 +23,16 @@ it('pins the Windows sync checkout and exact candidate revision', () => {
   expect(script).toContain("$root -ne 'D:/C/foliole-sync'");
   expect(script).toContain('candidate-bbbbbbbbbb\\instance-b\\windows');
   expect(script).toContain("--revision 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'");
+});
+
+it('can restore an existing task-owned state root without encoding a product scenario', () => {
+  const script = buildWindowsSyncClientPowerShell(parseWindowsSyncClientArgs([
+    'start', '--revision', 'd'.repeat(40), '--port', '19222',
+    '--state-root', '.tmp\\artifacts\\multi-device-sync\\windows-c\\client'
+  ]));
+  expect(script).toContain("--artifact-root 'D:\\C\\foliole-sync\\.tmp\\artifacts\\multi-device-sync\\windows-c'");
+  expect(script).toContain("--state-root 'D:\\C\\foliole-sync\\.tmp\\artifacts\\multi-device-sync\\windows-c\\client'");
+  expect(script).toContain("--result 'D:\\C\\foliole-sync\\.tmp\\artifacts\\multi-device-sync\\windows-c\\client-control-19222.json'");
 });
 
 it('materializes locked dependencies and the Electron ABI while aligning', () => {
