@@ -15,7 +15,7 @@ function candidate(status: 'compatible' | 'incompatible', endpointUrl: string) {
     },
     discovery: { group_id: 'group-1', provider_device_id: 'desktop-c' },
     endpointUrl
-  } as CompanionDiscoveryResult;
+  } as unknown as CompanionDiscoveryResult;
 }
 
 it('prefers the compatible current advertisement for one Group Device', () => {
