@@ -33,6 +33,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 
+import { buildReadwiseBookPlaceholderNodeIdFromTitle } from './readwiseBookNodes.js';
 import { prepareReadwiseSourceCutoverIdentity } from './readwiseSourceCutoverIdentity.js';
 
 let tempRoot = '';
@@ -44,6 +45,10 @@ beforeEach(async () => {
   await fs.mkdir(state.sourcePath, { recursive: true });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+  openDatabaseConnection().driver.execute(
+    `INSERT OR REPLACE INTO settings (key,value,updated_at)
+     VALUES ('readwise_source_mode','{"mode":"relay","version":1}','old')`
+  );
 });
 
 afterEach(async () => {
@@ -122,6 +127,42 @@ it('ignores stale identity artifacts whose Topic no longer exists', async () => 
 
   const identity = await prepareReadwiseSourceCutoverIdentity('connection');
   expect(identity.bindingFor(document())).toMatchObject({ nodeId: 'topic-1' });
+});
+
+it('binds an EPUB to its deterministic legacy Books root when persisted inventory is empty', async () => {
+  const title = 'Legacy EPUB';
+  const nodeId = buildReadwiseBookPlaceholderNodeIdFromTitle(title);
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+    VALUES ('books-folder',NULL,'folder','books',0,'','old','old'),
+      (?, 'books-folder','topic',?,0,'','old','old')`, [nodeId, title]);
+  const prepared = document();
+  prepared.category = 'epub';
+  prepared.metadata.category = 'epub';
+  prepared.metadata.title = title;
+  prepared.title = title;
+
+  const identity = await prepareReadwiseSourceCutoverIdentity('connection');
+
+  expect(identity.bindingFor(prepared)).toMatchObject({
+    legacyAnnotations: [], nodeId, remoteDocumentId: 'document-1', sourceFingerprint: ''
+  });
+});
+
+it('does not use a same-title EPUB outside the deterministic legacy Books identity', async () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+    VALUES ('books-folder',NULL,'folder','books',0,'','old','old'),
+      ('user-topic','books-folder','topic','Legacy EPUB',0,'','old','old')`);
+  const prepared = document();
+  prepared.category = 'epub';
+  prepared.metadata.category = 'epub';
+  prepared.metadata.title = 'Legacy EPUB';
+  prepared.title = 'Legacy EPUB';
+
+  const identity = await prepareReadwiseSourceCutoverIdentity('connection');
+
+  expect(identity.bindingFor(prepared)).toBeNull();
 });
 
 function saveCandidate() {

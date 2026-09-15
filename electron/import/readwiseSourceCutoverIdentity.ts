@@ -10,6 +10,7 @@ import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexSta
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 
 import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js';
+import { buildReadwiseBookPlaceholderNodeIdFromTitle } from './readwiseBookNodes.js';
 import {
   loadReadwiseSourceArtifacts,
   type ReadwiseSourceArtifact
@@ -40,13 +41,34 @@ export async function prepareReadwiseSourceCutoverIdentity(connectionRef: string
         }
       }
       if (matchesByNode.size > 1) throw new Error('readwise_source_cutover_identity_conflict');
-      const match = matchesByNode.values().next().value as ReadwiseSourceArtifact | undefined;
+      const matched = matchesByNode.values().next().value as ReadwiseSourceArtifact | undefined;
+      const match = matched ?? legacyBookArtifact(document);
       return match ? bindingFor(match, document, loadReadwiseApiAnnotationLedger(connectionRef)) : null;
     },
     migrateDispositions(documentIds: string[]) {
       return migrateReadwiseSourceDispositions(connectionRef, documentIds, artifacts);
     }
   };
+}
+
+function legacyBookArtifact(document: PreparedReadwiseApiDocument): ReadwiseSourceArtifact | null {
+  if (document.category !== 'epub') return null;
+  const nodeId = buildReadwiseBookPlaceholderNodeIdFromTitle(document.title);
+  const row = openDatabaseConnection().driver.queryOne<{ id: string }>(
+    `SELECT book.id FROM nodes book JOIN nodes folder ON folder.id=book.parent_id
+     WHERE book.id=? AND book.deleted_at IS NULL AND folder.deleted_at IS NULL
+       AND folder.kind='folder' AND lower(folder.title)='books'`,
+    [nodeId]
+  );
+  return row ? {
+    disposition: null,
+    documentIds: new Set([document.id]),
+    highlightIds: new Set(),
+    latestNodeId: row.id,
+    nodeActive: true,
+    raw: '',
+    sourceFingerprint: null
+  } : null;
 }
 
 function matchingArtifacts(
