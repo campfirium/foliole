@@ -119,6 +119,9 @@ it('starts migration from the complete selected candidate scope instead of the o
   expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id=?', [materialized.latest_node_id])?.content)
     .toContain('API body with remembered phrase.');
   expect(send.mock.calls.map(([, payload]) => payload.phase)).toEqual(expect.arrayContaining(['indexing', 'merging']));
+  expect(send.mock.calls.map(([, payload]) => payload)).toContainEqual(expect.objectContaining({
+    phase: 'indexing', processedCount: 0, totalCount: 1
+  }));
   expect(send.mock.calls.map(([, payload]) => payload).some((payload) =>
     payload.phase === 'indexing' && (payload.processedCount ?? 0) > 0 && (payload.totalCount ?? 0) > 0
   )).toBe(true);

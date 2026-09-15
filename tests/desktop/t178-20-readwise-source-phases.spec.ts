@@ -39,7 +39,7 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
         secretRef, state: 'connected', verifiedAt: '2026-09-11T00:00:00.000Z'
       }, source, '2026-09-11T00:00:00.000Z');
       cutover.writeReadwiseSourceCutover({
-        annotations: [], cohortDocumentIds: input.migration === 'merging' ? ['document-1'] : [],
+        annotations: [], cohortDocumentIds: ['document-1'],
         completedAt: '2026-09-11T00:00:00.000Z', documents: [], phase: input.migration,
         retiredNodeIds: [], sourceHost: assignment.current_host_name,
         startedAt: '2026-09-11T00:00:00.000Z', status: 'migration-in-progress'
@@ -72,7 +72,7 @@ test('projects durable migration phases with truthful progress', async ({ browse
 
     await seedProjection(session.electronApp, { migration: 'indexing' });
     let settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Migrating · Indexing|正在迁移 · 索引中)$/, 'migration-indexing.png');
+    await expectPhase(settings, /^(Migrating · Indexing|正在迁移 · 索引中) · 0 \/ 1$/, 'migration-indexing.png');
 
     await seedProjection(session.electronApp, { migration: 'merging' });
     settings = await reopenReadwise(session);

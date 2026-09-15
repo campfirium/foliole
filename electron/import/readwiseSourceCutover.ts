@@ -129,6 +129,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
       const migrated = identity.migrateDispositions(documentIds);
       suppressedDocumentIds = new Set([...suppressedDocumentIds, ...migrated]);
       recordReadwiseSuppressedCutoverDocuments(connectionRef, migrated);
+      publishProgress(input.window, 0, documentIds.length, 'indexing');
     },
     onCandidateFactsComplete: (total) => {
       setReadwiseSourceCutoverPhase('merging');
