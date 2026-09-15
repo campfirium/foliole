@@ -26,7 +26,7 @@ const stages = [
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
-      'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
+      'c-provider-discoverable', 'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
     progressDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
     siblings: [{ hardDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
       name: 'android-b-approval', waitsFor: 'windows-c-join' },

@@ -16,7 +16,7 @@ function actions(failAt = null) {
   const milestones = {
     'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
       'b-anchor-sync-ready', 'b-fact-received', 'a-offline', 'c-join-started',
-      'b-approval-completed', 'c-ordinary-sync-completed'],
+      'b-approval-completed', 'c-provider-discoverable', 'c-ordinary-sync-completed'],
     'establish-a-b': ['macos-group-created', 'a5-paired', 'a-b-synced'],
     'prepare-candidate': ['candidate-prepared']
   };
