@@ -100,7 +100,10 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     forceSourceProjection: true
   });
   const settings = loadImportManagerSettings();
-  const dependencies = input.dependencies ?? {};
+  const dependencies = {
+    ...input.dependencies,
+    allowFolderModeForCutover: true
+  };
   const existingCutover = loadReadwiseSourceCutover();
   let suppressedDocumentIds = new Set(existingCutover?.version === 2
     ? existingCutover.documents

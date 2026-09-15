@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
-  canCurrentHostRunReadwise: () => true,
+  canCurrentHostRunReadwise: (mode = 'relay') => mode === 'relay',
   loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: true })
 }));
 vi.mock('./readwiseApiConnectionState.js', async () => {
