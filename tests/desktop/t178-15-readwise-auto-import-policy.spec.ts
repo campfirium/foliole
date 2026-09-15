@@ -23,7 +23,7 @@ const POLICY = {
 
 async function captureMatrix(dialog: Locator, testInfo: TestInfo, name: string) {
   const matrix = dialog.getByRole('group', {
-    name: /^(Readwise automatic import|Readwise 自动导入)$/
+    name: /^(Readwise import rules|Readwise 导入规则)$/
   });
   await expect(matrix).toBeVisible();
   await mkdir(ARTIFACT_DIR, { recursive: true });

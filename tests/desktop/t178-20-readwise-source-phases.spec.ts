@@ -80,8 +80,8 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
 }
 
 async function reopenReadwise(session: T178AcceptanceSession) {
-  await session.firstWindow.reload();
   await expectWorkspaceShell(session.firstWindow);
+  await openSettingsCategory(session.firstWindow, 'Appearance');
   return openSettingsCategory(session.firstWindow, 'ReadwiseReader');
 }
 

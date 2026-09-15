@@ -46,7 +46,6 @@ async function setupConnection(app: ElectronApplication) {
     const remoteIdentity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
     const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
-    const sourceMode = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceMode.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const source = remoteIdentity.createReadwiseRemoteSource('2026-09-10T00:00:00.000Z');
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000014.bin';
@@ -58,22 +57,11 @@ async function setupConnection(app: ElectronApplication) {
         readwiseReaderConfig: defaults.readwiseReaderConfig,
         readwiseSourceMode: 'api', updatedAt: '2026-09-10T00:00:00.000Z'
       }, source, '2026-09-10T00:00:00.000Z');
-      const sourceHost = 'Test host';
-      cutover.writeReadwiseSourceCutover({
-        annotations: [], cohortDocumentIds: Array.from({ length: 31 }, (_, index) => `candidate-${index + 1}`),
-        completedAt: '2026-09-10T00:00:00.000Z', completionVersion: 3,
-        documents: Array.from({ length: 31 }, (_, index) => ({
-          nodeId: `node-${index + 1}`, remoteId: `candidate-${index + 1}`, status: 'bound'
-        })),
-        retiredNodeIds: [], sourceHost, startedAt: '2026-09-10T00:00:00.000Z', status: 'api'
+      cutover.writeLegacyReadwiseSourceCutover({
+        completedAt: '2026-09-10T00:00:00.000Z', completedCandidateCount: 31,
+        migratedCount: 30, sourceHost: 'Test host', startedAt: '2026-09-10T00:00:00.000Z',
+        status: 'api', totalCandidateCount: 31, unmatchedCount: 1
       });
-      sourceMode.writeReadwiseSourceMode(
-        connection.openDatabaseConnection().driver,
-        'api',
-        '2026-09-10T00:00:00.000Z',
-        { batchId: null, completedAt: '2026-09-10T00:00:00.000Z', sourceHost,
-          startedAt: '2026-09-10T00:00:00.000Z' }
-      );
     });
   });
 }
@@ -93,13 +81,13 @@ async function seedInterruptedManifest(app: ElectronApplication) {
       driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref=?', [source.connectionRef]);
       const insert = driver.prepare(`INSERT INTO readwise_api_import_stage
         (connection_ref, record_kind, remote_id, payload_json) VALUES (?, ?, ?, ?)`);
-      insert.run([source.connectionRef, 'candidate-manifest-v3', 'manifest', JSON.stringify({
-        pipelineVersion: 3,
+      insert.run([source.connectionRef, 'candidate-manifest-v2', 'manifest', JSON.stringify({
+        pipelineVersion: 2,
         scopeSignature: JSON.stringify({ withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'inbox' })
       })]);
       for (let index = 1; index <= 31; index += 1) {
         const documentId = `candidate-${index}`;
-        insert.run([source.connectionRef, 'candidate-v3', documentId, JSON.stringify({
+        insert.run([source.connectionRef, 'candidate-v2', documentId, JSON.stringify({
           destination: 'inbox', documentId, exportCategory: null,
           ...(index > 29 ? { failure: {
             attemptCount: 1, failedAt: '2026-09-10T00:00:00.000Z', reason: null, stage: 'fetching'
@@ -110,7 +98,7 @@ async function seedInterruptedManifest(app: ElectronApplication) {
       }
       driver.execute(`INSERT INTO readwise_api_import_runs
         (connection_ref, query_updated_after, round_started_at, reader_cursor, export_cursor, phase, updated_at)
-        VALUES (?, NULL, ?, NULL, NULL, 'candidate-v3:ready', ?)`,
+        VALUES (?, NULL, ?, NULL, NULL, 'candidate-v2:ready', ?)`,
       [source.connectionRef, '2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z']);
       settings.saveJsonSetting('readwise_api_import_state', { connectionRef: source.connectionRef, version: 1 });
       settings.saveJsonSetting('readwise_active_host', { host_name: 'Inactive test host' });

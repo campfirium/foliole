@@ -110,7 +110,7 @@ async function pause(session: T178AcceptanceSession) {
   });
 }
 
-test('restores the credential, records failure, and does not retry it on restart', async ({ browserName }) => {
+test('restores the credential and resumes a failed migration on restart', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-'));
@@ -134,7 +134,7 @@ test('restores the credential, records failure, and does not retry it on restart
     })).toBeVisible();
     expect(await session.electronApp.evaluate(() => Boolean(
       (globalThis as typeof globalThis & { __t17819Requested?: boolean }).__t17819Requested
-    ))).toBe(false);
+    ))).toBe(true);
     await expectStorageResponsive(session);
   } finally {
     if (session) await pause(session).catch(() => undefined);
