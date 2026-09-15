@@ -55,13 +55,6 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   return receipt.factText;
 }
 
-async function syncAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
-  await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
-    appId: APP_ID, buildIdentity: runId, env,
-    evidenceRoot: path.join(evidenceRoot, 'b-sync'), execute,
-    installMain: false, paths, serial: A5_SERIAL, transportRequired: false });
-}
-
 async function macosFacts(execute, repoRoot, databasePath, factIds) {
   const electron = path.join(repoRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
   const inspector = path.join(repoRoot, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
@@ -132,7 +125,6 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
       session, withAttachment: true });
     reportProgress('a-fact-created');
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
-    await syncAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartProvider();
     await windowsProvider.waitForProgress('c-fact-created');

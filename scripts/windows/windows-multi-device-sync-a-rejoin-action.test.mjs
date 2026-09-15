@@ -11,6 +11,11 @@ const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4
   localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
 
+it('allows the active Android sync run three minutes to publish its fresh fact', () => {
+  const source = fs.readFileSync('scripts/windows/windows-multi-device-sync-a-rejoin-action.mjs', 'utf8');
+  expect(source).toContain("label: 'Windows C A-rejoin convergence', stallMs: 3 * 60_000");
+});
+
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));
   const ids = { A: 'multi-device-sync-a-new', B: 'multi-device-sync-b-new',

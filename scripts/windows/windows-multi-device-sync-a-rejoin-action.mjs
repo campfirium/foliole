@@ -23,7 +23,9 @@ function assertComplete(facts, ids) {
 async function waitForFreshFacts(execute, inspect, paths, excluded, origins, factIds = [],
   timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
-  const observe = createSyncProgressWatchdog({ label: 'Windows C A-rejoin convergence', stallMs: 60_000 });
+  const observe = createSyncProgressWatchdog({
+    label: 'Windows C A-rejoin convergence', stallMs: 3 * 60_000
+  });
   let facts;
   while (Date.now() < deadline) {
     facts = await inspect(execute, paths, undefined, factIds);
