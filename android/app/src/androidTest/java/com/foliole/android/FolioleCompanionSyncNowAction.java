@@ -26,6 +26,7 @@ final class FolioleCompanionSyncNowAction {
             instrumentation, webView, before.optString("runId"), 30_000
         );
         JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
+        requireCompletedTerminal(terminal);
         waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
@@ -33,6 +34,11 @@ final class FolioleCompanionSyncNowAction {
             .put("terminalRunId", terminal.getString("terminalRunId"))
             .put("terminalResult", terminal.getString("terminalResult"))
             .put("errorText", terminal.optString("errorText"));
+    }
+
+    private static void requireCompletedTerminal(JSONObject terminal) {
+        if ("completed".equals(terminal.optString("terminalResult"))) return;
+        throw new IllegalStateException("Sync Now failed before projection: " + terminal);
     }
 
     private static JSONObject readState(
