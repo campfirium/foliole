@@ -52,7 +52,7 @@ it('rejects a discovery payload that belongs to another Device', async () => {
   await collect({ addresses: ['192.168.0.8'], port: 38641,
     txt: { device_id: 'device-a5', group_id: 'group-a' } });
 
-  await expect(waiting).rejects.toThrow('Current A5 Device provider was not published');
+  await expect(waiting).rejects.toThrow('Current Device provider was not published');
 });
 
 it('requires the current topology role when the caller identifies one', async () => {

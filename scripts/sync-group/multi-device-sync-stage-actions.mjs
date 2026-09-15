@@ -29,6 +29,7 @@ import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-devic
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
 
 /* global AbortController, AbortSignal */
 
@@ -77,6 +78,13 @@ export async function syncAdmittedCToAndroid({
   return { restarted, sync };
 }
 
+export function waitForAdmittedCProvider(group, waitForProvider = waitForCurrentProvider) {
+  if (!group?.group_id) throw new Error('Admitted C Sync Group identity is unavailable.');
+  return waitForProvider({
+    groupId: group.group_id, providerPlatform: 'win32', topologyRole: 'anchor'
+  });
+}
+
 async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-c');
@@ -98,7 +106,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
   let windowsProvider;
   let windowsSettled = false;
   try {
-    const { approval, windows } = await runAOfflineAdmissionPrelude({
+    const { approval, group, windows } = await runAOfflineAdmissionPrelude({
       cancelSiblings: (name, status) => cancelAdmissionSibling(
         approvalController, approvalRelease, name, status
       ),
@@ -128,6 +136,8 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       }
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
+    await waitForAdmittedCProvider(group);
+    reportProgress('c-provider-discoverable');
     const android = await windowsProvider.raceConsumer(syncAdmittedCToAndroid({
       env, evidenceRoot, execute, factId: windows.factId, paths, runId
     }));
