@@ -101,14 +101,17 @@ function rebuildRootContent(
   const blocks = current.trim().split(/\n{2,}/u);
   const trailingLinks = blocks.at(-1)?.includes('[Open in Reader]') ? blocks.pop() : null;
   const title = headingText(blocks[0]) === rootTitle ? blocks.shift() : null;
+  const coverIndex = blocks.findIndex(isLocalizedCover);
+  const cover = coverIndex >= 0 ? blocks.splice(coverIndex, 1)[0] : null;
   const localized = blocks.join('\n\n');
   const root = normalizeCoverage(localized) === normalizeCoverage(sourceRoot)
     ? localized : localizeRemoteImages(sourceRoot, localized);
-  return [title, root, joinChunks(added), trailingLinks].filter(Boolean).join('\n\n');
+  return [title, cover, root, joinChunks(added), trailingLinks].filter(Boolean).join('\n\n');
 }
 
 function localizeRemoteImages(content: string, localized: string) {
-  const assets = localized.match(/!\[[^\]]*\]\(asset:\/\/[^)]*\)/giu) ?? [];
+  const assets = (localized.match(/!\[[^\]]*\]\(asset:\/\/[^)]*\)/giu) ?? [])
+    .filter((image) => !/!\[[^\]]* cover\]\(asset:\/\//iu.test(image));
   let index = 0;
   return content.replace(/!\[[^\]]*\]\(https?:\/\/[^)]*\)/giu, () => (
     assets[index++] ?? '**Image unavailable.**'
@@ -117,6 +120,10 @@ function localizeRemoteImages(content: string, localized: string) {
 
 function headingText(value: string | undefined) {
   return value?.match(/^#{1,6}\s+(.+)$/u)?.[1]?.trim() ?? null;
+}
+
+function isLocalizedCover(value: string) {
+  return /^!\[[^\]\r\n]* cover\]\(asset:\/\/[^)\r\n]+\)$/iu.test(value.trim());
 }
 
 function joinChunks(chunks: string[] | undefined) {
