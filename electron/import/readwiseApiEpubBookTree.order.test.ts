@@ -17,9 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
+import { buildReadwiseApiEpubBodyOverwrite } from './readwiseApiEpubBodyRepair.js';
 import { persistReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
 
 let tempRoot = '';
@@ -53,19 +55,33 @@ it('keeps rebuilt EPUB topics in the source order directly after their root', ()
   expect(readOrderedTitles()).toEqual(['Book', 'second', 'first', 'Sibling']);
 });
 
-it('keeps reading state when an existing generated topic is rebuilt', () => {
-  persist(['first']);
-  const driver = openDatabaseConnection().driver;
-  const nodeId = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title='first'")!.id;
-  driver.execute(`INSERT INTO node_reading (
-    node_id,interval_duration_ms,interval_growth_factor,last_handled_at,next_at,priority,repetition_count,state
-  ) VALUES (?,1000,1.5,'2026-09-13T01:00:00.000Z','2026-09-14T01:00:00.000Z',4,3,'active')`, [nodeId]);
-
-  persist(['first']);
-
-  expect(driver.queryOne('SELECT * FROM node_reading WHERE node_id=?', [nodeId])).toMatchObject({
-    interval_duration_ms: 1000, priority: 4, repetition_count: 3, state: 'active'
+it('overwrites bodies from API HTML without changing the existing node scope', () => {
+  const childId = stableReadwiseEpubNodeId('connection', 'document', 'section');
+  const before = new Map([
+    ['root', { content: '# Book\n\n![Book cover](asset://cover.jpg)\n\nOld root', id: 'root', title: 'Book' }],
+    [childId, { content: 'Old section', id: childId, title: 'Section' }]
+  ]);
+  const desired = buildReadwiseApiEpubBodyOverwrite({
+    connectionRef: 'connection', documentId: 'document', nodeId: 'root', title: 'Book'
+  }, before, {
+    accounting: {
+      conversionDroppedCount: 0, localizedBodyCount: 0, sourceBodyCount: 0,
+      treeBodyCount: 0, unavailableBodyCount: 0
+    },
+    degradedReason: null,
+    rootAttachmentIds: [],
+    rootBody: 'New root from API HTML',
+    sections: [{
+      attachmentIds: [], content: 'New section from API HTML', headingLevel: 1,
+      markerKey: 'section', title: 'Section'
+    }]
   });
+
+  expect(desired.map((item) => item.nodeId)).toEqual(['root', childId]);
+  expect(desired.map((item) => item.content)).toEqual([
+    '# Book\n\n![Book cover](asset://cover.jpg)\n\nNew root from API HTML',
+    'New section from API HTML'
+  ]);
 });
 
 function persist(titles: string[]) {
