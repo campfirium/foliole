@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type {
@@ -8,11 +9,14 @@ import type {
 } from '../../../lib/core/import/readwiseAutoImportPolicy';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
+  AppDropdownMenu,
+  AppDropdownMenuCheckItem,
+  AppDropdownMenuContent,
+  AppDropdownMenuTrigger,
   AppInput,
   SettingsChoiceMatrix,
   SettingsControlSlot,
-  SettingsRow,
-  settingsFieldClassName
+  SettingsRow
 } from '../../shared/ui';
 
 type PolicyField = ReadwiseAutoImportPolicyField;
@@ -32,6 +36,48 @@ const FOLDER_ROWS = [
   ['epub', 'desktop.readwise.behavior.book.title', 'book']
 ] as const;
 
+function ImportDestinationControl(props: {
+  ariaLabel: string;
+  disabled: boolean | undefined;
+  onChange: (value: ReadwiseImportDestination) => void;
+  value: ReadwiseImportDestination;
+}) {
+  const t = useTranslation();
+  const options: Array<{ label: string; value: ReadwiseImportDestination }> = [
+    { label: t('desktop.readwise.destination.inbox'), value: 'inbox' },
+    { label: t('desktop.readwise.destination.external'), value: 'external' },
+    { label: t('desktop.readwise.destination.off'), value: 'off' }
+  ];
+  const selected = options.find((option) => option.value === props.value) ?? options[0]!;
+  return (
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <button
+          aria-label={props.ariaLabel}
+          className="inline-flex h-8 w-full items-center justify-between gap-2 rounded-sm px-2 text-left text-ui-md text-foreground/78 transition-colors hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-settings-control-hover disabled:pointer-events-none disabled:opacity-45"
+          disabled={props.disabled}
+          role="combobox"
+          type="button"
+        >
+          <span className="truncate">{selected.label}</span>
+          <ChevronDown aria-hidden="true" className="shrink-0 text-foreground/55" size={15} strokeWidth={1.8} />
+        </button>
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" className="min-w-40">
+        {options.map((option) => (
+          <AppDropdownMenuCheckItem
+            checked={option.value === props.value}
+            key={option.value}
+            onSelect={() => props.onChange(option.value)}
+          >
+            {option.label}
+          </AppDropdownMenuCheckItem>
+        ))}
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
 export function ReadwiseReaderImportBehavior(props: {
   disabled?: boolean;
   onChange: (field: PolicyField, value: ReadwiseImportDestination) => void;
@@ -40,24 +86,14 @@ export function ReadwiseReaderImportBehavior(props: {
   sourceMode: 'api' | 'folder';
 }) {
   const t = useTranslation();
-  const options: Array<{ label: string; value: ReadwiseImportDestination }> = [
-    { label: t('desktop.readwise.destination.inbox'), value: 'inbox' },
-    { label: t('desktop.readwise.destination.external'), value: 'external' },
-    { label: t('desktop.readwise.destination.off'), value: 'off' }
-  ];
   function control(field: PolicyField, ariaLabel: string) {
     return (
-      <select
-        aria-label={ariaLabel}
-        className={settingsFieldClassName()}
+      <ImportDestinationControl
+        ariaLabel={ariaLabel}
         disabled={props.disabled}
-        onChange={(event) => props.onChange(field, event.target.value as ReadwiseImportDestination)}
+        onChange={(value) => props.onChange(field, value)}
         value={props.policy[field]}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      />
     );
   }
   function row(

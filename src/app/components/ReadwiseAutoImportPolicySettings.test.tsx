@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { createDefaultReadwiseAutoImportPolicy } from '../../../lib/core/import/readwiseAutoImportPolicy';
@@ -28,20 +28,20 @@ function renderPolicy(sourceMode: 'api' | 'relay') {
 
 function expectSelection(selectName: string, optionName: string) {
   const select = screen.getByRole('combobox', { name: selectName });
-  expect(select).toHaveDisplayValue(optionName);
-  expect(within(select).getAllByRole('option')).toHaveLength(3);
+  expect(select).toHaveTextContent(optionName);
 }
 
-it('keeps the folder policy on article and book rows backed by article and EPUB fields', () => {
+it('keeps the folder policy on article and book rows backed by article and EPUB fields', async () => {
   const onChangePolicy = renderPolicy('relay');
   expectSelection('Articles with highlights destination', 'Inbox');
   expectSelection('Articles without highlights destination', "Don't import");
   expectSelection('Books with highlights destination', 'Inbox');
   expectSelection('Books without highlights destination', 'Inbox');
 
-  fireEvent.change(screen.getByRole('combobox', {
+  fireEvent.keyDown(screen.getByRole('combobox', {
     name: 'Books without highlights destination'
-  }), { target: { value: 'external' } });
+  }), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'External document library' }));
   expect(onChangePolicy).toHaveBeenCalledWith('epubWithoutHighlights', 'external');
   expect(screen.queryByRole('textbox', { name: 'Reader document import tag' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
