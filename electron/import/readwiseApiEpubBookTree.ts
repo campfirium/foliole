@@ -1,5 +1,6 @@
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import type { NodeReadingPayload } from '../../lib/core/database/nodeReadingPayload.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   buildReadwiseApiEpubBookNodes,
@@ -36,6 +37,7 @@ export function persistReadwiseApiEpubBookNodes(input: {
       nodeId,
       parentNodeId: node.parentKey ? (nodeIds.get(node.parentKey) ?? input.rootNodeId) : input.rootNodeId,
       position: null,
+      reading: readExistingNodeReading(driver, nodeId),
       reveal: null,
       title: node.title,
       updatedAt: input.importedAt
@@ -44,6 +46,18 @@ export function persistReadwiseApiEpubBookNodes(input: {
   });
   retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);
   orderBookNodes(driver, input.rootNodeId, [...nodeIds.values()]);
+}
+
+function readExistingNodeReading(
+  driver: ReturnType<typeof openDatabaseConnection>['driver'],
+  nodeId: string
+) {
+  return driver.queryOne<NodeReadingPayload & Record<string, unknown>>(
+    `SELECT interval_duration_ms intervalDurationMs, interval_growth_factor intervalGrowthFactor,
+       last_handled_at lastHandledAt, next_at nextAt, priority,
+       0 readingPosition, repetition_count repetitionCount, state
+     FROM node_reading WHERE node_id = ?`, [nodeId]
+  ) ?? null;
 }
 
 function orderBookNodes(

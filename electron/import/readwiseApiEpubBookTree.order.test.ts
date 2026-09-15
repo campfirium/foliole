@@ -53,6 +53,21 @@ it('keeps rebuilt EPUB topics in the source order directly after their root', ()
   expect(readOrderedTitles()).toEqual(['Book', 'second', 'first', 'Sibling']);
 });
 
+it('keeps reading state when an existing generated topic is rebuilt', () => {
+  persist(['first']);
+  const driver = openDatabaseConnection().driver;
+  const nodeId = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title='first'")!.id;
+  driver.execute(`INSERT INTO node_reading (
+    node_id,interval_duration_ms,interval_growth_factor,last_handled_at,next_at,priority,repetition_count,state
+  ) VALUES (?,1000,1.5,'2026-09-13T01:00:00.000Z','2026-09-14T01:00:00.000Z',4,3,'active')`, [nodeId]);
+
+  persist(['first']);
+
+  expect(driver.queryOne('SELECT * FROM node_reading WHERE node_id=?', [nodeId])).toMatchObject({
+    interval_duration_ms: 1000, priority: 4, repetition_count: 3, state: 'active'
+  });
+});
+
 function persist(titles: string[]) {
   persistReadwiseApiEpubBookNodes({
     connectionRef: 'connection', documentId: 'document', importedAt: new Date().toISOString(),
