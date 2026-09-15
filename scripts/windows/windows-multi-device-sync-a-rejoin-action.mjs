@@ -23,9 +23,7 @@ function assertComplete(facts, ids) {
 async function waitForFreshFacts(execute, inspect, paths, excluded, origins, factIds = [],
   timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
-  const observe = createSyncProgressWatchdog({
-    label: 'Windows C A-rejoin convergence', stallMs: 3 * 60_000
-  });
+  const observe = createSyncProgressWatchdog({ label: 'Windows C A-rejoin convergence', stallMs: 60_000 });
   let facts;
   while (Date.now() < deadline) {
     facts = await inspect(execute, paths, undefined, factIds);
@@ -67,6 +65,8 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
   try {
     const initial = await inspect(execute, paths);
     const excluded = new Set(Object.keys(initial.journeyFacts ?? {}));
+    reportProgress({ factId: 'a-rejoin', milestone: 'c-baseline-captured' });
+    await waitForConsumerRelease({ action: 'multi-device-sync-a-rejoin', repoRoot: paths.repoRoot });
     const continuous = await withSession(paths, evidenceRoot, openSession, async ({ page }) => {
       const ab = await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B']);
       reportProgress({ factId: 'a-rejoin', milestone: 'c-a-b-facts-received' });

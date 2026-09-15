@@ -11,11 +11,6 @@ const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4
   localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
 
-it('allows the active Android sync run three minutes to publish its fresh fact', () => {
-  const source = fs.readFileSync('scripts/windows/windows-multi-device-sync-a-rejoin-action.mjs', 'utf8');
-  expect(source).toContain("label: 'Windows C A-rejoin convergence', stallMs: 3 * 60_000");
-});
-
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));
   const ids = { A: 'multi-device-sync-a-new', B: 'multi-device-sync-b-new',
@@ -32,17 +27,22 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
   const openSession = vi.fn(async () => ({ app: { close }, page: {} }));
-  let releaseProvider;
+  const releaseProviders = [];
   const reportProgress = vi.fn();
-  const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => { releaseProvider = resolve; }));
+  const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => {
+    releaseProviders.push(resolve);
+  }));
   const work = runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
     control: vi.fn(), execute: vi.fn(), inspect, paths: {}, suspend: vi.fn(async () => ({ running: false })),
     restore: vi.fn(async () => {}), openSession,
     invoke: vi.fn(), reportProgress, waitForConsumerRelease,
     createFact: vi.fn(async () => ({ factId: ids.C })) });
-  await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledOnce(), { timeout: 2_500 });
+  await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledTimes(1));
+  expect(openSession).not.toHaveBeenCalled();
+  releaseProviders.shift()();
+  await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledTimes(2), { timeout: 2_500 });
   expect(close).toHaveBeenCalledTimes(1);
-  releaseProvider();
+  releaseProviders.shift()();
   const result = await work;
   expect(result.multiDeviceSyncARejoin.manifestPath).toContain('multi-device-sync-a-rejoin-receipt.json');
   expect(JSON.parse(fs.readFileSync(result.multiDeviceSyncARejoin.manifestPath, 'utf8')))
@@ -50,11 +50,15 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
   expect(openSession).toHaveBeenCalledTimes(2);
   expect(close).toHaveBeenCalledTimes(2);
   expect(inspect).toHaveBeenCalledTimes(5);
-  expect(waitForConsumerRelease).toHaveBeenCalledWith({
+  expect(waitForConsumerRelease).toHaveBeenCalledTimes(2);
+  expect(waitForConsumerRelease).toHaveBeenNthCalledWith(1, {
+    action: 'multi-device-sync-a-rejoin', repoRoot: undefined
+  });
+  expect(waitForConsumerRelease).toHaveBeenNthCalledWith(2, {
     action: 'multi-device-sync-a-rejoin', repoRoot: undefined
   });
   expect(reportProgress.mock.calls.map(([value]) => value.milestone)).toEqual([
-    'c-native-suspended', 'c-session-opened', 'c-a-b-facts-received',
+    'c-native-suspended', 'c-baseline-captured', 'c-session-opened', 'c-a-b-facts-received',
     'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'
   ]);
 });

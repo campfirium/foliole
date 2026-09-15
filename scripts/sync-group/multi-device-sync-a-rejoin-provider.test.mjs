@@ -115,14 +115,17 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   expect(created).toBeLessThan(identities);
 });
 
-it('creates fresh A and B facts only after Windows C captures its baseline', () => {
+it('creates fresh A and B facts after the Windows baseline and before its session opens', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
-  const baseline = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
+  const baseline = source.indexOf("await windowsProvider.waitForProgress('c-baseline-captured')");
   const aFact = source.indexOf('await createDesktopSyncGroupJourneyFact');
   const bFact = source.indexOf('await createAndroidFact');
+  const session = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
   expect(baseline).toBeGreaterThan(-1);
   expect(baseline).toBeLessThan(aFact);
   expect(baseline).toBeLessThan(bFact);
+  expect(aFact).toBeLessThan(session);
+  expect(bFact).toBeLessThan(session);
 });
 
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {

@@ -116,7 +116,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     (value) => value === 3,
       'three_members_missing');
     reportProgress('three-members-converged');
-    await windowsProvider.waitForProgress('c-session-opened');
+    await windowsProvider.waitForProgress('c-baseline-captured');
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
     const excluded = existingJourneyFactIds(
       (await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts
@@ -127,6 +127,8 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartProvider();
+    await windowsProvider.release('consumer_complete');
+    await windowsProvider.waitForProgress('c-session-opened');
     await windowsProvider.waitForProgress('c-fact-created');
     const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
