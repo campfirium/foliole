@@ -33,6 +33,7 @@ import {
   readReadwiseApiSourceDisposition,
   writeReadwiseApiSourceDisposition
 } from '../database/readwiseApiSourceDispositions.js';
+import { ensureReadwiseSourceModeInitialized } from '../database/readwiseSourceMode.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
@@ -44,6 +45,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('desktop-test');
+  ensureReadwiseSourceModeInitialized();
   persistOriginal.mockReset();
   prepareOriginal.mockReset();
 });

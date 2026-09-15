@@ -30,6 +30,7 @@ import {
   loadReadwiseExternalSearchPreview,
   searchReadwiseExternalDocuments
 } from '../database/readwiseManagedExternalDocuments.js';
+import { ensureReadwiseSourceModeInitialized } from '../database/readwiseSourceMode.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 
@@ -40,6 +41,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('desktop-test');
+  ensureReadwiseSourceModeInitialized();
 });
 
 afterEach(async () => {
