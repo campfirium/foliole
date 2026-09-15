@@ -130,7 +130,8 @@ async function runWindowsContinuity(context, before) {
   reportProgress('b-two-members-active');
   const beforeWindows = await androidSnapshot(paths);
   const windowsProvider = startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot
+    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot,
+    sourceRef: context.sourceRef
   });
   let windowsSettled = false;
   try {
@@ -191,7 +192,9 @@ async function verifyRestartedSurvivors(context, departed, remote) {
   return proof;
 }
 
-function createContext({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
+function createContext({
+  execute, reportActivity = () => {}, reportProgress, repoRoot, runId, sourceRef
+}) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-leave');
   const rejoin = JSON.parse(fs.readFileSync(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs',
@@ -199,7 +202,7 @@ function createContext({ execute, reportActivity = () => {}, reportProgress, rep
   return { databasePath: path.join(owned.root, 'library', 'Data', 'foliole.db'),
     env: macosAcceptanceEnv(macosA5GradleEnv()), evidenceRoot, execute, owned,
     paths: macosA5Paths(repoRoot),
-    rejoin, reportActivity, reportProgress, repoRoot, runId };
+    rejoin, reportActivity, reportProgress, repoRoot, runId, sourceRef };
 }
 
 export async function proveALeave(options) {

@@ -55,8 +55,13 @@ it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', 
       + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-session-opened fact=a-rejoin\n' });
     return new Promise(() => {});
   });
-  startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd() });
+  startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd(),
+    sourceRef: 'refs/heads/sync' });
   expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
+  expect(execute).toHaveBeenCalledWith(process.execPath, [
+    'scripts/acceptance/t173-windows-candidate-control.mjs', 'multi-device-sync-a-rejoin',
+    '--source-ref', 'refs/heads/sync'
+  ], expect.any(Object));
 });
 
 it('holds the joined Windows C provider until Android consumes its fact', async () => {

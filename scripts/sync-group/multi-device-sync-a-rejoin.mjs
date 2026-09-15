@@ -76,7 +76,9 @@ export async function restartARejoinAndroidProvider({
   });
 }
 
-export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
+export async function proveARejoin({
+  execute, reportActivity = () => {}, reportProgress, repoRoot, runId, sourceRef
+}) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosAcceptanceEnv(macosA5GradleEnv());
@@ -84,7 +86,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const abMaterial = readABConvergenceMaterial(repoRoot, runId, false);
   const preJoinMaterial = readNonemptyAdmissionMaterial(repoRoot, runId);
-  const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot,
+  const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot, sourceRef,
     reportProgress: () => reportActivity('windows-provider-progress') });
   let windowsSettled = false;
   const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });

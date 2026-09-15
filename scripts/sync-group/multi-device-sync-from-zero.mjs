@@ -21,6 +21,7 @@ import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
   WINDOWS_SYNC_FROM_ZERO_PROGRESS
 } from './sync-from-zero-contract.mjs';
+import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, AbortSignal, process */
@@ -94,7 +95,7 @@ async function admitWindowsFromZero(context) {
   let windowsStarted;
   const started = new Promise((resolve) => { windowsStarted = resolve; });
   const runWindows = () => context.execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-from-zero'], {
+    windowsSyncGroupCommand('multi-device-sync-from-zero', context.sourceRef), {
       action: 'windows-c-sync-from-zero', cwd: context.repoRoot, host: 'windows-c',
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
@@ -159,7 +160,7 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('windows-attachment-batches-complete');
     const androidAfterC = await waitForAndroidSyncFromZeroProofSnapshot(context.paths);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
-      runId: context.runId,
+      runId: context.runId, sourceRef: context.sourceRef,
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');

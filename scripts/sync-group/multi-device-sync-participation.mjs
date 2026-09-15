@@ -190,14 +190,16 @@ function createContext(options) {
     openSession: () => openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       runtimeRoot: owned.root })),
-    paths, reportProgress, repoRoot, runId, serial: A5_SERIAL };
+    paths, reportProgress, repoRoot, runId, serial: A5_SERIAL,
+    sourceRef: options.sourceRef };
 }
 
 export async function proveParticipationControl(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
   const windows = startWindowsSyncGroupProvider({ action: 'multi-device-sync-participation',
-    execute: context.execute, reportProgress: context.reportProgress, repoRoot: context.repoRoot });
+    execute: context.execute, reportProgress: context.reportProgress, repoRoot: context.repoRoot,
+    sourceRef: context.sourceRef });
   let settled = false;
   let macos;
   try {

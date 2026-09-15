@@ -167,20 +167,20 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId, s
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
       reportProgress: context.reportProgress }),
-    'prove-sync-from-zero': (context) => proveSyncFromZero({ repoRoot, runId, ...context,
+    'prove-sync-from-zero': (context) => proveSyncFromZero({ repoRoot, runId, sourceRef, ...context,
       createExecute: (signal, onOutput) => {
         const execute = actionExecute(zeroRoot, signal, context.stage);
         return (command, args, options = {}) => execute(command, args, { ...options, onOutput });
       }, execute: actionExecute(zeroRoot, context.signal, context.stage) }),
-    'set-participation': (context) => proveParticipationControl({ repoRoot, runId,
+    'set-participation': (context) => proveParticipationControl({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'participation-control'), context.signal, context.stage),
       reportProgress: context.reportProgress }),
-    'leave-a': (context) => proveALeave({ repoRoot, runId,
+    'leave-a': (context) => proveALeave({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-leave'), context.signal, context.stage), reportActivity: context.reportActivity,
       reportProgress: context.reportProgress }),
-    'rejoin-a': (context) => proveARejoin({ repoRoot, runId,
+    'rejoin-a': (context) => proveARejoin({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-rejoin'), context.signal, context.stage), reportActivity: context.reportActivity,
       reportProgress: context.reportProgress })
