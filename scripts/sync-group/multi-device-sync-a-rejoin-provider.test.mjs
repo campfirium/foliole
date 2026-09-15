@@ -136,6 +136,13 @@ it('waits for fresh A and B on macOS before releasing the Windows session', () =
   expect(converged).toBeLessThan(release);
 });
 
+it('creates the fresh Android fact without replacing its joined application data', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const create = source.slice(source.indexOf('async function createAndroidFact'),
+    source.indexOf('async function macosFacts'));
+  expect(create).toContain('installMain: false');
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);
