@@ -32,16 +32,47 @@ export interface ReadwiseSourceArtifact {
 }
 
 export async function loadReadwiseSourceArtifacts(): Promise<ReadwiseSourceArtifact[]> {
-  return [...await loadFolderArtifacts(), ...await loadBookArtifacts()];
+  return [...loadTrackedArtifacts(), ...await loadFolderArtifacts()];
+}
+
+function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
+  const driver = openDatabaseConnection().driver;
+  const dispositionsByPath = readDispositionsByPath(driver);
+  const rows = driver.queryAll<{
+    last_node_id: string; raw: string; rule_id: string; source_fingerprint: string | null;
+    source_path: string;
+  }>(`SELECT item.rule_id,item.source_path,item.last_node_id,
+      COALESCE(cache.content,cache.content_preview,'') raw,
+      (SELECT source_fingerprint FROM import_sources source
+       WHERE source.latest_node_id=item.last_node_id AND source.remote_document_id IS NULL
+       ORDER BY source.last_imported_at DESC LIMIT 1) source_fingerprint
+    FROM keep_import_items item
+    LEFT JOIN keep_import_item_cache cache ON cache.rule_id=item.rule_id AND cache.source_path=item.source_path
+    JOIN nodes node ON node.id=item.last_node_id AND node.deleted_at IS NULL
+    WHERE item.last_node_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM desktop_sources desktop WHERE desktop.config_ref=item.rule_id
+        AND desktop.source_type='readwise' AND desktop.host_name=?
+    )`,
+  [loadReadwiseHostAssignment().current_host_name]);
+  return rows.map((row) => {
+    const ids = new Set(extractReaderLinkIds(row.raw));
+    const dispositions = dispositionsByPath.get(sourcePathKey(row.rule_id, row.source_path)) ?? [];
+    if (dispositions.length > 1) throw new Error('readwise_source_disposition_identity_conflict');
+    return {
+      disposition: dispositions[0] ?? null,
+      documentIds: ids,
+      highlightIds: ids,
+      latestNodeId: row.last_node_id,
+      nodeActive: true,
+      raw: row.raw,
+      sourceFingerprint: row.source_fingerprint
+    };
+  });
 }
 
 async function loadFolderArtifacts() {
   const driver = openDatabaseConnection().driver;
-  const dispositionsByPath = new Map<string, ReadwiseLegacySourceDisposition[]>();
-  for (const disposition of listReadwiseLegacySourceDispositions(driver)) {
-    const key = sourcePathKey(disposition.ruleId, disposition.sourcePath);
-    dispositionsByPath.set(key, [...(dispositionsByPath.get(key) ?? []), disposition]);
-  }
+  const dispositionsByPath = readDispositionsByPath(driver);
   const rows = driver.queryAll<SourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, i.source_ref,
        i.remote_document_id, d.root_path,
@@ -74,48 +105,13 @@ async function loadFolderArtifacts() {
   }));
 }
 
-async function loadBookArtifacts(): Promise<ReadwiseSourceArtifact[]> {
-  const driver = openDatabaseConnection().driver;
-  const value = driver.queryOne<{ value: string }>(
-    "SELECT value FROM settings WHERE key = 'readwise_books_inventory_state'"
-  )?.value;
-  if (!value) return [];
-  let payload: Record<string, unknown>;
-  try { payload = JSON.parse(value) as Record<string, unknown>; } catch { return []; }
-  const inventories = payload.inventories && typeof payload.inventories === 'object'
-    ? Object.values(payload.inventories as Record<string, unknown>) : [];
-  const artifacts: ReadwiseSourceArtifact[] = [];
-  for (const entry of inventories) {
-    const inventory = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {};
-    for (const item of Array.isArray(inventory.books) ? inventory.books : []) {
-      const book = item && typeof item === 'object' ? item as Record<string, unknown> : {};
-      if (typeof book.generatedNodeId !== 'string' || !isActiveNode(book.generatedNodeId)) continue;
-      const full = await readText(typeof book.fullDocumentMarkdownPath === 'string' ? book.fullDocumentMarkdownPath : '');
-      const raw = await readText(typeof book.highlightMarkdownPath === 'string' ? book.highlightMarkdownPath : '');
-      const remote = driver.queryOne<{ remote_document_id: string }>(
-        `SELECT remote_document_id FROM import_sources WHERE latest_node_id = ?
-         AND remote_provider = 'readwise' AND remote_document_id IS NOT NULL`,
-        [book.generatedNodeId]
-      );
-      artifacts.push({
-        disposition: null,
-        documentIds: new Set([...extractReaderLinkIds(full), ...(remote ? [remote.remote_document_id] : [])]),
-        highlightIds: new Set(extractReaderLinkIds(raw)),
-        latestNodeId: book.generatedNodeId,
-        nodeActive: true,
-        raw,
-        sourceFingerprint: null
-      });
-    }
+function readDispositionsByPath(driver: ReturnType<typeof openDatabaseConnection>['driver']) {
+  const dispositionsByPath = new Map<string, ReadwiseLegacySourceDisposition[]>();
+  for (const disposition of listReadwiseLegacySourceDispositions(driver)) {
+    const key = sourcePathKey(disposition.ruleId, disposition.sourcePath);
+    dispositionsByPath.set(key, [...(dispositionsByPath.get(key) ?? []), disposition]);
   }
-  return artifacts;
-}
-
-function isActiveNode(nodeId: string) {
-  return Boolean(openDatabaseConnection().driver.queryOne(
-    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
-    [nodeId]
-  ));
+  return dispositionsByPath;
 }
 
 function safeRelative(value: string) {

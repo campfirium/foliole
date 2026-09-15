@@ -95,15 +95,15 @@ async function runNow(
 }
 
 async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourceCutoverInput) {
-  const identity = await prepareReadwiseSourceCutoverIdentity(connectionRef);
-  const migration = createReadwiseDocumentMigration(identity, connectionRef, {
-    forceSourceProjection: true
-  });
   const settings = loadImportManagerSettings();
   const dependencies = {
     ...input.dependencies,
     allowFolderModeForCutover: true
   };
+  const identity = await prepareReadwiseSourceCutoverIdentity(connectionRef, dependencies);
+  const migration = createReadwiseDocumentMigration(identity, connectionRef, {
+    forceSourceProjection: true
+  });
   const existingCutover = loadReadwiseSourceCutover();
   let suppressedDocumentIds = new Set(existingCutover?.version === 2
     ? existingCutover.documents
@@ -117,6 +117,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     connectionRef,
     deferCommitUntilAllFacts: true,
     dependencies,
+    failFastCandidate: (documentId) => identity.candidatePriority(documentId) === 0,
     freezeCandidateResources: (document, destination) => prepareReadwiseApiFrozenResources({
       config: settings.readwiseReaderConfig,
       connectionRef,
@@ -125,6 +126,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
       document
     }),
     onCandidateIndex: (documentIds) => {
+      identity.assertCandidateCoverage(documentIds);
       promoteReadwiseSourceCutoverCohort(documentIds);
       const migrated = identity.migrateDispositions(documentIds);
       suppressedDocumentIds = new Set([...suppressedDocumentIds, ...migrated]);
@@ -140,6 +142,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
       publishProgress(input.window, processed, total, 'indexing'),
     onProgress: (completed, total) => publishProgress(input.window, completed, total, 'merging'),
     purpose: 'cutover',
+    candidatePriority: identity.candidatePriority,
     settings,
     shouldSkipCandidate: (documentId) => suppressedDocumentIds.has(documentId)
   });

@@ -13,11 +13,21 @@ export async function fetchReadwiseIdentityEvidence(input: {
   minIntervalMs?: number;
   token: string;
 }) {
+  const { documents, request } = await fetchReadwiseIdentityDocuments(input);
+  const exportIds = await fetchExportIds(request);
+  return { documents, exportIds };
+}
+
+export async function fetchReadwiseIdentityDocuments(input: {
+  fetchImpl?: typeof fetch;
+  ids: string[];
+  minIntervalMs?: number;
+  token: string;
+}) {
   const request = rateLimitedRequest(input.token, input.fetchImpl ?? fetch, input.minIntervalMs ?? 3_100);
   const documents = new Map<string, ReaderDocumentContract>();
   for (const id of input.ids) await fetchChain(id, documents, request);
-  const exportIds = await fetchExportIds(request);
-  return { documents, exportIds };
+  return { documents, request };
 }
 
 async function fetchChain(

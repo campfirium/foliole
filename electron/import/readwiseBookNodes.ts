@@ -21,10 +21,6 @@ export function buildReadwiseBookPlaceholderNodeId(bookKey: string) {
   return `node-readwise-book-${digest}`;
 }
 
-export function buildReadwiseBookPlaceholderNodeIdFromTitle(title: string) {
-  return buildReadwiseBookPlaceholderNodeId(title.trim().toLowerCase());
-}
-
 function buildPendingReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryItem) {
   const lines = [
     `# ${book.title}`,

@@ -65,7 +65,8 @@ export async function prepareDeferredReadwiseApiCandidates(
   total: number
 ) {
   if (!input.deferCommitUntilAllFacts) return null;
-  const candidates = loadReadwiseApiCandidates(input.connectionRef);
+  const candidates = loadReadwiseApiCandidates(input.connectionRef).sort((left, right) =>
+    (input.candidatePriority?.(left.documentId) ?? 0) - (input.candidatePriority?.(right.documentId) ?? 0));
   const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate.documentId));
   if (activeCandidates.some((candidate) => !hasLocalReadwiseApiCandidateFacts(candidate))) {
     return incompleteReadwiseApiCandidateResult(stats, candidates);

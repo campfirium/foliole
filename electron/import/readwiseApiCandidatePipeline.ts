@@ -30,6 +30,7 @@ type ReadwiseApiCandidateAfterCommit = (
 
 export type ReadwiseApiCandidatePipelineInput = {
   assertEligible: () => void;
+  candidatePriority?: (documentId: string) => number;
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
   afterCommit?: ReadwiseApiCandidateAfterCommit;
@@ -40,6 +41,7 @@ export type ReadwiseApiCandidatePipelineInput = {
     skip?: boolean;
   } | void>;
   deferCommitUntilAllFacts?: boolean;
+  failFastCandidate?: (documentId: string) => boolean;
   freezeCandidateResources?: (
     document: PreparedReadwiseApiDocument,
     destination: ReturnType<typeof loadReadwiseApiCandidates>[number]['destination']
@@ -160,5 +162,6 @@ async function consumeCandidate(
         failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'writing'
       }
     );
+    if (input.failFastCandidate?.(documentId)) throw error;
   }
 }

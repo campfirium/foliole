@@ -61,12 +61,12 @@ export function migrationFetch() {
     const id = url.searchParams.get('id');
     if (id) {
       return Response.json({ results: [{
-        category: 'article',
+        category: id === 'highlight-1' ? 'highlight' : 'article',
         created_at: '2026-09-10T00:00:00.000Z',
         html_content: url.searchParams.has('withHtmlContent')
           ? '<p>API body with remembered phrase. It also contains new phrase.</p>' : null,
         id,
-        parent_id: null,
+        parent_id: id === 'highlight-1' ? 'document-1' : null,
         title: 'Sample'
       }] });
     }

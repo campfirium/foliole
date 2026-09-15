@@ -5,17 +5,19 @@ import { extractReadwiseSidecarHighlights, normalizeReadwiseText } from '../../l
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { extractReaderLinkIds } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiAnnotationLedger } from '../database/readwiseApiIndexStage.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 
 import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js';
-import { buildReadwiseBookPlaceholderNodeIdFromTitle } from './readwiseBookNodes.js';
+import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import { readReadwiseApiSecret } from './readwiseApiSecret.js';
+import { fetchReadwiseIdentityDocuments } from './readwiseIdentityApi.js';
 import {
   loadReadwiseSourceArtifacts,
   type ReadwiseSourceArtifact
 } from './readwiseSourceCutoverArtifacts.js';
 import { migrateReadwiseSourceDispositions } from './readwiseSourceCutoverDispositions.js';
+import { resolveReadwiseSourceIdentityIndex } from './readwiseSourceCutoverIdentityIndex.js';
 
 export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseIdentityBinding {
   blockedAnnotationIds?: Set<string>;
@@ -23,66 +25,45 @@ export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseI
   nodeId: string;
 }
 
-export async function prepareReadwiseSourceCutoverIdentity(connectionRef: string) {
+export async function prepareReadwiseSourceCutoverIdentity(
+  connectionRef: string,
+  dependencies: ReadwiseApiFetchDependencies = {}
+) {
   const artifacts = await loadReadwiseSourceArtifacts();
+  const ids = [...new Set(artifacts.flatMap((artifact) => [
+    ...artifact.documentIds, ...artifact.highlightIds
+  ]))];
+  const secretRef = loadStoredReadwiseHostSettings().apiConnection.secretRef;
+  if (ids.length > 0 && !secretRef) throw new Error('readwise_api_token_missing');
+  const documents = ids.length > 0 ? (await fetchReadwiseIdentityDocuments({
+    ...(dependencies.fetchImpl ? { fetchImpl: dependencies.fetchImpl } : {}),
+    ids,
+    ...(dependencies.minIntervalMs === undefined ? {} : { minIntervalMs: dependencies.minIntervalMs }),
+    token: readReadwiseApiSecret(secretRef!)
+  })).documents : new Map();
+  const index = resolveReadwiseSourceIdentityIndex(artifacts, documents);
   return {
     bindingFor(document: PreparedReadwiseApiDocument): ReadwiseSourceCutoverIdentityBinding | null {
-      const matches = matchingArtifacts(
-        document.id,
-        new Set(document.annotations.map((item) => item.remoteId)),
-        artifacts,
-        connectionRef
-      ).filter((artifact) => artifact.nodeActive && !artifact.disposition);
-      const matchesByNode = new Map<string, ReadwiseSourceArtifact>();
-      for (const artifact of matches) {
-        const current = matchesByNode.get(artifact.latestNodeId);
-        if (!current || (!current.sourceFingerprint && artifact.sourceFingerprint)) {
-          matchesByNode.set(artifact.latestNodeId, artifact);
-        }
-      }
-      if (matchesByNode.size > 1) throw new Error('readwise_source_cutover_identity_conflict');
-      const matched = matchesByNode.values().next().value as ReadwiseSourceArtifact | undefined;
-      const match = matched ?? legacyBookArtifact(document);
+      const match = index.byDocument.get(document.id);
+      if (match?.disposition || !match?.nodeActive) return null;
       return match ? bindingFor(match, document, loadReadwiseApiAnnotationLedger(connectionRef)) : null;
     },
+    assertCandidateCoverage(documentIds: string[]) {
+      const candidates = new Set(documentIds);
+      if (index.artifacts.some((artifact) => !candidates.has(artifact.remoteDocumentId))) {
+        throw new Error('readwise_source_cutover_identity_unmatched');
+      }
+    },
+    candidatePriority(documentId: string) {
+      return index.byDocument.has(documentId) ? 0 : 1;
+    },
     migrateDispositions(documentIds: string[]) {
-      return migrateReadwiseSourceDispositions(connectionRef, documentIds, artifacts);
+      return migrateReadwiseSourceDispositions(connectionRef, documentIds, index.artifacts.map((artifact) => ({
+        ...artifact,
+        documentIds: new Set([artifact.remoteDocumentId])
+      })));
     }
   };
-}
-
-function legacyBookArtifact(document: PreparedReadwiseApiDocument): ReadwiseSourceArtifact | null {
-  if (document.category !== 'epub') return null;
-  const nodeId = buildReadwiseBookPlaceholderNodeIdFromTitle(document.title);
-  const row = openDatabaseConnection().driver.queryOne<{ id: string }>(
-    `SELECT book.id FROM nodes book JOIN nodes folder ON folder.id=book.parent_id
-     WHERE book.id=? AND book.deleted_at IS NULL AND folder.deleted_at IS NULL
-       AND folder.kind='folder' AND lower(folder.title)='books'`,
-    [nodeId]
-  );
-  return row ? {
-    disposition: null,
-    documentIds: new Set([document.id]),
-    highlightIds: new Set(),
-    latestNodeId: row.id,
-    nodeActive: true,
-    raw: '',
-    sourceFingerprint: null
-  } : null;
-}
-
-function matchingArtifacts(
-  documentId: string,
-  fallbackAnnotationIds: Set<string>,
-  artifacts: ReadwiseSourceArtifact[],
-  connectionRef: string
-) {
-  const candidate = loadReadwiseApiCandidates(connectionRef).find((item) => item.documentId === documentId);
-  const annotationIds = candidate
-    ? new Set([...candidate.highlightIds, ...(candidate.noteIds ?? [])])
-    : fallbackAnnotationIds;
-  return artifacts.filter((artifact) => artifact.documentIds.has(documentId) ||
-    [...annotationIds].some((id) => artifact.highlightIds.has(id)));
 }
 
 function bindingFor(

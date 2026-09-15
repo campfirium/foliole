@@ -201,10 +201,10 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
-  expect(documentRequests).toHaveLength(2);
+  expect(documentRequests).toHaveLength(3);
   expect(documentRequests[0]?.searchParams.has('withHtmlContent')).toBe(false);
-  expect(documentRequests[1]?.searchParams.get('withHtmlContent')).toBe('true');
-  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(0);
+  expect(documentRequests[2]?.searchParams.get('withHtmlContent')).toBe('true');
+  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(1);
 }, 20_000);
 
 it('rolls back the final completion record when the source mode cannot commit', async () => {
