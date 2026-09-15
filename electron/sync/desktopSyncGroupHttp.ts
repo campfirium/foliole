@@ -43,15 +43,29 @@ export async function readDesktopWorkgroupResponse(args: {
   pathWithQuery: string;
   response: Response;
 }) {
-  if (!args.response.ok) throw new Error(`sync_group_http_${args.response.status}`);
   if (args.response.headers.get('content-type') !== WORKGROUP_ENVELOPE_CONTENT_TYPE) {
     throw new Error('workgroup_aead_response_required');
   }
   const body = Buffer.from(await args.response.arrayBuffer());
-  return runWithDatabaseConnectionOwner(() => decryptDesktopWorkgroupResponse({
-    body, contentType: args.contentType, groupId: args.groupId,
+  const contentType = args.response.headers.get('x-foliole-original-content-type') ?? args.contentType;
+  const plaintext = await runWithDatabaseConnectionOwner(() => decryptDesktopWorkgroupResponse({
+    body, contentType, groupId: args.groupId,
     method: args.method, pathWithQuery: args.pathWithQuery
   }));
+  if (!args.response.ok) {
+    const error = readWorkgroupError(plaintext);
+    throw new Error(`sync_group_http_${args.response.status}${error ? `:${error}` : ''}`);
+  }
+  return plaintext;
+}
+
+function readWorkgroupError(body: Buffer) {
+  try {
+    const value = JSON.parse(body.toString('utf8')) as { error?: unknown };
+    return typeof value.error === 'string' && value.error.trim() ? value.error.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function postDesktopWorkgroupJson(args: {
