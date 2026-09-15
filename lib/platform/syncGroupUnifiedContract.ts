@@ -33,6 +33,13 @@ export function canonicalizeLibraryPath(value: unknown, flavor: DevicePathFlavor
   return flavor === 'windows' ? canonicalizeWindowsPath(value) : canonicalizePosixPath(value);
 }
 
+export function devicePathFlavorFromCanonicalLibraryPath(value: unknown): DevicePathFlavor {
+  if (typeof value !== 'string') throw new Error('library_path_invalid');
+  if (value.startsWith('/')) return 'posix';
+  if (/^[a-zA-Z]:\\/u.test(value) || value.startsWith('\\\\')) return 'windows';
+  throw new Error('library_path_not_absolute');
+}
+
 export function createSyncGroupDeviceIdentity(
   input: SyncGroupDeviceIdentityInput
 ): SyncGroupDeviceIdentity {

@@ -5,7 +5,10 @@ import type {
   SyncGroupRemovalDecisionPayload
 } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION } from '../../../../../lib/platform/syncGroupMemberStateContract';
-import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
+import {
+  createSyncGroupDeviceIdentity,
+  devicePathFlavorFromCanonicalLibraryPath
+} from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
@@ -129,7 +132,7 @@ async function mergeDevice(db: DbPort, groupId: string, device: SyncGroupDeviceP
   const identity = createSyncGroupDeviceIdentity({
     device_anchor: device.device_anchor, group_id: groupId,
     library_path: device.canonical_library_path,
-    path_flavor: ['win32', 'windows'].includes(device.platform.toLowerCase()) ? 'windows' : 'posix'
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(device.canonical_library_path)
   });
   if (identity.identity_key !== device.device_identity_key) {
     throw new Error('sync_group_device_identity_mismatch');

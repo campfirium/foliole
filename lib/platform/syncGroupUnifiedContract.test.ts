@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalizeLibraryPath,
   createSyncGroupDeviceIdentity,
+  devicePathFlavorFromCanonicalLibraryPath,
   isSameSyncGroupDevice,
   parseDeviceAnchor
 } from './syncGroupUnifiedContract.js';
@@ -42,6 +43,12 @@ describe('Sync Group Device identity', () => {
 
     expect(ordinary).toBe('c:\\users\\roamer\\foliole\\data\\foliole.db');
     expect(namespaced).toBe(ordinary);
+  });
+
+  it('recovers path flavor from a canonical path without using the display platform', () => {
+    expect(devicePathFlavorFromCanonicalLibraryPath('d:\\c\\foliole\\data\\foliole.db'))
+      .toBe('windows');
+    expect(devicePathFlavorFromCanonicalLibraryPath('/data/foliole.db')).toBe('posix');
   });
 
   it('rejects non-canonical, non-v4, and uppercase anchors', () => {

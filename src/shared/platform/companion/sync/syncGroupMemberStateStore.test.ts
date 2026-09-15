@@ -63,6 +63,28 @@ beforeEach(async () => {
 
 afterEach(() => sqlite.close());
 
+it('merges a Windows display platform using its canonical path flavor', async () => {
+  const windows = createSyncGroupDeviceIdentity({
+    device_anchor: 'c3333333-3333-4333-8333-333333333333', group_id: 'group-1',
+    library_path: 'd:\\c\\foliole\\data\\foliole.db', path_flavor: 'windows'
+  });
+  const state = await loadCompanionSyncGroupMemberState();
+  await applyCompanionSyncGroupMemberState({
+    ...state,
+    devices: [...state.devices, {
+      canonical_library_path: windows.canonical_library_path, contract_version: 1,
+      device_anchor: windows.device_anchor, device_identity_key: windows.identity_key,
+      device_name: 'Windows C', joined_at: '2026-09-15T02:00:00.000Z',
+      last_seen_at: null, left_at: null, platform: 'Windows 11', state: 'active',
+      updated_at: '2026-09-15T02:00:00.000Z'
+    }],
+    sender_device_identity_key: provider.identity_key
+  }, provider.identity_key);
+  expect((await loadCompanionSyncGroupMemberState()).devices).toContainEqual(
+    expect.objectContaining({ device_identity_key: windows.identity_key, platform: 'Windows 11' })
+  );
+});
+
 it('persists a target exit and returns its confirmation before the provider stops', async () => {
   const state = await loadCompanionSyncGroupMemberState();
   const result = await applyCompanionSyncGroupMemberState({

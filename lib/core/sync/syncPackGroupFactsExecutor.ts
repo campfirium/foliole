@@ -1,4 +1,7 @@
-import { createSyncGroupDeviceIdentity } from '../../platform/syncGroupUnifiedContract.js';
+import {
+  createSyncGroupDeviceIdentity,
+  devicePathFlavorFromCanonicalLibraryPath
+} from '../../platform/syncGroupUnifiedContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 
@@ -79,7 +82,7 @@ function validateDevices(groupId: string, devices: DeviceRow[]) {
       device_anchor: device.device_anchor,
       group_id: device.group_id,
       library_path: device.canonical_library_path,
-      path_flavor: device.canonical_library_path.includes('\\') ? 'windows' : 'posix'
+      path_flavor: devicePathFlavorFromCanonicalLibraryPath(device.canonical_library_path)
     });
     if (identity.identity_key !== device.device_identity_key || identities.has(identity.identity_key)) {
       throw new Error('sync_group_device_identity_invalid');

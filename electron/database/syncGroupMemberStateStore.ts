@@ -6,7 +6,10 @@ import type {
   SyncGroupRemovalDecisionPayload
 } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION } from '../../lib/platform/syncGroupMemberStateContract.js';
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import {
+  createSyncGroupDeviceIdentity,
+  devicePathFlavorFromCanonicalLibraryPath
+} from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
@@ -160,7 +163,7 @@ function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDevic
   const identity = createSyncGroupDeviceIdentity({
     device_anchor: device.device_anchor, group_id: groupId,
     library_path: device.canonical_library_path,
-    path_flavor: ['win32', 'windows'].includes(device.platform.toLowerCase()) ? 'windows' : 'posix'
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(device.canonical_library_path)
   });
   if (identity.identity_key !== device.device_identity_key) {
     throw new Error('sync_group_device_identity_mismatch');
