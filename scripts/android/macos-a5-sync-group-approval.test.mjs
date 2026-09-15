@@ -97,7 +97,8 @@ it('waits for the accepted Device request to leave the provider queue', () => {
   expect(approval).toContain('pendingRequestId()');
   expect(approval).toContain('getString("request_id")');
   expect(approval).toContain('waitForAcceptedRequestToLeavePending(requestId, deadline)');
-  expect(approval).toContain('waitForProviderRequest()');
+  expect(approval).toContain('waitForProviderRequest(deadline)');
+  expect(approval).toContain('private static void waitForProviderRequest(long deadline)');
   expect(approval).toContain('waitForProviderDiscoverable()');
   expect(approval).toContain('onProviderReady.run()');
   expect(approval).toContain('FolioleCompanionSyncGroupProvider.isDiscoverable()');
