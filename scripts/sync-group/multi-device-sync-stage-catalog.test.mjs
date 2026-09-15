@@ -40,7 +40,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   expect(resolveStage('a-rejoin')).toMatchObject({
     action: 'rejoin-a', milestones: ['a-listener-ready', 'three-members-converged',
       'a-fact-created', 'b-fact-created', 'c-fact-created', 'three-facts-converged',
-      'three-members-restarted']
+      'three-members-restarted'], progressDeadlineMs: 190_000
   });
   expect(resolveStage('a-leave')).toMatchObject({
     action: 'leave-a', activities: ['b-consumer-progress'],
