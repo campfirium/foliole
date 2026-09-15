@@ -103,20 +103,17 @@ async function runApiFixture(app: ElectronApplication) {
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(input.cwd, 'package.json'));
     const connection = require(pathApi.join(input.cwd, 'dist/electron/database/connection.js'));
-    const hostSettings = require(pathApi.join(input.cwd, 'dist/lib/core/import/readwiseHostSettings.js'));
     const identity = require(pathApi.join(input.cwd, 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(input.cwd, 'dist/electron/import/readwiseApiSecret.js'));
-    const cutover = require(pathApi.join(input.cwd, 'dist/electron/database/readwiseSourceCutover.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const source = identity.createReadwiseRemoteSource('2026-09-10T00:00:00.000Z');
-      const host = hostSettings.createDefaultReadwiseHostSettings();
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000015.bin';
       secret.writeReadwiseApiSecret(secretRef, 't178-15-token');
-      identity.saveReadwiseConnectionState({ ...host, apiConnection: { secretRef, state: 'connected' },
-        readwiseSourceMode: 'api' }, source, '2026-09-10T00:00:00.000Z');
-      cutover.writeLegacyReadwiseSourceCutover({ completedAt: '2026-09-10T00:00:00.000Z',
-        completedCandidateCount: 0, migratedCount: 0, sourceHost: 'Test host',
-        startedAt: '2026-09-10T00:00:00.000Z', status: 'api', totalCandidateCount: 0, unmatchedCount: 0 });
+      identity.saveReadwiseConnectionState(
+        { secretRef, state: 'connected', verifiedAt: '2026-09-10T00:00:00.000Z' },
+        source,
+        '2026-09-10T00:00:00.000Z'
+      );
     });
   }, { cwd: process.cwd(), policy: POLICY });
 }

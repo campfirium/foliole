@@ -27,8 +27,8 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const hostSettings = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseHostSettings.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
+    const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
     const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
     const settings = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
     connection.runWithDatabaseConnectionOwner(() => {
@@ -36,12 +36,10 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
       const assignment = host.loadReadwiseHostAssignment();
       const source = identity.loadReadwiseRemoteSource()
         ?? identity.createReadwiseRemoteSource('2026-09-11T00:00:00.000Z');
-      const defaults = hostSettings.createDefaultReadwiseHostSettings();
+      const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000020.bin';
+      secret.writeReadwiseApiSecret(secretRef, 't178-20-token');
       identity.saveReadwiseConnectionState({
-        ...defaults,
-        apiConnection: { secretRef: null, state: 'disconnected', verifiedAt: null },
-        readwiseSourceMode: 'api',
-        updatedAt: '2026-09-11T00:00:00.000Z'
+        secretRef, state: 'connected', verifiedAt: '2026-09-11T00:00:00.000Z'
       }, source, '2026-09-11T00:00:00.000Z');
       if (input.migration !== 'completed') cutover.writeReadwiseSourceCutover({
         annotations: [], cohortDocumentIds: input.migration === 'merging' ? ['document-1'] : [],
