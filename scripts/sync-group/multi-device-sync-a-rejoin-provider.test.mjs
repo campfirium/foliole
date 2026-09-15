@@ -127,7 +127,7 @@ it('pushes fresh member facts through product sync before waiting on the anchor'
   expect(cCreated).toBeGreaterThan(bSync);
 });
 
-it('runs the rejoining Mac product sync only after Windows C opens its session', () => {
+it('lets the rejoining Mac auto-converge before any later manual fact sync', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const opened = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
   const macosOpened = source.indexOf('session = await openMacosSyncGroupDesktopSession(sessionOptions)');
@@ -136,8 +136,8 @@ it('runs the rejoining Mac product sync only after Windows C opens its session',
   expect(opened).toBeGreaterThan(-1);
   expect(source).not.toContain('waitForCurrentProvider');
   expect(opened).toBeLessThan(macosOpened);
-  expect(macosOpened).toBeLessThan(sync);
-  expect(sync).toBeLessThan(convergence);
+  expect(macosOpened).toBeLessThan(convergence);
+  expect(convergence).toBeLessThan(sync);
 });
 
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
