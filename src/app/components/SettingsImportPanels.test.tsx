@@ -56,14 +56,14 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
 
   expect(screen.getByText('Readwise Reader Import')).toBeInTheDocument();
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
-  expect(screen.getByText('Clean up imports')).toBeInTheDocument();
+  expect(screen.queryByText('Clean up imports')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
-  expect(screen.getByRole('radiogroup', { name: 'Articles with highlights destination' })).toBeInTheDocument();
-  expect(screen.getByRole('radiogroup', { name: 'Articles without highlights destination' })).toBeInTheDocument();
-  expect(screen.getByRole('radiogroup', { name: 'Books with highlights destination' })).toBeInTheDocument();
-  expect(screen.getByRole('radiogroup', { name: 'Books without highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Articles with highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Articles without highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Books with highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Books without highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toHaveValue('hourly');
   expect(screen.queryByLabelText('Readwise import scope')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
@@ -75,7 +75,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   expect(
     screen
-      .getByRole('radiogroup', { name: 'Articles with highlights destination' })
+      .getByRole('combobox', { name: 'Articles with highlights destination' })
       .compareDocumentPosition(screen.getByText('Readwise root folder'))
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });

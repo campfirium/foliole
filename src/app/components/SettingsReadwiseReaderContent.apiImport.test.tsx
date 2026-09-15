@@ -28,7 +28,7 @@ vi.mock('../../shared/ui', async (importOriginal) => ({
   requestAppConfirmation: modeRuntime.confirm
 }));
 
-it('keeps sync and cleanup alongside import rules', async () => {
+it('keeps sync without cleanup alongside import rules', async () => {
   scheduleRuntime.load.mockResolvedValue({
     cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'completed', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
@@ -56,14 +56,14 @@ it('keeps sync and cleanup alongside import rules', async () => {
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Sync' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Clean up...' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Clean up...' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Reader document import tag' })).toHaveValue('');
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.queryByRole('searchbox', { name: 'Search by title or author' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Preview import' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Connect Readwise' })).toBeInTheDocument();
-  for (const name of ['Connect Readwise', 'Sync', 'Clean up...']) {
+  for (const name of ['Connect Readwise', 'Sync']) {
     expect(screen.getByRole('button', { name })).toHaveClass('w-36', 'min-h-8');
   }
   expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();

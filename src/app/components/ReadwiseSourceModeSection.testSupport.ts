@@ -6,10 +6,8 @@ import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
 
 export function createReadwiseApiModeTestSettings(): ReadwiseApiModeSettings {
   return {
-    cleanupDisabled: false,
     config: createDefaultReadwiseReaderConfig(),
     onChangeFrequency: vi.fn(),
-    onCleanup: vi.fn(),
     onSync: vi.fn(),
     syncDisabled: false,
     syncIsRunning: false,

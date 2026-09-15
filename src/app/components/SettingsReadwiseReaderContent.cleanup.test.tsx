@@ -1,20 +1,15 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createReadwiseImportSources } from './importSourceWorkspaceModel';
-import {
-  createReadwiseCleanupPreview,
-  createReadwiseCleanupRunResult
-} from './readwiseReaderSettingsTestSupport';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-it('previews and runs Readwise cleanup from the setup action row', async () => {
-  const onPreviewCleanup = vi.fn().mockResolvedValue(createReadwiseCleanupPreview());
-  const onRunCleanup = vi.fn().mockResolvedValue(createReadwiseCleanupRunResult());
-  const onSave = vi.fn();
+it('does not preview or show Readwise cleanup in folder mode', () => {
+  const onPreviewCleanup = vi.fn();
+  const onRunCleanup = vi.fn();
 
   renderWithLocalization(
     <SettingsReadwiseReaderContent
@@ -25,35 +20,14 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
       }}
       onPreviewCleanup={onPreviewCleanup}
       onRunCleanup={onRunCleanup}
-      onSave={onSave}
+      onSave={vi.fn()}
       readwiseRootPath="/Readwise"
       readwiseSources={createReadwiseImportSources('/Readwise')}
     />
   );
 
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Clean up...' })).toBeEnabled();
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Clean up...' }));
-
-  expect(
-    await screen.findByRole('dialog', { name: 'Clean up Readwise imports' })
-  ).toBeInTheDocument();
-  expect(screen.getByText('1 with additions will be kept')).toBeInTheDocument();
-  expect(screen.getByText('Plain')).toBeInTheDocument();
-  expect(screen.queryByText('tracking records will be cleared')).not.toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Clean up' }));
-
-  await waitFor(() => {
-    expect(onRunCleanup).toHaveBeenCalledTimes(1);
-  });
-  expect(onSave).toHaveBeenCalledWith(
-    expect.objectContaining({
-      config: expect.objectContaining({ enabled: false }),
-      readwiseSources: expect.arrayContaining([
-        expect.objectContaining({ kind: 'articles', keepState: 'draft' })
-      ])
-    })
-  );
+  expect(screen.queryByText('Clean up imports')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Clean up...' })).not.toBeInTheDocument();
+  expect(onPreviewCleanup).not.toHaveBeenCalled();
+  expect(onRunCleanup).not.toHaveBeenCalled();
 });

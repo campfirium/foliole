@@ -16,28 +16,19 @@ import type {
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
-import { definedProps } from '../../shared/lib/definedProps';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
-import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
 import { ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
-import { useReadwiseCleanup } from './useReadwiseCleanup';
 import {
   useReadwiseSetupController,
   type ReadwiseSetupPayload
 } from './useReadwiseSetupController';
-import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
-import {
-  createReadwiseSetupPayload,
-  disableReadwiseImportSource
-} from './useReadwiseSyncPreviewFlow';
-
-type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
+import { createReadwiseSetupPayload } from './useReadwiseSyncPreviewFlow';
 
 interface SettingsReadwiseReaderContentProps {
   config: ReadwiseReaderConfig;
@@ -61,16 +52,7 @@ interface SettingsReadwiseReaderContentProps {
   readwiseSources: DraftImportSource[];
 }
 
-function saveDisabledReadwiseSetup(props: SettingsReadwiseReaderContentProps, draft: ReadwiseSetupDraft) {
-  props.onSave(createReadwiseSetupPayload(
-    draft,
-    { ...draft.draftConfig, enabled: false },
-    disableReadwiseImportSource(draft.draftSources)
-  ));
-}
-
 function ReadwiseSelectedModeContent(props: {
-  cleanup: ReturnType<typeof useReadwiseCleanup>;
   settings: SettingsReadwiseReaderContentProps;
   setup: ReturnType<typeof useReadwiseSetupController>;
   sourceMode: ReadwiseSourceMode;
@@ -82,8 +64,6 @@ function ReadwiseSelectedModeContent(props: {
       canPreview={props.setup.canPreview}
       draft={props.setup.draft}
       integrationEnabled={props.setup.integrationEnabled}
-      cleanupDisabled={props.cleanup.cleanupDisabled}
-      onCleanup={() => void props.cleanup.openCleanupDialog()}
       onChangePolicy={props.settings.onChangePolicy ?? (() => undefined)}
       onChangeIntegration={props.setup.handleChangeIntegration}
       onCheck={props.setup.handleCheck}
@@ -98,15 +78,12 @@ function ReadwiseSelectedModeContent(props: {
 
 function createApiModeSettings(
   setup: ReturnType<typeof useReadwiseSetupController>,
-  cleanup: ReturnType<typeof useReadwiseCleanup>,
   onChangeFrequency: (frequency: ReadwiseSyncFrequency) => void,
   syncAvailable: boolean
 ): ReadwiseApiModeSettings {
   return {
-    cleanupDisabled: cleanup.cleanupDisabled,
     config: setup.draft.draftConfig,
     onChangeFrequency,
-    onCleanup: () => void cleanup.openCleanupDialog(),
     onSync: () => void setup.handleRunSync(),
     syncDisabled: !syncAvailable || setup.syncIsRunning,
     syncIsRunning: setup.syncIsRunning,
@@ -114,32 +91,18 @@ function createApiModeSettings(
   };
 }
 
-function useReadwiseSettingsCleanup(
-  props: SettingsReadwiseReaderContentProps,
-  setup: ReturnType<typeof useReadwiseSetupController>
-) {
-  return useReadwiseCleanup({
-    onCleanupComplete: () => saveDisabledReadwiseSetup(props, setup.draft),
-    ...definedProps({
-      onPreviewCleanup: props.onPreviewCleanup,
-      onRunCleanup: props.onRunCleanup
-    })
-  });
-}
-
 function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
   const committedMode = props.readwiseSourceMode ?? 'relay';
   const [sourceMode, setSourceMode] = useState(committedMode);
   useEffect(() => setSourceMode(committedMode), [committedMode]);
-  const cleanup = useReadwiseSettingsCleanup(props, setup);
   function saveApiFrequency(syncFrequency: ReadwiseSyncFrequency) {
     const draft = setup.draft;
     const config = { ...draft.draftConfig, syncFrequency };
     draft.updateConfig('syncFrequency', syncFrequency);
     props.onSave(createReadwiseSetupPayload(draft, config, draft.draftSources));
   }
-  const apiSettings = createApiModeSettings(setup, cleanup, saveApiFrequency, Boolean(props.onRunSync));
+  const apiSettings = createApiModeSettings(setup, saveApiFrequency, Boolean(props.onRunSync));
   return (
     <>
       <ReadwiseSourceModeSection
@@ -155,7 +118,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         {...(props.onChangeSourceMode ? { onCommitMode: props.onChangeSourceMode } : {})}
       />
       <ReadwiseSelectedModeContent
-        cleanup={cleanup}
         settings={props}
         setup={setup}
         sourceMode={sourceMode}
@@ -171,14 +133,6 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
         open={setup.syncIntent !== null}
         progress={setup.syncProgress}
         preview={setup.syncPreview}
-      />
-      <ReadwiseCleanupDialog
-        error={cleanup.cleanupError}
-        isRunning={cleanup.isCleanupRunning}
-        onCancel={cleanup.closeCleanupDialog}
-        onRun={() => void cleanup.runCleanup()}
-        open={cleanup.isCleanupDialogOpen}
-        preview={cleanup.cleanupPreview}
       />
     </>
   );

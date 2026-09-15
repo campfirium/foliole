@@ -7,11 +7,6 @@ import type {
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  AppButton,
-  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
-  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SettingsControlSlot,
-  SettingsRow,
   SettingsSection
 } from '../../shared/ui';
 
@@ -50,24 +45,9 @@ export function ReadwiseBehaviorSection(props: {
   );
 }
 
-export function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void }) {
-  const t = useTranslation();
-  return (
-    <SettingsRow description={t('desktop.readwise.cleanup.description')} title={t('desktop.readwise.cleanup.title')}>
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="danger">
-          {t('desktop.readwise.cleanup.action')}
-        </AppButton>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
 export function ReadwiseCommonRows(props: {
-  cleanupDisabled: boolean;
   config: ReadwiseReaderConfig;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
-  onCleanup: () => void;
   onSync: () => void;
   syncActionLabel?: string;
   syncDetail?: ReactNode;
@@ -77,8 +57,7 @@ export function ReadwiseCommonRows(props: {
   syncStatus: ReadwiseManualSyncStatus;
 }) {
   return (
-    <>
-      <ReadwiseReaderSyncRow
+    <ReadwiseReaderSyncRow
         actionLabel={props.syncActionLabel}
         config={props.config}
         detail={props.syncDetail}
@@ -88,9 +67,7 @@ export function ReadwiseCommonRows(props: {
         onChange={props.onChange}
         onSync={props.onSync}
         status={props.syncStatus}
-      />
-      <ReadwiseCleanupRow disabled={props.cleanupDisabled} onCleanup={props.onCleanup} />
-    </>
+    />
   );
 }
 
@@ -111,12 +88,10 @@ function ReadwiseImportSettingsSection({ draft }: { draft: ReadwiseSetupDraft })
 
 export function ReadwiseFolderSettingsSections(props: {
   canPreview: boolean;
-  cleanupDisabled: boolean;
   draft: ReadwiseSetupDraft;
   integrationEnabled: boolean;
   onChangeIntegration: () => void;
   onCheck: () => void;
-  onCleanup: () => void;
   onChangePolicy: (field: PolicyField, value: ReadwiseImportDestination) => void;
   onSync: () => void;
   policy: ReadwiseAutoImportPolicy;
@@ -148,10 +123,8 @@ export function ReadwiseFolderSettingsSections(props: {
           result={props.draft.previewResult}
         />
         <ReadwiseCommonRows
-          cleanupDisabled={props.cleanupDisabled}
           config={props.draft.draftConfig}
           onChange={props.draft.updateConfig}
-          onCleanup={props.onCleanup}
           onSync={props.onSync}
           syncDisabled={props.syncDisabled}
           syncIsRunning={props.syncIsRunning}

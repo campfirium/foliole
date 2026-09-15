@@ -69,7 +69,7 @@ async function capture(settings: Locator, testInfo: TestInfo, name: string) {
   await testInfo.attach(name, { contentType: 'image/png', path: target });
 }
 
-test('keeps Readwise row actions fixed across folder and API modes', async ({ browserName }, testInfo) => {
+test('keeps Readwise row actions fixed and hides cleanup across source modes', async ({ browserName }, testInfo) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-21-'));
@@ -79,10 +79,10 @@ test('keeps Readwise row actions fixed across folder and API modes', async ({ br
     await expectWorkspaceShell(session.firstWindow);
     let settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     const folderRows = settings.getByLabel(/^(Readwise Reader import|Readwise Reader 导入)$/, { exact: true });
-    await expectSameSize([
-      folderRows.getByRole('button', { name: /^(Sync|同步)$/ }),
-      folderRows.getByRole('button', { name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/ })
-    ]);
+    await expect(folderRows.getByRole('button', { name: /^(Sync|同步)$/ })).toBeVisible();
+    await expect(folderRows.getByRole('button', {
+      name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/
+    })).toHaveCount(0);
     await expect(settings.getByRole('combobox', { name: /^(Sync frequency|同步频率)$/ }))
       .not.toHaveClass(/w-36/);
     await capture(settings, testInfo, 'folder-actions');
@@ -95,9 +95,11 @@ test('keeps Readwise row actions fixed across folder and API modes', async ({ br
     const syncRows = settings.getByLabel(/^(Readwise Reader sync|Readwise Reader 同步)$/);
     await expectSameSize([
       connectionRows.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }),
-      syncRows.getByRole('button', { name: /^(Sync|同步)$/ }),
-      syncRows.getByRole('button', { name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/ })
+      syncRows.getByRole('button', { name: /^(Sync|同步)$/ })
     ]);
+    await expect(syncRows.getByRole('button', {
+      name: /^(Clean up…|清理…|Clean up\.\.\.|清理\.\.\.)$/
+    })).toHaveCount(0);
     await expect(settings.getByRole('radiogroup', {
       name: /^(Readwise source mode|Readwise 来源模式)$/
     })).not.toHaveClass(/w-36/);

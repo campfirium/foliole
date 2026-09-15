@@ -24,10 +24,8 @@ const IDLE_SYNC_STATUS: ReadwiseManualSyncStatus = {
 };
 
 export interface ReadwiseApiModeSettings {
-  cleanupDisabled: boolean;
   config: ReadwiseReaderConfig;
   onChangeFrequency: (value: ReadwiseSyncFrequency) => void;
-  onCleanup: () => void;
   onSync: () => void;
   syncDisabled: boolean;
   syncIsRunning: boolean;
@@ -149,10 +147,8 @@ export function ReadwiseApiOperationsRows(props: {
   const migrationActive = props.migrationActive;
   return (
     <ReadwiseCommonRows
-      cleanupDisabled={props.settings.cleanupDisabled || migrationActive}
       config={props.settings.config}
       onChange={(_field, value) => props.settings.onChangeFrequency(value as ReadwiseSyncFrequency)}
-      onCleanup={props.settings.onCleanup}
       onSync={props.settings.onSync}
       syncActionLabel={task.actionLabel}
       syncDisabled={props.settings.syncDisabled || migrationActive || task.running}

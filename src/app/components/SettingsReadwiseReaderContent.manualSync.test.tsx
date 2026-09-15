@@ -75,11 +75,11 @@ it('keeps manual Readwise sync status compact while running', async () => {
   expect(rehydrate).toHaveBeenCalledTimes(1);
 });
 
-it('uses the shared fixed action size for folder sync and cleanup', () => {
+it('uses the shared fixed action size for folder sync without cleanup', () => {
   renderManualSyncHarness(vi.fn());
 
   expect(screen.getByRole('button', { name: 'Sync' })).toHaveClass('w-36', 'min-h-8');
-  expect(screen.getByRole('button', { name: 'Clean up...' })).toHaveClass('w-36', 'min-h-8');
+  expect(screen.queryByRole('button', { name: 'Clean up...' })).not.toBeInTheDocument();
 });
 
 it('shows failed Readwise source details after manual sync', async () => {
