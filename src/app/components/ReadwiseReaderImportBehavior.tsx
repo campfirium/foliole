@@ -54,7 +54,7 @@ function ImportDestinationControl(props: {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={props.ariaLabel}
-          className="inline-flex h-8 w-full items-center justify-between gap-2 rounded-sm px-2 text-left text-ui-md text-foreground/78 transition-colors hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-settings-control-hover disabled:pointer-events-none disabled:opacity-45"
+          className="inline-flex h-8 w-full items-center justify-end gap-1.5 rounded-sm px-2 text-right text-ui-md text-foreground/78 transition-colors hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-settings-control-hover disabled:pointer-events-none disabled:opacity-45"
           disabled={props.disabled}
           role="combobox"
           type="button"
