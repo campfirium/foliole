@@ -18,6 +18,8 @@ import {
 } from './windows-sync-group-recovery-action.mjs';
 import { readWindowsSyncRuntimeLog } from './windows-sync-group-runtime-progress.mjs';
 
+/* global AbortController */
+
 const FIRST_CURSOR_COMMIT_TIMEOUT_MS = 3 * 60_000;
 
 function assertEmptyCursor(facts) {
@@ -77,6 +79,20 @@ export function waitForCursorCommitSignal(signal, {
   });
 }
 
+export async function completeJoinUntilAccepted(page, signal, {
+  invoke = invokeWindowsSyncGroupCommand, pause = delay
+} = {}) {
+  while (!signal.aborted) {
+    try {
+      await invoke(page, 'complete_sync_group_join');
+      return;
+    } catch {
+      if (signal.aborted) return;
+      await pause(1_000);
+    }
+  }
+}
+
 function waitForCompleteFacts(inspect, reportProgress) {
   let contentReported = false;
   let attachmentsReported = false;
@@ -104,8 +120,12 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     await actions.enable(session.page);
     const candidate = await actions.discover(session.page); report('c-group-discovered');
     await actions.requestJoin(session.page, candidate.endpoint_url); report('c-join-requested');
-    await actions.waitForCursorCommitted(session.cursorCommitted);
+    const completionController = new AbortController();
+    const completionWork = actions.completeJoin(session.page, completionController.signal);
+    try { await actions.waitForCursorCommitted(session.cursorCommitted); }
+    finally { completionController.abort(); }
     await actions.closeSession(session, { force: true }); session = null;
+    await completionWork;
     const interruptedFacts = await actions.inspect();
     assertCommittedPartial(interruptedFacts);
     assertJoinedGroup(interruptedFacts, candidate.group_id);
@@ -143,6 +163,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
     receipt = await runWindowsSyncFromZeroJourney({
       discover: (page) => discoverUniqueGroup(page, 60_000, isAndroidProvider),
       closeSession: closeWindowsSyncGroupSession,
+      completeJoin: completeJoinUntilAccepted,
       enable: (page) => enableWindowsSyncParticipation(page, invokeWindowsSyncGroupCommand),
       inspect,
       openSession: (options) => openWindowsSyncGroupSession(paths, evidenceRoot, undefined, options),
