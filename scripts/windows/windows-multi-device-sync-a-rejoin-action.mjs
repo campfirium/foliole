@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
+import { syncDesktopMemberAfterElection } from '../sync-group/multi-device-sync-topology.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 
 function freshFactIds(facts, excluded) {
@@ -18,24 +19,6 @@ function assertComplete(facts, ids) {
       || Object.values(ids).some((id) => facts.facts?.[id] !== true)) {
     throw new Error(`Windows C A-rejoin state is incomplete: ${JSON.stringify(facts)}`);
   }
-}
-
-export async function syncWindowsAfterAnchorSettles(invoke, page, {
-  attempts = 30, pause = delay
-} = {}) {
-  let lastError;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      return await invoke(page, 'sync_companion_now');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!['sync_group_peer_not_anchor', 'sync_group_peer_unavailable']
-        .some((code) => message.includes(code))) throw error;
-      lastError = error;
-      await pause(1_000);
-    }
-  }
-  throw lastError;
 }
 
 async function waitForFreshFacts(execute, inspect, paths, excluded, origins, factIds = [],
@@ -92,7 +75,10 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
         invoke: (command, args) => invoke(page, command, args)
       } });
       reportProgress({ factId: 'a-rejoin', milestone: 'c-fact-created' });
-      await syncWindowsAfterAnchorSettles(invoke, page);
+      await syncDesktopMemberAfterElection({
+        loadOverview: () => invoke(page, 'load_sync_group_overview'),
+        sync: () => invoke(page, 'sync_companion_now')
+      });
       const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;

@@ -4,28 +4,12 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
-import {
-  runWindowsMultiDeviceSyncARejoin, syncWindowsAfterAnchorSettles
-} from './windows-multi-device-sync-a-rejoin-action.mjs';
+import { runWindowsMultiDeviceSyncARejoin } from './windows-multi-device-sync-a-rejoin-action.mjs';
 
 const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4,
   facts: {}, journeyFacts: {}, localGroupId: 'group-1', localMemberState: 'active',
   localTimelineId: null, missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
-
-it('waits through topology election before publishing the Windows fact', async () => {
-  const invoke = vi.fn()
-    .mockRejectedValueOnce(new Error('sync_group_peer_not_anchor'))
-    .mockRejectedValueOnce(new Error('sync_group_peer_unavailable'))
-    .mockResolvedValueOnce({ status: 'completed' });
-  const pause = vi.fn(async () => {});
-
-  await expect(syncWindowsAfterAnchorSettles(invoke, {}, { attempts: 3, pause }))
-    .resolves.toEqual({ status: 'completed' });
-
-  expect(invoke).toHaveBeenCalledTimes(3);
-  expect(pause).toHaveBeenCalledTimes(2);
-});
 
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));
@@ -43,7 +27,13 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
   const openSession = vi.fn(async () => ({ app: { close }, page: {} }));
-  const invoke = vi.fn(async () => ({}));
+  const invoke = vi.fn(async (_page, command) => command === 'load_sync_group_overview'
+    ? { current_device: { device_identity_key: 'desktop-c' }, server_status: {
+      topology_role: 'member', topology_status: 'ready'
+    }, sync_group: { devices: [
+      { device_identity_key: 'desktop-a', platform: 'macOS', state: 'active' },
+      { device_identity_key: 'desktop-c', platform: 'Windows 11', state: 'active' }
+    ] } } : {});
   const releaseProviders = [];
   const reportProgress = vi.fn();
   const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => {

@@ -150,7 +150,7 @@ it('syncs restarted macOS after the restarted Windows provider before requiring 
   const windowsRestarted = source.indexOf(
     "await windowsProvider.waitForProgress('c-session-restarted')", created
   );
-  const synced = source.indexOf("await session.invoke('sync_companion_now')", created);
+  const synced = source.indexOf('await syncDesktopMemberAfterElection', created);
   const converged = source.indexOf("waitUntil('macOS A fresh fact identities'", created);
   expect(created).toBeLessThan(macosRestarted);
   expect(macosRestarted).toBeLessThan(windowsRestarted);

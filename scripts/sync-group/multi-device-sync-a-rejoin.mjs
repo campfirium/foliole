@@ -23,6 +23,7 @@ import { readNonemptyAdmissionMaterial } from './multi-device-sync-nonempty-admi
 import {
   productFailure, waitForThreeDeviceProof, waitUntil
 } from './multi-device-sync-three-device-proof.mjs';
+import { syncDesktopMemberAfterElection } from './multi-device-sync-topology.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
@@ -140,7 +141,8 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     session = await openMacosSyncGroupDesktopSession(sessionOptions);
     await session.enable();
     await windowsProvider.waitForProgress('c-session-restarted');
-    await session.invoke('sync_companion_now');
+    await syncDesktopMemberAfterElection({ loadOverview: () => session.load(),
+      sync: () => session.invoke('sync_companion_now') });
     const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
     (value) => ['A', 'B', 'C'].every((origin) => value[origin]),
