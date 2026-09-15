@@ -7,13 +7,14 @@ import { ATTACHMENT_RESOURCE_BATCH_LIMIT } from '../../src/shared/platform/compa
 import { CONTENT_BLOB_BATCH_LIMIT } from '../../src/shared/platform/companionDesktopSyncContentBlobs.ts';
 import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
-  SYNC_FROM_ZERO_DATASET
+  SYNC_FROM_ZERO_DATASET, SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS
 } from './sync-from-zero-contract.mjs';
 
 it('keeps the bounded product dataset beyond every existing ordinary sync batch boundary', () => {
   expect(SYNC_FROM_ZERO_DATASET.nodeCount).toBeGreaterThan(SYNC_OBJECT_APPLY_BATCH_SIZE);
   expect(SYNC_FROM_ZERO_DATASET.nodeCount).toBeGreaterThan(CONTENT_BLOB_BATCH_LIMIT);
   expect(SYNC_FROM_ZERO_DATASET.attachmentCount).toBeGreaterThan(ATTACHMENT_RESOURCE_BATCH_LIMIT);
+  expect(SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS).toBe(180_000);
 });
 
 it('requires exact dataset resources instead of accepting generic nonempty facts', () => {

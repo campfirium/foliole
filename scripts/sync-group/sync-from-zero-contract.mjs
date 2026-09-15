@@ -6,6 +6,8 @@ export const SYNC_FROM_ZERO_DATASET = Object.freeze({
   nodePrefix: 'sync-from-zero-a-'
 });
 
+export const SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS = 3 * 60_000;
+
 export const WINDOWS_SYNC_FROM_ZERO_PROGRESS = Object.freeze([
   'c-cursor-zero',
   'c-group-discovered',

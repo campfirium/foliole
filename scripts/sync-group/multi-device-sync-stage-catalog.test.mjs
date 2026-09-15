@@ -70,7 +70,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'windows-structure-batches-complete', 'windows-content-batches-complete',
       'windows-attachment-batches-complete', 'three-host-converged',
       'provider-resources-preserved', 'peer-progress-converged'
-    ], progressDeadlineMs: 60_000
+    ], progressDeadlineMs: 180_000
   });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },

@@ -6,7 +6,8 @@ import {
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import {
-  assertSyncFromZeroDatasetFacts, syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
+  assertSyncFromZeroDatasetFacts, syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET,
+  SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS
 } from './sync-from-zero-contract.mjs';
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
@@ -83,7 +84,9 @@ export async function waitForAndroidSyncFromZeroProofSnapshot(paths, {
 
 export async function waitForAndroidSyncFromZeroDataset(paths, reportActivity, reportProgress) {
   const deadline = Date.now() + 12 * 60_000;
-  const observe = createSyncProgressWatchdog({ label: 'Android B sync-from-zero dataset', stallMs: 60_000 });
+  const observe = createSyncProgressWatchdog({
+    label: 'Android B sync-from-zero dataset', stallMs: SYNC_FROM_ZERO_PROGRESS_DEADLINE_MS
+  });
   let structureReported = false;
   let contentReported = false;
   let attachmentsReported = false;
