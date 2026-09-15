@@ -11,6 +11,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
+  seedCompletedReadwiseApiMode,
   type T178AcceptanceSession
 } from './harness/t178ApiAcceptanceSession';
 
@@ -154,6 +155,7 @@ test('routes four representative folder and API inputs through the same policy',
       if (mode === 'api') {
         await installApiFixture(session.electronApp);
         await runApiFixture(session.electronApp);
+        await seedCompletedReadwiseApiMode(session.electronApp);
       }
       await expect.poll(async () => {
         try {

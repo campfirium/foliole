@@ -46,16 +46,11 @@ async function seedIncompleteMigration(app: ElectronApplication) {
 
 async function installBlockedTransport(app: ElectronApplication) {
   await app.evaluate(() => {
-    const runtime = globalThis as typeof globalThis & {
-      __t17819Requested?: boolean;
-      __t17819Reject?: () => void;
-    };
+    const runtime = globalThis as typeof globalThis & { __t17819Requested?: boolean };
     runtime.__t17819Requested = false;
     runtime.fetch = async () => {
       runtime.__t17819Requested = true;
-      return new Promise((_resolve, reject) => {
-        runtime.__t17819Reject = () => reject(new Error('t178_19_pause'));
-      });
+      throw new Error('t178_19_pause');
     };
   });
 }

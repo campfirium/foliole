@@ -76,7 +76,7 @@ it.each(['initial', 'routine'] as const)('projects %s worker progress through th
   });
   expect(readwiseApiPhasePresentation(status(kind), translate.bind(null, 'en'))).toEqual({
     failed: false,
-    text: 'Syncing'
+    text: 'Syncing · 4 / 10'
   });
 });
 
@@ -103,13 +103,13 @@ it('shows indexing while a normal sync is still building its Readwise index', ()
   });
 });
 
-it('keeps the failed indexing stage and its durable reason without numeric progress', () => {
+it('keeps the failed indexing stage, durable progress, and reason', () => {
   const snapshot = status('initial');
   snapshot.initial_sync.lifecycle = {
     ...lifecycle('initial'), error_reason: 'rate_limited', stage: 'fetching', status: 'failed'
   };
   expect(readwiseApiPhasePresentation(snapshot, translate.bind(null, 'en'))).toEqual({
     failed: true,
-    text: 'Indexing failed · Readwise rate limit reached'
+    text: 'Indexing failed · 4 / 10 · Readwise rate limit reached'
   });
 });

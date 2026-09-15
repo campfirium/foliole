@@ -8,6 +8,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 import {
   createT178ApiAcceptanceSession,
+  seedCompletedReadwiseApiMode,
   type T178AcceptanceSession
 } from './harness/t178ApiAcceptanceSession';
 
@@ -42,21 +43,20 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
         readwiseSourceMode: 'api',
         updatedAt: '2026-09-11T00:00:00.000Z'
       }, source, '2026-09-11T00:00:00.000Z');
-      cutover.writeReadwiseSourceCutover({
-        annotations: [],
-        cohortDocumentIds: input.migration === 'merging' ? ['document-1'] : [],
-        completedAt: '2026-09-11T00:00:00.000Z',
-        documents: [],
-        retiredNodeIds: [],
-        sourceHost: assignment.current_host_name,
-        startedAt: '2026-09-11T00:00:00.000Z',
-        status: input.migration === 'completed' ? 'api' : 'migration-in-progress'
+      if (input.migration !== 'completed') cutover.writeReadwiseSourceCutover({
+        annotations: [], cohortDocumentIds: input.migration === 'merging' ? ['document-1'] : [],
+        completedAt: '2026-09-11T00:00:00.000Z', documents: [], phase: input.migration,
+        retiredNodeIds: [], sourceHost: assignment.current_host_name,
+        startedAt: '2026-09-11T00:00:00.000Z', status: 'migration-in-progress'
       });
       const lifecycle = input.sync ? {
         error_reason: null,
         finished_at: input.sync.status === 'completed' ? '2026-09-11T00:00:03.000Z' : null,
         kind: 'initial',
-        progress: null,
+        progress: {
+          completed_count: 1, failed_count: 0, pending_count: 1,
+          total_count: 2, unexplained_failure_count: 0
+        },
         queued_at: '2026-09-11T00:00:01.000Z',
         run_id: 't178-20-run',
         stage: input.sync.stage,
@@ -74,6 +74,9 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
       });
     });
   }, projection);
+  if (projection.migration === 'completed') {
+    await seedCompletedReadwiseApiMode(app, '2026-09-11T00:00:00.000Z');
+  }
 }
 
 async function reopenReadwise(session: T178AcceptanceSession) {
@@ -85,12 +88,11 @@ async function reopenReadwise(session: T178AcceptanceSession) {
 async function expectPhase(settings: Locator, expected: RegExp, screenshot: string) {
   const status = settings.getByRole('status').filter({ hasText: expected });
   await expect(status).toBeVisible();
-  await expect(status).not.toContainText(/[0-9%/]/u);
   await expect(settings.getByRole('progressbar')).toHaveCount(0);
   await settings.screenshot({ path: path.join(ARTIFACT_DIR, screenshot) });
 }
 
-test('projects durable migration and sync phases below the API source mode without numbers', async ({ browserName }) => {
+test('projects durable migration and sync phases with truthful progress', async ({ browserName }) => {
   void browserName;
   test.setTimeout(120_000);
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-20-'));
@@ -105,19 +107,19 @@ test('projects durable migration and sync phases below the API source mode witho
 
     await seedProjection(session.electronApp, { migration: 'merging' });
     settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Migrating · Merging|正在迁移 · 合并中)$/, 'migration-merging.png');
+    await expectPhase(settings, /^(Migrating · Merging|正在迁移 · 合并中) · 0 \/ 1$/, 'migration-merging.png');
 
     await seedProjection(session.electronApp, {
       migration: 'completed', sync: { stage: 'fetching', status: 'interrupted' }
     });
     settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Indexing|索引中)$/, 'sync-indexing.png');
+    await expectPhase(settings, /^(Indexing|索引中) · 1 \/ 2$/, 'sync-indexing.png');
 
     await seedProjection(session.electronApp, {
       migration: 'completed', sync: { stage: 'writing', status: 'interrupted' }
     });
     settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Syncing|同步中)$/, 'syncing.png');
+    await expectPhase(settings, /^(Syncing|同步中) · 1 \/ 2$/, 'syncing.png');
 
     await seedProjection(session.electronApp, {
       migration: 'completed', sync: { stage: 'writing', status: 'completed' }

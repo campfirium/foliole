@@ -2,6 +2,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import type { ElectronApplication } from '@playwright/test';
+
 import {
   acquireMacosHiddenCredentialSessionLock,
   resolveMacosHiddenCredentialSession
@@ -54,4 +56,34 @@ export async function createT178ApiAcceptanceSession(stateRoot: string) {
   const executablePath = runtime.executablePath;
   runtime.cleanup();
   return launchMacosSession(executablePath, stateRoot);
+}
+
+export async function seedCompletedReadwiseApiMode(
+  app: ElectronApplication,
+  completedAt = '2026-09-15T00:00:00.000Z'
+) {
+  await app.evaluate((_electron, timestamp) => {
+    const moduleApi = process.getBuiltinModule('module');
+    const pathApi = process.getBuiltinModule('path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
+    const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
+    const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
+    const sourceMode = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceMode.js'));
+    connection.runWithDatabaseConnectionOwner(() => {
+      host.activateReadwiseOnThisHost();
+      const sourceHost = host.loadReadwiseHostAssignment().current_host_name;
+      cutover.writeReadwiseSourceCutover({
+        annotations: [], cohortDocumentIds: [], completedAt: timestamp, completionVersion: 3,
+        documents: [], retiredNodeIds: [], sourceHost, startedAt: timestamp, status: 'api'
+      });
+      sourceMode.writeReadwiseSourceMode(
+        connection.openDatabaseConnection().driver,
+        'api',
+        timestamp,
+        { batchId: null, completedAt: timestamp, sourceHost, startedAt: timestamp }
+      );
+    });
+  }, completedAt);
 }

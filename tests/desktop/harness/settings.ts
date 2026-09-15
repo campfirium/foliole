@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 const BACKUPS_HEADING_NAME = /^(Backups|备份)$/;
 const CATEGORY_NAMES = {
@@ -71,7 +71,8 @@ export async function connectAndCutoverReadwiseApi(
   const confirmation = windowPage.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
   await waitForVisible(confirmation);
   await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
-  await waitForVisible(settingsDialog.getByLabel(/^(Sync frequency|同步频率)$/));
+  await expect(settingsDialog.getByText(/^(API enabled|API 已启用)$/)).toBeVisible({ timeout: 90_000 });
+  await expect(settingsDialog.getByLabel(/^(Sync frequency|同步频率)$/)).toBeEnabled();
 }
 
 export async function openBackupsSection(windowPage: Page) {

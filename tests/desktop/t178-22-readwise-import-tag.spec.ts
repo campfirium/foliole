@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { seedCompletedReadwiseApiMode } from './harness/t178ApiAcceptanceSession';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 
@@ -23,6 +24,7 @@ test('persists one API import tag and exposes no manual import controls', async 
   expect(isolation.hidden).toBe('1');
   expect(isolation.libraryHome).toBe(path.join(isolation.stateRoot!, 'library'));
 
+  await seedCompletedReadwiseApiMode(desktopApp);
   await desktopWindow.evaluate(async () => {
     const settings = await globalThis.window?.electronAPI?.invoke('load_import_manager_settings');
     await globalThis.window?.electronAPI?.invoke('save_import_manager_settings', {

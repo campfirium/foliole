@@ -51,13 +51,19 @@ export function readwiseApiPhasePresentation(
   const phaseKey = lifecycle.stage === 'fetching'
     ? 'desktop.readwise.api.tasks.indexing'
     : 'desktop.readwise.api.tasks.syncing';
-  const phase = t(phaseKey);
+  const phase = withProgress(t(phaseKey), lifecycle.progress);
   if (lifecycle.status !== 'failed') return { failed: false, text: phase };
   const failedKey = lifecycle.stage === 'fetching'
     ? 'desktop.readwise.api.tasks.indexFailed'
     : 'desktop.readwise.api.tasks.syncFailed';
   const reason = readwiseFailureReason(lifecycle.error_reason, t);
-  return { failed: true, text: reason ? `${t(failedKey)} · ${reason}` : t(failedKey) };
+  const failed = withProgress(t(failedKey), lifecycle.progress);
+  return { failed: true, text: reason ? `${failed} · ${reason}` : failed };
+}
+
+function withProgress(text: string, progress: NativeReadwiseApiRunLifecycle['progress']) {
+  if (!progress || progress.total_count === null) return text;
+  return `${text} · ${progress.completed_count} / ${progress.total_count}`;
 }
 
 function activeLifecycle(status: NativeReadwiseApiScheduleStatus | null) {
