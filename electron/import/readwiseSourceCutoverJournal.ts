@@ -1,6 +1,9 @@
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
-import type { ReadwiseSourceCutover } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import {
+  READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
+  type ReadwiseSourceCutover
+} from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { completeReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
 import {
@@ -190,7 +193,7 @@ export function completeReadwiseSourceCutoverMigration(connectionRef: string) {
     writeReadwiseSourceCutoverWithDriver(driver, {
       ...latest,
       completedAt,
-      completionVersion: 2,
+      completionVersion: READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
       phase: null,
       status: 'api'
     }, completedAt);

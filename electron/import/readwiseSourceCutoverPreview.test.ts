@@ -94,12 +94,24 @@ it('restores a reset migration as indexing until its Readwise index exists', asy
 it('reports an accepted API completion without reopening migration', async () => {
   writeReadwiseSourceCutover({
     annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
-    completionVersion: 2, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
+    completionVersion: 3, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
     startedAt: '2026-09-11T00:00:00.000Z', status: 'api'
   });
 
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     phase: null, status: 'already_completed'
+  });
+});
+
+it('requires a new migration for a historical v2 completion', async () => {
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
+    completionVersion: 2, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
+    startedAt: '2026-09-11T00:00:00.000Z', status: 'api'
+  });
+
+  await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
+    phase: null, status: 'ready'
   });
 });
 

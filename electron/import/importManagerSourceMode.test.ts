@@ -46,7 +46,7 @@ it('does not let a historical cutover override the library source mode', () => {
   expect(saved.readwiseSourceMode).toBe('relay');
   expect(loadImportManagerSettings()).toMatchObject({
     readwiseSourceMode: 'relay',
-    readwiseSourceModeConflict: ['completion_conflicts_with_mode']
+    readwiseSourceModeConflict: []
   });
 });
 
@@ -56,7 +56,7 @@ it('keeps completion proof while API mode is disabled and enables it again witho
   };
   saveJsonSetting('readwise_source_cutover_v2', {
     annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-    completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+    completedAt: completion.completedAt, completionVersion: 3, documents: [], phase: null,
     retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
     status: 'api', version: 2
   });
@@ -85,7 +85,7 @@ it('resolves a proved relay conflict when the user selects API mode', () => {
   };
   saveJsonSetting('readwise_source_cutover_v2', {
     annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-    completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+    completedAt: completion.completedAt, completionVersion: 3, documents: [], phase: null,
     retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
     status: 'api', version: 2
   });

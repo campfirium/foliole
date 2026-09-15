@@ -119,8 +119,8 @@ it('materializes the Readwise import tag without turning it into Host state', as
 
 it('waits for the matching cutover proof before materializing API mode', async () => {
   const completion = {
-    batchId: 'batch-1', completedAt: '2026-09-15T00:02:00.000Z',
-    sourceHost: 'Source Mac', startedAt: '2026-09-15T00:01:00.000Z'
+    batchId: 'batch-1', completedAt: '2027-09-15T00:02:00.000Z',
+    sourceHost: 'Source Mac', startedAt: '2027-09-15T00:01:00.000Z'
   };
   const mode = settingRecord({
     contentHash: 'readwise-mode-api', formFactor: 'desktop', hostName: '*',
@@ -134,7 +134,7 @@ it('waits for the matching cutover proof before materializing API mode', async (
     updatedAt: completion.completedAt,
     valueJson: JSON.stringify({
       annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-      completedAt: completion.completedAt, completionVersion: 2, documents: [], phase: null,
+      completedAt: completion.completedAt, completionVersion: 3, documents: [], phase: null,
       retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
       status: 'api', version: 2
     })

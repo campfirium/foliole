@@ -8,6 +8,7 @@ import {
   type ReadwiseSourceModeCompletion,
   type ReadwiseSourceMode
 } from '../../lib/core/import/readwiseSourceMode.js';
+import { READWISE_SOURCE_CUTOVER_COMPLETION_VERSION } from '../../lib/core/readwise/readwiseSourceCutover.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadReadwiseSourceCutover } from './readwiseSourceCutover.js';
@@ -33,14 +34,14 @@ export function loadReadwiseSourceModeState(): ReadwiseSourceModeState {
   const reasons = new Set(storedConflict?.reasons ?? []);
   const cutover = loadReadwiseSourceCutover();
   const complete = cutover?.version === 2 && cutover.status === 'api'
-    && cutover.completionVersion === 2;
+    && cutover.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION;
   const proofMatches = complete && setting.completion
     && setting.completion.completedAt === cutover.completedAt
     && setting.completion.startedAt === cutover.startedAt
     && setting.completion.sourceHost === cutover.sourceHost
     && setting.completion.batchId === (cutover.batchId ?? null);
   if (setting.mode === 'api' && !proofMatches) reasons.add('api_without_completion_proof');
-  if (setting.mode === 'relay' && cutover?.status === 'api') {
+  if (setting.mode === 'relay' && complete) {
     reasons.add('completion_conflicts_with_mode');
   }
   if (setting.mode !== 'relay' && cutover?.status === 'migration-in-progress') {

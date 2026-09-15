@@ -1,9 +1,11 @@
 import {
+  normalizeReadwiseSourceMode,
   normalizeLegacyReadwiseSourceMode,
   READWISE_SOURCE_MODE_CONFLICT_KEY,
   READWISE_SOURCE_MODE_KEY,
   type ReadwiseSourceMode
 } from '../import/readwiseSourceMode.js';
+import { READWISE_SOURCE_CUTOVER_COMPLETION_VERSION } from '../readwise/readwiseSourceCutover.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { tableExists } from './numberedMigrationHelpers.js';
@@ -61,7 +63,7 @@ function resolveLegacyState(values: StoredValue[]) {
   const cutovers = values.filter((item) => CUTOVER_KEYS.includes(item.key as never));
   const v1 = cutovers.filter((item) => record(item.value).version === 1).map((item) => record(item.value));
   const v2 = cutovers.filter((item) => record(item.value).version === 2).map((item) => record(item.value));
-  const completed = v2.some(isCompleteV2);
+  const completed = v2.some(isCurrentCompletion);
   const migrating = [...v1, ...v2].some((item) => item.status === 'migration-in-progress');
   const reasons: string[] = [];
   if (uniqueModes.length > 1) reasons.push('legacy_mode_conflict');
@@ -72,7 +74,7 @@ function resolveLegacyState(values: StoredValue[]) {
   if (explicit === 'api' && migrating) reasons.push('api_while_migration_in_progress');
   if (!explicit && cutovers.length > 0) reasons.push('mode_missing_for_existing_readwise_state');
   return {
-    completion: completed ? completionProof(v2.find(isCompleteV2)!) : null,
+    completion: completed ? completionProof(v2.find(isCurrentCompletion)!) : null,
     mode: explicit ?? (cutovers.length > 0 ? 'off' : 'relay'),
     reasons: [...new Set(reasons)].sort(),
     updatedAt: values.map((item) => item.updatedAt).sort().at(-1) ?? '1970-01-01T00:00:00.000Z'
@@ -93,8 +95,9 @@ function legacyMode(value: unknown): ReadwiseSourceMode[] {
   return mode ? [mode] : [];
 }
 
-function isCompleteV2(value: Record<string, unknown>) {
-  if (value.status !== 'api' || value.completionVersion !== 2
+function isCurrentCompletion(value: Record<string, unknown>) {
+  if (value.status !== 'api'
+    || value.completionVersion !== READWISE_SOURCE_CUTOVER_COMPLETION_VERSION
     || !Array.isArray(value.cohortDocumentIds) || !Array.isArray(value.documents)
     || !Array.isArray(value.annotations)) return false;
   const terminals = new Set(value.documents.flatMap((item) => {
@@ -102,6 +105,28 @@ function isCompleteV2(value: Record<string, unknown>) {
     return typeof row.remoteId === 'string' ? [row.remoteId] : [];
   }));
   return value.cohortDocumentIds.every((id) => typeof id === 'string' && terminals.has(id));
+}
+
+export function invalidateLegacyReadwiseSourceCompletion(
+  sqlite: DatabaseMigrationTarget,
+  now = new Date().toISOString()
+) {
+  if (!tableExists(sqlite, 'settings')) return;
+  const row = sqlite.prepare('SELECT value FROM settings WHERE key = ? LIMIT 1')
+    .all(READWISE_SOURCE_MODE_KEY)[0] as { value?: string } | undefined;
+  if (!row?.value) return;
+  const setting = normalizeReadwiseSourceMode(parse(row.value, READWISE_SOURCE_MODE_KEY));
+  const hasCurrentCompletion = readRelevantValues(sqlite)
+    .filter((item) => item.key === 'readwise_source_cutover_v2')
+    .some((item) => isCurrentCompletion(record(item.value)));
+  if (hasCurrentCompletion) return;
+  writeUserSpaceSetting(sqlite, READWISE_SOURCE_MODE_KEY, {
+    mode: setting.mode === 'api' ? 'relay' : setting.mode,
+    version: 1
+  }, now);
+  writeUserSpaceSetting(sqlite, READWISE_SOURCE_MODE_CONFLICT_KEY, {
+    reasons: [], version: 1
+  }, now);
 }
 
 function statuses(values: Array<Record<string, unknown>>) {

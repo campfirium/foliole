@@ -1,4 +1,7 @@
-import { readwiseSourceCutoverProgress } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import {
+  READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
+  readwiseSourceCutoverProgress
+} from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { NativeReadwiseSourceCutoverPreview } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
@@ -11,7 +14,9 @@ interface SourceCountRow { [column: string]: unknown; count: number }
 
 export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSourceCutoverPreview> {
   const current = loadReadwiseSourceCutover();
-  if (current) {
+  const completed = current?.version === 2 && current.status === 'api'
+    && current.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION;
+  if (current && (current.status === 'migration-in-progress' || completed)) {
     const connectionRef = loadReadwiseRemoteSource()?.connectionRef ?? '';
     const progress = readwiseSourceCutoverProgress(current);
     const indexing = current.status !== 'api' && current.version === 2
@@ -20,8 +25,8 @@ export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSour
     return {
       completed_count: indexing ? frozenCount : progress.completedCandidateCount,
       error_reason: firstReadwiseCandidateFailureReason(),
-      phase: current.status === 'api' ? null : indexing ? 'indexing' : 'merging',
-      status: current.status === 'api' ? 'already_completed' : 'migration_in_progress',
+      phase: completed ? null : indexing ? 'indexing' : 'merging',
+      status: completed ? 'already_completed' : 'migration_in_progress',
       topic_count: countCurrentHostTopics(current.sourceHost),
       total_count: indexing && current.version === 2 && current.cohortDocumentIds.length === 0
         ? null : progress.totalCandidateCount

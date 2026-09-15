@@ -1,4 +1,7 @@
-import { readwiseSourceCutoverProgress } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import {
+  READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
+  readwiseSourceCutoverProgress
+} from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { NativeReadwiseSourceCutoverResult } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -50,7 +53,10 @@ async function runNow(
   const current = loadReadwiseSourceCutover();
   const sourceMode = loadReadwiseSourceModeState();
   const currentProgress = current ? readwiseSourceCutoverProgress(current) : null;
-  if (current?.status === 'api' && sourceMode.mode === 'api' && sourceMode.conflictReasons.length === 0) {
+  const completed = current?.status === 'api'
+    && current.version === 2
+    && current.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION;
+  if (completed && sourceMode.mode === 'api' && sourceMode.conflictReasons.length === 0) {
     return result('already_completed', currentProgress?.migratedCount, currentProgress?.unmatchedCount);
   }
   if (sourceMode.conflictReasons.length > 0 || sourceMode.mode !== 'relay') {
@@ -61,8 +67,9 @@ async function runNow(
   const source = loadReadwiseRemoteSource();
   if (!source) return result('connection_required');
   if (!isStoredReadwiseApiConnectionReady()) return result('connection_required');
-  const startedAt = current?.startedAt ?? new Date().toISOString();
-  if (!current) {
+  const restartRequired = !current || current.status === 'api';
+  const startedAt = restartRequired ? new Date().toISOString() : current.startedAt;
+  if (restartRequired) {
     restartIncompleteReadwiseSourceCutover({
       connectionRef: source.connectionRef,
       policy: loadImportManagerSettings().readwiseAutoImportPolicy,

@@ -129,6 +129,30 @@ it('starts migration from the complete selected candidate scope instead of the o
   expect(exportRequest?.searchParams.has('updatedAfter')).toBe(false);
 });
 
+it('reruns the API migration instead of accepting a historical v2 completion', async () => {
+  await seedMigratableSource(state.sourcePath);
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: ['old-document'], completedAt: '2026-09-11T01:00:00.000Z',
+    completionVersion: 2,
+    documents: [{ nodeId: 'old-topic', remoteId: 'old-document', status: 'materialized' }],
+    phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
+    startedAt: '2026-09-11T00:00:00.000Z', status: 'api'
+  });
+  const fetchImpl = migrationFetch();
+
+  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
+
+  expect(fetchImpl).toHaveBeenCalled();
+  const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(journal).toMatchObject({
+    cohortDocumentIds: ['document-1'], completionVersion: 3, status: 'api'
+  });
+});
+
 it('reprojects a pristine body atomically while preserving a local cloze', async () => {
   await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
@@ -154,7 +178,7 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
   );
   expect(JSON.parse(legacyState?.value ?? '{}')).toMatchObject({ status: 'api', version: 1 });
   expect(JSON.parse(journalState?.value ?? '{}')).toMatchObject({
-    completionVersion: 2,
+    completionVersion: 3,
     cohortDocumentIds: ['document-1'],
     documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
     status: 'api',

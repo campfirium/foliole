@@ -3,6 +3,7 @@ import type { PreparedReadwiseApiDocument } from './readwiseApiImport.js';
 export const READWISE_SOURCE_CUTOVER_KEY = 'readwise_source_cutover';
 export const READWISE_SOURCE_CUTOVER_JOURNAL_KEY = 'readwise_source_cutover_v2';
 export const READWISE_SOURCE_CUTOVER_VERSION = 2;
+export const READWISE_SOURCE_CUTOVER_COMPLETION_VERSION = 3;
 
 export type ReadwiseSourceCutoverStatus = 'api' | 'migration-in-progress';
 
@@ -67,7 +68,9 @@ export function normalizeReadwiseSourceCutover(value: unknown): StoredReadwiseSo
     annotations: classifications(payload.annotations, 'annotations'),
     ...(optionalText(payload.batchId) ? { batchId: optionalText(payload.batchId)! } : {}),
     cohortDocumentIds,
-    ...(payload.completionVersion === 2 ? { completionVersion: 2 } : {}),
+    ...((payload.completionVersion === 2
+      || payload.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION)
+      ? { completionVersion: payload.completionVersion } : {}),
     completedAt: text(payload.completedAt, 'completedAt'),
     documents,
     phase: cutoverPhase(payload.phase, payload.status),

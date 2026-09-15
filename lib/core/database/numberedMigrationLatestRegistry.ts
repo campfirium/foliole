@@ -17,7 +17,10 @@ import { migrateReadwiseExternalReferences } from './readwiseExternalReferenceMi
 import { migrateReadwiseHostSettingsVersion } from './readwiseHostSettingsVersionMigration.js';
 import { migrateReadwiseRemoteIdentity } from './readwiseRemoteIdentityMigration.js';
 import { migrateReadwiseSevenCategoryPolicy } from './readwiseSevenCategoryPolicyMigration.js';
-import { migrateReadwiseSourceMode } from './readwiseSourceModeMigration.js';
+import {
+  invalidateLegacyReadwiseSourceCompletion,
+  migrateReadwiseSourceMode
+} from './readwiseSourceModeMigration.js';
 
 export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 70, migrate: migrateHostPermanentState },
@@ -39,5 +42,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 86, migrate: migrateReadwiseAutoImportPolicy },
   { version: 87, migrate: createDataMigrationStateTable },
   { version: 88, migrate: migrateReadwiseSourceMode },
-  { version: 89, migrate: repairSyncObjectStateBaseContentHash }
+  { version: 89, migrate: repairSyncObjectStateBaseContentHash },
+  { version: 90, migrate: invalidateLegacyReadwiseSourceCompletion }
 ];

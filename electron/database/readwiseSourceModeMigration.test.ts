@@ -4,7 +4,10 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { migrateReadwiseSourceMode } from '../../lib/core/database/readwiseSourceModeMigration.js';
+import {
+  invalidateLegacyReadwiseSourceCompletion,
+  migrateReadwiseSourceMode
+} from '../../lib/core/database/readwiseSourceModeMigration.js';
 
 let sqlite: Database.Database;
 
@@ -61,6 +64,23 @@ it('keeps a proved API library enabled without retaining a Host mode copy', () =
   expect(readSetting('readwise_import_settings')).not.toHaveProperty('readwiseSourceMode');
 });
 
+it('returns a historical v2 API claim to relay until the current migration completes', () => {
+  saveCompletedCutover(2);
+  const completion = {
+    batchId: null, completedAt: 'done', sourceHost: 'This Mac', startedAt: 'start'
+  };
+  sqlite.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('readwise_source_mode', ?, 'done')")
+    .run(JSON.stringify({ completion, mode: 'api', version: 1 }));
+
+  invalidateLegacyReadwiseSourceCompletion(sqlite, 'repair');
+
+  expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+  expect(readSetting('readwise_source_mode_conflict')).toEqual({ reasons: [], version: 1 });
+  expect(readCanonical('readwise_source_mode')).toMatchObject({
+    value_json: JSON.stringify({ mode: 'relay', version: 1 })
+  });
+});
+
 function saveLegacyHost(mode: string) {
   const value = JSON.stringify({ readwiseSourceMode: mode, version: 6 });
   sqlite.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('readwise_import_settings', ?, 'mode')")
@@ -71,9 +91,9 @@ function saveLegacyHost(mode: string) {
     .run(value);
 }
 
-function saveCompletedCutover() {
+function saveCompletedCutover(completionVersion = 3) {
   const value = JSON.stringify({
-    annotations: [], cohortDocumentIds: ['document'], completedAt: 'done', completionVersion: 2,
+    annotations: [], cohortDocumentIds: ['document'], completedAt: 'done', completionVersion,
     documents: [{ nodeId: 'topic', remoteId: 'document', status: 'bound' }], phase: null,
     retiredNodeIds: [], sourceHost: 'This Mac', startedAt: 'start', status: 'api', version: 2
   });

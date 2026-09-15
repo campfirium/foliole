@@ -6,6 +6,7 @@ import {
   normalizeReadwiseSourceMode,
   READWISE_SOURCE_MODE_KEY
 } from '../../lib/core/import/readwiseSourceMode.js';
+import { READWISE_SOURCE_CUTOVER_COMPLETION_VERSION } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import type { SyncPackSyncObjectRecord } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
 
@@ -59,7 +60,8 @@ async function canMaterializeReadwiseMode(port: DbPort, valueJson: string) {
   if (!rows[0]) return false;
   try {
     const cutover = JSON.parse(rows[0].value_json) as Record<string, unknown>;
-    return cutover.version === 2 && cutover.status === 'api' && cutover.completionVersion === 2
+    return cutover.version === 2 && cutover.status === 'api'
+      && cutover.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION
       && setting.completion?.completedAt === cutover.completedAt
       && setting.completion?.startedAt === cutover.startedAt
       && setting.completion?.sourceHost === cutover.sourceHost

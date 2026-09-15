@@ -35,7 +35,7 @@ async function seedCompletedApiMode(app: ElectronApplication) {
       );
       cutover.writeReadwiseSourceCutover({
         annotations: [], cohortDocumentIds: [],
-        completedAt: '2026-09-12T00:00:00.000Z', completionVersion: 2,
+        completedAt: '2026-09-12T00:00:00.000Z', completionVersion: 3,
         documents: [], retiredNodeIds: [],
         sourceHost: assignment.current_host_name, startedAt: '2026-09-12T00:00:00.000Z', status: 'api'
       });
