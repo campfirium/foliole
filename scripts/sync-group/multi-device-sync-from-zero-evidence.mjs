@@ -125,7 +125,7 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const overview = await session.load();
   const nodeIds = datasetReceipt.nodeIds.filter((id) => snapshot.nodesById?.[id]);
   return {
-    activeMemberCount: overview.sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
+    activeMemberCount: overview.sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
     datasetDigest: syncFromZeroDatasetDigest({
       attachmentIds: datasetReceipt.attachmentIds, contentHashes, nodeIds
     }),

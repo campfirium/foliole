@@ -54,7 +54,7 @@ it('uses the desktop body blob identity when list content is intentionally empty
     invoke: async (channel) => channel === 'load_workspace_list_snapshot'
       ? { nodesById: { 'node-1': { bodyBlobHash: 'body-1', content: '' } } }
       : { status: 'ready' },
-    load: async () => ({ sync_group: { group_id: 'group-1', members: [{ state: 'active' }],
+    load: async () => ({ sync_group: { devices: [{ state: 'active' }], group_id: 'group-1',
       timeline_id: 'timeline-1' } })
   };
   await expect(inspectMacosSyncFromZeroDataset(session, receipt)).resolves.toMatchObject({

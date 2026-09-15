@@ -9,7 +9,7 @@ import {
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { readABConvergenceMaterial } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -75,14 +75,25 @@ export async function restartARejoinAndroidProvider({
   });
 }
 
-export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
+export function createARejoinProofRequirements(ids, abMaterial, preJoinMaterial) {
+  return {
+    requiredAttachmentId: preJoinMaterial?.attachmentId,
+    requiredIds: { ...ids, ...(abMaterial ? {
+      preJoinA: abMaterial.desktopFactId, preJoinB: abMaterial.androidFactId
+    } : {}), ...(preJoinMaterial ? { preJoinC: preJoinMaterial.factId } : {}) }
+  };
+}
+
+export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress,
+  repoRoot, requirePreJoinMaterial = true, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-rejoin');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const abMaterial = readABConvergenceMaterial(repoRoot, runId, false);
-  const preJoinMaterial = readNonemptyAdmissionMaterial(repoRoot, runId);
+  const preJoinMaterial = requirePreJoinMaterial
+    ? readNonemptyAdmissionMaterial(repoRoot, runId) : null;
   const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot,
     reportProgress: () => reportActivity('windows-provider-progress') });
   let windowsSettled = false;
@@ -91,7 +102,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root
   });
-  let session = await openMacosPairSyncDesktopSession(sessionOptions);
+  let session = await openMacosSyncGroupDesktopSession(sessionOptions);
   try {
     const enabled = await session.enable();
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',
@@ -99,7 +110,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('a-listener-ready');
     await restartProvider();
     await waitUntil('macOS A three-member convergence', async () =>
-      (await session.load()).sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
+      (await session.load()).sync_group?.devices.filter(({ state }) => state === 'active').length ?? 0,
     (value) => value === 3,
       'three_members_missing');
     reportProgress('three-members-converged');
@@ -146,15 +157,15 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('three-facts-converged');
     await session.close(); session = null;
     await restartProvider();
-    session = await openMacosPairSyncDesktopSession(sessionOptions);
-    const requiredIds = { ...ids, ...(abMaterial ? {
-      preJoinA: abMaterial.desktopFactId, preJoinB: abMaterial.androidFactId
-    } : {}), preJoinC: preJoinMaterial.factId };
+    session = await openMacosSyncGroupDesktopSession(sessionOptions);
+    const { requiredAttachmentId, requiredIds } = createARejoinProofRequirements(
+      ids, abMaterial, preJoinMaterial
+    );
     const proof = await waitForThreeDeviceProof({ ids: requiredIds, inspect: async () => ({
       android: await androidSnapshot(paths),
       macos: await macosFacts(execute, repoRoot, databasePath, Object.values(requiredIds)),
       windows: remote.receipt.restarted
-    }), requiredAttachmentId: preJoinMaterial.attachmentId, runId });
+    }), requiredAttachmentId, runId });
     reportProgress('three-members-restarted');
     const evidenceRef = path.join(evidenceRoot, 'a-rejoin-proof.json');
     fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),

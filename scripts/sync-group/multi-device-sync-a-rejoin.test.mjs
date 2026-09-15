@@ -2,7 +2,9 @@
 
 import { expect, it } from 'vitest';
 
-import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
+import {
+  createARejoinProofRequirements, restartARejoinAndroidProvider
+} from './multi-device-sync-a-rejoin.mjs';
 import {
   assertThreeDeviceProof, waitForThreeDeviceProof
 } from './multi-device-sync-three-device-proof.mjs';
@@ -48,6 +50,15 @@ it('requires the exact pre-join C fact and hash attachment on every restarted ho
   expect(() => assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
     macos: { ...desktop, availableAttachmentIds: [] }, requiredAttachmentId: 'hash-c',
     runId: 'run-1', windows: desktop })).toThrow('exact journey attachment');
+});
+
+it('does not require another scenario pre-join receipt during sync from zero', () => {
+  expect(createARejoinProofRequirements(ids, {
+    androidFactId: 'fact-b-before-join', desktopFactId: 'fact-a-before-join'
+  }, null)).toEqual({
+    requiredAttachmentId: undefined,
+    requiredIds: { ...ids, preJoinA: 'fact-a-before-join', preJoinB: 'fact-b-before-join' }
+  });
 });
 
 it('waits for the exact restarted fact instead of accepting a transient older set', async () => {
