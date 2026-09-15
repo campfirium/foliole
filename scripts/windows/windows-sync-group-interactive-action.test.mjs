@@ -95,6 +95,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
     factId: 'sync-from-zero', milestone: 'c-first-cursor-committed'
   });
   expect(validateSyncGroupInteractiveProgress({
+    factId: 'a-rejoin', milestone: 'c-baseline-captured'
+  }, 'multi-device-sync-a-rejoin')).toEqual({
+    factId: 'a-rejoin', milestone: 'c-baseline-captured'
+  });
+  expect(validateSyncGroupInteractiveProgress({
     factId: 'a-rejoin', milestone: 'c-session-restarted'
   }, 'multi-device-sync-a-rejoin')).toEqual({
     factId: 'a-rejoin', milestone: 'c-session-restarted'

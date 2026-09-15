@@ -16,7 +16,7 @@ export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
 ]);
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
 const WINDOWS_A_REJOIN_PROGRESS = [
-  'c-native-suspended', 'c-session-opened', 'c-a-b-facts-received',
+  'c-native-suspended', 'c-baseline-captured', 'c-session-opened', 'c-a-b-facts-received',
   'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'
 ];
 
