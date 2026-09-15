@@ -28,8 +28,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   expect(stage).toMatchObject({
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
       'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
-      'b-approval-completed',
-      'c-provider-discoverable', 'c-ordinary-sync-completed'],
+      'b-approval-completed', 'c-ordinary-sync-completed'],
     siblings: expect.arrayContaining([
       expect.objectContaining({ name: 'android-b-approval', waitsFor: 'windows-c-join' }),
       expect.objectContaining({ name: 'windows-c-join', waitsFor: null })

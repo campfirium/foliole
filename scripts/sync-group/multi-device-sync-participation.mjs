@@ -185,7 +185,7 @@ function createContext(options) {
     'participation-control');
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const paths = macosA5Paths(repoRoot);
-  return { databasePath, env, evidenceRoot, execute,
+  return { appId: APP_ID, databasePath, env, evidenceRoot, execute,
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
     openSession: () => openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,

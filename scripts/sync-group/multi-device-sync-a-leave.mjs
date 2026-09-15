@@ -21,9 +21,9 @@ import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile
 /* global AbortController, process */
 
 function memberHosts(database, state) {
-  return database.prepare(`SELECT host_name FROM sync_group_members
-    WHERE state = ? ORDER BY host_name`).all(state)
-    .map(({ host_name }) => host_name);
+  return database.prepare(`SELECT device_name FROM sync_group_devices
+    WHERE state = ? ORDER BY device_name`).all(state)
+    .map(({ device_name }) => device_name);
 }
 
 function androidSnapshot(paths) {
@@ -81,7 +81,8 @@ function assertActiveThreeMemberInput(overview, facts, baseline) {
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
-  return runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', buildIdentity: runId,
+  return runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
+    appId: MULTI_DEVICE_ANDROID_APP_ID, buildIdentity: runId,
     env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute, paths, serial: A5_SERIAL });
 }
 

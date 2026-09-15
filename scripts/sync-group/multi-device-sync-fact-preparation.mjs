@@ -54,7 +54,7 @@ export async function runAOfflineAdmissionPrelude({
       { name: 'windows-c-join', work: windowsWork }
     ], cancelSiblings, ['windows-c-join']);
     return { approval: settled['android-b-approval'], fact,
-      group: listener.sync_group, windows: settled['windows-c-join'] };
+      windows: settled['windows-c-join'] };
   } finally {
     await close().catch(() => undefined);
   }

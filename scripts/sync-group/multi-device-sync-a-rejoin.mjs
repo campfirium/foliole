@@ -23,7 +23,6 @@ import {
   productFailure, waitForThreeDeviceProof, waitUntil
 } from './multi-device-sync-three-device-proof.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
-import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global process */
@@ -34,8 +33,8 @@ function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
     serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
-      activeMemberHosts: database.prepare(`SELECT host_name FROM sync_group_members
-        WHERE state = 'active' ORDER BY host_name`).all().map(({ host_name }) => host_name),
+      activeMemberHosts: database.prepare(`SELECT device_name FROM sync_group_devices
+        WHERE state = 'active' ORDER BY device_name`).all().map(({ device_name }) => device_name),
       availableAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
         WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).all()
         .map(({ attachment_id }) => attachment_id),
@@ -46,7 +45,7 @@ function androidSnapshot(paths) {
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   const result = await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
-    buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
+    appId: APP_ID, buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
     paths, serial: A5_SERIAL });
   const receipt = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8')).receipt;
   if (typeof receipt?.factText !== 'string' || !receipt.factText) {
@@ -96,11 +95,6 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
   let session = null;
   try {
     await windowsProvider.waitForProgress('c-session-opened');
-    const androidGroupId = (await androidSnapshot(paths)).database?.inspection?.syncGroupId;
-    if (!androidGroupId) throw productFailure('android-b', 'android_group_identity_missing',
-      'Android B Sync Group identity is unavailable before A rejoins.');
-    await waitForCurrentProvider({ advertisedPlatform: 'win32', groupId: androidGroupId,
-      topologyRole: 'anchor' });
     session = await openMacosSyncGroupDesktopSession(sessionOptions);
     const enabled = await session.enable();
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',

@@ -17,8 +17,7 @@ function actions(failAt = null) {
   const milestones = {
     'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
       'b-anchor-sync-ready', 'b-fact-received', 'a-offline', 'b-provider-discoverable',
-      'c-join-started', 'b-approval-completed', 'c-provider-discoverable',
-      'c-ordinary-sync-completed'],
+      'c-join-started', 'b-approval-completed', 'c-ordinary-sync-completed'],
     'establish-a-b': ['macos-group-created', 'a5-paired', 'a-b-synced'],
     'prepare-candidate': ['candidate-prepared']
   };
@@ -79,5 +78,6 @@ it('keeps every formal Android stage on the isolated acceptance application', ()
     const source = fs.readFileSync(`scripts/sync-group/${name}`, 'utf8');
     expect(source).toContain('MULTI_DEVICE_ANDROID_APP_ID');
     expect(source).not.toMatch(/['"]com\.foliole\.android['"]/u);
+    expect(source).not.toContain('sync_group_members');
   }
 });

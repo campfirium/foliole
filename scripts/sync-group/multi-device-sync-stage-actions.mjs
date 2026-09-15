@@ -78,13 +78,6 @@ export async function syncAdmittedCToAndroid({
   return { restarted, sync };
 }
 
-export function waitForAdmittedCProvider(group, waitForProvider = waitForCurrentProvider) {
-  if (!group?.group_id) throw new Error('Admitted C Sync Group identity is unavailable.');
-  return waitForProvider({
-    advertisedPlatform: 'win32', groupId: group.group_id, topologyRole: 'anchor'
-  });
-}
-
 export function waitForCurrentAndroidProvider(group, waitForProvider = waitForCurrentProvider) {
   if (!group?.group_id) throw new Error('Android B Sync Group identity is unavailable.');
   return waitForProvider({ groupId: group.group_id, topologyRole: 'member' });
@@ -111,7 +104,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
   let windowsProvider;
   let windowsSettled = false;
   try {
-    const { approval, group, windows } = await runAOfflineAdmissionPrelude({
+    const { approval, windows } = await runAOfflineAdmissionPrelude({
       cancelSiblings: (name, status) => cancelAdmissionSibling(
         approvalController, approvalRelease, name, status
       ),
@@ -142,8 +135,6 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       }
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
-    await waitForAdmittedCProvider(group);
-    reportProgress('c-provider-discoverable');
     const android = await windowsProvider.raceConsumer(syncAdmittedCToAndroid({
       env, evidenceRoot, execute, factId: windows.factId, paths, runId
     }));

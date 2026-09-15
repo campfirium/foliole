@@ -3,7 +3,7 @@ import path from 'node:path';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 
 export function runParticipantMaintenance(context, action, suffix = action) {
-  return runMacosA5SyncGroupMaintenance({ action, buildIdentity: context.runId,
+  return runMacosA5SyncGroupMaintenance({ action, appId: context.appId, buildIdentity: context.runId,
     env: context.env, evidenceRoot: path.join(context.evidenceRoot, suffix),
     execute: context.execute, paths: context.paths, serial: context.serial });
 }
