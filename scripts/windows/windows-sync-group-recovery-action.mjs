@@ -15,7 +15,7 @@ import {
   assertOwnedClientCompleteFacts, assertOwnedClientUnboundFacts, seedOwnedWindowsClient
 } from './windows-sync-group-owned-client-seed.mjs';
 import {
-  captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog
+  captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog, waitForWindowsProviderDiscoverable
 } from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsDatabaseFile } from './windows-sync-group-database-readiness.mjs';
@@ -204,6 +204,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRes
       if (overview.sync_group?.group_id !== candidate.group_id) {
         throw new Error('Windows C lost Sync Group membership after restart.');
       }
+      await waitForWindowsProviderDiscoverable(session);
       await captureSyncSettings(session.page, screenshotPath);
       await onRestartedReady(localFact);
     } finally { await closeWindowsSyncGroupSession(session); }
