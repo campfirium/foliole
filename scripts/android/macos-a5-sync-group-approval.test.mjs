@@ -98,9 +98,9 @@ it('waits for the accepted Device request to leave the provider queue', () => {
   expect(approval).toContain('getString("request_id")');
   expect(approval).toContain('waitForAcceptedRequestToLeavePending(requestId, deadline)');
   expect(approval).toContain('waitForProviderRequest()');
-  expect(approval).toContain('waitForProviderRunning()');
+  expect(approval).toContain('waitForProviderDiscoverable()');
   expect(approval).toContain('onProviderReady.run()');
-  expect(approval).toContain('"running".equals(latest.optString("state"))');
+  expect(approval).toContain('FolioleCompanionSyncGroupProvider.isDiscoverable()');
   expect(approval).not.toContain('advertisement_state');
   expect(approval).not.toContain('authorization');
 });
