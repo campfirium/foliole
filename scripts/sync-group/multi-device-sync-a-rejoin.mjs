@@ -125,6 +125,7 @@ export async function proveARejoin({
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await session.invoke('sync_companion_now');
+    await windowsProvider.waitForProgress('c-a-b-facts-received');
     await syncAndroidFact({ env, evidenceRoot, execute, paths, runId });
     await restartProvider();
     await windowsProvider.waitForProgress('c-fact-created');

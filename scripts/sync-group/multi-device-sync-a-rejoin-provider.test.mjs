@@ -124,11 +124,13 @@ it('waits for topology convergence before pushing fresh facts through product sy
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const bCreated = source.indexOf("reportProgress('b-fact-created')");
   const aSync = source.indexOf("await session.invoke('sync_companion_now')", bCreated);
+  const cReady = source.indexOf("await windowsProvider.waitForProgress('c-a-b-facts-received')", bCreated);
   const bSync = source.indexOf('await syncAndroidFact(', bCreated);
   const cCreated = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
   expect(bCreated).toBeGreaterThan(-1);
   expect(aSync).toBeGreaterThan(bCreated);
-  expect(bSync).toBeGreaterThan(aSync);
+  expect(cReady).toBeGreaterThan(aSync);
+  expect(bSync).toBeGreaterThan(cReady);
   expect(cCreated).toBeGreaterThan(bSync);
 });
 
