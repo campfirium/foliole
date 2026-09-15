@@ -50,7 +50,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         port: 38641,
         portToken: '{port}',
         serviceType: '_foliole-sync._tcp',
-        timeoutMs: 1500
+        timeoutMs: 5000
       },
       discoveryResponseKeys: {
         candidates: 'candidates'

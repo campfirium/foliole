@@ -41,4 +41,5 @@ it('generates narrow Capacitor request and state keys for participation', async 
     },
     storage: { preferencesName: 'foliole_companion_sync_participation' }
   });
+  expect(contract.hostApi.network.discoveryDefaults.timeoutMs).toBe(5000);
 });
