@@ -40,7 +40,7 @@ function assertJoinedGroup(facts, expectedGroupId) {
 }
 
 function isAndroidProvider(candidate) {
-  return candidate.provider_device_kind === 'android-capacitor';
+  return candidate.provider_platform === 'android-capacitor';
 }
 
 async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeoutMs = 12 * 60_000) {
@@ -116,7 +116,7 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     report('c-restarted-from-cursor');
     const finalFacts = await actions.waitForComplete(report);
     const receipt = { candidate: { groupId: candidate.group_id,
-      providerKind: candidate.provider_device_kind }, finalFacts, firstCommittedFacts,
+      providerKind: candidate.provider_platform }, finalFacts, firstCommittedFacts,
     initialFacts, interruptedFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
     assertSyncFromZeroCursorContinuity(receipt);
     return receipt;

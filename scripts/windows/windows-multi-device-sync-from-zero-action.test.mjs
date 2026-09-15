@@ -14,12 +14,12 @@ function session(events, name) {
 
 it('selects the fixed Android provider without occupying unrelated desktop groups', async () => {
   const candidates = [
-    { group_id: 'user-group', provider_device_kind: 'darwin' },
-    { group_id: 'acceptance-group', provider_device_kind: 'android-capacitor' }
+    { group_id: 'user-group', provider_platform: 'darwin' },
+    { group_id: 'acceptance-group', provider_platform: 'android-capacitor' }
   ];
   const page = { evaluate: vi.fn(async () => ({ join_candidates: candidates })) };
   await expect(discoverUniqueGroup(page, 10,
-    (candidate) => candidate.provider_device_kind === 'android-capacitor'
+    (candidate) => candidate.provider_platform === 'android-capacitor'
   )).resolves.toMatchObject({ group_id: 'acceptance-group' });
 });
 
@@ -36,7 +36,7 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
       events.push(`${current.page.name}-${options?.force ? 'interrupted' : 'closed'}`);
     },
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1',
-      provider_device_kind: 'android-capacitor' }),
+      provider_platform: 'android-capacitor' }),
     enable: async () => { events.push('enabled'); },
     inspect: async () => partial,
     openSession: async (options) => { sessionOptions.push(options); return sessions.shift(); },
