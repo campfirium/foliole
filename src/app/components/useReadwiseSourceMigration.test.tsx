@@ -119,6 +119,24 @@ it('presents a required reconnection as a retryable migration failure', async ()
   ));
 });
 
+it('restores completed migration warnings without reopening migration', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 27, error_reason: null,
+    failed_items: [{
+      reason: 'readwise_source_cutover_document_timeout', remote_id: 'document-1',
+      stage: 'resources', title: 'Broken PDF'
+    }],
+    phase: null, status: 'already_completed', topic_count: 27, total_count: 27
+  });
+  const onSelectApi = vi.fn();
+
+  render(<Probe committedMode="api" onSelectApi={onSelectApi} />);
+
+  await waitFor(() => expect(screen.getByTestId('failures')).toHaveTextContent('1'));
+  expect(onSelectApi).not.toHaveBeenCalled();
+  expect(cutover.run).not.toHaveBeenCalled();
+});
+
 function Probe(props: {
   committedMode?: 'api' | 'relay';
   onCommitMode?: (mode: 'api' | 'relay' | 'off') => void;
@@ -137,6 +155,7 @@ function Probe(props: {
     <div data-testid="failure">
       {migration.failed ? 'failed' : 'ready'}:{migration.errorReason ?? 'none'}
     </div>
+    <div data-testid="failures">{migration.failures?.length ?? 0}</div>
     <button onClick={() => void migration.selectApi()} type="button">select-api</button>
     <button onClick={() => void migration.requestStart(() => undefined)} type="button">start-migration</button>
     <button onClick={() => void migration.start()} type="button">run-migration</button>

@@ -1,6 +1,9 @@
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
-import type { ReadwiseSourceCutoverClassificationStatus } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import type {
+  ReadwiseSourceCutoverClassificationStatus,
+  ReadwiseSourceCutoverFailureStage
+} from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import type { ConfirmedReadwiseIdentityBinding } from '../database/readwiseRemoteIdentity.js';
 import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
@@ -14,16 +17,17 @@ export function recordReadwiseSourceCutoverClassification(
 ) {
   const current = requireCutoverV2();
   if (current.documents.some((item) => item.remoteId === document.id)) return;
+  const next = withoutActiveDocument(current, document.id);
   const byRemote = new Map(binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
   const blocked = binding?.blockedAnnotationIds ?? new Set<string>();
   writeReadwiseSourceCutover({
-    ...current,
-    annotations: [...current.annotations, ...document.annotations.map((item) => ({
+    ...next,
+    annotations: [...next.annotations, ...document.annotations.map((item) => ({
       nodeId: byRemote.get(item.remoteId) ?? null,
       remoteId: item.remoteId,
       status: annotationStatus(status, byRemote.has(item.remoteId), blocked.has(item.remoteId))
     }))],
-    documents: [...current.documents, {
+    documents: [...next.documents, {
       nodeId: binding?.nodeId ?? null,
       remoteId: document.id,
       status
@@ -53,6 +57,72 @@ export function recordReadwiseSuppressedCutoverDocuments(
       status: 'suppressed' as const
     }))]
   });
+}
+
+export function recordReadwiseSourceCutoverFailure(input: {
+  binding: ReadwiseSourceCutoverIdentityBinding | null;
+  document: PreparedReadwiseApiDocument;
+  reason: string;
+  stage: ReadwiseSourceCutoverFailureStage;
+}) {
+  const current = requireCutoverV2();
+  if (current.documents.some((item) => item.remoteId === input.document.id)) return;
+  const next = withoutActiveDocument(current, input.document.id);
+  const status = input.binding ? 'blocked' as const : 'unavailable' as const;
+  const byRemote = new Map(input.binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
+  const blocked = input.binding?.blockedAnnotationIds ?? new Set<string>();
+  writeReadwiseSourceCutover({
+    ...next,
+    annotations: [...next.annotations, ...input.document.annotations.map((item) => ({
+      nodeId: byRemote.get(item.remoteId) ?? null,
+      reason: input.reason,
+      remoteId: item.remoteId,
+      status: annotationStatus(status, byRemote.has(item.remoteId), blocked.has(item.remoteId))
+    }))],
+    documents: [...next.documents, {
+      nodeId: input.binding?.nodeId ?? null,
+      reason: input.reason,
+      remoteId: input.document.id,
+      status
+    }],
+    failures: [...(next.failures ?? []), {
+      reason: input.reason,
+      remoteId: input.document.id,
+      stage: input.stage,
+      title: input.document.title
+    }]
+  });
+}
+
+export function recordReadwiseSourceCutoverActiveDocument(input: {
+  document: PreparedReadwiseApiDocument;
+  stage: ReadwiseSourceCutoverFailureStage;
+}) {
+  const current = requireCutoverV2();
+  const startedAt = current.activeDocument?.remoteId === input.document.id
+    ? current.activeDocument.startedAt : new Date().toISOString();
+  writeReadwiseSourceCutover({
+    ...current,
+    activeDocument: {
+      remoteId: input.document.id,
+      stage: input.stage,
+      startedAt,
+      title: input.document.title
+    }
+  });
+}
+
+export function clearReadwiseSourceCutoverActiveDocument(remoteId: string) {
+  const current = requireCutoverV2();
+  if (current.activeDocument?.remoteId !== remoteId) return;
+  writeReadwiseSourceCutover(withoutActiveDocument(current, remoteId));
+}
+
+function withoutActiveDocument(current: ReturnType<typeof requireCutoverV2>, remoteId: string) {
+  if (current.activeDocument?.remoteId !== remoteId) return current;
+  const next = { ...current };
+  delete next.activeDocument;
+  return next;
 }
 
 function requireCutoverV2() {

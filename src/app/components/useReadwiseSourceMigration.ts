@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
 import type { ReadwiseSourceMode } from '../../../lib/core/import/importManagerSettings';
+import type { NativeReadwiseSourceCutoverFailure } from '../../../lib/platform/nativeReadwiseSourceCutoverContract';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import {
   previewReadwiseSourceCutoverInRuntime,
@@ -16,6 +17,7 @@ export interface ReadwiseMigrationState {
   completedCount: number;
   errorReason: string | null;
   failed: boolean;
+  failures?: NativeReadwiseSourceCutoverFailure[];
   phase: 'indexing' | 'merging' | null;
   totalCount: number | null;
 }
@@ -28,7 +30,7 @@ export function useReadwiseSourceMigration(input: {
 }) {
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState<ReadwiseMigrationState>({
-    completedCount: 0, errorReason: null, failed: false, phase: null, totalCount: null
+    completedCount: 0, errorReason: null, failed: false, failures: [], phase: null, totalCount: null
   });
   const [required, setRequired] = useState(false);
   const startingRef = useRef(false);
@@ -49,6 +51,7 @@ export function useReadwiseSourceMigration(input: {
         completedCount: state.completed_count,
         errorReason: output.error_reason ?? state.error_reason,
         failed: active && output.status !== 'completed' && output.status !== 'already_completed',
+        failures: state.failed_items ?? [],
         phase: active ? state.phase : null,
         totalCount: active ? state.total_count : null
       });
@@ -90,6 +93,7 @@ function resetMigrationProgress(
 ) {
   setProgress((current) => ({
     ...current, errorReason: null, failed: false,
+    failures: [],
     totalCount: null
   }));
 }
@@ -107,6 +111,7 @@ function applyMigrationProgress(
         ? Math.max(current.completedCount, nextCount) : nextCount,
       errorReason: null,
       failed: progress.status === 'failed',
+      failures: current.failures ?? [],
       phase,
       totalCount: progress.totalCount > 0 ? progress.totalCount : current.totalCount
     };
@@ -151,13 +156,25 @@ function useResumeReadwiseMigration(
     if (attempted.current) return;
     attempted.current = true;
     void previewReadwiseSourceCutoverInRuntime().then((state) => {
-      if (state.status !== 'migration_in_progress') return;
+      if (state.status !== 'migration_in_progress' && !state.failed_items?.length) return;
+      if (state.status !== 'migration_in_progress') {
+        setProgress({
+          completedCount: state.completed_count,
+          errorReason: state.error_reason,
+          failed: false,
+          failures: state.failed_items ?? [],
+          phase: null,
+          totalCount: state.total_count
+        });
+        return;
+      }
       onSelectApi();
       setRequired(true);
       setProgress({
         completedCount: state.completed_count,
         errorReason: state.error_reason,
         failed: Boolean(state.error_reason),
+        failures: state.failed_items ?? [],
         phase: state.phase,
         totalCount: state.total_count
       });

@@ -33,6 +33,14 @@ export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSour
       error_reason: current.version === 2
         ? current.errorReason ?? firstReadwiseCandidateFailureReason()
         : firstReadwiseCandidateFailureReason(),
+      ...(current.version === 2 && current.failures?.length ? {
+        failed_items: current.failures.map((item) => ({
+          reason: item.reason,
+          remote_id: item.remoteId,
+          stage: item.stage,
+          title: item.title
+        }))
+      } : {}),
       phase: completed ? null : indexing ? 'indexing' : 'merging',
       status: completed ? 'already_completed' : 'migration_in_progress',
       topic_count: topicCount,

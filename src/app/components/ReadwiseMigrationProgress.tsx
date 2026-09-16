@@ -5,6 +5,14 @@ import { AppButton, AppSpinner } from '../../shared/ui';
 import { readwiseFailureReason } from './ReadwiseApiTaskStatus';
 import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
 
+interface MigrationPresentation {
+  active: boolean;
+  details?: string[];
+  failed: boolean;
+  retryable: boolean;
+  text: string;
+}
+
 export function ReadwiseMigrationProgress(props: {
   compact?: boolean;
   migration: ReadwiseMigrationState;
@@ -24,14 +32,19 @@ export function ReadwiseMigrationProgress(props: {
   return (
     <div
       aria-live="polite"
-      className={`flex items-center gap-2 text-ui-md ${presentation.failed ? 'text-error' : 'text-foreground'}`}
+      className={`flex items-start gap-2 text-ui-md ${presentation.failed ? 'text-error' : 'text-foreground'}`}
       role="status"
     >
       {presentation.active
         ? <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
         : null}
-      <span>{presentation.text}</span>
-      {presentation.failed && props.onRetry ? (
+      <span>
+        {presentation.text}
+        {presentation.details?.map((detail) => (
+          <span className="mt-1 block text-ui-sm" key={detail}>{detail}</span>
+        ))}
+      </span>
+      {presentation.retryable && props.onRetry ? (
         <AppButton onClick={props.onRetry} size="sm" variant="default">
           {t('desktop.readwise.cutover.retry')}
         </AppButton>
@@ -45,27 +58,9 @@ function migrationPresentation(
   taskStatus: NativeReadwiseApiScheduleStatus | null,
   t: ReturnType<typeof useTranslation>,
   compact: boolean
-) {
-  if (!migration.phase) {
-    if (taskStatus?.cutover.status === 'completed') {
-      return taskStatus.initial_sync.status === 'completed' ? null : {
-        active: false,
-        failed: false,
-        text: t('desktop.readwise.api.firstSyncPending')
-      };
-    }
-    return taskStatus?.cutover.status === 'in_progress'
-      ? {
-          active: true,
-          failed: false,
-          text: progressText(
-            `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`, compact,
-            migration.completedCount,
-            null
-          )
-        }
-      : null;
-  }
+): MigrationPresentation | null {
+  const failures = migration.failures ?? [];
+  if (!migration.phase) return inactiveMigrationPresentation(migration, taskStatus, t, compact, failures);
   const phase = migration.phase === 'indexing'
     ? t('desktop.readwise.cutover.phase.indexing')
     : t('desktop.readwise.cutover.phase.merging');
@@ -73,6 +68,7 @@ function migrationPresentation(
     return {
       active: true,
       failed: false,
+      retryable: false,
       text: progressText(
         `${t('desktop.readwise.cutover.status')} · ${phase}`, compact,
         migration.completedCount,
@@ -87,6 +83,7 @@ function migrationPresentation(
   return {
     active: false,
     failed: true,
+    retryable: true,
     text: compact
       ? `${t('desktop.readwise.cutover.status')} · ${failed}`
       : `${withProgress(
@@ -95,6 +92,57 @@ function migrationPresentation(
           migration.totalCount
         )}${reason ? ` · ${reason}` : ''}`
   };
+}
+
+function inactiveMigrationPresentation(
+  migration: ReadwiseMigrationState,
+  taskStatus: NativeReadwiseApiScheduleStatus | null,
+  t: ReturnType<typeof useTranslation>,
+  compact: boolean,
+  failures: NonNullable<ReadwiseMigrationState['failures']>
+) {
+  if (failures.length > 0) return completedFailurePresentation(failures, t, compact);
+  if (taskStatus?.cutover.status === 'completed') {
+    return taskStatus.initial_sync.status === 'completed' ? null : {
+      active: false, failed: false, retryable: false,
+      text: t('desktop.readwise.api.firstSyncPending')
+    };
+  }
+  return taskStatus?.cutover.status === 'in_progress' ? {
+    active: true,
+    failed: false,
+    retryable: false,
+    text: progressText(
+      `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
+      compact, migration.completedCount, null
+    )
+  } : null;
+}
+
+function completedFailurePresentation(
+  failures: NonNullable<ReadwiseMigrationState['failures']>,
+  t: ReturnType<typeof useTranslation>,
+  compact: boolean
+) {
+  return {
+    active: false,
+    ...(compact ? {} : { details: failures.map((failure) => t(
+      'desktop.readwise.cutover.result.failureDetail', {
+        reason: cutoverFailureReason(failure.reason, t),
+        stage: t(`desktop.readwise.cutover.failureStage.${failure.stage}`),
+        title: failure.title
+      }
+    )) }),
+    failed: true,
+    retryable: false,
+    text: t('desktop.readwise.cutover.result.completedWithFailures', { count: failures.length })
+  };
+}
+
+function cutoverFailureReason(reason: string, t: ReturnType<typeof useTranslation>) {
+  return reason === 'readwise_source_cutover_document_timeout'
+    ? t('desktop.readwise.cutover.failureReason.timeout')
+    : t('desktop.readwise.cutover.failureReason.processingFailed');
 }
 
 function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null) {

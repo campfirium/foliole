@@ -68,3 +68,31 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
   expect(screen.queryByText(/request_failed/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
+
+it('shows the failed source and step after migration completes', () => {
+  render(
+    <LocalizationProvider>
+      <ReadwiseMigrationProgress
+        migration={{
+          completedCount: 27,
+          errorReason: null,
+          failed: false,
+          failures: [{
+            reason: 'readwise_source_cutover_document_timeout',
+            remote_id: 'document-1',
+            stage: 'resources',
+            title: 'Broken PDF'
+          }],
+          phase: null,
+          totalCount: 27
+        }}
+        taskStatus={null}
+      />
+    </LocalizationProvider>
+  );
+
+  expect(screen.getByText('Migration completed · Incomplete sources: 1'))
+    .toBeInTheDocument();
+  expect(screen.getByText('Broken PDF · getting its file or images · timed out')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
+});

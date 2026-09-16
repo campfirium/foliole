@@ -7,10 +7,18 @@ export type NativeReadwiseSourceCutoverStatus =
   | 'not_active_host'
   | 'ready';
 
+export interface NativeReadwiseSourceCutoverFailure {
+  reason: string;
+  remote_id: string;
+  stage: 'preparing' | 'resources' | 'writing' | 'recording';
+  title: string;
+}
+
 export interface NativeReadwiseSourceCutoverPreview {
   status: Exclude<NativeReadwiseSourceCutoverStatus, 'completed' | 'failed'>;
   completed_count: number;
   error_reason: string | null;
+  failed_items?: NativeReadwiseSourceCutoverFailure[];
   phase: 'indexing' | 'merging' | null;
   total_count: number | null;
   topic_count: number;

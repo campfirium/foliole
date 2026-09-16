@@ -16,7 +16,8 @@ export function matchReadwiseSourceCutover(input: {
   preparedDocuments: PreparedReadwiseApiDocument[];
   readerDocuments: ReaderDocumentContract[];
 }) {
-  const artifacts = groupArtifacts(input.artifacts).filter((item) => item.nodeActive && !item.disposition);
+  const artifacts = groupReadwiseSourceArtifacts(input.artifacts)
+    .filter((item) => item.nodeActive && !item.disposition);
   const preparedById = new Map(input.preparedDocuments.map((item) => [item.id, item]));
   const readersById = new Map(input.readerDocuments.map((item) => [item.id, item]));
   const matches = new Map<string, ReadwiseSourceArtifact>();
@@ -135,7 +136,7 @@ function groupBy<T>(values: T[], keyFor: (value: T) => string) {
   return groups;
 }
 
-function groupArtifacts(values: ReadwiseSourceArtifact[]) {
+export function groupReadwiseSourceArtifacts(values: ReadwiseSourceArtifact[]) {
   const groups = new Map<string, ReadwiseSourceArtifact>();
   for (const value of values) {
     const previous = groups.get(value.latestNodeId);

@@ -7,14 +7,23 @@ import {
 
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
-import { prepareReadwiseApiFrozenResources } from './readwiseApiFrozenBatch.js';
 import {
   fetchReadwiseSourceCutoverSnapshot,
   type ReadwiseApiFetchDependencies
 } from './readwiseApiImportFetch.js';
 import { loadReadwiseSourceArtifacts } from './readwiseSourceCutoverArtifacts.js';
-import { recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
+import {
+  clearReadwiseSourceCutoverActiveDocument,
+  recordReadwiseSourceCutoverActiveDocument,
+  recordReadwiseSourceCutoverFailure,
+  recordReadwiseSuppressedCutoverDocuments
+} from './readwiseSourceCutoverClassification.js';
 import { migrateReadwiseSourceDispositions } from './readwiseSourceCutoverDispositions.js';
+import {
+  prepareReadwiseCutoverResources,
+  readwiseCutoverDocumentFailureReason
+} from './readwiseSourceCutoverDocumentStep.js';
+import { freezeReadwiseSourceCutoverMatching } from './readwiseSourceCutoverFrozenMatching.js';
 import { createReadwiseSourceCutoverBinding } from './readwiseSourceCutoverIdentity.js';
 import {
   createReadwiseDocumentMigration,
@@ -75,7 +84,10 @@ async function prepareCutoverContext(
     readerDocuments: staged.readerDocuments
   });
   promoteReadwiseSourceCutoverCohort(documents.map((item) => item.id));
-  recordReadwiseSourceCutoverLegacyFailures(matching.failures);
+  if (requireReadwiseSourceCutoverV2().legacyMatches === undefined) {
+    recordReadwiseSourceCutoverLegacyFailures(matching.failures);
+  }
+  const frozenMatching = freezeReadwiseSourceCutoverMatching({ artifacts, documents, matching });
   const suppressed = migrateReadwiseSourceDispositions(
     input.connectionRef,
     documents.map((item) => item.id),
@@ -88,11 +100,18 @@ async function prepareCutoverContext(
   );
   recordReadwiseSuppressedCutoverDocuments(documents, suppressed);
   setReadwiseSourceCutoverPhase('merging');
-  const legacyTotal = new Set(artifacts.filter((item) => item.nodeActive && !item.disposition)
-    .map((item) => item.latestNodeId)).size;
-  let legacyCompleted = matching.failures.length;
+  const current = requireReadwiseSourceCutoverV2();
+  const legacyNodes = new Set((frozenMatching.failures).map((item) => item.nodeId));
+  for (const item of current.documents) {
+    const artifact = frozenMatching.artifactFor(item.remoteId);
+    if (artifact) legacyNodes.add(artifact.latestNodeId);
+  }
+  const legacyTotal = frozenMatching.legacyTotal;
+  let legacyCompleted = legacyNodes.size;
   input.onProgress(legacyCompleted, legacyTotal, 'merging');
-  return { artifacts, documents, legacyCompleted, legacyTotal, matching, suppressed };
+  return {
+    artifacts, documents, legacyCompleted, legacyTotal, matching: frozenMatching, suppressed
+  };
 }
 
 async function mergeCutoverDocuments(
@@ -103,17 +122,21 @@ async function mergeCutoverDocuments(
   const readersById = new Map(staged.readerDocuments.map((item) => [item.id, item]));
   const deletedAnnotationIds = new Set(staged.exportBooks.flatMap((book) =>
     book.highlights.filter((item) => item.isDeleted).map((item) => item.externalId)));
-  const migration = createReadwiseDocumentMigration({
-    bindingFor: (document) => {
-      const artifact = context.matching.artifactFor(document.id);
-      return artifact
-        ? createReadwiseSourceCutoverBinding(artifact, document, readersById, deletedAnnotationIds) : null;
-    }
-  }, input.connectionRef, { preserveExistingBody: true });
+  const bindingFor = (document: (typeof context.documents)[number]) => {
+    const artifact = context.matching.artifactFor(document.id);
+    return artifact
+      ? createReadwiseSourceCutoverBinding(artifact, document, readersById, deletedAnnotationIds) : null;
+  };
+  const migration = createReadwiseDocumentMigration({ bindingFor }, input.connectionRef, {
+    preserveExistingBody: true
+  });
   const completedDocuments = new Map(context.documents.map((item) => [item.id, item]));
   for (const document of context.documents) {
     input.assertEligible();
-    if (requireReadwiseSourceCutoverV2().documents.some((item) => item.remoteId === document.id)) continue;
+    if (requireReadwiseSourceCutoverV2().documents.some((item) => item.remoteId === document.id)) {
+      clearReadwiseSourceCutoverActiveDocument(document.id);
+      continue;
+    }
     const artifact = context.matching.artifactFor(document.id);
     const destination = destinationFor(document, readersById.get(document.id)?.tags, input.settings);
     const commitDestination = artifact ? 'inbox' : destination;
@@ -121,9 +144,23 @@ async function mergeCutoverDocuments(
       recordReadwiseSuppressedCutoverDocuments([document], new Set([document.id]));
       continue;
     }
-    completedDocuments.set(document.id, await commitSnapshotDocument(
-      input, document, commitDestination, migration
-    ));
+    let stage: Parameters<typeof recordReadwiseSourceCutoverFailure>[0]['stage'] = 'preparing';
+    try {
+      completedDocuments.set(document.id, await commitSnapshotDocument(
+        input, document, commitDestination, migration, (next) => {
+          stage = next;
+          recordReadwiseSourceCutoverActiveDocument({ document, stage: next });
+        }
+      ));
+    } catch (error) {
+      const reason = readwiseCutoverDocumentFailureReason(error);
+      console.error('[readwise-cutover] document skipped', {
+        reason, remoteId: document.id, stage, title: document.title
+      });
+      let binding = null;
+      try { binding = bindingFor(document); } catch { /* the failure remains isolated to this document */ }
+      recordReadwiseSourceCutoverFailure({ binding, document, reason, stage });
+    }
     if (artifact) {
       context.legacyCompleted += 1;
       input.onProgress(context.legacyCompleted, context.legacyTotal, 'merging');
@@ -136,8 +173,10 @@ async function commitSnapshotDocument(
   input: ReadwiseSourceCutoverSnapshotRunInput,
   document: ReturnType<typeof prepareReadwiseApiDocuments>[number],
   destination: 'external' | 'inbox',
-  migration: ReturnType<typeof createReadwiseDocumentMigration>
+  migration: ReturnType<typeof createReadwiseDocumentMigration>,
+  onStage: (stage: Parameters<typeof recordReadwiseSourceCutoverFailure>[0]['stage']) => void
 ) {
+  onStage('preparing');
   const options = await migration.beforeCommit(document);
   const committed = options && 'document' in options && options.document ? options.document : document;
   if (options && 'skip' in options && options.skip) {
@@ -147,10 +186,15 @@ async function commitSnapshotDocument(
     return document;
   }
   const projection = options && 'replaceExistingBody' in options ? options : null;
-  const resources = await prepareReadwiseApiFrozenResources({
-    config: input.settings.readwiseReaderConfig, connectionRef: input.connectionRef,
-    dependencies: input.dependencies, destination, document: committed
+  onStage('resources');
+  const resources = await prepareReadwiseCutoverResources({
+    config: input.settings.readwiseReaderConfig,
+    connectionRef: input.connectionRef,
+    dependencies: input.dependencies,
+    destination,
+    document: committed
   });
+  onStage('writing');
   const result = await commitReadwiseApiDocument({
     assertEligible: input.assertEligible, config: input.settings.readwiseReaderConfig,
     connectionRef: input.connectionRef, dependencies: input.dependencies, destination,
@@ -159,6 +203,7 @@ async function commitSnapshotDocument(
     ...(projection?.replaceExistingBody === undefined
       ? {} : { replaceExistingBody: projection.replaceExistingBody })
   });
+  onStage('recording');
   await migration.afterCommit(committed, result);
   return committed;
 }

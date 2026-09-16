@@ -6,6 +6,7 @@ import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js'
 
 export interface ReadwiseApiFetchDependencies {
   allowFolderModeForCutover?: boolean;
+  cutoverDocumentTimeoutMs?: number;
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
   onPage?: (input: { phase: 'export' | 'reader'; recordCount: number; totalCount?: number }) => void;
@@ -19,9 +20,10 @@ export function createReadwiseRequest(
 ) {
   const fetchImpl = dependencies.fetchImpl ?? fetch;
   const minIntervalMs = dependencies.minIntervalMs ?? 3_100;
+  const maxRetries = dependencies.allowFolderModeForCutover ? 3 : 2;
   let lastRequestAt = 0;
   return async (url: URL) => {
-    for (let retry = 0; retry <= 2; retry += 1) {
+    for (let retry = 0; retry <= maxRetries; retry += 1) {
       const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
       if (delay) await abortableDelay(delay, dependencies.signal);
       assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
@@ -35,7 +37,7 @@ export function createReadwiseRequest(
           headers: { Authorization: `Token ${token}` }, method: 'GET', redirect: 'error', signal: requestSignal
         });
       } catch (error) {
-        if (retry >= 2) throw error;
+        if (retry >= maxRetries) throw error;
         await abortableDelay(transientRetryDelay(retry, dependencies), dependencies.signal);
         continue;
       }
@@ -43,7 +45,7 @@ export function createReadwiseRequest(
         saveReconnectRequired(loadStoredReadwiseHostSettings());
         throw new Error('readwise_api_reconnect_required');
       }
-      if (response.status === 429 && retry < 2) {
+      if (response.status === 429 && retry < maxRetries) {
         const retryAfter = Math.max(1, Number(response.headers.get('retry-after')) || 1);
         await abortableDelay(retryAfter * 1_000, dependencies.signal);
         continue;
@@ -51,7 +53,7 @@ export function createReadwiseRequest(
       if (response.status === 429) {
         throw new Error(`readwise_api_rate_limited:${response.headers.get('retry-after') ?? ''}`);
       }
-      if (response.status >= 500 && retry < 2) {
+      if (response.status >= 500 && retry < maxRetries) {
         await abortableDelay(transientRetryDelay(retry, dependencies), dependencies.signal);
         continue;
       }

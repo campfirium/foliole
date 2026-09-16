@@ -237,6 +237,19 @@ export function recordReadwiseSourceCutoverLegacyFailures(
   writeReadwiseSourceCutover({ ...current, unmatchedLegacy: failures });
 }
 
+export function freezeReadwiseSourceCutoverLegacyMatches(input: {
+  matches: Array<{ nodeId: string; remoteId: string }>;
+  total: number;
+}) {
+  const current = requireReadwiseSourceCutoverV2();
+  if (current.legacyMatches !== undefined) return;
+  writeReadwiseSourceCutover({
+    ...current,
+    legacyMatches: input.matches,
+    legacyTotal: input.total
+  });
+}
+
 export function requireReadwiseSourceCutoverV2(): ReadwiseSourceCutover {
   const state = loadReadwiseSourceCutover();
   if (!state || state.version !== 2) throw new Error('readwise_source_cutover_v2_required');
