@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
@@ -61,9 +61,10 @@ it('saves reviewed draft rules before the confirmed API migration starts', async
 
   expect(await screen.findByText('Connected')).toBeInTheDocument();
   expect(screen.getByText('Not enabled yet · Obsidian relay import is still active')).toBeInTheDocument();
-  fireEvent.click(within(screen.getByRole('radiogroup', {
+  fireEvent.keyDown(screen.getByRole('combobox', {
     name: 'PDFs without highlights destination'
-  })).getByRole('radio', { name: "Don't import" }));
+  }), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('menuitem', { name: "Don't import" }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Reader document import tag' }), {
     target: { value: 'readwise' }
   });

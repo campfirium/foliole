@@ -153,11 +153,12 @@ it('resumes from a saved scope cursor and fails closed when that cursor is rejec
   await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', {
     fetchImpl, minIntervalMs: 0
   })).rejects.toThrow('readwise_api_http_500');
+  expect(cursors).toEqual([null, 'cursor-1', 'cursor-1', 'cursor-1']);
   fail = false;
   await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', {
     fetchImpl, minIntervalMs: 0
   })).rejects.toThrow('readwise_api_scope_cursor_invalid:reader:highlight');
-  expect(cursors).toEqual([null, 'cursor-1', 'cursor-1']);
+  expect(cursors).toEqual([null, 'cursor-1', 'cursor-1', 'cursor-1', 'cursor-1']);
 });
 
 it('does not refetch the parent body when an incremental highlight belongs to an imported document', async () => {

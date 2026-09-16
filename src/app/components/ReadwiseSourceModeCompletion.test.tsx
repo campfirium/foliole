@@ -77,7 +77,7 @@ it('does not repeat the selected API mode after the initial sync completes', asy
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeInTheDocument();
   expect(screen.queryByText('API enabled')).not.toBeInTheDocument();
   expect(screen.queryByText('First sync pending')).not.toBeInTheDocument();
 });
@@ -98,7 +98,7 @@ it('turns a completed API source off and enables it again without migration', ()
     apiMigrationCompleted committedMode="off" mode="off"
     onChange={onChange} onCommitMode={onCommitMode}
   /></LocalizationProvider>);
-  expect(screen.getByRole('radio', { name: 'Obsidian relay import' })).toBeDisabled();
+  expect(screen.getByRole('radio', { name: 'Obsidian relay' })).toBeDisabled();
   fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
   expect(onChange).toHaveBeenCalledWith('api');
   expect(onCommitMode).toHaveBeenCalledWith('api');
@@ -121,7 +121,7 @@ it('lets a completed library resolve a relay conflict through the source selecto
     'Readwise settings do not match this library. Choose Off or API mode to continue.'
   ))
     .toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: 'Obsidian relay import' })).toBeDisabled();
+  expect(screen.getByRole('radio', { name: 'Obsidian relay' })).toBeDisabled();
   fireEvent.click(screen.getByRole('radio', { name: 'API mode' }));
   expect(onChange).toHaveBeenCalledWith('api');
   expect(onCommitMode).toHaveBeenCalledWith('api');
