@@ -55,11 +55,9 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
-import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import { runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import {
   epubMigrationFetch,
-  incrementalHighlightFetch,
   migrationFetch,
   migrationFetchWithoutHighlightBody,
   seedMigratableSource
@@ -117,7 +115,7 @@ it('keeps the legacy body while materializing a fallback highlight', async () =>
     .toBe('readwise-folder');
 });
 
-it('preserves a bound EPUB body while freshly downloading its original file', async () => {
+it('rebuilds a bound EPUB from its freshly downloaded original file', async () => {
   await seedMigratableSource(state.sourcePath);
   const seeded = openDatabaseConnection().driver;
   seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
@@ -131,21 +129,65 @@ it('preserves a bound EPUB body while freshly downloading its original file', as
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .toContain('Legacy body with remembered phrase.');
+    .not.toContain('Book import pending');
   expect(driver.queryAll<{ title: string }>(
     "SELECT title FROM nodes WHERE parent_id='topic-1' AND id LIKE 'node-epub-%' AND deleted_at IS NULL"
-  ).map((item) => item.title)).toEqual(['Legacy']);
-  expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM nodes WHERE id='node-epub-legacy' AND deleted_at IS NULL"
-  )?.count).toBe(1);
+  ).map((item) => item.title)).toContain('Original chapter');
   const source = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
   );
   expect(JSON.parse(source?.remote_import_state_json ?? '{}')).toMatchObject({
+    bodyAuthority: 'original_epub',
     originalFile: { status: 'localized' }
   });
   expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
     .toHaveLength(1);
+});
+
+it('uses the existing body while binding edited legacy highlights and importing later highlights', async () => {
+  await seedMigratableSource(state.sourcePath);
+  const driver = openDatabaseConnection().driver;
+  const legacyHighlight = driver.queryOne<{ id: string }>(
+    "SELECT id FROM nodes WHERE parent_id='topic-1' AND anchor_link IS NOT NULL LIMIT 1"
+  );
+  expect(legacyHighlight).toBeTruthy();
+  driver.execute("UPDATE nodes SET updated_at='newer' WHERE id=?", [legacyHighlight!.id]);
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  const fallback = migrationFetch();
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/api/v2/export/') {
+      return Response.json({ nextPageCursor: null, results: [{
+        external_id: 'document-1', source: 'reader', highlights: [
+          { external_id: 'highlight-1', text: 'remembered phrase' },
+          { external_id: 'highlight-2', text: 'new phrase' }
+        ]
+      }] });
+    }
+    if (!url.searchParams.get('id') && !url.searchParams.has('category')) {
+      return Response.json({ count: 3, nextPageCursor: null, results: [{
+        category: 'article', html_content: null, id: 'document-1', parent_id: null, title: 'Sample'
+      }, {
+        category: 'highlight', id: 'highlight-1', parent_id: 'document-1', title: 'Sample'
+      }, {
+        category: 'highlight', id: 'highlight-2', parent_id: 'document-1', title: 'Sample'
+      }] });
+    }
+    return fallback(input);
+  }) as typeof fetch;
+
+  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
+
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
+    .toContain('Legacy body with remembered phrase.');
+  expect(driver.queryOne<{ id: string }>(
+    "SELECT id FROM nodes WHERE parent_id='topic-1' AND content='new phrase' AND deleted_at IS NULL"
+  )).toBeTruthy();
+  const source = driver.queryOne<{ remote_annotations_json: string }>(
+    "SELECT remote_annotations_json FROM import_sources WHERE remote_document_id='document-1'"
+  );
+  expect(JSON.parse(source?.remote_annotations_json ?? '[]')).toHaveLength(2);
 });
 
 it('records a matched EPUB as failed instead of bound when its fresh download fails', async () => {
@@ -169,67 +211,4 @@ it('records a matched EPUB as failed instead of bound when its fresh download fa
     failures: [{ remoteId: 'document-1', stage: 'resources' }],
     status: 'api'
   });
-});
-
-it('adds later API highlights without creating a source-update workflow', async () => {
-  await seedMigratableSource(state.sourcePath);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  await runReadwiseSourceCutover({ dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 } });
-  const driver = openDatabaseConnection().driver;
-  const migratedBody = driver.queryOne<{ content: string }>(
-    "SELECT content FROM nodes WHERE id='topic-1'"
-  )?.content;
-  await expect(runReadwiseApiImport({
-    dependencies: { fetchImpl: incrementalHighlightFetch(), minIntervalMs: 0 }
-  })).resolves.toMatchObject({ annotation_count: 1, status: 'completed' });
-
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .toBe(migratedBody);
-  expect(migratedBody).not.toContain('Changed API body');
-  expect(driver.queryOne<{ anchor_link: string; content: string }>(
-    "SELECT anchor_link, content FROM nodes WHERE parent_id='topic-1' AND content='new phrase' AND deleted_at IS NULL"
-  )).toMatchObject({ content: 'new phrase' });
-  const stateJson = driver.queryOne<{ remote_import_state_json: string }>(
-    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
-  )?.remote_import_state_json ?? '{}';
-  const importState = JSON.parse(stateJson) as {
-    annotations: Array<{ remoteId: string }>;
-    sourceUpdate: null | { status: string };
-  };
-  expect(importState.annotations.map((item) => item.remoteId).sort()).toEqual(['highlight-1', 'highlight-2']);
-  expect(importState.sourceUpdate).toBeNull();
-});
-
-it('returns immediately after a real completion without requesting the API again', async () => {
-  await seedMigratableSource(state.sourcePath);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  await runReadwiseSourceCutover({ dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 } });
-  const fetchImpl = vi.fn(async () => { throw new Error('network_must_not_run'); }) as typeof fetch;
-
-  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ status: 'already_completed' });
-  expect(fetchImpl).not.toHaveBeenCalled();
-});
-
-it('does not revive a legacy highlight that Export reports as deleted', async () => {
-  await seedMigratableSource(state.sourcePath);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  const fallback = migrationFetch();
-  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
-    const url = new URL(String(input));
-    if (url.pathname !== '/api/v2/export/') return fallback(input);
-    return Response.json({ count: 1, nextPageCursor: null, results: [{
-      external_id: 'document-1', source: 'reader', highlights: [{
-        external_id: 'highlight-1', is_deleted: true, text: 'remembered phrase'
-      }]
-    }] });
-  }) as typeof fetch;
-
-  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ status: 'completed' });
-
-  const source = openDatabaseConnection().driver.queryOne<{ remote_annotations_json: string }>(
-    "SELECT remote_annotations_json FROM import_sources WHERE remote_document_id='document-1'"
-  );
-  expect(JSON.parse(source?.remote_annotations_json ?? '[]')).toEqual([]);
 });

@@ -73,6 +73,64 @@ it('reopens a v3 completion whose bound EPUB still requires a fresh download', (
   });
 });
 
+it('reopens a v4 completion whose bound EPUB was attached but not rebuilt', () => {
+  const completion = {
+    batchId: 'old-batch', completedAt: 'old-done',
+    sourceHost: 'This Mac', startedAt: 'old-start'
+  };
+  saveSetting('readwise_source_cutover_v2', {
+    annotations: [], batchId: completion.batchId, cohortDocumentIds: ['book'],
+    completedAt: completion.completedAt, completionVersion: 4,
+    documents: [{ nodeId: 'topic-book', remoteId: 'book', status: 'bound' }],
+    phase: null, retiredNodeIds: [], sourceHost: completion.sourceHost,
+    startedAt: completion.startedAt, status: 'api', version: 2
+  });
+  saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
+  sqlite.prepare(`INSERT INTO import_sources (
+    source_fingerprint,provider,source_kind,source_name,source_locator,first_imported_at,
+    last_imported_at,last_content_fingerprint,latest_node_id,remote_provider,
+    remote_connection_ref,remote_document_id,remote_import_state_json
+  ) VALUES ('source','readwise_api','epub','Book','book','old','old','hash','topic-book',
+    'readwise','connection','book',?)`).run(JSON.stringify({
+      bodyAuthority: 'reader_html', metadata: { category: 'epub' },
+      originalFile: { status: 'localized' }
+    }));
+  sqlite.pragma('user_version = 92');
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+  expect(readSetting('readwise_source_cutover_v2')).toMatchObject({
+    cohortDocumentIds: [], documents: [], phase: 'indexing', status: 'migration-in-progress'
+  });
+});
+
+it('reopens a v4 completion with annotation binding failures', () => {
+  const completion = {
+    batchId: 'old-batch', completedAt: 'old-done',
+    sourceHost: 'This Mac', startedAt: 'old-start'
+  };
+  saveSetting('readwise_source_cutover_v2', {
+    annotations: [], cohortDocumentIds: ['article'], completedAt: completion.completedAt,
+    completionVersion: 4,
+    documents: [{ nodeId: 'topic', reason: 'readwise_source_cutover_annotation_binding_missing',
+      remoteId: 'article', status: 'blocked' }],
+    failures: [{ reason: 'readwise_source_cutover_annotation_binding_missing', remoteId: 'article',
+      stage: 'recording', title: 'Article' }],
+    phase: null, retiredNodeIds: [], sourceHost: completion.sourceHost,
+    startedAt: completion.startedAt, status: 'api', version: 2
+  });
+  saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
+  sqlite.pragma('user_version = 92');
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+  expect(readSetting('readwise_source_cutover_v2')).toMatchObject({
+    cohortDocumentIds: [], documents: [], phase: 'indexing', status: 'migration-in-progress'
+  });
+});
+
 function saveSetting(key: string, value: unknown) {
   sqlite.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, 'old')
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)

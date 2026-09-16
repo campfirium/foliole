@@ -26,6 +26,7 @@ import {
   persistReadwiseApiOriginalFile,
   prepareReadwiseApiOriginalFile
 } from './readwiseApiOriginalFile.js';
+import type { PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 
 interface ReadwiseApiDocumentCommitInput {
   assertEligible?: () => void;
@@ -45,6 +46,7 @@ export interface ReadwiseApiPreparedResources {
   epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;
   forceEpubStructure?: boolean;
   originalFile: Awaited<ReturnType<typeof prepareReadwiseApiOriginalFile>> | null;
+  originalEpub?: PreparedOriginalEpubCandidate;
   replaceOriginalFile?: boolean;
 }
 

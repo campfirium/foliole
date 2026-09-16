@@ -1,6 +1,9 @@
+import { promises as fs } from 'node:fs';
+
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import {
   loadReadwiseApiFrozenResources,
   saveReadwiseApiFrozenResources
@@ -17,6 +20,7 @@ import {
   prepareReadwiseApiOriginalFile,
   stageReadwiseApiOriginalFile
 } from './readwiseApiOriginalFile.js';
+import { prepareOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import { shouldRebuildPristineReadwiseEpub } from './readwiseSourceCutoverMerge.js';
 
 export async function prepareReadwiseApiFrozenResources(input: {
@@ -28,24 +32,16 @@ export async function prepareReadwiseApiFrozenResources(input: {
   requireFreshOriginalFile?: boolean;
 }): Promise<ReadwiseApiPreparedResources> {
   const frozen = loadReadwiseApiFrozenResources(input.connectionRef, input.document.id);
-  if (frozen) return frozen;
+  if (frozen && !(input.requireFreshOriginalFile && input.document.category === 'epub'
+    && !frozen.originalEpub)) return frozen;
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const destination = existing ? 'inbox' : input.destination;
   const forceEpubStructure = shouldRebuildPristineReadwiseEpub({
     connectionRef: input.connectionRef,
     document: input.document
   });
-  const originalFileCategory = originalFileCategoryFor(input.document.category);
-  const originalFile = originalFileCategory && destination === 'inbox'
-    && (input.requireFreshOriginalFile || existing?.state.originalFile?.status !== 'localized')
-    ? await prepareReadwiseApiOriginalFile({
-      category: originalFileCategory,
-      dependencies: input.dependencies,
-      documentId: input.document.id,
-      hasHtmlBody: Boolean(input.document.body.trim()),
-      ...(input.document.rawSourceUrl === undefined ? {} : { rawSourceUrl: input.document.rawSourceUrl })
-    })
-    : null;
+  const { originalEpub, originalFile } = await prepareOriginalResources(input, frozen, destination,
+    existing?.state.originalFile?.status === 'localized');
   const epubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
@@ -60,24 +56,62 @@ export async function prepareReadwiseApiFrozenResources(input: {
     document: input.document,
     forceEpubStructure
   });
-  if (originalFile?.bytes && originalFile.state.status === 'localized') {
-    await stageReadwiseApiOriginalFile({
-      bytes: originalFile.bytes,
-      category: originalFileCategory ?? 'pdf',
-      state: originalFile.state,
-      title: input.document.title
-    });
-  }
   const resources: ReadwiseApiPreparedResources = {
-    epubCover,
-    epubImages,
+    epubCover: frozen?.epubCover ?? epubCover,
+    epubImages: frozen?.epubImages ?? epubImages,
     forceEpubStructure,
     originalFile: originalFile ? { bytes: null, state: originalFile.state } : null,
+    ...(originalEpub ? { originalEpub } : {}),
     ...(input.requireFreshOriginalFile ? { replaceOriginalFile: true } : {})
   };
   assertFreshOriginalFile(input.requireFreshOriginalFile, originalFile);
   saveReadwiseApiFrozenResources(input.connectionRef, input.document.id, resources);
   return resources;
+}
+
+async function prepareOriginalResources(
+  input: Parameters<typeof prepareReadwiseApiFrozenResources>[0],
+  frozen: ReadwiseApiPreparedResources | null,
+  destination: ReadwiseImportDestination,
+  originalFileLocalized: boolean
+) {
+  const category = originalFileCategoryFor(input.document.category);
+  const restoredOriginalEpub = frozen && input.requireFreshOriginalFile
+    && input.document.category === 'epub'
+    ? await prepareFrozenOriginalEpub(frozen, input.document.title) : null;
+  const originalFile = restoredOriginalEpub ? frozen!.originalFile
+    : category && destination === 'inbox' && (input.requireFreshOriginalFile || !originalFileLocalized)
+    ? await prepareReadwiseApiOriginalFile({
+      category, dependencies: input.dependencies, documentId: input.document.id,
+      hasHtmlBody: Boolean(input.document.body.trim()),
+      ...(input.document.rawSourceUrl === undefined ? {} : { rawSourceUrl: input.document.rawSourceUrl })
+    }) : null;
+  if (originalFile?.bytes && originalFile.state.status === 'localized') {
+    await stageReadwiseApiOriginalFile({
+      bytes: originalFile.bytes, category: category ?? 'pdf', state: originalFile.state,
+      title: input.document.title
+    });
+  }
+  const originalEpub = restoredOriginalEpub ?? (input.document.category === 'epub' && originalFile?.bytes
+    && originalFile.state.status === 'localized'
+    ? await prepareOriginalEpubCandidate({
+      bytes: originalFile.bytes, now: new Date().toISOString(), title: input.document.title
+    }) : frozen?.originalEpub);
+  return { originalEpub, originalFile };
+}
+
+async function prepareFrozenOriginalEpub(
+  frozen: ReadwiseApiPreparedResources,
+  title: string
+) {
+  const state = frozen.originalFile?.state;
+  if (state?.status !== 'localized') return null;
+  try {
+    const bytes = await fs.readFile(resolveAttachmentStoragePath(state.contentHash, undefined, state.mimeType));
+    return prepareOriginalEpubCandidate({ bytes, now: new Date().toISOString(), title });
+  } catch {
+    return null;
+  }
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {

@@ -76,9 +76,29 @@ export function commitReadwiseOriginalEpub(input: {
   importedAt: string;
   target: ReadwiseOriginalEpubTarget;
 }) {
+  return commitPreparedOriginalEpub(input, true);
+}
+
+export function commitReadwiseOriginalEpubDuringCutover(input: {
+  candidate: PreparedOriginalEpubCandidate;
+  document: PreparedReadwiseApiDocument;
+  expectedSnapshot: string;
+  importedAt: string;
+  target: ReadwiseOriginalEpubTarget;
+}) {
+  return commitPreparedOriginalEpub(input, false);
+}
+
+function commitPreparedOriginalEpub(input: {
+  candidate: PreparedOriginalEpubCandidate;
+  document: PreparedReadwiseApiDocument;
+  expectedSnapshot: string;
+  importedAt: string;
+  target: ReadwiseOriginalEpubTarget;
+}, requireApiRuntime: boolean) {
   const driver = openDatabaseConnection().driver;
   return driver.transaction(() => {
-    if (!isReadwiseOriginalEpubRuntimeReady(input.target)
+    if ((requireApiRuntime && !isReadwiseOriginalEpubRuntimeReady(input.target))
       || captureReadwiseOriginalEpubSnapshot(input.target) !== input.expectedSnapshot) {
       throw new Error('original_epub_target_changed');
     }

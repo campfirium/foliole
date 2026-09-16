@@ -190,7 +190,7 @@ function resolveAnnotation(
      ) SELECT n.id, n.title, n.content, n.anchor_link, n.is_title_manual, n.created_at, n.updated_at
        FROM nodes n JOIN tree t ON t.id=n.id`,
   [nodeId]);
-  const matches = children.filter((child) => child.is_title_manual === 0 && child.created_at === child.updated_at
+  const matches = children.filter((child) => child.is_title_manual === 0
     && normalizeReadwiseText(resolveLegacyHighlightText(child)) === normalizeReadwiseText(text));
   return matches.length === 1
     ? [{ kind: remote.kind, nodeId: matches[0]!.id, remoteId: remote.remoteId }]

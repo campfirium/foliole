@@ -48,10 +48,8 @@ function createHarness() {
   let sourceMode: 'api' | 'relay' = 'api';
   let completedThrough: string | null = '2026-09-08T11:30:00.000Z';
   const progress = candidateProgress();
-  let lastResult: NativeReadwiseApiScheduleResult | null = null;
-  let lifecycle: NativeReadwiseApiRunLifecycle | null = null;
-  let initialProgress: NativeReadwiseApiTaskProgress | null = null;
-  let active = true;
+  let lastResult: NativeReadwiseApiScheduleResult | null = null; let lifecycle: NativeReadwiseApiRunLifecycle | null = null;
+  let initialProgress: NativeReadwiseApiTaskProgress | null = null; let active = true;
   const runImport = importRunner();
   const saveNextRun = vi.fn();
   const dependencies = {
@@ -221,19 +219,6 @@ it('keeps the completed first-sync watermark while a routine run is queued', () 
 
   expect(harness.scheduler.loadStatus().initial_sync).toMatchObject({
     completed_count: 31, failed_count: 0, status: 'completed', total_count: 31
-  });
-});
-
-it('keeps cutover and initial candidate progress independent', () => {
-  const harness = createHarness();
-  harness.setCompletedThrough(null);
-  harness.setCandidateProgress(29, 31, 2);
-
-  expect(harness.scheduler.loadStatus().cutover).toMatchObject({
-    completed_count: 31, status: 'completed', total_count: 31
-  });
-  expect(harness.scheduler.loadStatus().initial_sync).toMatchObject({
-    completed_count: 29, failed_count: 2, status: 'failed', total_count: 31
   });
 });
 

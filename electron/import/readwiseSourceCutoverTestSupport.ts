@@ -93,7 +93,21 @@ export function migrationFetchWithoutHighlightBody() {
 }
 
 export function epubMigrationFetch() {
-  const original = createTestZip([{ content: 'application/epub+zip', name: 'mimetype' }]);
+  const original = createTestZip([
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content: '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content: '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Sample</dc:title></metadata><manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content: '<html><head><title>Original chapter</title></head><body><h1>Original chapter</h1><p>Original EPUB body with remembered phrase.</p></body></html>',
+      name: 'OPS/chapter.xhtml'
+    }
+  ]);
   return vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.hostname.endsWith('.amazonaws.com')) {

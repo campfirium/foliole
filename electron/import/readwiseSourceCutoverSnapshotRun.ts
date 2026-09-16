@@ -30,6 +30,7 @@ import {
   setReadwiseSourceCutoverPhase
 } from './readwiseSourceCutoverJournal.js';
 import { matchReadwiseSourceCutover } from './readwiseSourceCutoverMatching.js';
+import { finalizeReadwiseCutoverOriginalEpub } from './readwiseSourceCutoverOriginalEpub.js';
 import { prepareReadwiseSourceCutoverRouting } from './readwiseSourceCutoverRouting.js';
 
 export interface ReadwiseSourceCutoverSnapshotRunInput {
@@ -204,6 +205,9 @@ async function commitSnapshotDocument(
     ...(projection?.forceEpubStructure ? { forceEpubStructure: true } : {}),
     ...(projection?.replaceExistingBody === undefined
       ? {} : { replaceExistingBody: projection.replaceExistingBody })
+  });
+  finalizeReadwiseCutoverOriginalEpub({
+    connectionRef: input.connectionRef, document: committed, resources, result
   });
   onStage('recording');
   await migration.afterCommit(committed, result);

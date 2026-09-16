@@ -77,7 +77,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
     hideReadwiseApiExternalDocument(input.connectionRef, input.document.id, importedAt);
     return result(input.document.id, 'skipped');
   }
-  if (!input.document.body.trim()) {
+  if (!input.document.body.trim() && !existing?.body?.trim()) {
     const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt));
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
       annotations: existing?.state.annotations ?? [],

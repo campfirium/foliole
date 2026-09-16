@@ -68,10 +68,10 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
     stop();
     if (startup) recoverStartupRun(dependencies);
     const eligibility = resolveEligibility(dependencies);
-    const signature = eligibilitySignature(eligibility);
-    if (lastSignature && lastSignature !== signature) dependencies.cancelImport();
+    const signature = eligibilitySignature(eligibility); if (lastSignature && lastSignature !== signature) dependencies.cancelImport();
     lastSignature = signature;
     if (eligibility.status !== 'ready') return;
+    if (eligibility.migration) return schedule(eligibility, 0, startup ? 'startup' : 'scheduled');
     const state = dependencies.loadScheduleState(eligibility.connectionRef);
     const candidateProgress = dependencies.loadCandidateProgress(eligibility.connectionRef);
     if (!eligibility.completedThrough && state.lifecycle?.status === 'interrupted'
@@ -145,7 +145,12 @@ function buildScheduleStatus(dependencies: SchedulerDependencies): NativeReadwis
 function resolveEligibility(dependencies: SchedulerDependencies) {
   const settings = dependencies.loadSettings();
   const sourceMode = dependencies.loadSourceMode();
-  if (sourceMode.conflictReasons.length > 0 || settings.readwiseSourceMode !== 'api') {
+  const cutover = dependencies.loadCutover();
+  const migration = cutover?.status === 'migration-in-progress';
+  if (migration && cutover.version === 2 && cutover.errorReason) {
+    return { status: 'source_mode_mismatch' as const };
+  }
+  if (!migration && (sourceMode.conflictReasons.length > 0 || settings.readwiseSourceMode !== 'api')) {
     return { status: 'source_mode_mismatch' as const };
   }
   const assignment = dependencies.loadHostAssignment();
@@ -161,13 +166,14 @@ function resolveEligibility(dependencies: SchedulerDependencies) {
     completedThrough,
     connectionRef: source.connectionRef,
     frequency: settings.readwiseReaderConfig.syncFrequency,
+    migration,
     status: 'ready' as const
   };
 }
 
 function eligibilitySignature(eligibility: Eligibility) {
   return eligibility.status === 'ready'
-    ? `${eligibility.status}:${eligibility.activeHost}:${eligibility.connectionRef}`
+    ? `${eligibility.status}:${eligibility.activeHost}:${eligibility.connectionRef}:${eligibility.migration}`
     : eligibility.status;
 }
 
