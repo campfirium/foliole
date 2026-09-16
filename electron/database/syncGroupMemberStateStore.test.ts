@@ -11,7 +11,11 @@ import {
   loadDesktopSyncGroupMemberState,
   loadPendingDesktopSyncGroupRemovalDeviceIds
 } from './syncGroupMemberStateStore.js';
-import { createDesktopSyncGroup, registerSyncGroupDevice } from './syncGroupStore.js';
+import {
+  createDesktopSyncGroup,
+  leaveDesktopSyncGroupDevice,
+  registerSyncGroupDevice
+} from './syncGroupStore.js';
 
 const connection = vi.hoisted(() => ({ current: null as unknown as { driver: unknown } }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection.current }));
@@ -93,6 +97,21 @@ it('learns unknown members independently and never revives a removed Device from
   oldActive.devices.find((device) => device.device_identity_key === identities[2]!.identity_key)!.state = 'active';
   applyDesktopSyncGroupMemberState(oldActive, identities[0]!.identity_key);
   expect(loadPendingDesktopSyncGroupRemovalDeviceIds('group-1')).toContain(identities[2]!.identity_key);
+});
+
+it('retains a publishable member snapshot after the local Device leaves', () => {
+  deviceDatabase(0, [1, 2]);
+  leaveDesktopSyncGroupDevice(identities[0]!.identity_key, '2026-09-15T03:00:00.000Z');
+
+  const departed = loadDesktopSyncGroupMemberState({
+    groupId: 'group-1', senderDeviceId: identities[0]!.identity_key
+  });
+
+  expect(departed.sender_device_identity_key).toBe(identities[0]!.identity_key);
+  expect(departed.devices.find((device) =>
+    device.device_identity_key === identities[0]!.identity_key)).toMatchObject({
+    left_at: '2026-09-15T03:00:00.000Z', state: 'left'
+  });
 });
 
 function deviceDatabase(localIndex: number, remoteIndexes: number[]) {

@@ -31,7 +31,10 @@ import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscov
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
-import { exchangeAllDesktopSyncGroupMemberStates } from '../sync/desktopSyncGroupMemberStateSession.js';
+import {
+  exchangeAllDesktopSyncGroupMemberStates,
+  publishDesktopSyncGroupDeparture
+} from '../sync/desktopSyncGroupMemberStateSession.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 
@@ -94,8 +97,14 @@ async function createGroup() {
 
 async function leaveGroup() {
   const group = loadDesktopSyncGroup();
-  if (group) leaveDesktopSyncGroupDevice(group.local_device_identity_key);
-  await stopLanWorkspaceSyncServer();
+  try {
+    if (group) {
+      leaveDesktopSyncGroupDevice(group.local_device_identity_key);
+      await publishDesktopSyncGroupDeparture(group.group_id, group.local_device_identity_key);
+    }
+  } finally {
+    await stopLanWorkspaceSyncServer();
+  }
   return overview();
 }
 

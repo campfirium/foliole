@@ -1,10 +1,14 @@
 import { parseDesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
+import { loadDesktopSyncGroupMemberState } from '../database/syncGroupMemberStateStore.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
-import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
+import {
+  exchangeDesktopSyncGroupMemberState,
+  publishDesktopSyncGroupMemberState
+} from './desktopSyncGroupMemberState.js';
 import { isCurrentGroupPeerService, readSyncGroupServiceDeviceId } from './desktopSyncGroupPeerService.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
@@ -55,6 +59,14 @@ export async function exchangeDesktopSyncGroupMemberStateWithDevice(deviceId: st
 export async function exchangeAllDesktopSyncGroupMemberStates() {
   const results = await Promise.allSettled([...endpoints.values()].map((peer) =>
     exchangeDesktopSyncGroupMemberState(peer)));
+  return results.some((result) => result.status === 'fulfilled');
+}
+
+export async function publishDesktopSyncGroupDeparture(groupId: string, senderDeviceId: string) {
+  const state = loadDesktopSyncGroupMemberState({ groupId, senderDeviceId });
+  const peers = [...endpoints.values()].filter((peer) => peer.group_id === groupId);
+  const results = await Promise.allSettled(peers.map((peer) =>
+    publishDesktopSyncGroupMemberState(peer, state)));
   return results.some((result) => result.status === 'fulfilled');
 }
 
