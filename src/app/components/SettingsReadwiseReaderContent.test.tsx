@@ -191,7 +191,7 @@ it('runs manual Readwise sync without opening the preview confirmation', async (
     config: createEnabledReadwiseConfig()
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
 
   await waitFor(() => {
     expect(onRunSync).toHaveBeenCalledTimes(1);

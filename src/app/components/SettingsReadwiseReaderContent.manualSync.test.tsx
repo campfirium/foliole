@@ -59,10 +59,10 @@ it('keeps manual Readwise sync status compact while running', async () => {
   const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   renderManualSyncHarness(() => runResult.promise);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Syncing...' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Syncing…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Syncing…' })).toHaveAttribute('aria-busy', 'true');
   });
   expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
   expect(onReadwiseReaderImportProgress).toHaveBeenCalled();
@@ -78,7 +78,7 @@ it('keeps manual Readwise sync status compact while running', async () => {
 it('uses the shared fixed action size for folder sync without cleanup', () => {
   renderManualSyncHarness(vi.fn());
 
-  expect(screen.getByRole('button', { name: 'Sync' })).toHaveClass('w-36', 'min-h-8');
+  expect(screen.getByRole('button', { name: 'Sync now' })).toHaveClass('w-36', 'min-h-8');
   expect(screen.queryByRole('button', { name: 'Clean up...' })).not.toBeInTheDocument();
 });
 
@@ -101,7 +101,7 @@ it('shows failed Readwise source details after manual sync', async () => {
   });
   renderManualSyncHarness(onRunSync);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
 
   await waitFor(() => {
     expect(screen.getByText('Some Readwise sources could not be synced.')).toBeInTheDocument();
@@ -124,7 +124,7 @@ it('does not present unchanged scanned Readwise sources as synced topics', async
   });
   renderManualSyncHarness(onRunSync);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
 
   await waitFor(() => {
     expect(screen.getByText('No new or changed Readwise sources.')).toBeInTheDocument();
