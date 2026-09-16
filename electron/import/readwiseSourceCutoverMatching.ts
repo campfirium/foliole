@@ -5,10 +5,11 @@ import {
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 
 import type { ReadwiseSourceArtifact } from './readwiseSourceCutoverArtifacts.js';
+import { extractReadwiseSourceUrl } from './readwiseSourceCutoverSourceUrl.js';
 
 export interface ReadwiseLegacyMatchFailure {
   nodeId: string;
-  reason: 'category_mismatch' | 'identity_conflict' | 'title_not_unique' | 'unmatched' | 'url_not_unique';
+  reason: 'identity_conflict' | 'unmatched' | 'url_not_unique';
 }
 
 export function matchReadwiseSourceCutover(input: {
@@ -17,14 +18,13 @@ export function matchReadwiseSourceCutover(input: {
   readerDocuments: ReaderDocumentContract[];
 }) {
   const artifacts = groupReadwiseSourceArtifacts(input.artifacts)
-    .filter((item) => item.nodeActive && !item.disposition);
+    .filter((item) => item.nodeActive);
   const preparedById = new Map(input.preparedDocuments.map((item) => [item.id, item]));
   const readersById = new Map(input.readerDocuments.map((item) => [item.id, item]));
   const matches = new Map<string, ReadwiseSourceArtifact>();
   const failures = new Map<string, ReadwiseLegacyMatchFailure['reason']>();
   matchByIdentity(artifacts, readersById, preparedById, matches, failures);
-  matchUnique(artifacts, input.preparedDocuments, matches, failures, 'url');
-  matchUnique(artifacts, input.preparedDocuments, matches, failures, 'title');
+  matchUniqueUrl(artifacts, input.preparedDocuments, matches, failures);
   return {
     artifactFor: (documentId: string) => matches.get(documentId) ?? null,
     failures: artifacts.filter((item) => ![...matches.values()].includes(item)).map((item) => ({
@@ -51,12 +51,6 @@ function matchByIdentity(
     if (ids.size > 1) failures.set(artifact.latestNodeId, 'identity_conflict');
     if (ids.size !== 1) continue;
     const id = [...ids][0]!;
-    const url = normalizeUrl(artifact.originalUrl);
-    if (url && [...preparedById.values()].some((document) =>
-      document.id !== id && normalizeUrl(document.metadata.sourceUrl) === url)) {
-      failures.set(artifact.latestNodeId, 'identity_conflict');
-      continue;
-    }
     claimed.set(id, [...(claimed.get(id) ?? []), artifact]);
   }
   for (const [documentId, candidates] of claimed) {
@@ -65,19 +59,23 @@ function matchByIdentity(
   }
 }
 
-function matchUnique(
+function matchUniqueUrl(
   artifacts: ReadwiseSourceArtifact[],
   documents: PreparedReadwiseApiDocument[],
   matches: Map<string, ReadwiseSourceArtifact>,
-  failures: Map<string, ReadwiseLegacyMatchFailure['reason']>,
-  kind: 'title' | 'url'
+  failures: Map<string, ReadwiseLegacyMatchFailure['reason']>
 ) {
   const matchedArtifacts = new Set(matches.values());
   const availableArtifacts = artifacts.filter((item) => !matchedArtifacts.has(item)
     && !failures.has(item.latestNodeId));
   const availableDocuments = documents.filter((item) => !matches.has(item.id));
-  const artifactGroups = groupBy(availableArtifacts, (item) => matchKey(kind, item));
-  const documentGroups = groupBy(availableDocuments, (item) => documentMatchKey(kind, item));
+  const artifactGroups = groupBy(availableArtifacts, (item) => normalizeUrl(item.originalUrl));
+  const documentGroups = new Map<string, PreparedReadwiseApiDocument[]>();
+  for (const document of availableDocuments) {
+    for (const key of documentUrlKeys(document)) {
+      documentGroups.set(key, [...(documentGroups.get(key) ?? []), document]);
+    }
+  }
   for (const [key, candidates] of artifactGroups) {
     if (!key) continue;
     const remote = documentGroups.get(key) ?? [];
@@ -86,23 +84,15 @@ function matchUnique(
       continue;
     }
     if (remote.length === 0) continue;
-    const reason = kind === 'url' ? 'url_not_unique' : 'title_not_unique';
-    for (const artifact of candidates) failures.set(artifact.latestNodeId, reason);
+    for (const artifact of candidates) failures.set(artifact.latestNodeId, 'url_not_unique');
   }
 }
 
-function matchKey(kind: 'title' | 'url', artifact: ReadwiseSourceArtifact) {
-  if (kind === 'url') return normalizeUrl(artifact.originalUrl);
-  const category = artifact.sourceCategory;
-  const title = normalizeTitle(artifact.title);
-  return category && title ? `${category}\u0000${title}` : '';
-}
-
-function documentMatchKey(kind: 'title' | 'url', document: PreparedReadwiseApiDocument) {
-  if (kind === 'url') return normalizeUrl(document.metadata.sourceUrl);
-  const category = legacyCategory(document.category);
-  const title = normalizeTitle(document.title);
-  return category && title ? `${category}\u0000${title}` : '';
+function documentUrlKeys(document: PreparedReadwiseApiDocument) {
+  return new Set([
+    normalizeUrl(document.metadata.sourceUrl),
+    normalizeUrl(extractReadwiseSourceUrl(document.body))
+  ].filter(Boolean));
 }
 
 function normalizeUrl(value: string | null | undefined) {
@@ -119,18 +109,6 @@ function normalizeUrl(value: string | null | undefined) {
   } catch {
     return '';
   }
-}
-
-function normalizeTitle(value: string | null | undefined) {
-  return value?.normalize('NFKC').replace(/\s+/gu, ' ').trim().toLocaleLowerCase() ?? '';
-}
-
-function legacyCategory(value: PreparedReadwiseApiDocument['category']) {
-  if (value === 'article' || value === 'email' || value === 'rss') return 'articles';
-  if (value === 'epub' || value === 'pdf') return 'books';
-  if (value === 'tweet') return 'tweets';
-  if (value === 'video') return 'podcasts';
-  return null;
 }
 
 function groupBy<T>(values: T[], keyFor: (value: T) => string) {

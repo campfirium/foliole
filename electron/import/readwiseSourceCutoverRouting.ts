@@ -18,14 +18,17 @@ export function prepareReadwiseSourceCutoverRouting(input: {
   settings: ImportManagerSettings;
 }) {
   const destinations = new Map<string, 'external' | 'inbox' | 'off'>();
-  const suppressed = new Set(input.dispositionSuppressed);
+  const suppressed = new Set([...input.dispositionSuppressed]
+    .filter((documentId) => !input.artifactFor(documentId)));
   const driver = openDatabaseConnection().driver;
   for (const document of input.documents) {
+    const matchedArtifact = input.artifactFor(document.id);
     const alreadySuppressed = Boolean(readReadwiseApiSourceDisposition(
       driver, input.connectionRef, document.id
     ));
-    const destination = alreadySuppressed ? 'off' : input.artifactFor(document.id)
+    const destination = matchedArtifact
       ? 'inbox'
+      : alreadySuppressed ? 'off'
       : resolveReadwiseAutoImportDestination(
           input.settings.readwiseAutoImportPolicy,
           document.category,

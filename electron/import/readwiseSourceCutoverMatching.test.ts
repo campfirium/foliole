@@ -7,18 +7,17 @@ import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApi
 
 import type { ReadwiseSourceArtifact } from './readwiseSourceCutoverArtifacts.js';
 import { matchReadwiseSourceCutover } from './readwiseSourceCutoverMatching.js';
+import { extractReadwiseSourceUrl } from './readwiseSourceCutoverSourceUrl.js';
 
-it('matches in Reader ID, canonical URL, then category-scoped unique full title order', () => {
+it('matches active and dismissed sources by Reader ID or canonical source URL', () => {
   const reader = [
     remote('id-match', 'article', 'Different', 'https://example.com/id'),
-    remote('url-match', 'article', 'Different too', 'https://EXAMPLE.com/url/#fragment'),
-    remote('title-match', 'epub', '  Shared   Book  ', null)
+    remote('url-match', 'article', 'Different too', 'https://EXAMPLE.com/url/#fragment')
   ];
   const output = matchReadwiseSourceCutover({
     artifacts: [
-      artifact('legacy-id', 'articles', 'Old', null, ['id-match']),
+      artifact('legacy-id', 'articles', 'Old', null, ['id-match'], true),
       artifact('legacy-url', 'articles', 'Old', 'https://example.com/url', []),
-      artifact('legacy-title', 'books', 'shared book', null, [])
     ],
     preparedDocuments: prepareReadwiseApiDocuments(reader, []),
     readerDocuments: reader
@@ -26,11 +25,10 @@ it('matches in Reader ID, canonical URL, then category-scoped unique full title 
 
   expect(output.artifactFor('id-match')?.latestNodeId).toBe('legacy-id');
   expect(output.artifactFor('url-match')?.latestNodeId).toBe('legacy-url');
-  expect(output.artifactFor('title-match')?.latestNodeId).toBe('legacy-title');
   expect(output.failures).toEqual([]);
 });
 
-it('does not guess across identity, URL, or title conflicts', () => {
+it('does not guess across identity or URL conflicts', () => {
   const reader = [
     remote('one', 'article', 'Duplicate', 'https://example.com/shared'),
     remote('two', 'article', 'Duplicate', 'https://example.com/shared')
@@ -38,8 +36,7 @@ it('does not guess across identity, URL, or title conflicts', () => {
   const output = matchReadwiseSourceCutover({
     artifacts: [
       artifact('identity-conflict', 'articles', 'Duplicate', null, ['one', 'two']),
-      artifact('url-conflict', 'articles', 'Duplicate', 'https://example.com/shared', []),
-      artifact('title-conflict', 'articles', 'Duplicate', null, [])
+      artifact('url-conflict', 'articles', 'Duplicate', 'https://example.com/shared', [])
     ],
     preparedDocuments: prepareReadwiseApiDocuments(reader, []),
     readerDocuments: reader
@@ -48,12 +45,11 @@ it('does not guess across identity, URL, or title conflicts', () => {
   expect(output.matchedDocumentIds.size).toBe(0);
   expect(output.failures).toEqual(expect.arrayContaining([
     { nodeId: 'identity-conflict', reason: 'identity_conflict' },
-    { nodeId: 'url-conflict', reason: 'url_not_unique' },
-    { nodeId: 'title-conflict', reason: 'title_not_unique' }
+    { nodeId: 'url-conflict', reason: 'url_not_unique' }
   ]));
 });
 
-it('requires the legacy category to agree for title-only matches', () => {
+it('does not use a unique full title as identity evidence', () => {
   const reader = [remote('article', 'article', 'Same title', null)];
   const output = matchReadwiseSourceCutover({
     artifacts: [artifact('legacy-book', 'books', 'Same title', null, [])],
@@ -65,15 +61,62 @@ it('requires the legacy category to agree for title-only matches', () => {
   expect(output.failures).toEqual([{ nodeId: 'legacy-book', reason: 'unmatched' }]);
 });
 
+it('uses an explicit source link in converted document bodies when sourceUrl is absent', () => {
+  const reader = [remote('email', 'email', 'Repeated mail title', null,
+    '<p><a href="https://forum.example.com/topic/8/81">访问话题</a></p>')];
+  const output = matchReadwiseSourceCutover({
+    artifacts: [artifact('legacy-email', 'articles', 'Repeated mail title',
+      'https://forum.example.com/topic/8/81', [])],
+    preparedDocuments: prepareReadwiseApiDocuments(reader, []),
+    readerDocuments: reader
+  });
+
+  expect(output.artifactFor('email')?.latestNodeId).toBe('legacy-email');
+  expect(output.failures).toEqual([]);
+});
+
+it('lets an exact Reader ID win when another document shares its source URL', () => {
+  const reader = [
+    remote('exact', 'article', 'One', 'https://example.com/shared'),
+    remote('duplicate', 'rss', 'Two', 'https://example.com/shared')
+  ];
+  const output = matchReadwiseSourceCutover({
+    artifacts: [artifact('legacy', 'articles', 'Old', 'https://example.com/shared', ['exact'])],
+    preparedDocuments: prepareReadwiseApiDocuments(reader, []),
+    readerDocuments: reader
+  });
+
+  expect(output.artifactFor('exact')?.latestNodeId).toBe('legacy');
+  expect(output.artifactFor('duplicate')).toBeNull();
+});
+
+it('reads the explicit legacy URL field and labeled body source links', () => {
+  expect(extractReadwiseSourceUrl('---\nurl: https://example.com/article\n---')).toBe(
+    'https://example.com/article'
+  );
+  expect(extractReadwiseSourceUrl('[访问话题](https://forum.example.com/topic/8/81)')).toBe(
+    'https://forum.example.com/topic/8/81'
+  );
+  expect(extractReadwiseSourceUrl('url: https://readwise.io/reader/document_raw_content/123')).toBe(
+    'https://readwise.io/reader/document_raw_content/123'
+  );
+});
+
 function artifact(
   nodeId: string,
   sourceCategory: NonNullable<ReadwiseSourceArtifact['sourceCategory']>,
   title: string,
   originalUrl: string | null,
-  ids: string[]
+  ids: string[],
+  dismissed = false
 ): ReadwiseSourceArtifact {
   return {
-    disposition: null,
+    disposition: dismissed ? {
+      disposition: 'dismissed',
+      key: { originalTitle: title, sourceKind: 'readwise', sourceScope: 'legacy:.' },
+      ruleId: 'legacy',
+      sourcePath: `${title}.md`
+    } : null,
     documentIds: new Set(ids),
     highlightIds: new Set(),
     latestNodeId: nodeId,
@@ -90,12 +133,13 @@ function remote(
   id: string,
   category: ReaderDocumentContract['category'],
   title: string,
-  sourceUrl: string | null
+  sourceUrl: string | null,
+  htmlContent = `<p>${title}</p>`
 ): ReaderDocumentContract {
   return {
     author: null,
     category,
-    htmlContent: `<p>${title}</p>`,
+    htmlContent,
     id,
     imageUrl: null,
     notes: null,

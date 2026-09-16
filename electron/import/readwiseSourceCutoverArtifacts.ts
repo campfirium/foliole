@@ -10,6 +10,8 @@ import {
   type ReadwiseLegacySourceDisposition
 } from '../database/readwiseLegacySourceDispositions.js';
 
+import { extractReadwiseSourceUrl } from './readwiseSourceCutoverSourceUrl.js';
+
 interface SourceRow extends DatabaseRow {
   highlight_path: string;
   latest_node_id: string;
@@ -70,7 +72,7 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
       highlightIds: ids,
       latestNodeId: row.last_node_id,
       nodeActive: true,
-      originalUrl: extractOriginalUrl(row.raw),
+      originalUrl: extractReadwiseSourceUrl(row.raw),
       raw: row.raw,
       sourceCategory: sourceCategory(row.kind),
       sourceFingerprint: row.source_fingerprint,
@@ -110,7 +112,7 @@ async function loadFolderArtifacts() {
       highlightIds: new Set(extractReaderLinkIds(raw)),
       latestNodeId: source.latest_node_id,
       nodeActive: source.node_active === 1,
-      originalUrl: extractOriginalUrl(full || raw),
+      originalUrl: extractReadwiseSourceUrl(full || raw),
       raw,
       sourceCategory: sourceCategory(parseKind(source.type_settings_json)),
       sourceFingerprint: source.source_fingerprint,
@@ -159,17 +161,4 @@ function parseKind(value: string) {
 function sourceCategory(value: string | null) {
   return value === 'articles' || value === 'books' || value === 'podcasts' || value === 'tweets'
     ? value : null;
-}
-
-function extractOriginalUrl(value: string) {
-  const explicit = /^(?:source(?: url)?|original url)\s*:\s*(https?:\/\/\S+)\s*$/imu.exec(value)?.[1];
-  const linked = /\[(?:source|original)\]\((https?:\/\/[^)]+)\)/iu.exec(value)?.[1];
-  const candidate = explicit ?? linked;
-  if (!candidate) return null;
-  try {
-    const url = new URL(candidate.replace(/[),.;]+$/u, ''));
-    return /(^|\.)readwise\.io$/iu.test(url.hostname) ? null : url.toString();
-  } catch {
-    return null;
-  }
 }
