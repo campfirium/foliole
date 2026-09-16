@@ -51,6 +51,12 @@ function matchByIdentity(
     if (ids.size > 1) failures.set(artifact.latestNodeId, 'identity_conflict');
     if (ids.size !== 1) continue;
     const id = [...ids][0]!;
+    const url = normalizeUrl(artifact.originalUrl);
+    if (url && [...preparedById.values()].some((document) =>
+      document.id !== id && normalizeUrl(document.metadata.sourceUrl) === url)) {
+      failures.set(artifact.latestNodeId, 'identity_conflict');
+      continue;
+    }
     claimed.set(id, [...(claimed.get(id) ?? []), artifact]);
   }
   for (const [documentId, candidates] of claimed) {

@@ -42,6 +42,7 @@ interface ReadwiseApiDocumentCommitInput {
 }
 
 export interface ReadwiseApiPreparedResources {
+  preparationPending?: boolean;
   epubCover?: Awaited<ReturnType<typeof prepareReadwiseApiEpubCoverIfNeeded>>;
   epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;
   forceEpubStructure?: boolean;

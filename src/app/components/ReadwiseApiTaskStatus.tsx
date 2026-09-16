@@ -78,12 +78,16 @@ function currentLifecycle(status: NativeReadwiseApiScheduleStatus | null): Nativ
 }
 
 export function readwiseFailureReason(reason: string | null, t: Translate) {
+  if (reason?.startsWith('readwise_source_cutover_')) return t('desktop.readwise.cutover.internalFailure');
+  const httpStatus = reason?.match(/^readwise_api_http_(\d{3})$/)?.[1];
+  if (httpStatus) return t('desktop.readwise.cutover.httpFailure', { status: httpStatus });
   const key = {
     rate_limited: 'desktop.readwise.api.failure.rateLimited',
     readwise_api_reconnect_required: 'desktop.readwise.api.failure.reconnectRequired',
     readwise_execution_connection_changed: 'desktop.readwise.api.failure.connectionChanged',
     readwise_execution_eligibility_lost: 'desktop.readwise.api.failure.notEligible',
     readwise_source_mode_conflict: 'desktop.readwise.source.conflict',
+    readwise_api_network_failed: 'desktop.readwise.api.failure.requestFailed',
     request_failed: 'desktop.readwise.api.failure.requestFailed'
   }[reason ?? ''] as Parameters<Translate>[0] | undefined;
   return key ? t(key) : null;

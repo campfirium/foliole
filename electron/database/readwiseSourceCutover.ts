@@ -20,17 +20,9 @@ export function loadReadwiseSourceCutover() {
 export function loadReadwiseSourceMigrationProgress() {
   const state = loadReadwiseSourceCutover();
   if (!state || state.version !== 2) return { completedCount: 0, totalCount: 0 };
-  const totalCount = openDatabaseConnection().driver.queryOne<{ count: number }>(
-    `SELECT COUNT(DISTINCT i.latest_node_id) count FROM import_sources i
-     JOIN desktop_sources d ON d.source_ref = i.source_ref
-     JOIN nodes n ON n.id = i.latest_node_id AND n.deleted_at IS NULL
-     WHERE d.source_type = 'readwise' AND d.host_name = ?`,
-    [state.sourceHost]
-  )?.count ?? 0;
-  const completedCount = new Set(state.documents.flatMap((item) =>
-    item.status === 'bound' && item.nodeId ? [item.nodeId] : []
-  )).size;
-  return { completedCount: Math.min(completedCount, totalCount), totalCount };
+  const ids = new Set(state.updateDocumentIds ?? []);
+  const completedCount = state.documents.filter((item) => ids.has(item.remoteId)).length;
+  return { completedCount, totalCount: ids.size };
 }
 
 export function writeReadwiseSourceCutover(

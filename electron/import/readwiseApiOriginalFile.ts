@@ -30,6 +30,9 @@ export async function prepareReadwiseApiOriginalFile(input: {
 }): Promise<PreparedReadwiseOriginalFile> {
   try {
     let rawSourceUrl = input.rawSourceUrl ?? null;
+    if (!rawSourceUrl && input.rawSourceUrl === null && input.dependencies?.allowFolderModeForCutover) {
+      return degraded(input.hasHtmlBody, 'original_file_not_distributed');
+    }
     if (!rawSourceUrl) {
       rawSourceUrl = await refreshRawSourceUrl(input);
     }
@@ -92,6 +95,8 @@ export async function persistReadwiseApiOriginalFile(input: {
 export async function stageReadwiseApiOriginalFile(input: {
   bytes: Uint8Array;
   category?: OriginalFileCategory;
+  signal?: AbortSignal;
+  assertEligible?: () => void;
   state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>;
   title: string;
 }) {
@@ -100,6 +105,8 @@ export async function stageReadwiseApiOriginalFile(input: {
   const existing = findAttachmentRecordById(input.state.attachmentId);
   const storagePath = resolveAttachmentStoragePath(input.state.contentHash, undefined, input.state.mimeType);
   await persistValidatedFile(storagePath, input.bytes);
+  input.signal?.throwIfAborted();
+  input.assertEligible?.();
   const createdAt = existing?.createdAt ?? new Date().toISOString();
   if (!existing) {
     createAttachmentRecord({

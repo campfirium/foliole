@@ -66,7 +66,7 @@ function migrationPresentation(
       text: progressText(
         `${t('desktop.readwise.cutover.status')} · ${phase}`, compact,
         migration.completedCount,
-        migration.totalCount
+        migration.totalCount, migration.phase === 'indexing'
       )
     };
   }
@@ -83,7 +83,7 @@ function migrationPresentation(
       : `${withProgress(
           `${t('desktop.readwise.cutover.status')} · ${failed}`,
           migration.completedCount,
-          migration.totalCount
+          migration.totalCount, migration.phase === 'indexing'
         )}${reason ? ` · ${reason}` : ''}`
   };
 }
@@ -142,11 +142,13 @@ function completedFailurePresentation(
   };
 }
 
-function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null) {
-  return compact ? text : withProgress(text, completedCount, totalCount);
+function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null, percent = false) {
+  return compact ? text : withProgress(text, completedCount, totalCount, percent);
 }
 
-function withProgress(text: string, completedCount: number, totalCount: number | null) {
+function withProgress(text: string, completedCount: number, totalCount: number | null, percent = false) {
+  if (percent) return totalCount === null || totalCount === 0 ? text
+    : `${text} · ${Math.floor(completedCount * 100 / totalCount)}%`;
   if (completedCount === 0 && totalCount === null) return text;
   return `${text} · ${completedCount}${totalCount === null ? '' : ` / ${totalCount}`}`;
 }

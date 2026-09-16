@@ -60,6 +60,7 @@ export interface ReadwiseSourceCutover {
   failures?: ReadwiseSourceCutoverFailure[];
   legacyMatches?: ReadwiseSourceCutoverLegacyMatch[];
   legacyTotal?: number;
+  updateDocumentIds?: string[];
   phase?: 'indexing' | 'merging' | null;
   retiredNodeIds: string[];
   sourceHost: string;

@@ -19,6 +19,7 @@ import {
   type ReadwiseApiFetchDependencies
 } from './readwiseApiRequest.js';
 import { readReadwiseApiSecret } from './readwiseApiSecret.js';
+import { downloadReadwiseCutover } from './readwiseCutoverDownload.js';
 
 export type { ReadwiseApiFetchDependencies } from './readwiseApiRequest.js';
 
@@ -82,8 +83,7 @@ export async function fetchReadwiseSourceCutoverSnapshot(
   const request = createReadwiseRequest(
     readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies, connectionRef
   );
-  const run = loadOrCreateReadwiseApiImportRun(connectionRef, new Date().toISOString(), true);
-  return fetchRemainingPages(run, request, dependencies, false);
+  return downloadReadwiseCutover(connectionRef, request, dependencies);
 }
 
 async function fetchRemainingPages(

@@ -10,6 +10,7 @@ import {
 } from '../database/readwiseRemoteIdentity.js';
 import {
   loadReadwiseSourceCutover,
+  loadReadwiseSourceMigrationProgress,
   writeReadwiseSourceCutover
 } from '../database/readwiseSourceCutover.js';
 import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
@@ -18,6 +19,7 @@ import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportP
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import { readCutoverDownloadProgress } from './readwiseCutoverDownload.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import {
   completeReadwiseSourceCutoverMigration,
@@ -82,6 +84,7 @@ async function runNow(
     publishProgress(input.window, 0, 0, 'indexing');
   }
   recordCutoverError(null);
+  const activeBatchId = requireReadwiseSourceCutoverV2().batchId;
   try {
     const output = await runCutoverPipeline(source.connectionRef, input);
     const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
@@ -94,6 +97,7 @@ async function runNow(
   } catch (error) {
     console.error('[readwise-cutover] migration paused', error);
     const reason = safeFailureReason(error);
+    if (requireReadwiseSourceCutoverV2().batchId !== activeBatchId) return result('failed', 0, 0, reason);
     recordCutoverError(reason);
     publishFailed(input.window);
     return result('failed', 0, 0, reason);
@@ -110,12 +114,15 @@ function recordCutoverError(errorReason: string | null) {
 
 async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourceCutoverInput) {
   const settings = loadImportManagerSettings();
+  const batchId = requireReadwiseSourceCutoverV2().batchId;
+  const assertEligible = () => assertMigrationEligible(connectionRef, batchId);
   const dependencies = {
     ...input.dependencies,
-    allowFolderModeForCutover: true
+    allowFolderModeForCutover: true,
+    assertCutoverBatch: assertEligible
   };
   return runReadwiseSourceCutoverSnapshot({
-    assertEligible: () => assertMigrationEligible(connectionRef),
+    assertEligible,
     connectionRef,
     dependencies,
     onProgress: (completed, total, phase) => publishProgress(input.window, completed, total, phase),
@@ -123,10 +130,10 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
   });
 }
 
-function assertMigrationEligible(connectionRef: string) {
+function assertMigrationEligible(connectionRef: string, batchId?: string) {
   const state = loadReadwiseSourceCutover();
   const sourceMode = loadReadwiseSourceModeState();
-  if (state?.status !== 'migration-in-progress') {
+  if (state?.status !== 'migration-in-progress' || (state.version === 2 && state.batchId !== batchId)) {
     throw new Error('readwise_source_migration_not_active');
   }
   if (!loadReadwiseHostAssignment().is_active || !isStoredReadwiseApiConnectionReady()) {
@@ -141,7 +148,7 @@ function assertMigrationEligible(connectionRef: string) {
 }
 
 function safeFailureReason(error: unknown) {
-  if (!(error instanceof Error)) return 'request_failed';
+  if (!(error instanceof Error)) return 'readwise_source_cutover_internal_failure';
   if (error.message.startsWith('readwise_api_rate_limited:')) return 'rate_limited';
   if (error.message === 'readwise_api_import_not_ready') return 'readwise_api_reconnect_required';
   const reasons = [
@@ -150,7 +157,8 @@ function safeFailureReason(error: unknown) {
     'readwise_execution_connection_changed',
     'readwise_execution_eligibility_lost'
   ];
-  return reasons.includes(error.message) ? error.message : 'request_failed';
+  if (/^readwise_[a-z0-9_]+(?::[a-zA-Z0-9_-]+)?$/.test(error.message)) return error.message;
+  return reasons.includes(error.message) ? error.message : 'readwise_source_cutover_internal_failure';
 }
 
 function publishProgress(
@@ -170,8 +178,11 @@ function publishProgress(
 function publishFailed(window: ReadwiseImportProgressWindow | null | undefined) {
   const current = loadReadwiseSourceCutover();
   const phase = current?.version === 2 && current.phase === 'merging' ? 'merging' : 'indexing';
+  const progress = phase === 'merging' ? loadReadwiseSourceMigrationProgress() : null;
+  const download = readCutoverDownloadProgress(loadReadwiseRemoteSource()?.connectionRef ?? '');
   notifyReadwiseReaderImportProgress({
-    phase, processedCount: 0, status: 'failed', totalCount: 0
+    phase, processedCount: progress?.completedCount ?? download.completed, status: 'failed',
+    totalCount: progress?.totalCount ?? download.total ?? 0
   }, window);
 }
 

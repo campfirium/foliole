@@ -93,8 +93,7 @@ function resetMigrationProgress(
 ) {
   setProgress((current) => ({
     ...current, errorReason: null, failed: false,
-    failures: [],
-    totalCount: null
+    failures: []
   }));
 }
 
@@ -107,13 +106,12 @@ function applyMigrationProgress(
   setProgress((current) => {
     const nextCount = migrationCompletedCount(progress);
     return {
-      completedCount: current.phase === phase
-        ? Math.max(current.completedCount, nextCount) : nextCount,
+      completedCount: nextCount,
       errorReason: null,
       failed: progress.status === 'failed',
       failures: current.failures ?? [],
       phase,
-      totalCount: progress.totalCount > 0 ? progress.totalCount : current.totalCount
+      totalCount: phase === 'merging' ? progress.totalCount : progress.totalCount > 0 ? progress.totalCount : null
     };
   });
 }

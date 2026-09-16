@@ -85,8 +85,13 @@ async function installRecoveringTransport(app: ElectronApplication) {
     globalThis.fetch = async (input) => {
       const url = new URL(String(input));
       if (url.pathname === '/api/v3/list/') {
-        await gate;
-        return Response.json({ count: 1, nextPageCursor: null, results: [{
+        if (url.searchParams.has('pageCursor')) {
+          await gate;
+          return Response.json({ count: 2, nextPageCursor: null, results: [{
+            category: 'rss', id: 'excluded-document', title: 'Excluded source'
+          }] });
+        }
+        return Response.json({ count: 2, nextPageCursor: 'next', results: [{
           category: 'article', html_content: '<p>Remote replacement body</p>',
           id: 'remote-document', title: 'Unique restored title'
         }] });
@@ -148,17 +153,20 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await expect(getSettingsDialog(session.firstWindow)).toBeVisible();
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Import failed|正在迁移 · 导入失败)/
+      hasText: /^(Readwise migration · Download failed|Readwise 迁移 · 下载失败)/
     })).toBeVisible({ timeout: 30_000 });
+    await expect(settings.getByRole('status')).toContainText('HTTP 400');
+    await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'download-failed.png') });
     const retry = settings.getByRole('button', { name: /^(Retry migration|重试迁移)$/ });
     await expect(retry).toBeVisible();
 
     await installRecoveringTransport(session.electronApp);
     await retry.click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Importing|正在迁移 · 导入中)/
+      hasText: /^(Readwise migration · Downloading|Readwise 迁移 · 下载中)/
     })).toBeVisible();
-    await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'importing.png') });
+    await expect(settings.getByRole('status')).toContainText('50%');
+    await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'downloading.png') });
     await releaseImport(session.electronApp);
 
     await expect.poll(() => session!.firstWindow.evaluate(async () => {
@@ -208,7 +216,7 @@ test('uses the saved device token when a restored library has no API source iden
     const confirmation = session.firstWindow.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
     await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Importing|正在迁移 · 导入中)/
+      hasText: /^(Readwise migration · Downloading|Readwise 迁移 · 下载中)/
     })).toBeVisible();
     await releaseImport(session.electronApp);
     await expect.poll(() => session!.firstWindow.evaluate(async () =>

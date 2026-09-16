@@ -38,6 +38,7 @@ export function normalizeStoredReadwiseSourceCutover(
     ...(payload.failures === undefined ? {} : { failures: cutoverFailures(payload.failures) }),
     ...(payload.legacyMatches === undefined ? {} : { legacyMatches: legacyMatches(payload.legacyMatches) }),
     ...(payload.legacyTotal === undefined ? {} : { legacyTotal: integer(payload.legacyTotal, 'legacyTotal') }),
+    ...(payload.updateDocumentIds === undefined ? {} : { updateDocumentIds: uniqueStrings(payload.updateDocumentIds, 'updateDocumentIds') }),
     phase: cutoverPhase(payload.phase, payload.status),
     retiredNodeIds: uniqueStrings(payload.retiredNodeIds, 'retiredNodeIds'),
     sourceHost: text(payload.sourceHost, 'sourceHost'),

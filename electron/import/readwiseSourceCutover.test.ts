@@ -215,7 +215,7 @@ it('rolls back the final completion record when the source mode cannot commit', 
 
   await expect(runReadwiseSourceCutover({
     dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 }
-  })).resolves.toMatchObject({ error_reason: 'request_failed', status: 'failed' });
+  })).resolves.toMatchObject({ error_reason: 'readwise_source_cutover_internal_failure', status: 'failed' });
 
   expect(JSON.parse(driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key='readwise_source_mode'"

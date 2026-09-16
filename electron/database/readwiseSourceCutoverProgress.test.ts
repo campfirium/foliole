@@ -39,7 +39,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('counts every existing relay Topic in source migration progress', () => {
+it('counts only the frozen update list despite unrelated historical Topics', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
     VALUES ('topic-1',NULL,'topic','Article',0,'legacy',NULL,'old','old'),
@@ -54,10 +54,11 @@ it('counts every existing relay Topic in source migration progress', () => {
     ('source-2','desktop_text_file','markdown','Book.md','/Readwise/Book.md','old','old','hash-2',
      'topic-2','readwise:local','Book.md')`);
   writeReadwiseSourceCutover({
+    updateDocumentIds: ['document-1'],
     annotations: [], cohortDocumentIds: ['document-1'], completedAt: 'old',
     documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
     retiredNodeIds: [], sourceHost: 'This Mac', startedAt: 'old', status: 'migration-in-progress'
   });
 
-  expect(loadReadwiseSourceMigrationProgress()).toEqual({ completedCount: 1, totalCount: 2 });
+  expect(loadReadwiseSourceMigrationProgress()).toEqual({ completedCount: 1, totalCount: 1 });
 });

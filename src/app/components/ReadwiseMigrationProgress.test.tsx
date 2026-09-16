@@ -45,7 +45,7 @@ it('shows remote records while importing migration facts', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Importing · 12 / 234')).toBeInTheDocument();
+  expect(screen.getByText('Readwise migration · Downloading · 5%')).toBeInTheDocument();
 });
 
 it('shows cumulative first-sync progress while the API index is being fetched', () => {
@@ -61,7 +61,7 @@ it('shows cumulative first-sync progress while the API index is being fetched', 
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Indexing · 1327')).toBeInTheDocument();
+  expect(screen.getByText('Readwise migration · Indexing · 1327')).toBeInTheDocument();
 });
 
 it('shows completed and total counts while first-sync topics are imported', () => {
@@ -91,7 +91,7 @@ it('shows completed and total counts while first-sync topics are imported', () =
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Importing · 13 / 27')).toBeInTheDocument();
+  expect(screen.getByText('Readwise migration · Downloading · 13 / 27')).toBeInTheDocument();
 });
 
 it('provides a compact visual-only phase without repeating progress details', () => {
@@ -111,7 +111,7 @@ it('provides a compact visual-only phase without repeating progress details', ()
     </LocalizationProvider>
   );
 
-  const status = screen.getByText('Migrating · Importing');
+  const status = screen.getByText('Readwise migration · Downloading');
   expect(status).toHaveAttribute('aria-hidden', 'true');
   expect(screen.queryByText(/12 \/ 234/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -134,7 +134,7 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Import failed')).toBeInTheDocument();
+  expect(screen.getByText('Readwise migration · Download failed')).toBeInTheDocument();
   expect(screen.queryByText(/request_failed/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
@@ -165,4 +165,31 @@ it('keeps completed migration failures summarized in the source selector', () =>
     .toBeInTheDocument();
   expect(screen.queryByText('Broken PDF')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
+});
+
+it('shows activity without a percentage while either download total is unknown', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{ completedCount: 900, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
+    taskStatus={null}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading$/);
+});
+
+it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{ completedCount: 27, errorReason: 'readwise_source_cutover_epub_projection_incomplete',
+      failed: true, phase: 'merging', totalCount: 27 }}
+    taskStatus={null}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent('27 / 27');
+  expect(screen.getByRole('status')).toHaveTextContent('Migration verification failed');
+  expect(screen.getByRole('status')).not.toHaveTextContent('Readwise request failed');
+});
+
+it('reports a real HTTP failure separately from internal verification errors', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{ completedCount: 0, errorReason: 'readwise_api_http_400', failed: true, phase: 'indexing', totalCount: null }}
+    taskStatus={null}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent('Readwise returned HTTP 400');
 });

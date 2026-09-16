@@ -92,7 +92,7 @@ export function saveReadwiseApiStagePage(input: {
 export function loadStagedReadwiseApiContracts(connectionRef: string) {
   const rows = openDatabaseConnection().driver.queryAll<{ payload_json: string; record_kind: string }>(
     `SELECT record_kind, payload_json FROM readwise_api_import_stage
-     WHERE connection_ref = ? ORDER BY record_kind, remote_id`, [connectionRef]
+     WHERE connection_ref = ? AND record_kind IN ('reader', 'export') ORDER BY record_kind, remote_id`, [connectionRef]
   );
   const readerDocuments: ReaderDocumentContract[] = [];
   const exportBooks: ExportBookContract[] = [];
@@ -101,7 +101,7 @@ export function loadStagedReadwiseApiContracts(connectionRef: string) {
       const parsed = JSON.parse(row.payload_json);
       if (row.record_kind === 'reader') readerDocuments.push(parsed as ReaderDocumentContract);
       if (row.record_kind === 'export') exportBooks.push(parsed as ExportBookContract);
-    } catch { /* corrupted staging is reset by the caller */ }
+    } catch { throw new Error('readwise_source_cutover_stage_corrupt'); }
   }
   return { exportBooks, readerDocuments };
 }

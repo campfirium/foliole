@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: () => true,
   loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: true })
 }));
 vi.mock('./readwiseApiConnectionState.js', async () => {
@@ -80,7 +81,7 @@ it('keeps the irreversible migration state after a network failure', async () =>
     .resolves.toMatchObject({ status: 'failed' });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     completed_count: 0,
-    error_reason: 'request_failed',
+    error_reason: 'readwise_api_network_failed',
     phase: 'indexing',
     status: 'migration_in_progress'
   });

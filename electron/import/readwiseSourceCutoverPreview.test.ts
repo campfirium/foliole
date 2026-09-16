@@ -126,3 +126,17 @@ it('fails closed when the v2 journal is malformed even with a legacy sentinel', 
   );
   await expect(previewReadwiseSourceCutover()).rejects.toThrow('invalid_json');
 });
+
+it('uses the frozen worklist for failures instead of recounting historical Topics', async () => {
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: ['success', 'failed', 'excluded'], updateDocumentIds: ['success', 'failed'],
+    completedAt: '2026-09-16T00:00:00Z', documents: [
+      { nodeId: 'local-topic', remoteId: 'success', status: 'bound' },
+      { nodeId: null, remoteId: 'failed', status: 'unavailable' },
+      { nodeId: null, remoteId: 'excluded', status: 'suppressed' }
+    ], failures: [{ remoteId: 'failed', title: 'Failed document', reason: 'original_file_download_failed', stage: 'resources' }],
+    phase: 'merging', retiredNodeIds: [], sourceHost: 'This Mac', startedAt: '2026-09-16T00:00:00Z',
+    status: 'migration-in-progress', errorReason: 'readwise_source_cutover_internal_failure', legacyTotal: 27
+  });
+  expect(await previewReadwiseSourceCutover()).toMatchObject({ completed_count: 2, total_count: 2 });
+});

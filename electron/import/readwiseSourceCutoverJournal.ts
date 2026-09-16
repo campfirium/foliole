@@ -22,6 +22,7 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { hasPersistedReadwiseApiEpubStructure } from './readwiseApiEpubMaterialization.js';
 import { prepareReadwiseApiImportRecord } from './readwiseApiMaterialization.js';
 import type { ReadwiseApiMaterializationResult } from './readwiseApiMaterialization.js';
+import { completeCutoverDownload } from './readwiseCutoverCompletion.js';
 import {
   loadReadwiseSourceCutoverBinding,
   recordReadwiseSourceCutoverClassification
@@ -75,7 +76,7 @@ export function createReadwiseDocumentMigration(input: {
 } = {}) {
   const pending = new Map<string, ReadwiseSourceCutoverIdentityBinding | null>();
   return {
-    async beforeCommit(document: PreparedReadwiseApiDocument) {
+    beforeCommit(document: PreparedReadwiseApiDocument) {
       return prepareReadwiseDocumentCommit(document, input, connectionRef, options, pending);
     },
     afterCommit(document: PreparedReadwiseApiDocument, result: ReadwiseApiMaterializationResult) {
@@ -213,8 +214,7 @@ export function completeReadwiseSourceCutoverMigration(
       phase: null,
       status: 'api'
     }, completedAt);
-    driver.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ?', [connectionRef]);
-    driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]);
+    completeCutoverDownload(driver, connectionRef, documents, completedAt);
     writeReadwiseSourceMode(driver, 'api', completedAt, {
       batchId: latest.batchId ?? null,
       completedAt,

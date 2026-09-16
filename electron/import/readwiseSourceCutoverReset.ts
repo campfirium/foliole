@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
@@ -13,7 +15,7 @@ export function restartIncompleteReadwiseSourceCutover(input: {
   });
   const state = writeReadwiseSourceCutover({
     annotations: [],
-    batchId: `${input.connectionRef}:${input.startedAt}`,
+    batchId: `${input.connectionRef}:${randomUUID()}`,
     cohortDocumentIds: [],
     completedAt: restartedAt,
     documents: [],

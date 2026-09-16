@@ -6,6 +6,7 @@ import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js'
 
 export interface ReadwiseApiFetchDependencies {
   allowFolderModeForCutover?: boolean;
+  assertCutoverBatch?: () => void;
   cutoverDocumentTimeoutMs?: number;
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
@@ -37,7 +38,10 @@ export function createReadwiseRequest(
           headers: { Authorization: `Token ${token}` }, method: 'GET', redirect: 'error', signal: requestSignal
         });
       } catch (error) {
-        if (retry >= maxRetries) throw error;
+        if (retry >= maxRetries) {
+          if (dependencies.allowFolderModeForCutover) throw new Error('readwise_api_network_failed', { cause: error });
+          throw error;
+        }
         await abortableDelay(transientRetryDelay(retry, dependencies), dependencies.signal);
         continue;
       }

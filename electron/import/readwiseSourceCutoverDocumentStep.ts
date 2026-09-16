@@ -4,6 +4,7 @@ import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwi
 
 import { prepareReadwiseApiFrozenResources } from './readwiseApiFrozenBatch.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import { cutoverResourceFetch } from './readwiseCutoverResourceFetch.js';
 
 export async function prepareReadwiseCutoverResources(input: {
   config: ReadwiseReaderConfig;
@@ -17,14 +18,23 @@ export async function prepareReadwiseCutoverResources(input: {
   const timeout = AbortSignal.timeout(timeoutMs);
   const signal = input.dependencies.signal
     ? AbortSignal.any([input.dependencies.signal, timeout]) : timeout;
+  let stop: (() => void) | undefined;
   try {
-    return await prepareReadwiseApiFrozenResources({
+    const preparation = prepareReadwiseApiFrozenResources({
       ...input,
-      dependencies: { ...input.dependencies, signal }
+      dependencies: { ...input.dependencies, fetchImpl: cutoverResourceFetch(input.dependencies.fetchImpl ?? fetch), signal }
     });
+    const cancelled = new Promise<never>((_, reject) => {
+      stop = () => reject(new Error('readwise_source_cutover_document_timeout'));
+      signal.addEventListener('abort', stop, { once: true });
+      if (signal.aborted) stop();
+    });
+    return await Promise.race([preparation, cancelled]);
   } catch (error) {
     if (timeout.aborted) throw new Error('readwise_source_cutover_document_timeout');
     throw error;
+  } finally {
+    if (stop) signal.removeEventListener('abort', stop);
   }
 }
 

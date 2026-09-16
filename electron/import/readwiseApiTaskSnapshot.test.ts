@@ -27,4 +27,5 @@ it('projects an unfinished full index as migration without using stored counts',
   });
 
   expect(snapshot.cutover.status).toBe('in_progress');
+  expect(snapshot.initial_sync.status).toBe('completed');
 });

@@ -61,7 +61,7 @@ function initialSyncStatus(
   } : progress;
   if (!effectiveProgress) return {
     completed_count: 0, failed_count: 0, lifecycle: null,
-    pending_count: 0, status: 'pending', total_count: null, unexplained_failure_count: 0
+    pending_count: 0, status: completedThrough ? 'completed' : 'pending', total_count: null, unexplained_failure_count: 0
   };
   const initialLifecycle = lifecycle?.kind === 'initial' ? lifecycle : null;
   return {
@@ -85,8 +85,10 @@ function cutoverStatus(
     total_count: null, unexplained_failure_count: 0
   };
   const progress = readwiseSourceCutoverProgress(state);
-  const total = progress.totalCandidateCount;
-  const completed = progress.completedCandidateCount;
+  const updateIds = state.version === 2 && state.updateDocumentIds ? new Set(state.updateDocumentIds) : null;
+  const total = updateIds?.size ?? progress.totalCandidateCount;
+  const completed = updateIds && state.version === 2
+    ? state.documents.filter((item) => updateIds.has(item.remoteId)).length : progress.completedCandidateCount;
   return {
     completed_count: completed,
     failed_count: 0,

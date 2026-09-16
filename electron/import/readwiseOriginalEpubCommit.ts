@@ -18,10 +18,10 @@ import {
   type ReadwiseOriginalEpubTarget
 } from './readwiseOriginalEpubTarget.js';
 
-function withOriginalEpubBody(input: {
+export function withOriginalEpubBody(input: {
   candidate: PreparedOriginalEpubCandidate;
   document: PreparedReadwiseApiDocument;
-  target: ReadwiseOriginalEpubTarget;
+  target: Pick<ReadwiseOriginalEpubTarget, 'title'>;
 }): PreparedReadwiseApiDocument {
   const sections = input.candidate.images.sections;
   return {
