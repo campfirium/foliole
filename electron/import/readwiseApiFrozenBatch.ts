@@ -25,6 +25,7 @@ export async function prepareReadwiseApiFrozenResources(input: {
   dependencies: ReadwiseApiFetchDependencies;
   destination: ReadwiseImportDestination;
   document: PreparedReadwiseApiDocument;
+  requireFreshOriginalFile?: boolean;
 }): Promise<ReadwiseApiPreparedResources> {
   const frozen = loadReadwiseApiFrozenResources(input.connectionRef, input.document.id);
   if (frozen) return frozen;
@@ -34,11 +35,9 @@ export async function prepareReadwiseApiFrozenResources(input: {
     connectionRef: input.connectionRef,
     document: input.document
   });
-  const originalFileCategory = input.document.category === 'pdf' || input.document.category === 'epub'
-    ? input.document.category : null;
+  const originalFileCategory = originalFileCategoryFor(input.document.category);
   const originalFile = originalFileCategory && destination === 'inbox'
-    && (originalFileCategory !== 'epub' || !existing)
-    && existing?.state.originalFile?.status !== 'localized'
+    && (input.requireFreshOriginalFile || existing?.state.originalFile?.status !== 'localized')
     ? await prepareReadwiseApiOriginalFile({
       category: originalFileCategory,
       dependencies: input.dependencies,
@@ -73,8 +72,23 @@ export async function prepareReadwiseApiFrozenResources(input: {
     epubCover,
     epubImages,
     forceEpubStructure,
-    originalFile: originalFile ? { bytes: null, state: originalFile.state } : null
+    originalFile: originalFile ? { bytes: null, state: originalFile.state } : null,
+    ...(input.requireFreshOriginalFile ? { replaceOriginalFile: true } : {})
   };
+  assertFreshOriginalFile(input.requireFreshOriginalFile, originalFile);
   saveReadwiseApiFrozenResources(input.connectionRef, input.document.id, resources);
   return resources;
+}
+
+function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {
+  return category === 'pdf' || category === 'epub' ? category : null;
+}
+
+function assertFreshOriginalFile(
+  required: boolean | undefined,
+  originalFile: Awaited<ReturnType<typeof prepareReadwiseApiOriginalFile>> | null
+) {
+  if (required && originalFile?.state.status !== 'localized') {
+    throw new Error(originalFile?.state.reason ?? 'original_file_download_failed');
+  }
 }

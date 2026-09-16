@@ -145,7 +145,8 @@ async function mergeCutoverDocuments(
     let stage: Parameters<typeof recordReadwiseSourceCutoverFailure>[0]['stage'] = 'preparing';
     try {
       completedDocuments.set(document.id, await commitSnapshotDocument(
-        input, document, commitDestination, migration, (next) => {
+        input, document, commitDestination, migration, Boolean(artifact)
+          && (document.category === 'pdf' || document.category === 'epub'), (next) => {
           stage = next;
           recordReadwiseSourceCutoverActiveDocument({ document, stage: next });
         }
@@ -173,6 +174,7 @@ async function commitSnapshotDocument(
   document: ReturnType<typeof prepareReadwiseApiDocuments>[number],
   destination: 'external' | 'inbox',
   migration: ReturnType<typeof createReadwiseDocumentMigration>,
+  requireFreshOriginalFile: boolean,
   onStage: (stage: Parameters<typeof recordReadwiseSourceCutoverFailure>[0]['stage']) => void
 ) {
   onStage('preparing');
@@ -191,7 +193,8 @@ async function commitSnapshotDocument(
     connectionRef: input.connectionRef,
     dependencies: input.dependencies,
     destination,
-    document: committed
+    document: committed,
+    ...(requireFreshOriginalFile ? { requireFreshOriginalFile: true } : {})
   });
   onStage('writing');
   const result = await commitReadwiseApiDocument({

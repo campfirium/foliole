@@ -137,7 +137,7 @@ it('restores Readwise mode and cutover together without restoring device credent
   });
   saveJsonSetting('readwise_source_cutover_v2', {
     annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-    completedAt: completion.completedAt, completionVersion: 3, documents: [], phase: null,
+    completedAt: completion.completedAt, completionVersion: 4, documents: [], phase: null,
     retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
     status: 'api', version: 2
   });

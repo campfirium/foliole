@@ -47,6 +47,10 @@ vi.mock('./importManagerSettings.js', async () => {
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import {
+  clearAttachmentLibraryPathSnapshot,
+  publishAttachmentLibraryPathSnapshot
+} from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -66,6 +70,10 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-body-highlight-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  publishAttachmentLibraryPathSnapshot({
+    assetsDir: path.join(mockedAppDataDir, 'assets'),
+    libraryScope: 'test-library'
+  });
   state.sourcePath = path.join(tempRoot, 'Readwise');
   await fs.mkdir(state.sourcePath, { recursive: true });
   initializeDatabaseConnection(openDatabaseConnection());
@@ -77,6 +85,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  clearAttachmentLibraryPathSnapshot();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
@@ -108,15 +117,16 @@ it('keeps the legacy body while materializing a fallback highlight', async () =>
     .toBe('readwise-folder');
 });
 
-it('preserves a bound EPUB body and structure while attaching its remote identity', async () => {
+it('preserves a bound EPUB body while freshly downloading its original file', async () => {
   await seedMigratableSource(state.sourcePath);
   const seeded = openDatabaseConnection().driver;
   seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
     VALUES ('node-epub-legacy','topic-1','topic','Legacy',0,'Legacy body','old','old')`);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
 
+  const fetchImpl = epubMigrationFetch();
   await expect(runReadwiseSourceCutover({
-    dependencies: { fetchImpl: epubMigrationFetch(), minIntervalMs: 0 }
+    dependencies: { fetchImpl, minIntervalMs: 0 }
   })).resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
 
   const driver = openDatabaseConnection().driver;
@@ -131,7 +141,34 @@ it('preserves a bound EPUB body and structure while attaching its remote identit
   const source = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
   );
-  expect(source).toBeTruthy();
+  expect(JSON.parse(source?.remote_import_state_json ?? '{}')).toMatchObject({
+    originalFile: { status: 'localized' }
+  });
+  expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
+    .toHaveLength(1);
+});
+
+it('records a matched EPUB as failed instead of bound when its fresh download fails', async () => {
+  await seedMigratableSource(state.sourcePath);
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  const fallback = epubMigrationFetch();
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    return url.hostname.endsWith('.amazonaws.com')
+      ? new Response(null, { status: 500 }) : fallback(input);
+  }) as typeof fetch;
+
+  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ migrated_count: 0, status: 'completed' });
+
+  const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(journal).toMatchObject({
+    documents: [{ remoteId: 'document-1', status: 'blocked' }],
+    failures: [{ remoteId: 'document-1', stage: 'resources' }],
+    status: 'api'
+  });
 });
 
 it('adds later API highlights without creating a source-update workflow', async () => {

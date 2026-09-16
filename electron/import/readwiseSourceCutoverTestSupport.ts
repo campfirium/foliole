@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
 import { resolveReadwiseTopicMergeSource } from './readwiseTopicMergeSource.js';
@@ -92,8 +93,14 @@ export function migrationFetchWithoutHighlightBody() {
 }
 
 export function epubMigrationFetch() {
+  const original = createTestZip([{ content: 'application/epub+zip', name: 'mimetype' }]);
   return vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
+    if (url.hostname.endsWith('.amazonaws.com')) {
+      return new Response(original, {
+        headers: { 'content-type': 'application/epub+zip' }, status: 200
+      });
+    }
     if (url.pathname === '/api/v2/export/') {
       return Response.json({ nextPageCursor: null, results: [{
         external_id: 'document-1', highlights: [
@@ -114,7 +121,8 @@ export function epubMigrationFetch() {
         '<h1 data-rw-epub-toc="chapter-2">Chapter 2</h1>',
         '<p>Second chapter body.</p>'
       ].join('') : null,
-      id: id ?? 'document-1', parent_id: null, title: 'Sample'
+      id: id ?? 'document-1', parent_id: null,
+      raw_source_url: 'https://bucket.s3.amazonaws.com/sample.epub', title: 'Sample'
     }, ...(!id ? [{ category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }] : [])] });
   });
 }

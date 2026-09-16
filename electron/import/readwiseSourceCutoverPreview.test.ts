@@ -94,7 +94,7 @@ it('does not present the legacy Topic count as a remote import total', async () 
 it('reports an accepted API completion without reopening migration', async () => {
   writeReadwiseSourceCutover({
     annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
-    completionVersion: 3, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
+    completionVersion: 4, documents: [], phase: null, retiredNodeIds: [], sourceHost: 'This Mac',
     startedAt: '2026-09-11T00:00:00.000Z', status: 'api'
   });
 

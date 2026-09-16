@@ -3,6 +3,7 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import { deleteNodeAttachmentLink } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import {
   loadReadwiseApiImportSource,
@@ -44,6 +45,7 @@ export interface ReadwiseApiPreparedResources {
   epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;
   forceEpubStructure?: boolean;
   originalFile: Awaited<ReturnType<typeof prepareReadwiseApiOriginalFile>> | null;
+  replaceOriginalFile?: boolean;
 }
 
 export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommitInput) {
@@ -86,26 +88,50 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   if (!originalFileCategory || result.status !== 'imported') return result;
 
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
-  if (!prepared || previousOriginalFile?.status === 'localized') return result;
-  input.assertEligible?.();
-  let finalState = prepared.state;
-  if (prepared.bytes && prepared.state.status === 'localized' && existing?.nodeId) {
-    try {
-      await persistReadwiseApiOriginalFile({
-        bytes: prepared.bytes,
-        category: originalFileCategory,
-        nodeId: existing.nodeId,
-        state: prepared.state,
-        title: input.document.title
-      });
-    } catch {
-      finalState = unavailableState(Boolean(input.document.body.trim()), 'original_file_storage_failed');
-    }
-  } else if (prepared.state.status === 'localized' && existing?.nodeId) {
-    attachReadwiseApiOriginalFile(existing.nodeId, prepared.state);
+  if (!prepared || (previousOriginalFile?.status === 'localized' && !input.preparedResources?.replaceOriginalFile)) {
+    return result;
   }
+  input.assertEligible?.();
+  const finalState = await persistPreparedOriginalFile({
+    category: originalFileCategory, input, nodeId: existing?.nodeId ?? null,
+    prepared, previous: previousOriginalFile
+  });
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
+}
+
+async function persistPreparedOriginalFile(input: {
+  category: 'epub' | 'pdf';
+  input: ReadwiseApiDocumentCommitInput;
+  nodeId: string | null;
+  prepared: NonNullable<ReadwiseApiPreparedResources['originalFile']>;
+  previous: ReadwiseApiOriginalFileState | null | undefined;
+}) {
+  let finalState = input.prepared.state;
+  if (input.prepared.bytes && input.prepared.state.status === 'localized' && input.nodeId) {
+    try {
+      await persistReadwiseApiOriginalFile({
+        bytes: input.prepared.bytes, category: input.category, nodeId: input.nodeId,
+        state: input.prepared.state, title: input.input.document.title
+      });
+    } catch {
+      finalState = unavailableState(Boolean(input.input.document.body.trim()), 'original_file_storage_failed');
+    }
+  } else if (input.prepared.state.status === 'localized' && input.nodeId) {
+    attachReadwiseApiOriginalFile(input.nodeId, input.prepared.state);
+  }
+  replacePreviousOriginalLink(input.nodeId, input.previous, finalState);
+  return finalState;
+}
+
+function replacePreviousOriginalLink(
+  nodeId: string | null,
+  previous: ReadwiseApiOriginalFileState | null | undefined,
+  current: ReadwiseApiOriginalFileState
+) {
+  if (!nodeId || previous?.status !== 'localized' || current.status !== 'localized'
+    || previous.attachmentId === current.attachmentId) return;
+  deleteNodeAttachmentLink({ attachmentId: previous.attachmentId, nodeId, role: 'reference' });
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {

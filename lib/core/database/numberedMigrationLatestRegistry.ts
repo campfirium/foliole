@@ -6,6 +6,7 @@ import { tableExists } from './numberedMigrationHelpers.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
+import { reopenReadwiseBoundOriginalFiles } from './numberedMigrationReadwiseBoundOriginalFiles.js';
 import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
@@ -69,5 +70,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         'trg_sync_delivery_review_insert']) sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
       installAvailableSyncDeliveryTriggers(sqlite);
     }
-  }
+  },
+  { version: 92, migrate: reopenReadwiseBoundOriginalFiles }
 ];
