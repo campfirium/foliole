@@ -1,14 +1,17 @@
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import {
   loadReadwiseApiFrozenResources,
   saveReadwiseApiFrozenResources
 } from '../database/readwiseApiFrozenResourceStage.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
+import { ensureMacosFileSecurityScopedAccess } from '../macosFileSecurityBookmarks.js';
 
 import type { ReadwiseApiPreparedResources } from './readwiseApiDocumentCommit.js';
 import {
@@ -41,7 +44,7 @@ export async function prepareReadwiseApiFrozenResources(input: {
     document: input.document
   });
   const { originalEpub, originalFile } = await prepareOriginalResources(input, frozen, destination,
-    existing?.state.originalFile?.status === 'localized');
+    existing?.state.originalFile ?? null);
   const epubImages = await prepareReadwiseApiEpubImagesIfNeeded({
     config: input.config,
     connectionRef: input.connectionRef,
@@ -73,14 +76,16 @@ async function prepareOriginalResources(
   input: Parameters<typeof prepareReadwiseApiFrozenResources>[0],
   frozen: ReadwiseApiPreparedResources | null,
   destination: ReadwiseImportDestination,
-  originalFileLocalized: boolean
+  existingOriginalFile: ReadwiseApiOriginalFileState | null
 ) {
   const category = originalFileCategoryFor(input.document.category);
-  const restoredOriginalEpub = frozen && input.requireFreshOriginalFile
-    && input.document.category === 'epub'
-    ? await prepareFrozenOriginalEpub(frozen, input.document.title) : null;
-  const originalFile = restoredOriginalEpub ? frozen!.originalFile
-    : category && destination === 'inbox' && (input.requireFreshOriginalFile || !originalFileLocalized)
+  const cachedOriginalFile = frozen?.originalFile?.state ?? existingOriginalFile;
+  const restoredOriginalEpub = input.requireFreshOriginalFile && input.document.category === 'epub'
+    ? await prepareCachedOriginalEpub(cachedOriginalFile, input.document.title) : null;
+  const originalFile = restoredOriginalEpub && cachedOriginalFile
+    ? { bytes: null, state: cachedOriginalFile }
+    : category && destination === 'inbox'
+      && (input.requireFreshOriginalFile || existingOriginalFile?.status !== 'localized')
     ? await prepareReadwiseApiOriginalFile({
       category, dependencies: input.dependencies, documentId: input.document.id,
       hasHtmlBody: Boolean(input.document.body.trim()),
@@ -100,14 +105,15 @@ async function prepareOriginalResources(
   return { originalEpub, originalFile };
 }
 
-async function prepareFrozenOriginalEpub(
-  frozen: ReadwiseApiPreparedResources,
+async function prepareCachedOriginalEpub(
+  state: ReadwiseApiOriginalFileState | null | undefined,
   title: string
 ) {
-  const state = frozen.originalFile?.state;
   if (state?.status !== 'localized') return null;
   try {
-    const bytes = await fs.readFile(resolveAttachmentStoragePath(state.contentHash, undefined, state.mimeType));
+    const storagePath = resolveAttachmentStoragePath(state.contentHash, undefined, state.mimeType);
+    ensureMacosFileSecurityScopedAccess(path.dirname(storagePath));
+    const bytes = await fs.readFile(storagePath);
     return prepareOriginalEpubCandidate({ bytes, now: new Date().toISOString(), title });
   } catch {
     return null;

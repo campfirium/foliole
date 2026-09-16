@@ -39,7 +39,7 @@ it('invalidates a deployed v2 completion when schema 89 upgrades', () => {
   expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
   expect(readSetting('readwise_source_mode_conflict')).toEqual({ reasons: [], version: 1 });
   expect(readSetting('readwise_source_cutover_v2')).toMatchObject({
-    completionVersion: 2, status: 'api'
+    completionVersion: 6, status: 'api'
   });
   expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
@@ -105,14 +105,14 @@ it('reopens a v4 completion whose bound EPUB was attached but not rebuilt', () =
   });
 });
 
-it('reopens a v4 completion with annotation binding failures', () => {
+it('reopens a v5 completion with per-document failures', () => {
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
   };
   saveSetting('readwise_source_cutover_v2', {
     annotations: [], cohortDocumentIds: ['article'], completedAt: completion.completedAt,
-    completionVersion: 4,
+    completionVersion: 5,
     documents: [{ nodeId: 'topic', reason: 'readwise_source_cutover_annotation_binding_missing',
       remoteId: 'article', status: 'blocked' }],
     failures: [{ reason: 'readwise_source_cutover_annotation_binding_missing', remoteId: 'article',
@@ -121,7 +121,7 @@ it('reopens a v4 completion with annotation binding failures', () => {
     startedAt: completion.startedAt, status: 'api', version: 2
   });
   saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
-  sqlite.pragma('user_version = 92');
+  sqlite.pragma('user_version = 93');
 
   initializeDatabaseSchema(sqlite);
 

@@ -75,7 +75,7 @@ export async function seedCompletedReadwiseApiMode(
       host.activateReadwiseOnThisHost();
       const sourceHost = host.loadReadwiseHostAssignment().current_host_name;
       cutover.writeReadwiseSourceCutover({
-        annotations: [], cohortDocumentIds: [], completedAt: timestamp, completionVersion: 5,
+        annotations: [], cohortDocumentIds: [], completedAt: timestamp, completionVersion: 6,
         documents: [], retiredNodeIds: [], sourceHost, startedAt: timestamp, status: 'api'
       });
       sourceMode.writeReadwiseSourceMode(

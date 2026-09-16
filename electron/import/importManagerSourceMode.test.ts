@@ -56,7 +56,7 @@ it('keeps completion proof while API mode is disabled and enables it again witho
   };
   saveJsonSetting('readwise_source_cutover_v2', {
     annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-    completedAt: completion.completedAt, completionVersion: 5, documents: [], phase: null,
+    completedAt: completion.completedAt, completionVersion: 6, documents: [], phase: null,
     retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
     status: 'api', version: 2
   });
@@ -85,7 +85,7 @@ it('resolves a proved relay conflict when the user selects API mode', () => {
   };
   saveJsonSetting('readwise_source_cutover_v2', {
     annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-    completedAt: completion.completedAt, completionVersion: 5, documents: [], phase: null,
+    completedAt: completion.completedAt, completionVersion: 6, documents: [], phase: null,
     retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
     status: 'api', version: 2
   });

@@ -134,7 +134,7 @@ it('waits for the matching cutover proof before materializing API mode', async (
     updatedAt: completion.completedAt,
     valueJson: JSON.stringify({
       annotations: [], batchId: completion.batchId, cohortDocumentIds: [],
-      completedAt: completion.completedAt, completionVersion: 5, documents: [], phase: null,
+      completedAt: completion.completedAt, completionVersion: 6, documents: [], phase: null,
       retiredNodeIds: [], sourceHost: completion.sourceHost, startedAt: completion.startedAt,
       status: 'api', version: 2
     })

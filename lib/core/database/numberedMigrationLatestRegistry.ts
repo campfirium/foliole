@@ -7,7 +7,7 @@ import { migrateHostPermanentState } from './numberedMigrationHostPermanentState
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
 import { reopenReadwiseBoundOriginalFiles } from './numberedMigrationReadwiseBoundOriginalFiles.js';
-import { reopenIncompleteReadwiseV4Completion } from './numberedMigrationReadwiseCompletionRepair.js';
+import { reopenIncompleteReadwiseCompletion } from './numberedMigrationReadwiseCompletionRepair.js';
 import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
@@ -73,5 +73,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     }
   },
   { version: 92, migrate: reopenReadwiseBoundOriginalFiles },
-  { version: 93, migrate: reopenIncompleteReadwiseV4Completion }
+  { version: 93, migrate: reopenIncompleteReadwiseCompletion },
+  { version: 94, migrate: reopenIncompleteReadwiseCompletion }
 ];

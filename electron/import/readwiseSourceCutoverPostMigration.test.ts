@@ -148,3 +148,24 @@ it('does not revive a legacy highlight that Export reports as deleted', async ()
   );
   expect(JSON.parse(source?.remote_annotations_json ?? '[]')).toEqual([]);
 });
+
+it('keeps an already migrated API disposition terminal during recovery', async () => {
+  await seedMigratableSource(state.sourcePath);
+  const source = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO source_disposition_states
+    (source_kind,source_scope,original_title,disposition,updated_at)
+    VALUES ('readwise',?,'Sample','dismissed','old')`, [
+    `api/${encodeURIComponent(source.connectionRef)}/document-1`
+  ]);
+
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 }
+  })).resolves.toMatchObject({ migrated_count: 0, status: 'completed' });
+
+  const journal = JSON.parse(driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}') as { documents: Array<{ remoteId: string; status: string }>; failures?: unknown[] };
+  expect(journal.documents).toContainEqual({ nodeId: null, remoteId: 'document-1', status: 'suppressed' });
+  expect(journal.failures ?? []).toEqual([]);
+});

@@ -6,7 +6,7 @@ import { invalidateLegacyReadwiseSourceCompletion } from './readwiseSourceModeMi
 
 const CUTOVER_KEY = 'readwise_source_cutover_v2';
 
-export function reopenIncompleteReadwiseV4Completion(
+export function reopenIncompleteReadwiseCompletion(
   sqlite: DatabaseMigrationTarget,
   now = new Date().toISOString()
 ) {
@@ -14,7 +14,9 @@ export function reopenIncompleteReadwiseV4Completion(
   const row = sqlite.prepare('SELECT value FROM settings WHERE key = ? LIMIT 1')
     .all(CUTOVER_KEY)[0] as { value?: string } | undefined;
   const cutover = parseRecord(row?.value);
-  if (cutover.version !== 2 || cutover.status !== 'api' || cutover.completionVersion !== 4) return;
+  if (cutover.version !== 2 || cutover.status !== 'api'
+    || typeof cutover.completionVersion !== 'number'
+    || cutover.completionVersion >= READWISE_SOURCE_CUTOVER_COMPLETION_VERSION) return;
   if (!needsRepair(sqlite, cutover)) {
     writeCutover(sqlite, { ...cutover, completionVersion: READWISE_SOURCE_CUTOVER_COMPLETION_VERSION }, now);
     return;
@@ -22,7 +24,7 @@ export function reopenIncompleteReadwiseV4Completion(
   const reopened: Record<string, unknown> = {
     ...cutover,
     annotations: [],
-    batchId: `cutover-v4-recovery:${now}`,
+    batchId: `cutover-v${cutover.completionVersion}-recovery:${now}`,
     cohortDocumentIds: [],
     completedAt: now,
     documents: [],
@@ -37,9 +39,7 @@ export function reopenIncompleteReadwiseV4Completion(
 
 function needsRepair(sqlite: DatabaseMigrationTarget, cutover: Record<string, unknown>) {
   const failures = Array.isArray(cutover.failures) ? cutover.failures : [];
-  if (failures.some((item) => record(item).reason === 'readwise_source_cutover_annotation_binding_missing')) {
-    return true;
-  }
+  if (failures.length > 0) return true;
   const boundIds = new Set((Array.isArray(cutover.documents) ? cutover.documents : []).flatMap((item) => {
     const value = record(item);
     return value.status === 'bound' && typeof value.remoteId === 'string' ? [value.remoteId] : [];

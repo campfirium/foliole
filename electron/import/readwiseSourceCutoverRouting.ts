@@ -2,6 +2,8 @@ import type { ImportManagerSettings } from '../../lib/core/import/importManagerS
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
 
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import { clearReadwiseSourceCutoverActiveDocument, recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
@@ -9,6 +11,7 @@ import { requireReadwiseSourceCutoverV2 } from './readwiseSourceCutoverJournal.j
 
 export function prepareReadwiseSourceCutoverRouting(input: {
   artifactFor: (documentId: string) => unknown;
+  connectionRef: string;
   documents: PreparedReadwiseApiDocument[];
   dispositionSuppressed: ReadonlySet<string>;
   readersById: ReadonlyMap<string, ReaderDocumentContract>;
@@ -16,8 +19,12 @@ export function prepareReadwiseSourceCutoverRouting(input: {
 }) {
   const destinations = new Map<string, 'external' | 'inbox' | 'off'>();
   const suppressed = new Set(input.dispositionSuppressed);
+  const driver = openDatabaseConnection().driver;
   for (const document of input.documents) {
-    const destination = input.artifactFor(document.id)
+    const alreadySuppressed = Boolean(readReadwiseApiSourceDisposition(
+      driver, input.connectionRef, document.id
+    ));
+    const destination = alreadySuppressed ? 'off' : input.artifactFor(document.id)
       ? 'inbox'
       : resolveReadwiseAutoImportDestination(
           input.settings.readwiseAutoImportPolicy,

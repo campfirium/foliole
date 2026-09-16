@@ -131,6 +131,7 @@ async function mergeCutoverDocuments(
   });
   const routing = prepareReadwiseSourceCutoverRouting({
     artifactFor: context.matching.artifactFor,
+    connectionRef: input.connectionRef,
     dispositionSuppressed: context.suppressed,
     documents: context.documents,
     readersById,
