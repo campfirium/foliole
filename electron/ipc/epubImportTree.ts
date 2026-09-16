@@ -1,5 +1,6 @@
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 
+import { resolveChapterBodyTitle } from './epubImportTreeTitles.js';
 import { type EpubTocEntry } from './epubToc.js';
 
 export interface RawBookNode {
@@ -13,28 +14,6 @@ export interface RawBookNode {
 
 interface SpineChapterNode extends RawBookNode {
   href: string;
-}
-
-function stripChapterPrefix(title: string) {
-  const trimmed = title.trim();
-  if (!trimmed) {
-    return '';
-  }
-  const strippedChinese = trimmed.replace(/^\s*第\s*[零〇一二两三四五六七八九十百千万\d]+\s*[章节回部卷篇]\s*[:：、.\-)]?\s*/u, '');
-  const strippedEnglish = strippedChinese.replace(/^\s*chapter\s+(?:\d+|[ivxlcdm]+)\s*[:：.\-)]?\s*/iu, '');
-  return strippedEnglish.trim();
-}
-
-function resolveChapterBodyTitle(primaryTitle: string, fallbackTitle: string) {
-  const primary = stripChapterPrefix(primaryTitle);
-  if (primary) {
-    return primary;
-  }
-  const fallback = stripChapterPrefix(fallbackTitle);
-  if (fallback) {
-    return fallback;
-  }
-  return primaryTitle.trim() || fallbackTitle.trim();
 }
 
 function stripFragment(href: string | null) {
@@ -123,6 +102,7 @@ function appendTocNode(
     key: string;
     parentKey: string | null;
     sliceByTitle: boolean;
+    usedKeys: Set<string>;
   }
 ) {
   const { chapter, entry, key, parentKey } = input;
@@ -150,7 +130,7 @@ function appendTocNode(
       content,
       degradedReason: chapter.degradedReason,
       embeddedImages: chapter.embeddedImages,
-      key: `${key}::chapter-body`,
+      key: allocateUniqueKey(`${key}::chapter-body`, input.usedKeys),
       parentKey: key,
       title: resolveChapterBodyTitle(entry.title, chapter.title)
     });
@@ -162,7 +142,10 @@ export function buildBookNodes(input: {
   toc: EpubTocEntry[];
 }) {
   if (input.toc.length === 0) {
-    return input.chapters.map((chapter) => copyChapterNode(chapter));
+    const usedKeys = new Set<string>();
+    return input.chapters.map((chapter) => copyChapterNode(
+      { ...chapter, key: allocateUniqueKey(chapter.key, usedKeys) }
+    ));
   }
 
   const consumedChapterKeys = new Set<string>();
@@ -176,6 +159,7 @@ export function buildBookNodes(input: {
   }
   const nodes: RawBookNode[] = [];
   const referenceCounts = countUnanchoredTocReferences(input.toc);
+  const usedKeys = new Set<string>();
   let tocIndex = 0;
 
   const visitEntries = (entries: EpubTocEntry[], parentKey: string | null) => {
@@ -187,13 +171,14 @@ export function buildBookNodes(input: {
       const fragment = matchedChapter && hasFragment(entry.href) ? fragmentKey(entry.href) : null;
       const sliceByTitle = Boolean(matchedChapter && !hasFragment(matchedChapter.href) && (fragment || repeatedReference));
       const hasSection = Boolean(matchedChapter && sliceByTitle && sliceMarkdownSection(matchedChapter.content, entry.title));
-      const key = matchedChapter && !repeatedReference && (!sliceByTitle || hasSection)
+      const preferredKey = matchedChapter && !repeatedReference && (!sliceByTitle || hasSection)
         ? (fragment ? `${matchedChapter.key}::${fragment}` : matchedChapter.key)
         : `toc-${tocIndex += 1}`;
+      const key = allocateUniqueKey(preferredKey, usedKeys);
       if (matchedChapter) {
         consumedChapterKeys.add(matchedChapter.key);
       }
-      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey, sliceByTitle });
+      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey, sliceByTitle, usedKeys });
       visitEntries(entry.children, key);
     });
   };
@@ -201,6 +186,17 @@ export function buildBookNodes(input: {
   visitEntries(input.toc, null);
   reconcileUnconsumedChapterBodies(nodes, input.chapters, consumedChapterKeys);
   return nodes;
+}
+
+function allocateUniqueKey(preferred: string, used: Set<string>) {
+  let key = preferred;
+  let suffix = 2;
+  while (used.has(key)) {
+    key = `${preferred}::${suffix}`;
+    suffix += 1;
+  }
+  used.add(key);
+  return key;
 }
 
 function countUnanchoredTocReferences(toc: EpubTocEntry[]) {

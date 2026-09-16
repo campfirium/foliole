@@ -55,6 +55,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
+import { normalizeExpectedRootBody } from './readwiseCutoverProjection.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import {
   epubMigrationFetch,
@@ -62,6 +63,11 @@ import {
 } from './readwiseSourceCutoverTestSupport.js';
 
 let tempRoot = '';
+
+it('projects EPUB root headings through the same normalization as the imported Topic', () => {
+  expect(normalizeExpectedRootBody('---\n\n# First\n\n# Second')).toBe('---\n\n## First\n\n## Second');
+  expect(normalizeExpectedRootBody('Plain body')).toBe('Plain body');
+});
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-body-highlight-'));

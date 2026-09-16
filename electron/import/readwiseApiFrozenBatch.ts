@@ -45,19 +45,13 @@ export async function prepareReadwiseApiFrozenResources(input: {
   });
   const { originalEpub, originalFile } = await prepareOriginalResources(input, frozen, destination,
     existing?.state.originalFile ?? null);
-  const epubImages = await prepareReadwiseApiEpubImagesIfNeeded({
-    config: input.config,
-    connectionRef: input.connectionRef,
-    destination,
-    document: input.document,
-    forceEpubStructure
+  const epubImages = originalEpub ? null : await prepareReadwiseApiEpubImagesIfNeeded({
+    config: input.config, connectionRef: input.connectionRef, destination,
+    document: input.document, forceEpubStructure
   });
-  const epubCover = await prepareReadwiseApiEpubCoverIfNeeded({
-    config: input.config,
-    connectionRef: input.connectionRef,
-    destination,
-    document: input.document,
-    forceEpubStructure
+  const epubCover = originalEpub ? null : await prepareReadwiseApiEpubCoverIfNeeded({
+    config: input.config, connectionRef: input.connectionRef, destination,
+    document: input.document, forceEpubStructure
   });
   const resources: ReadwiseApiPreparedResources = {
     epubCover: frozen?.epubCover ?? epubCover,

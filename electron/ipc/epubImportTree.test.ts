@@ -131,6 +131,26 @@ it('splits repeated same-file toc fragment entries into their matching markdown 
   ]);
 });
 
+it('keeps repeated anchored toc entries as distinct book nodes', () => {
+  const nodes = buildBookNodes({
+    chapters: [{
+      content: '# Chapter 1\n\nBody.', degradedReason: null, embeddedImages: [],
+      href: 'OPS/book.xhtml#chapter-1', key: 'book::chapter-1', parentKey: null, title: 'Chapter 1'
+    }],
+    toc: [
+      { children: [], href: 'OPS/book.xhtml#chapter-1', title: 'Chapter 1' },
+      { children: [], href: 'OPS/book.xhtml#chapter-1', title: 'Chapter 1 again' }
+    ]
+  });
+
+  expect(nodes).toHaveLength(2);
+  expect(new Set(nodes.map((node) => node.key))).toHaveLength(2);
+  expect(nodes.map((node) => node.key)).toEqual([
+    'book::chapter-1::chapter-1',
+    'book::chapter-1::chapter-1::2'
+  ]);
+});
+
 it('marks unresolved same-file toc fragments as degraded instead of silently importing empty sections', () => {
   const nodes = buildBookNodes({
     chapters: [

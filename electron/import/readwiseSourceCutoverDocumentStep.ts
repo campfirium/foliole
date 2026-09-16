@@ -14,7 +14,7 @@ export async function prepareReadwiseCutoverResources(input: {
   document: PreparedReadwiseApiDocument;
   requireFreshOriginalFile?: boolean;
 }) {
-  const timeoutMs = input.dependencies.cutoverDocumentTimeoutMs ?? 150_000;
+  const timeoutMs = input.dependencies.cutoverDocumentTimeoutMs ?? 600_000;
   const timeout = AbortSignal.timeout(timeoutMs);
   const signal = input.dependencies.signal
     ? AbortSignal.any([input.dependencies.signal, timeout]) : timeout;

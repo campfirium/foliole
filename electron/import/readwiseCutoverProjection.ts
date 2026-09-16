@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { normalizeImportedMarkdownHeadings } from '../../lib/core/import/normalizeImportedHeadings.js';
 import { matchesReadwiseApiEpubProjection } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import { stableReadwiseEpubNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -27,8 +28,11 @@ export function verifyCutoverEpub(connectionRef: string, document: PreparedReadw
   }
   const bodies = readReadwiseApiEpubBookBodies(source.nodeId);
   const expected = resources?.originalEpub?.images ?? resources?.epubImages ?? finalDocument.epubStructure;
-  if (!expected || !matchesBookBodies(connectionRef, document.id, source.nodeId, expected, bodies)) {
-    throw new Error(`readwise_source_cutover_projection_body_mismatch:${document.id}`);
+  const bodyMismatch = expected
+    ? findBookBodyMismatch(connectionRef, document.id, source.nodeId, expected, bodies)
+    : 'expected_body_missing';
+  if (bodyMismatch) {
+    throw new Error(`readwise_source_cutover_projection_body_mismatch:${document.id}:${bodyMismatch}`);
   }
   const receipt = { inputHash: hash(document), bodyHash: hash(bodies) };
   const saved = loadReadwiseCutoverStage<Receipt>(connectionRef, KIND, document.id);
@@ -45,20 +49,51 @@ export function finalCutoverDocument(
     ? withOriginalEpubBody({ candidate: resources.originalEpub, document, target: { title } }) : document;
 }
 
-function matchesBookBodies(
+function findBookBodyMismatch(
   connectionRef: string, documentId: string, rootNodeId: string,
   expected: Pick<NonNullable<PreparedReadwiseApiDocument['epubStructure']>, 'rootBody' | 'sections'>,
   bodies: ReturnType<typeof readReadwiseApiEpubBookBodies>
 ) {
   const nodes = buildReadwiseApiEpubBookNodes(expected.sections);
   const bodyById = new Map(bodies.map((body) => [body.id, body.content]));
-  if (bodies.length !== nodes.length + 1 || !bodyById.get(rootNodeId)?.includes(expected.rootBody)) return false;
-  return nodes.every((node) => {
+  if (bodies.length !== nodes.length + 1) return `body_count:${bodies.length}:${nodes.length + 1}`;
+  const rootBody = bodyById.get(rootNodeId) ?? '';
+  const expectedRootBody = normalizeExpectedRootBody(expected.rootBody);
+  if (!rootBody.includes(expectedRootBody)) {
+    return rootBodyMismatch(rootBody, expectedRootBody);
+  }
+  for (const node of nodes) {
     const id = stableReadwiseEpubNodeId(connectionRef, documentId, node.key);
     const row = openDatabaseConnection().driver.queryOne<{ parent_id: string; title: string }>(
       'SELECT parent_id, title FROM nodes WHERE id = ? AND deleted_at IS NULL', [id]
     );
     const parentId = node.parentKey ? stableReadwiseEpubNodeId(connectionRef, documentId, node.parentKey) : rootNodeId;
-    return row?.title === node.title && row.parent_id === parentId && bodyById.get(id) === node.content;
-  });
+    if (!row) return `section_missing:${id}`;
+    if (row.title !== node.title) return `section_title:${id}`;
+    if (row.parent_id !== parentId) return `section_parent:${id}`;
+    if (bodyById.get(id) !== node.content) return `section_body:${id}`;
+  }
+  return null;
+}
+
+function textHash(value: string) {
+  return createHash('sha256').update(value).digest('hex').slice(0, 12);
+}
+
+export function normalizeExpectedRootBody(value: string) {
+  const sentinel = '# __foliole_imported_title__\n\n';
+  const normalized = normalizeImportedMarkdownHeadings(`${sentinel}${value}`);
+  return normalized.slice(normalized.indexOf('\n\n') + 2);
+}
+
+function rootBodyMismatch(actual: string, expected: string) {
+  const start = actual.indexOf(expected.slice(0, Math.min(64, expected.length)));
+  let differentAt = -1;
+  if (start >= 0) {
+    while (differentAt + 1 < expected.length && actual[start + differentAt + 1] === expected[differentAt + 1]) {
+      differentAt += 1;
+    }
+    differentAt += 1;
+  }
+  return `root_body:${actual.length}:${expected.length}:${start}:${differentAt}:${textHash(actual)}:${textHash(expected)}`;
 }
