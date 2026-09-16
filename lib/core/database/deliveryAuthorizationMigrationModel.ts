@@ -94,10 +94,10 @@ function deduplicate(
   const migrated = new Map<string, DeliveryMigrationRow>();
   for (const row of rows) {
     const legacyKey = text(row.authorization_id ?? row.peer_id);
-    if (scope.currentKnown.has(legacyKey) && scope.historicalKnown.has(legacyKey)) {
+    const authorizationId = scope.aliases.get(legacyKey);
+    if (!authorizationId && scope.currentKnown.has(legacyKey) && scope.historicalKnown.has(legacyKey)) {
       throw new Error(`delivery_authorization_ambiguous:${legacyKey}`);
     }
-    const authorizationId = scope.aliases.get(legacyKey);
     if (!authorizationId && scope.historicalKnown.has(legacyKey) && !scope.currentKnown.has(legacyKey)) {
       continue;
     }

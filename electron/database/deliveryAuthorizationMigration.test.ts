@@ -89,6 +89,24 @@ it('ignores proven historical group rows without letting duplicate Host names po
   sqlite.close();
 });
 
+it('prefers the unique active-group authorization when a Host name also exists in history', () => {
+  const sqlite = fixture();
+  sqlite.exec(`
+    INSERT INTO sync_groups VALUES ('history','History','old','Phone','2026-07-01','2026-07-02',NULL);
+    INSERT INTO sync_group_members VALUES
+      ('history','Phone','mobile','active','Phone','auth-history',NULL,
+       '2026-07-01','2026-07-01',NULL,'2026-07-02');
+    INSERT INTO delivery_authorization_migration_aliases VALUES
+      ('history','Phone','auth-history');
+  `);
+
+  sqlite.transaction(() => migrateDeliveryAuthorizations(sqlite))();
+
+  expect(sqlite.prepare("SELECT DISTINCT authorization_id FROM sync_delivery_receipts WHERE object_id = 'a'").all())
+    .toEqual([{ authorization_id: 'auth-b' }]);
+  sqlite.close();
+});
+
 it('fails closed for an unclassified peer key in the active migration scope', () => {
   const sqlite = fixture();
   sqlite.prepare(`INSERT INTO sync_peer_cursors VALUES
