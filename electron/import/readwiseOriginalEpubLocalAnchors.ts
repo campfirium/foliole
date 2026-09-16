@@ -2,6 +2,7 @@ import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/dat
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import {
@@ -93,9 +94,11 @@ export function relocateReadwiseOriginalEpubLocalAnchors(input: {
       [placement.located?.parentId ?? unlocatedNodeId, anchorLink, input.importedAt, placement.row.id]
     );
   }
-  if (unlocatedNodeId) {
-    placeReadwiseUnlocatedNodeLast(driver, input.rootNodeId, unlocatedNodeId);
-  }
+  placeReadwiseUnlocatedNodeLast(
+    driver,
+    input.rootNodeId,
+    unlocatedNodeId ?? buildReadwiseUnlocatedNodeId(input.connectionRef, input.documentId)
+  );
   return rows.length;
 }
 
