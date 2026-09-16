@@ -148,10 +148,13 @@ it('rolls back content and identity when a new book fails during its final write
   const driver = openDatabaseConnection().driver;
   driver.execute(`CREATE TRIGGER reject_chapter BEFORE INSERT ON nodes
     WHEN NEW.id LIKE 'node-epub-%' BEGIN SELECT RAISE(ABORT, 'injected chapter failure'); END`);
-  expect((await runReadwiseSourceCutover({ dependencies: { fetchImpl: epubMigrationFetch(), minIntervalMs: 0 } })).status).toBe('completed');
+  expect((await runReadwiseSourceCutover({ dependencies: {
+    fetchImpl: epubMigrationFetch(), minIntervalMs: 0
+  } })).status).toBe('failed');
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE kind='topic'")?.count).toBe(0);
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM import_sources WHERE remote_provider='readwise'")?.count).toBe(0);
   expect(await previewReadwiseSourceCutover()).toMatchObject({
-    failed_items: [expect.objectContaining({ stage: 'writing', reason: 'injected chapter failure' })]
+    failed_items: [expect.objectContaining({ stage: 'writing', reason: 'injected chapter failure' })],
+    status: 'migration_in_progress'
   });
 });

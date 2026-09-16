@@ -175,3 +175,31 @@ it('downloads a bounded EPUB archive without forwarding Readwise authorization',
     }
   )).rejects.toThrow('original_file_signature_mismatch');
 });
+
+it('allows a large original download to outlive the idle timeout while bytes keep arriving', async () => {
+  const bytes = createTestZip([{ content: 'application/epub+zip', name: 'mimetype' }]);
+  const chunkSize = Math.ceil(bytes.byteLength / 5);
+  let offset = 0;
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      if (offset >= bytes.byteLength) {
+        controller.close();
+        return;
+      }
+      const next = bytes.subarray(offset, Math.min(bytes.byteLength, offset + chunkSize));
+      offset += next.byteLength;
+      controller.enqueue(next);
+    }
+  });
+  const fetchImpl = vi.fn(async () => new Response(body, {
+    headers: { 'content-type': 'application/epub+zip' }, status: 200
+  })) as typeof fetch;
+
+  await expect(downloadReadwiseOriginalFile(
+    'https://bucket.s3.amazonaws.com/slow-book.epub', 'epub', {
+      fetchImpl,
+      originalFileIdleTimeoutMs: 100
+    }
+  )).resolves.toEqual(new Uint8Array(bytes));
+});

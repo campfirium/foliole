@@ -10,6 +10,9 @@ export function assertReadwiseSourceCutoverComplete(
   documents: PreparedReadwiseApiDocument[]
 ) {
   const current = requireActiveCutover();
+  if (current.failures?.length) {
+    throw new Error('readwise_source_cutover_failures_remaining');
+  }
   const candidateIds = new Set(documents.map((item) => item.id));
   if (!sameSet(candidateIds, new Set(current.cohortDocumentIds))) {
     throw new Error('readwise_source_cutover_cohort_incomplete');

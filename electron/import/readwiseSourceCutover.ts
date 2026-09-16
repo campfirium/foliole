@@ -89,7 +89,9 @@ async function runNow(
     const output = await runCutoverPipeline(source.connectionRef, input);
     const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
     if (output.remainingCount > 0) {
-      return result('failed', progress.migratedCount, progress.unmatchedCount, firstReadwiseCandidateFailureReason());
+      const failure = requireReadwiseSourceCutoverV2().failures?.[0]?.reason
+        ?? firstReadwiseCandidateFailureReason();
+      return result('failed', progress.migratedCount, progress.unmatchedCount, failure);
     }
     completeReadwiseSourceCutoverMigration(source.connectionRef, output.documents);
     const completed = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());

@@ -14,28 +14,13 @@ export async function prepareReadwiseCutoverResources(input: {
   document: PreparedReadwiseApiDocument;
   requireFreshOriginalFile?: boolean;
 }) {
-  const timeoutMs = input.dependencies.cutoverDocumentTimeoutMs ?? 600_000;
-  const timeout = AbortSignal.timeout(timeoutMs);
-  const signal = input.dependencies.signal
-    ? AbortSignal.any([input.dependencies.signal, timeout]) : timeout;
-  let stop: (() => void) | undefined;
-  try {
-    const preparation = prepareReadwiseApiFrozenResources({
-      ...input,
-      dependencies: { ...input.dependencies, fetchImpl: cutoverResourceFetch(input.dependencies.fetchImpl ?? fetch), signal }
-    });
-    const cancelled = new Promise<never>((_, reject) => {
-      stop = () => reject(new Error('readwise_source_cutover_document_timeout'));
-      signal.addEventListener('abort', stop, { once: true });
-      if (signal.aborted) stop();
-    });
-    return await Promise.race([preparation, cancelled]);
-  } catch (error) {
-    if (timeout.aborted) throw new Error('readwise_source_cutover_document_timeout');
-    throw error;
-  } finally {
-    if (stop) signal.removeEventListener('abort', stop);
-  }
+  return prepareReadwiseApiFrozenResources({
+    ...input,
+    dependencies: {
+      ...input.dependencies,
+      fetchImpl: cutoverResourceFetch(input.dependencies.fetchImpl ?? fetch)
+    }
+  });
 }
 
 export function readwiseCutoverDocumentFailureReason(error: unknown) {

@@ -18,6 +18,7 @@ export function recordReadwiseSourceCutoverClassification(
   const current = requireCutoverV2();
   if (current.documents.some((item) => item.remoteId === document.id)) return;
   const next = withoutActiveDocument(current, document.id);
+  const failures = next.failures?.filter((item) => item.remoteId !== document.id) ?? [];
   const byRemote = new Map(binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
   const blocked = binding?.blockedAnnotationIds ?? new Set<string>();
   writeReadwiseSourceCutover({
@@ -31,7 +32,8 @@ export function recordReadwiseSourceCutoverClassification(
       nodeId: binding?.nodeId ?? null,
       remoteId: document.id,
       status
-    }]
+    }],
+    ...(next.failures === undefined && failures.length === 0 ? {} : { failures })
   });
 }
 
@@ -68,24 +70,9 @@ export function recordReadwiseSourceCutoverFailure(input: {
   const current = requireCutoverV2();
   if (current.documents.some((item) => item.remoteId === input.document.id)) return;
   const next = withoutActiveDocument(current, input.document.id);
-  const status = input.binding ? 'blocked' as const : 'unavailable' as const;
-  const byRemote = new Map(input.binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
-  const blocked = input.binding?.blockedAnnotationIds ?? new Set<string>();
   writeReadwiseSourceCutover({
     ...next,
-    annotations: [...next.annotations, ...input.document.annotations.map((item) => ({
-      nodeId: byRemote.get(item.remoteId) ?? null,
-      reason: input.reason,
-      remoteId: item.remoteId,
-      status: annotationStatus(status, byRemote.has(item.remoteId), blocked.has(item.remoteId))
-    }))],
-    documents: [...next.documents, {
-      nodeId: input.binding?.nodeId ?? null,
-      reason: input.reason,
-      remoteId: input.document.id,
-      status
-    }],
-    failures: [...(next.failures ?? []), {
+    failures: [...(next.failures ?? []).filter((item) => item.remoteId !== input.document.id), {
       reason: input.reason,
       remoteId: input.document.id,
       stage: input.stage,

@@ -208,14 +208,14 @@ it('records a matched EPUB as failed instead of bound when its fresh download fa
   }) as typeof fetch;
 
   await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ migrated_count: 0, status: 'completed' });
+    .resolves.toMatchObject({ migrated_count: 0, status: 'failed' });
 
   const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
   )?.value ?? '{}');
   expect(journal).toMatchObject({
-    documents: [{ remoteId: 'document-1', status: 'blocked' }],
+    documents: [],
     failures: [{ remoteId: 'document-1', stage: 'resources' }],
-    status: 'api'
+    status: 'migration-in-progress'
   });
 });

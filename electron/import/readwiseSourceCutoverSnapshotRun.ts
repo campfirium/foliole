@@ -31,7 +31,12 @@ export async function runReadwiseSourceCutoverSnapshot(input: ReadwiseSourceCuto
   });
   const work = await prepareCutoverWorklist(input.connectionRef, input.settings);
   await updateDocuments({ ...input, settings: { ...input.settings, readwiseReaderConfig: work.config } }, work);
-  return { documents: work.documents, remainingCount: 0 };
+  const current = requireReadwiseSourceCutoverV2();
+  const terminals = new Set(current.documents.map((item) => item.remoteId));
+  return {
+    documents: work.documents,
+    remainingCount: current.cohortDocumentIds.filter((id) => !terminals.has(id)).length
+  };
 }
 
 async function updateDocuments(

@@ -64,16 +64,16 @@ it('records a deleted document and its annotations as blocked tombstones', () =>
   ]);
 });
 
-it('allows an unmatched selected document to materialize regardless of its creation time', async () => {
+it('allows an unmatched selected document to materialize regardless of its creation time', () => {
   const migration = createReadwiseDocumentMigration({ bindingFor: () => null }, 'connection');
-  await expect(migration.beforeCommit(document())).resolves.toBeUndefined();
+  expect(migration.beforeCommit(document())).toBeUndefined();
 });
 
-it('allows an unmatched document created after cutover to use the normal import policy', async () => {
+it('allows an unmatched document created after cutover to use the normal import policy', () => {
   const migration = createReadwiseDocumentMigration({ bindingFor: () => null }, 'connection');
-  await expect(migration.beforeCommit({
+  expect(migration.beforeCommit({
     ...document(), id: 'document-new', createdAt: '2026-09-10T00:00:00.000Z'
-  })).resolves.toBeUndefined();
+  })).toBeUndefined();
 });
 
 function document(): PreparedReadwiseApiDocument {

@@ -7,10 +7,10 @@ import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js'
 export interface ReadwiseApiFetchDependencies {
   allowFolderModeForCutover?: boolean;
   assertCutoverBatch?: () => void;
-  cutoverDocumentTimeoutMs?: number;
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
   onPage?: (input: { phase: 'export' | 'reader'; recordCount: number; totalCount?: number }) => void;
+  originalFileIdleTimeoutMs?: number;
   signal?: AbortSignal;
 }
 

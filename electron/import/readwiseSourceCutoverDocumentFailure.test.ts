@@ -49,6 +49,10 @@ vi.mock('./importManagerSettings.js', async () => {
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import {
+  clearAttachmentLibraryPathSnapshot,
+  publishAttachmentLibraryPathSnapshot
+} from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -60,6 +64,9 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-document-failure-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  publishAttachmentLibraryPathSnapshot({
+    assetsDir: path.join(mockedAppDataDir, 'assets'), libraryScope: 'test-library'
+  });
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
@@ -70,42 +77,55 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  clearAttachmentLibraryPathSnapshot();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('times out one document, records it, and completes the remaining migration', async () => {
+it('records one stalled document, leaves cutover active, and retries it', async () => {
   const fetchImpl = migrationWithHungOriginalFile();
   await expect(runReadwiseSourceCutover({
-    dependencies: { cutoverDocumentTimeoutMs: 5, fetchImpl, minIntervalMs: 0 }
-  })).resolves.toMatchObject({ status: 'completed' });
+    dependencies: { fetchImpl, minIntervalMs: 0, originalFileIdleTimeoutMs: 5 }
+  })).resolves.toMatchObject({ error_reason: 'original_file_download_stalled', status: 'failed' });
 
-  const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+  let journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
   )?.value ?? '{}');
   expect(journal).toMatchObject({
     documents: expect.arrayContaining([
-      expect.objectContaining({ remoteId: 'document-1', status: 'unavailable' }),
       expect.objectContaining({ remoteId: 'document-2', status: 'materialized' })
     ]),
     failures: [{
-      reason: 'readwise_source_cutover_document_timeout',
+      reason: 'original_file_download_stalled',
       remoteId: 'document-1',
       stage: 'resources',
       title: 'Broken PDF'
     }],
-    status: 'api'
+    status: 'migration-in-progress'
   });
+  expect(journal.documents).toHaveLength(1);
   expect(journal.activeDocument).toBeUndefined();
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     failed_items: [{
-      reason: 'readwise_source_cutover_document_timeout',
+      reason: 'original_file_download_stalled',
       remote_id: 'document-1',
       stage: 'resources',
       title: 'Broken PDF'
     }],
-    status: 'already_completed'
+    status: 'migration_in_progress'
   });
+
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl: migrationWithRecoveredOriginalFile(), minIntervalMs: 0 }
+  })).resolves.toMatchObject({ status: 'completed' });
+  journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(journal).toMatchObject({ failures: [], status: 'api' });
+  expect(journal.documents).toEqual(expect.arrayContaining([
+    expect.objectContaining({ remoteId: 'document-1', status: 'materialized' }),
+    expect.objectContaining({ remoteId: 'document-2', status: 'materialized' })
+  ]));
 });
 
 it('classifies a large off-policy cohort in one pass without stalling the merge', async () => {
@@ -147,6 +167,18 @@ function migrationWithHungOriginalFile(): typeof fetch {
     }, {
       category: 'highlight', id: 'highlight-2', parent_id: 'document-2', title: 'Working article'
     }] });
+  }) as typeof fetch;
+}
+
+function migrationWithRecoveredOriginalFile(): typeof fetch {
+  const base = migrationWithHungOriginalFile();
+  const bytes = Buffer.from('%PDF-1.7\nrecovered original\n%%EOF');
+  return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.hostname.endsWith('.amazonaws.com')) {
+      return new Response(bytes, { headers: { 'content-type': 'application/pdf' }, status: 200 });
+    }
+    return base(input, init);
   }) as typeof fetch;
 }
 
