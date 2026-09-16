@@ -1,11 +1,9 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
-import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
   loadStagedReadwiseApiContracts
 } from '../database/readwiseApiImportState.js';
 
-import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 import {
   fetchReadwiseSourceCutoverSnapshot,
@@ -13,7 +11,6 @@ import {
 } from './readwiseApiImportFetch.js';
 import { loadReadwiseSourceArtifacts } from './readwiseSourceCutoverArtifacts.js';
 import {
-  clearReadwiseSourceCutoverActiveDocument,
   recordReadwiseSourceCutoverActiveDocument,
   recordReadwiseSourceCutoverFailure,
   recordReadwiseSuppressedCutoverDocuments
@@ -33,6 +30,7 @@ import {
   setReadwiseSourceCutoverPhase
 } from './readwiseSourceCutoverJournal.js';
 import { matchReadwiseSourceCutover } from './readwiseSourceCutoverMatching.js';
+import { prepareReadwiseSourceCutoverRouting } from './readwiseSourceCutoverRouting.js';
 
 export interface ReadwiseSourceCutoverSnapshotRunInput {
   assertEligible: () => void;
@@ -130,20 +128,20 @@ async function mergeCutoverDocuments(
   const migration = createReadwiseDocumentMigration({ bindingFor }, input.connectionRef, {
     preserveExistingBody: true
   });
+  const routing = prepareReadwiseSourceCutoverRouting({
+    artifactFor: context.matching.artifactFor,
+    dispositionSuppressed: context.suppressed,
+    documents: context.documents,
+    readersById,
+    settings: input.settings
+  });
   const completedDocuments = new Map(context.documents.map((item) => [item.id, item]));
   for (const document of context.documents) {
     input.assertEligible();
-    if (requireReadwiseSourceCutoverV2().documents.some((item) => item.remoteId === document.id)) {
-      clearReadwiseSourceCutoverActiveDocument(document.id);
-      continue;
-    }
+    if (routing.terminalDocumentIds.has(document.id)) continue;
     const artifact = context.matching.artifactFor(document.id);
-    const destination = destinationFor(document, readersById.get(document.id)?.tags, input.settings);
-    const commitDestination = artifact ? 'inbox' : destination;
-    if (context.suppressed.has(document.id) || commitDestination === 'off') {
-      recordReadwiseSuppressedCutoverDocuments([document], new Set([document.id]));
-      continue;
-    }
+    const commitDestination = routing.destinations.get(document.id) ?? 'off';
+    if (commitDestination === 'off') continue;
     let stage: Parameters<typeof recordReadwiseSourceCutoverFailure>[0]['stage'] = 'preparing';
     try {
       completedDocuments.set(document.id, await commitSnapshotDocument(
@@ -161,6 +159,7 @@ async function mergeCutoverDocuments(
       try { binding = bindingFor(document); } catch { /* the failure remains isolated to this document */ }
       recordReadwiseSourceCutoverFailure({ binding, document, reason, stage });
     }
+    routing.terminalDocumentIds.add(document.id);
     if (artifact) {
       context.legacyCompleted += 1;
       input.onProgress(context.legacyCompleted, context.legacyTotal, 'merging');
@@ -206,17 +205,4 @@ async function commitSnapshotDocument(
   onStage('recording');
   await migration.afterCommit(committed, result);
   return committed;
-}
-
-function destinationFor(
-  document: ReturnType<typeof prepareReadwiseApiDocuments>[number],
-  tags: Record<string, unknown> | null | undefined,
-  settings: ImportManagerSettings
-) {
-  return resolveReadwiseAutoImportDestination(
-    settings.readwiseAutoImportPolicy,
-    document.category,
-    document.annotations.length > 0,
-    matchesReadwiseDocumentImportTag(tags, settings.readwiseAutoImportPolicy.importTag)
-  );
 }

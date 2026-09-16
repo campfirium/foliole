@@ -108,6 +108,20 @@ it('times out one document, records it, and completes the remaining migration', 
   });
 });
 
+it('classifies a large off-policy cohort in one pass without stalling the merge', async () => {
+  const documentCount = 1_000;
+  await expect(runReadwiseSourceCutover({
+    dependencies: { fetchImpl: migrationWithSuppressedDocuments(documentCount), minIntervalMs: 0 }
+  })).resolves.toMatchObject({ status: 'completed' });
+
+  const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(journal).toMatchObject({ status: 'api' });
+  expect(journal.documents).toHaveLength(documentCount);
+  expect(journal.documents.every((item: { status: string }) => item.status === 'suppressed')).toBe(true);
+}, 5_000);
+
 function migrationWithHungOriginalFile(): typeof fetch {
   return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -133,5 +147,22 @@ function migrationWithHungOriginalFile(): typeof fetch {
     }, {
       category: 'highlight', id: 'highlight-2', parent_id: 'document-2', title: 'Working article'
     }] });
+  }) as typeof fetch;
+}
+
+function migrationWithSuppressedDocuments(count: number): typeof fetch {
+  return vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/api/v2/export/') {
+      return Response.json({ count: 0, nextPageCursor: null, results: [] });
+    }
+    return Response.json({
+      count,
+      nextPageCursor: null,
+      results: Array.from({ length: count }, (_, index) => ({
+        category: 'rss', html_content: `<p>Body ${index}</p>`, id: `rss-${index}`,
+        parent_id: null, title: `Suppressed RSS ${index}`
+      }))
+    });
   }) as typeof fetch;
 }
