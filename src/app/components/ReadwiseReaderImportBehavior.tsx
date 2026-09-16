@@ -23,10 +23,10 @@ type PolicyField = ReadwiseAutoImportPolicyField;
 
 const API_ROWS = [
   ['article', 'desktop.readwise.behavior.article.title'],
-  ['email', 'desktop.readwise.behavior.email.title'],
-  ['rss', 'desktop.readwise.behavior.rss.title'],
-  ['pdf', 'desktop.readwise.behavior.pdf.title'],
   ['epub', 'desktop.readwise.behavior.epub.title'],
+  ['pdf', 'desktop.readwise.behavior.pdf.title'],
+  ['rss', 'desktop.readwise.behavior.rss.title'],
+  ['email', 'desktop.readwise.behavior.email.title'],
   ['video', 'desktop.readwise.behavior.video.title'],
   ['tweet', 'desktop.readwise.behavior.tweet.title']
 ] as const;
