@@ -10,7 +10,10 @@ import {
 
 import { readReadwiseApiEpubBookBodies } from './readwiseApiEpubMaterialization.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
-import { relocateReadwiseOriginalEpubLocalAnchors } from './readwiseOriginalEpubLocalAnchors.js';
+import {
+  captureReadwiseOriginalEpubRootTexts,
+  relocateReadwiseOriginalEpubLocalAnchors
+} from './readwiseOriginalEpubLocalAnchors.js';
 import type { PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import {
   captureReadwiseOriginalEpubSnapshot,
@@ -102,6 +105,7 @@ function commitPreparedOriginalEpub(input: {
       || captureReadwiseOriginalEpubSnapshot(input.target) !== input.expectedSnapshot) {
       throw new Error('original_epub_target_changed');
     }
+    const preservedRootTexts = captureReadwiseOriginalEpubRootTexts(input.target.nodeId);
     for (const stage of input.candidate.stages) persistStagedManagedAttachment(stage);
     const document = withOriginalEpubBody(input);
     const result = materializeReadwiseApiDocument({
@@ -127,6 +131,7 @@ function commitPreparedOriginalEpub(input: {
       connectionRef: input.target.connectionRef,
       documentId: input.target.documentId,
       importedAt: input.importedAt,
+      preservedRootTexts,
       rootNodeId: input.target.nodeId
     });
     createNodeAttachmentLink({

@@ -127,7 +127,11 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
   if (input.existingSourceFingerprint) preparedRoot.sourceFingerprint = input.existingSourceFingerprint;
   const root = runPreparedImport(
     preparedRoot,
-    input.rootNodeId ? { forceUpdateExistingNodeId: input.rootNodeId, resetImportedStructure: true } : undefined
+    input.rootNodeId ? {
+      forceUpdateExistingNodeId: input.rootNodeId,
+      preserveExistingHighlightNodes: true,
+      resetImportedStructure: true
+    } : undefined
   );
   if (!root.nodeId) throw new Error('readwise_epub_root_missing');
   replaceReadwiseApiEpubImageLinks(

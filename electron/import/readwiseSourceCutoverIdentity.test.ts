@@ -92,9 +92,9 @@ it('treats duplicate identity artifacts for the same active Topic as one match',
   expect(identity.bindingFor(document())).toMatchObject({ nodeId: 'topic-1' });
 });
 
-it('binds a legacy EPUB highlight whose source text is stored in its anchor', async () => {
+it('binds prepared remote text from a local anchor without sidecar ID order', async () => {
   await fs.writeFile(path.join(state.sourcePath, 'Sample.md'),
-    '# Sample\n\n## Highlights\n- Legacy highlight ([View Highlight](https://read.readwise.io/read/highlight-v3))');
+    '# Sample\n\n[Reader](https://read.readwise.io/read/document-1)');
   seedLegacySource();
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)

@@ -25,6 +25,7 @@ import { updateExistingReadwiseNode } from './importReadwiseHighlightBackfill.js
 export interface RunPreparedImportOptions {
   ambiguityPolicy?: 'first' | 'unique';
   forceUpdateExistingNodeId?: string;
+  preserveExistingHighlightNodes?: boolean;
   resetImportedStructure?: boolean;
 }
 
@@ -35,9 +36,11 @@ function persistImportedHighlightNodes(input: {
   importedAt: string;
   nodeId: string;
   prepared: PreparedImportRecord;
+  preserveExistingHighlightNodes: boolean;
   resetImportedStructure: boolean;
   matchedAnchoredHighlights: Array<PreparedImportHighlightRecord | ReturnType<typeof applyImportedHighlightAnchors>['highlights'][number]>;
 }) {
+  if (input.preserveExistingHighlightNodes) return;
   if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar' || input.resetImportedStructure) {
     replaceImportedHighlightNodes({
       driver: input.driver,
@@ -182,6 +185,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     matchedAnchoredHighlights: anchoredImport.highlights,
     nodeId,
     prepared,
+    preserveExistingHighlightNodes: Boolean(options.preserveExistingHighlightNodes),
     resetImportedStructure: Boolean(options.resetImportedStructure)
   });
   establishImportedNodeIdentity(driver, baseRecord, nodeId);

@@ -9,7 +9,7 @@ import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceD
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import { attachReadwiseApiOriginalFile } from './readwiseApiOriginalFile.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiRequest.js';
-import { assertCutoverBookUnedited, verifyCutoverEpub } from './readwiseCutoverProjection.js';
+import { verifyCutoverEpub } from './readwiseCutoverProjection.js';
 import { cutoverItemBinding, type CutoverWorkItem } from './readwiseCutoverWorklist.js';
 import { recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
 import { prepareReadwiseCutoverResources } from './readwiseSourceCutoverDocumentStep.js';
@@ -30,7 +30,6 @@ export async function commitCutoverItem(input: {
   const document = mergeLegacyReadwiseAnnotations(input.document, binding?.legacyAnnotations ?? []);
   const book = document.category === 'epub' || document.category === 'pdf';
   const nodeId = binding?.nodeId ?? loadReadwiseApiImportSource(input.connectionRef, document.id)?.nodeId ?? null;
-  if (book) assertCutoverBookUnedited(nodeId);
   input.onStage('resources');
   const resources = await prepareReadwiseCutoverResources({
     config: input.settings.readwiseReaderConfig, connectionRef: input.connectionRef,
@@ -44,7 +43,6 @@ export async function commitCutoverItem(input: {
       recordReadwiseSuppressedCutoverDocuments([document], new Set([document.id]));
       return;
     }
-    if (book) assertCutoverBookUnedited(nodeId);
     const migration = createReadwiseDocumentMigration({ bindingFor: () => binding }, input.connectionRef, { preserveExistingBody: true });
     migration.beforeCommit(input.document);
     const result = materializeReadwiseApiDocument({

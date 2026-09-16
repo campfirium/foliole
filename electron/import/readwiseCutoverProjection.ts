@@ -45,20 +45,6 @@ export function finalCutoverDocument(
     ? withOriginalEpubBody({ candidate: resources.originalEpub, document, target: { title } }) : document;
 }
 
-export function assertCutoverBookUnedited(nodeId: string | null) {
-  if (!nodeId) return;
-  const edited = openDatabaseConnection().driver.queryOne<{ id: string }>(
-    `WITH RECURSIVE tree(id) AS (
-      SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL
-      UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id=t.id WHERE n.deleted_at IS NULL
-    ) SELECT n.id FROM nodes n JOIN tree t ON n.id=t.id
-    WHERE (n.id = ? OR n.id LIKE 'node-epub-%') AND n.updated_at > COALESCE(
-      (SELECT MAX(last_imported_at) FROM import_sources WHERE latest_node_id = ?), n.created_at)
-    LIMIT 1`, [nodeId, nodeId, nodeId]
-  );
-  if (edited) throw new Error('readwise_source_cutover_user_edit_conflict');
-}
-
 function matchesBookBodies(
   connectionRef: string, documentId: string, rootNodeId: string,
   expected: Pick<NonNullable<PreparedReadwiseApiDocument['epubStructure']>, 'rootBody' | 'sections'>,

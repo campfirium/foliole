@@ -147,8 +147,13 @@ it('rebuilds a bound EPUB from its freshly downloaded original file', async () =
 it('uses the existing body while binding edited legacy highlights and importing later highlights', async () => {
   await seedMigratableSource(state.sourcePath);
   const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
+    VALUES ('legacy-imported-highlight','topic-1','topic','remembered phrase',0,'',?,'old','old')`, [JSON.stringify({
+    id: 'imported-highlight-legacy', kind: 'highlight',
+    locator: { from: 17, originalText: 'remembered phrase', to: 34 }
+  })]);
   const legacyHighlight = driver.queryOne<{ id: string }>(
-    "SELECT id FROM nodes WHERE parent_id='topic-1' AND anchor_link IS NOT NULL LIMIT 1"
+    "SELECT id FROM nodes WHERE id='legacy-imported-highlight'"
   );
   expect(legacyHighlight).toBeTruthy();
   driver.execute("UPDATE nodes SET updated_at='newer' WHERE id=?", [legacyHighlight!.id]);
@@ -187,7 +192,9 @@ it('uses the existing body while binding edited legacy highlights and importing 
   const source = driver.queryOne<{ remote_annotations_json: string }>(
     "SELECT remote_annotations_json FROM import_sources WHERE remote_document_id='document-1'"
   );
-  expect(JSON.parse(source?.remote_annotations_json ?? '[]')).toHaveLength(2);
+  const bindings = JSON.parse(source?.remote_annotations_json ?? '[]');
+  expect(bindings).toContainEqual(expect.objectContaining({ nodeId: legacyHighlight!.id, remoteId: 'highlight-1' }));
+  expect(bindings).toContainEqual(expect.objectContaining({ remoteId: 'highlight-2' }));
 });
 
 it('records a matched EPUB as failed instead of bound when its fresh download fails', async () => {

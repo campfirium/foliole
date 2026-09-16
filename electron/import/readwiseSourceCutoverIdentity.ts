@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { formatHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
-import { extractReadwiseSidecarHighlights, normalizeReadwiseText } from '../../lib/core/import/readwiseReaderParsing.js';
+import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import {
   resolveReaderBodyAncestor,
   type ReaderDocumentContract
@@ -21,6 +21,10 @@ import {
   fetchReadwiseIdentityDocument,
   fetchReadwiseIdentityDocuments
 } from './readwiseIdentityApi.js';
+import {
+  matchReadwiseCutoverAnnotations,
+  type LegacyAnnotationCandidate
+} from './readwiseSourceCutoverAnnotationMatching.js';
 import {
   loadReadwiseSourceArtifacts,
   type ReadwiseSourceArtifact
@@ -112,23 +116,22 @@ function bindingFor(
   exactDocuments: ReadonlyMap<string, ReaderDocumentContract>,
   blockedAnnotationIds: ReadonlySet<string> = new Set()
 ): ReadwiseSourceCutoverIdentityBinding {
-  const ids = extractReaderLinkIds(artifact.raw);
-  const highlights = extractReadwiseSidecarHighlights(
-    artifact.raw,
-    loadStoredReadwiseHostSettings().readwiseReaderConfig
+  const legacyAnnotations = legacyAnnotationsFor(artifact, document.id, exactDocuments)
+    .filter((item) => !blockedAnnotationIds.has(item.remoteId));
+  const preparedIds = new Set(document.annotations.map((item) => item.remoteId));
+  const matchable = [
+    ...document.annotations,
+    ...legacyAnnotations.filter((item) => !preparedIds.has(item.remoteId))
+  ];
+  const annotations = matchReadwiseCutoverAnnotations(
+    loadLegacyAnnotationCandidates(artifact.latestNodeId),
+    matchable,
+    blockedAnnotationIds
   );
-  const annotations = highlights.length === ids.length
-    ? highlights.flatMap((highlight, index) => blockedAnnotationIds.has(ids[index] ?? '') ? [] : resolveAnnotation(
-      artifact.latestNodeId,
-      highlight.text,
-      exactAnnotation(ids[index], document.id, exactDocuments)
-    ))
-    : [];
   return {
     annotations,
     blockedAnnotationIds: new Set(blockedAnnotationIds),
-    legacyAnnotations: legacyAnnotationsFor(artifact, document.id, exactDocuments)
-      .filter((item) => !blockedAnnotationIds.has(item.remoteId)),
+    legacyAnnotations,
     nodeId: artifact.latestNodeId,
     remoteDocumentId: document.id,
     sourceFingerprint: artifact.sourceFingerprint ?? ''
@@ -175,26 +178,15 @@ function legacyAnnotationsFor(
   });
 }
 
-function resolveAnnotation(
-  nodeId: string,
-  text: string,
-  remote: { kind: 'highlight' | 'note'; remoteId: string } | null
-) {
-  if (!remote) return [];
-  const children = openDatabaseConnection().driver.queryAll<{
-    anchor_link: string | null; content: string; created_at: string; id: string;
-    is_title_manual: number; title: string; updated_at: string;
-  }>(`WITH RECURSIVE tree(id) AS (
+function loadLegacyAnnotationCandidates(nodeId: string) {
+  return openDatabaseConnection().driver.queryAll<LegacyAnnotationCandidate>(`WITH RECURSIVE tree(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE n.deleted_at IS NULL
-     ) SELECT n.id, n.title, n.content, n.anchor_link, n.is_title_manual, n.created_at, n.updated_at
+     ) SELECT n.id, n.title, n.content, n.anchor_link anchorLink,
+       n.is_title_manual isTitleManual, n.created_at createdAt,
+       (SELECT COUNT(*) FROM nodes child WHERE child.parent_id=n.id AND child.deleted_at IS NULL) childCount
        FROM nodes n JOIN tree t ON t.id=n.id`,
   [nodeId]);
-  const matches = children.filter((child) => child.is_title_manual === 0
-    && normalizeReadwiseText(resolveLegacyHighlightText(child)) === normalizeReadwiseText(text));
-  return matches.length === 1
-    ? [{ kind: remote.kind, nodeId: matches[0]!.id, remoteId: remote.remoteId }]
-    : [];
 }
 
 function exactAnnotation(
@@ -207,18 +199,4 @@ function exactAnnotation(
   if ((fact?.category !== 'highlight' && fact?.category !== 'note')
     || resolveReaderBodyAncestor(remoteId, documents).documentId !== documentId) return null;
   return { kind: fact.category, remoteId, updatedAt: fact.updatedAt };
-}
-
-function resolveLegacyHighlightText(child: { anchor_link: string | null; content: string; title: string }) {
-  if (child.anchor_link) {
-    try {
-      const parsed = JSON.parse(child.anchor_link) as { locator?: { originalText?: unknown } };
-      if (typeof parsed.locator?.originalText === 'string' && parsed.locator.originalText.trim()) {
-        return parsed.locator.originalText;
-      }
-    } catch {
-      // Fall through to legacy node fields when the stored anchor is malformed.
-    }
-  }
-  return child.content.trim() ? child.content : child.title;
 }

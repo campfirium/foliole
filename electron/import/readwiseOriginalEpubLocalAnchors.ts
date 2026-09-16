@@ -7,9 +7,11 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
 
 interface LocalAnchorRow extends DatabaseRow {
-  anchor_link: string;
+  anchor_link: string | null;
   content: string;
   id: string;
+  is_title_manual: number;
+  title: string;
 }
 
 function originalText(anchor: StoredAnchorLink) {
@@ -19,13 +21,15 @@ function originalText(anchor: StoredAnchorLink) {
     : null;
 }
 
-function locateAnchor(bodies: Array<{ content: string; id: string }>, row: LocalAnchorRow, anchor: StoredAnchorLink) {
-  const text = originalText(anchor);
+function locateAnchor(
+  bodies: Array<{ content: string; id: string }>, row: LocalAnchorRow,
+  anchor: StoredAnchorLink, text: string | null
+) {
   if (!text) return null;
   const matches = bodies.map((body) => ({
     anchored: applyImportedHighlightAnchors({
       content: body.content,
-      highlights: [{ content: row.content, label: null, locatorText: text, nodeId: row.id }]
+      highlights: [{ content: row.content.trim() || text, label: null, locatorText: text, nodeId: row.id }]
     }).highlights[0] ?? null,
     body
   })).filter((candidate) => candidate.anchored !== null);
@@ -51,17 +55,21 @@ export function relocateReadwiseOriginalEpubLocalAnchors(input: {
   connectionRef: string;
   documentId: string;
   importedAt: string;
+  preservedRootTexts?: ReadonlyMap<string, string | null>;
   rootNodeId: string;
 }) {
   const driver = openDatabaseConnection().driver;
   const trackedIds = new Set(input.annotationStates.map((state) => state.nodeId));
   const rows = driver.queryAll<LocalAnchorRow>(
-    `SELECT id, content, anchor_link FROM nodes
-     WHERE parent_id = ? AND deleted_at IS NULL AND anchor_link IS NOT NULL`, [input.rootNodeId]
+    `SELECT id, title, content, anchor_link, is_title_manual FROM nodes
+     WHERE parent_id = ? AND deleted_at IS NULL
+       AND (anchor_link IS NOT NULL OR is_title_manual = 0)`, [input.rootNodeId]
   ).filter((row) => !trackedIds.has(row.id));
   const placements = rows.map((row) => {
-    const anchor = parseStoredAnchorLink(row.anchor_link);
-    return { anchor, located: anchor ? locateAnchor(input.bodies, row, anchor) : null, row };
+    const anchor = parseStoredAnchorLink(row.anchor_link) ?? legacyAnchor(row);
+    const text = input.preservedRootTexts?.get(row.id)
+      ?? originalText(anchor) ?? (row.content.trim() || row.title.trim() || null);
+    return { anchor, located: locateAnchor(input.bodies, row, anchor, text), row };
   });
   const unlocatedNodeId = placements.some((placement) => !placement.located)
     ? ensureReadwiseUnlocatedNode({
@@ -83,4 +91,20 @@ export function relocateReadwiseOriginalEpubLocalAnchors(input: {
     );
   }
   return rows.length;
+}
+
+export function captureReadwiseOriginalEpubRootTexts(rootNodeId: string) {
+  const rows = openDatabaseConnection().driver.queryAll<LocalAnchorRow>(
+    `SELECT id, title, content, anchor_link, is_title_manual FROM nodes
+     WHERE parent_id = ? AND deleted_at IS NULL
+       AND (anchor_link IS NOT NULL OR is_title_manual = 0)`, [rootNodeId]
+  );
+  return new Map(rows.map((row) => {
+    const anchor = parseStoredAnchorLink(row.anchor_link) ?? legacyAnchor(row);
+    return [row.id, originalText(anchor) ?? (row.content.trim() || row.title.trim() || null)];
+  }));
+}
+
+function legacyAnchor(row: LocalAnchorRow): StoredAnchorLink {
+  return { id: `imported-highlight-${row.id}`, kind: 'highlight' };
 }

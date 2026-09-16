@@ -123,17 +123,17 @@ it('verifies four materialized original EPUBs against their final chapters and r
   expect(source.connectionRef).toBeTruthy();
 });
 
-it('keeps edited legacy book content and reports a specific conflict', async () => {
+it('rebuilds a bound book when legacy timestamps look edited', async () => {
   await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource();
   const driver = openDatabaseConnection().driver;
   driver.execute("UPDATE nodes SET content='User edited book', updated_at='2026-09-16T10:00:00Z' WHERE id='topic-1'");
   driver.execute("UPDATE import_sources SET last_imported_at='2026-09-15T10:00:00Z'");
   await runReadwiseSourceCutover({ dependencies: { fetchImpl: epubMigrationFetch(), minIntervalMs: 0 } });
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content).toBe('User edited book');
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
+    .not.toBe('User edited book');
   expect(await previewReadwiseSourceCutover()).toMatchObject({
-    completed_count: 1, total_count: 1,
-    failed_items: [expect.objectContaining({ reason: 'readwise_source_cutover_user_edit_conflict' })]
+    completed_count: 1, error_reason: null, total_count: 1
   });
 });
 

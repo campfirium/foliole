@@ -31,6 +31,10 @@ import { createTestZip } from '../ipc/testZipBuilder.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
+import {
+  headingCoverEpubBytes,
+  invalidImageEpubBytes
+} from './readwiseOriginalEpubCommitTestFixtures.js';
 import { prepareOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import {
   captureReadwiseOriginalEpubSnapshot,
@@ -92,40 +96,6 @@ function originalBytes() {
   ]);
 }
 
-function invalidImageBytes() {
-  return createTestZip([
-    { content: 'application/epub+zip', name: 'mimetype' },
-    {
-      content: '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-      name: 'META-INF/container.xml'
-    },
-    {
-      content: '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Broken</dc:title></metadata><manifest><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/><item id="good" href="good.png" media-type="image/png"/><item id="bad" href="bad.png" media-type="image/png"/></manifest><spine><itemref idref="one"/></spine></package>',
-      name: 'OPS/book.opf'
-    },
-    { content: '<html><head><title>One</title></head><body><h1>One</h1><img src="good.png"/><img src="bad.png"/></body></html>', name: 'OPS/one.xhtml' },
-    { content: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), name: 'OPS/good.png' },
-    { content: 'not-an-image', name: 'OPS/bad.png' }
-  ]);
-}
-
-function headingCoverBytes() {
-  return createTestZip([
-    { content: 'application/epub+zip', name: 'mimetype' },
-    {
-      content: '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-      name: 'META-INF/container.xml'
-    },
-    {
-      content: '<?xml version="1.0"?><package version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Cover</dc:title></metadata><manifest><item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/><item id="image" href="cover.png" media-type="image/png"/></manifest><spine><itemref idref="cover"/><itemref idref="chapter"/></spine><guide><reference type="cover" href="cover.xhtml"/></guide></package>',
-      name: 'OPS/book.opf'
-    },
-    { content: '<html><body><h1><img alt="Cover" src="cover.png"/></h1></body></html>', name: 'OPS/cover.xhtml' },
-    { content: '<html><body><h1>Chapter</h1><p>Body remains available.</p></body></html>', name: 'OPS/chapter.xhtml' },
-    { content: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), name: 'OPS/cover.png' }
-  ]);
-}
-
 async function seedTarget() {
   const connectionRef = ensureReadwiseRemoteSource(false, importedAt).connectionRef;
   const document = apiDocument();
@@ -146,10 +116,16 @@ async function seedTarget() {
     `INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
      VALUES ('local-cloze',?,'item','Local',1,'Answer',? ,?,?),
        ('local-missing',?,'topic','Missing',1,'Kept',? ,?,?),
+       ('root-imported',?,'topic','local phrase',0,'',? ,?,?),
+       ('root-imported-cloze','root-imported','item','Local child',0,'Answer',? ,?,?),
+       ('root-legacy-auto',?,'topic','not in original auto',0,'',NULL,?,?),
        ('ordinary-same-title',?,'topic','※',1,'# ※',NULL,?,?)`,
     [
       readerSection.id, JSON.stringify({ id: 'anchor-local', kind: 'cloze', locator: { from: 0, originalText: 'local phrase', to: 12 } }), importedAt, importedAt,
       readerSection.id, JSON.stringify({ id: 'anchor-missing', kind: 'highlight', locator: { from: 0, originalText: 'not in original', to: 15 } }), importedAt, importedAt,
+      root.id, JSON.stringify({ id: 'imported-highlight-root', kind: 'highlight', locator: { from: 0, originalText: 'local phrase', to: 12 } }), importedAt, importedAt,
+      JSON.stringify({ id: 'anchor-root-cloze', kind: 'cloze', locator: { from: 0, originalText: 'local', to: 5 } }), importedAt, importedAt,
+      root.id, importedAt, importedAt,
       root.id, importedAt, importedAt
     ]
   );
@@ -190,6 +166,15 @@ it('force-replaces changed Reader content while preserving identities, user cont
   expect(driver.queryOne<{ parent_title: string }>(
     "SELECT parent.title parent_title FROM nodes child JOIN nodes parent ON parent.id=child.parent_id WHERE child.id='local-missing'"
   )).toEqual({ parent_title: '※' });
+  expect(driver.queryOne<{ parent_title: string }>(
+    "SELECT parent.title parent_title FROM nodes child JOIN nodes parent ON parent.id=child.parent_id WHERE child.id='root-imported'"
+  )).toEqual({ parent_title: 'One' });
+  expect(driver.queryOne<{ parent_id: string }>("SELECT parent_id FROM nodes WHERE id='root-imported-cloze'"))
+    .toEqual({ parent_id: 'root-imported' });
+  expect(driver.queryOne<{ anchor_link: string; parent_title: string }>(
+    `SELECT child.anchor_link,parent.title parent_title FROM nodes child JOIN nodes parent ON parent.id=child.parent_id
+     WHERE child.id='root-legacy-auto'`
+  )).toMatchObject({ anchor_link: expect.stringContaining('imported-highlight-root-legacy-auto'), parent_title: '※' });
   expect(driver.queryOne<{ parent_id: string }>("SELECT parent_id FROM nodes WHERE id='ordinary-same-title'"))
     .toEqual({ parent_id: seeded.rootId });
   const source = driver.queryOne<{ remote_import_state_json: string }>(
@@ -214,13 +199,13 @@ it('rolls every database write back when the authority save fails', async () => 
 });
 
 it('removes files staged before an EPUB preparation failure', async () => {
-  await expect(prepareOriginalEpubCandidate({ bytes: invalidImageBytes(), now: importedAt, title: 'Broken' }))
+  await expect(prepareOriginalEpubCandidate({ bytes: invalidImageEpubBytes(), now: importedAt, title: 'Broken' }))
     .rejects.toThrow('original_epub_image_invalid');
   await expect(fs.readdir(path.join(mockedAppDataDir, 'assets'))).resolves.toEqual([]);
 });
 
 it('keeps a cover image nested in the leading heading when replacing the whole EPUB', async () => {
-  const candidate = await prepareOriginalEpubCandidate({ bytes: headingCoverBytes(), now: importedAt, title: 'Cover' });
+  const candidate = await prepareOriginalEpubCandidate({ bytes: headingCoverEpubBytes(), now: importedAt, title: 'Cover' });
   expect(candidate.images.rootBody).toMatch(/^!\[Cover\]\(asset:\/\//u);
   expect(candidate.images.rootAttachmentIds).toHaveLength(1);
   expect(candidate.images.sections.some((section) => section.content.includes('Body remains available.'))).toBe(true);
