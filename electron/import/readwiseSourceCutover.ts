@@ -4,7 +4,10 @@ import {
 } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { NativeReadwiseSourceCutoverResult } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
-import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
+import {
+  ensureReadwiseRemoteSource,
+  loadReadwiseRemoteSource
+} from '../database/readwiseRemoteIdentity.js';
 import {
   loadReadwiseSourceCutover,
   writeReadwiseSourceCutover
@@ -63,11 +66,10 @@ async function runNow(
   if (!assignment.is_active) {
     return result('not_active_host', 0, 0, 'readwise_execution_eligibility_lost');
   }
-  const source = loadReadwiseRemoteSource();
-  if (!source) return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
   if (!isStoredReadwiseApiConnectionReady()) {
     return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
   }
+  const source = loadReadwiseRemoteSource() ?? ensureReadwiseRemoteSource();
   const restartRequired = !current || current.status === 'api';
   const startedAt = restartRequired ? new Date().toISOString() : current.startedAt;
   if (restartRequired) {

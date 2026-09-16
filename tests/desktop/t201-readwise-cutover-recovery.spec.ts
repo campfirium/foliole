@@ -13,13 +13,14 @@ import {
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t201');
 
-async function seedPendingCutover(app: ElectronApplication) {
-  await app.evaluate(() => {
+async function seedRestoredLibrary(app: ElectronApplication, pendingCutover = false) {
+  await app.evaluate((_electron, shouldCreateCutover) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const device = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseDeviceConnection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
@@ -27,12 +28,15 @@ async function seedPendingCutover(app: ElectronApplication) {
     connection.runWithDatabaseConnectionOwner(() => {
       host.activateReadwiseOnThisHost();
       const assignment = host.loadReadwiseHostAssignment();
-      const source = identity.createReadwiseRemoteSource('2026-09-16T00:00:00.000Z');
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000201.bin';
       secret.writeReadwiseApiSecret(secretRef, 't201-token');
-      identity.saveReadwiseConnectionState({
-        secretRef, state: 'connected', verifiedAt: '2026-09-16T00:00:00.000Z'
-      }, source, '2026-09-16T00:00:00.000Z');
+      const deviceConnection = {
+        secretRef, state: 'connected' as const, verifiedAt: '2026-09-16T00:00:00.000Z'
+      };
+      const source = shouldCreateCutover
+        ? identity.createReadwiseRemoteSource('2026-09-16T00:00:00.000Z') : null;
+      if (source) identity.saveReadwiseConnectionState(deviceConnection, source, '2026-09-16T00:00:00.000Z');
+      else device.saveReadwiseDeviceConnection(deviceConnection);
       const driver = connection.openDatabaseConnection().driver;
       driver.execute(`INSERT INTO nodes
         (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
@@ -50,13 +54,15 @@ async function seedPendingCutover(app: ElectronApplication) {
         VALUES ('t201-source','desktop_text_file','markdown','Unique restored title.md','missing',
           '2026-09-15T00:00:00.000Z','2026-09-16T00:00:00.000Z','hash','legacy-topic',
           'readwise:t201','Unique restored title.md')`);
-      reset.restartIncompleteReadwiseSourceCutover({
-        connectionRef: source.connectionRef,
-        sourceHost: assignment.current_host_name,
-        startedAt: '2026-09-16T00:00:00.000Z'
-      });
+      if (source) {
+        reset.restartIncompleteReadwiseSourceCutover({
+          connectionRef: source.connectionRef,
+          sourceHost: assignment.current_host_name,
+          startedAt: '2026-09-16T00:00:00.000Z'
+        });
+      }
     });
-  });
+  }, pendingCutover);
 }
 
 async function installFailedTransport(app: ElectronApplication) {
@@ -130,7 +136,7 @@ test('shows a retryable import failure and recovers without replacing the legacy
   try {
     await mkdir(ARTIFACT_DIR, { recursive: true });
     session = await createT178ApiAcceptanceSession(stateRoot);
-    await seedPendingCutover(session.electronApp);
+    await seedRestoredLibrary(session.electronApp, true);
     await installFailedTransport(session.electronApp);
     await setRendererOnline(session);
     await session.firstWindow.reload();
@@ -173,6 +179,41 @@ test('shows a retryable import failure and recovers without replacing the legacy
       content: 'User-edited body', id: 'legacy-topic', remote_document_id: 'remote-document'
     });
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'completed.png') });
+  } finally {
+    await session?.close().catch(() => undefined);
+    await rm(stateRoot, { force: true, recursive: true });
+  }
+});
+
+test('uses the saved device token when a restored library has no API source identity', async ({ browserName }) => {
+  void browserName;
+  test.setTimeout(120_000);
+  const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t201-restored-'));
+  let session: T178AcceptanceSession | null = null;
+  try {
+    session = await createT178ApiAcceptanceSession(stateRoot);
+    await seedRestoredLibrary(session.electronApp);
+    await installRecoveringTransport(session.electronApp);
+    await setRendererOnline(session);
+    await session.firstWindow.reload();
+    await expectWorkspaceShell(session.firstWindow);
+    await openSettingsFromNativeMenu(session.electronApp);
+    await expect(getSettingsDialog(session.firstWindow)).toBeVisible();
+    const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
+    await settings.getByRole('radio', { name: /^(API mode|API 模式)$/ }).click();
+    const setup = session.firstWindow.getByRole('dialog', { name: /^(Set up API mode|设置 API 模式)$/ });
+    await setup.getByRole('button', { name: /^(Continue setup|继续设置)$/ }).click();
+    await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
+    await settings.getByRole('button', { name: /^(Migrate to API mode…|迁移到 API 模式…)$/ }).click();
+    const confirmation = session.firstWindow.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
+    await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
+    await expect(settings.getByRole('status').filter({
+      hasText: /^(Migrating · Importing|正在迁移 · 导入中)/
+    })).toBeVisible();
+    await releaseImport(session.electronApp);
+    await expect.poll(() => session!.firstWindow.evaluate(async () =>
+      (await window.electronAPI.invoke('preview_readwise_source_cutover')).status
+    ), { timeout: 30_000 }).toBe('already_completed');
   } finally {
     await session?.close().catch(() => undefined);
     await rm(stateRoot, { force: true, recursive: true });

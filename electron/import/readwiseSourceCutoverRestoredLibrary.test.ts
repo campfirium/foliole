@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '';
+const state = vi.hoisted(() => ({ connectionReady: true }));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -23,7 +24,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
 vi.mock('./readwiseApiConnectionState.js', async () => {
   const { createDefaultReadwiseReaderConfig } = await import('../../lib/core/import/readwiseReaderSettings.js');
   return {
-    isStoredReadwiseApiConnectionReady: () => true,
+    isStoredReadwiseApiConnectionReady: () => state.connectionReady,
     loadStoredReadwiseHostSettings: () => ({
       apiConnection: { secretRef: 'readwise-secret', state: 'connected' },
       readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
@@ -36,7 +37,7 @@ vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
-import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
+import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import { migrationFetch } from './readwiseSourceCutoverTestSupport.js';
@@ -46,6 +47,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-restored-library-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  state.connectionReady = true;
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
   openDatabaseConnection().driver.execute(
@@ -58,9 +60,8 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('binds a restored legacy Topic by its unique category-scoped full title', async () => {
+it('uses the current device token to initialize and migrate a restored legacy library', async () => {
   seedUnreadableLegacyTopic();
-  ensureReadwiseRemoteSource(false, '2026-09-16T00:00:00.000Z');
   const send = vi.fn();
 
   await expect(runReadwiseSourceCutover({
@@ -69,6 +70,7 @@ it('binds a restored legacy Topic by its unique category-scoped full title', asy
   })).resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
 
   const driver = openDatabaseConnection().driver;
+  expect(loadReadwiseRemoteSource()?.connectionRef).toMatch(/^readwise-/u);
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='legacy-topic'")?.content)
     .toBe('Legacy body stays untouched.');
   expect(driver.queryOne<{ latest_node_id: string }>(
@@ -80,6 +82,16 @@ it('binds a restored legacy Topic by its unique category-scoped full title', asy
   expect(send.mock.calls.map(([, payload]) => payload)).toContainEqual(expect.objectContaining({
     phase: 'merging', processedCount: 1, totalCount: 1
   }));
+});
+
+it('does not initialize a restored library without a usable device token', async () => {
+  state.connectionReady = false;
+
+  await expect(runReadwiseSourceCutover()).resolves.toMatchObject({
+    error_reason: 'readwise_api_reconnect_required', status: 'connection_required'
+  });
+
+  expect(loadReadwiseRemoteSource()).toBeNull();
 });
 
 function seedUnreadableLegacyTopic() {
