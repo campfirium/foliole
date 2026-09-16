@@ -103,7 +103,8 @@ export function providerFromDiscovery(args: {
 }
 
 function isWindowsProvider(platform: string) {
-  return ['win32', 'windows'].includes(platform.trim().toLowerCase());
+  const normalized = platform.trim().toLowerCase();
+  return normalized === 'win32' || normalized.startsWith('windows');
 }
 
 export function cancelCompanionSyncGroupJoin(requestId: string) {
