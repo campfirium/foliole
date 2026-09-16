@@ -60,7 +60,7 @@ it('shows Off, Obsidian relay, and API as one source selector', async () => {
   );
 
   expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: 'Obsidian relay import' })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'Obsidian relay' })).toBeInTheDocument();
   expect(screen.getByRole('radio', { name: 'API mode' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
   expect(onChange).toHaveBeenCalledWith('off');
@@ -115,7 +115,7 @@ it('does not render a disconnected state before the saved credential is restored
   expect(await screen.findByText('Connected')).toBeInTheDocument();
 });
 
-it('shows the known source total while rebuilding the Readwise index', async () => {
+it('keeps indexing visible while the remote total is not known yet', async () => {
   runtime.load.mockResolvedValue({ has_credential: true, state: 'connected', verified_at: 'now' });
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress', topic_count: 12, total_count: null
@@ -130,8 +130,8 @@ it('shows the known source total while rebuilding the Readwise index', async () 
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByText('Migrating · Indexing · 0 / 12')).toBeInTheDocument());
-  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText('Migrating · Importing')).toHaveLength(2));
+  expect(screen.queryByText(/0 \/ 12/)).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });
@@ -178,13 +178,13 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
+  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sync now' })).not.toHaveAttribute('aria-busy');
   expect(screen.queryByText(/Migration:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Importing')).toBeInTheDocument();
 });
 
 it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
@@ -210,10 +210,10 @@ it('keeps migration visible while the initial import is incomplete, regardless o
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Sync' })).not.toHaveAttribute('aria-busy');
+  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sync now' })).not.toHaveAttribute('aria-busy');
   const migrationStatus = screen.getByRole('status');
-  expect(migrationStatus).toHaveTextContent('Migrating · Indexing');
+  expect(migrationStatus).toHaveTextContent('Migrating · Importing');
   expect(migrationStatus).not.toHaveTextContent('failed');
   expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
   expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' }).parentElement).toContainElement(migrationStatus);
@@ -237,7 +237,7 @@ it('locks the retired relay choice after the API cutover', async () => {
   const onChange = vi.fn();
   render(<LocalizationProvider><ReadwiseSourceModeSection apiMigrationCompleted committedMode="api" mode="api" onChange={onChange} /></LocalizationProvider>);
 
-  const folderMode = await screen.findByRole('radio', { name: 'Obsidian relay import' });
+  const folderMode = await screen.findByRole('radio', { name: 'Obsidian relay' });
   expect(folderMode).toBeDisabled();
   fireEvent.click(folderMode);
   expect(onChange).not.toHaveBeenCalled();

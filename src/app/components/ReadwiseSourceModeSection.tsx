@@ -19,6 +19,7 @@ import {
 } from './ReadwiseApiModeSettingsRows';
 import { useReadwiseApiTaskStatus } from './ReadwiseApiTaskStatus';
 import { ReadwiseBehaviorSection } from './ReadwiseFolderSettingsSections';
+import { ReadwiseMigrationFailures } from './ReadwiseMigrationFailures';
 import { ReadwiseMigrationProgress } from './ReadwiseMigrationProgress';
 import { useReadwiseSourceMigration } from './useReadwiseSourceMigration';
 
@@ -217,6 +218,7 @@ function ReadwiseApiSettingsSections(props: {
           />
         </SettingsSection>
       ) : null}
+      <ReadwiseMigrationFailures failures={state.migration.failures ?? []} />
     </>
   );
 }

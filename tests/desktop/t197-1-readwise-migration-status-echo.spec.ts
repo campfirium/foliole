@@ -47,6 +47,33 @@ async function seedConnectedApi(app: ElectronApplication, migrating: boolean) {
   }, migrating);
 }
 
+async function seedCompletedFailure(app: ElectronApplication) {
+  await app.evaluate(() => {
+    const moduleApi = process.getBuiltinModule('module')!;
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
+    const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
+    connection.runWithDatabaseConnectionOwner(() => {
+      const sourceHost = host.loadReadwiseHostAssignment().current_host_name;
+      cutover.writeReadwiseSourceCutover({
+        annotations: [], cohortDocumentIds: ['failed-epub'],
+        completedAt: '2026-09-15T00:00:01.000Z', completionVersion: 6,
+        documents: [{
+          nodeId: null, reason: 'original_file_download_failed',
+          remoteId: 'failed-epub', status: 'unavailable'
+        }],
+        failures: [{
+          reason: 'original_file_download_failed', remoteId: 'failed-epub',
+          stage: 'resources', title: 'Broken EPUB'
+        }],
+        retiredNodeIds: [], sourceHost, startedAt: '2026-09-15T00:00:00.000Z', status: 'api'
+      });
+    });
+  });
+}
+
 async function openReadwise(session: T178AcceptanceSession) {
   await expectWorkspaceShell(session.firstWindow);
   await openSettingsCategory(session.firstWindow, 'Appearance');
@@ -74,7 +101,7 @@ test('echoes the active migration below the connection and removes it on complet
     let settings = await openReadwise(session);
     let connection = settings.getByLabel(/^(API connection|API 连接)$/);
     await expect(connection.getByText(/^(Connected|已连接)$/)).toBeVisible();
-    await expect(connection.getByText(/^(Migrating · Indexing|正在迁移 · 索引中)$/)).toBeVisible();
+    await expect(connection.getByText(/^(Migrating · Importing|正在迁移 · 导入中)$/)).toBeVisible();
     await expect(connection.getByRole('button', { name: /^(Disconnect|断开)$/ })).toBeVisible();
     await captureConnection(connection, testInfo, 'migration-indexing-echo');
 
@@ -83,13 +110,19 @@ test('echoes the active migration below the connection and removes it on complet
     session = await createT178ApiAcceptanceSession(completedStateRoot);
     await seedConnectedApi(session.electronApp, false);
     await seedCompletedReadwiseApiMode(session.electronApp, '2026-09-15T00:00:01.000Z');
+    await seedCompletedFailure(session.electronApp);
     await session.firstWindow.reload();
     settings = await openReadwise(session);
     connection = settings.getByLabel(/^(API connection|API 连接)$/);
     await expect(connection.getByText(/^(Connected|已连接)$/)).toBeVisible();
-    await expect(connection.getByText(/^(Migrating · Indexing|正在迁移 · 索引中)$/)).toHaveCount(0);
+    await expect(connection.getByText(/^(Migrating · Importing|正在迁移 · 导入中)$/)).toHaveCount(0);
     await expect(connection.getByRole('button', { name: /^(Disconnect|断开)$/ })).toBeVisible();
+    const issues = settings.getByRole('region', { name: /^(Migration issues|迁移问题)$/ });
+    await expect(issues.getByText('Broken EPUB')).toBeVisible();
+    await expect(issues).toContainText(/original_file_download_failed/);
     await captureConnection(connection, testInfo, 'migration-completed-echo-removed');
+    await captureConnection(issues, testInfo, 'migration-failure-details');
+    await captureConnection(settings, testInfo, 'migration-failure-settings');
   } finally {
     await session?.close().catch(() => undefined);
     await rm(activeStateRoot, { force: true, recursive: true });

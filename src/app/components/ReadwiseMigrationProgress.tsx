@@ -7,7 +7,6 @@ import type { ReadwiseMigrationState } from './useReadwiseSourceMigration';
 
 interface MigrationPresentation {
   active: boolean;
-  details?: string[];
   failed: boolean;
   retryable: boolean;
   text: string;
@@ -38,12 +37,7 @@ export function ReadwiseMigrationProgress(props: {
       {presentation.active
         ? <AppSpinner decorative size="sm" tone={presentation.failed ? 'danger' : 'neutral'} />
         : null}
-      <span>
-        {presentation.text}
-        {presentation.details?.map((detail) => (
-          <span className="mt-1 block text-ui-sm" key={detail}>{detail}</span>
-        ))}
-      </span>
+      <span>{presentation.text}</span>
       {presentation.retryable && props.onRetry ? (
         <AppButton onClick={props.onRetry} size="sm" variant="default">
           {t('desktop.readwise.cutover.retry')}
@@ -101,7 +95,7 @@ function inactiveMigrationPresentation(
   compact: boolean,
   failures: NonNullable<ReadwiseMigrationState['failures']>
 ) {
-  if (failures.length > 0) return completedFailurePresentation(failures, t, compact);
+  if (failures.length > 0) return completedFailurePresentation(failures, t);
   const initialRun = taskStatus?.initial_sync.lifecycle;
   if (initialRun?.status === 'running') {
     const phase = initialRun.stage === 'fetching'
@@ -138,28 +132,14 @@ function inactiveMigrationPresentation(
 
 function completedFailurePresentation(
   failures: NonNullable<ReadwiseMigrationState['failures']>,
-  t: ReturnType<typeof useTranslation>,
-  compact: boolean
+  t: ReturnType<typeof useTranslation>
 ) {
   return {
     active: false,
-    ...(compact ? {} : { details: failures.map((failure) => t(
-      'desktop.readwise.cutover.result.failureDetail', {
-        reason: cutoverFailureReason(failure.reason, t),
-        stage: t(`desktop.readwise.cutover.failureStage.${failure.stage}`),
-        title: failure.title
-      }
-    )) }),
     failed: true,
     retryable: false,
     text: t('desktop.readwise.cutover.result.completedWithFailures', { count: failures.length })
   };
-}
-
-function cutoverFailureReason(reason: string, t: ReturnType<typeof useTranslation>) {
-  return reason === 'readwise_source_cutover_document_timeout'
-    ? t('desktop.readwise.cutover.failureReason.timeout')
-    : t('desktop.readwise.cutover.failureReason.processingFailed');
 }
 
 function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null) {

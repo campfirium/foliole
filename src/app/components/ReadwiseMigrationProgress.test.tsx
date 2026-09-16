@@ -139,7 +139,7 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('shows the failed source and step after migration completes', () => {
+it('keeps completed migration failures summarized in the source selector', () => {
   render(
     <LocalizationProvider>
       <ReadwiseMigrationProgress
@@ -163,6 +163,6 @@ it('shows the failed source and step after migration completes', () => {
 
   expect(screen.getByText('Migration completed · Incomplete sources: 1'))
     .toBeInTheDocument();
-  expect(screen.getByText('Broken PDF · getting its file or images · timed out')).toBeInTheDocument();
+  expect(screen.queryByText('Broken PDF')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
 });
