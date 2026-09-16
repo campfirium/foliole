@@ -71,11 +71,11 @@ it('keeps relay mode while a long migration is still running', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'start-migration' }));
 
   await waitFor(() => expect(cutover.run).toHaveBeenCalled());
-  expect(screen.getByTestId('phase')).toHaveTextContent('none:0/12');
+  expect(screen.getByTestId('phase')).toHaveTextContent('none:0/none');
   act(() => events.handler?.({
     phase: 'indexing', processedCount: 0, status: 'running', totalCount: 0
   }));
-  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:0/12');
+  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:0/none');
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
@@ -91,7 +91,7 @@ it('restores a durable migration without making the settings page execute it', a
   render(<Probe committedMode="relay" onCommitMode={onCommitMode} onSelectApi={onSelectApi} />);
 
   await waitFor(() => expect(onSelectApi).toHaveBeenCalledOnce());
-  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:0/12');
+  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:0/none');
   act(() => events.handler?.({
     phase: 'indexing', processedCount: 3, status: 'running', totalCount: 12
   }));

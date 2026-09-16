@@ -19,6 +19,8 @@ interface SourceRow extends DatabaseRow {
   source_fingerprint: string;
   source_location: string;
   source_ref: string;
+  source_title: string;
+  type_settings_json: string;
 }
 
 export interface ReadwiseSourceArtifact {
@@ -27,8 +29,11 @@ export interface ReadwiseSourceArtifact {
   highlightIds: Set<string>;
   latestNodeId: string;
   nodeActive: boolean;
+  originalUrl?: string | null;
   raw: string;
+  sourceCategory?: 'articles' | 'books' | 'podcasts' | 'tweets' | null;
   sourceFingerprint: string | null;
+  title?: string;
 }
 
 export async function loadReadwiseSourceArtifacts(): Promise<ReadwiseSourceArtifact[]> {
@@ -39,20 +44,21 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
   const driver = openDatabaseConnection().driver;
   const dispositionsByPath = readDispositionsByPath(driver);
   const rows = driver.queryAll<{
-    last_node_id: string; raw: string; rule_id: string; source_fingerprint: string | null;
-    source_path: string;
+    kind: string | null; last_node_id: string; raw: string; rule_id: string;
+    source_fingerprint: string | null; source_path: string; title: string;
   }>(`SELECT item.rule_id,item.source_path,item.last_node_id,
       COALESCE(cache.content,cache.content_preview,'') raw,
+      COALESCE(node.title,cache.title,'') title,
+      json_extract(desktop.type_settings_json, '$.kind') kind,
       (SELECT source_fingerprint FROM import_sources source
        WHERE source.latest_node_id=item.last_node_id AND source.remote_document_id IS NULL
        ORDER BY source.last_imported_at DESC LIMIT 1) source_fingerprint
     FROM keep_import_items item
+    JOIN desktop_sources desktop ON desktop.config_ref=item.rule_id
+      AND desktop.source_type='readwise' AND desktop.host_name=?
     LEFT JOIN keep_import_item_cache cache ON cache.rule_id=item.rule_id AND cache.source_path=item.source_path
     JOIN nodes node ON node.id=item.last_node_id AND node.deleted_at IS NULL
-    WHERE item.last_node_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM desktop_sources desktop WHERE desktop.config_ref=item.rule_id
-        AND desktop.source_type='readwise' AND desktop.host_name=?
-    )`,
+    WHERE item.last_node_id IS NOT NULL`,
   [loadReadwiseHostAssignment().current_host_name]);
   return rows.map((row) => {
     const ids = new Set(extractReaderLinkIds(row.raw));
@@ -64,8 +70,11 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
       highlightIds: ids,
       latestNodeId: row.last_node_id,
       nodeActive: true,
+      originalUrl: extractOriginalUrl(row.raw),
       raw: row.raw,
-      sourceFingerprint: row.source_fingerprint
+      sourceCategory: sourceCategory(row.kind),
+      sourceFingerprint: row.source_fingerprint,
+      title: row.title
     };
   });
 }
@@ -76,9 +85,11 @@ async function loadFolderArtifacts() {
   const rows = driver.queryAll<SourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, i.source_ref,
        i.remote_document_id, d.root_path,
+       n.title source_title, d.type_settings_json,
        EXISTS(SELECT 1 FROM nodes n WHERE n.id = i.latest_node_id AND n.deleted_at IS NULL) AS node_active,
        json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
      FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
+     LEFT JOIN nodes n ON n.id = i.latest_node_id
      WHERE d.source_type = 'readwise' AND d.host_name = ?
        AND i.latest_node_id IS NOT NULL AND i.source_location IS NOT NULL
      ORDER BY i.source_fingerprint`,
@@ -99,8 +110,11 @@ async function loadFolderArtifacts() {
       highlightIds: new Set(extractReaderLinkIds(raw)),
       latestNodeId: source.latest_node_id,
       nodeActive: source.node_active === 1,
+      originalUrl: extractOriginalUrl(full || raw),
       raw,
-      sourceFingerprint: source.source_fingerprint
+      sourceCategory: sourceCategory(parseKind(source.type_settings_json)),
+      sourceFingerprint: source.source_fingerprint,
+      title: source.source_title
     };
   }));
 }
@@ -131,4 +145,31 @@ function sourcePathKey(ruleId: string, sourcePath: string) {
 async function readText(filePath: string) {
   if (!filePath) return '';
   try { return await fs.readFile(filePath, 'utf8'); } catch { return ''; }
+}
+
+function parseKind(value: string) {
+  try {
+    const parsed = JSON.parse(value) as { kind?: unknown };
+    return typeof parsed.kind === 'string' ? parsed.kind : null;
+  } catch {
+    return null;
+  }
+}
+
+function sourceCategory(value: string | null) {
+  return value === 'articles' || value === 'books' || value === 'podcasts' || value === 'tweets'
+    ? value : null;
+}
+
+function extractOriginalUrl(value: string) {
+  const explicit = /^(?:source(?: url)?|original url)\s*:\s*(https?:\/\/\S+)\s*$/imu.exec(value)?.[1];
+  const linked = /\[(?:source|original)\]\((https?:\/\/[^)]+)\)/iu.exec(value)?.[1];
+  const candidate = explicit ?? linked;
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate.replace(/[),.;]+$/u, ''));
+    return /(^|\.)readwise\.io$/iu.test(url.hostname) ? null : url.toString();
+  } catch {
+    return null;
+  }
 }

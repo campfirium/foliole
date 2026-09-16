@@ -28,6 +28,7 @@ import {
   readReadwiseApiSecret,
   writeReadwiseApiSecret
 } from './readwiseApiSecret.js';
+import { invalidateIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
 
 const READWISE_AUTH_URL = 'https://readwise.io/api/v2/auth/';
 
@@ -121,6 +122,15 @@ export async function connectReadwiseApiFromClipboard(
   try {
     const verifiedAt = new Date().toISOString();
     saveConnection({ secretRef, state: 'connected', verifiedAt }, remoteSource);
+    if (previousToken && previousToken !== token) {
+      const source = remoteSource ?? loadReadwiseRemoteSource();
+      if (source) {
+        invalidateIncompleteReadwiseSourceCutover({
+          connectionRef: source.connectionRef,
+          sourceHost: loadReadwiseHostAssignment().current_host_name
+        });
+      }
+    }
   } catch (error) {
     if (previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     else deleteReadwiseApiSecret(secretRef);

@@ -109,7 +109,8 @@ async function requireSourceArtifacts() {
 function bindingFor(
   artifact: ReadwiseSourceArtifact,
   document: PreparedReadwiseApiDocument,
-  exactDocuments: ReadonlyMap<string, ReaderDocumentContract>
+  exactDocuments: ReadonlyMap<string, ReaderDocumentContract>,
+  blockedAnnotationIds: ReadonlySet<string> = new Set()
 ): ReadwiseSourceCutoverIdentityBinding {
   const ids = extractReaderLinkIds(artifact.raw);
   const highlights = extractReadwiseSidecarHighlights(
@@ -117,7 +118,7 @@ function bindingFor(
     loadStoredReadwiseHostSettings().readwiseReaderConfig
   );
   const annotations = highlights.length === ids.length
-    ? highlights.flatMap((highlight, index) => resolveAnnotation(
+    ? highlights.flatMap((highlight, index) => blockedAnnotationIds.has(ids[index] ?? '') ? [] : resolveAnnotation(
       artifact.latestNodeId,
       highlight.text,
       exactAnnotation(ids[index], document.id, exactDocuments)
@@ -125,11 +126,22 @@ function bindingFor(
     : [];
   return {
     annotations,
-    legacyAnnotations: legacyAnnotationsFor(artifact, document.id, exactDocuments),
+    blockedAnnotationIds: new Set(blockedAnnotationIds),
+    legacyAnnotations: legacyAnnotationsFor(artifact, document.id, exactDocuments)
+      .filter((item) => !blockedAnnotationIds.has(item.remoteId)),
     nodeId: artifact.latestNodeId,
     remoteDocumentId: document.id,
     sourceFingerprint: artifact.sourceFingerprint ?? ''
   };
+}
+
+export function createReadwiseSourceCutoverBinding(
+  artifact: ReadwiseSourceArtifact,
+  document: PreparedReadwiseApiDocument,
+  documents: ReadonlyMap<string, ReaderDocumentContract>,
+  blockedAnnotationIds: ReadonlySet<string> = new Set()
+) {
+  return bindingFor(artifact, document, documents, blockedAnnotationIds);
 }
 
 function legacyAnnotationsFor(

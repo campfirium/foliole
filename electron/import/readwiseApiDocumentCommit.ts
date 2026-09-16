@@ -53,19 +53,21 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
   if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
   input = { ...input, document: guardedDocument };
-  const isOriginalFile = input.document.category === 'pdf';
+  const originalFileCategory = originalFileCategoryFor(input.document.category);
   const previousOriginalFile = input.reimportDeleted && existingBefore?.nodeDeleted
     ? null : existingBefore?.state.originalFile;
   const materializesLocally = Boolean(existingBefore) || input.destination === 'inbox';
   const prepared = input.preparedResources
     ? input.preparedResources.originalFile
-    : isOriginalFile && materializesLocally && previousOriginalFile?.status !== 'localized'
+    : originalFileCategory && materializesLocally && previousOriginalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
-      category: 'pdf',
+      category: originalFileCategory,
       ...(input.dependencies ? { dependencies: input.dependencies } : {}),
-      documentId: input.document.id, hasHtmlBody: Boolean(input.document.body.trim())
+      documentId: input.document.id,
+      hasHtmlBody: Boolean(input.document.body.trim()),
+      ...(input.document.rawSourceUrl === undefined ? {} : { rawSourceUrl: input.document.rawSourceUrl })
     }) : null;
-  const document = isOriginalFile && materializesLocally
+  const document = originalFileCategory && materializesLocally
     ? withOriginalFileStatus(input.document, prepared?.state ?? previousOriginalFile ?? null)
     : input.document;
   const forceEpubStructure = Boolean(input.forceEpubStructure || input.preparedResources?.forceEpubStructure);
@@ -81,7 +83,7 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     ...(input.replaceExistingBody === undefined && !forceEpubStructure
       ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || forceEpubStructure) })
   });
-  if (!isOriginalFile || result.status !== 'imported') return result;
+  if (!originalFileCategory || result.status !== 'imported') return result;
 
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   if (!prepared || previousOriginalFile?.status === 'localized') return result;
@@ -91,7 +93,7 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     try {
       await persistReadwiseApiOriginalFile({
         bytes: prepared.bytes,
-        category: 'pdf',
+        category: originalFileCategory,
         nodeId: existing.nodeId,
         state: prepared.state,
         title: input.document.title
@@ -104,6 +106,10 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   }
   saveOriginalFileState(input.connectionRef, input.document.id, finalState);
   return result;
+}
+
+function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {
+  return category === 'pdf' || category === 'epub' ? category : null;
 }
 
 function shouldSkipHandledDocument(input: ReadwiseApiDocumentCommitInput) {

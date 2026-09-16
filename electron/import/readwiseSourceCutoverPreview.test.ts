@@ -76,18 +76,18 @@ it('restores the merging phase from an unfinished durable cohort', async () => {
     startedAt: '2026-09-09T00:00:00.000Z', status: 'migration-in-progress'
   });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
-    completed_count: 0, phase: 'merging', status: 'migration_in_progress', total_count: 1
+    completed_count: 0, phase: 'merging', status: 'migration_in_progress', total_count: 0
   });
 });
 
-it('uses the known source Topic count while rebuilding the Readwise index', async () => {
+it('does not present the legacy Topic count as a remote import total', async () => {
   writeReadwiseSourceCutover({
     annotations: [], cohortDocumentIds: [], completedAt: '2026-09-11T01:00:00.000Z',
     documents: [], retiredNodeIds: ['retired-1'], sourceHost: 'This Mac',
     startedAt: '2026-09-11T01:00:00.000Z', status: 'migration-in-progress'
   });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
-    completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: 0
+    completed_count: 0, phase: 'indexing', status: 'migration_in_progress', total_count: null
   });
 });
 

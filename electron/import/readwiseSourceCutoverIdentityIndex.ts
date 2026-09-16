@@ -56,8 +56,11 @@ function groupArtifacts(artifacts: ReadwiseSourceArtifact[]) {
       highlightIds: new Set([...previous.highlightIds, ...artifact.highlightIds]),
       latestNodeId: artifact.latestNodeId,
       nodeActive: previous.nodeActive || artifact.nodeActive,
+      originalUrl: previous.originalUrl ?? artifact.originalUrl ?? null,
       raw: preferredRaw(previous, artifact),
-      sourceFingerprint: previous.sourceFingerprint ?? artifact.sourceFingerprint
+      sourceCategory: previous.sourceCategory ?? artifact.sourceCategory ?? null,
+      sourceFingerprint: previous.sourceFingerprint ?? artifact.sourceFingerprint,
+      title: previous.title || artifact.title || ''
     });
   }
   return [...byNode.values()];

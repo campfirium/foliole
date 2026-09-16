@@ -1,5 +1,5 @@
 import { openDatabaseConnection } from '../database/connection.js';
-import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 export function restartIncompleteReadwiseSourceCutover(input: {
   connectionRef: string;
@@ -21,7 +21,22 @@ export function restartIncompleteReadwiseSourceCutover(input: {
     retiredNodeIds: [],
     sourceHost: input.sourceHost,
     startedAt: input.startedAt,
-    status: 'migration-in-progress'
+    status: 'migration-in-progress',
+    unmatchedLegacy: []
   }, restartedAt);
   return state;
+}
+
+export function invalidateIncompleteReadwiseSourceCutover(input: {
+  connectionRef: string;
+  sourceHost: string;
+}) {
+  const current = loadReadwiseSourceCutover();
+  if (current?.status !== 'migration-in-progress') return false;
+  restartIncompleteReadwiseSourceCutover({
+    connectionRef: input.connectionRef,
+    sourceHost: input.sourceHost,
+    startedAt: new Date().toISOString()
+  });
+  return true;
 }

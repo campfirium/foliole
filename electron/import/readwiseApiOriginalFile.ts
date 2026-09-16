@@ -26,13 +26,23 @@ export async function prepareReadwiseApiOriginalFile(input: {
   documentId: string;
   hasHtmlBody: boolean;
   dependencies?: ReadwiseApiFetchDependencies;
+  rawSourceUrl?: string | null;
 }): Promise<PreparedReadwiseOriginalFile> {
   try {
-    const document = await fetchReadwiseRawSourceDocument(input.documentId, input.dependencies);
-    if (!document?.rawSourceUrl || document.category !== input.category) {
-      return degraded(input.hasHtmlBody, 'original_file_not_distributed');
+    let rawSourceUrl = input.rawSourceUrl ?? null;
+    if (!rawSourceUrl) {
+      rawSourceUrl = await refreshRawSourceUrl(input);
     }
-    const bytes = await downloadReadwiseOriginalFile(document.rawSourceUrl, input.category, input.dependencies);
+    if (!rawSourceUrl) return degraded(input.hasHtmlBody, 'original_file_not_distributed');
+    let bytes: Uint8Array;
+    try {
+      bytes = await downloadReadwiseOriginalFile(rawSourceUrl, input.category, input.dependencies);
+    } catch (error) {
+      if (!input.rawSourceUrl || !isExpiredOriginalFileUrl(error)) throw error;
+      const refreshed = await refreshRawSourceUrl(input);
+      if (!refreshed) return degraded(input.hasHtmlBody, 'original_file_not_distributed');
+      bytes = await downloadReadwiseOriginalFile(refreshed, input.category, input.dependencies);
+    }
     const contentHash = createHash('sha256').update(bytes).digest('hex');
     return {
       bytes,
@@ -45,6 +55,23 @@ export async function prepareReadwiseApiOriginalFile(input: {
     if (isAbortError(error)) throw error;
     return degraded(input.hasHtmlBody, originalFileFailureReason(error));
   }
+}
+
+async function refreshRawSourceUrl(input: {
+  category: OriginalFileCategory;
+  dependencies?: ReadwiseApiFetchDependencies;
+  documentId: string;
+}) {
+  const document = await fetchReadwiseRawSourceDocument(input.documentId, input.dependencies);
+  return document?.category === input.category ? document.rawSourceUrl : null;
+}
+
+function isExpiredOriginalFileUrl(error: unknown) {
+  return error instanceof Error && (
+    error.message === 'original_file_http_400'
+    || error.message === 'original_file_http_401'
+    || error.message === 'original_file_http_403'
+  );
 }
 
 export async function persistReadwiseApiOriginalFile(input: {

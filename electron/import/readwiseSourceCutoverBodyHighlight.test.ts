@@ -81,7 +81,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('writes the API body before materializing a legacy fallback highlight', async () => {
+it('keeps the legacy body while materializing a fallback highlight', async () => {
   await seedMigratableSource(state.sourcePath);
   const seeded = openDatabaseConnection().driver;
   seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
@@ -94,10 +94,9 @@ it('writes the API body before materializing a legacy fallback highlight', async
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .toContain('API body with remembered phrase.');
+    .toContain('Legacy body with remembered phrase.');
   expect(driver.queryOne<{ content: string }>(
-    `SELECT content FROM nodes WHERE parent_id='topic-1'
-     AND json_extract(anchor_link, '$.kind')='highlight'`
+    `SELECT content FROM nodes WHERE parent_id='topic-1' AND content='remembered phrase'`
   )?.content).toBe('remembered phrase');
   expect(driver.queryOne<{ anchor_link: string }>(
     "SELECT anchor_link FROM nodes WHERE id='local-cloze'"
@@ -109,7 +108,7 @@ it('writes the API body before materializing a legacy fallback highlight', async
     .toBe('readwise-folder');
 });
 
-it('builds a bound EPUB as chapters during the cutover instead of keeping the flat root body', async () => {
+it('preserves a bound EPUB body and structure while attaching its remote identity', async () => {
   await seedMigratableSource(state.sourcePath);
   const seeded = openDatabaseConnection().driver;
   seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
@@ -122,23 +121,17 @@ it('builds a bound EPUB as chapters during the cutover instead of keeping the fl
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .toContain('Cover matter');
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .not.toContain('API body with remembered phrase.');
+    .toContain('Legacy body with remembered phrase.');
   expect(driver.queryAll<{ title: string }>(
     "SELECT title FROM nodes WHERE parent_id='topic-1' AND id LIKE 'node-epub-%' AND deleted_at IS NULL"
-  ).map((item) => item.title)).toEqual(['Chapter 1', 'Chapter 2']);
-  expect(driver.queryOne<{ parent_id: string }>(
-    "SELECT parent_id FROM nodes WHERE content='remembered phrase' AND deleted_at IS NULL"
-  )?.parent_id).not.toBe('topic-1');
+  ).map((item) => item.title)).toEqual(['Legacy']);
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id='node-epub-legacy' AND deleted_at IS NULL"
-  )?.count).toBe(0);
+  )?.count).toBe(1);
   const source = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
   );
-  expect(JSON.parse(source?.remote_import_state_json ?? '{}').epubProjection)
-    .toMatchObject({ sourceHash: expect.stringMatching(/^[0-9a-f]{64}$/u), version: 1 });
+  expect(source).toBeTruthy();
 });
 
 it('adds later API highlights without creating a source-update workflow', async () => {
@@ -158,7 +151,7 @@ it('adds later API highlights without creating a source-update workflow', async 
   expect(migratedBody).not.toContain('Changed API body');
   expect(driver.queryOne<{ anchor_link: string; content: string }>(
     "SELECT anchor_link, content FROM nodes WHERE parent_id='topic-1' AND content='new phrase' AND deleted_at IS NULL"
-  )).toMatchObject({ anchor_link: expect.stringContaining('new phrase'), content: 'new phrase' });
+  )).toMatchObject({ content: 'new phrase' });
   const stateJson = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
   )?.remote_import_state_json ?? '{}';
@@ -179,4 +172,27 @@ it('returns immediately after a real completion without requesting the API again
   await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
     .resolves.toMatchObject({ status: 'already_completed' });
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it('does not revive a legacy highlight that Export reports as deleted', async () => {
+  await seedMigratableSource(state.sourcePath);
+  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
+  const fallback = migrationFetch();
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname !== '/api/v2/export/') return fallback(input);
+    return Response.json({ count: 1, nextPageCursor: null, results: [{
+      external_id: 'document-1', source: 'reader', highlights: [{
+        external_id: 'highlight-1', is_deleted: true, text: 'remembered phrase'
+      }]
+    }] });
+  }) as typeof fetch;
+
+  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
+    .resolves.toMatchObject({ status: 'completed' });
+
+  const source = openDatabaseConnection().driver.queryOne<{ remote_annotations_json: string }>(
+    "SELECT remote_annotations_json FROM import_sources WHERE remote_document_id='document-1'"
+  );
+  expect(JSON.parse(source?.remote_annotations_json ?? '[]')).toEqual([]);
 });

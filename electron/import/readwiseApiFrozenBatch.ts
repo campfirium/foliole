@@ -34,13 +34,17 @@ export async function prepareReadwiseApiFrozenResources(input: {
     connectionRef: input.connectionRef,
     document: input.document
   });
-  const originalFile = input.document.category === 'pdf' && destination === 'inbox'
+  const originalFileCategory = input.document.category === 'pdf' || input.document.category === 'epub'
+    ? input.document.category : null;
+  const originalFile = originalFileCategory && destination === 'inbox'
+    && (originalFileCategory !== 'epub' || !existing)
     && existing?.state.originalFile?.status !== 'localized'
     ? await prepareReadwiseApiOriginalFile({
-      category: 'pdf',
+      category: originalFileCategory,
       dependencies: input.dependencies,
       documentId: input.document.id,
-      hasHtmlBody: Boolean(input.document.body.trim())
+      hasHtmlBody: Boolean(input.document.body.trim()),
+      ...(input.document.rawSourceUrl === undefined ? {} : { rawSourceUrl: input.document.rawSourceUrl })
     })
     : null;
   const epubImages = await prepareReadwiseApiEpubImagesIfNeeded({
@@ -60,6 +64,7 @@ export async function prepareReadwiseApiFrozenResources(input: {
   if (originalFile?.bytes && originalFile.state.status === 'localized') {
     await stageReadwiseApiOriginalFile({
       bytes: originalFile.bytes,
+      category: originalFileCategory ?? 'pdf',
       state: originalFile.state,
       title: input.document.title
     });

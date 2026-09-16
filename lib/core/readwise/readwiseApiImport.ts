@@ -37,6 +37,7 @@ export interface PreparedReadwiseApiDocument {
   epubStructure?: PreparedReadwiseApiEpubStructure | null;
   id: string;
   metadata: ReadwiseApiSourceMetadata;
+  rawSourceUrl?: string | null;
   title: string;
   unmatchedAnnotationCount: number;
   updatedAt: string | null;
@@ -113,6 +114,7 @@ function prepareDocument(
       author: document.author, category: document.category, readerUrl: document.url,
       sourceUrl: document.sourceUrl, title
     },
+    rawSourceUrl: document.rawSourceUrl,
     title,
     unmatchedAnnotationCount,
     updatedAt: document.updatedAt

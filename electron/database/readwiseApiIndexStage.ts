@@ -43,7 +43,7 @@ export function saveReadwiseApiReaderIndexPage(
         JSON.stringify({
           ...document,
           matchedImportTag: matchedImportTag ?? previous?.matchedImportTag ?? null,
-          rawSourceUrl: null
+          rawSourceUrl: document.rawSourceUrl
         })
       ]);
       if (document.category === 'highlight' || document.category === 'note') {

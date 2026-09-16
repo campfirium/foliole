@@ -98,6 +98,33 @@ it('refreshes an S3 URL without forwarding the token and persists one verified P
   )).toEqual({ availability: 'local', content_hash: prepared.state.contentHash });
 });
 
+it('uses the paged raw URL and refreshes only that document when the URL has expired', async () => {
+  const bytes = Buffer.from('%PDF-1.7\nverified original\n%%EOF');
+  fetchRawSource.mockResolvedValue({
+    category: 'pdf', id: 'document-1', rawSourceUrl: 'https://bucket.s3.amazonaws.com/fresh.pdf'
+  });
+  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes('expired.pdf')) return new Response(null, { status: 403 });
+    return new Response(bytes, {
+      headers: { 'content-type': 'application/pdf' }, status: 200
+    });
+  }) as typeof fetch;
+
+  await expect(prepareReadwiseApiOriginalFile({
+    category: 'pdf', dependencies: { fetchImpl }, documentId: 'document-1',
+    hasHtmlBody: true, rawSourceUrl: 'https://bucket.s3.amazonaws.com/paged.pdf'
+  })).resolves.toMatchObject({ state: { status: 'localized' } });
+  expect(fetchRawSource).not.toHaveBeenCalled();
+
+  await expect(prepareReadwiseApiOriginalFile({
+    category: 'pdf', dependencies: { fetchImpl }, documentId: 'document-1',
+    hasHtmlBody: true, rawSourceUrl: 'https://bucket.s3.amazonaws.com/expired.pdf'
+  })).resolves.toMatchObject({ state: { status: 'localized' } });
+  expect(fetchRawSource).toHaveBeenCalledTimes(1);
+  expect(fetchRawSource).toHaveBeenCalledWith('document-1', expect.objectContaining({ fetchImpl }));
+});
+
 it('keeps HTML with explicit reasons for oversized and invalid PDF originals', async () => {
   fetchRawSource.mockResolvedValue({
     category: 'pdf', id: 'document-1', rawSourceUrl: 'https://bucket.s3.amazonaws.com/signed.pdf'

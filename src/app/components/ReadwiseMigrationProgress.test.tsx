@@ -5,7 +5,7 @@ import { LocalizationProvider } from '../../shared/localization/LocalizationProv
 
 import { ReadwiseMigrationProgress } from './ReadwiseMigrationProgress';
 
-it('shows the frozen parent total while indexing resources', () => {
+it('shows remote records while importing migration facts', () => {
   render(
     <LocalizationProvider>
       <ReadwiseMigrationProgress
@@ -21,7 +21,7 @@ it('shows the frozen parent total while indexing resources', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Indexing · 12 / 234')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Importing · 12 / 234')).toBeInTheDocument();
 });
 
 it('provides a compact visual-only phase without repeating progress details', () => {
@@ -41,7 +41,7 @@ it('provides a compact visual-only phase without repeating progress details', ()
     </LocalizationProvider>
   );
 
-  const status = screen.getByText('Migrating · Indexing');
+  const status = screen.getByText('Migrating · Importing');
   expect(status).toHaveAttribute('aria-hidden', 'true');
   expect(screen.queryByText(/12 \/ 234/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Indexing failed')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Import failed')).toBeInTheDocument();
   expect(screen.queryByText(/request_failed/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });

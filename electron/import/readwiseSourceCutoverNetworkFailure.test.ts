@@ -80,6 +80,7 @@ it('keeps the irreversible migration state after a network failure', async () =>
     .resolves.toMatchObject({ status: 'failed' });
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
     completed_count: 0,
+    error_reason: 'request_failed',
     phase: 'indexing',
     status: 'migration_in_progress'
   });

@@ -5,7 +5,10 @@ import {
 import type { NativeReadwiseSourceCutoverResult } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
-import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import {
+  loadReadwiseSourceCutover,
+  writeReadwiseSourceCutover
+} from '../database/readwiseSourceCutover.js';
 import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportProgressEvents.js';
 
@@ -13,13 +16,13 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
-import { runReadwiseSourceCutoverExact } from './readwiseSourceCutoverExactRun.js';
 import {
   completeReadwiseSourceCutoverMigration,
   requireReadwiseSourceCutoverV2
 } from './readwiseSourceCutoverJournal.js';
 import { firstReadwiseCandidateFailureReason } from './readwiseSourceCutoverPreview.js';
 import { restartIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
+import { runReadwiseSourceCutoverSnapshot } from './readwiseSourceCutoverSnapshotRun.js';
 
 interface RunReadwiseSourceCutoverInput {
   dependencies?: ReadwiseApiFetchDependencies;
@@ -76,6 +79,7 @@ async function runNow(
     await input.onMigrationStarted?.();
     publishProgress(input.window, 0, 0, 'indexing');
   }
+  recordCutoverError(null);
   try {
     const output = await runCutoverPipeline(source.connectionRef, input);
     const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
@@ -87,8 +91,19 @@ async function runNow(
     return result('completed', completed.migratedCount, completed.unmatchedCount);
   } catch (error) {
     console.error('[readwise-cutover] migration paused', error);
-    return result('failed', 0, 0, safeFailureReason(error));
+    const reason = safeFailureReason(error);
+    recordCutoverError(reason);
+    publishFailed(input.window);
+    return result('failed', 0, 0, reason);
   }
+}
+
+function recordCutoverError(errorReason: string | null) {
+  const current = loadReadwiseSourceCutover();
+  if (!current || current.version !== 2 || current.status !== 'migration-in-progress') return;
+  const next = { ...current };
+  delete next.errorReason;
+  writeReadwiseSourceCutover({ ...next, ...(errorReason ? { errorReason } : {}) });
 }
 
 async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourceCutoverInput) {
@@ -97,7 +112,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     ...input.dependencies,
     allowFolderModeForCutover: true
   };
-  return runReadwiseSourceCutoverExact({
+  return runReadwiseSourceCutoverSnapshot({
     assertEligible: () => assertMigrationEligible(connectionRef),
     connectionRef,
     dependencies,
@@ -147,6 +162,14 @@ function publishProgress(
     processedCount: completed,
     status: 'running',
     totalCount: total
+  }, window);
+}
+
+function publishFailed(window: ReadwiseImportProgressWindow | null | undefined) {
+  const current = loadReadwiseSourceCutover();
+  const phase = current?.version === 2 && current.phase === 'merging' ? 'merging' : 'indexing';
+  notifyReadwiseReaderImportProgress({
+    phase, processedCount: 0, status: 'failed', totalCount: 0
   }, window);
 }
 

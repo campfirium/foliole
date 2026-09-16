@@ -43,7 +43,8 @@ export function loadReadwiseApiCompletedThrough(connectionRef: string) {
 
 export function loadOrCreateReadwiseApiImportRun(
   connectionRef: string,
-  now = new Date().toISOString()
+  now = new Date().toISOString(),
+  fullSnapshot = false
 ): ReadwiseApiImportRunState {
   const driver = openDatabaseConnection().driver;
   const existing = driver.queryOne<Record<string, unknown>>(
@@ -54,9 +55,9 @@ export function loadOrCreateReadwiseApiImportRun(
     `INSERT INTO readwise_api_import_runs (
       connection_ref, query_updated_after, round_started_at, reader_cursor, export_cursor, phase, updated_at
     ) VALUES (?, ?, ?, NULL, NULL, 'reader', ?)`,
-    [connectionRef, loadReadwiseApiCompletedThrough(connectionRef), now, now]
+    [connectionRef, fullSnapshot ? null : loadReadwiseApiCompletedThrough(connectionRef), now, now]
   );
-  return loadOrCreateReadwiseApiImportRun(connectionRef, now);
+  return loadOrCreateReadwiseApiImportRun(connectionRef, now, fullSnapshot);
 }
 
 export function saveReadwiseApiStagePage(input: {
@@ -76,7 +77,7 @@ export function saveReadwiseApiStagePage(input: {
     );
     for (const item of input.items) {
       const remoteId = input.kind === 'reader' ? (item as ReaderDocumentContract).id : exportStageId(item as ExportBookContract);
-      insert.run([input.connectionRef, input.kind, remoteId, JSON.stringify(withoutRawSourceUrl(item))]);
+      insert.run([input.connectionRef, input.kind, remoteId, JSON.stringify(item)]);
     }
     const nextPhase: ReadwiseApiRunPhase = input.cursor ? input.kind : input.kind === 'reader' ? 'export' : 'ready';
     tx.execute(
@@ -183,10 +184,6 @@ function toRunState(row: Record<string, unknown>): ReadwiseApiImportRunState {
 
 function exportStageId(book: ExportBookContract) {
   return book.externalId ?? `unmapped:${book.highlightExternalIds.join(':')}`;
-}
-
-function withoutRawSourceUrl(item: ExportBookContract | ReaderDocumentContract) {
-  return 'rawSourceUrl' in item ? { ...item, rawSourceUrl: null } : item;
 }
 
 function parseJson(value: string) {

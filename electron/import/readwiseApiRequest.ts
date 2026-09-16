@@ -8,7 +8,7 @@ export interface ReadwiseApiFetchDependencies {
   allowFolderModeForCutover?: boolean;
   fetchImpl?: typeof fetch;
   minIntervalMs?: number;
-  onPage?: (input: { phase: 'export' | 'reader'; recordCount: number }) => void;
+  onPage?: (input: { phase: 'export' | 'reader'; recordCount: number; totalCount?: number }) => void;
   signal?: AbortSignal;
 }
 

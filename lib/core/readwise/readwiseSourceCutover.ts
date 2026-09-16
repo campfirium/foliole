@@ -33,11 +33,13 @@ export interface ReadwiseSourceCutover {
   completionVersion?: number;
   completedAt: string;
   documents: ReadwiseSourceCutoverClassification[];
+  errorReason?: string;
   phase?: 'indexing' | 'merging' | null;
   retiredNodeIds: string[];
   sourceHost: string;
   startedAt: string;
   status: ReadwiseSourceCutoverStatus;
+  unmatchedLegacy?: Array<{ nodeId: string; reason: string }>;
   version: 2;
 }
 
@@ -73,11 +75,14 @@ export function normalizeReadwiseSourceCutover(value: unknown): StoredReadwiseSo
       ? { completionVersion: payload.completionVersion } : {}),
     completedAt: text(payload.completedAt, 'completedAt'),
     documents,
+    ...(optionalText(payload.errorReason) ? { errorReason: optionalText(payload.errorReason)! } : {}),
     phase: cutoverPhase(payload.phase, payload.status),
     retiredNodeIds: uniqueStrings(payload.retiredNodeIds, 'retiredNodeIds'),
     sourceHost: text(payload.sourceHost, 'sourceHost'),
     startedAt: text(payload.startedAt, 'startedAt'),
     status: status(payload.status),
+    ...(payload.unmatchedLegacy === undefined
+      ? {} : { unmatchedLegacy: legacyFailures(payload.unmatchedLegacy) }),
     version: READWISE_SOURCE_CUTOVER_VERSION
   };
   const classifiedDocumentIds = new Set(documents.map((item) => item.remoteId));
@@ -85,6 +90,22 @@ export function normalizeReadwiseSourceCutover(value: unknown): StoredReadwiseSo
     throw new Error('readwise_source_cutover_incomplete_cohort');
   }
   return state;
+}
+
+function legacyFailures(value: unknown) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('readwise_source_cutover_invalid:unmatchedLegacy');
+  const failures = value.map((item, index) => {
+    const row = record(item, `unmatchedLegacy.${index}`);
+    return {
+      nodeId: text(row.nodeId, `unmatchedLegacy.${index}.nodeId`),
+      reason: text(row.reason, `unmatchedLegacy.${index}.reason`)
+    };
+  });
+  if (new Set(failures.map((item) => item.nodeId)).size !== failures.length) {
+    throw new Error('readwise_source_cutover_duplicate:unmatchedLegacy');
+  }
+  return failures;
 }
 
 export function readwiseSourceCutoverProgress(state: StoredReadwiseSourceCutover) {

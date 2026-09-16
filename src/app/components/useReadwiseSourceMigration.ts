@@ -34,11 +34,11 @@ export function useReadwiseSourceMigration(input: {
   const startingRef = useRef(false);
   const resumeAttemptedRef = useRef(false);
   useMigrationProgressEvents(setProgress);
-  const start = useCallback(async (initialTotalCount?: number) => {
+  const start = useCallback(async () => {
     if (startingRef.current) return;
     startingRef.current = true;
     setPending(true);
-    resetMigrationProgress(setProgress, initialTotalCount);
+    resetMigrationProgress(setProgress);
     try {
       const output = await runReadwiseSourceCutoverInRuntime();
       if (output.status === 'completed') await keepCompletedMergeVisible();
@@ -50,7 +50,7 @@ export function useReadwiseSourceMigration(input: {
         errorReason: output.error_reason ?? state.error_reason,
         failed: active && output.status !== 'completed' && output.status !== 'already_completed',
         phase: active ? state.phase : null,
-        totalCount: active ? state.total_count ?? state.topic_count : null
+        totalCount: active ? state.total_count : null
       });
       if (output.status === 'completed' || output.status === 'already_completed') {
         input.onCommitMode?.('api');
@@ -86,12 +86,11 @@ function useMigrationProgressEvents(
 }
 
 function resetMigrationProgress(
-  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
-  initialTotalCount?: number
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>
 ) {
   setProgress((current) => ({
     ...current, errorReason: null, failed: false,
-    totalCount: current.totalCount ?? initialTotalCount ?? null
+    totalCount: null
   }));
 }
 
@@ -160,7 +159,7 @@ function useResumeReadwiseMigration(
         errorReason: state.error_reason,
         failed: Boolean(state.error_reason),
         phase: state.phase,
-        totalCount: state.total_count ?? state.topic_count
+        totalCount: state.total_count
       });
     });
   }, [attempted, committedMode, onSelectApi, setProgress, setRequired]);

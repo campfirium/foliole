@@ -22,9 +22,12 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { restartReadwiseApiCandidateRun } from '../database/readwiseApiCandidateRun.js';
 import { loadReadwiseApiCandidates, saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
-import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
+import { loadReadwiseSourceCutover, writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-import { restartIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
+import {
+  invalidateIncompleteReadwiseSourceCutover,
+  restartIncompleteReadwiseSourceCutover
+} from './readwiseSourceCutoverReset.js';
 
 let tempRoot = '';
 
@@ -33,6 +36,33 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture('This Mac');
+});
+
+it('invalidates an unfinished fact batch without deleting imported Topics', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+    VALUES ('kept-topic',NULL,'topic','Kept',0,'body','old','old')`);
+  driver.execute(`INSERT INTO readwise_api_import_runs (
+    connection_ref,query_updated_after,round_started_at,reader_cursor,export_cursor,phase,updated_at
+  ) VALUES ('connection',NULL,'old','cursor',NULL,'reader','old')`);
+  driver.execute(`INSERT INTO readwise_api_import_stage (connection_ref,record_kind,remote_id,payload_json)
+    VALUES ('connection','reader','document-1','{}')`);
+  writeReadwiseSourceCutover({
+    annotations: [], cohortDocumentIds: ['document-1'], completedAt: 'old',
+    documents: [], phase: 'indexing', retiredNodeIds: [], sourceHost: 'This Mac',
+    startedAt: 'old', status: 'migration-in-progress'
+  });
+
+  expect(invalidateIncompleteReadwiseSourceCutover({
+    connectionRef: 'connection', sourceHost: 'This Mac'
+  })).toBe(true);
+
+  expect(driver.queryOne("SELECT id FROM nodes WHERE id='kept-topic'")).toEqual({ id: 'kept-topic' });
+  expect(driver.queryOne('SELECT connection_ref FROM readwise_api_import_runs')).toBeUndefined();
+  expect(driver.queryOne('SELECT remote_id FROM readwise_api_import_stage')).toBeUndefined();
+  expect(loadReadwiseSourceCutover()).toMatchObject({
+    cohortDocumentIds: [], documents: [], phase: 'indexing', status: 'migration-in-progress'
+  });
 });
 
 afterEach(async () => {

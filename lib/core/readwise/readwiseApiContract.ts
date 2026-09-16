@@ -16,6 +16,7 @@ export interface ReaderDocumentContract {
   rawSourceUrl: string | null;
   sourceUrl: string | null;
   summary: string | null;
+  tags?: Record<string, unknown> | null;
   title: string | null;
   updatedAt: string | null;
   url: string | null;
@@ -55,10 +56,16 @@ export function normalizeReaderDocument(value: unknown): ReaderDocumentContract 
     rawSourceUrl: safeRawSourceUrl(row.raw_source_url),
     sourceUrl: safeHttpUrl(row.source_url),
     summary: text(row.summary),
+    tags: recordOrNull(row.tags),
     title: text(row.title),
     updatedAt: text(row.updated_at),
     url: safeHttpUrl(row.url)
   };
+}
+
+function recordOrNull(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : null;
 }
 
 export function normalizeExportBook(value: unknown): ExportBookContract | null {

@@ -15,10 +15,11 @@ const state = vi.hoisted(() => ({
   sourceMode: 'api' as 'api' | 'relay'
 }));
 const clipboardRead = vi.hoisted(() => vi.fn());
+const invalidateCutover = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({ clipboard: { readText: clipboardRead } }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
-  loadReadwiseHostAssignment: () => ({ is_active: state.active })
+  loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: state.active })
 }));
 vi.mock('../database/readwiseSourceMode.js', () => ({
   loadReadwiseSourceModeState: () => ({
@@ -57,6 +58,9 @@ vi.mock('./readwiseApiSecret.js', () => ({
   readReadwiseApiSecret: () => state.secret,
   writeReadwiseApiSecret: (_ref: string, token: string) => { state.secret = token; }
 }));
+vi.mock('./readwiseSourceCutoverReset.js', () => ({
+  invalidateIncompleteReadwiseSourceCutover: invalidateCutover
+}));
 
 import {
   connectReadwiseApiFromClipboard,
@@ -72,6 +76,7 @@ beforeEach(() => {
   state.settings = createDefaultReadwiseHostSettings().apiConnection;
   state.sourceMode = 'api';
   clipboardRead.mockReset();
+  invalidateCutover.mockReset();
   clipboardRead.mockReturnValue('READWISE-SECRET');
 });
 
@@ -171,4 +176,7 @@ it('replaces the current token without changing the library source identity', as
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
   expect(state.secret).toBe('NEW-SECRET');
+  expect(invalidateCutover).toHaveBeenCalledWith({
+    connectionRef: 'readwise-existing', sourceHost: 'This Mac'
+  });
 });

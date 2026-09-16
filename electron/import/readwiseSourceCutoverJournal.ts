@@ -69,7 +69,10 @@ export function promoteReadwiseSourceCutoverCohort(documentIds: string[]) {
 
 export function createReadwiseDocumentMigration(input: {
   bindingFor: (document: PreparedReadwiseApiDocument) => ReadwiseSourceCutoverIdentityBinding | null;
-}, connectionRef: string, options: { forceSourceProjection?: boolean } = {}) {
+}, connectionRef: string, options: {
+  forceSourceProjection?: boolean;
+  preserveExistingBody?: boolean;
+} = {}) {
   const pending = new Map<string, ReadwiseSourceCutoverIdentityBinding | null>();
   return {
     async beforeCommit(document: PreparedReadwiseApiDocument) {
@@ -104,7 +107,7 @@ function prepareReadwiseDocumentCommit(
   document: PreparedReadwiseApiDocument,
   input: { bindingFor: (value: PreparedReadwiseApiDocument) => ReadwiseSourceCutoverIdentityBinding | null },
   connectionRef: string,
-  options: { forceSourceProjection?: boolean },
+  options: { forceSourceProjection?: boolean; preserveExistingBody?: boolean },
   pending: Map<string, ReadwiseSourceCutoverIdentityBinding | null>
 ) {
   const classification = requireReadwiseSourceCutoverV2().documents.find((item) => item.remoteId === document.id);
@@ -126,6 +129,12 @@ function prepareReadwiseDocumentCommit(
   if (!binding) return;
   if (!binding.sourceFingerprint) adoptBookSource(connectionRef, document, binding);
   if (!existing) confirmReadwiseIdentityBindings(connectionRef, [binding]);
+  if (options.preserveExistingBody) {
+    return {
+      document: mergeLegacyReadwiseAnnotations(document, binding.legacyAnnotations),
+      replaceExistingBody: false
+    };
+  }
   if (!options.forceSourceProjection) {
     if (!existing) return;
     applyReadwiseSourceProjection(existing.nodeId, document);
@@ -219,6 +228,13 @@ export function setReadwiseSourceCutoverPhase(phase: 'indexing' | 'merging') {
   const current = requireReadwiseSourceCutoverV2();
   if (current.status !== 'migration-in-progress') throw new Error('readwise_source_migration_not_active');
   writeReadwiseSourceCutover({ ...current, phase });
+}
+
+export function recordReadwiseSourceCutoverLegacyFailures(
+  failures: Array<{ nodeId: string; reason: string }>
+) {
+  const current = requireReadwiseSourceCutoverV2();
+  writeReadwiseSourceCutover({ ...current, unmatchedLegacy: failures });
 }
 
 export function requireReadwiseSourceCutoverV2(): ReadwiseSourceCutover {

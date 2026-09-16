@@ -70,10 +70,27 @@ export async function fetchReadwiseApiImportRound(
   return run;
 }
 
+export async function fetchReadwiseSourceCutoverSnapshot(
+  connectionRef: string,
+  dependencies: ReadwiseApiFetchDependencies = {}
+) {
+  const settings = loadStoredReadwiseHostSettings();
+  if (!canRunReadwiseApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
+    throw new Error('readwise_api_import_not_ready');
+  }
+  if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
+  const request = createReadwiseRequest(
+    readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies, connectionRef
+  );
+  const run = loadOrCreateReadwiseApiImportRun(connectionRef, new Date().toISOString(), true);
+  return fetchRemainingPages(run, request, dependencies, false);
+}
+
 async function fetchRemainingPages(
   initial: ReadwiseApiImportRunState,
   request: (url: URL) => Promise<Record<string, unknown>>,
-  dependencies: ReadwiseApiFetchDependencies
+  dependencies: ReadwiseApiFetchDependencies,
+  hydrateAncestors = true
 ) {
   let run = initial;
   while (run.phase !== 'ready') {
@@ -89,9 +106,13 @@ async function fetchRemainingPages(
     const cursor = typeof payload.nextPageCursor === 'string' && payload.nextPageCursor
       ? payload.nextPageCursor : null;
     saveReadwiseApiStagePage({ connectionRef: run.connectionRef, cursor, items, kind });
-    dependencies.onPage?.({ phase: kind, recordCount: items.length });
+    dependencies.onPage?.({
+      phase: kind,
+      recordCount: items.length,
+      ...(typeof payload.count === 'number' ? { totalCount: payload.count } : {})
+    });
     run = loadOrCreateReadwiseApiImportRun(run.connectionRef);
-    if (kind === 'reader' && !cursor) {
+    if (hydrateAncestors && kind === 'reader' && !cursor) {
       await hydrateMissingReaderAncestors(run.connectionRef, request, dependencies);
       run = loadOrCreateReadwiseApiImportRun(run.connectionRef);
     }
@@ -133,6 +154,7 @@ function buildPageUrl(run: ReadwiseApiImportRunState, kind: 'export' | 'reader')
   if (kind === 'reader') {
     url.searchParams.set('limit', '100');
     url.searchParams.set('withHtmlContent', 'true');
+    url.searchParams.set('withRawSourceUrl', 'true');
     if (run.readerCursor) url.searchParams.set('pageCursor', run.readerCursor);
   } else {
     url.searchParams.set('includeDeleted', 'true');

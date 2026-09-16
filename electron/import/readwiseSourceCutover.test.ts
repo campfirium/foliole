@@ -77,7 +77,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('does not migrate remote documents that have no local legacy identity', async () => {
+it('fetches the two full fact streams and routes unmatched remote documents by current policy', async () => {
   const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   writeReadwiseSourceCutover({
     annotations: [], cohortDocumentIds: [], completedAt: '2026-09-09T01:00:00.000Z',
@@ -110,19 +110,27 @@ it('does not migrate remote documents that have no local legacy identity', async
     dependencies: { fetchImpl, minIntervalMs: 0 },
     window: { isDestroyed: () => false, webContents: { send } }
   }))
-    .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 0 });
+    .resolves.toMatchObject({ migrated_count: 1, status: 'completed', unmatched_count: 0 });
   const driver = openDatabaseConnection().driver;
   const materialized = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_provider='readwise' AND remote_document_id='document-1'"
   );
-  expect(materialized).toBeUndefined();
+  expect(materialized?.latest_node_id).toBeTruthy();
   expect(send.mock.calls.map(([, payload]) => payload.phase)).toEqual(expect.arrayContaining(['indexing', 'merging']));
   expect(send.mock.calls.map(([, payload]) => payload)).toContainEqual(expect.objectContaining({
-    phase: 'indexing', processedCount: 0, totalCount: 0
+    phase: 'indexing', processedCount: 3, totalCount: 3
   }));
   expect(send.mock.calls.findIndex(([, payload]) => payload.phase === 'indexing'))
     .toBeLessThan(send.mock.calls.findIndex(([, payload]) => payload.phase === 'merging'));
-  expect(requests).toEqual([]);
+  expect(requests.map((value) => new URL(value))).toEqual([
+    expect.objectContaining({ pathname: '/api/v3/list/' }),
+    expect.objectContaining({ pathname: '/api/v2/export/' })
+  ]);
+  const [reader, exported] = requests.map((value) => new URL(value));
+  expect(Object.fromEntries(reader!.searchParams)).toEqual({
+    limit: '100', withHtmlContent: 'true', withRawSourceUrl: 'true'
+  });
+  expect(Object.fromEntries(exported!.searchParams)).toEqual({ includeDeleted: 'true' });
 });
 
 it('reruns the API migration instead of accepting a historical v2 completion', async () => {
@@ -149,7 +157,7 @@ it('reruns the API migration instead of accepting a historical v2 completion', a
   });
 });
 
-it('reprojects a pristine body atomically while preserving a local cloze', async () => {
+it('binds the remote identity and highlights while preserving the legacy body and local cloze', async () => {
   await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   const fetchImpl = migrationFetch();
@@ -159,7 +167,7 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
     .resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .toContain('API body with remembered phrase.');
+    .toContain('Legacy body with remembered phrase.');
   expect(driver.queryOne<{ anchor_link: string; content: string }>(
     "SELECT anchor_link, content FROM nodes WHERE id='local-cloze'"
   )).toMatchObject({
@@ -192,13 +200,9 @@ it('reprojects a pristine body atomically while preserving a local cloze', async
     mode: 'api', version: 1
   });
   const requestUrls = fetchImpl.mock.calls.map(([input]) => new URL(String(input)));
-  expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(0);
+  expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   expect(requestUrls.filter((url) => url.searchParams.has('category'))).toHaveLength(0);
-  const documentRequests = requestUrls.filter((url) => url.searchParams.get('id') === 'document-1');
-  expect(documentRequests).toHaveLength(2);
-  expect(documentRequests[0]?.searchParams.has('withHtmlContent')).toBe(false);
-  expect(documentRequests[1]?.searchParams.get('withHtmlContent')).toBe('true');
-  expect(requestUrls.filter((url) => url.searchParams.get('id') === 'highlight-1')).toHaveLength(1);
+  expect(requestUrls.filter((url) => url.searchParams.has('id'))).toHaveLength(0);
 }, 20_000);
 
 it('rolls back the final completion record when the source mode cannot commit', async () => {
@@ -221,7 +225,7 @@ it('rolls back the final completion record when the source mode cannot commit', 
   )?.value ?? '{}')).toMatchObject({ status: 'migration-in-progress' });
   expect(driver.queryOne<{ query_updated_after: string | null }>(
     'SELECT query_updated_after FROM readwise_api_import_runs LIMIT 1'
-  )).toBeUndefined();
+  )).toEqual({ query_updated_after: null });
 });
 
 it.each(['dismissed', 'hard_deleted'] as const)(

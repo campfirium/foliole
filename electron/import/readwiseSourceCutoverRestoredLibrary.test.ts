@@ -58,7 +58,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('imports API documents when a restored library has no readable legacy identity files', async () => {
+it('binds a restored legacy Topic by its unique category-scoped full title', async () => {
   seedUnreadableLegacyTopic();
   ensureReadwiseRemoteSource(false, '2026-09-16T00:00:00.000Z');
   const send = vi.fn();
@@ -73,9 +73,9 @@ it('imports API documents when a restored library has no readable legacy identit
     .toBe('Legacy body stays untouched.');
   expect(driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id='document-1'"
-  )?.latest_node_id).not.toBe('legacy-topic');
+  )?.latest_node_id).toBe('legacy-topic');
   expect(send.mock.calls.map(([, payload]) => payload)).toContainEqual(expect.objectContaining({
-    phase: 'indexing', processedCount: 1, totalCount: 1
+    phase: 'indexing', processedCount: 3, totalCount: 3
   }));
   expect(send.mock.calls.map(([, payload]) => payload)).toContainEqual(expect.objectContaining({
     phase: 'merging', processedCount: 1, totalCount: 1
@@ -101,7 +101,7 @@ function restoredLibraryFetch() {
   return vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname === '/api/v3/list/' && !url.searchParams.has('id')) {
-      return Response.json({ nextPageCursor: null, results: [
+      return Response.json({ count: 2, nextPageCursor: null, results: [
         { category: 'article', html_content: '<p>Fresh API body.</p>', id: 'document-1', title: 'Sample' },
         { category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }
       ] });

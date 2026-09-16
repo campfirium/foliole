@@ -44,7 +44,7 @@ export function migrationFetch() {
   return vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname === '/api/v2/export/') {
-      return Response.json({ nextPageCursor: null, results: [{
+      return Response.json({ count: 1, nextPageCursor: null, results: [{
         external_id: 'document-1',
         highlights: [{ external_id: 'highlight-1', text: 'remembered phrase' }],
         source: 'reader'
@@ -70,7 +70,13 @@ export function migrationFetch() {
         title: 'Sample'
       }] });
     }
-    return Response.json({ nextPageCursor: null, results: [] });
+    return Response.json({ count: 2, nextPageCursor: null, results: [{
+      category: 'article', created_at: '2026-09-10T00:00:00.000Z',
+      html_content: '<p>API body with remembered phrase. It also contains new phrase.</p>',
+      id: 'document-1', parent_id: null, title: 'Sample'
+    }, {
+      category: 'highlight', id: 'highlight-1', parent_id: 'document-1', title: 'Sample'
+    }] });
   });
 }
 
@@ -79,7 +85,7 @@ export function migrationFetchWithoutHighlightBody() {
   return vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname !== '/api/v2/export/') return fetchImpl(input);
-    return Response.json({ nextPageCursor: null, results: [{
+    return Response.json({ count: 1, nextPageCursor: null, results: [{
       external_id: 'document-1', highlights: [{ external_id: 'highlight-1', text: '' }], source: 'reader'
     }] });
   });
@@ -99,7 +105,7 @@ export function epubMigrationFetch() {
     if (id === 'highlight-1') return Response.json({ results: [{
       category: 'highlight', id, parent_id: 'document-1'
     }] });
-    return Response.json({ results: [{
+    return Response.json({ count: 2, nextPageCursor: null, results: [{
       category: 'epub',
       html_content: url.searchParams.has('withHtmlContent') ? [
         '<p>Cover matter</p>',
@@ -109,7 +115,7 @@ export function epubMigrationFetch() {
         '<p>Second chapter body.</p>'
       ].join('') : null,
       id: id ?? 'document-1', parent_id: null, title: 'Sample'
-    }] });
+    }, ...(!id ? [{ category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }] : [])] });
   });
 }
 

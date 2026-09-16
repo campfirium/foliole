@@ -37,7 +37,7 @@ function assertCurrentEpubProjections(
   const statusById = new Map(terminals.map((item) => [item.remoteId, item.status]));
   for (const document of documents) {
     const status = statusById.get(document.id);
-    if (status !== 'bound' && status !== 'materialized') continue;
+    if (status !== 'materialized') continue;
     if (document.category !== 'epub') continue;
     const source = loadReadwiseApiImportSource(connectionRef, document.id);
     if (!matchesReadwiseApiEpubProjection(source?.state.epubProjection ?? null, document)) {
