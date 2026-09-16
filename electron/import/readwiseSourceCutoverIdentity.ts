@@ -26,7 +26,10 @@ import {
   type ReadwiseSourceArtifact
 } from './readwiseSourceCutoverArtifacts.js';
 import { migrateReadwiseSourceDispositions } from './readwiseSourceCutoverDispositions.js';
-import { resolveReadwiseSourceIdentityIndex } from './readwiseSourceCutoverIdentityIndex.js';
+import {
+  hasNoReadwiseSourceIdentityEvidence,
+  resolveReadwiseSourceIdentityIndex
+} from './readwiseSourceCutoverIdentityIndex.js';
 
 export interface ReadwiseSourceCutoverIdentityBinding extends ConfirmedReadwiseIdentityBinding {
   blockedAnnotationIds?: Set<string>;
@@ -38,7 +41,7 @@ export async function prepareReadwiseSourceCutoverIdentity(
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
-  const artifacts = await loadReadwiseSourceArtifacts();
+  const artifacts = await requireSourceArtifacts();
   const ids = [...new Set(artifacts.flatMap((artifact) => [
     ...artifact.documentIds, ...artifact.highlightIds
   ]))];
@@ -93,6 +96,14 @@ export async function prepareReadwiseSourceCutoverIdentity(
       })));
     }
   };
+}
+
+async function requireSourceArtifacts() {
+  const artifacts = await loadReadwiseSourceArtifacts();
+  if (hasNoReadwiseSourceIdentityEvidence(artifacts)) {
+    throw new Error('readwise_source_cutover_identity_unavailable');
+  }
+  return artifacts;
 }
 
 function bindingFor(

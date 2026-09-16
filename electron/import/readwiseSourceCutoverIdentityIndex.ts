@@ -6,6 +6,13 @@ export interface ReadwiseResolvedSourceArtifact extends ReadwiseSourceArtifact {
   remoteDocumentId: string;
 }
 
+export function hasNoReadwiseSourceIdentityEvidence(artifacts: ReadwiseSourceArtifact[]) {
+  const relevant = groupArtifacts(artifacts)
+    .filter((artifact) => artifact.nodeActive || artifact.disposition);
+  return relevant.length > 0 && relevant.every((artifact) =>
+    artifact.documentIds.size === 0 && artifact.highlightIds.size === 0);
+}
+
 export function resolveReadwiseSourceIdentityIndex(
   artifacts: ReadwiseSourceArtifact[],
   documents: ReadonlyMap<string, ReaderDocumentContract>

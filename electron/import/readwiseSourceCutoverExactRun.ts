@@ -1,3 +1,5 @@
+import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
+
 import { commitReadwiseApiDocument } from './readwiseApiDocumentCommit.js';
 import { prepareReadwiseApiFrozenResources } from './readwiseApiFrozenBatch.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -9,21 +11,23 @@ import {
   requireReadwiseSourceCutoverV2,
   setReadwiseSourceCutoverPhase
 } from './readwiseSourceCutoverJournal.js';
+import { runReadwiseSourceCutoverUnbound } from './readwiseSourceCutoverUnboundRun.js';
 
-interface ExactRunInput {
+export interface ReadwiseSourceCutoverExactRunInput {
   assertEligible: () => void;
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
   onProgress: (completed: number, total: number, phase: 'indexing' | 'merging') => void;
-  readwiseReaderConfig: Parameters<typeof prepareReadwiseApiFrozenResources>[0]['config'];
+  settings: ImportManagerSettings;
 }
 
 type CutoverIdentity = Awaited<ReturnType<typeof prepareReadwiseSourceCutoverIdentity>>;
 type MigrationDocuments = ReturnType<CutoverIdentity['migrationDocuments']>;
 
-export async function runReadwiseSourceCutoverExact(input: ExactRunInput) {
+export async function runReadwiseSourceCutoverExact(input: ReadwiseSourceCutoverExactRunInput) {
   input.assertEligible();
-  const identity = await prepareReadwiseSourceCutoverIdentity(input.connectionRef, input.dependencies);
+  const identity = await prepareIdentityOrNull(input);
+  if (!identity) return runReadwiseSourceCutoverUnbound(input);
   const documents = identity.migrationDocuments();
   const documentIds = documents.map((document) => document.id);
   identity.assertCandidateCoverage(documentIds);
@@ -52,7 +56,7 @@ export async function runReadwiseSourceCutoverExact(input: ExactRunInput) {
       ? skipped(document.id)
       : await commitReadwiseApiDocument({
         assertEligible: input.assertEligible,
-        config: input.readwiseReaderConfig,
+        config: input.settings.readwiseReaderConfig,
         connectionRef: input.connectionRef,
         dependencies: input.dependencies,
         destination: 'inbox',
@@ -69,8 +73,17 @@ export async function runReadwiseSourceCutoverExact(input: ExactRunInput) {
   return { documents, remainingCount: 0 };
 }
 
+async function prepareIdentityOrNull(input: ReadwiseSourceCutoverExactRunInput) {
+  try {
+    return await prepareReadwiseSourceCutoverIdentity(input.connectionRef, input.dependencies);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'readwise_source_cutover_identity_unavailable') return null;
+    throw error;
+  }
+}
+
 async function prepareResources(
-  input: ExactRunInput,
+  input: ReadwiseSourceCutoverExactRunInput,
   documents: MigrationDocuments,
   total: number
 ) {
@@ -79,7 +92,7 @@ async function prepareResources(
   for (const document of documents) {
     input.assertEligible();
     resources.set(document.id, await prepareReadwiseApiFrozenResources({
-      config: input.readwiseReaderConfig,
+      config: input.settings.readwiseReaderConfig,
       connectionRef: input.connectionRef,
       dependencies: input.dependencies,
       destination: 'inbox',

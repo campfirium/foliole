@@ -33,19 +33,13 @@ export function useReadwiseSourceMigration(input: {
   const [required, setRequired] = useState(false);
   const startingRef = useRef(false);
   const resumeAttemptedRef = useRef(false);
+  useMigrationProgressEvents(setProgress);
   const start = useCallback(async (initialTotalCount?: number) => {
     if (startingRef.current) return;
     startingRef.current = true;
     setPending(true);
     resetMigrationProgress(setProgress, initialTotalCount);
-    let unsubscribe: (() => void) | null = null;
     try {
-      try {
-        unsubscribe = await onReadwiseReaderImportProgress((progress) => {
-          if (progress.phase !== 'indexing' && progress.phase !== 'merging') return;
-          applyMigrationProgress(setProgress, progress);
-        });
-      } catch { unsubscribe = null; }
       const output = await runReadwiseSourceCutoverInRuntime();
       if (output.status === 'completed') await keepCompletedMergeVisible();
       const state = await previewReadwiseSourceCutoverInRuntime();
@@ -65,7 +59,6 @@ export function useReadwiseSourceMigration(input: {
       setRequired(true);
       setProgress((current) => ({ ...current, errorReason: 'request_failed', failed: Boolean(current.phase) }));
     } finally {
-      unsubscribe?.();
       setPending(false);
       startingRef.current = false;
     }
@@ -77,6 +70,19 @@ export function useReadwiseSourceMigration(input: {
   const requestStart = (beforeStart: () => Promise<void> | void) =>
     requestReadwiseApiMigration(input.t, beforeStart, start);
   return { ...progress, pending, required, requestStart, selectApi, start };
+}
+
+function useMigrationProgressEvents(
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>
+) {
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let disposed = false;
+    void onReadwiseReaderImportProgress((progress) => applyMigrationProgress(setProgress, progress))
+      .then((stop) => { if (disposed) stop?.(); else unsubscribe = stop; })
+      .catch(() => undefined);
+    return () => { disposed = true; unsubscribe?.(); };
+  }, [setProgress]);
 }
 
 function resetMigrationProgress(

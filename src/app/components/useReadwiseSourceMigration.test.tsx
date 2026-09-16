@@ -92,6 +92,10 @@ it('restores a durable migration without making the settings page execute it', a
 
   await waitFor(() => expect(onSelectApi).toHaveBeenCalledOnce());
   expect(screen.getByTestId('phase')).toHaveTextContent('indexing:0/12');
+  act(() => events.handler?.({
+    phase: 'indexing', processedCount: 3, status: 'running', totalCount: 12
+  }));
+  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:3/12');
   expect(onSelectApi).toHaveBeenCalledOnce();
   expect(cutover.run).not.toHaveBeenCalled();
   expect(onCommitMode).not.toHaveBeenCalled();

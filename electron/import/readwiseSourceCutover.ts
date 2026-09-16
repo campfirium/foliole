@@ -102,7 +102,7 @@ async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourc
     connectionRef,
     dependencies,
     onProgress: (completed, total, phase) => publishProgress(input.window, completed, total, phase),
-    readwiseReaderConfig: settings.readwiseReaderConfig
+    settings
   });
 }
 
