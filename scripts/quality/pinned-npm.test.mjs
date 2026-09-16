@@ -19,6 +19,11 @@ const TERMINATED_SOCKET_FAILURE = [
   'TypeError: terminated',
   "[cause]: SocketError: other side closed code: 'UND_ERR_SOCKET'"
 ].join('\n');
+const UNDICI_PARSER_ASSERTION_FAILURE = [
+  `Installing npm@${PINNED_NPM.version}...`,
+  'AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:',
+  'assert(!this.paused)'
+].join('\n');
 const QUIET_STREAM = { write: vi.fn() };
 
 function successfulRunner(version = PINNED_NPM.version) {
@@ -78,6 +83,27 @@ describe('pinned npm quality tooling', () => {
     runner
       .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
       .mockReturnValueOnce({ status: 1, stdout: TERMINATED_SOCKET_FAILURE, stderr: '' });
+    const sleep = vi.fn();
+
+    activatePinnedNpm({
+      env: HOSTED_ENV,
+      platform: 'win32',
+      runner,
+      sleep,
+      stderr: QUIET_STREAM,
+      stdout: QUIET_STREAM,
+      windowsShell: 'cmd.exe'
+    });
+
+    expect(runner).toHaveBeenCalledTimes(4);
+    expect(sleep).toHaveBeenCalledExactlyOnceWith(5_000);
+  });
+
+  it('retries a hosted undici parser assertion during pinned npm download', () => {
+    const runner = successfulRunner();
+    runner
+      .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+      .mockReturnValueOnce({ status: 1, stdout: UNDICI_PARSER_ASSERTION_FAILURE, stderr: '' });
     const sleep = vi.fn();
 
     activatePinnedNpm({

@@ -15,6 +15,7 @@ const TRANSIENT_REGISTRY_FAILURE = [
   /\bfetch failed\b/iu,
   /\b(?:ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENETUNREACH|ECONNREFUSED|ENOTFOUND)\b/u,
   /\bUND_ERR_(?:CONNECT_TIMEOUT|HEADERS_TIMEOUT|SOCKET)\b/u,
+  /\bAssertionError \[ERR_ASSERTION\]:[\s\S]*\bassert\(!this\.paused\)/u,
   /\bsocket hang up\b/iu,
   /\bnetwork timeout\b/iu,
   /\bHTTP(?: response| status(?: code)?)?\s*:?\s*(?:408|429|5\d\d)\b/iu,
