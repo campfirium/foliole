@@ -52,8 +52,8 @@ function needsRepair(sqlite: DatabaseMigrationTarget, cutover: Record<string, un
     }>;
   return sources.some((source) => {
     if (!boundIds.has(source.remote_document_id)) return false;
-    const state = record(parse(source.remote_import_state_json));
-    return record(state.metadata).category === 'epub' && state.bodyAuthority !== 'original_epub';
+    const category = record(record(parse(source.remote_import_state_json)).metadata).category;
+    return category === 'epub' || category === 'pdf';
   });
 }
 

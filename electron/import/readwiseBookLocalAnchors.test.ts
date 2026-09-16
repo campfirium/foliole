@@ -18,8 +18,8 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { relocateReadwiseOriginalEpubLocalAnchors } from './readwiseOriginalEpubLocalAnchors.js';
-import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
+import { relocateReadwiseBookLocalAnchors } from './readwiseBookLocalAnchors.js';
+import { ensureReadwiseUnlocatedNode } from './readwiseBookUnlocated.js';
 
 const importedAt = '2026-09-17T01:00:00.000Z';
 let tempRoot = '';
@@ -53,7 +53,7 @@ it('places an existing unlocated container last when no root-level anchor needs 
   );
   rewriteExistingNodeOrder(driver, ['book', 'chapter']);
 
-  expect(relocateReadwiseOriginalEpubLocalAnchors({
+  expect(relocateReadwiseBookLocalAnchors({
     annotationStates: [], bodies: [{ content: 'Body', id: 'chapter' }], connectionRef: 'connection',
     documentId: 'document', importedAt, rootNodeId: 'book'
   })).toBe(0);

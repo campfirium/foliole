@@ -8,7 +8,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 import { resolveRelocationNodeId } from './readwiseApiEpubAnnotationRelocation.js';
 import { placeReadwiseApiEpubHighlight } from './readwiseApiEpubHighlightPlacement.js';
-import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
+import { ensureReadwiseUnlocatedNode, placeReadwiseUnlocatedNodeLast } from './readwiseBookUnlocated.js';
 
 function placeUniqueHighlight(input: {
   bodies: Array<{ content: string; id: string }>;
@@ -81,6 +81,9 @@ export function placeReadwiseApiEpubAnnotations(input: {
     grouped.set(parentId, values);
   }
   for (const [parentId, highlights] of grouped) persistGroup(input, parentId, highlights);
+  if (unmatchedNodeId) {
+    placeReadwiseUnlocatedNodeLast(openDatabaseConnection().driver, input.rootNodeId, unmatchedNodeId);
+  }
   return input.annotations.length;
 }
 

@@ -4,7 +4,7 @@ import { loadReadwiseApiImportSource, saveReadwiseApiImportSource } from '../dat
 
 import { readReadwiseApiEpubBookBodies } from './readwiseApiEpubMaterialization.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
-import { relocateReadwiseOriginalEpubLocalAnchors } from './readwiseOriginalEpubLocalAnchors.js';
+import { relocateReadwiseBookLocalAnchors } from './readwiseBookLocalAnchors.js';
 import {
   captureReadwiseSourceLocalAnchors,
   relocateReadwiseSourceLocalAnchors
@@ -66,7 +66,7 @@ function relocateLocalAnchors(
   const source = loadReadwiseApiImportSource(input.target.connectionRef, input.target.documentId);
   if (!source) throw new Error('readwise_resync_target_missing');
   if (isEpub) {
-    relocateReadwiseOriginalEpubLocalAnchors({
+    relocateReadwiseBookLocalAnchors({
       annotationStates: source.state.annotations,
       bodies: readReadwiseApiEpubBookBodies(input.target.nodeId),
       connectionRef: input.target.connectionRef,

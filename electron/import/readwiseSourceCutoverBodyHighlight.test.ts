@@ -57,7 +57,6 @@ import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.j
 
 import { runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import {
-  epubMigrationFetch,
   migrationFetch,
   migrationFetchWithoutHighlightBody,
   seedMigratableSource
@@ -115,35 +114,6 @@ it('keeps the legacy body while materializing a fallback highlight', async () =>
     .toBe('readwise-folder');
 });
 
-it('rebuilds a bound EPUB from its freshly downloaded original file', async () => {
-  await seedMigratableSource(state.sourcePath);
-  const seeded = openDatabaseConnection().driver;
-  seeded.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
-    VALUES ('node-epub-legacy','topic-1','topic','Legacy',0,'Legacy body','old','old')`);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-
-  const fetchImpl = epubMigrationFetch();
-  await expect(runReadwiseSourceCutover({
-    dependencies: { fetchImpl, minIntervalMs: 0 }
-  })).resolves.toMatchObject({ migrated_count: 1, status: 'completed' });
-
-  const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
-    .not.toContain('Book import pending');
-  expect(driver.queryAll<{ title: string }>(
-    "SELECT title FROM nodes WHERE parent_id='topic-1' AND id LIKE 'node-epub-%' AND deleted_at IS NULL"
-  ).map((item) => item.title)).toContain('Original chapter');
-  const source = driver.queryOne<{ remote_import_state_json: string }>(
-    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='document-1'"
-  );
-  expect(JSON.parse(source?.remote_import_state_json ?? '{}')).toMatchObject({
-    bodyAuthority: 'original_epub',
-    originalFile: { status: 'localized' }
-  });
-  expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
-    .toHaveLength(1);
-});
-
 it('uses the existing body while binding edited legacy highlights and importing later highlights', async () => {
   await seedMigratableSource(state.sourcePath);
   const driver = openDatabaseConnection().driver;
@@ -195,27 +165,4 @@ it('uses the existing body while binding edited legacy highlights and importing 
   const bindings = JSON.parse(source?.remote_annotations_json ?? '[]');
   expect(bindings).toContainEqual(expect.objectContaining({ nodeId: legacyHighlight!.id, remoteId: 'highlight-1' }));
   expect(bindings).toContainEqual(expect.objectContaining({ remoteId: 'highlight-2' }));
-});
-
-it('records a matched EPUB as failed instead of bound when its fresh download fails', async () => {
-  await seedMigratableSource(state.sourcePath);
-  ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
-  const fallback = epubMigrationFetch();
-  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
-    const url = new URL(String(input));
-    return url.hostname.endsWith('.amazonaws.com')
-      ? new Response(null, { status: 500 }) : fallback(input);
-  }) as typeof fetch;
-
-  await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-    .resolves.toMatchObject({ migrated_count: 0, status: 'failed' });
-
-  const journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
-    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
-  )?.value ?? '{}');
-  expect(journal).toMatchObject({
-    documents: [],
-    failures: [{ remoteId: 'document-1', stage: 'resources' }],
-    status: 'migration-in-progress'
-  });
 });

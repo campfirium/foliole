@@ -29,6 +29,7 @@ import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.j
 import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
+import { ensureReadwiseUnlocatedNode } from './readwiseBookUnlocated.js';
 import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
 import {
@@ -40,7 +41,6 @@ import {
   captureReadwiseOriginalEpubSnapshot,
   loadReadwiseOriginalEpubTarget
 } from './readwiseOriginalEpubTarget.js';
-import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
 
 const importedAt = '2026-09-12T01:00:00.000Z';
 let tempRoot = '';

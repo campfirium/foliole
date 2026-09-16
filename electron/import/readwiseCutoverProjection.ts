@@ -8,10 +8,8 @@ import { loadReadwiseApiFrozenResources } from '../database/readwiseApiFrozenRes
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { loadReadwiseCutoverStage, saveReadwiseCutoverStage } from '../database/readwiseCutoverStage.js';
 
-import type { ReadwiseApiPreparedResources } from './readwiseApiDocumentCommit.js';
 import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
 import { readReadwiseApiEpubBookBodies } from './readwiseApiEpubMaterialization.js';
-import { withOriginalEpubBody } from './readwiseOriginalEpubCommit.js';
 
 interface Receipt { inputHash: string; bodyHash: string }
 const KIND = 'cutover-projection-v1';
@@ -22,12 +20,12 @@ export function verifyCutoverEpub(connectionRef: string, document: PreparedReadw
   const source = loadReadwiseApiImportSource(connectionRef, document.id);
   if (!source?.nodeId) throw new Error(`readwise_source_cutover_projection_missing:${document.id}`);
   const resources = loadReadwiseApiFrozenResources(connectionRef, document.id);
-  const finalDocument = finalCutoverDocument(document, resources, source.title ?? document.title);
+  const finalDocument = finalCutoverDocument(document);
   if (!matchesReadwiseApiEpubProjection(source.state.epubProjection ?? null, finalDocument)) {
     throw new Error(`readwise_source_cutover_epub_projection_incomplete:${document.id}`);
   }
   const bodies = readReadwiseApiEpubBookBodies(source.nodeId);
-  const expected = resources?.originalEpub?.images ?? resources?.epubImages ?? finalDocument.epubStructure;
+  const expected = resources?.epubImages ?? finalDocument.epubStructure;
   const bodyMismatch = expected
     ? findBookBodyMismatch(connectionRef, document.id, source.nodeId, expected, bodies)
     : 'expected_body_missing';
@@ -43,10 +41,9 @@ export function verifyCutoverEpub(connectionRef: string, document: PreparedReadw
 }
 
 export function finalCutoverDocument(
-  document: PreparedReadwiseApiDocument, resources: ReadwiseApiPreparedResources | null, title: string
+  document: PreparedReadwiseApiDocument
 ) {
-  return resources?.originalEpub
-    ? withOriginalEpubBody({ candidate: resources.originalEpub, document, target: { title } }) : document;
+  return document;
 }
 
 function findBookBodyMismatch(

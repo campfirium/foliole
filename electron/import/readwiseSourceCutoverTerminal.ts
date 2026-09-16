@@ -1,6 +1,5 @@
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
 import { verifyCutoverEpub } from './readwiseCutoverProjection.js';
@@ -31,24 +30,6 @@ export function assertReadwiseSourceCutoverComplete(
     throw new Error('readwise_source_cutover_pending_bodies');
   }
   assertCurrentEpubProjections(connectionRef, documents, current.documents);
-  assertBoundOriginalFiles(connectionRef, documents, current.documents);
-}
-
-function assertBoundOriginalFiles(
-  connectionRef: string,
-  documents: PreparedReadwiseApiDocument[],
-  terminals: ReturnType<typeof requireActiveCutover>['documents']
-) {
-  const byId = new Map(documents.map((item) => [item.id, item]));
-  for (const terminal of terminals) {
-    if (terminal.status !== 'bound') continue;
-    const category = byId.get(terminal.remoteId)?.category;
-    if (category !== 'pdf' && category !== 'epub') continue;
-    const source = loadReadwiseApiImportSource(connectionRef, terminal.remoteId);
-    if (source?.state.originalFile?.status !== 'localized') {
-      throw new Error('readwise_source_cutover_original_file_incomplete');
-    }
-  }
 }
 
 function assertCurrentEpubProjections(

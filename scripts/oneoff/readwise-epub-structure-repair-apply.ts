@@ -1,5 +1,5 @@
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver.js';
-import { ensureReadwiseUnlocatedNode } from '../../electron/import/readwiseOriginalEpubUnlocated.js';
+import { ensureReadwiseUnlocatedNode } from '../../electron/import/readwiseBookUnlocated.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import {

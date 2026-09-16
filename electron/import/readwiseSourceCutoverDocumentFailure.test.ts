@@ -82,50 +82,23 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('records one stalled document, leaves cutover active, and retries it', async () => {
+it('uses frozen API body for PDFs without requesting a stalled original file', async () => {
   const fetchImpl = migrationWithHungOriginalFile();
   await expect(runReadwiseSourceCutover({
     dependencies: { fetchImpl, minIntervalMs: 0, originalFileIdleTimeoutMs: 5 }
-  })).resolves.toMatchObject({ error_reason: 'original_file_download_stalled', status: 'failed' });
+  })).resolves.toMatchObject({ status: 'completed' });
 
   let journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
   )?.value ?? '{}');
-  expect(journal).toMatchObject({
-    documents: expect.arrayContaining([
-      expect.objectContaining({ remoteId: 'document-2', status: 'materialized' })
-    ]),
-    failures: [{
-      reason: 'original_file_download_stalled',
-      remoteId: 'document-1',
-      stage: 'resources',
-      title: 'Broken PDF'
-    }],
-    status: 'migration-in-progress'
-  });
-  expect(journal.documents).toHaveLength(1);
-  expect(journal.activeDocument).toBeUndefined();
+  expect(journal).toMatchObject({ status: 'api' });
+  expect(journal.failures ?? []).toEqual([]);
+  expect(journal.documents).toHaveLength(2);
   await expect(previewReadwiseSourceCutover()).resolves.toMatchObject({
-    failed_items: [{
-      reason: 'original_file_download_stalled',
-      remote_id: 'document-1',
-      stage: 'resources',
-      title: 'Broken PDF'
-    }],
-    status: 'migration_in_progress'
+    status: 'already_completed'
   });
-
-  await expect(runReadwiseSourceCutover({
-    dependencies: { fetchImpl: migrationWithRecoveredOriginalFile(), minIntervalMs: 0 }
-  })).resolves.toMatchObject({ status: 'completed' });
-  journal = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
-    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
-  )?.value ?? '{}');
-  expect(journal).toMatchObject({ failures: [], status: 'api' });
-  expect(journal.documents).toEqual(expect.arrayContaining([
-    expect.objectContaining({ remoteId: 'document-1', status: 'materialized' }),
-    expect.objectContaining({ remoteId: 'document-2', status: 'materialized' })
-  ]));
+  expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
+    .toHaveLength(0);
 });
 
 it('classifies a large off-policy cohort in one pass without stalling the merge', async () => {
@@ -142,7 +115,7 @@ it('classifies a large off-policy cohort in one pass without stalling the merge'
   expect(journal.documents.every((item: { status: string }) => item.status === 'suppressed')).toBe(true);
 }, 5_000);
 
-function migrationWithHungOriginalFile(): typeof fetch {
+function migrationWithHungOriginalFile() {
   return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
     if (url.hostname.endsWith('.amazonaws.com')) {
@@ -167,19 +140,7 @@ function migrationWithHungOriginalFile(): typeof fetch {
     }, {
       category: 'highlight', id: 'highlight-2', parent_id: 'document-2', title: 'Working article'
     }] });
-  }) as typeof fetch;
-}
-
-function migrationWithRecoveredOriginalFile(): typeof fetch {
-  const base = migrationWithHungOriginalFile();
-  const bytes = Buffer.from('%PDF-1.7\nrecovered original\n%%EOF');
-  return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-    const url = new URL(String(input));
-    if (url.hostname.endsWith('.amazonaws.com')) {
-      return new Response(bytes, { headers: { 'content-type': 'application/pdf' }, status: 200 });
-    }
-    return base(input, init);
-  }) as typeof fetch;
+  });
 }
 
 function migrationWithSuppressedDocuments(count: number): typeof fetch {

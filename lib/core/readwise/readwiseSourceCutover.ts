@@ -4,7 +4,7 @@ import { normalizeStoredReadwiseSourceCutover } from './readwiseSourceCutoverNor
 export const READWISE_SOURCE_CUTOVER_KEY = 'readwise_source_cutover';
 export const READWISE_SOURCE_CUTOVER_JOURNAL_KEY = 'readwise_source_cutover_v2';
 export const READWISE_SOURCE_CUTOVER_VERSION = 2;
-export const READWISE_SOURCE_CUTOVER_COMPLETION_VERSION = 6;
+export const READWISE_SOURCE_CUTOVER_COMPLETION_VERSION = 7;
 
 export type ReadwiseSourceCutoverStatus = 'api' | 'migration-in-progress';
 

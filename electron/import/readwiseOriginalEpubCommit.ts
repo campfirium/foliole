@@ -11,9 +11,9 @@ import {
 import { readReadwiseApiEpubBookBodies } from './readwiseApiEpubMaterialization.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 import {
-  captureReadwiseOriginalEpubRootTexts,
-  relocateReadwiseOriginalEpubLocalAnchors
-} from './readwiseOriginalEpubLocalAnchors.js';
+  captureReadwiseBookRootTexts,
+  relocateReadwiseBookLocalAnchors
+} from './readwiseBookLocalAnchors.js';
 import type { PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import {
   captureReadwiseOriginalEpubSnapshot,
@@ -105,7 +105,7 @@ function commitPreparedOriginalEpub(input: {
       || captureReadwiseOriginalEpubSnapshot(input.target) !== input.expectedSnapshot) {
       throw new Error('original_epub_target_changed');
     }
-    const preservedRootTexts = captureReadwiseOriginalEpubRootTexts(input.target.nodeId);
+    const preservedRootTexts = captureReadwiseBookRootTexts(input.target.nodeId);
     for (const stage of input.candidate.stages) persistStagedManagedAttachment(stage);
     const document = withOriginalEpubBody(input);
     const result = materializeReadwiseApiDocument({
@@ -125,7 +125,7 @@ function commitPreparedOriginalEpub(input: {
     if (result.status !== 'imported') throw new Error('original_epub_commit_failed');
     const materialized = loadReadwiseApiImportSource(input.target.connectionRef, input.target.documentId);
     if (!materialized) throw new Error('original_epub_target_missing');
-    relocateReadwiseOriginalEpubLocalAnchors({
+    relocateReadwiseBookLocalAnchors({
       annotationStates: materialized.state.annotations,
       bodies: readReadwiseApiEpubBookBodies(input.target.nodeId),
       connectionRef: input.target.connectionRef,

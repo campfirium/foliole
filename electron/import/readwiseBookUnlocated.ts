@@ -1,7 +1,7 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
-import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
+import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 
 export function ensureReadwiseUnlocatedNode(input: {
   connectionRef: string;

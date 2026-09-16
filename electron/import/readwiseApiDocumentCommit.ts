@@ -42,6 +42,7 @@ interface ReadwiseApiDocumentCommitInput {
 }
 
 export interface ReadwiseApiPreparedResources {
+  cutoverBodySource?: 'reader_html';
   preparationPending?: boolean;
   epubCover?: Awaited<ReturnType<typeof prepareReadwiseApiEpubCoverIfNeeded>>;
   epubImages: Awaited<ReturnType<typeof prepareReadwiseApiEpubImagesIfNeeded>>;

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { requireResolvedNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
-import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
+import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 
 import type { DuplicateRootBookMerge, DuplicateRootRepairPlan } from './readwise-epub-duplicate-root-types.js';
 import { relocateRepairHighlight } from './readwise-epub-structure-repair-highlights.js';

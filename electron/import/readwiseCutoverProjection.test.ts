@@ -93,7 +93,7 @@ afterEach(async () => {
 });
 
 
-it('verifies four materialized original EPUBs against their final chapters and resumes without rewriting', async () => {
+it('verifies four Reader HTML EPUBs against their final chapters and resumes without rewriting', async () => {
   const source = ensureReadwiseRemoteSource();
   const driver = openDatabaseConnection().driver;
   driver.execute(`CREATE TRIGGER pause_completion BEFORE UPDATE OF value ON settings
@@ -117,7 +117,7 @@ it('verifies four materialized original EPUBs against their final chapters and r
   expect(await previewReadwiseSourceCutover()).toMatchObject({ completed_count: 4, total_count: 4 });
   const before = driver.queryAll('SELECT id, content, updated_at FROM nodes ORDER BY id');
   expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM import_sources WHERE json_extract(remote_import_state_json, '$.bodyAuthority')='original_epub'"
+    "SELECT COUNT(*) count FROM import_sources WHERE json_extract(remote_import_state_json, '$.bodyAuthority')='reader_html'"
   )?.count).toBe(4);
   // Simulate the previous version's missing final-result receipt, retaining its saved resources.
   driver.execute("DELETE FROM readwise_api_import_stage WHERE record_kind='cutover-projection-v1'");

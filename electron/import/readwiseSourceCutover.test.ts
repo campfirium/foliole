@@ -153,7 +153,7 @@ it('reruns the API migration instead of accepting a historical v2 completion', a
     "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
   )?.value ?? '{}');
   expect(journal).toMatchObject({
-    cohortDocumentIds: ['document-1'], completionVersion: 6, status: 'api'
+    cohortDocumentIds: ['document-1'], completionVersion: 7, status: 'api'
   });
 });
 
@@ -182,7 +182,7 @@ it('binds the remote identity and highlights while preserving the legacy body an
   );
   expect(JSON.parse(legacyState?.value ?? '{}')).toMatchObject({ status: 'api', version: 1 });
   expect(JSON.parse(journalState?.value ?? '{}')).toMatchObject({
-    completionVersion: 6,
+    completionVersion: 7,
     cohortDocumentIds: ['document-1'],
     documents: [{ nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }],
     status: 'api',

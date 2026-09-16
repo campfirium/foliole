@@ -9,7 +9,7 @@ import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImp
 import {
   buildReadwiseUnlocatedNodeId,
   isReadwiseUnlocatedNodeId
-} from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
+} from '../../lib/core/readwise/readwiseBookUnlocated.js';
 
 import { auditReadwiseEpubCorpus, type ReadwiseEpubSourceSnapshot } from './readwise-epub-corpus-audit.js';
 import { buildRepairBodies } from './readwise-epub-structure-repair-bodies.js';

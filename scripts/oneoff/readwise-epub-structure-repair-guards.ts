@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { isReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
+import { isReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 
 interface ProtectionDetails {
   attachmentRows: Array<Record<string, unknown>>;

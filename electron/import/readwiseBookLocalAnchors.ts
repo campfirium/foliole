@@ -2,13 +2,13 @@ import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/dat
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
-import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
+import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import {
   ensureReadwiseUnlocatedNode,
   placeReadwiseUnlocatedNodeLast
-} from './readwiseOriginalEpubUnlocated.js';
+} from './readwiseBookUnlocated.js';
 
 interface LocalAnchorRow extends DatabaseRow {
   anchor_link: string | null;
@@ -53,7 +53,7 @@ function locateAnchor(
   };
 }
 
-export function relocateReadwiseOriginalEpubLocalAnchors(input: {
+export function relocateReadwiseBookLocalAnchors(input: {
   annotationStates: ReadwiseApiAnnotationState[];
   bodies: Array<{ content: string; id: string }>;
   connectionRef: string;
@@ -102,7 +102,7 @@ export function relocateReadwiseOriginalEpubLocalAnchors(input: {
   return rows.length;
 }
 
-export function captureReadwiseOriginalEpubRootTexts(rootNodeId: string) {
+export function captureReadwiseBookRootTexts(rootNodeId: string) {
   const rows = openDatabaseConnection().driver.queryAll<LocalAnchorRow>(
     `SELECT id, title, content, anchor_link, is_title_manual FROM nodes
      WHERE parent_id = ? AND deleted_at IS NULL

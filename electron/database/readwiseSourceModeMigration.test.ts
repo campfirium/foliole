@@ -91,7 +91,7 @@ function saveLegacyHost(mode: string) {
     .run(value);
 }
 
-function saveCompletedCutover(completionVersion = 6) {
+function saveCompletedCutover(completionVersion = 7) {
   const value = JSON.stringify({
     annotations: [], cohortDocumentIds: ['document'], completedAt: 'done', completionVersion,
     documents: [{ nodeId: 'topic', remoteId: 'document', status: 'bound' }], phase: null,

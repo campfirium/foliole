@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseOriginalEpubUnlocated';
+import { buildReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseBookUnlocated';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,

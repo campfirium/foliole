@@ -1,4 +1,4 @@
-import { isReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseOriginalEpubUnlocated';
+import { isReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseBookUnlocated';
 
 import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';

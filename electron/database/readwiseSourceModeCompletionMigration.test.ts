@@ -39,7 +39,7 @@ it('invalidates a deployed v2 completion when schema 89 upgrades', () => {
   expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
   expect(readSetting('readwise_source_mode_conflict')).toEqual({ reasons: [], version: 1 });
   expect(readSetting('readwise_source_cutover_v2')).toMatchObject({
-    completionVersion: 6, status: 'api'
+    completionVersion: 7, status: 'api'
   });
   expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
@@ -122,6 +122,38 @@ it('reopens a v5 completion with per-document failures', () => {
   });
   saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
   sqlite.pragma('user_version = 93');
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(readSetting('readwise_source_mode')).toEqual({ mode: 'relay', version: 1 });
+  expect(readSetting('readwise_source_cutover_v2')).toMatchObject({
+    cohortDocumentIds: [], documents: [], phase: 'indexing', status: 'migration-in-progress'
+  });
+});
+
+it('reopens a v6 completion so bound books are rebuilt from Reader HTML', () => {
+  const completion = {
+    batchId: 'old-batch', completedAt: 'old-done',
+    sourceHost: 'This Mac', startedAt: 'old-start'
+  };
+  saveSetting('readwise_source_cutover_v2', {
+    annotations: [], cohortDocumentIds: ['book'], completedAt: completion.completedAt,
+    completionVersion: 6,
+    documents: [{ nodeId: 'topic-book', remoteId: 'book', status: 'bound' }],
+    phase: null, retiredNodeIds: [], sourceHost: completion.sourceHost,
+    startedAt: completion.startedAt, status: 'api', version: 2
+  });
+  saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
+  sqlite.prepare(`INSERT INTO import_sources (
+    source_fingerprint,provider,source_kind,source_name,source_locator,first_imported_at,
+    last_imported_at,last_content_fingerprint,latest_node_id,remote_provider,
+    remote_connection_ref,remote_document_id,remote_import_state_json
+  ) VALUES ('source','readwise_api','epub','Book','book','old','old','hash','topic-book',
+    'readwise','connection','book',?)`).run(JSON.stringify({
+      bodyAuthority: 'original_epub', metadata: { category: 'epub' },
+      originalFile: { status: 'localized' }
+    }));
+  sqlite.pragma('user_version = 94');
 
   initializeDatabaseSchema(sqlite);
 

@@ -74,5 +74,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   },
   { version: 92, migrate: reopenReadwiseBoundOriginalFiles },
   { version: 93, migrate: reopenIncompleteReadwiseCompletion },
-  { version: 94, migrate: reopenIncompleteReadwiseCompletion }
+  { version: 94, migrate: reopenIncompleteReadwiseCompletion },
+  { version: 95, migrate: reopenIncompleteReadwiseCompletion }
 ];
