@@ -112,6 +112,10 @@ async function runNow(
         onPage: (page) => publishProgress(input?.window, 0, 0, 'fetching', page.recordCount)
       },
       onCandidateCount: updateReadwiseApiTrackedRunProgress,
+      onIndexProgress: (processed) => {
+        updateReadwiseApiTrackedRunProgress(processed, null);
+        publishProgress(input?.window, 0, 0, 'fetching', processed);
+      },
       onProgress: (processed, total) => {
         updateReadwiseApiTrackedRunStage('writing');
         updateReadwiseApiTrackedRunProgress(processed, total);

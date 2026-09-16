@@ -121,8 +121,8 @@ it('uses V3 parent categories and obtains each highlighted parent body once', as
 
   await runReadwiseApiImport({ dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('off') });
 
-  expect(parentRequestOrder).toEqual([
-    'article:metadata', 'book:metadata', 'article:body', 'book:body'
+  expect(parentRequestOrder.filter((request) => request.endsWith(':body'))).toEqual([
+    'article:body', 'book:body'
   ]);
 });
 

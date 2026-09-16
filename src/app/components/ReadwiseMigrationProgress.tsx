@@ -102,6 +102,23 @@ function inactiveMigrationPresentation(
   failures: NonNullable<ReadwiseMigrationState['failures']>
 ) {
   if (failures.length > 0) return completedFailurePresentation(failures, t, compact);
+  const initialRun = taskStatus?.initial_sync.lifecycle;
+  if (initialRun?.status === 'running') {
+    const phase = initialRun.stage === 'fetching'
+      ? t('desktop.readwise.api.tasks.indexing')
+      : t('desktop.readwise.cutover.phase.indexing');
+    return {
+      active: true,
+      failed: false,
+      retryable: false,
+      text: progressText(
+        `${t('desktop.readwise.cutover.status')} · ${phase}`,
+        compact,
+        initialRun.progress?.completed_count ?? 0,
+        initialRun.progress?.total_count ?? null
+      )
+    };
+  }
   if (taskStatus?.cutover.status === 'completed') {
     return taskStatus.initial_sync.status === 'completed' ? null : {
       active: false, failed: false, retryable: false,

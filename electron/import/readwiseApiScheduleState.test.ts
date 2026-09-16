@@ -29,6 +29,7 @@ import {
   loadReadwiseApiScheduleState,
   queueReadwiseApiTrackedRun,
   recoverInterruptedReadwiseApiRun,
+  updateReadwiseApiTrackedRunProgress,
   updateReadwiseApiTrackedRunStage
 } from './readwiseApiScheduleState.js';
 
@@ -91,4 +92,18 @@ it('fails closed for an unknown persisted lifecycle version', () => {
   saveJsonSetting('readwise_api_schedule_state', { connectionRef: 'connection', version: 99 });
   expect(() => loadReadwiseApiScheduleState('connection'))
     .toThrow('readwise_api_schedule_state_unknown_version:99');
+});
+
+it('persists cumulative fetch progress before the total is known', () => {
+  beginReadwiseApiTrackedRun('connection', 'startup', 'initial');
+  updateReadwiseApiTrackedRunStage('fetching');
+  updateReadwiseApiTrackedRunProgress(1327, null);
+
+  expect(loadReadwiseApiScheduleState('connection').lifecycle?.progress).toEqual({
+    completed_count: 1327,
+    failed_count: 0,
+    pending_count: 0,
+    total_count: null,
+    unexplained_failure_count: 0
+  });
 });

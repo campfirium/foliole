@@ -90,7 +90,7 @@ export function updateReadwiseApiTrackedRunStage(stage: NativeReadwiseApiRunStag
 
 export function updateReadwiseApiTrackedRunProgress(
   completedCount: number,
-  totalCount: number,
+  totalCount: number | null,
   failedCount = 0,
   unexplainedFailureCount = 0
 ) {
@@ -104,7 +104,9 @@ export function updateReadwiseApiTrackedRunProgress(
       progress: {
         completed_count: completedCount,
         failed_count: failedCount,
-        pending_count: Math.max(0, totalCount - completedCount - failedCount),
+        pending_count: totalCount === null
+          ? 0
+          : Math.max(0, totalCount - completedCount - failedCount),
         total_count: totalCount,
         unexplained_failure_count: unexplainedFailureCount
       }
