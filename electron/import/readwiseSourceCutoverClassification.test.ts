@@ -23,7 +23,10 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 
-import { recordReadwiseSourceCutoverClassification } from './readwiseSourceCutoverClassification.js';
+import {
+  recordReadwiseSourceCutoverClassification,
+  reopenSuppressedReadwiseSourceCutoverDocuments
+} from './readwiseSourceCutoverClassification.js';
 import { createReadwiseDocumentMigration } from './readwiseSourceCutoverJournal.js';
 
 let tempRoot = '';
@@ -62,6 +65,50 @@ it('records a deleted document and its annotations as blocked tombstones', () =>
   expect(stored.annotations).toEqual([
     { nodeId: null, remoteId: 'highlight-1', status: 'blocked' }
   ]);
+});
+
+it('reopens a suppressed matched document and its annotations for migration', () => {
+  writeReadwiseSourceCutover({
+    annotations: [
+      { nodeId: null, remoteId: 'highlight-1', status: 'suppressed' },
+      { nodeId: null, remoteId: 'other-highlight', status: 'suppressed' }
+    ],
+    cohortDocumentIds: ['document-1', 'other-document'],
+    completedAt: '2026-09-09T01:00:00.000Z',
+    documents: [
+      { nodeId: null, remoteId: 'document-1', status: 'suppressed' },
+      { nodeId: null, remoteId: 'other-document', status: 'suppressed' }
+    ],
+    retiredNodeIds: ['retired-1'], sourceHost: 'This Mac',
+    startedAt: '2026-09-09T00:00:00.000Z', status: 'migration-in-progress'
+  });
+
+  reopenSuppressedReadwiseSourceCutoverDocuments([document()]);
+
+  const stored = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(stored.documents).toEqual([
+    { nodeId: null, remoteId: 'other-document', status: 'suppressed' }
+  ]);
+  expect(stored.annotations).toEqual([
+    { nodeId: null, remoteId: 'other-highlight', status: 'suppressed' }
+  ]);
+
+  recordReadwiseSourceCutoverClassification(document(), 'bound', {
+    annotations: [{ kind: 'highlight', nodeId: 'local-highlight', remoteId: 'highlight-1' }],
+    legacyAnnotations: [], nodeId: 'local-topic', remoteDocumentId: 'document-1',
+    sourceFingerprint: 'legacy-source'
+  });
+  const completed = JSON.parse(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
+  )?.value ?? '{}');
+  expect(completed.documents).toContainEqual({
+    nodeId: 'local-topic', remoteId: 'document-1', status: 'bound'
+  });
+  expect(completed.annotations).toContainEqual({
+    nodeId: 'local-highlight', remoteId: 'highlight-1', status: 'bound'
+  });
 });
 
 it('allows an unmatched selected document to materialize regardless of its creation time', () => {

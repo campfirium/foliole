@@ -61,6 +61,29 @@ export function recordReadwiseSuppressedCutoverDocuments(
   });
 }
 
+export function reopenSuppressedReadwiseSourceCutoverDocuments(
+  documents: PreparedReadwiseApiDocument[]
+) {
+  if (documents.length === 0) return;
+  const current = requireCutoverV2();
+  const documentIds = new Set(documents.map((document) => document.id));
+  const reopenIds = new Set(current.documents
+    .filter((item) => documentIds.has(item.remoteId) && item.status === 'suppressed')
+    .map((item) => item.remoteId));
+  if (reopenIds.size === 0) return;
+  const annotationIds = new Set(documents
+    .filter((document) => reopenIds.has(document.id))
+    .flatMap((document) => document.annotations.map((annotation) => annotation.remoteId)));
+  const next = {
+    ...current,
+    annotations: current.annotations.filter((item) => !annotationIds.has(item.remoteId)),
+    documents: current.documents.filter((item) => !reopenIds.has(item.remoteId))
+  };
+  if (next.failures) next.failures = next.failures.filter((item) => !reopenIds.has(item.remoteId));
+  if (next.activeDocument && reopenIds.has(next.activeDocument.remoteId)) delete next.activeDocument;
+  writeReadwiseSourceCutover(next);
+}
+
 export function recordReadwiseSourceCutoverFailure(input: {
   binding: ReadwiseSourceCutoverIdentityBinding | null;
   document: PreparedReadwiseApiDocument;

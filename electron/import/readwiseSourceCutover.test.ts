@@ -229,7 +229,7 @@ it('rolls back the final completion record when the source mode cannot commit', 
 });
 
 it.each(['dismissed', 'hard_deleted'] as const)(
-  'migrates %s folder sources to Readwise ids without fetching or materializing them', async (disposition) => {
+  'migrates a %s folder source without changing its disposition', async (disposition) => {
     await seedMigratableSource(state.sourcePath);
     const driver = openDatabaseConnection().driver;
     driver.execute(`INSERT INTO keep_import_items (
@@ -246,18 +246,22 @@ it.each(['dismissed', 'hard_deleted'] as const)(
     const fetchImpl = migrationFetch();
 
     await expect(runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } }))
-      .resolves.toMatchObject({ migrated_count: 0, status: 'completed', unmatched_count: 1 });
+      .resolves.toMatchObject(disposition === 'dismissed'
+        ? { migrated_count: 1, status: 'completed', unmatched_count: 0 }
+        : { migrated_count: 0, status: 'completed', unmatched_count: 1 });
 
     expect(driver.queryAll<{ disposition: string; source_scope: string }>(
       'SELECT disposition,source_scope FROM source_disposition_states'
     )).toEqual([{ disposition, source_scope: `api/${remote.connectionRef}/document-1` }]);
-    expect(driver.queryOne<{ count: number }>(
-      "SELECT COUNT(*) count FROM import_sources WHERE remote_document_id='document-1'"
-    )).toEqual({ count: 0 });
+    expect(driver.queryOne<{ latest_node_id: string }>(
+      "SELECT latest_node_id FROM import_sources WHERE remote_document_id='document-1'"
+    )).toEqual(disposition === 'dismissed' ? { latest_node_id: 'topic-1' } : undefined);
     const journal = JSON.parse(driver.queryOne<{ value: string }>(
       "SELECT value FROM settings WHERE key='readwise_source_cutover_v2'"
     )?.value ?? '{}');
-    expect(journal.documents).toEqual([{ nodeId: null, remoteId: 'document-1', status: 'suppressed' }]);
+    expect(journal.documents).toEqual([disposition === 'dismissed'
+      ? { nodeId: 'topic-1', remoteId: 'document-1', status: 'bound' }
+      : { nodeId: null, remoteId: 'document-1', status: 'suppressed' }]);
     expect(fetchImpl.mock.calls.map(([input]) => new URL(String(input))).filter((url) =>
       url.searchParams.get('id') === 'document-1' && url.searchParams.get('withHtmlContent') === 'true'
     )).toHaveLength(0);

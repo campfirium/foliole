@@ -106,6 +106,14 @@ function seedUnreadableLegacyTopic() {
     first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location) VALUES
     ('legacy-source','desktop_text_file','markdown','Sample.md','D:\\Missing\\Sample.md','old','old','hash',
      'legacy-topic','readwise:restored','Sample.md')`);
+  driver.execute(`INSERT INTO keep_import_items (
+    rule_id,source_path,source_mtime_ms,source_size_bytes,source_state,local_node_state,
+    has_source_update,last_node_id,last_status,first_seen_at,last_seen_at,last_imported_at
+  ) VALUES ('restored','Sample.md',1,1,'present','active',0,'legacy-topic','imported','old','old','old')`);
+  driver.execute(`INSERT INTO keep_import_item_cache (
+    rule_id,source_path,title,content,source_mtime_ms,source_size_bytes,refreshed_at
+  ) VALUES ('restored','Sample.md','Sample',
+    '[View in Reader](https://read.readwise.io/read/document-1)',1,1,'old')`);
 }
 
 function restoredLibraryFetch() {

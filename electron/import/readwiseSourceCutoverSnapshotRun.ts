@@ -1,5 +1,7 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { ReadwiseSourceCutoverFailureStage } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
 import { loadReadwiseSourceMigrationProgress } from '../database/readwiseSourceCutover.js';
 
 import { fetchReadwiseSourceCutoverSnapshot, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -7,7 +9,11 @@ import { commitCutoverItem } from './readwiseCutoverCommit.js';
 import { readCutoverDownloadProgress } from './readwiseCutoverDownload.js';
 import { verifyCutoverEpub } from './readwiseCutoverProjection.js';
 import { cutoverItemBinding, prepareCutoverWorklist } from './readwiseCutoverWorklist.js';
-import { recordReadwiseSourceCutoverActiveDocument, recordReadwiseSourceCutoverFailure } from './readwiseSourceCutoverClassification.js';
+import {
+  recordReadwiseSourceCutoverActiveDocument,
+  recordReadwiseSourceCutoverFailure,
+  reopenSuppressedReadwiseSourceCutoverDocuments
+} from './readwiseSourceCutoverClassification.js';
 import { readwiseCutoverDocumentFailureReason } from './readwiseSourceCutoverDocumentStep.js';
 import { requireReadwiseSourceCutoverV2 } from './readwiseSourceCutoverJournal.js';
 
@@ -44,6 +50,17 @@ async function updateDocuments(
   work: Awaited<ReturnType<typeof prepareCutoverWorklist>>
 ) {
   const documents = new Map(work.documents.map((document) => [document.id, document]));
+  const initialTerminals = new Map(requireReadwiseSourceCutoverV2().documents
+    .map((item) => [item.remoteId, item]));
+  reopenSuppressedReadwiseSourceCutoverDocuments(work.items.flatMap((item) => {
+    const document = documents.get(item.remoteId);
+    const disposition = readReadwiseApiSourceDisposition(
+      openDatabaseConnection().driver, input.connectionRef, item.remoteId
+    );
+    return item.binding && disposition !== 'hard_deleted' && document &&
+      initialTerminals.get(item.remoteId)?.status === 'suppressed'
+      ? [document] : [];
+  }));
   const terminals = new Map(requireReadwiseSourceCutoverV2().documents.map((item) => [item.remoteId, item]));
   const publish = () => {
     const progress = loadReadwiseSourceMigrationProgress();

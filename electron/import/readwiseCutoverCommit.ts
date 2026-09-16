@@ -39,7 +39,7 @@ export async function commitCutoverItem(input: {
   input.assertEligible();
   input.onStage('writing');
   openDatabaseConnection().driver.transaction((driver) => {
-    if (readReadwiseApiSourceDisposition(driver, input.connectionRef, document.id)) {
+    if (readReadwiseApiSourceDisposition(driver, input.connectionRef, document.id) === 'hard_deleted') {
       recordReadwiseSuppressedCutoverDocuments([document], new Set([document.id]));
       return;
     }
