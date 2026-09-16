@@ -32,6 +32,7 @@ const resolved = { ...unresolved, addresses: ['192.168.0.12'], host: 'peer.local
   port: 38641, txt: { group_id: 'group-1' } };
 
 beforeEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
   runtime.browseCallback = null;
   runtime.resolveCallbacks = [];
@@ -70,17 +71,31 @@ it('fails closed on host errors and ignores callbacks after stop', () => {
   expect(onError).not.toHaveBeenCalled();
 });
 
-it('ignores one failed service resolve without stopping discovery', () => {
+it('retries a failed service resolve without stopping discovery', () => {
+  vi.useFakeTimers();
   const onError = vi.fn();
   const onService = vi.fn();
   startDesktopDnsSdSession({ onError, onService });
   runtime.browseCallback?.({ kind: 'found', service: unresolved });
   runtime.resolveCallbacks[0]?.({ code: 'resolve_failed', kind: 'error', message: 'offline' });
-  const another = { ...unresolved, fqdn: 'Another._foliole-sync._tcp.local.', name: 'Another' };
-  runtime.browseCallback?.({ kind: 'found', service: another });
-  runtime.resolveCallbacks[1]?.({ kind: 'found', service: { ...resolved, ...another } });
+  vi.advanceTimersByTime(1_000);
+  runtime.resolveCallbacks[1]?.({ kind: 'found', service: resolved });
 
   expect(onError).not.toHaveBeenCalled();
   expect(runtime.browseCancel).not.toHaveBeenCalled();
+  expect(runtime.resolveInputs).toHaveLength(2);
   expect(onService).toHaveBeenCalledWith(expect.objectContaining({ kind: 'found' }));
+});
+
+it('cancels a pending resolve retry when the service is lost', () => {
+  vi.useFakeTimers();
+  const onService = vi.fn();
+  startDesktopDnsSdSession({ onError: vi.fn(), onService });
+  runtime.browseCallback?.({ kind: 'found', service: unresolved });
+  runtime.resolveCallbacks[0]?.({ code: 'resolve_failed', kind: 'error', message: 'offline' });
+  runtime.browseCallback?.({ kind: 'lost', service: unresolved });
+  vi.advanceTimersByTime(1_000);
+
+  expect(runtime.resolveInputs).toHaveLength(1);
+  expect(onService).not.toHaveBeenCalled();
 });

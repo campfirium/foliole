@@ -9,6 +9,7 @@ import {
 import { desktopDnsSdServiceFacts, logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 
 const SERVICE = { domain: 'local.', type: '_foliole-sync._tcp' } as const;
+const RESOLVE_RETRY_MS = 1_000;
 
 export type DesktopDnsSdServiceChange = {
   kind: 'changed' | 'found' | 'lost';
@@ -21,7 +22,10 @@ type SessionCallbacks = {
   onError: (error: Error) => void;
   onService: (event: DesktopDnsSdServiceChange) => void;
 };
-type ResolveToken = { handle: DesktopDnsSdHandle | null };
+type ResolveToken = {
+  handle: DesktopDnsSdHandle | null;
+  retryTimer: ReturnType<typeof setTimeout> | null;
+};
 type SessionState = {
   browser: DesktopDnsSdHandle | null;
   callbacks: SessionCallbacks;
@@ -37,12 +41,17 @@ function serviceKey(service: DesktopDnsSdService) {
   return `${service.interfaceIndex}:${service.fqdn || service.name}`;
 }
 
+function cancelResolve(token: ResolveToken | undefined) {
+  token?.handle?.cancel();
+  if (token?.retryTimer) clearTimeout(token.retryTimer);
+}
+
 function stopSession(state: SessionState) {
   if (state.stopped) return;
   state.stopped = true;
   logDesktopDnsSdDiagnostic('browse_stopped', { sessionId: state.sessionId });
   state.browser?.cancel();
-  state.pending.forEach(({ handle }) => handle?.cancel());
+  state.pending.forEach((token) => cancelResolve(token));
   state.pending.clear();
   state.resolved.clear();
 }
@@ -55,21 +64,28 @@ function failSession(state: SessionState, event: Extract<DesktopDnsSdEvent, { ki
   state.callbacks.onError(new Error(`${event.code}: ${event.message}`));
 }
 
-function ignoreResolveFailure(
+function scheduleResolveRetry(
   state: SessionState,
   key: string,
+  service: DesktopDnsSdService,
   event: Extract<DesktopDnsSdEvent, { kind: 'error' }>
 ) {
-  state.pending.delete(key);
+  const token = state.pending.get(key);
+  if (!token) return;
+  token.handle = null;
   logDesktopDnsSdDiagnostic('resolve_error_ignored', {
     code: event.code, message: event.message, sessionId: state.sessionId
   });
+  token.retryTimer = setTimeout(() => {
+    if (state.stopped || state.pending.get(key) !== token) return;
+    beginResolve(state, service);
+  }, RESOLVE_RETRY_MS);
 }
 
 function beginResolve(state: SessionState, service: DesktopDnsSdService) {
   const key = serviceKey(service);
-  state.pending.get(key)?.handle?.cancel();
-  const token: ResolveToken = { handle: null };
+  cancelResolve(state.pending.get(key));
+  const token: ResolveToken = { handle: null, retryTimer: null };
   state.pending.set(key, token);
   logDesktopDnsSdDiagnostic('resolve_started', {
     fqdn: service.fqdn, interfaceIndex: service.interfaceIndex, sessionId: state.sessionId
@@ -78,7 +94,7 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
     name: service.name }, (event) => {
     if (state.stopped || state.pending.get(key) !== token) return;
     if (event.kind === 'error') {
-      ignoreResolveFailure(state, key, event);
+      scheduleResolveRetry(state, key, service, event);
       return;
     }
     if (event.kind !== 'found' && event.kind !== 'changed') return;
@@ -110,7 +126,7 @@ function consumeBrowseEvent(state: SessionState, event: DesktopDnsSdEvent) {
   });
   const key = serviceKey(event.service);
   if (event.kind !== 'lost') return beginResolve(state, event.service);
-  state.pending.get(key)?.handle?.cancel();
+  cancelResolve(state.pending.get(key));
   state.pending.delete(key);
   const previous = state.resolved.get(key);
   state.resolved.delete(key);
