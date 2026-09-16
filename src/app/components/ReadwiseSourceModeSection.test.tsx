@@ -115,7 +115,7 @@ it('does not render a disconnected state before the saved credential is restored
   expect(await screen.findByText('Connected')).toBeInTheDocument();
 });
 
-it('shows indeterminate indexing below the API source selector', async () => {
+it('shows the known source total while rebuilding the Readwise index', async () => {
   runtime.load.mockResolvedValue({ has_credential: true, state: 'connected', verified_at: 'now' });
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress', topic_count: 12, total_count: null
@@ -130,7 +130,8 @@ it('shows indeterminate indexing below the API source selector', async () => {
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  await waitFor(() => expect(screen.getAllByText('Migrating · Indexing')).toHaveLength(2));
+  await waitFor(() => expect(screen.getByText('Migrating · Indexing · 0 / 12')).toBeInTheDocument());
+  expect(screen.getByText('Migrating · Indexing')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
 });

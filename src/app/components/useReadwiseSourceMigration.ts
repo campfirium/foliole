@@ -33,11 +33,11 @@ export function useReadwiseSourceMigration(input: {
   const [required, setRequired] = useState(false);
   const startingRef = useRef(false);
   const resumeAttemptedRef = useRef(false);
-  const start = useCallback(async () => {
+  const start = useCallback(async (initialTotalCount?: number) => {
     if (startingRef.current) return;
     startingRef.current = true;
     setPending(true);
-    setProgress((current) => ({ ...current, errorReason: null, failed: false }));
+    resetMigrationProgress(setProgress, initialTotalCount);
     let unsubscribe: (() => void) | null = null;
     try {
       try {
@@ -56,7 +56,7 @@ export function useReadwiseSourceMigration(input: {
         errorReason: output.error_reason ?? state.error_reason,
         failed: active && output.status !== 'completed' && output.status !== 'already_completed',
         phase: active ? state.phase : null,
-        totalCount: active ? state.total_count : null
+        totalCount: active ? state.total_count ?? state.topic_count : null
       });
       if (output.status === 'completed' || output.status === 'already_completed') {
         input.onCommitMode?.('api');
@@ -79,6 +79,16 @@ export function useReadwiseSourceMigration(input: {
   return { ...progress, pending, required, requestStart, selectApi, start };
 }
 
+function resetMigrationProgress(
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
+  initialTotalCount?: number
+) {
+  setProgress((current) => ({
+    ...current, errorReason: null, failed: false,
+    totalCount: current.totalCount ?? initialTotalCount ?? null
+  }));
+}
+
 function applyMigrationProgress(
   setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
   progress: ReadwiseReaderImportProgressPayload
@@ -93,7 +103,7 @@ function applyMigrationProgress(
       errorReason: null,
       failed: progress.status === 'failed',
       phase,
-      totalCount: progress.totalCount > 0 ? progress.totalCount : null
+      totalCount: progress.totalCount > 0 ? progress.totalCount : current.totalCount
     };
   });
 }
@@ -117,12 +127,12 @@ async function selectReadwiseApi(
 async function requestReadwiseApiMigration(
   t: Translate,
   beforeStart: () => Promise<void> | void,
-  start: () => Promise<void>
+  start: (initialTotalCount?: number) => Promise<void>
 ) {
   const preview = await previewReadwiseSourceCutoverInRuntime();
   if (preview.status !== 'ready' || !await confirmMigration(preview.topic_count, t)) return;
   await beforeStart();
-  await start();
+  await start(preview.topic_count);
 }
 
 function useResumeReadwiseMigration(
@@ -144,7 +154,7 @@ function useResumeReadwiseMigration(
         errorReason: state.error_reason,
         failed: Boolean(state.error_reason),
         phase: state.phase,
-        totalCount: state.total_count
+        totalCount: state.total_count ?? state.topic_count
       });
     });
   }, [attempted, committedMode, onSelectApi, setProgress, setRequired]);

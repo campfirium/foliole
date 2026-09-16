@@ -38,8 +38,22 @@ async function seedProjection(app: ElectronApplication, projection: Projection) 
       identity.saveReadwiseConnectionState({
         secretRef, state: 'connected', verifiedAt: '2026-09-11T00:00:00.000Z'
       }, source, '2026-09-11T00:00:00.000Z');
+      const driver = connection.openDatabaseConnection().driver;
+      driver.execute(`INSERT OR IGNORE INTO nodes
+        (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+        VALUES ('readwise-topic-1',NULL,'topic','Readwise topic',0,'body','old','old')`);
+      driver.execute(`INSERT OR IGNORE INTO desktop_sources
+        (source_ref,source_type,config_ref,host_name,host_platform,root_path,path_flavor,
+         type_settings_json,created_at,updated_at) VALUES
+        ('readwise:phase','readwise','phase',?,'darwin','/phase','posix','{}','old','old')`,
+      [assignment.current_host_name]);
+      driver.execute(`INSERT OR IGNORE INTO import_sources
+        (source_fingerprint,provider,source_kind,source_name,source_locator,first_imported_at,
+         last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location)
+        VALUES ('phase','desktop_text_file','markdown','Phase.md','Phase.md','old','old','hash',
+          'readwise-topic-1','readwise:phase','Phase.md')`);
       cutover.writeReadwiseSourceCutover({
-        annotations: [], cohortDocumentIds: ['document-1'],
+        annotations: [], cohortDocumentIds: input.migration === 'indexing' ? [] : ['document-1'],
         completedAt: '2026-09-11T00:00:00.000Z', documents: [], phase: input.migration,
         retiredNodeIds: [], sourceHost: assignment.current_host_name,
         startedAt: '2026-09-11T00:00:00.000Z', status: 'migration-in-progress'

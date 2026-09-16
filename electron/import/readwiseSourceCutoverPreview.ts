@@ -22,14 +22,15 @@ export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSour
     const indexing = current.status !== 'api' && current.version === 2
       ? current.phase !== 'merging' : current.status !== 'api';
     const frozenCount = countReadwiseApiFrozenResources(connectionRef);
+    const topicCount = countCurrentHostTopics(current.sourceHost);
     return {
       completed_count: indexing ? frozenCount : progress.completedCandidateCount,
       error_reason: firstReadwiseCandidateFailureReason(),
       phase: completed ? null : indexing ? 'indexing' : 'merging',
       status: completed ? 'already_completed' : 'migration_in_progress',
-      topic_count: countCurrentHostTopics(current.sourceHost),
+      topic_count: topicCount,
       total_count: indexing && current.version === 2 && current.cohortDocumentIds.length === 0
-        ? null : progress.totalCandidateCount
+        ? topicCount : progress.totalCandidateCount
     };
   }
   const assignment = loadReadwiseHostAssignment();
