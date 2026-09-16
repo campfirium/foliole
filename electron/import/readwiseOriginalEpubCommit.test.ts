@@ -40,6 +40,7 @@ import {
   captureReadwiseOriginalEpubSnapshot,
   loadReadwiseOriginalEpubTarget
 } from './readwiseOriginalEpubTarget.js';
+import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
 
 const importedAt = '2026-09-12T01:00:00.000Z';
 let tempRoot = '';
@@ -106,6 +107,14 @@ async function seedTarget() {
   const root = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'Book'")!;
   const readerSection = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'Reader chapter'")!;
   const remote = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE content = 'Remote original'")!;
+  const earlyUnlocated = ensureReadwiseUnlocatedNode({
+    connectionRef, documentId: document.id, driver, importedAt, rootNodeId: root.id
+  });
+  driver.execute(
+    `INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+     VALUES ('early-unlocated-child',?,'topic','Early missing',1,'Kept',?,?)`,
+    [earlyUnlocated, importedAt, importedAt]
+  );
   driver.execute("UPDATE nodes SET title = 'My title', content = 'My remote note' WHERE id = ?", [remote.id]);
   driver.execute("UPDATE nodes SET title = 'My Book', updated_at = ? WHERE id = ?", ['2026-09-12T01:10:00.000Z', root.id]);
   driver.execute(
@@ -177,6 +186,10 @@ it('force-replaces changed Reader content while preserving identities, user cont
   )).toMatchObject({ anchor_link: expect.stringContaining('imported-highlight-root-legacy-auto'), parent_title: '※' });
   expect(driver.queryOne<{ parent_id: string }>("SELECT parent_id FROM nodes WHERE id='ordinary-same-title'"))
     .toEqual({ parent_id: seeded.rootId });
+  expect(driver.queryAll<{ title: string }>(
+    `SELECT child.title FROM node_order ordered JOIN nodes child ON child.id=ordered.node_id
+     WHERE child.parent_id=? AND child.deleted_at IS NULL ORDER BY ordered.position`, [seeded.rootId]
+  ).at(-1)).toEqual({ title: '※' });
   const source = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='book-1'"
   )!;

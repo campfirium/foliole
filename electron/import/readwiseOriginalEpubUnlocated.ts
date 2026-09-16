@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseOriginalEpubUnlocated.js';
 
 export function ensureReadwiseUnlocatedNode(input: {
@@ -35,4 +36,30 @@ export function removeEmptyReadwiseUnlocatedNode(driver: DatabaseDriver, nodeId:
   if (children === 0) {
     driver.execute('UPDATE nodes SET deleted_at = ?, updated_at = ?, sync_dirty = 1 WHERE id = ?', [deletedAt, deletedAt, nodeId]);
   }
+}
+
+export function placeReadwiseUnlocatedNodeLast(
+  driver: DatabaseDriver,
+  rootNodeId: string,
+  nodeId: string
+) {
+  const siblings = driver.queryAll<{ id: string }>(
+    `SELECT sibling.id
+     FROM nodes sibling
+     LEFT JOIN node_order sibling_order ON sibling_order.node_id = sibling.id
+     WHERE sibling.parent_id = ? AND sibling.deleted_at IS NULL
+     ORDER BY CASE WHEN sibling_order.position IS NULL THEN 1 ELSE 0 END,
+       sibling_order.position ASC, sibling.rowid ASC`,
+    [rootNodeId]
+  ).map((row) => row.id);
+  if (!siblings.includes(nodeId)) return;
+  const siblingIds = new Set(siblings);
+  const current = driver.queryAll<{ node_id: string }>(
+    'SELECT node_id FROM node_order ORDER BY position ASC'
+  ).map((row) => row.node_id);
+  const firstSiblingIndex = current.findIndex((currentId) => siblingIds.has(currentId));
+  const next = current.filter((currentId) => !siblingIds.has(currentId));
+  const desired = [...siblings.filter((siblingId) => siblingId !== nodeId), nodeId];
+  next.splice(firstSiblingIndex < 0 ? next.length : firstSiblingIndex, 0, ...desired);
+  rewriteExistingNodeOrder(driver, next);
 }

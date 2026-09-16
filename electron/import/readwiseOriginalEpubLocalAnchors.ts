@@ -4,7 +4,10 @@ import { applyImportedHighlightAnchors } from '../../lib/core/database/importHig
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
-import { ensureReadwiseUnlocatedNode } from './readwiseOriginalEpubUnlocated.js';
+import {
+  ensureReadwiseUnlocatedNode,
+  placeReadwiseUnlocatedNodeLast
+} from './readwiseOriginalEpubUnlocated.js';
 
 interface LocalAnchorRow extends DatabaseRow {
   anchor_link: string | null;
@@ -89,6 +92,9 @@ export function relocateReadwiseOriginalEpubLocalAnchors(input: {
        WHERE id = ?`,
       [placement.located?.parentId ?? unlocatedNodeId, anchorLink, input.importedAt, placement.row.id]
     );
+  }
+  if (unlocatedNodeId) {
+    placeReadwiseUnlocatedNodeLast(driver, input.rootNodeId, unlocatedNodeId);
   }
   return rows.length;
 }
