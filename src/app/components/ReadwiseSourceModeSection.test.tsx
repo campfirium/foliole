@@ -130,7 +130,8 @@ it('keeps indexing visible while the remote total is not known yet', async () =>
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  await waitFor(() => expect(screen.getAllByText('Readwise migration · Downloading')).toHaveLength(2));
+  await waitFor(() => expect(screen.getAllByText(/^Readwise migration · Downloading/)).toHaveLength(2));
+  expect(screen.getByText('Readwise migration · Downloading · 0')).toBeInTheDocument();
   expect(screen.queryByText(/0 \/ 12/)).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');

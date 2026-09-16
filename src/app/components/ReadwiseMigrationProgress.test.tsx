@@ -167,12 +167,20 @@ it('keeps completed migration failures summarized in the source selector', () =>
   expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
 });
 
-it('shows activity without a percentage while either download total is unknown', () => {
+it('shows the downloaded record count while a reliable percentage is unavailable', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 900, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading · 900$/);
+});
+
+it('shows zero before the first download page arrives', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{ completedCount: 0, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
+    taskStatus={null}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading · 0$/);
 });
 
 it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {
