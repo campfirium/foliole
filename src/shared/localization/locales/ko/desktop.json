@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "폴더를 선택하고 검사를 실행한 다음 이 기능을 켜십시오.",
   "desktop.readwise.section.sync.aria": "Readwise 리더 동기화",
   "desktop.readwise.section.behavior.aria": "Readwise 리더 가져오기 동작",
+  "desktop.readwise.section.behavior.description": "가져올 유형과 위치를 설정합니다.",
   "desktop.readwise.section.behavior.title": "가져오기 동작",
   "desktop.readwise.section.settings.aria": "Readwise 리더 가져오기 설정",
   "desktop.readwise.section.settings.title": "가져오기 설정",

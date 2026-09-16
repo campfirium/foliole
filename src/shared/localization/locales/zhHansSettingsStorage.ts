@@ -10,7 +10,7 @@ export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.category.externalSearch.label': 'External folders',
   'settings.category.externalSearch.description': '选择 Foliole 外部的文件夹，用于浏览、搜索和导入。',
   'settings.category.readwiseReader.label': 'Readwise Reader',
-  'settings.category.readwiseReader.description': '同步 Readwise Reader 内容，导入为主题或纳入外部文档库。',
+  'settings.category.readwiseReader.description': '将 Readwise Reader 内容导入为主题或纳入外部文档库。',
   'settings.import.title.sectionAria': '导入标题设置区',
   'settings.import.title.sectionTitle': '导入标题',
   'settings.import.title.description': '导入的主题会保持原正文不变。这里仅决定哪个值作为主题标题。',

@@ -55,15 +55,19 @@ it('keeps sync without cleanup alongside import rules', async () => {
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Sync' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Sync now' })).toBeEnabled();
+  expect(screen.getByText(
+    'While the app is running, automatically sync new and changed Readwise Reader content.'
+  )).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Clean up...' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
+  expect(screen.getByText('Set import types and destinations.')).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Reader document import tag' })).toHaveValue('');
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.queryByRole('searchbox', { name: 'Search by title or author' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Preview import' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Connect Readwise' })).toBeInTheDocument();
-  for (const name of ['Connect Readwise', 'Sync']) {
+  for (const name of ['Connect Readwise', 'Sync now']) {
     expect(screen.getByRole('button', { name })).toHaveClass('w-36', 'min-h-8');
   }
   expect(screen.queryByText('Migrate existing Topics')).not.toBeInTheDocument();

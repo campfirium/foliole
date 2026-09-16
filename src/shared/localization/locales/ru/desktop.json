@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "Выберите папки, запустите проверку, затем включите это.",
   "desktop.readwise.section.sync.aria": "Readwise Синхронизация чтения",
   "desktop.readwise.section.behavior.aria": "Readwise Поведение импорта Reader",
+  "desktop.readwise.section.behavior.description": "Настройте типы импорта и места назначения.",
   "desktop.readwise.section.behavior.title": "Импортировать поведение",
   "desktop.readwise.section.settings.aria": "Readwise Настройки импорта Reader",
   "desktop.readwise.section.settings.title": "Импортировать настройки",

@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "Scegli le cartelle, esegui un controllo, quindi attivalo.",
   "desktop.readwise.section.sync.aria": "Readwise Sincronizzazione lettore",
   "desktop.readwise.section.behavior.aria": "Readwise Comportamento di importazione del lettore",
+  "desktop.readwise.section.behavior.description": "Imposta i tipi e le destinazioni di importazione.",
   "desktop.readwise.section.behavior.title": "Comportamento di importazione",
   "desktop.readwise.section.settings.aria": "Readwise Impostazioni di importazione del lettore",
   "desktop.readwise.section.settings.title": "Importa impostazioni",

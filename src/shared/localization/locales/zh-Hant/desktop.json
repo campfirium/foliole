@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "選擇資料夾，執行檢查，然後將其開啟。",
   "desktop.readwise.section.sync.aria": "Readwise 讀卡機同步",
   "desktop.readwise.section.behavior.aria": "Readwise 讀取器導入行為",
+  "desktop.readwise.section.behavior.description": "設定匯入類型和匯入位置。",
   "desktop.readwise.section.behavior.title": "導入行為",
   "desktop.readwise.section.settings.aria": "Readwise 讀卡機導入設定",
   "desktop.readwise.section.settings.title": "導入設定",

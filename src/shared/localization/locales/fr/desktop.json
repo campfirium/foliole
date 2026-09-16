@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "Choisissez les dossiers, effectuez une vérification, puis activez-le.",
   "desktop.readwise.section.sync.aria": "Readwise Synchronisation du lecteur",
   "desktop.readwise.section.behavior.aria": "Readwise Comportement d'importation du lecteur",
+  "desktop.readwise.section.behavior.description": "Définissez les types et les destinations d’importation.",
   "desktop.readwise.section.behavior.title": "Comportement d'importation",
   "desktop.readwise.section.settings.aria": "Readwise Paramètres d'importation du lecteur",
   "desktop.readwise.section.settings.title": "Paramètres d'importation",

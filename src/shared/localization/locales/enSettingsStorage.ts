@@ -8,7 +8,7 @@ export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   'settings.category.externalSearch.label': 'External folders',
   'settings.category.externalSearch.description': 'Choose folders to browse, search, and import from outside Foliole.',
   'settings.category.readwiseReader.label': 'Readwise Reader',
-  'settings.category.readwiseReader.description': 'Sync Readwise Reader content, importing it as topics or adding it to the external document library.',
+  'settings.category.readwiseReader.description': 'Import Readwise Reader content as topics or add it to the external document library.',
   'settings.import.title.sectionAria': 'Import title settings',
   'settings.import.title.sectionTitle': 'Imported title',
   'settings.import.title.description': 'Imported topics keep the original body unchanged. This only decides which value becomes the topic title.',

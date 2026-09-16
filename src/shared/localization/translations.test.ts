@@ -76,4 +76,20 @@ describe('translation catalog loading', () => {
       );
     }
   });
+
+  it('keeps the approved Simplified Chinese Readwise settings copy', () => {
+    expect(translate('zh-Hans', 'settings.category.readwiseReader.description')).toBe(
+      '将 Readwise Reader 内容导入为主题或纳入外部文档库。'
+    );
+    expect(translate('zh-Hans', 'desktop.readwise.section.behavior.description')).toBe(
+      '设置导入类型和导入位置。'
+    );
+    expect(translate('zh-Hans', 'desktop.readwise.behavior.importTag.description')).toBe(
+      '同时导入带有此 Reader 文档标签的内容。'
+    );
+    expect(translate('zh-Hans', 'desktop.readwise.sync.description')).toBe(
+      '应用运行期间，自动同步 Readwise Reader 中新增和变更的内容。'
+    );
+    expect(translate('zh-Hans', 'desktop.readwise.sync.action')).toBe('立即同步');
+  });
 });

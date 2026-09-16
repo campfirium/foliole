@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "Wählen Sie die Ordner aus, führen Sie eine Prüfung durch und aktivieren Sie diese Funktion.",
   "desktop.readwise.section.sync.aria": "Readwise Reader-Synchronisierung",
   "desktop.readwise.section.behavior.aria": "Readwise Reader-Importverhalten",
+  "desktop.readwise.section.behavior.description": "Importtypen und Importziele festlegen.",
   "desktop.readwise.section.behavior.title": "Importverhalten",
   "desktop.readwise.section.settings.aria": "Readwise Reader-Importeinstellungen",
   "desktop.readwise.section.settings.title": "Einstellungen importieren",

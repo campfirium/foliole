@@ -76,7 +76,11 @@ function ReadwiseConfigDialogBody(props: {
             onSync={() => undefined}
           />
         </SettingsSection>
-        <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
+        <SettingsSection
+          ariaLabel={t('desktop.readwise.section.behavior.aria')}
+          description={t('desktop.readwise.section.behavior.description')}
+          title={t('desktop.readwise.section.behavior.title')}
+        >
           <ReadwiseReaderImportBehavior
             onChange={props.onChangePolicy}
             onChangeImportTag={() => undefined}

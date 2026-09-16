@@ -139,7 +139,7 @@ function ReadwiseImportTagRow(props: {
       title={t('desktop.readwise.behavior.importTag.title')}
     >
       <SettingsControlSlot>
-        <div className="flex min-w-0 items-stretch">
+        <div className="flex w-80 max-w-full min-w-0 items-stretch">
           <span aria-hidden="true" className="flex h-10 items-center rounded-l-md border border-r-0 border-settings-control-border bg-settings-control px-3 text-ui-input text-foreground/60">#</span>
           <AppInput
             aria-label={t('desktop.readwise.behavior.importTag.aria')}

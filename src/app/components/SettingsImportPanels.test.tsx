@@ -58,6 +58,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
   expect(screen.queryByText('Clean up imports')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import rules' })).toBeInTheDocument();
+  expect(screen.getByText('Set import types and destinations.')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Articles with highlights destination' })).toBeInTheDocument();
@@ -66,11 +67,11 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(screen.getByRole('combobox', { name: 'Books without highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toHaveValue('hourly');
   expect(screen.queryByLabelText('Readwise import scope')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sync now' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
   expect(
     screen
-      .getByRole('button', { name: 'Sync' })
+      .getByRole('button', { name: 'Sync now' })
       .compareDocumentPosition(screen.getByRole('heading', { name: 'Import rules' }))
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   expect(

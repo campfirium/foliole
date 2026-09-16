@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "フォルダーを選択し、チェックを実行して、これをオンにします。",
   "desktop.readwise.section.sync.aria": "Readwise リーダーの同期",
   "desktop.readwise.section.behavior.aria": "Readwise リーダーのインポート動作",
+  "desktop.readwise.section.behavior.description": "インポートする種類と保存先を設定します。",
   "desktop.readwise.section.behavior.title": "インポート動作",
   "desktop.readwise.section.settings.aria": "Readwise リーダーのインポート設定",
   "desktop.readwise.section.settings.title": "インポート設定",

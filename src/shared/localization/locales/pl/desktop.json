@@ -163,6 +163,7 @@
   "desktop.readwise.dialog.description": "Wybierz foldery, sprawdź, a następnie włącz tę opcję.",
   "desktop.readwise.section.sync.aria": "Readwise Synchronizacja czytnika",
   "desktop.readwise.section.behavior.aria": "Readwise Zachowanie przy importowaniu czytnika",
+  "desktop.readwise.section.behavior.description": "Ustaw typy importu i miejsca docelowe.",
   "desktop.readwise.section.behavior.title": "Importuj zachowanie",
   "desktop.readwise.section.settings.aria": "Readwise Ustawienia importu czytnika",
   "desktop.readwise.section.settings.title": "Importuj ustawienia",

@@ -33,7 +33,11 @@ export function ReadwiseBehaviorSection(props: {
 }) {
   const t = useTranslation();
   return (
-    <SettingsSection ariaLabel={t('desktop.readwise.section.behavior.aria')} title={t('desktop.readwise.section.behavior.title')}>
+    <SettingsSection
+      ariaLabel={t('desktop.readwise.section.behavior.aria')}
+      description={t('desktop.readwise.section.behavior.description')}
+      title={t('desktop.readwise.section.behavior.title')}
+    >
       <ReadwiseReaderImportBehavior
         {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
         onChange={props.onChange}
