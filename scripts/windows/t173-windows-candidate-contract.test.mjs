@@ -11,9 +11,11 @@ const expected = { branch: 'sync', clean: true, committed: true,
   revision: 'a'.repeat(40), sourceRef: 'refs/heads/sync',
   sourceRoot: T173_WINDOWS_REPO_ROOT, treeDigest: 'b'.repeat(40) };
 
-it('registers both formal T173 product actions under the candidate owner', () => {
+it('registers every formal Windows stage under the sync candidate owner', () => {
   expect([...T173_WINDOWS_ACTIONS]).toEqual([
-    'multi-device-sync-c', 'two-device-sync-provider'
+    'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
+    'multi-device-sync-from-zero', 'multi-device-sync-participation',
+    'two-device-sync-provider'
   ]);
 });
 

@@ -12,6 +12,7 @@ import {
   openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { waitForCurrentA5Provider } from '../android/macos-a5-current-provider-readiness.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import {
@@ -118,7 +119,15 @@ async function joinA5({ buildIdentity, env, evidenceRoot, execute, groupIdentity
     } });
 }
 
-export async function establishFreshAB({ execute, reportProgress, repoRoot, runId }) {
+export async function waitForMacosProviderAfterJoin(session, group, {
+  observe = observeMacosAnchorAfterElection, waitForProvider = waitForCurrentA5Provider
+} = {}) {
+  await observe(session);
+  return waitForProvider({ deviceId: group.local_device_identity_key,
+    groupId: group.group_id, topologyRole: 'anchor' });
+}
+
+export async function establishFreshAB({ execute, reportProgress, repoRoot, runId, signal }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosAcceptanceEnv(macosA5GradleEnv());
@@ -130,16 +139,20 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     runtimeRoot: owned.root
   });
   const session = await openMacosSyncGroupDesktopSession(sessionOptions);
-  await session.enable();
-  await prepareA5ForFreshJoin({ buildIdentity: runId, env, evidenceRoot, execute, paths });
-  await observeMacosAnchorAfterElection(session);
-  const providerOverview = await session.load();
+  const abort = () => { void session.close().catch(() => undefined); };
+  signal?.addEventListener('abort', abort, { once: true });
   let journey;
-  try { journey = await performFreshJoinSequence({
+  try {
+    await session.enable();
+    await prepareA5ForFreshJoin({ buildIdentity: runId, env, evidenceRoot, execute, paths });
+    await observeMacosAnchorAfterElection(session);
+    const providerOverview = await session.load();
+    journey = await performFreshJoinSequence({
     createFact: () => createInitialFact({ evidenceRoot, session }),
     pair: async () => {
       const result = await joinA5({ buildIdentity: runId, env, evidenceRoot, execute,
         groupIdentity: providerOverview.sync_group, paths, session });
+      await waitForMacosProviderAfterJoin(session, providerOverview.sync_group);
       reportProgress('macos-group-created'); reportProgress('a5-paired');
       return result;
     },
@@ -148,7 +161,11 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     restart: () => restartAndroid(execute, paths, env),
     syncNow: (_factId, observe) => runFreshJoinInitialSync({ buildIdentity: runId, env,
       evidenceRoot, execute, observe, paths })
-  }); } finally { await session.close().catch(() => undefined); }
+    });
+  } finally {
+    signal?.removeEventListener('abort', abort);
+    await session.close().catch(() => undefined);
+  }
   const { mutationFact, pairResult, received, restarted } = journey;
   const mutation = { factId: mutationFact.factId, origin: 'A', runId };
   const proof = assertFreshJoinInitialConvergence({ mutation,

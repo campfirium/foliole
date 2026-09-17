@@ -14,8 +14,8 @@ export function freshJourneyFactIds(journeyFacts, excluded) {
   return result;
 }
 
-export function startWindowsARejoinProvider({ execute, reportProgress, repoRoot }) {
+export function startWindowsARejoinProvider({ execute, reportProgress, repoRoot, sourceRef }) {
   return startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-a-rejoin', execute, reportProgress, repoRoot
+    action: 'multi-device-sync-a-rejoin', execute, reportProgress, repoRoot, sourceRef
   });
 }

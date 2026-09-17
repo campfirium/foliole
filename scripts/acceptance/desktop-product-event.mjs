@@ -2,6 +2,7 @@
 
 const PRODUCT_EVENTS = new Set([
   'onSyncGroupDiscoveryChanged', 'onSyncGroupJoinRequestsChanged',
+  'onSyncGroupOverviewChanged',
   'onWorkspaceContentChanged', 'onWorkspaceSyncApplied'
 ]);
 
@@ -88,6 +89,10 @@ export async function waitForDesktopProductState(page, {
           throw new Error('Discovered Sync Group identity did not match id and tag.');
         }
         return candidates.length === 1;
+      }
+      if (condition.kind === 'sync-group-topology') {
+        return value?.server_status?.topology_role === condition.role
+          && value?.server_status?.topology_status === condition.status;
       }
       if (condition.kind === 'fact-prefix-counts') {
         const titles = Object.values(value?.nodesById ?? {}).map((item) => String(item.title));

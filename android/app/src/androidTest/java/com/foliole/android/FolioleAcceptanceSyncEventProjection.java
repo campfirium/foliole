@@ -30,9 +30,18 @@ final class FolioleAcceptanceSyncEventProjection {
                 "SELECT value FROM companion_meta " +
                     "WHERE key = 'workspace_sync_events' LIMIT 1"));
             JSONArray events = new JSONArray();
+            JSONArray sourceRuns = new JSONArray();
             for (int index = 0; index < source.length(); index += 1) {
                 JSONObject event = source.optJSONObject(index);
-                if (event == null || !"run_finished".equals(event.optString("kind"))) continue;
+                if (event == null) continue;
+                if (!event.optString("run_id").isEmpty()) {
+                    sourceRuns.put(new JSONObject()
+                        .put("kind", event.optString("kind"))
+                        .put("run_id", event.optString("run_id"))
+                        .put("status", event.optString("status"))
+                        .put("trigger_reason", event.optString("trigger_reason")));
+                }
+                if (!"run_finished".equals(event.optString("kind"))) continue;
                 JSONObject projected = new JSONObject()
                     .put("device_identity_key", identity)
                     .put("run_id", required(event, "run_id"))
@@ -47,7 +56,8 @@ final class FolioleAcceptanceSyncEventProjection {
                 events.put(projected);
             }
             return new JSONObject().put("application_id", context.getPackageName())
-                .put("events", events).put("syncEventsProjected", true);
+                .put("events", events).put("source_runs", sourceRuns)
+                .put("syncEventsProjected", true);
         }
     }
 

@@ -18,16 +18,18 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
       events.push('b-started'); await onReady(); events.push('c-approved'); return 'approval';
     },
     startWindows: async () => { events.push('c-started'); return 'windows'; },
+    waitForProvider: async () => { events.push('b-discoverable'); },
     waitForFact: async (factId) => { events.push(`b-received-${factId}`); }
   });
   expect(events).toEqual([
     'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-started',
-    'b-received-fact-a', 'a-offline', 'c-started', 'c-approved'
+    'b-received-fact-a', 'a-offline', 'b-discoverable', 'c-started', 'c-approved'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
   expect(milestones).toEqual([
     'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
-    'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed'
+    'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
+    'b-approval-completed'
   ]);
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });
 });

@@ -14,13 +14,17 @@ import java.util.concurrent.TimeUnit;
 final class FolioleCompanionSyncGroupApprovalScenario {
     private FolioleCompanionSyncGroupApprovalScenario() {}
 
-    static JSONObject approveForeground(Instrumentation instrumentation) throws Exception {
+    static JSONObject approveForeground(
+        Instrumentation instrumentation, Runnable onProviderReady
+    ) throws Exception {
         Activity activity = start(instrumentation);
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView);
-        waitForProviderRequest();
+        waitForProviderDiscoverable();
+        onProviderReady.run();
+        waitForProviderRequest(deadline);
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
@@ -40,7 +44,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             WebView webView = activity.findViewById(R.id.webview);
             long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
             openSyncSettings(instrumentation, webView);
-            waitForProviderRequest();
+            waitForProviderRequest(deadline);
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-approve", deadline
             );
@@ -72,8 +76,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         );
     }
 
-    private static void waitForProviderRequest() throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+    private static void waitForProviderRequest(long deadline) throws Exception {
         JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
             latest = FolioleCompanionSyncGroupProvider.state();
@@ -84,6 +87,17 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Provider request unavailable: " + latest);
+    }
+
+    private static void waitForProviderDiscoverable() throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            latest = FolioleCompanionSyncGroupProvider.state();
+            if (FolioleCompanionSyncGroupProvider.isDiscoverable()) return;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Provider undiscoverable after Activity restart: " + latest);
     }
 
     private static String pendingRequestId() throws Exception {

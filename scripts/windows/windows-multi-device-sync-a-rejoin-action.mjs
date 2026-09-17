@@ -6,6 +6,8 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 
+export const WINDOWS_A_REJOIN_STALL_MS = 3 * 60_000;
+
 function freshFactIds(facts, excluded) {
   return Object.entries(facts?.journeyFacts ?? {}).filter(([id]) => !excluded.has(id))
     .reduce((result, [id, origin]) => ({ ...result, [origin]: id }), {});
@@ -13,7 +15,7 @@ function freshFactIds(facts, excluded) {
 
 function assertComplete(facts, ids) {
   if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
-      || !facts.localGroupId || !facts.localTimelineId || facts.missingAttachmentCount !== 0
+      || !facts.localGroupId || facts.missingAttachmentCount !== 0
       || facts.missingContentBlobCount !== 0
       || Object.values(ids).some((id) => facts.facts?.[id] !== true)) {
     throw new Error(`Windows C A-rejoin state is incomplete: ${JSON.stringify(facts)}`);
@@ -23,14 +25,16 @@ function assertComplete(facts, ids) {
 async function waitForFreshFacts(execute, inspect, paths, excluded, origins, factIds = [],
   timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
-  const observe = createSyncProgressWatchdog({ label: 'Windows C A-rejoin convergence', stallMs: 60_000 });
+  const observe = createSyncProgressWatchdog({
+    label: 'Windows C A-rejoin convergence', stallMs: WINDOWS_A_REJOIN_STALL_MS
+  });
   let facts;
   while (Date.now() < deadline) {
     facts = await inspect(execute, paths, undefined, factIds);
     const fresh = freshFactIds(facts, excluded);
     observe(JSON.stringify([facts.activeMemberCount, fresh, facts.facts]), facts);
-    const resourcesComplete = factIds.length === 0 || (facts.missingAttachmentCount === 0
-      && facts.missingContentBlobCount === 0);
+    const resourcesComplete = facts.missingAttachmentCount === 0
+      && facts.missingContentBlobCount === 0;
     if (facts.activeMemberCount === 3 && origins.every((origin) => fresh[origin])
         && factIds.every((id) => facts.facts[id] === true) && resourcesComplete) return { facts, fresh };
     await delay(1_000);

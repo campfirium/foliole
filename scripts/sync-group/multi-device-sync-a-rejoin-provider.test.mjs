@@ -55,8 +55,13 @@ it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', 
       + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-session-opened fact=a-rejoin\n' });
     return new Promise(() => {});
   });
-  startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd() });
+  startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd(),
+    sourceRef: 'refs/heads/sync' });
   expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
+  expect(execute).toHaveBeenCalledWith(process.execPath, [
+    'scripts/acceptance/t173-windows-candidate-control.mjs', 'multi-device-sync-a-rejoin',
+    '--source-ref', 'refs/heads/sync'
+  ], expect.any(Object));
 });
 
 it('holds the joined Windows C provider until Android consumes its fact', async () => {
@@ -113,6 +118,33 @@ it('starts the local identity deadline only after Windows C creates its fact', (
   const identities = source.indexOf("raceConsumer(waitUntil('macOS A fresh fact identities'");
   expect(created).toBeGreaterThan(-1);
   expect(created).toBeLessThan(identities);
+});
+
+it('waits for topology convergence before pushing fresh facts through product sync', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const bCreated = source.indexOf("reportProgress('b-fact-created')");
+  const aSync = source.indexOf("await session.invoke('sync_companion_now')", bCreated);
+  const cReady = source.indexOf("await windowsProvider.waitForProgress('c-a-b-facts-received')", bCreated);
+  const bSync = source.indexOf('await syncAndroidFact(', bCreated);
+  const cCreated = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
+  expect(bCreated).toBeGreaterThan(-1);
+  expect(aSync).toBeGreaterThan(bCreated);
+  expect(cReady).toBeGreaterThan(aSync);
+  expect(bSync).toBeGreaterThan(cReady);
+  expect(cCreated).toBeGreaterThan(bSync);
+});
+
+it('lets the rejoining Mac auto-converge before creating new facts', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const opened = source.indexOf("await windowsProvider.waitForProgress('c-session-opened')");
+  const macosOpened = source.indexOf('session = await openMacosSyncGroupDesktopSession(sessionOptions)');
+  const convergence = source.indexOf("waitUntil('macOS A three-member convergence'");
+  const aFact = source.indexOf("device: 'A'");
+  expect(opened).toBeGreaterThan(-1);
+  expect(source).not.toContain('waitForCurrentProvider');
+  expect(opened).toBeLessThan(macosOpened);
+  expect(macosOpened).toBeLessThan(convergence);
+  expect(convergence).toBeLessThan(aFact);
 });
 
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {

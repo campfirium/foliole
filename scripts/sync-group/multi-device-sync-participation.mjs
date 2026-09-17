@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   assertDesktopDepartureData, assertParticipationState, desktopFactObservation
@@ -19,10 +19,11 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertPauseResumeContinuity, factObservation
 } from './sync-scenario-predicate.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global process */
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function productFailure(host, missingFact, message) {
   return Object.assign(new Error(message), { failureOwner: 'product', host, missingFact });
@@ -73,7 +74,7 @@ async function proveMacosParticipation(context) {
   let session = await context.openSession();
   const initial = await session.load();
   const groupId = initial.sync_group?.group_id;
-  if (!groupId || initial.sync_group.members.filter(({ state }) => state === 'active').length !== 3) {
+  if (!groupId || initial.sync_group.devices.filter(({ state }) => state === 'active').length !== 3) {
     throw productFailure('macos-a', 'macos_three_member_input_missing', 'macOS three-member input is missing.');
   }
   const androidBefore = await androidSnapshot(context.paths);
@@ -184,19 +185,21 @@ function createContext(options) {
     'participation-control');
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const paths = macosA5Paths(repoRoot);
-  return { databasePath, env, evidenceRoot, execute,
+  return { appId: APP_ID, databasePath, env, evidenceRoot, execute,
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
-    openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+    openSession: () => openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       runtimeRoot: owned.root })),
-    paths, reportProgress, repoRoot, runId, serial: A5_SERIAL };
+    paths, reportProgress, repoRoot, runId, serial: A5_SERIAL,
+    sourceRef: options.sourceRef };
 }
 
 export async function proveParticipationControl(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
   const windows = startWindowsSyncGroupProvider({ action: 'multi-device-sync-participation',
-    execute: context.execute, reportProgress: context.reportProgress, repoRoot: context.repoRoot });
+    execute: context.execute, reportProgress: context.reportProgress, repoRoot: context.repoRoot,
+    sourceRef: context.sourceRef });
   let settled = false;
   let macos;
   try {

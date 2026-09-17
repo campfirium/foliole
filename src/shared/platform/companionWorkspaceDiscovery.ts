@@ -5,6 +5,10 @@ import {
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
+import {
+  desktopAnchorAdvertisements,
+  waitForCompanionDesktopAdvertisements
+} from './companion/companionDesktopDiscoveryWait';
 import { qualifyPreparedCompanionAnchorCandidate } from './companion/preparedAnchorDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
@@ -67,8 +71,11 @@ async function loadNativeDiscoveryCandidates(
   }
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const native = (payload.candidates ?? [])
-      .filter((candidate) => !isMobileProvider(candidate.protocol_txt))
+    const immediate = desktopAnchorAdvertisements(payload);
+    const discovered = immediate.length > 0
+      ? immediate
+      : await waitForCompanionDesktopAdvertisements(FolioleCompanionSync);
+    const native = discovered
       .map((candidate) => ({
         endpointUrl: candidate.endpoint_url,
         protocolTxt: candidate.protocol_txt ?? null,
@@ -155,10 +162,6 @@ function abortableNativeDiscoveryRequest(url: string, signal: AbortSignal) {
   });
 }
 
-function isMobileProvider(protocolTxt: Record<string, string> | null | undefined) {
-  return ['android-capacitor', 'ios-capacitor'].includes(protocolTxt?.provider_platform ?? '');
-}
-
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
   const groupId = result.discovery.group_id?.trim();
   const deviceId = result.discovery.provider_device_id?.trim();
@@ -166,10 +169,12 @@ function getDiscoveryKey(result: CompanionDiscoveryResult) {
   return result.discovery.runtime_instance_id?.trim() || deviceId || result.endpointUrl;
 }
 
-function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
+export function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
   const key = getDiscoveryKey(result);
   const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
   if (existingIndex < 0) return void results.push(result);
+  if (results[existingIndex]?.compatibility.status === 'incompatible'
+      && result.compatibility.status === 'compatible') results[existingIndex] = result;
 }
 
 export async function discoverCompanionDesktops(

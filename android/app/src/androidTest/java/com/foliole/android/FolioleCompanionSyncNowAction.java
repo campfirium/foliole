@@ -17,7 +17,7 @@ final class FolioleCompanionSyncNowAction {
 
     static JSONObject perform(Instrumentation instrumentation, WebView webView) throws Exception {
         JSONObject before = readState(instrumentation, webView);
-        waitUntilEnabled(instrumentation, webView, 30_000);
+        waitUntilEnabled(instrumentation, webView, TERMINAL_TIMEOUT_MS);
         JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
             instrumentation, webView, TEST_ID, "click", ""
         );
@@ -26,6 +26,7 @@ final class FolioleCompanionSyncNowAction {
             instrumentation, webView, before.optString("runId"), 30_000
         );
         JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
+        requireCompletedTerminal(instrumentation, terminal);
         waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
@@ -33,6 +34,38 @@ final class FolioleCompanionSyncNowAction {
             .put("terminalRunId", terminal.getString("terminalRunId"))
             .put("terminalResult", terminal.getString("terminalResult"))
             .put("errorText", terminal.optString("errorText"));
+    }
+
+    private static void requireCompletedTerminal(
+        Instrumentation instrumentation, JSONObject terminal
+    ) throws Exception {
+        if ("completed".equals(terminal.optString("terminalResult"))) return;
+        throw new IllegalStateException(
+            "Sync Now failed before projection: " + terminal
+                + "; discovery=" + diagnoseDiscovery(instrumentation)
+        );
+    }
+
+    private static JSONArray diagnoseDiscovery(Instrumentation instrumentation) throws Exception {
+        JSONArray results = new JSONArray();
+        String endpointKey = FolioleCompanionHostBridgeContractDefinitions
+            .networkEndpointUrlCandidateKey(instrumentation.getTargetContext());
+        for (JSONObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(
+            instrumentation.getTargetContext()
+        )) {
+            JSONObject result = new JSONObject().put("candidate", candidate);
+            String endpoint = candidate.optString(endpointKey);
+            try {
+                result.put("http", FolioleCompanionDesktopHttpClient.request(
+                    instrumentation.getTargetContext(), endpoint + "/companion/discovery",
+                    "GET", null, null
+                ));
+            } catch (Exception error) {
+                result.put("http_error", String.valueOf(error));
+            }
+            results.put(result);
+        }
+        return results;
     }
 
     private static JSONObject readState(
@@ -55,16 +88,17 @@ final class FolioleCompanionSyncNowAction {
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
-            JSONObject state = readState(instrumentation, webView);
-            if (state.optBoolean("found") && !state.optBoolean("disabled")) {
+            latest = readState(instrumentation, webView);
+            if (latest.optBoolean("found") && !latest.optBoolean("disabled")) {
                 Thread.sleep(500);
                 JSONObject stable = readState(instrumentation, webView);
                 if (stable.optBoolean("found") && !stable.optBoolean("disabled")) return;
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for public Sync Now.");
+        throw new IllegalStateException("Timed out waiting for public Sync Now: " + latest);
     }
 
     private static JSONObject waitUntilStarted(
@@ -103,11 +137,13 @@ final class FolioleCompanionSyncNowAction {
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
         SQLiteReadOnlyDatabaseException lastReadConflict = null;
+        JSONObject latestProjection = new JSONObject();
         while (System.nanoTime() < deadline) {
             try {
-                JSONArray events = FolioleAcceptanceSyncEventProjection.read(
+                latestProjection = FolioleAcceptanceSyncEventProjection.read(
                     instrumentation.getTargetContext()
-                ).getJSONArray("events");
+                );
+                JSONArray events = latestProjection.getJSONArray("events");
                 for (int index = 0; index < events.length(); index += 1) {
                     if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
                 }
@@ -117,7 +153,9 @@ final class FolioleCompanionSyncNowAction {
             Thread.sleep(100);
         }
         throw new IllegalStateException(
-            "Timed out waiting for projected Sync Now run: " + runId, lastReadConflict
+            "Timed out waiting for projected Sync Now run: " + runId
+                + "; latestProjection=" + latestProjection,
+            lastReadConflict
         );
     }
 }

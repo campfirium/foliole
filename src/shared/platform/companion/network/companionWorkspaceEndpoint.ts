@@ -1,4 +1,5 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
+import { isDesktopSyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
@@ -17,10 +18,6 @@ export interface CompanionWorkspaceSyncTarget {
   groupId?: string;
 }
 
-function isDesktopDevice(platform: string) {
-  return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
-}
-
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
   const group = await loadCompanionSyncGroup();
   if (target.groupId && group?.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
@@ -34,24 +31,27 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
   const discovered = await discoverCompanionDesktops(normalized, options);
-  const match = discovered.find((candidate) => {
+  const matches = discovered.filter((candidate) => {
     const known = group.devices.find((device) =>
       device.device_identity_key === candidate.discovery.provider_device_id);
     return candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && isDesktopDevice(candidate.discovery.provider_platform ?? known?.platform ?? '')
+      && isDesktopSyncGroupPlatform(candidate.discovery.provider_platform ?? known?.platform ?? '')
       && candidate.discovery.provider_device_id !== group.local_device_identity_key;
   });
-  if (!match) {
+  if (matches.length === 0) {
     const incompatible = discovered.some((candidate) => candidate.compatibility.status === 'incompatible'
       && candidate.discovery.group_id === group.group_id);
     throw new Error(incompatible ? 'discovery_incompatible' : 'discovery_waiting_anchor');
   }
-  const known = group.devices.find((device) =>
-    device.device_identity_key === match.discovery.provider_device_id);
-  return [{ deviceId: match.discovery.provider_device_id,
-    deviceName: match.discovery.provider_device_name ?? known?.device_name ?? match.discovery.provider_device_id,
-    endpointUrl: match.endpointUrl, groupId: group.group_id }];
+  return matches.map((match) => {
+    const known = group.devices.find((device) =>
+      device.device_identity_key === match.discovery.provider_device_id);
+    return { deviceId: match.discovery.provider_device_id,
+      deviceName: match.discovery.provider_device_name ?? known?.device_name
+        ?? match.discovery.provider_device_id,
+      endpointUrl: match.endpointUrl, groupId: group.group_id };
+  });
 }
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoint(

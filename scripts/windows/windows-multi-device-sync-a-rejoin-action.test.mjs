@@ -4,12 +4,18 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
-import { runWindowsMultiDeviceSyncARejoin } from './windows-multi-device-sync-a-rejoin-action.mjs';
+import {
+  runWindowsMultiDeviceSyncARejoin, WINDOWS_A_REJOIN_STALL_MS
+} from './windows-multi-device-sync-a-rejoin-action.mjs';
 
 const identity = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4,
   facts: {}, journeyFacts: {}, localGroupId: 'group-1', localMemberState: 'active',
-  localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
+  localTimelineId: null, missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 5 };
+
+it('allows a full product sync run before declaring rejoin stalled', () => {
+  expect(WINDOWS_A_REJOIN_STALL_MS).toBe(3 * 60_000);
+});
 
 it('creates C fact only after fresh A and B facts and verifies a restarted three-member result', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-rejoin-'));
@@ -20,6 +26,9 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
   const pendingBodies = { ...complete, missingContentBlobCount: 3 };
   const inspect = vi.fn()
     .mockResolvedValueOnce({ ...identity, journeyFacts: { 'multi-device-sync-a-old': 'A' } })
+    .mockResolvedValueOnce({ ...identity, missingAttachmentCount: 1, journeyFacts: {
+      'multi-device-sync-a-old': 'A', [ids.A]: 'A', [ids.B]: 'B'
+    } })
     .mockResolvedValueOnce({ ...identity, journeyFacts: {
       'multi-device-sync-a-old': 'A', [ids.A]: 'A', [ids.B]: 'B'
     } })
@@ -44,7 +53,7 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .toMatchObject({ factIds: ids, resultStatus: 'success', restarted: { activeMemberCount: 3 } });
   expect(openSession).toHaveBeenCalledTimes(2);
   expect(close).toHaveBeenCalledTimes(2);
-  expect(inspect).toHaveBeenCalledTimes(5);
+  expect(inspect).toHaveBeenCalledTimes(6);
   expect(waitForConsumerRelease).toHaveBeenCalledWith({
     action: 'multi-device-sync-a-rejoin', repoRoot: undefined
   });

@@ -4,6 +4,10 @@ const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
   discovery: vi.fn(),
   freshness: vi.fn(),
+  memberSessionArgs: null as null | {
+    onMember(peer: Record<string, unknown>): Promise<boolean>;
+    onMemberLost(deviceId: string): void;
+  },
   notifyOverviewChanged: vi.fn(),
   group: {
     devices: [
@@ -53,7 +57,12 @@ vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
 }));
 vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
-  startDesktopSyncGroupMemberStateSession: () => ({ stop: vi.fn() })
+  startDesktopSyncGroupMemberStateSession: (_group: unknown, _onChanged: unknown,
+    onMember: (peer: Record<string, unknown>) => Promise<boolean>,
+    onMemberLost: (deviceId: string) => void) => {
+    runtime.memberSessionArgs = { onMember, onMemberLost };
+    return { stop: vi.fn() };
+  }
 }));
 
 import {
@@ -70,6 +79,7 @@ beforeEach(() => {
   runtime.persistedRoute = null;
   runtime.role = 'observing';
   runtime.sessionArgs = null;
+  runtime.memberSessionArgs = null;
   runtime.discovery.mockResolvedValue([]);
 });
 
@@ -127,6 +137,26 @@ it('does not make an anchor poll another anchor unless demotion requires a sync'
   expect(runtime.coordinator).toHaveBeenCalledOnce();
 });
 
+it('lets the anchor collect and retain a periodic route to a desktop member', async () => {
+  runtime.role = 'anchor';
+  startDesktopSyncGroupAutoSync();
+  const member = {
+    endpoint_url: 'http://windows:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32'
+  };
+
+  await expect(runtime.memberSessionArgs?.onMember(member)).resolves.toBe(true);
+
+  expect(runtime.coordinator).toHaveBeenCalledWith('automatic', expect.objectContaining({
+    peer_device_id: 'desktop-b', route_kind: 'member'
+  }));
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
+    peer_device_id: 'desktop-b', route_kind: 'member'
+  })]);
+  expect(runtime.freshness).toHaveBeenCalledWith(true);
+});
+
 it('uses only the selected anchor for an on-demand manual sync', async () => {
   runtime.participating = false;
   runtime.discovery.mockResolvedValue([{ endpoint_url: 'http://windows:38641',
@@ -147,4 +177,19 @@ it('completes an anchor manual action without polling a member', async () => {
 
   expect(runtime.discovery).not.toHaveBeenCalled();
   expect(runtime.coordinator).not.toHaveBeenCalled();
+});
+
+it('checks collected desktop members when the anchor runs Sync Now', async () => {
+  runtime.role = 'anchor';
+  startDesktopSyncGroupAutoSync();
+  await runtime.memberSessionArgs?.onMember({
+    endpoint_url: 'http://windows:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32'
+  });
+  runtime.coordinator.mockClear();
+
+  await runDesktopManualSyncWithDiscovery();
+
+  expect(runtime.coordinator).toHaveBeenCalledWith('manual');
 });

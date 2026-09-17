@@ -6,7 +6,7 @@ import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-r
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import {
   assertAndroidConsumerComplete, assertSurvivorProof, matchesAndroidSurvivorState,
   projectAndroidConsumerProgress
@@ -16,17 +16,18 @@ import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs'
 import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, process */
 
 function memberHosts(database, state) {
-  return database.prepare(`SELECT host_name FROM sync_group_members
-    WHERE state = ? ORDER BY host_name`).all(state)
-    .map(({ host_name }) => host_name);
+  return database.prepare(`SELECT device_name FROM sync_group_devices
+    WHERE state = ? ORDER BY device_name`).all(state)
+    .map(({ device_name }) => device_name);
 }
 
 function androidSnapshot(paths) {
-  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: MULTI_DEVICE_ANDROID_APP_ID,
     includeEvents: false, serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
       activeMemberHosts: memberHosts(database, 'active'),
@@ -69,22 +70,25 @@ function assertMacosRetention(before, after, factIds) {
   }
 }
 
-function assertActiveThreeMemberInput(overview, baseline) {
+function assertActiveThreeMemberInput(overview, facts, baseline) {
   const group = overview.sync_group;
-  if (group?.group_id !== baseline.groupId || group.timeline_id !== baseline.timelineId
-      || group.local_member_state !== 'active'
-      || group.members.filter(({ state }) => state === 'active').length !== 3) {
+  if (group?.group_id !== baseline.groupId
+      || group.devices.filter(({ state }) => state === 'active').length !== 3
+      || facts.localGroupId !== baseline.groupId || facts.localTimelineId !== baseline.timelineId
+      || facts.localMemberState !== 'active') {
     throw new Error('macOS A does not have the required three-member input.');
   }
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
-  return runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', buildIdentity: runId,
-    env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute, paths, serial: A5_SERIAL });
+  return runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact',
+    appId: MULTI_DEVICE_ANDROID_APP_ID, buildIdentity: runId,
+    env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
+    installMain: false, paths, serial: A5_SERIAL });
 }
 
 function openMacosSession({ env, owned, repoRoot }) {
-  return openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+  return openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({ env,
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root }));
 }
@@ -95,18 +99,17 @@ async function leaveAndRestartA(context) {
   try {
     await restartARejoinAndroidProvider({ env, execute, paths });
     reportProgress('survivor-provider-ready');
-    assertActiveThreeMemberInput(await session.load(), rejoin.groupContext);
     const before = await macosFacts(execute, repoRoot, databasePath, Object.values(rejoin.factIds));
+    assertActiveThreeMemberInput(await session.load(), before, rejoin.groupContext);
     const afterLeave = await session.leave();
-    if (afterLeave.sync_group !== null || afterLeave.paired_authorizations.length !== 0) {
+    if (afterLeave.sync_group !== null || afterLeave.join_requests.length !== 0) {
       throw new Error('macOS A did not leave through the product action.');
     }
     reportProgress('a-left');
     await session.close();
     session = await openMacosSession({ env, owned, repoRoot });
     const restartedOverview = await session.load();
-    if (restartedOverview.sync_group !== null
-        || restartedOverview.paired_authorizations.length !== 0) {
+    if (restartedOverview.sync_group !== null || restartedOverview.join_requests.length !== 0) {
       throw new Error('macOS A restored obsolete membership after restart.');
     }
     assertMacosRetention(before, await macosFacts(
@@ -128,7 +131,8 @@ async function runWindowsContinuity(context, before) {
   reportProgress('b-two-members-active');
   const beforeWindows = await androidSnapshot(paths);
   const windowsProvider = startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot
+    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot,
+    sourceRef: context.sourceRef
   });
   let windowsSettled = false;
   try {
@@ -189,7 +193,9 @@ async function verifyRestartedSurvivors(context, departed, remote) {
   return proof;
 }
 
-function createContext({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
+function createContext({
+  execute, reportActivity = () => {}, reportProgress, repoRoot, runId, sourceRef
+}) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-leave');
   const rejoin = JSON.parse(fs.readFileSync(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs',
@@ -197,7 +203,7 @@ function createContext({ execute, reportActivity = () => {}, reportProgress, rep
   return { databasePath: path.join(owned.root, 'library', 'Data', 'foliole.db'),
     env: macosAcceptanceEnv(macosA5GradleEnv()), evidenceRoot, execute, owned,
     paths: macosA5Paths(repoRoot),
-    rejoin, reportActivity, reportProgress, repoRoot, runId };
+    rejoin, reportActivity, reportProgress, repoRoot, runId, sourceRef };
 }
 
 export async function proveALeave(options) {

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import {
-  performFreshJoinSequence, prepareA5ForFreshJoin
+  performFreshJoinSequence, prepareA5ForFreshJoin, waitForMacosProviderAfterJoin
 } from './multi-device-sync-fresh-join.mjs';
 
 it('joins as a Device before requesting public Sync Now and proves the exact fact after restart', async () => {
@@ -39,6 +39,25 @@ it('keeps the formal A-B journey on the Device request contract', () => {
   expect(source).toContain('expectedGroupId: groupIdentity.group_id');
   expect(source).toContain('expectedGroupTag: groupIdentity.group_tag');
   expect(source).not.toMatch(/PairSync|pair_request|paired_authorizations/u);
+});
+
+it('waits for the current Mac anchor advertisement after the Device joins', async () => {
+  const order = [];
+  const session = {};
+  const group = { group_id: 'group-1', local_device_identity_key: 'mac-a' };
+  const observe = vi.fn(async (value) => {
+    expect(value).toBe(session);
+    order.push('anchor-ready');
+    return { role: 'anchor', status: 'ready' };
+  });
+  const waitForProvider = vi.fn(async (expected) => {
+    order.push('discoverable');
+    return expected;
+  });
+  await expect(waitForMacosProviderAfterJoin(session, group, {
+    observe, waitForProvider
+  })).resolves.toEqual({ deviceId: 'mac-a', groupId: 'group-1', topologyRole: 'anchor' });
+  expect(order).toEqual(['anchor-ready', 'discoverable']);
 });
 
 it('leaves a previously joined A5 through the product before a fresh formal join', async () => {

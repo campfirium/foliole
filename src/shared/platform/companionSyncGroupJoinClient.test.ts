@@ -32,8 +32,8 @@ describe('companion Sync Group provider identity', () => {
     expect(providerFromDiscovery({
       providerDeviceId: device.identity_key,
       providerDeviceName: 'V',
-      providerPlatform: 'Windows'
-    }, 'group-1')).toEqual({ device, deviceName: 'V', platform: 'Windows' });
+      providerPlatform: 'Windows 11'
+    }, 'group-1')).toEqual({ device, deviceName: 'V', platform: 'Windows 11' });
   });
 
   it('rejects a provider identity from a different group', () => {

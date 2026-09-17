@@ -27,8 +27,8 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   const stage = resolveStage('b-admit-c');
   expect(stage).toMatchObject({
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
-      'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
-      'c-ordinary-sync-completed'],
+      'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
+      'b-approval-completed', 'c-ordinary-sync-completed'],
     siblings: expect.arrayContaining([
       expect.objectContaining({ name: 'android-b-approval', waitsFor: 'windows-c-join' }),
       expect.objectContaining({ name: 'windows-c-join', waitsFor: null })
@@ -40,7 +40,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   expect(resolveStage('a-rejoin')).toMatchObject({
     action: 'rejoin-a', milestones: ['a-listener-ready', 'three-members-converged',
       'a-fact-created', 'b-fact-created', 'c-fact-created', 'three-facts-converged',
-      'three-members-restarted']
+      'three-members-restarted'], progressDeadlineMs: 190_000
   });
   expect(resolveStage('a-leave')).toMatchObject({
     action: 'leave-a', activities: ['b-consumer-progress'],

@@ -113,6 +113,11 @@ final class FolioleCompanionSyncGroupProvider {
         return activeConfig == null ? "" : activeConfig.optString("runtime_instance_id");
     }
 
+    static synchronized boolean isDiscoverable() {
+        return server != null && advertisement != null
+            && "registered".equals(advertisement.state());
+    }
+
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(
             activeContext, activeConfig, joinProvider, dataBridge, stateListener

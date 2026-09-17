@@ -7,19 +7,23 @@ import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtoc
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
+import {
+  DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
+  DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
+} from './desktopSyncGroupDiscoveryTiming.js';
 import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
-
-const PROBE_TIMEOUT_MS = 2_000;
-const OBSERVATION_MS = 1_800;
 
 export class DesktopSyncGroupDiscoverySession {
   private readonly services = new Map<string, DesktopDnsSdService>();
   private readonly candidates = new Map<string, DesktopSyncGroupJoinCandidatePayload>();
   private runtime: DesktopDnsSdSession | null = null;
   private stopped = true;
+  private discoveryGraceElapsed = false;
   private observationComplete = false;
   private observationTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingProbes = 0;
+  private sessionId = 0;
 
   constructor(
     private readonly emit: (snapshot: SyncGroupDiscoverySnapshot) => void,
@@ -28,19 +32,22 @@ export class DesktopSyncGroupDiscoverySession {
 
   start() {
     this.stop(false);
+    const sessionId = ++this.sessionId;
     this.stopped = false;
+    this.discoveryGraceElapsed = false;
     this.observationComplete = false;
     this.observationTimer = setTimeout(() => {
-      this.observationComplete = true;
-      if (!this.stopped) this.emitSnapshot('changed');
-    }, OBSERVATION_MS);
+      if (this.stopped || sessionId !== this.sessionId) return;
+      this.discoveryGraceElapsed = true;
+      this.completeObservationIfSettled();
+    }, DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
     this.emitSnapshot('started');
     try {
       this.runtime = startDesktopDnsSdSession({
         onError: (error) => this.fail('discovery_unavailable', error),
         onService: ({ kind, service }) => {
           if (kind === 'lost') this.remove(service);
-          else void this.upsert(service, kind);
+          else void this.upsert(service, kind, sessionId);
         }
       });
     } catch (error) {
@@ -51,29 +58,49 @@ export class DesktopSyncGroupDiscoverySession {
 
   stop(emit = true) {
     this.stopped = true;
+    this.sessionId += 1;
     this.runtime?.stop();
     this.runtime = null;
     if (this.observationTimer) clearTimeout(this.observationTimer);
     this.observationTimer = null;
     this.services.clear();
     this.candidates.clear();
+    this.pendingProbes = 0;
     const snapshot = this.snapshot('stopped');
     if (emit) this.emit(snapshot);
     return snapshot;
   }
 
-  private async upsert(service: DesktopDnsSdService, change: 'found' | 'changed') {
+  private async upsert(
+    service: DesktopDnsSdService,
+    change: 'found' | 'changed',
+    sessionId: number
+  ) {
     if (this.stopped || service.txt.runtime_instance_id === loadSyncGroupRuntimeInstanceId()) return;
     this.services.set(service.fqdn, service);
-    const result = await probeService(this.fetchDiscovery, service);
-    if (this.stopped || this.services.get(service.fqdn) !== service) return;
-    if (!result || result.status !== 'results') {
-      const status = result?.status ?? 'connection_failed';
-      this.emit({ ...this.snapshot('failed'), error_code: status, status });
-      return;
+    this.pendingProbes += 1;
+    try {
+      const result = await probeService(this.fetchDiscovery, service);
+      if (this.stopped || sessionId !== this.sessionId || this.services.get(service.fqdn) !== service) return;
+      if (!result || result.status !== 'results') {
+        const status = result?.status ?? 'connection_failed';
+        this.emit({ ...this.snapshot('failed'), error_code: status, status });
+        return;
+      }
+      this.candidates.set(service.fqdn, result.candidate);
+      this.emitSnapshot(change);
+    } finally {
+      if (sessionId === this.sessionId) {
+        this.pendingProbes -= 1;
+        this.completeObservationIfSettled();
+      }
     }
-    this.candidates.set(service.fqdn, result.candidate);
-    this.emitSnapshot(change);
+  }
+
+  private completeObservationIfSettled() {
+    if (this.stopped || this.observationComplete || !this.discoveryGraceElapsed || this.pendingProbes > 0) return;
+    this.observationComplete = true;
+    this.emitSnapshot('changed');
   }
 
   private remove(service: DesktopDnsSdService) {
@@ -114,7 +141,9 @@ async function probeService(fetchDiscovery: typeof fetch, service: DesktopDnsSdS
 
 async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSdService, endpointUrl: string) {
   try {
-    const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+    const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, {
+      signal: AbortSignal.timeout(DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS)
+    });
     if (!response.ok) return null;
     const payload = await response.json() as Record<string, unknown>;
     if (payload.group_id !== service.txt.group_id || payload.group_tag !== service.txt.group_tag) {

@@ -22,6 +22,8 @@ export async function assertDesktopSyncGroupPeerCompatible(
     if (!mobile) throw new Error('sync_group_mobile_guide_identity_mismatch');
   } else if (peer.route_kind === 'anchor' && (mobile || discovery.topology_role !== 'anchor')) {
     throw new Error('sync_group_peer_not_anchor');
+  } else if (peer.route_kind === 'member' && (mobile || discovery.topology_role !== 'member')) {
+    throw new Error('sync_group_peer_not_member');
   }
   const compatibility = evaluateSyncProtocolCompatibility(discovery.protocol);
   if (compatibility.status !== 'compatible') {

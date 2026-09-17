@@ -71,6 +71,10 @@ public final class FolioleCompanionNsdDiscovery {
             : serviceType;
     }
 
+    static String serviceIdentity(String name, String type) {
+        return name + "\n" + normalizeServiceType(type).toLowerCase();
+    }
+
     private static final class NsdCollector {
         private final Context context;
         private final NsdManager nsdManager;
@@ -78,6 +82,7 @@ public final class FolioleCompanionNsdDiscovery {
         private final CountDownLatch discoveryStarted = new CountDownLatch(1);
         private final Object lock = new Object();
         private final Set<String> endpointUrls = new LinkedHashSet<>();
+        private final Set<String> resolutionKeys = new LinkedHashSet<>();
         private final List<JSObject> candidates = new ArrayList<>();
         private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
         private boolean resolving;
@@ -153,6 +158,9 @@ public final class FolioleCompanionNsdDiscovery {
         @SuppressWarnings("deprecation")
         private void resolve(NsdServiceInfo serviceInfo) {
             synchronized (lock) {
+                if (!resolutionKeys.add(serviceIdentity(
+                    serviceInfo.getServiceName(), serviceInfo.getServiceType()
+                ))) return;
                 pendingResolutions.addLast(serviceInfo);
                 if (resolving) return;
                 resolving = true;

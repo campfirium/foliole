@@ -3,7 +3,8 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  cancelAdmissionSibling, createDiagnosticStageActions, syncAdmittedCToAndroid, windowsJoinFailure
+  cancelAdmissionSibling, createDiagnosticStageActions, syncAdmittedCToAndroid,
+  waitForCurrentAndroidProvider, windowsJoinFailure
 } from './multi-device-sync-stage-actions.mjs';
 
 /* global process */
@@ -50,7 +51,7 @@ it('uses public Android Sync Now to consume the admitted C fact', async () => {
   })).resolves.toEqual({ restarted: 'observed-c', sync: 'observed-c' });
   expect(runSyncNow).toHaveBeenCalledWith(expect.objectContaining({
     action: 'sync-now', appId: 'com.foliole.android.acceptance',
-    buildIdentity: 'run-1', installMain: false
+    buildIdentity: 'run-1', installMain: false, instrumentationOwnsActivity: true
   }));
   expect(restartAndroid).toHaveBeenCalledWith({ appId: 'com.foliole.android.acceptance',
     env: {}, execute: expect.any(Function), paths: {} });
@@ -58,6 +59,12 @@ it('uses public Android Sync Now to consume the admitted C fact', async () => {
   expect(waitForFact).toHaveBeenNthCalledWith(1, {}, 'fact-c', 'C');
   expect(waitForFact).toHaveBeenNthCalledWith(2, {}, 'fact-c', 'C');
   expect(events).toEqual(['sync-now', 'fact', 'restart', 'fact']);
+});
+
+it('waits for the current Android member provider to be externally discoverable', async () => {
+  const waitForProvider = vi.fn(async (expected) => expected);
+  await expect(waitForCurrentAndroidProvider({ group_id: 'group-1' }, waitForProvider))
+    .resolves.toEqual({ groupId: 'group-1', topologyRole: 'member' });
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

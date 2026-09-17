@@ -1,5 +1,3 @@
-import { setTimeout as delay } from 'node:timers/promises';
-
 export function assertMacosAnchorReady(overview) {
   const status = overview?.server_status;
   if (status?.topology_role !== 'anchor' || status?.topology_status !== 'ready') {
@@ -11,8 +9,13 @@ export function assertMacosAnchorReady(overview) {
 }
 
 export async function observeMacosAnchorAfterElection(session, {
-  observationMs = 2_500, wait = delay
+  timeoutMs = 15_000
 } = {}) {
-  await wait(observationMs);
-  return assertMacosAnchorReady(await session.load());
+  const overview = await session.waitForState({
+    command: 'load_sync_group_overview',
+    condition: { kind: 'sync-group-topology', role: 'anchor', status: 'ready' },
+    eventName: 'onSyncGroupOverviewChanged',
+    timeoutMs
+  });
+  return assertMacosAnchorReady(overview);
 }

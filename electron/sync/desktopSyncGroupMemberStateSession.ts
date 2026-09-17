@@ -1,18 +1,26 @@
+import { parseDesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
+import { loadDesktopSyncGroupMemberState } from '../database/syncGroupMemberStateStore.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
-import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
+import {
+  exchangeDesktopSyncGroupMemberState,
+  publishDesktopSyncGroupMemberState
+} from './desktopSyncGroupMemberState.js';
 import { isCurrentGroupPeerService, readSyncGroupServiceDeviceId } from './desktopSyncGroupPeerService.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
 const endpoints = new Map<string, DesktopSyncGroupPeer>();
+const activatedMembers = new Map<string, string>();
 const inFlight = new Map<string, Promise<void>>();
 
 export function startDesktopSyncGroupMemberStateSession(
   group: SyncGroupPayload,
-  onChanged: () => void
+  onChanged: () => void,
+  onMember: (peer: DesktopSyncGroupPeer) => Promise<boolean> = async () => false,
+  onMemberLost: (deviceId: string) => void = () => undefined
 ): DesktopDnsSdSession {
   const runtime = startDesktopDnsSdSession({
     onError: () => undefined,
@@ -22,17 +30,20 @@ export function startDesktopSyncGroupMemberStateSession(
       if (!deviceId) return;
       if (kind === 'lost') {
         endpoints.delete(deviceId);
+        activatedMembers.delete(deviceId);
+        onMemberLost(deviceId);
         return;
       }
       const endpointUrl = resolveCompanionMdnsServiceEndpoints(service)[0];
       if (!endpointUrl) return;
-      void probeAndExchange(group, deviceId, endpointUrl, onChanged);
+      void probeAndExchange(group, deviceId, endpointUrl, onChanged, onMember);
     }
   });
   return {
     stop: () => {
       runtime.stop();
       endpoints.clear();
+      activatedMembers.clear();
       inFlight.clear();
     }
   };
@@ -51,19 +62,31 @@ export async function exchangeAllDesktopSyncGroupMemberStates() {
   return results.some((result) => result.status === 'fulfilled');
 }
 
+export async function publishDesktopSyncGroupDeparture(groupId: string, senderDeviceId: string) {
+  const state = loadDesktopSyncGroupMemberState({ groupId, senderDeviceId });
+  const peers = [...endpoints.values()].filter((peer) => peer.group_id === groupId);
+  const results = await Promise.allSettled(peers.map((peer) =>
+    publishDesktopSyncGroupMemberState(peer, state)));
+  return results.some((result) => result.status === 'fulfilled');
+}
+
 async function probeAndExchange(
   group: SyncGroupPayload,
   deviceId: string,
   endpointUrl: string,
-  onChanged: () => void
+  onChanged: () => void,
+  onMember: (peer: DesktopSyncGroupPeer) => Promise<boolean>
 ) {
   if (inFlight.has(deviceId)) return inFlight.get(deviceId);
   const work = probe(group, deviceId, endpointUrl)
-    .then(async (peer) => {
-      if (!peer) return;
+    .then(async (qualified) => {
+      if (!qualified) return;
+      const { peer, role } = qualified;
       endpoints.set(deviceId, peer);
       await exchangeDesktopSyncGroupMemberState(peer);
       onChanged();
+      if (role === 'member' && activatedMembers.get(deviceId) !== peer.endpoint_url
+          && await onMember(peer)) activatedMembers.set(deviceId, peer.endpoint_url);
     })
     .catch((error) => console.info('[sync-group] member state exchange paused', {
       error: error instanceof Error ? error.message : String(error), peerDeviceId: deviceId
@@ -81,14 +104,15 @@ async function probe(group: SyncGroupPayload, deviceId: string, endpointUrl: str
   const discovery = await response.json() as Record<string, unknown>;
   if (discovery.group_id !== group.group_id || discovery.provider_device_id !== deviceId ||
       evaluateSyncProtocolCompatibility(discovery.protocol).status !== 'compatible') return null;
-  return {
+  return { peer: {
     endpoint_url: endpointUrl,
     group_id: group.group_id,
     local_device_id: group.local_device_identity_key,
     peer_device_id: deviceId,
     peer_device_name: text(discovery.provider_device_name) ?? deviceId,
     peer_platform: text(discovery.provider_platform) ?? 'desktop'
-  } satisfies DesktopSyncGroupPeer;
+  } satisfies DesktopSyncGroupPeer,
+  role: parseDesktopAnchorRole(discovery.topology_role) };
 }
 
 function text(value: unknown) {

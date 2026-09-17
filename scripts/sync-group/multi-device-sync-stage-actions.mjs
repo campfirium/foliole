@@ -29,6 +29,7 @@ import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-devic
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
 
 /* global AbortController, AbortSignal */
 
@@ -69,11 +70,17 @@ export async function syncAdmittedCToAndroid({
   const sync = await runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
     appId: MULTI_DEVICE_ANDROID_APP_ID,
     evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
+    instrumentationOwnsActivity: true,
     observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
     paths, serial: A5_SERIAL, transportRequired: false });
   await restartAndroid({ appId: MULTI_DEVICE_ANDROID_APP_ID, env, execute, paths });
   const restarted = await waitForFact(paths, factId, 'C');
   return { restarted, sync };
+}
+
+export function waitForCurrentAndroidProvider(group, waitForProvider = waitForCurrentProvider) {
+  if (!group?.group_id) throw new Error('Android B Sync Group identity is unavailable.');
+  return waitForProvider({ groupId: group.group_id, topologyRole: 'member' });
 }
 
 async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {
@@ -86,7 +93,9 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
   const execute = actionExecute(evidenceRoot, signal, stage);
   const executeApprovalAction = actionExecute(evidenceRoot, approvalSignal, stage);
   const executeApproval = (command, args, options = {}) => executeApprovalAction(command, args, {
-    ...options, onOutput: approvalRelease.capture
+    ...options, onOutput: (event) => {
+      approvalRelease.capture(event); options.onOutput?.(event);
+    }
   });
   const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
@@ -108,7 +117,8 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       })),
       runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
         appId: MULTI_DEVICE_ANDROID_APP_ID,
-        allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
+        allowControlledCancellation: true, cancelInstrumentation: () => approvalController.abort(),
+        execute, instrumentationExecute: executeApproval,
         ...lifecycle, prepare: () => {}, repoRoot
       }),
       startWindows: async () => {
@@ -118,6 +128,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       },
       reportProgress,
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId),
+      waitForProvider: (group) => waitForCurrentAndroidProvider(group),
       waitForListener: async (session) => {
         await observeMacosAnchorAfterElection(session);
         return session.load();
@@ -156,20 +167,20 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId, s
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
       reportProgress: context.reportProgress }),
-    'prove-sync-from-zero': (context) => proveSyncFromZero({ repoRoot, runId, ...context,
+    'prove-sync-from-zero': (context) => proveSyncFromZero({ repoRoot, runId, sourceRef, ...context,
       createExecute: (signal, onOutput) => {
         const execute = actionExecute(zeroRoot, signal, context.stage);
         return (command, args, options = {}) => execute(command, args, { ...options, onOutput });
       }, execute: actionExecute(zeroRoot, context.signal, context.stage) }),
-    'set-participation': (context) => proveParticipationControl({ repoRoot, runId,
+    'set-participation': (context) => proveParticipationControl({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'participation-control'), context.signal, context.stage),
       reportProgress: context.reportProgress }),
-    'leave-a': (context) => proveALeave({ repoRoot, runId,
+    'leave-a': (context) => proveALeave({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-leave'), context.signal, context.stage), reportActivity: context.reportActivity,
       reportProgress: context.reportProgress }),
-    'rejoin-a': (context) => proveARejoin({ repoRoot, runId,
+    'rejoin-a': (context) => proveARejoin({ repoRoot, runId, sourceRef,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-rejoin'), context.signal, context.stage), reportActivity: context.reportActivity,
       reportProgress: context.reportProgress })

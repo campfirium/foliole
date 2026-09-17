@@ -9,12 +9,13 @@ import {
 const routeIdentity = 't173-sync-aaaaaaaaaa-12345678-1234-1234-1234-123456789abc';
 
 it('accepts only the explicit sync source ref and registered T173 actions', () => {
-  expect(parseT173WindowsCandidateControlArgs([
-    'multi-device-sync-c', '--source-ref', 'refs/heads/sync'
-  ])).toEqual({ action: 'multi-device-sync-c', sourceRef: 'refs/heads/sync' });
-  expect(parseT173WindowsCandidateControlArgs([
-    'two-device-sync-provider', '--source-ref', 'refs/heads/sync'
-  ])).toEqual({ action: 'two-device-sync-provider', sourceRef: 'refs/heads/sync' });
+  for (const action of ['multi-device-sync-a-leave', 'multi-device-sync-a-rejoin',
+    'multi-device-sync-c', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
+    'two-device-sync-provider']) {
+    expect(parseT173WindowsCandidateControlArgs([
+      action, '--source-ref', 'refs/heads/sync'
+    ])).toEqual({ action, sourceRef: 'refs/heads/sync' });
+  }
   expect(() => parseT173WindowsCandidateControlArgs([
     'multi-device-sync-c', '--source-ref', 'refs/heads/dev'
   ])).toThrow('arguments are invalid');

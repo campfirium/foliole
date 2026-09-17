@@ -13,7 +13,10 @@ function serviceIpv4Candidates(service) {
 
 async function probeCurrentProvider(service, expected, fetchProvider) {
   if (service.txt?.group_id !== expected.groupId
-      || service.txt?.device_id !== expected.deviceId || !Number(service.port)) return null;
+      || (expected.deviceId && service.txt?.device_id !== expected.deviceId) || !Number(service.port)
+      || (expected.advertisedPlatform
+        && service.txt?.provider_platform !== expected.advertisedPlatform)
+      || (expected.topologyRole && service.txt?.topology_role !== expected.topologyRole)) return null;
   for (const host of serviceIpv4Candidates(service)) {
     try {
       const endpointUrl = `http://${host}:${service.port}`;
@@ -22,13 +25,14 @@ async function probeCurrentProvider(service, expected, fetchProvider) {
       });
       const payload = response.ok ? await response.json() : null;
       if (payload?.group_id === expected.groupId
-          && payload?.provider_device_id === expected.deviceId) return endpointUrl;
+          && (!expected.deviceId || payload?.provider_device_id === expected.deviceId)
+          && (!expected.topologyRole || payload?.topology_role === expected.topologyRole)) return endpointUrl;
     } catch { /* Try the next address from this Device advertisement. */ }
   }
   return null;
 }
 
-export async function waitForCurrentA5Provider(expected, {
+export async function waitForCurrentProvider(expected, {
   createBonjour = (options) => new Bonjour(options), fetchProvider = fetch,
   interfaces = os.networkInterfaces(), timeoutMs = 30_000
 } = {}) {
@@ -39,13 +43,13 @@ export async function waitForCurrentA5Provider(expected, {
   try {
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(
-        'Current A5 Device provider was not published before desktop sync.'
+        'Current Device provider was not published before sync.'
       )), timeoutMs);
       const collect = async (service) => {
         const endpointUrl = await probeCurrentProvider(service, expected, fetchProvider);
         if (!endpointUrl) return;
         clearTimeout(timer);
-        resolve({ deviceId: expected.deviceId, endpointUrl, groupId: expected.groupId });
+        resolve({ deviceId: service.txt?.device_id, endpointUrl, groupId: expected.groupId });
       };
       [null, ...addresses].forEach((networkInterface) => {
         const bonjour = createBonjour(networkInterface ? { interface: networkInterface } : undefined);
@@ -60,3 +64,5 @@ export async function waitForCurrentA5Provider(expected, {
     });
   }
 }
+
+export const waitForCurrentA5Provider = waitForCurrentProvider;

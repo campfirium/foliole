@@ -95,11 +95,22 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('put("actionStarted", true)');
   expect(action).toContain('put("syncRequested", true)');
   expect(action).toContain('put("terminalRunId", terminal.getString("terminalRunId"))');
+  expect(action).toContain('requireCompletedTerminal(instrumentation, terminal)');
+  expect(action).toContain('"Sync Now failed before projection: " + terminal');
+  expect(action).toContain('diagnoseDiscovery(instrumentation)');
   expect(action).toContain('waitUntilProjected(instrumentation, terminal.getString("terminalRunId"))');
   expect(action).toContain('FolioleAcceptanceSyncEventProjection.read(');
   expect(action).toContain('catch (SQLiteReadOnlyDatabaseException error)');
   expect(action).toContain('lastReadConflict');
+  expect(action).toContain('latestProjection=');
+  const projection = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceSyncEventProjection.java',
+    'utf8'
+  );
+  expect(projection).toContain('put("source_runs", sourceRuns)');
   expect(action).toContain('JSONObject stable = readState(instrumentation, webView)');
+  expect(action).toContain('waitUntilEnabled(instrumentation, webView, TERMINAL_TIMEOUT_MS)');
+  expect(action).toContain('"Timed out waiting for public Sync Now: " + latest');
   expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
 

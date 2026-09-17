@@ -1,4 +1,5 @@
 import { parseSyncGroupMemberState } from '../../lib/platform/syncGroupMemberStateContract.js';
+import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import {
   applyDesktopSyncGroupMemberState,
   isDesktopSyncGroupDeviceBlocked,
@@ -37,4 +38,20 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     localExited: applied.localExited,
     peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id)
   };
+}
+
+export async function publishDesktopSyncGroupMemberState(
+  peer: DesktopSyncGroupPeer,
+  state: SyncGroupMemberStatePayload
+) {
+  const workgroup = loadDesktopWorkgroupKey(peer.group_id);
+  if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
+  await postDesktopWorkgroupJson({
+    body: JSON.stringify(state),
+    endpointUrl: peer.endpoint_url,
+    groupId: peer.group_id,
+    localDeviceId: peer.local_device_id,
+    pathWithQuery: SYNC_GROUP_MEMBER_STATE_PATH,
+    secret: workgroup.group_key
+  });
 }

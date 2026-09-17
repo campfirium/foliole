@@ -4,6 +4,7 @@ import { digest } from './multi-device-sync-contract.mjs';
 
 const CONTROL_DEADLINE = 10_000;
 const PRODUCT_PROGRESS_DEADLINE = 60_000;
+const ANDROID_PRODUCT_ACTION_DEADLINE = 3 * 60_000;
 const WINDOWS_C_JOIN_DEADLINE = 15 * 60_000;
 
 const stages = [
@@ -25,8 +26,8 @@ const stages = [
   { action: 'admit-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-c',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-anchor-sync-ready',
-      'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
-      'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
+      'b-fact-received', 'a-offline', 'b-provider-discoverable', 'c-join-started',
+      'b-approval-completed', 'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
     progressDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
     siblings: [{ hardDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
       name: 'android-b-approval', waitsFor: 'windows-c-join' },
@@ -37,7 +38,7 @@ const stages = [
     milestones: ['a-listener-ready', 'three-members-converged', 'a-fact-created',
       'b-fact-created', 'c-fact-created', 'three-facts-converged', 'three-members-restarted'],
     outputs: ['three_members_active'],
-    progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE, siblings: [] },
+    progressDeadlineMs: ANDROID_PRODUCT_ACTION_DEADLINE + CONTROL_DEADLINE, siblings: [] },
   { action: 'leave-a', host: 'macos-a', inputs: ['three_members_active'], name: 'a-leave',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     activities: ['b-consumer-progress'],

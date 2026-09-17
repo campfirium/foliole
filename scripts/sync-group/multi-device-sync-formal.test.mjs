@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import { cleanupPassedState } from './multi-device-sync-cli.mjs';
@@ -15,8 +16,8 @@ const adapters = { 'android-b': ready, 'macos-a': ready, 'windows-c': ready };
 function actions(failAt = null) {
   const milestones = {
     'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
-      'b-anchor-sync-ready', 'b-fact-received', 'a-offline', 'c-join-started',
-      'b-approval-completed', 'c-ordinary-sync-completed'],
+      'b-anchor-sync-ready', 'b-fact-received', 'a-offline', 'b-provider-discoverable',
+      'c-join-started', 'b-approval-completed', 'c-ordinary-sync-completed'],
     'establish-a-b': ['macos-group-created', 'a5-paired', 'a-b-synced'],
     'prepare-candidate': ['candidate-prepared']
   };
@@ -66,4 +67,33 @@ it('preserves passed host state while retaining only formal run evidence', async
   expect(removeRun).not.toHaveBeenCalled();
   await cleanupPassedState({ clearHosts, mode: 'diagnostic', options, removeRun });
   expect(removeRun).toHaveBeenCalledWith(options);
+});
+
+it('keeps every formal Android stage on the isolated acceptance application', () => {
+  for (const name of [
+    'multi-device-sync-a-rejoin.mjs', 'multi-device-sync-a-leave.mjs',
+    'multi-device-sync-participation.mjs', 'multi-device-sync-from-zero-evidence.mjs',
+    'multi-device-sync-from-zero.mjs'
+  ]) {
+    const source = fs.readFileSync(`scripts/sync-group/${name}`, 'utf8');
+    expect(source).toContain('MULTI_DEVICE_ANDROID_APP_ID');
+    expect(source).not.toMatch(/['"]com\.foliole\.android['"]/u);
+    expect(source).not.toContain('sync_group_members');
+  }
+});
+
+it('preserves the prepared Android participant during post-join maintenance', () => {
+  for (const file of [
+    'multi-device-sync-a-rejoin.mjs',
+    'multi-device-sync-ab-convergence.mjs',
+    'multi-device-sync-a-leave.mjs'
+  ]) {
+    const source = fs.readFileSync(`scripts/sync-group/${file}`, 'utf8');
+    const factAction = source.slice(source.indexOf("action: 'create-journey-fact'"));
+    expect(factAction.slice(0, 260)).toContain('installMain: false');
+  }
+  const participation = fs.readFileSync(
+    'scripts/sync-group/multi-device-sync-participation-runtime.mjs', 'utf8'
+  );
+  expect(participation).toContain('execute: context.execute, installMain: false');
 });

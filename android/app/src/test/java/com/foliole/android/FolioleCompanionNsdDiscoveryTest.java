@@ -43,6 +43,16 @@ public class FolioleCompanionNsdDiscoveryTest {
     }
 
     @Test
+    public void deduplicatesRepeatedCallbacksForOneServiceIdentity() {
+        assertEquals(
+            FolioleCompanionNsdDiscovery.serviceIdentity("Studio-anchor", "_foliole-sync._tcp"),
+            FolioleCompanionNsdDiscovery.serviceIdentity("Studio-anchor", "_FOLIOLE-SYNC._TCP.")
+        );
+        assertFalse(FolioleCompanionNsdDiscovery.serviceIdentity("Studio-observing", "_foliole-sync._tcp")
+            .equals(FolioleCompanionNsdDiscovery.serviceIdentity("Studio-anchor", "_foliole-sync._tcp")));
+    }
+
+    @Test
     public void formatsIpv4AndIpv6DiscoveryHostsForHttpEndpoints() throws Exception {
         assertEquals("192.168.0.11", FolioleCompanionNsdAddresses.endpointHost(
             InetAddress.getByName("192.168.0.11")

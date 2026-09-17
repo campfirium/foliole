@@ -16,9 +16,9 @@ vi.mock('./desktopDnsSd.js', () => ({
 }));
 
 import {
-  DESKTOP_ANCHOR_OBSERVATION_MS,
   startDesktopAnchorTopologySession
 } from './desktopAnchorTopologySession.js';
+import { DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS } from './desktopSyncGroupDiscoveryTiming.js';
 
 const group = {
   devices: [], display_name: 'Studio', group_id: 'group-1',
@@ -50,7 +50,7 @@ it('declares the first desktop anchor only after the complete observation window
     onState: (state) => states.push(state)
   });
 
-  await vi.advanceTimersByTimeAsync(DESKTOP_ANCHOR_OBSERVATION_MS - 1);
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS - 1);
   expect(states.at(-1)?.role).toBe('observing');
   await vi.advanceTimersByTimeAsync(1);
   expect(states.at(-1)?.role).toBe('anchor');
@@ -70,11 +70,51 @@ it('syncs before the stable lower-id anchor makes the local anchor a member', as
     fetchDiscovery, group, onAnchor, onAnchorLost: vi.fn(),
     onState: (state) => states.push(state)
   });
-  await vi.advanceTimersByTimeAsync(DESKTOP_ANCHOR_OBSERVATION_MS);
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
   runtime.onService?.({ kind: 'found', service });
 
   await vi.waitFor(() => expect(states.at(-1)).toMatchObject({ role: 'member', status: 'ready' }));
   expect(states).toContainEqual(expect.objectContaining({ role: 'anchor', status: 'sync_before_demote' }));
   expect(onAnchor).toHaveBeenCalledWith(expect.objectContaining({ peerDeviceId: 'desktop-a' }), true);
+  session.stop();
+});
+
+it('does not self-elect while a discovered anchor probe is still pending', async () => {
+  let finishProbe!: (response: Response) => void;
+  const fetchDiscovery = vi.fn(() => new Promise<Response>((resolve) => { finishProbe = resolve; }));
+  const states: Array<{ role: string }> = [];
+  const session = startDesktopAnchorTopologySession({
+    fetchDiscovery, group, onAnchor: vi.fn(async () => true), onAnchorLost: vi.fn(),
+    onState: (state) => states.push(state)
+  });
+
+  runtime.onService?.({ kind: 'found', service: anchorService() });
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
+  expect(states.at(-1)?.role).toBe('observing');
+
+  finishProbe(new Response(JSON.stringify({
+    group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'desktop-a',
+    provider_platform: 'darwin', topology_role: 'anchor',
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  })));
+  await vi.waitFor(() => expect(states.at(-1)?.role).toBe('member'));
+  session.stop();
+});
+
+it('self-elects after the discovery grace and all candidate probes fail', async () => {
+  let finishProbe!: (response: Response) => void;
+  const fetchDiscovery = vi.fn(() => new Promise<Response>((resolve) => { finishProbe = resolve; }));
+  const states: Array<{ role: string }> = [];
+  const session = startDesktopAnchorTopologySession({
+    fetchDiscovery, group, onAnchor: vi.fn(async () => true), onAnchorLost: vi.fn(),
+    onState: (state) => states.push(state)
+  });
+
+  runtime.onService?.({ kind: 'found', service: anchorService() });
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
+  expect(states.at(-1)?.role).toBe('observing');
+
+  finishProbe(new Response(null, { status: 503 }));
+  await vi.waitFor(() => expect(states.at(-1)?.role).toBe('anchor'));
   session.stop();
 });

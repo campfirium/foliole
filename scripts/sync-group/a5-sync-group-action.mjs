@@ -63,7 +63,8 @@ function validateProductResult(receipt, expected, evidenceRef) {
 
 export async function runMacosA5SyncGroupMaintenance({
   action, appId, buildIdentity, env, evidenceRoot, execute, installMain = true,
-  conflictToken, expectedJourneyCounts, mechanics = runMacosA5InstrumentationMechanics,
+  conflictToken, expectedJourneyCounts, instrumentationOwnsActivity = false,
+  mechanics = runMacosA5InstrumentationMechanics,
   observeWhileTransportOpen, paths, serial, transportRequired
 }) {
   const spec = SPECS[action];
@@ -82,8 +83,8 @@ export async function runMacosA5SyncGroupMaintenance({
     ? ['-e', 'expectedJourneyCounts', `'${JSON.stringify(expectedJourneyCounts ?? {})}'`]
     : action === 'fork-conflict' ? ['-e', 'conflictToken', conflictToken ?? ''] : [];
   const raw = await mechanics({ appId, buildIdentity, env, evidenceRoot, execute, installMain,
-    instrumentationArgs, needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
-    restartApp, serial, testClass,
+    instrumentationArgs, instrumentationOwnsActivity, needsTransport, observeWhileTransportOpen,
+    paths, releaseAfterObservation, restartApp, serial, testClass,
     validateInstrumentation: ({ evidencePath, stdout }) => validateProductResult(
       bundle(stdout, 'folioleActionReceipt'), expected, evidencePath
     ) });

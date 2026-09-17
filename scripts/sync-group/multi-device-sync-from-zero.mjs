@@ -6,7 +6,7 @@ import {
   runMacosA5SyncGroupApproval, startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
-import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from '../android/macos-sync-group-desktop-session.mjs';
 import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-action.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
@@ -21,6 +21,8 @@ import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
   WINDOWS_SYNC_FROM_ZERO_PROGRESS
 } from './sync-from-zero-contract.mjs';
+import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
+import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
 
 /* global AbortController, AbortSignal, process */
 
@@ -84,17 +86,23 @@ async function admitWindowsFromZero(context) {
   const approvalController = new AbortController();
   const approvalSignal = AbortSignal.any([context.signal, approvalController.signal]);
   const approvalRelease = createApprovalReceiptRelease(() => approvalController.abort());
-  const instrumentationExecute = context.createExecute(approvalSignal, approvalRelease.capture);
+  const instrumentationExecute = (command, args, options = {}) => context.createExecute(
+    approvalSignal, (event) => {
+      approvalRelease.capture(event); options.onOutput?.(event);
+    }
+  )(command, args, options);
   let windowsWork;
   let windowsStarted;
   const started = new Promise((resolve) => { windowsStarted = resolve; });
   const runWindows = () => context.execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-from-zero'], {
+    windowsSyncGroupCommand('multi-device-sync-from-zero', context.sourceRef), {
       action: 'windows-c-sync-from-zero', cwd: context.repoRoot, host: 'windows-c',
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
   const approvalWork = runMacosA5SyncGroupApproval({ allowControlledCancellation: true,
-    execute: context.execute, instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
+    appId: MULTI_DEVICE_ANDROID_APP_ID,
+    cancelInstrumentation: () => approvalController.abort(), execute: context.execute,
+    instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
     onProviderStopped: async () => {}, onReady: async () => {
       windowsWork = runWindows(); context.reportProgress('windows-join-started'); windowsStarted();
     } });
@@ -123,19 +131,19 @@ function createContext(options) {
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(options.repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     options.runId, 'sync-from-zero');
-  return { ...options, env, evidenceRoot, owned, paths };
+  return { ...options, appId: MULTI_DEVICE_ANDROID_APP_ID, env, evidenceRoot, owned, paths };
 }
 
 export async function proveSyncFromZero(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
-  let session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+  let session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
     libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
     runtimeRoot: context.owned.root
   }));
   try {
     const overview = await session.enable();
-    if (overview.sync_group?.members.filter(({ state }) => state === 'active').length !== 2) {
+    if (overview.sync_group?.devices.filter(({ state }) => state === 'active').length !== 2) {
       throw productFailure('macos-a', 'a_b_group_input_missing', 'A/B Sync Group input is missing.');
     }
     const datasetReceipt = await createSyncFromZeroDataset({
@@ -152,11 +160,11 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('windows-attachment-batches-complete');
     const androidAfterC = await waitForAndroidSyncFromZeroProofSnapshot(context.paths);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
-      runId: context.runId,
+      runId: context.runId, sourceRef: context.sourceRef,
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');
-    session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+    session = await openMacosSyncGroupDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
       runtimeRoot: context.owned.root
     }));

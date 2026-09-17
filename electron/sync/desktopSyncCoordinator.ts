@@ -13,7 +13,9 @@ import {
 
 const RESULT_SETTING_KEY = 'sync_group_last_trigger_result';
 let activeRun: Promise<SyncTriggerResult> | null = null;
+let activePeerId: string | null = null;
 const completedListeners = new Set<() => void>();
+const queuedRuns = new Map<string, Promise<SyncTriggerResult>>();
 
 export function loadActiveDesktopSyncRun() {
   return activeRun;
@@ -31,13 +33,35 @@ export function loadDesktopSyncTriggerResult() {
 export function runDesktopSyncCoordinator(
   reason: SyncTriggerReason,
   preferredPeer?: DesktopSyncGroupPeer
-) {
-  if (activeRun) return activeRun;
+): Promise<SyncTriggerResult> {
+  if (activeRun) {
+    if (!preferredPeer || activePeerId === preferredPeer.peer_device_id) return activeRun;
+    return queuePreferredPeer(reason, preferredPeer, activeRun);
+  }
+  activePeerId = preferredPeer?.peer_device_id ?? null;
   const work = runOwnedSync(reason, preferredPeer).finally(() => {
-    if (activeRun === work) activeRun = null;
+    if (activeRun !== work) return;
+    activeRun = null;
+    activePeerId = null;
   });
   activeRun = work;
   return work;
+}
+
+function queuePreferredPeer(
+  reason: SyncTriggerReason,
+  peer: DesktopSyncGroupPeer,
+  predecessor: Promise<SyncTriggerResult>
+): Promise<SyncTriggerResult> {
+  const current = queuedRuns.get(peer.peer_device_id);
+  if (current) return current;
+  const queued: Promise<SyncTriggerResult> = predecessor.catch(() => undefined)
+    .then(() => runDesktopSyncCoordinator(reason, peer))
+    .finally(() => {
+      if (queuedRuns.get(peer.peer_device_id) === queued) queuedRuns.delete(peer.peer_device_id);
+    });
+  queuedRuns.set(peer.peer_device_id, queued);
+  return queued;
 }
 
 async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSyncGroupPeer) {

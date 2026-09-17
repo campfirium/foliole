@@ -32,6 +32,7 @@ final class FolioleCompanionNsdAdvertisement {
         ));
         info.setPort(port);
         put(info, "app_version", config.getString("app_version"));
+        put(info, "provider_platform", config.getString("platform"));
         put(info, "topology_role", config.getString("topology_role"));
         put(info, "group_id", config.getJSONObject("sync_group").getString("group_id"));
         put(info, "group_tag", config.getString("group_tag"));
