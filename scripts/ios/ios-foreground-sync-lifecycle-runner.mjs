@@ -196,6 +196,8 @@ function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
       `endpoint_ready=${value?.endpoint_ready ?? 'unknown'}`,
       `group_joined=${value?.sync_group_joined ?? 'unknown'}`,
       `participation_hydrated=${value?.participation_hydrated ?? 'unknown'}`,
+      `sync_enabled=${value?.sync_enabled ?? 'unknown'}`,
+      `sync_paused=${value?.sync_paused ?? 'unknown'}`,
       `sync_status=${value?.sync_status ?? 'unknown'}`
     ].join(' '),
     initialObservation: `${label} result was not readable`, label,
