@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
+  upsertVersionedNodeContentWithAnchors,
   upsertVersionedNodeSnapshot,
   upsertVersionedNodeSnapshotWithOrder
 } from './nodeVersionedMutations.js';
@@ -90,4 +91,46 @@ it('creates a child version linked to the prior formal version during a normal e
     body_text: 'Alpha desktop.',
     parent_version_id: first.current_version_id
   });
+});
+
+it('remaps persisted anchor children that were not loaded by the renderer', () => {
+  const remoteImage = '![Remote](https://example.com/very-long-cover-name.png)';
+  const previousContent = `${remoteImage}\n\nTarget sentence.`;
+  upsertVersionedNodeSnapshot({
+    ...nodeInput(previousContent, '2026-07-25T04:31:00.000Z'),
+    nodeId: 'node-parent'
+  });
+  upsertVersionedNodeSnapshot({
+    ...nodeInput('Target sentence.', '2026-07-25T04:31:00.000Z'),
+    anchorLink: {
+      id: 'anchor-1', kind: 'highlight', locator: {
+        from: previousContent.indexOf('Target sentence.'),
+        originalText: 'Target sentence.',
+        to: previousContent.length
+      }
+    },
+    nodeId: 'node-child',
+    parentNodeId: 'node-parent'
+  });
+  const nextContent = '![Remote](asset://cover.png)\n\nTarget sentence.';
+
+  const updates = upsertVersionedNodeContentWithAnchors({
+    ...nodeInput(nextContent, '2026-07-25T04:32:00.000Z'),
+    nodeId: 'node-parent'
+  }, []);
+
+  expect(updates).toEqual([expect.objectContaining({
+    anchorLink: expect.objectContaining({
+      locator: {
+        from: nextContent.indexOf('Target sentence.'),
+        originalText: 'Target sentence.',
+        to: nextContent.length
+      }
+    }),
+    nodeId: 'node-child'
+  })]);
+  const stored = openDatabaseConnection().sqlite
+    .prepare('SELECT anchor_link FROM nodes WHERE id = ?')
+    .get('node-child') as { anchor_link: string };
+  expect(JSON.parse(stored.anchor_link).locator.from).toBe(nextContent.indexOf('Target sentence.'));
 });

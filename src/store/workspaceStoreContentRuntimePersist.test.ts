@@ -58,6 +58,7 @@ function schedulePersist(node: WorkspaceNode, version = markNodeContentEdited(no
     },
     metrics: createUpdateNodeContentMetrics(false),
     nextNodeForSync: node,
+    set: () => undefined,
     version
   });
   return version;

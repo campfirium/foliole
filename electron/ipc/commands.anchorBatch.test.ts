@@ -30,7 +30,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   softDeleteNodes: vi.fn()
 }));
 vi.mock('../database/nodeVersionedMutations.js', () => ({
-  upsertVersionedNodeContentWithAnchors: vi.fn(),
+  upsertVersionedNodeContentWithAnchors: vi.fn((_parent, anchors) => anchors),
   upsertVersionedNodeSnapshot: vi.fn(),
   upsertVersionedNodeSnapshotWithOrder: vi.fn()
 }));

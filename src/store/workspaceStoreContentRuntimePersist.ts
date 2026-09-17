@@ -15,6 +15,7 @@ import {
   waitForNodeCreateConfirmations
 } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
+import { applyRuntimeAnchorAcknowledgements } from './workspaceRuntimeAnchorAcknowledgements';
 import {
   hasWorkspaceNodeMutationRuntime,
   syncNodeContentWithAnchorsMutationToRuntime
@@ -75,7 +76,7 @@ export async function applyNodeContentRuntimePatch(args: {
     applyRuntimeMutationDiagnostics(args.metrics, result);
   }
   args.metrics.runtimeApplyTotalMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - applyStartedAt : 0;
-  return Boolean(result) || !hasWorkspaceNodeMutationRuntime();
+  return result;
 }
 
 export function applyNodeContentLocalPatch(args: {
@@ -114,15 +115,18 @@ async function runNodeContentRuntimePersist(args: {
   localState: UpdateNodeContentLocalState;
   metrics: UpdateNodeContentMetrics;
   nextNodeForSync: WorkspaceNode;
+  set: WorkspaceSet;
   version: number;
 }) {
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
-  const runtimeAccepted = await applyNodeContentRuntimePatch({
+  const runtimeResult = await applyNodeContentRuntimePatch({
     ...args.localState,
     diagnosticsEnabled: args.diagnosticsEnabled,
     metrics: runtimeMetrics,
     nextNodeForSync: args.nextNodeForSync
   });
+  const runtimeAccepted = Boolean(runtimeResult) || !hasWorkspaceNodeMutationRuntime();
+  applyRuntimeAnchorAcknowledgements(args.set, runtimeResult);
   if (args.diagnosticsEnabled) {
     logUpdateNodeContentDiagnostic({
       applied: runtimeAccepted,

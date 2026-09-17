@@ -1,8 +1,11 @@
+import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
+import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCodec.js';
 import type { UpsertNodeSnapshotOptions } from '../../lib/core/database/nodeMutations.js';
 import type {
   UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -43,19 +46,45 @@ export function upsertVersionedNodeContentWithAnchors(
   parent: UpsertNodeSnapshotInput,
   affectedAnchors: UpdateNodeAnchorLinkInput[],
   options: UpsertNodeSnapshotOptions = {}
-): void {
+) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
-  withTransaction(driver, () => {
+  return withTransaction(driver, () => {
+    const contentChange = applyParentContentChange({
+      driver,
+      nextContent: parent.content,
+      nodeId: parent.nodeId,
+      title: parent.title,
+      updatedAt: parent.updatedAt
+    });
     upsertNodeSnapshot(parent, options);
     updateNodeAnchorLinks(affectedAnchors);
     flushVersion(driver, parent.nodeId, hostName, parent.updatedAt);
-    for (const anchor of affectedAnchors) {
+    const anchorIds = [...new Set([
+      ...contentChange.affectedChildIds,
+      ...affectedAnchors.map((anchor) => anchor.nodeId)
+    ])];
+    for (const nodeId of anchorIds) {
       driver.execute(
         `UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
-        [hostName, anchor.nodeId]
+        [hostName, nodeId]
       );
-      flushVersion(driver, anchor.nodeId, hostName, anchor.updatedAt);
+      flushVersion(driver, nodeId, hostName, parent.updatedAt);
     }
+    return anchorIds.flatMap((nodeId) => {
+      const row = driver.queryOne<{
+        anchor_link: string | null;
+        image_regions: string | null;
+        updated_at: string;
+      }>('SELECT anchor_link, image_regions, updated_at FROM nodes WHERE id = ?', [nodeId]);
+      const anchorLink = parseStoredAnchorLink(row?.anchor_link ?? null);
+      if (!row || !anchorLink) return [];
+      return [{
+        anchorLink: anchorLink as UpdateNodeAnchorLinkInput['anchorLink'],
+        imageRegions: parseStoredImageRegions(row.image_regions),
+        nodeId,
+        updatedAt: row.updated_at
+      }];
+    });
   });
 }

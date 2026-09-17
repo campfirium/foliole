@@ -192,6 +192,7 @@ async function updateNodeContent(
     localState,
     metrics,
     nextNodeForSync,
+    set,
     version
   });
   metrics.runtimeAwaitContinuationGapMs = diagnosticsEnabled

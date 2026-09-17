@@ -6,7 +6,7 @@ import {
   resetTestAttachmentResources
 } from '../test/attachmentResourceTestSupport';
 
-import { syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
+import { hasWorkspaceNodeMutationRuntime, syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -38,6 +38,7 @@ const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({
 });
 
 beforeEach(() => {
+  vi.clearAllMocks();
   registerTestAttachmentResource({
     attachmentId: IMAGE_ATTACHMENT_ID,
     contentHash: IMAGE_CONTENT_HASH,
@@ -106,4 +107,111 @@ it('keeps imported image highlights as image regions when parent image markdown 
     })],
     expect.any(Array)
   );
+});
+
+it('keeps a mixed highlight on the later image when several image URLs are localized together', async () => {
+  vi.useFakeTimers();
+  const remoteFirst = '![First](https://example.com/first.jpg)';
+  const remoteSecond = '![Second](https://example.com/second.jpg)';
+  const localFirst = `![First](${IMAGE_ASSET_URL})`;
+  const localSecond = `![Second](${IMAGE_ASSET_URL})`;
+  const trailingText = 'Trailing highlighted paragraph.';
+  const previousContent = `${remoteFirst}\n\nPreface\n\n${remoteSecond}\n${trailingText}`;
+  const nextContent = `${localFirst}\n\nPreface\n\n${localSecond}\n${trailingText}`;
+  const originalText = `${remoteSecond}\n${trailingText}`;
+  const expectedText = `${localSecond}\n${trailingText}`;
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1'] = {
+    ...fixture.nodesById['node-1']!,
+    content: previousContent
+  };
+  fixture.nodeOrder = [...fixture.nodeOrder, 'node-mixed-highlight'];
+  fixture.nodesById['node-mixed-highlight'] = {
+    id: 'node-mixed-highlight',
+    parentNodeId: 'node-1',
+    kind: 'topic',
+    title: originalText,
+    hasContent: true,
+    content: originalText,
+    anchorLink: {
+      id: 'mixed-highlight',
+      kind: 'highlight',
+      locator: {
+        from: previousContent.indexOf(remoteSecond),
+        originalText,
+        to: previousContent.length
+      }
+    },
+    imageRegions: null,
+    hasReveal: false,
+    reveal: null,
+    review: null,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  };
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  await actions.updateNodeContent('node-1', nextContent);
+  await vi.advanceTimersByTimeAsync(800);
+
+  const expectedFrom = nextContent.indexOf(localSecond);
+  expect(harness.getState().nodesById['node-mixed-highlight']?.anchorLink?.locator).toEqual({
+    from: expectedFrom,
+    originalText: expectedText,
+    to: expectedFrom + expectedText.length
+  });
+});
+
+it('applies persisted remaps returned for an anchor that hydrated after the local edit', async () => {
+  vi.useFakeTimers();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  const previousContent = '![Remote](https://example.com/long-cover.png)\n\nTarget sentence.';
+  const nextContent = '![Remote](asset://cover.png)\n\nTarget sentence.';
+  const expectedFrom = nextContent.indexOf('Target sentence.');
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1'] = { ...fixture.nodesById['node-1']!, content: previousContent };
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockResolvedValue({
+    anchorUpdates: [{
+      anchorLink: {
+        id: 'late-anchor', kind: 'highlight', locator: {
+          from: expectedFrom, originalText: 'Target sentence.', to: nextContent.length
+        }
+      },
+      imageRegions: null,
+      nodeId: 'late-child',
+      updatedAt: '2099-04-14T00:00:01.000Z'
+    }],
+    nodes: []
+  });
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  await actions.updateNodeContent('node-1', nextContent);
+  harness.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      'late-child': {
+        ...state.nodesById['node-1']!,
+        anchorLink: {
+          id: 'late-anchor', kind: 'highlight', locator: {
+            from: previousContent.indexOf('Target sentence.'),
+            originalText: 'Target sentence.',
+            to: previousContent.length
+          }
+        },
+        content: 'Target sentence.',
+        id: 'late-child',
+        parentNodeId: 'node-1',
+        title: 'Target sentence.'
+      }
+    }
+  }));
+  await vi.advanceTimersByTimeAsync(800);
+
+  expect(harness.getState().nodesById['late-child']?.anchorLink?.locator).toEqual({
+    from: expectedFrom,
+    originalText: 'Target sentence.',
+    to: nextContent.length
+  });
 });

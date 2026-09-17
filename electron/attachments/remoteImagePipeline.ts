@@ -2,6 +2,7 @@ import type {
   NativeImportLocalImageAttachmentResult,
   NativeImportRemoteImageAttachmentArgs
 } from '../../lib/platform/nativeStorageContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { importImageAttachmentBytes } from './importImageAttachmentBytes.js';
@@ -56,7 +57,7 @@ async function storeRemoteImageFetchResult(
   }
   await writeRemoteImageCache(result.resource).catch(() => undefined);
   if (result.strategy === 'source-origin') {
-    learnRemoteImageSourceOrigin(sourceUrl, sourceOrigin);
+    await runWithDatabaseConnectionOwner(() => learnRemoteImageSourceOrigin(sourceUrl, sourceOrigin));
   }
   return result;
 }
@@ -208,13 +209,13 @@ export async function importRemoteImageAttachment(
 
   const importKey = `${normalizedNodeId}\u0000${fetchResult.resource.cacheKey}`;
   if (!importByNodeAndCacheKey.has(importKey)) {
-    const promise = importImageAttachmentBytes({
+    const promise = runWithDatabaseConnectionOwner(() => importImageAttachmentBytes({
       bytes: fetchResult.resource.bytes,
       errorSource: fetchResult.resource.sourceUrl,
       mimeType: fetchResult.resource.mimeType,
       nodeId: normalizedNodeId,
       originalName: fetchResult.resource.originalName
-    });
+    }));
     importByNodeAndCacheKey.set(importKey, promise);
   }
   return importByNodeAndCacheKey.get(importKey)!;

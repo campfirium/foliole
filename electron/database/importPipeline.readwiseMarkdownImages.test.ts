@@ -175,6 +175,7 @@ it('matches readwise highlights before remote image localization and remaps afte
     remappedLocator?.originalText
   );
   expect(remappedLocator?.originalText).toContain(`![Avatar](asset://${storageKey})`);
+  expect(remappedLocator?.originalText).toContain('大罗SEO target sentence.');
   expect(imageRegions).toEqual([
     {
       attachmentId: contentHash,

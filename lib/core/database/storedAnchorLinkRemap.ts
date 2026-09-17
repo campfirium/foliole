@@ -55,7 +55,8 @@ function remapLocators(input: {
     expandMarkdownImageTextLocator(
       input.nextContent,
       remapTextAnchorLocator(input.nextContent, locator, input.previousContent),
-      locator
+      locator,
+      input.previousContent
     )
   );
 }

@@ -4,7 +4,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   fetchRemoteImageMetadata: vi.fn(),
-  resolveRemoteImageSourceContext: vi.fn()
+  resolveRemoteImageSourceContext: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
 vi.mock('../attachments/attachmentImageActions.js', () => ({
@@ -23,6 +24,9 @@ vi.mock('../attachments/remoteImagePipeline.js', () => ({
   fetchRemoteImageMetadata: mocks.fetchRemoteImageMetadata
 }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource: vi.fn() }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: mocks.runWithDatabaseConnectionOwner
+}));
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
@@ -64,4 +68,5 @@ it('loads metadata with the node source context and retry intent', async () => {
     bypassFailureCache: true,
     sourceOrigin: 'https://source.example/'
   });
+  expect(mocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
 });

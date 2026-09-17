@@ -7,10 +7,16 @@ const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
   registerSchemesAsPrivileged: vi.fn()
 }));
 
-const { importImageAttachmentBytes, resolveImageMimeType, normalizeImageFileName } = vi.hoisted(() => ({
+const {
+  importImageAttachmentBytes,
+  resolveImageMimeType,
+  normalizeImageFileName,
+  runWithDatabaseConnectionOwner
+} = vi.hoisted(() => ({
   importImageAttachmentBytes: vi.fn(),
   normalizeImageFileName: vi.fn((value: string) => value || 'pasted-image.png'),
-  resolveImageMimeType: vi.fn()
+  resolveImageMimeType: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
 vi.mock('electron', () => ({
@@ -26,6 +32,7 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
   normalizeImageFileName,
   resolveImageMimeType
 }));
+vi.mock('../database/connection.js', () => ({ runWithDatabaseConnectionOwner }));
 
 vi.mock('./remoteImageSourceContext.js', () => ({
   resolveRemoteImageSourceContext: vi.fn(() => ({ sourceOrigin: null }))
@@ -34,6 +41,8 @@ vi.mock('./remoteImageSourceContext.js', () => ({
 import { buildRemoteImageRenderUrl } from '../../lib/platform/remoteImageProtocolUrl.js';
 
 import {
+  configureRemoteImageFetchTransportForTests,
+  fetchRemoteImageMetadata,
   importRemoteImageAttachment,
   resetRemoteImagePipelineForTests
 } from './remoteImagePipeline.js';
@@ -72,4 +81,23 @@ it('shares one remote fetch across protocol renders and auto localization', asyn
 
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(importImageAttachmentBytes).toHaveBeenCalledTimes(1);
+});
+
+it('does not acquire the sqlite owner while a shared remote fetch is pending', async () => {
+  let resolveFetch!: (response: Response) => void;
+  const fetchTransport = vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve; }));
+  configureRemoteImageFetchTransportForTests(fetchTransport);
+  importImageAttachmentBytes.mockResolvedValue({ status: 'imported', attachment_id: 'hash-1' });
+
+  const metadata = fetchRemoteImageMetadata('https://example.com/cover.png');
+  const imported = importRemoteImageAttachment({ nodeId: 'node-1', sourceUrl: 'https://example.com/cover.png' });
+  await vi.waitFor(() => expect(fetchTransport).toHaveBeenCalledTimes(1));
+  expect(runWithDatabaseConnectionOwner).not.toHaveBeenCalled();
+
+  resolveFetch(new Response(PNG_BYTES, { headers: { 'content-type': 'image/png' }, status: 200 }));
+  await expect(Promise.all([metadata, imported])).resolves.toEqual([
+    null,
+    { status: 'imported', attachment_id: 'hash-1' }
+  ]);
+  expect(runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
 });

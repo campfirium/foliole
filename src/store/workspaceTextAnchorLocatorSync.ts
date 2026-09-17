@@ -81,7 +81,8 @@ function buildNextTextAnchorNode(args: {
     return expandMarkdownImageTextLocator(
       args.nextContent,
       remappedLocator,
-      locator
+      locator,
+      args.previousContent
     );
   });
   const imageRegionStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;

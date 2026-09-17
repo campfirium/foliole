@@ -11,6 +11,7 @@ import {
 import { fetchRemoteImageMetadata } from '../attachments/remoteImagePipeline.js';
 import { resolveRemoteImageSourceContext } from '../attachments/remoteImageSourceContext.js';
 import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { asBoolean, asString } from './commandParsers.js';
 
@@ -18,13 +19,14 @@ function handleRemoteImageSourceCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadRemoteImageMetadata) {
     const sourceUrl = asString(args.source_url, 'source_url');
     const nodeId = typeof args.node_id === 'string' ? args.node_id : null;
-    const context = resolveRemoteImageSourceContext(nodeId, sourceUrl);
-    return fetchRemoteImageMetadata(sourceUrl, {
-      bypassFailureCache: args.bypass_failure_cache === undefined
-        ? false
-        : asBoolean(args.bypass_failure_cache, 'bypass_failure_cache'),
-      sourceOrigin: context.sourceOrigin
-    }).then((intrinsicSize) => ({ intrinsic_size: intrinsicSize }));
+    return runWithDatabaseConnectionOwner(() => resolveRemoteImageSourceContext(nodeId, sourceUrl))
+      .then((context) => fetchRemoteImageMetadata(sourceUrl, {
+        bypassFailureCache: args.bypass_failure_cache === undefined
+          ? false
+          : asBoolean(args.bypass_failure_cache, 'bypass_failure_cache'),
+        sourceOrigin: context.sourceOrigin
+      }))
+      .then((intrinsicSize) => ({ intrinsic_size: intrinsicSize }));
   }
   if (command === NATIVE_COMMANDS.loadRemoteImageSourceContext) {
     const context = resolveRemoteImageSourceContext(

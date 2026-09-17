@@ -101,7 +101,7 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   diagnostics.parseAnchorsMs = readElapsedMs(parseAnchorsStartedAt);
   const upsertStartedAt = readNowMs();
-  upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
+  const persistedAnchors = upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
     searchInvalidation: { workspaceInvalidation: 'defer' }
   });
   diagnostics.upsertNodeMs = readElapsedMs(upsertStartedAt);
@@ -111,9 +111,15 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   enqueueCoalescedWorkspaceSearchInvalidation([parent.nodeId]);
   diagnostics.enqueueSearchMs = readElapsedMs(enqueueSearchStartedAt);
   const scheduleMirrorStartedAt = readNowMs();
-  scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
+  scheduleMirrorSync([parent.nodeId, ...persistedAnchors.map((node) => node.nodeId)]);
   diagnostics.scheduleMirrorMs = readElapsedMs(scheduleMirrorStartedAt);
-  const result = buildNodeContentWithAnchorsResult({ affectedAnchors, diagnostics, originWindow, parent, totalStartedAt });
+  const result = buildNodeContentWithAnchorsResult({
+    affectedAnchors: persistedAnchors,
+    diagnostics,
+    originWindow,
+    parent,
+    totalStartedAt
+  });
   return shouldReturnDiagnostics ? result : omitNodeMutationDiagnostics(result);
 }
 

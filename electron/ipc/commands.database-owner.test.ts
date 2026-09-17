@@ -50,6 +50,8 @@ it('queues storage commands behind the active database owner', async () => {
 it.each([
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
+  NATIVE_COMMANDS.importRemoteImageAttachment,
+  NATIVE_COMMANDS.loadRemoteImageMetadata,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,
   NATIVE_COMMANDS.restoreSqliteDatabase,
   NATIVE_COMMANDS.runReadwiseSourceCutover,
