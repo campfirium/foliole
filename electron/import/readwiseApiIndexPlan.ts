@@ -8,6 +8,8 @@ import {
 } from './readwiseApiCandidateTypes.js';
 import { READWISE_EXPORT_URL, READWISE_READER_LIST_URL } from './readwiseApiImportFetch.js';
 
+const READWISE_TAG_CHECKPOINT_OVERLAP_MS = 5 * 60 * 1_000;
+
 export function createReadwiseApiIndexPlan(policy: ReadwiseAutoImportPolicy): ReadwiseApiIndexScope[] {
   const categoryScopes = READER_PARENT_CATEGORIES.filter((category) =>
     resolveReadwiseAutoImportDestination(policy, category, false) !== 'off'
@@ -45,7 +47,9 @@ export function buildReadwiseApiScopeUrl(input: {
   scope: ReadwiseApiIndexScope;
 }) {
   const url = new URL(input.scope === 'export' ? READWISE_EXPORT_URL : READWISE_READER_LIST_URL);
-  if (input.checkpoint) url.searchParams.set('updatedAfter', input.checkpoint);
+  if (input.checkpoint) {
+    url.searchParams.set('updatedAfter', resolveUpdatedAfter(input.scope, input.checkpoint));
+  }
   if (input.cursor) url.searchParams.set('pageCursor', input.cursor);
   if (input.scope === 'export') return url;
   url.searchParams.set('limit', '100');
@@ -60,6 +64,13 @@ export function buildReadwiseApiScopeUrl(input: {
     }
   }
   return url;
+}
+
+function resolveUpdatedAfter(scope: ReadwiseApiIndexScope, checkpoint: string) {
+  if (scope !== 'reader:tag') return checkpoint;
+  const checkpointMs = Date.parse(checkpoint);
+  if (!Number.isFinite(checkpointMs)) return checkpoint;
+  return new Date(checkpointMs - READWISE_TAG_CHECKPOINT_OVERLAP_MS).toISOString();
 }
 
 function isParentCategory(value: string): value is ReaderParentCategory {
