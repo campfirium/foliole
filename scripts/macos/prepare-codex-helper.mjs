@@ -25,6 +25,10 @@ export async function prepareCodexHelper(options = {}) {
   const archive = path.join(directory, release.assetName);
   const command = path.join(directory, 'codex');
   await mkdir(directory, { recursive: true });
+  if (release.binarySha256 && await hasExpectedHash(command, release.binarySha256)) {
+    assertCodexHelperVersion(command, release.version, options.run);
+    return path.relative(root, command);
+  }
   if (!await hasExpectedHash(archive, release.sha256)) {
     const temporaryArchive = `${archive}.${process.pid}.tmp`;
     await rm(temporaryArchive, { force: true });

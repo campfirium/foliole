@@ -84,11 +84,14 @@ export async function assertPinnedCodexHelperIsCurrent(options = {}) {
 
 function parsePinnedRelease(value) {
   if (!value || typeof value !== 'object') throw new Error('Invalid Codex helper release lock');
-  const { assetName, sha256, version } = value;
+  const { assetName, binarySha256, sha256, version } = value;
   if (typeof assetName !== 'string' || !assetName.endsWith('.tar.gz')) throw new Error('Invalid Codex helper asset name');
   if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(sha256)) throw new Error('Invalid Codex helper SHA-256');
   if (typeof version !== 'string' || !STABLE_VERSION_PATTERN.test(version)) throw new Error('Codex helper must pin a stable release');
-  return { assetName, sha256, version };
+  if (binarySha256 !== undefined && (typeof binarySha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(binarySha256))) {
+    throw new Error('Invalid Codex helper binary SHA-256');
+  }
+  return { assetName, ...(binarySha256 ? { binarySha256 } : {}), sha256, version };
 }
 
 function parseOfficialRelease(value) {

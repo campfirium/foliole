@@ -1,7 +1,7 @@
 /* global Buffer */
 
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -39,6 +39,27 @@ it('uses the explicit release snapshot and rejects downloaded bytes with the wro
   );
   await expect(readFile(path.join(root, '.tmp/macos/codex/0.144.6', ASSET_NAME)))
     .rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('reuses a cached helper only when its pinned binary digest and version match', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'foliole-codex-helper-'));
+  temporaryDirectories.push(root);
+  const command = path.join(root, '.tmp/macos/codex/0.144.6/codex');
+  await mkdir(path.dirname(command), { recursive: true });
+  await writeFile(command, 'verified helper');
+  const fetchImpl = vi.fn();
+  const run = vi.fn(() => 'codex-cli 0.144.6\n');
+  const release = {
+    assetName: ASSET_NAME,
+    binarySha256: createHash('sha256').update('verified helper').digest('hex'),
+    sha256: 'a'.repeat(64),
+    version: '0.144.6'
+  };
+
+  await expect(prepareCodexHelper({ fetchImpl, release, root, run }))
+    .resolves.toBe('.tmp/macos/codex/0.144.6/codex');
+  expect(fetchImpl).not.toHaveBeenCalled();
+  expect(run).toHaveBeenCalledWith(command, ['--version'], { encoding: 'utf8' });
 });
 
 it('requires the extracted helper version to match the immutable release snapshot', () => {
