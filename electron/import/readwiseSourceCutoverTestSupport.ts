@@ -132,10 +132,12 @@ export function epubMigrationFetch() {
         '<p>Cover matter</p>',
         '<h1 data-rw-epub-toc="chapter-1">Chapter 1</h1>',
         '<p>API body with remembered phrase.</p>',
+        '<img src="https://bucket.s3.amazonaws.com/diagram.png" alt="Diagram">',
         '<h1 data-rw-epub-toc="chapter-2">Chapter 2</h1>',
         '<p>Second chapter body.</p>'
       ].join('') : null,
       id: id ?? 'document-1', parent_id: null,
+      image_url: 'https://bucket.s3.amazonaws.com/cover.jpeg',
       raw_source_url: 'https://bucket.s3.amazonaws.com/ParsedDocument33661889.epub', title: 'Sample'
     }, ...(!id ? [{ category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }] : [])] });
   });

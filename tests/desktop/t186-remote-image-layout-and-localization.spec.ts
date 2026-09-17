@@ -17,7 +17,9 @@ const URLS = {
   smallB: 'https://t186.example/small-b.png',
   smallC: 'https://t186.example/small-c.png'
 };
-const IDS = { auto: 't186-auto', layout: 't186-layout', onDemand: 't186-on-demand' };
+const IDS = {
+  anchor: 't186-anchor-source', auto: 't186-auto', layout: 't186-layout', onDemand: 't186-on-demand'
+};
 
 type Probe = { closes: Record<string, number>; firstChunks: Record<string, number>; requests: string[] };
 
@@ -58,6 +60,8 @@ async function installControlledImages(app: ElectronApplication) {
 async function seed(page: Page) {
   await page.evaluate(async ({ ids, urls }) => {
     window.localStorage.setItem('foliole-auto-localize-remote-images', 'false');
+    const anchorContent = `![Anchor image](${urls.onDemandA})\n\nTarget phrase`;
+    const anchorFrom = anchorContent.indexOf('Target phrase');
     await window.__folioleWorkspaceDebug?.seedNodes?.([
       {
         content: `![Large A](${urls.largeA}) ![Large B](${urls.largeB})\n\n![Small A](${urls.smallA}) ![Small B](${urls.smallB}) ![Small C](${urls.smallC})\n\n![Large text](${urls.largeA}) trailing text`,
@@ -67,6 +71,14 @@ async function seed(page: Page) {
       {
         content: `![Demand A](${urls.onDemandA})\n![Demand B](${urls.onDemandB})`,
         id: ids.onDemand, kind: 'topic', title: 'T186 On Demand'
+      },
+      { content: anchorContent, id: ids.anchor, kind: 'topic', title: 'T186 Anchor' },
+      {
+        anchorLink: { id: 't186-anchor', kind: 'highlight', locator: {
+          from: anchorFrom, originalText: 'Target phrase', to: anchorFrom + 13
+        } },
+        content: 'Target phrase', id: 't186-highlight', kind: 'item',
+        parentNodeId: ids.anchor, title: 'Target phrase'
       }
     ], { persist: true });
   }, { ids: IDS, urls: URLS });
@@ -204,6 +216,14 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
     .toMatch(/asset:\/\//);
   await expect(desktopWindow.locator('.cm-md-image-surface-clozeable')).toBeVisible();
   expect(await inspectLinks(desktopApp, IDS.auto)).toHaveLength(1);
+
+  await openNode(desktopWindow, IDS.anchor);
+  await expect.poll(() => desktopWindow.evaluate((id) => {
+    const parent = window.__folioleWorkspaceDebug?.getNode?.(id);
+    const anchor = window.__folioleWorkspaceDebug?.getNode?.('t186-highlight')?.anchorLink;
+    return anchor?.kind === 'highlight'
+      && parent?.content.slice(anchor.locator.from, anchor.locator.to) === 'Target phrase';
+  }, IDS.anchor)).toBe(true);
 
   const probe = await desktopApp.evaluate(() => structuredClone(globalThis.__t186Probe));
   for (const url of Object.values(URLS)) expect(probe.requests.filter((request) => request === url)).toHaveLength(1);

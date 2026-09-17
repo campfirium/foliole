@@ -116,6 +116,14 @@ it('rebuilds a bound EPUB from frozen Reader HTML and keeps unlocated highlights
   )).toEqual({ count: 1 });
   expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
     .toHaveLength(0);
+  expect(driver.queryAll<{ content: string }>(
+    "SELECT content FROM nodes WHERE id='topic-1' OR parent_id='topic-1'"
+  ).map((row) => row.content).join('\n')).toContain('https://bucket.s3.amazonaws.com/diagram.png');
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
+    .toContain('https://bucket.s3.amazonaws.com/cover.jpeg');
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM node_attachments WHERE node_id='topic-1' OR node_id IN (SELECT id FROM nodes WHERE parent_id='topic-1')"
+  )).toEqual({ count: 0 });
   expect(driver.queryOne<{ title: string }>(`SELECT parent.title FROM nodes child
     JOIN nodes parent ON parent.id=child.parent_id WHERE child.id='local-unlocated'`)).toEqual({ title: '※' });
   expect(driver.queryOne<{ title: string }>(`SELECT child.title FROM nodes child JOIN node_order o ON o.node_id=child.id

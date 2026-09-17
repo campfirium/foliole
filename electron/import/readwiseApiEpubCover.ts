@@ -12,17 +12,29 @@ export interface PreparedReadwiseApiEpubCover {
   text: string;
 }
 
+function buildReadwiseApiEpubCoverMarkdown(document: PreparedReadwiseApiDocument) {
+  if (!document.coverImageUrl) return '';
+  const alt = `${document.title.replace(/[\]\r\n]/gu, ' ').trim()} cover`;
+  return `![${alt}](${document.coverImageUrl})`;
+}
+
+export function prepareDeferredReadwiseApiEpubCover(
+  document: PreparedReadwiseApiDocument
+): PreparedReadwiseApiEpubCover {
+  return { attachmentIds: [], degradedReason: null, text: buildReadwiseApiEpubCoverMarkdown(document) };
+}
+
 export async function prepareReadwiseApiEpubCover(
   document: PreparedReadwiseApiDocument
 ): Promise<PreparedReadwiseApiEpubCover> {
-  if (!document.coverImageUrl) return { attachmentIds: [], degradedReason: null, text: '' };
-  const alt = `${document.title.replace(/[\]\r\n]/gu, ' ').trim()} cover`;
+  const remoteMarkdown = buildReadwiseApiEpubCoverMarkdown(document);
+  if (!remoteMarkdown) return { attachmentIds: [], degradedReason: null, text: '' };
   const context = new ImageLocalizationContext({
     bypassFailureCache: true,
     deadlineAt: Date.now() + COVER_PREPARATION_BUDGET_MS,
     fetchAttempts: 2
   });
-  const localized = await context.localizeMarkdown(`![${alt}](${document.coverImageUrl})`, {
+  const localized = await context.localizeMarkdown(remoteMarkdown, {
     layoutLargeImages: false
   });
   const usable = collectMarkdownImageReferences(localized.text).some((reference) => {

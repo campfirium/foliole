@@ -17,7 +17,10 @@ vi.mock('../attachments/importImageAttachmentResource.js', () => ({
 
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 
-import { prepareReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
+import {
+  prepareDeferredReadwiseApiEpubCover,
+  prepareReadwiseApiEpubCover
+} from './readwiseApiEpubCover.js';
 
 beforeEach(() => {
   mocks.fetchRemoteImageResource.mockReset();
@@ -49,6 +52,16 @@ it('does not fabricate a cover when the API omits imageUrl', async () => {
   const result = await prepareReadwiseApiEpubCover({ ...documentFixture(), coverImageUrl: null });
 
   expect(result).toEqual({ attachmentIds: [], degradedReason: null, text: '' });
+  expect(mocks.fetchRemoteImageResource).not.toHaveBeenCalled();
+});
+
+it('keeps the remote cover for deferred localization without fetching it', () => {
+  const result = prepareDeferredReadwiseApiEpubCover(documentFixture());
+
+  expect(result).toEqual({
+    attachmentIds: [], degradedReason: null,
+    text: '![Book cover](https://cdn.example.com/cover.jpeg)'
+  });
   expect(mocks.fetchRemoteImageResource).not.toHaveBeenCalled();
 });
 
