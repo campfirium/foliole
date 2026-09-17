@@ -7,7 +7,10 @@ import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApi
 
 import type { ReadwiseSourceArtifact } from './readwiseSourceCutoverArtifacts.js';
 import { matchReadwiseSourceCutover } from './readwiseSourceCutoverMatching.js';
-import { extractReadwiseSourceUrl } from './readwiseSourceCutoverSourceUrl.js';
+import {
+  extractReadwiseNumericDocumentId,
+  extractReadwiseSourceUrl
+} from './readwiseSourceCutoverSourceUrl.js';
 
 it('matches active and dismissed sources by Reader ID or canonical source URL', () => {
   const reader = [
@@ -75,6 +78,41 @@ it('uses an explicit source link in converted document bodies when sourceUrl is 
   expect(output.failures).toEqual([]);
 });
 
+it('matches a legacy EPUB download link to the Reader raw source document id', () => {
+  const reader = [remote('epub', 'epub', 'Book', null, '<p>Fresh book body.</p>',
+    'https://readwise-assets.s3.amazonaws.com/private/reader/cloud_docs/ParsedDocument33661889.epub?signature=x')];
+  const legacy = artifact('legacy-epub', 'books', 'Book', null, []);
+  legacy.raw = '[Download original file](https://readwise.io/reader/document_raw_content/33661889)';
+  const output = matchReadwiseSourceCutover({
+    artifacts: [legacy],
+    preparedDocuments: prepareReadwiseApiDocuments(reader, []),
+    readerDocuments: reader
+  });
+
+  expect(output.artifactFor('epub')?.latestNodeId).toBe('legacy-epub');
+  expect(output.failures).toEqual([]);
+});
+
+it('does not guess when a Reader numeric document id is duplicated', () => {
+  const reader = [remote('epub', 'epub', 'Book', null, '<p>Fresh book body.</p>',
+    'https://readwise-assets.s3.amazonaws.com/ParsedDocument33661889.epub')];
+  const first = artifact('legacy-a', 'books', 'Book A', null, []);
+  const second = artifact('legacy-b', 'books', 'Book B', null, []);
+  first.raw = 'https://readwise.io/reader/document_raw_content/33661889';
+  second.raw = 'https://readwise.io/reader/document_raw_content/33661889';
+  const output = matchReadwiseSourceCutover({
+    artifacts: [first, second],
+    preparedDocuments: prepareReadwiseApiDocuments(reader, []),
+    readerDocuments: reader
+  });
+
+  expect(output.artifactFor('epub')).toBeNull();
+  expect(output.failures).toEqual(expect.arrayContaining([
+    { nodeId: 'legacy-a', reason: 'identity_conflict' },
+    { nodeId: 'legacy-b', reason: 'identity_conflict' }
+  ]));
+});
+
 it('lets an exact Reader ID win when another document shares its source URL', () => {
   const reader = [
     remote('exact', 'article', 'One', 'https://example.com/shared'),
@@ -100,6 +138,12 @@ it('reads the explicit legacy URL field and labeled body source links', () => {
   expect(extractReadwiseSourceUrl('url: https://readwise.io/reader/document_raw_content/123')).toBe(
     'https://readwise.io/reader/document_raw_content/123'
   );
+  expect(extractReadwiseNumericDocumentId(
+    '[Download original file](https://readwise.io/reader/document_raw_content/33661889)'
+  )).toBe('33661889');
+  expect(extractReadwiseNumericDocumentId(
+    'https://readwise-assets.s3.amazonaws.com/cloud_docs/ParsedDocument33661889.epub?signature=x'
+  )).toBe('33661889');
 });
 
 function artifact(
@@ -134,7 +178,8 @@ function remote(
   category: ReaderDocumentContract['category'],
   title: string,
   sourceUrl: string | null,
-  htmlContent = `<p>${title}</p>`
+  htmlContent = `<p>${title}</p>`,
+  rawSourceUrl: string | null = null
 ): ReaderDocumentContract {
   return {
     author: null,
@@ -144,7 +189,7 @@ function remote(
     imageUrl: null,
     notes: null,
     parentId: null,
-    rawSourceUrl: null,
+    rawSourceUrl,
     sourceUrl,
     summary: null,
     tags: null,

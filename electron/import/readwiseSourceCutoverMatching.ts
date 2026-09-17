@@ -5,7 +5,10 @@ import {
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 
 import type { ReadwiseSourceArtifact } from './readwiseSourceCutoverArtifacts.js';
-import { extractReadwiseSourceUrl } from './readwiseSourceCutoverSourceUrl.js';
+import {
+  extractReadwiseNumericDocumentId,
+  extractReadwiseSourceUrl
+} from './readwiseSourceCutoverSourceUrl.js';
 
 export interface ReadwiseLegacyMatchFailure {
   nodeId: string;
@@ -24,6 +27,7 @@ export function matchReadwiseSourceCutover(input: {
   const matches = new Map<string, ReadwiseSourceArtifact>();
   const failures = new Map<string, ReadwiseLegacyMatchFailure['reason']>();
   matchByIdentity(artifacts, readersById, preparedById, matches, failures);
+  matchUniqueNumericDocumentId(artifacts, input.preparedDocuments, matches, failures);
   matchUniqueUrl(artifacts, input.preparedDocuments, matches, failures);
   return {
     artifactFor: (documentId: string) => matches.get(documentId) ?? null,
@@ -33,6 +37,32 @@ export function matchReadwiseSourceCutover(input: {
     } satisfies ReadwiseLegacyMatchFailure)),
     matchedDocumentIds: new Set(matches.keys())
   };
+}
+
+function matchUniqueNumericDocumentId(
+  artifacts: ReadwiseSourceArtifact[],
+  documents: PreparedReadwiseApiDocument[],
+  matches: Map<string, ReadwiseSourceArtifact>,
+  failures: Map<string, ReadwiseLegacyMatchFailure['reason']>
+) {
+  const matchedArtifacts = new Set(matches.values());
+  const availableArtifacts = artifacts.filter((item) => !matchedArtifacts.has(item)
+    && !failures.has(item.latestNodeId));
+  const availableDocuments = documents.filter((item) => !matches.has(item.id));
+  const artifactGroups = groupBy(availableArtifacts, (item) =>
+    extractReadwiseNumericDocumentId(item.raw) ?? '');
+  const documentGroups = groupBy(availableDocuments, (item) =>
+    extractReadwiseNumericDocumentId(item.rawSourceUrl) ?? '');
+  for (const [key, candidates] of artifactGroups) {
+    if (!key) continue;
+    const remote = documentGroups.get(key) ?? [];
+    if (candidates.length === 1 && remote.length === 1) {
+      matches.set(remote[0]!.id, candidates[0]!);
+      continue;
+    }
+    if (remote.length === 0) continue;
+    for (const artifact of candidates) failures.set(artifact.latestNodeId, 'identity_conflict');
+  }
 }
 
 function matchByIdentity(

@@ -10,3 +10,10 @@ export function extractReadwiseSourceUrl(value: string) {
     return null;
   }
 }
+
+export function extractReadwiseNumericDocumentId(value: string | null | undefined) {
+  if (!value) return null;
+  const rawContent = /readwise\.io\/reader\/document_raw_content\/(\d+)/iu.exec(value)?.[1];
+  const parsedDocument = /(?:^|\/)ParsedDocument(\d+)(?:[./?]|$)/iu.exec(value)?.[1];
+  return rawContent ?? parsedDocument ?? null;
+}

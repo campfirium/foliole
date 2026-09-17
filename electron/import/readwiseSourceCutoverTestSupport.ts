@@ -136,7 +136,7 @@ export function epubMigrationFetch() {
         '<p>Second chapter body.</p>'
       ].join('') : null,
       id: id ?? 'document-1', parent_id: null,
-      raw_source_url: 'https://bucket.s3.amazonaws.com/sample.epub', title: 'Sample'
+      raw_source_url: 'https://bucket.s3.amazonaws.com/ParsedDocument33661889.epub', title: 'Sample'
     }, ...(!id ? [{ category: 'highlight', id: 'highlight-1', parent_id: 'document-1' }] : [])] });
   });
 }

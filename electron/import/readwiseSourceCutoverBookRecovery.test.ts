@@ -82,6 +82,12 @@ afterEach(async () => {
 it('rebuilds a bound EPUB from frozen Reader HTML and keeps unlocated highlights last', async () => {
   await seedMigratableSource(state.sourcePath);
   const driver = openDatabaseConnection().driver;
+  await fs.writeFile(path.join(state.sourcePath, 'Sample.md'), [
+    '# Sample',
+    'Full text of this document omitted because this document is an EPUB',
+    '[Download original file →](https://readwise.io/reader/document_raw_content/33661889)'
+  ].join('\n'));
+  driver.execute("UPDATE nodes SET content='Original file missing' WHERE id='topic-1'");
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
     VALUES ('node-epub-legacy','topic-1','topic','Legacy',0,'Legacy body','old','old')`);
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,anchor_link,created_at,updated_at)
@@ -102,6 +108,12 @@ it('rebuilds a bound EPUB from frozen Reader HTML and keeps unlocated highlights
   expect(JSON.parse(source?.remote_import_state_json ?? '{}')).toMatchObject({
     bodyAuthority: 'reader_html', originalFile: null
   });
+  expect(driver.queryOne<{ latest_node_id: string }>(
+    "SELECT latest_node_id FROM import_sources WHERE remote_document_id='document-1'"
+  )).toEqual({ latest_node_id: 'topic-1' });
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM nodes WHERE title='Sample' AND deleted_at IS NULL"
+  )).toEqual({ count: 1 });
   expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
     .toHaveLength(0);
   expect(driver.queryOne<{ title: string }>(`SELECT parent.title FROM nodes child
