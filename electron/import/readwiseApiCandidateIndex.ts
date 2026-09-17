@@ -89,8 +89,7 @@ async function fetchScope(
       input.connectionRef,
       ledger.scope,
       payload,
-      ledger.runStartedAt,
-      input.settings.readwiseAutoImportPolicy.importTag
+      ledger.runStartedAt
     );
     input.dependencies.onPage?.({
       phase: ledger.scope === 'export' ? 'export' : 'reader',
@@ -107,8 +106,7 @@ function savePage(
   connectionRef: string,
   scope: string,
   payload: Record<string, unknown>,
-  seenInRun: string,
-  importTag: string
+  seenInRun: string
 ) {
   if (scope === 'export') {
     saveReadwiseApiExportIndexPage(connectionRef,
@@ -116,8 +114,7 @@ function savePage(
   } else {
     saveReadwiseApiReaderIndexPage(connectionRef,
       values(payload).map(normalizeReaderDocument).filter((item) => item !== null),
-      seenInRun,
-      scope === 'reader:tag' ? importTag.trim() : null);
+      seenInRun);
   }
 }
 
@@ -164,7 +161,7 @@ async function assembleCandidates(
     }
     if (!parent || !isParentCategory(parent.category)) continue;
     const matchedImportTag = matchesReadwiseDocumentImportTag(
-      parent.matchedImportTag ? { [parent.matchedImportTag]: true } : null,
+      parent.tags,
       settings.readwiseAutoImportPolicy.importTag
     );
     const destination = resolveReadwiseAutoImportDestination(

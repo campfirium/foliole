@@ -21,28 +21,21 @@ export interface ReadwiseAnnotationLedgerFact {
   updatedAt: string | null;
 }
 
-export interface ReadwiseApiIndexedReaderDocument extends ReaderDocumentContract {
-  matchedImportTag?: string | null;
-}
-
 export function saveReadwiseApiReaderIndexPage(
   connectionRef: string,
   documents: ReaderDocumentContract[],
-  seenInRun = '',
-  matchedImportTag: string | null = null
+  seenInRun = ''
 ) {
   const driver = openDatabaseConnection().driver;
   driver.transaction((tx) => {
     const upsert = tx.prepare(upsertSql());
     for (const document of documents) {
-      const previous = loadReaderDocument(connectionRef, document.id);
       upsert.run([
         connectionRef,
         INDEX_READER_KIND,
         document.id,
         JSON.stringify({
           ...document,
-          matchedImportTag: matchedImportTag ?? previous?.matchedImportTag ?? null,
           rawSourceUrl: document.rawSourceUrl
         })
       ]);
@@ -100,7 +93,7 @@ export function saveReadwiseApiExportIndexPage(connectionRef: string, books: Exp
 }
 
 export function loadReadwiseApiReaderIndex(connectionRef: string) {
-  return loadKind<ReadwiseApiIndexedReaderDocument>(connectionRef, INDEX_READER_KIND);
+  return loadKind<ReaderDocumentContract>(connectionRef, INDEX_READER_KIND);
 }
 
 export function loadReadwiseApiExportIndex(connectionRef: string) {
@@ -155,15 +148,6 @@ function loadExportBook(connectionRef: string, documentId: string) {
     [connectionRef, INDEX_EXPORT_KIND, documentId]
   );
   return row ? parse<ExportBookContract>(row.payload_json) : null;
-}
-
-function loadReaderDocument(connectionRef: string, documentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<{ payload_json: string }>(
-    `SELECT payload_json FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`,
-    [connectionRef, INDEX_READER_KIND, documentId]
-  );
-  return row ? parse<ReadwiseApiIndexedReaderDocument>(row.payload_json) : null;
 }
 
 function loadKind<T>(connectionRef: string, kind: string) {

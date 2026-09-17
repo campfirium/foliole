@@ -122,8 +122,11 @@ it('uses five checkpointed base requests and adds only one new tag backfill scop
   deleteReadwiseApiCandidateRun('connection');
 
   const tagUrls: URL[] = [];
-  await ensureReadwiseApiCandidateIndex(settings('favorite'), 'connection',
-    emptyFetch(tagUrls, [parent('tagged', 'article')]));
+  const tagCandidates = await ensureReadwiseApiCandidateIndex(settings('favorite'), 'connection',
+    emptyFetch(tagUrls, [
+      parent('tagged', 'article', { favorite: { name: 'Favorite' } }),
+      parent('stale-tag-result', 'article')
+    ]));
   expect(tagUrls).toHaveLength(6);
   expect(tagUrls.filter((url) => url.searchParams.get('tag') === 'favorite')).toHaveLength(1);
   expect(tagUrls.find((url) => url.searchParams.get('tag') === 'favorite')
@@ -131,8 +134,13 @@ it('uses five checkpointed base requests and adds only one new tag backfill scop
   expect(tagUrls.filter((url) => !url.searchParams.has('tag')).every(
     (url) => url.searchParams.has('updatedAfter')
   )).toBe(true);
-  expect(loadReadwiseApiReaderIndex('connection')).toContainEqual(
-    expect.objectContaining({ id: 'tagged', matchedImportTag: 'favorite' }));
+  expect(tagCandidates).toEqual([
+    expect.objectContaining({ documentId: 'tagged', matchedImportTag: true })
+  ]);
+  expect(loadReadwiseApiReaderIndex('connection')).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'tagged' }),
+    expect.objectContaining({ id: 'stale-tag-result' })
+  ]));
 });
 
 it('resumes from a saved scope cursor and fails closed when that cursor is rejected', async () => {
@@ -239,6 +247,6 @@ function fixedSnapshot() {
   };
 }
 
-function parent(id: string, category: string) {
-  return { category, html_content: `<p>${id}</p>`, id, title: id };
+function parent(id: string, category: string, tags?: Record<string, unknown>) {
+  return { category, html_content: `<p>${id}</p>`, id, tags, title: id };
 }
