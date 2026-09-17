@@ -9,22 +9,23 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         try definitions.validate()
         XCTAssertEqual(definitions.format, "foliole.sync-pack")
         XCTAssertEqual(definitions.formatVersion, 12)
-        XCTAssertEqual(definitions.schemaVersion, 84)
+        XCTAssertEqual(definitions.schemaVersion, 85)
         XCTAssertTrue(definitions.copyStatements.contains { $0.contains("sync_group_devices") })
         XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
     }
 
-    func testCompleteMemberCapabilityIsActiveInProductionV5() throws {
+    func testCompleteMemberCapabilityUsesTheCurrentProductionProtocol() throws {
         let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
+        let network = try FolioleCompanionContractStore().networkContract()
         let production = definitions.value["protocol"] as? [String: Any]
         let prepared = definitions.preparedMemberDataPlane
         let preparedProtocol = prepared["protocol"] as? [String: Any]
         let productionCapabilities = production?["capabilities"] as? [String] ?? []
         let preparedCapabilities = preparedProtocol?["capabilities"] as? [String] ?? []
 
-        XCTAssertEqual(production?["version"] as? Int, 5)
+        XCTAssertEqual(production?["version"] as? Int, network.protocolVersion)
         XCTAssertTrue(productionCapabilities.contains("complete-member-data-plane"))
-        XCTAssertEqual(preparedProtocol?["version"] as? Int, 5)
+        XCTAssertEqual(preparedProtocol?["version"] as? Int, network.protocolVersion)
         XCTAssertTrue(preparedCapabilities.contains("complete-member-data-plane"))
         XCTAssertEqual(Set(prepared["resourceKinds"] as? [String] ?? []), ["attachment", "content_blob"])
     }

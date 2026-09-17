@@ -1,5 +1,8 @@
 import { createIosForegroundSyncLifecycleService } from './ios-foreground-sync-lifecycle-service.ts';
 import { createIosStateWritebackAcceptanceService } from './ios-state-writeback-acceptance-service.ts';
+import { routeIosHostedMemberStateRequest } from './ios-sync-group-member-state-service.ts';
+
+type ScenarioRoute = Awaited<ReturnType<typeof createIosStateWritebackAcceptanceService>>['route'];
 
 export async function createIosSyncGroupScenarioService(args: {
   artifactDir: string;
@@ -17,12 +20,17 @@ export async function createIosSyncGroupScenarioService(args: {
   });
   return {
     close: service.close,
-    route: args.scenario === 'foreground-sync-lifecycle'
+    route: withMemberStateRoute(args.scenario === 'foreground-sync-lifecycle'
       ? createIosForegroundSyncLifecycleService({
         artifactDir: args.artifactDir,
         observations: args.observations.foreground_sync_lifecycle,
         route: service.route
       })
-      : service.route
+      : service.route)
   };
+}
+
+function withMemberStateRoute(route: ScenarioRoute): ScenarioRoute {
+  return async (request: { bodyText: string; method: string; url: string }) =>
+    routeIosHostedMemberStateRequest(request) ?? route(request);
 }
