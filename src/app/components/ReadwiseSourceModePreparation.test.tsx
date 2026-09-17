@@ -69,14 +69,14 @@ it('saves reviewed draft rules before the confirmed API migration starts', async
     target: { value: 'readwise' }
   });
   expect(onChangePolicy).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Migrate to API mode…' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enable API mode…' }));
 
   await waitFor(() => expect(confirmation.request).toHaveBeenLastCalledWith(expect.objectContaining({
-    confirmLabel: 'Switch and migrate',
+    confirmLabel: 'Enable and sync',
     description: expect.arrayContaining([
       '12 Topics were imported through the current Obsidian relay folders on this device.',
-      'Foliole will preserve your existing Topics while connecting them to the API where identity is exact. Back up important data first. This version cannot switch back after migration.',
-      'API mode is still experimental. If validation goes well, we plan to remove Obsidian relay import in a later release. If API mode cannot fully meet the synchronization requirements, Foliole will provide a way to switch back to Obsidian relay import.'
+      'Foliole will preserve your existing Topics while connecting them to the API where identity is exact. Back up important data first. This version cannot switch back after enabling API mode.',
+      'API mode is still experimental.'
     ])
   })));
   await waitFor(() => expect(cutover.run).toHaveBeenCalledTimes(1));

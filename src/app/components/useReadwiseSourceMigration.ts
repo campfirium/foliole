@@ -16,6 +16,7 @@ import { requestAppConfirmation } from '../../shared/ui';
 export interface ReadwiseMigrationState {
   completedCount: number;
   errorReason: string | null;
+  existingTopicCount?: number | null;
   failed: boolean;
   failures?: NativeReadwiseSourceCutoverFailure[];
   phase: 'indexing' | 'merging' | null;
@@ -30,17 +31,18 @@ export function useReadwiseSourceMigration(input: {
 }) {
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState<ReadwiseMigrationState>({
-    completedCount: 0, errorReason: null, failed: false, failures: [], phase: null, totalCount: null
+    completedCount: 0, errorReason: null, existingTopicCount: null,
+    failed: false, failures: [], phase: null, totalCount: null
   });
   const [required, setRequired] = useState(false);
   const startingRef = useRef(false);
   const resumeAttemptedRef = useRef(false);
   useMigrationProgressEvents(setProgress);
-  const start = useCallback(async () => {
+  const start = useCallback(async (existingTopicCount?: number) => {
     if (startingRef.current) return;
     startingRef.current = true;
     setPending(true);
-    resetMigrationProgress(setProgress);
+    resetMigrationProgress(setProgress, existingTopicCount);
     try {
       const output = await runReadwiseSourceCutoverInRuntime();
       if (output.status === 'completed') await keepCompletedMergeVisible();
@@ -50,6 +52,7 @@ export function useReadwiseSourceMigration(input: {
       setProgress({
         completedCount: state.completed_count,
         errorReason: output.error_reason ?? state.error_reason,
+        existingTopicCount: state.topic_count,
         failed: active && output.status !== 'completed' && output.status !== 'already_completed',
         failures: state.failed_items ?? [],
         phase: active ? state.phase : null,
@@ -89,11 +92,13 @@ function useMigrationProgressEvents(
 }
 
 function resetMigrationProgress(
-  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>
+  setProgress: Dispatch<SetStateAction<ReadwiseMigrationState>>,
+  existingTopicCount?: number
 ) {
   setProgress((current) => ({
     ...current, errorReason: null, failed: false,
-    failures: []
+    failures: [],
+    ...(existingTopicCount === undefined ? {} : { existingTopicCount })
   }));
 }
 
@@ -138,7 +143,8 @@ async function requestReadwiseApiMigration(
   start: (initialTotalCount?: number) => Promise<void>
 ) {
   const preview = await previewReadwiseSourceCutoverInRuntime();
-  if (preview.status !== 'ready' || !await confirmMigration(preview.topic_count, t)) return;
+  if (preview.status !== 'ready') return;
+  if (preview.topic_count > 0 && !await confirmMigration(preview.topic_count, t)) return;
   await beforeStart();
   await start(preview.topic_count);
 }
@@ -159,6 +165,7 @@ function useResumeReadwiseMigration(
         setProgress({
           completedCount: state.completed_count,
           errorReason: state.error_reason,
+          existingTopicCount: state.topic_count,
           failed: false,
           failures: state.failed_items ?? [],
           phase: null,
@@ -171,6 +178,7 @@ function useResumeReadwiseMigration(
       setProgress({
         completedCount: state.completed_count,
         errorReason: state.error_reason,
+        existingTopicCount: state.topic_count,
         failed: Boolean(state.error_reason),
         failures: state.failed_items ?? [],
         phase: state.phase,

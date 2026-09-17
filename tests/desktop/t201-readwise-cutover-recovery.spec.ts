@@ -153,17 +153,17 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await expect(getSettingsDialog(session.firstWindow)).toBeVisible();
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Download failed|正在迁移 · 下载失败)/
+      hasText: /^(Syncing · Download failed|正在同步 · 下载失败)/
     })).toBeVisible({ timeout: 30_000 });
     await expect(settings.getByRole('status')).toContainText('HTTP 400');
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'download-failed.png') });
-    const retry = settings.getByRole('button', { name: /^(Retry migration|重试迁移)$/ });
+    const retry = settings.getByRole('button', { name: /^(Retry sync|重试同步)$/ });
     await expect(retry).toBeVisible();
 
     await installRecoveringTransport(session.electronApp);
     await retry.click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Downloading|正在迁移 · 下载中)/
+      hasText: /^(Syncing · Downloading|正在同步 · 下载中)/
     })).toBeVisible();
     await expect(settings.getByRole('status')).toContainText('50%');
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'downloading.png') });
@@ -212,11 +212,11 @@ test('uses the saved device token when a restored library has no API source iden
     const setup = session.firstWindow.getByRole('dialog', { name: /^(Set up API mode|设置 API 模式)$/ });
     await setup.getByRole('button', { name: /^(Continue setup|继续设置)$/ }).click();
     await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
-    await settings.getByRole('button', { name: /^(Migrate to API mode…|迁移到 API 模式…)$/ }).click();
-    const confirmation = session.firstWindow.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
-    await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
+    await settings.getByRole('button', { name: /^(Enable API mode…|启用 API 模式…)$/ }).click();
+    const confirmation = session.firstWindow.getByRole('dialog', { name: /^(Enable API mode|启用 API 模式)$/ });
+    await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Migrating · Downloading|正在迁移 · 下载中)/
+      hasText: /^(Syncing · Downloading|正在同步 · 下载中)/
     })).toBeVisible();
     await releaseImport(session.electronApp);
     await expect.poll(() => session!.firstWindow.evaluate(async () =>

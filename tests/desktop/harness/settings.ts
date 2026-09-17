@@ -69,10 +69,10 @@ export async function connectAndCutoverReadwiseApi(
   }
   await settingsDialog.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }).click();
   await waitForVisible(settingsDialog.getByText(/^(Connected|已连接)$/));
-  await settingsDialog.getByRole('button', { name: /^(Migrate to API mode…|迁移到 API 模式…)$/ }).click();
-  const confirmation = windowPage.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
+  await settingsDialog.getByRole('button', { name: /^(Enable API mode…|启用 API 模式…)$/ }).click();
+  const confirmation = windowPage.getByRole('dialog', { name: /^(Enable API mode|启用 API 模式)$/ });
   await waitForVisible(confirmation);
-  await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
+  await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
   await expect(settingsDialog.getByRole('radio', {
     name: /^(Obsidian relay import|Obsidian 中转导入模式)$/
   })).toBeDisabled({ timeout: 90_000 });

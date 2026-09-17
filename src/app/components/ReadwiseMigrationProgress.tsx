@@ -57,7 +57,9 @@ function migrationPresentation(
   if (!migration.phase) return inactiveMigrationPresentation(migration, taskStatus, t, compact, failures);
   const phase = migration.phase === 'indexing'
     ? t('desktop.readwise.cutover.phase.indexing')
-    : t('desktop.readwise.cutover.phase.merging');
+    : migration.existingTopicCount === 0
+      ? t('desktop.readwise.cutover.phase.importing')
+      : t('desktop.readwise.cutover.phase.merging');
   if (!migration.failed) {
     const progress = resolvedCutoverProgress(migration, taskStatus);
     return {
@@ -73,7 +75,9 @@ function migrationPresentation(
   }
   const failed = migration.phase === 'indexing'
     ? t('desktop.readwise.cutover.phase.indexFailed')
-    : t('desktop.readwise.cutover.phase.mergeFailed');
+    : migration.existingTopicCount === 0
+      ? t('desktop.readwise.cutover.phase.importFailed')
+      : t('desktop.readwise.cutover.phase.mergeFailed');
   const reason = readwiseFailureReason(migration.errorReason, t);
   return {
     active: false,

@@ -79,6 +79,22 @@ it('keeps relay mode while a long migration is still running', async () => {
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
+it('starts syncing without a second confirmation when there are no existing relay Topics', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 0, error_reason: null, phase: null, status: 'ready',
+    topic_count: 0, total_count: null
+  });
+  cutover.run.mockResolvedValue({
+    error_reason: null, migrated_count: 0, status: 'completed', unmatched_count: 0
+  });
+
+  render(<Probe committedMode="relay" />);
+  fireEvent.click(screen.getByRole('button', { name: 'start-migration' }));
+
+  await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());
+  expect(confirmation.request).not.toHaveBeenCalled();
+});
+
 it('restores a durable migration without making the settings page execute it', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 0, error_reason: null, phase: 'indexing', status: 'migration_in_progress',

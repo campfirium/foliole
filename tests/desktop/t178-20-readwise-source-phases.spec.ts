@@ -86,11 +86,11 @@ test('projects durable migration phases with truthful progress', async ({ browse
 
     await seedProjection(session.electronApp, { migration: 'indexing' });
     let settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Migrating · Indexing|正在迁移 · 索引中) · 0 \/ 1$/, 'migration-indexing.png');
+    await expectPhase(settings, /^(Syncing · Downloading|正在同步 · 下载中) · 0 \/ 1$/, 'migration-indexing.png');
 
     await seedProjection(session.electronApp, { migration: 'merging' });
     settings = await reopenReadwise(session);
-    await expectPhase(settings, /^(Migrating · Merging|正在迁移 · 合并中) · 0 \/ 1$/, 'migration-merging.png');
+    await expectPhase(settings, /^(Syncing · Updating|正在同步 · 更新中) · 0 \/ 1$/, 'migration-merging.png');
 
   } finally {
     await session?.close().catch(() => undefined);

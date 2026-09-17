@@ -128,8 +128,8 @@ it('keeps indexing visible while the remote total is not known yet', async () =>
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  await waitFor(() => expect(screen.getAllByText(/^Migrating · Downloading/)).toHaveLength(2));
-  expect(screen.getAllByText('Migrating · Downloading')).toHaveLength(1);
+  await waitFor(() => expect(screen.getAllByText(/^Syncing · Downloading/)).toHaveLength(2));
+  expect(screen.getAllByText('Syncing · Downloading')).toHaveLength(1);
   expect(screen.queryByText(/0 \/ 12/)).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
@@ -150,9 +150,9 @@ it('restores merging progress and explains a paused migration in place', async (
 
   await waitFor(() => expect(cutover.preview).toHaveBeenCalled());
   expect(cutover.run).not.toHaveBeenCalled();
-  expect(await screen.findByText('Migrating · Update failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
+  expect(await screen.findByText('Syncing · Update failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Retry migration' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
   await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());
 });
 
@@ -183,7 +183,7 @@ it('shows an ordinary sync only on the sync button after API cutover', async () 
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.queryByText('Migrating · Downloading')).not.toBeInTheDocument();
+  expect(screen.queryByText('Syncing · Downloading')).not.toBeInTheDocument();
 });
 
 it('does not revive migration UI after API cutover', async () => {
@@ -210,7 +210,7 @@ it('does not revive migration UI after API cutover', async () => {
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('button', { name: 'Sync now' })).toBeEnabled();
-  expect(screen.queryByText(/Migrating/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Syncing ·/)).not.toBeInTheDocument();
   expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' })).not.toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -224,7 +224,7 @@ it('uses the same instruction for a missing or invalid token', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Readwise' }));
   expect(await screen.findByText('Copy your Readwise token to the clipboard first.')).toBeInTheDocument();
   expect(runtime.connect).toHaveBeenCalledWith('migration');
-  expect(screen.getByRole('button', { name: 'Migrate to API mode…' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Enable API mode…' })).toBeDisabled();
   expect(screen.getByText('Connect Readwise first.')).toBeInTheDocument();
 });
 

@@ -67,9 +67,9 @@ async function connectAndCutover(session: T178AcceptanceSession) {
   const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
   await settings.getByRole('radio', { name: /^(API mode|API 模式)$/ }).click();
   const confirmation = session.firstWindow.getByRole('dialog', {
-    name: /^(Switch to API mode|切换到 API 模式)$/
+    name: /^(Enable API mode|启用 API 模式)$/
   });
-  await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
+  await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
   await settings.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }).click();
   await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
   await expect(settings.getByLabel(/^(Sync frequency|同步频率)$/)).toBeVisible();

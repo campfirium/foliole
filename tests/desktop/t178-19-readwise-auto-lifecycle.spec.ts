@@ -161,29 +161,31 @@ test('keeps API preparation selected after navigating away', async ({ browserNam
     let confirmation = session.firstWindow.getByRole('dialog', {
       name: /^(Set up API mode|设置 API 模式)$/
     });
+    await expect(confirmation.getByText(/^(When everything looks right, select “Enable API mode” at the bottom of the page\. Foliole will then start syncing Readwise\.|确认无误后，在页面底部点击“启用 API 模式”。启用后，Foliole 将开始同步 Readwise。)$/)).toBeVisible();
+    await confirmation.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-setup-dialog.png') });
     await confirmation.getByRole('button', { name: /^(Continue setup|继续设置)$/ }).click();
     await expect(settings.getByText(/^(Not enabled yet|尚未启用)/)).toBeVisible();
     await expect(settings.getByRole('heading', { name: /^(Import rules|导入规则)$/ })).toBeVisible();
     await expect(settings.getByText(/^#$/)).toBeVisible();
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-preparation.png') });
     const migrationButton = settings.getByRole('button', {
-      name: /^(Migrate to API mode…|迁移到 API 模式…)$/
+      name: /^(Enable API mode…|启用 API 模式…)$/
     });
     await migrationButton.scrollIntoViewIfNeeded();
-    await expect(settings.getByText(/^(You can adjust the import rules after migration\.|迁移后仍可调整导入规则。)$/)).toBeVisible();
+    await expect(settings.getByText(/^(You can adjust the import rules after enabling it\.|启用后仍可调整导入规则。)$/)).toBeVisible();
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-migration-action.png') });
     await migrationButton.click();
-    confirmation = session.firstWindow.getByRole('dialog', {
-      name: /^(Switch to API mode|切换到 API 模式)$/
-    });
-    await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
+    await expect(session.firstWindow.getByRole('dialog', {
+      name: /^(Enable API mode|启用 API 模式)$/
+    })).toHaveCount(0);
+    await expect(settings.getByRole('status')).toContainText(/^(Syncing · Downloading|正在同步 · 下载中)/);
     await expect(settings.getByRole('radio', { name: /^(API mode|API 模式)$/ })).toBeChecked();
 
     await openSettingsCategory(session.firstWindow, 'Appearance');
     settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     await expect(settings.getByRole('radio', { name: /^(API mode|API 模式)$/ })).toBeChecked();
     await expect(settings.getByRole('radio', {
-      name: /^(Obsidian relay import|Obsidian 中转导入模式)$/
+      name: /^(Obsidian relay|Obsidian 中转)$/
     })).not.toBeChecked();
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'api-mode-after-return.png') });
     await pause(session);

@@ -45,7 +45,7 @@ it('shows remote records while importing migration facts', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Downloading · 5%')).toBeInTheDocument();
+  expect(screen.getByText('Syncing · Downloading · 5%')).toBeInTheDocument();
 });
 
 it('does not present an ordinary initial sync as migration', () => {
@@ -95,7 +95,7 @@ it('uses only cutover state when migration progress has not arrived yet', () => 
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Downloading · 100%')).toBeInTheDocument();
+  expect(screen.getByText('Syncing · Downloading · 100%')).toBeInTheDocument();
   expect(screen.queryByText(/13 \/ 27/)).not.toBeInTheDocument();
 });
 
@@ -116,7 +116,7 @@ it('provides a compact visual-only phase without repeating progress details', ()
     </LocalizationProvider>
   );
 
-  const status = screen.getByText('Migrating · Downloading');
+  const status = screen.getByText('Syncing · Downloading');
   expect(status).toHaveAttribute('aria-hidden', 'true');
   expect(screen.queryByText(/12 \/ 234/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Download failed')).toBeInTheDocument();
+  expect(screen.getByText('Syncing · Download failed')).toBeInTheDocument();
   expect(screen.queryByText(/request_failed/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
@@ -166,10 +166,10 @@ it('keeps completed migration failures summarized in the source selector', () =>
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migration completed · Incomplete sources: 1'))
+  expect(screen.getByText('Sync completed · Incomplete sources: 1'))
     .toBeInTheDocument();
   expect(screen.queryByText('Broken PDF')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Retry sync' })).not.toBeInTheDocument();
 });
 
 it('keeps download progress active without inventing a percentage', () => {
@@ -177,7 +177,7 @@ it('keeps download progress active without inventing a percentage', () => {
     migration={{ completedCount: 900, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading$/);
 });
 
 it('starts download progress at an approximate zero percent before the first total arrives', () => {
@@ -185,7 +185,7 @@ it('starts download progress at an approximate zero percent before the first tot
     migration={{ completedCount: 0, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading · 0%$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading · 0%$/);
 });
 
 it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {
@@ -195,7 +195,7 @@ it('keeps failed updates in the same denominator and distinguishes internal veri
     taskStatus={null}
   /></LocalizationProvider>);
   expect(screen.getByRole('status')).toHaveTextContent('27 / 27');
-  expect(screen.getByRole('status')).toHaveTextContent('Migration verification failed');
+  expect(screen.getByRole('status')).toHaveTextContent('Sync verification failed');
   expect(screen.getByRole('status')).not.toHaveTextContent('Readwise request failed');
 });
 
@@ -205,4 +205,15 @@ it('reports a real HTTP failure separately from internal verification errors', (
     taskStatus={null}
   /></LocalizationProvider>);
   expect(screen.getByRole('status')).toHaveTextContent('Readwise returned HTTP 400');
+});
+
+it('calls the second phase importing when there are no existing relay Topics', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{
+      completedCount: 3, errorReason: null, existingTopicCount: 0,
+      failed: false, phase: 'merging', totalCount: 8
+    }}
+    taskStatus={null}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing · Importing · 3 / 8');
 });
