@@ -2,7 +2,21 @@
 
 import { expect, it } from 'vitest';
 
-import { buildReadwiseApiScopeUrl } from './readwiseApiIndexPlan.js';
+import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
+
+import {
+  buildReadwiseApiScopeUrl,
+  readwiseApiScopePolicySignature
+} from './readwiseApiIndexPlan.js';
+
+it('versions the tag scope to backfill existing checkpoints once', () => {
+  const policy = { ...createDefaultReadwiseAutoImportPolicy(), importTag: 'favorite' };
+
+  expect(readwiseApiScopePolicySignature('reader:tag', policy))
+    .toMatch(/^tag-checkpoint-overlap-v1\|favorite\|/);
+  expect(readwiseApiScopePolicySignature('reader:article', policy))
+    .not.toContain('tag-checkpoint-overlap-v1');
+});
 
 it('overlaps only incremental tag checkpoints by five minutes', () => {
   const checkpoint = '2026-09-17T13:15:22.591Z';

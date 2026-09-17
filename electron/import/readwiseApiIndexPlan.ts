@@ -9,6 +9,7 @@ import {
 import { READWISE_EXPORT_URL, READWISE_READER_LIST_URL } from './readwiseApiImportFetch.js';
 
 const READWISE_TAG_CHECKPOINT_OVERLAP_MS = 5 * 60 * 1_000;
+const READWISE_TAG_SCOPE_VERSION = 'tag-checkpoint-overlap-v1';
 
 export function createReadwiseApiIndexPlan(policy: ReadwiseAutoImportPolicy): ReadwiseApiIndexScope[] {
   const categoryScopes = READER_PARENT_CATEGORIES.filter((category) =>
@@ -31,7 +32,9 @@ export function readwiseApiScopePolicySignature(
     `${category}:${resolveReadwiseAutoImportDestination(policy, category, true)}`
   ).join('|');
   if (scope === 'reader:highlight') return highlightedDestinations;
-  if (scope === 'reader:tag') return `${policy.importTag.trim()}|${highlightedDestinations}`;
+  if (scope === 'reader:tag') {
+    return `${READWISE_TAG_SCOPE_VERSION}|${policy.importTag.trim()}|${highlightedDestinations}`;
+  }
   if (scope.startsWith('reader:') && isParentCategory(scope.slice('reader:'.length))) {
     const category = scope.slice('reader:'.length) as ReaderParentCategory;
     return `${category}:${resolveReadwiseAutoImportDestination(policy, category, false)}`;
