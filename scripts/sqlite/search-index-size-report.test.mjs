@@ -24,6 +24,7 @@ afterEach(async () => {
 it('reports search index size drivers without reading document text', () => {
   const dbPath = path.join(tempRoot, 'foliole.db');
   const db = new DatabaseSync(dbPath);
+  db.exec('BEGIN');
   db.exec(`
     CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT);
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT);
@@ -133,6 +134,7 @@ it('reports search index size drivers without reading document text', () => {
   db.prepare(
     'INSERT INTO keep_import_item_cache (rule_id, source_path, title, content, content_preview) VALUES (?, ?, ?, ?, ?)'
   ).run('rule', 'a.md', 'A', 'preview body', 'preview body');
+  db.exec('COMMIT');
   db.close();
 
   const report = buildSearchIndexSizeReport(dbPath);
