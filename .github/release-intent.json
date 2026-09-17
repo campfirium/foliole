@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.13",
+  "version": "0.7.14",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.13 adds shared desktop editor gestures, immersive reading improvements, image resizing, formatting shortcuts, and Readwise repair behavior, so the macOS package is required.",
-    "windows": "Foliole 0.7.13 adds the same shared Electron editor and Readwise improvements to the supported Windows desktop app, so the Windows package and direct installer are required.",
-    "linux": "Foliole 0.7.13 adds the same shared Electron editor and Readwise improvements to Linux Experimental, so the Linux Experimental package is required."
+    "macos": "Foliole 0.7.14 changes shared Electron sync convergence and Readwise API import behavior used by the macOS desktop app, so the macOS package is required.",
+    "windows": "Foliole 0.7.14 changes Windows-facing sync provider labels and shared multi-device convergence behavior, so the Windows package and direct installer are required.",
+    "linux": "Foliole 0.7.14 changes shared Electron sync and Readwise behavior used by Linux Experimental, so the Linux Experimental package is required."
   }
 }
