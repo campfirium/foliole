@@ -82,7 +82,7 @@ export const ZH_HANS_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.cutover.progress': '正在迁移到 API 模式',
   'desktop.readwise.cutover.httpFailure': 'Readwise 返回 HTTP {status}',
   'desktop.readwise.cutover.internalFailure': '迁移内部校验失败',
-  'desktop.readwise.cutover.status': 'Readwise 迁移',
+  'desktop.readwise.cutover.status': '正在迁移',
   'desktop.readwise.cutover.phase.indexing': '下载中',
   'desktop.readwise.cutover.phase.merging': '更新中',
   'desktop.readwise.cutover.phase.indexFailed': '下载失败',

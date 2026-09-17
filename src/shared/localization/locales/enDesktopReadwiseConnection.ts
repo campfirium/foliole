@@ -82,7 +82,7 @@ export const EN_DESKTOP_READWISE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.cutover.progress': 'Migrating to API mode',
   'desktop.readwise.cutover.httpFailure': 'Readwise returned HTTP {status}',
   'desktop.readwise.cutover.internalFailure': 'Migration verification failed',
-  'desktop.readwise.cutover.status': 'Readwise migration',
+  'desktop.readwise.cutover.status': 'Migrating',
   'desktop.readwise.cutover.phase.indexing': 'Downloading',
   'desktop.readwise.cutover.phase.merging': 'Updating',
   'desktop.readwise.cutover.phase.indexFailed': 'Download failed',

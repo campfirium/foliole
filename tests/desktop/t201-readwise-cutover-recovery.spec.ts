@@ -153,7 +153,7 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await expect(getSettingsDialog(session.firstWindow)).toBeVisible();
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Readwise migration · Download failed|Readwise 迁移 · 下载失败)/
+      hasText: /^(Migrating · Download failed|正在迁移 · 下载失败)/
     })).toBeVisible({ timeout: 30_000 });
     await expect(settings.getByRole('status')).toContainText('HTTP 400');
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'download-failed.png') });
@@ -163,7 +163,7 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await installRecoveringTransport(session.electronApp);
     await retry.click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Readwise migration · Downloading|Readwise 迁移 · 下载中)/
+      hasText: /^(Migrating · Downloading|正在迁移 · 下载中)/
     })).toBeVisible();
     await expect(settings.getByRole('status')).toContainText('50%');
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'downloading.png') });
@@ -216,7 +216,7 @@ test('uses the saved device token when a restored library has no API source iden
     const confirmation = session.firstWindow.getByRole('dialog', { name: /^(Switch to API mode|切换到 API 模式)$/ });
     await confirmation.getByRole('button', { name: /^(Switch and migrate|切换并迁移)$/ }).click();
     await expect(settings.getByRole('status').filter({
-      hasText: /^(Readwise migration · Downloading|Readwise 迁移 · 下载中)/
+      hasText: /^(Migrating · Downloading|正在迁移 · 下载中)/
     })).toBeVisible();
     await releaseImport(session.electronApp);
     await expect.poll(() => session!.firstWindow.evaluate(async () =>

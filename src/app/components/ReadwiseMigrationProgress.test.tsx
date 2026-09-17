@@ -45,7 +45,7 @@ it('shows remote records while importing migration facts', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Readwise migration · Downloading · 5%')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Downloading · 5%')).toBeInTheDocument();
 });
 
 it('shows cumulative first-sync progress while the API index is being fetched', () => {
@@ -61,7 +61,7 @@ it('shows cumulative first-sync progress while the API index is being fetched', 
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Readwise migration · Indexing · 1327')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Indexing · 1327')).toBeInTheDocument();
 });
 
 it('shows completed and total counts while first-sync topics are imported', () => {
@@ -91,7 +91,7 @@ it('shows completed and total counts while first-sync topics are imported', () =
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Readwise migration · Downloading · 13 / 27')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Downloading · 13 / 27')).toBeInTheDocument();
 });
 
 it('provides a compact visual-only phase without repeating progress details', () => {
@@ -111,7 +111,7 @@ it('provides a compact visual-only phase without repeating progress details', ()
     </LocalizationProvider>
   );
 
-  const status = screen.getByText('Readwise migration · Downloading');
+  const status = screen.getByText('Migrating · Downloading');
   expect(status).toHaveAttribute('aria-hidden', 'true');
   expect(screen.queryByText(/12 \/ 234/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -134,7 +134,7 @@ it('keeps compact failure status concise and omits the detailed reason', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Readwise migration · Download failed')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Download failed')).toBeInTheDocument();
   expect(screen.queryByText(/request_failed/)).not.toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
@@ -167,20 +167,20 @@ it('keeps completed migration failures summarized in the source selector', () =>
   expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
 });
 
-it('shows the downloaded record count while a reliable percentage is unavailable', () => {
+it('keeps download progress active without inventing a percentage', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 900, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading · 900$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading$/);
 });
 
-it('shows zero before the first download page arrives', () => {
+it('does not expose a raw count before the download percentage is available', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 0, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Readwise migration · Downloading · 0$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading$/);
 });
 
 it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {

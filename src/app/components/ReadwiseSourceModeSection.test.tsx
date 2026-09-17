@@ -130,8 +130,8 @@ it('keeps indexing visible while the remote total is not known yet', async () =>
   /></LocalizationProvider>);
 
   expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
-  await waitFor(() => expect(screen.getAllByText(/^Readwise migration · Downloading/)).toHaveLength(2));
-  expect(screen.getByText('Readwise migration · Downloading · 0')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText(/^Migrating · Downloading/)).toHaveLength(2));
+  expect(screen.getAllByText('Migrating · Downloading')).toHaveLength(2);
   expect(screen.queryByText(/0 \/ 12/)).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
@@ -153,7 +153,7 @@ it('restores merging progress and explains a paused migration in place', async (
 
   await waitFor(() => expect(cutover.preview).toHaveBeenCalled());
   expect(cutover.run).not.toHaveBeenCalled();
-  expect(await screen.findByText('Readwise migration · Update failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
+  expect(await screen.findByText('Migrating · Update failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Retry migration' }));
   await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());
@@ -185,7 +185,7 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.getByText('Readwise migration · Downloading')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Downloading')).toBeInTheDocument();
 });
 
 it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
@@ -214,7 +214,7 @@ it('keeps migration visible while the initial import is incomplete, regardless o
   expect(await screen.findByRole('button', { name: 'Sync now' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Sync now' })).not.toHaveAttribute('aria-busy');
   const migrationStatus = screen.getByRole('status');
-  expect(migrationStatus).toHaveTextContent('Readwise migration · Downloading');
+  expect(migrationStatus).toHaveTextContent('Migrating · Downloading');
   expect(migrationStatus).not.toHaveTextContent('failed');
   expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
   expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' }).parentElement).toContainElement(migrationStatus);
