@@ -21,11 +21,11 @@ it('shows each failed source with a readable reason and diagnostic code', () => 
     </LocalizationProvider>
   );
 
-  expect(screen.getByRole('region', { name: 'Migration issues' })).toHaveTextContent(
+  expect(screen.getByRole('region', { name: 'Sync issues' })).toHaveTextContent(
     'Broken EPUBgetting its file or images · The original file could not be downloaded · Diagnostic code: original_file_download_failed'
   );
   expect(screen.getByText('Broken article').parentElement).toHaveTextContent(
-    'saving the migration result · The highlights could not be linked to the Topic'
+    'saving the sync result · The highlights could not be linked to the Topic'
   );
 });
 
