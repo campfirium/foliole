@@ -16,6 +16,7 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { ensureReadwiseApiCandidateIndex } from './readwiseApiCandidateFetch.js';
 import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { buildReadwiseApiCandidatePreview } from './readwiseApiCandidatePreview.js';
+import { isReadwiseApiCandidateBlockedByCutover } from './readwiseApiCandidateSkip.js';
 import type { ReadwiseApiCandidate } from './readwiseApiCandidateTypes.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { createCancelledReadwiseApiImportResult } from './readwiseApiImportResults.js';
@@ -158,9 +159,10 @@ function shouldSkipApiDocument(connectionRef: string, candidate: ReadwiseApiCand
   const documentId = candidate.documentId;
   if (readReadwiseApiSourceDisposition(openDatabaseConnection().driver, connectionRef, documentId)) return true;
   const cutover = loadReadwiseSourceCutover();
-  if (cutover?.version === 2 && cutover.documents.some((item) =>
-    item.remoteId === documentId && (item.status === 'suppressed' || item.status === 'blocked')
-  )) return true;
+  const cutoverStatus = cutover?.version === 2
+    ? cutover.documents.find((item) => item.remoteId === documentId)?.status
+    : null;
+  if (isReadwiseApiCandidateBlockedByCutover(candidate, cutoverStatus)) return true;
   const existing = loadReadwiseApiImportSource(connectionRef, documentId);
   if (!existing) return false;
   const known = new Set(existing.annotations.map((item) => item.remoteId));
