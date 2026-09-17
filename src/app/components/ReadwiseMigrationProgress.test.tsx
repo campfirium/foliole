@@ -48,7 +48,11 @@ it('shows remote records while importing migration facts', () => {
   expect(screen.getByText('Migrating · Downloading · 5%')).toBeInTheDocument();
 });
 
-it('shows cumulative first-sync progress while the API index is being fetched', () => {
+it('does not present an ordinary initial sync as migration', () => {
+  const taskStatus = {
+    ...INITIAL_IMPORT_STATUS,
+    cutover: { ...INITIAL_IMPORT_STATUS.cutover, status: 'completed' as const }
+  };
   render(
     <LocalizationProvider>
       <ReadwiseMigrationProgress
@@ -56,15 +60,15 @@ it('shows cumulative first-sync progress while the API index is being fetched', 
           completedCount: 27, errorReason: null, failed: false,
           phase: null, totalCount: null
         }}
-        taskStatus={INITIAL_IMPORT_STATUS}
+        taskStatus={taskStatus}
       />
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Indexing · 1327')).toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('shows completed and total counts while first-sync topics are imported', () => {
+it('uses only cutover state when migration progress has not arrived yet', () => {
   const taskStatus = {
     ...INITIAL_IMPORT_STATUS,
     initial_sync: {
@@ -91,7 +95,8 @@ it('shows completed and total counts while first-sync topics are imported', () =
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Migrating · Downloading · 13 / 27')).toBeInTheDocument();
+  expect(screen.getByText('Migrating · Downloading · 100%')).toBeInTheDocument();
+  expect(screen.queryByText(/13 \/ 27/)).not.toBeInTheDocument();
 });
 
 it('provides a compact visual-only phase without repeating progress details', () => {

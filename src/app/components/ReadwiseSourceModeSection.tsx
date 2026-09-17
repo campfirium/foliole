@@ -74,8 +74,8 @@ function useReadwiseSourceModeState(props: ReadwiseSourceModeSectionProps) {
   const preparingApi = committedMode !== 'api' && props.mode === 'api'
     && !props.apiMigrationCompleted;
   const migrationActive = Boolean(
-    preparingApi && (migration.pending || migration.required || migration.phase)
-      || taskStatus?.cutover.status === 'in_progress'
+    preparingApi && (migration.pending || migration.required || migration.phase
+      || taskStatus?.cutover.status === 'in_progress')
   );
 
   useEffect(() => {
@@ -145,8 +145,8 @@ function ReadwiseSourceSelector(props: {
     <p className="text-ui-sm text-error" role="status">
       {t('desktop.readwise.source.conflict')}
     </p>
-  ) : props.props.mode === 'api' ? (
-    props.state.preparingApi && !props.state.migrationActive
+  ) : props.state.preparingApi ? (
+    !props.state.migrationActive
       ? <p className="text-ui-sm text-foreground/58">{t('desktop.readwise.api.setup.pending')}</p>
       : <ReadwiseMigrationProgress
           migration={props.state.migration}
@@ -196,7 +196,8 @@ function ReadwiseApiSettingsSections(props: {
       <SettingsSection ariaLabel={t('desktop.readwise.api.connection.title')}>
         <ReadwiseApiConnectionRow
           migration={state.preparingApi}
-          migrationStatus={state.migration.phase || state.taskStatus?.cutover.status === 'in_progress' ? (
+          migrationStatus={state.preparingApi
+            && (state.migration.phase || state.taskStatus?.cutover.status === 'in_progress') ? (
             <ReadwiseMigrationProgress compact migration={state.migration} taskStatus={state.taskStatus} />
           ) : null}
           onConnectionChange={state.setApiConnected}

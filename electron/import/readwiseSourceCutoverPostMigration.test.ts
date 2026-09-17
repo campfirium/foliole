@@ -52,6 +52,7 @@ import {
 } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
@@ -90,13 +91,23 @@ it('adds later API highlights without creating a source-update workflow', async 
   await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   await runReadwiseSourceCutover({ dependencies: { fetchImpl: migrationFetch(), minIntervalMs: 0 } });
+  const connectionRef = ensureReadwiseRemoteSource().connectionRef;
+  const completedThrough = loadReadwiseApiCompletedThrough(connectionRef);
+  const fetchImpl = incrementalHighlightFetch();
   const driver = openDatabaseConnection().driver;
   const migratedBody = driver.queryOne<{ content: string }>(
     "SELECT content FROM nodes WHERE id='topic-1'"
   )?.content;
   await expect(runReadwiseApiImport({
-    dependencies: { fetchImpl: incrementalHighlightFetch(), minIntervalMs: 0 }
+    dependencies: { fetchImpl, minIntervalMs: 0 }
   })).resolves.toMatchObject({ annotation_count: 1, status: 'completed' });
+
+  const incrementalScopes = fetchImpl.mock.calls.map(([input]) => new URL(String(input)))
+    .filter((url) => url.pathname === '/api/v2/export/' || url.searchParams.has('category'));
+  expect(completedThrough).not.toBeNull();
+  expect(incrementalScopes.length).toBeGreaterThan(0);
+  expect(incrementalScopes.every((url) =>
+    url.searchParams.get('updatedAfter') === completedThrough)).toBe(true);
 
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
     .toBe(migratedBody);

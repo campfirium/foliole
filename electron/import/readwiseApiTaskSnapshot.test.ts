@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import { buildReadwiseApiTaskSnapshot } from './readwiseApiTaskSnapshot.js';
 
-it('projects an unfinished full index as migration without using stored counts', () => {
+it('keeps a completed cutover complete while an ordinary index is pending', () => {
   const snapshot = buildReadwiseApiTaskSnapshot({
     candidateProgress: null,
     completedThrough: '2026-09-10T00:00:00.000Z',
@@ -26,6 +26,6 @@ it('projects an unfinished full index as migration without using stored counts',
     workerOwned: false
   });
 
-  expect(snapshot.cutover.status).toBe('in_progress');
+  expect(snapshot.cutover.status).toBe('completed');
   expect(snapshot.initial_sync.status).toBe('completed');
 });

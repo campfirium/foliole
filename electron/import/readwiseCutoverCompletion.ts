@@ -1,11 +1,19 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { candidateScopeSignature } from '../database/readwiseApiCandidateRun.js';
+import { saveReadwiseApiCandidateManifestWithDriver } from '../database/readwiseApiCandidateStage.js';
 import { readwiseApiOverlapBoundary } from '../database/readwiseApiImportState.js';
+import { seedReadwiseApiScopeCheckpoints } from '../database/readwiseApiScopeLedger.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 import { writeJsonSetting } from '../database/settingsStore.js';
 
 export function completeCutoverDownload(
-  driver: DatabaseDriver, connectionRef: string, documents: PreparedReadwiseApiDocument[], now: string
+  driver: DatabaseDriver,
+  connectionRef: string,
+  documents: PreparedReadwiseApiDocument[],
+  policy: ReadwiseAutoImportPolicy,
+  now: string
 ) {
   const run = driver.queryOne<{ round_started_at: string }>(
     'SELECT round_started_at FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]
@@ -21,9 +29,16 @@ export function completeCutoverDownload(
       documents: documents.filter((item) => failed.has(item.id)), failures: state.failures
     }, now);
   }
+  const completedThrough = readwiseApiOverlapBoundary(run.round_started_at);
   writeJsonSetting(driver, 'readwise_api_import_state', {
-    completedThrough: readwiseApiOverlapBoundary(run.round_started_at), connectionRef, updatedAt: now, version: 1
+    completedThrough, connectionRef, updatedAt: now, version: 1
   }, now);
   driver.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ?', [connectionRef]);
   driver.execute('DELETE FROM readwise_api_import_runs WHERE connection_ref = ?', [connectionRef]);
+  saveReadwiseApiCandidateManifestWithDriver(
+    driver, connectionRef, candidateScopeSignature(policy)
+  );
+  seedReadwiseApiScopeCheckpoints(
+    driver, connectionRef, policy, completedThrough, run.round_started_at
+  );
 }

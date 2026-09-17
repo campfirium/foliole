@@ -71,7 +71,7 @@ function status(active: 'initial' | 'routine' | null): NativeReadwiseApiSchedule
 it.each(['initial', 'routine'] as const)('projects %s worker progress through the same copy', (kind) => {
   expect(readwiseApiTaskPresentation(status(kind), translate.bind(null, 'en'))).toEqual({
     actionLabel: 'Sync now',
-    loadingLabel: 'Sync now',
+    loadingLabel: 'Syncing…',
     running: true
   });
   expect(readwiseApiPhasePresentation(status(kind), translate.bind(null, 'en'))).toEqual({
@@ -83,15 +83,15 @@ it.each(['initial', 'routine'] as const)('projects %s worker progress through th
 it('shows no historical task summary after a worker finishes', () => {
   expect(readwiseApiTaskPresentation(status(null), translate.bind(null, 'en'))).toEqual({
     actionLabel: 'Sync now',
-    loadingLabel: 'Sync now',
+    loadingLabel: 'Syncing…',
     running: false
   });
 });
 
-it('does not infer progress before the owned worker establishes a total', () => {
+it('keeps the button in its syncing state before the worker establishes a total', () => {
   const snapshot = status('initial');
   snapshot.initial_sync.lifecycle = lifecycle('initial', null);
-  expect(readwiseApiTaskPresentation(snapshot, translate.bind(null, 'en')).loadingLabel).toBe('Sync now');
+  expect(readwiseApiTaskPresentation(snapshot, translate.bind(null, 'en')).loadingLabel).toBe('Syncing…');
 });
 
 it('shows indexing while a normal sync is still building its Readwise index', () => {

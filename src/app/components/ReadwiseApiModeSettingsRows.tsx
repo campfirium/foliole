@@ -153,7 +153,8 @@ export function ReadwiseApiOperationsRows(props: {
       syncDisabled={props.settings.syncDisabled || migrationActive || task.running}
       syncIsRunning={!migrationActive && (props.settings.syncIsRunning || task.running)}
       syncLoadingLabel={task.loadingLabel}
-      syncStatus={migrationActive ? IDLE_SYNC_STATUS : props.settings.syncStatus}
+      syncStatus={migrationActive || props.settings.syncIsRunning || task.running
+        ? IDLE_SYNC_STATUS : props.settings.syncStatus}
     />
   );
 }

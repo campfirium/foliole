@@ -1,3 +1,4 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { ExportBookContract, ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
@@ -20,13 +21,25 @@ import { finalizeReadwiseApiScopeLedgers } from './readwiseApiScopeLedger.js';
 const CANDIDATE_KIND = 'candidate-v3';
 
 export function saveReadwiseApiCandidateManifest(connectionRef: string, scopeSignature: string) {
-  openDatabaseConnection().driver.execute(
-    `UPDATE readwise_api_import_stage SET payload_json = ?
-     WHERE connection_ref = ? AND record_kind = 'candidate-manifest-v3' AND remote_id = 'manifest'`,
-    [JSON.stringify({
+  saveReadwiseApiCandidateManifestWithDriver(
+    openDatabaseConnection().driver, connectionRef, scopeSignature
+  );
+}
+
+export function saveReadwiseApiCandidateManifestWithDriver(
+  driver: DatabaseDriver,
+  connectionRef: string,
+  scopeSignature: string
+) {
+  driver.execute(
+    `INSERT INTO readwise_api_import_stage (connection_ref, record_kind, remote_id, payload_json)
+     VALUES (?, 'candidate-manifest-v3', 'manifest', ?)
+     ON CONFLICT(connection_ref, record_kind, remote_id)
+     DO UPDATE SET payload_json = excluded.payload_json`,
+    [connectionRef, JSON.stringify({
       pipelineVersion: READWISE_API_PIPELINE_VERSION,
       scopeSignature
-    } satisfies ReadwiseApiCandidateManifest), connectionRef]
+    } satisfies ReadwiseApiCandidateManifest)]
   );
 }
 

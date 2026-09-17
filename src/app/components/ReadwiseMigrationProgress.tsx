@@ -59,14 +59,15 @@ function migrationPresentation(
     ? t('desktop.readwise.cutover.phase.indexing')
     : t('desktop.readwise.cutover.phase.merging');
   if (!migration.failed) {
+    const progress = resolvedCutoverProgress(migration, taskStatus);
     return {
       active: true,
       failed: false,
       retryable: false,
       text: progressText(
         `${t('desktop.readwise.cutover.status')} · ${phase}`, compact,
-        migration.completedCount,
-        migration.totalCount, migration.phase === 'indexing'
+        progress.completedCount,
+        progress.totalCount, migration.phase === 'indexing'
       )
     };
   }
@@ -96,38 +97,26 @@ function inactiveMigrationPresentation(
   failures: NonNullable<ReadwiseMigrationState['failures']>
 ) {
   if (failures.length > 0) return completedFailurePresentation(failures, t);
-  const initialRun = taskStatus?.initial_sync.lifecycle;
-  if (initialRun?.status === 'running') {
-    const phase = initialRun.stage === 'fetching'
-      ? t('desktop.readwise.api.tasks.indexing')
-      : t('desktop.readwise.cutover.phase.indexing');
-    return {
-      active: true,
-      failed: false,
-      retryable: false,
-      text: progressText(
-        `${t('desktop.readwise.cutover.status')} · ${phase}`,
-        compact,
-        initialRun.progress?.completed_count ?? 0,
-        initialRun.progress?.total_count ?? null
-      )
-    };
-  }
-  if (taskStatus?.cutover.status === 'completed') {
-    return taskStatus.initial_sync.status === 'completed' ? null : {
-      active: false, failed: false, retryable: false,
-      text: t('desktop.readwise.api.firstSyncPending')
-    };
-  }
   return taskStatus?.cutover.status === 'in_progress' ? {
     active: true,
     failed: false,
     retryable: false,
     text: progressText(
       `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
-      compact, migration.completedCount, null
+      compact, taskStatus.cutover.completed_count, taskStatus.cutover.total_count, true
     )
   } : null;
+}
+
+function resolvedCutoverProgress(
+  migration: ReadwiseMigrationState,
+  taskStatus: NativeReadwiseApiScheduleStatus | null
+) {
+  const projected = taskStatus?.cutover;
+  if (migration.totalCount !== null || projected?.status !== 'in_progress') {
+    return { completedCount: migration.completedCount, totalCount: migration.totalCount };
+  }
+  return { completedCount: projected.completed_count, totalCount: projected.total_count };
 }
 
 function completedFailurePresentation(

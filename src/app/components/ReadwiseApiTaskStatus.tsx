@@ -36,7 +36,7 @@ export function readwiseApiTaskPresentation(status: NativeReadwiseApiScheduleSta
   const lifecycle = activeLifecycle(status);
   return {
     actionLabel: t('desktop.readwise.sync.action'),
-    loadingLabel: t('desktop.readwise.sync.action'),
+    loadingLabel: t('desktop.readwise.sync.running'),
     running: Boolean(lifecycle)
   };
 }

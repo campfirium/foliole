@@ -31,7 +31,7 @@ export function buildReadwiseApiTaskSnapshot(input: {
 }): NativeReadwiseApiScheduleStatus {
   const lifecycle = projectLifecycle(input.lifecycle, input.workerOwned);
   return {
-    cutover: cutoverStatus(input.cutover, input.migrationPending),
+    cutover: cutoverStatus(input.cutover),
     eligibility: input.eligibility,
     initial_sync: initialSyncStatus(
       input.candidateProgress, input.initialProgress, input.completedThrough, lifecycle
@@ -77,8 +77,7 @@ function initialSyncStatus(
 }
 
 function cutoverStatus(
-  state: StoredReadwiseSourceCutover | null,
-  migrationPending: boolean
+  state: StoredReadwiseSourceCutover | null
 ): NativeReadwiseApiScheduleStatus['cutover'] {
   if (!state) return {
     completed_count: 0, failed_count: 0, pending_count: 0, status: 'not_started',
@@ -93,7 +92,7 @@ function cutoverStatus(
     completed_count: completed,
     failed_count: 0,
     pending_count: total === null ? 0 : Math.max(0, total - completed),
-    status: state.status === 'api' && !migrationPending ? 'completed' : 'in_progress',
+    status: state.status === 'api' ? 'completed' : 'in_progress',
     total_count: total,
     unexplained_failure_count: 0
   };

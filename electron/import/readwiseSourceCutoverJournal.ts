@@ -214,7 +214,13 @@ export function completeReadwiseSourceCutoverMigration(
       phase: null,
       status: 'api'
     }, completedAt);
-    completeCutoverDownload(driver, connectionRef, documents, completedAt);
+    completeCutoverDownload(
+      driver,
+      connectionRef,
+      documents,
+      loadImportManagerSettings().readwiseAutoImportPolicy,
+      completedAt
+    );
     writeReadwiseSourceMode(driver, 'api', completedAt, {
       batchId: latest.batchId ?? null,
       completedAt,

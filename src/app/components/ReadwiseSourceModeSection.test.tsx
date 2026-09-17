@@ -122,16 +122,14 @@ it('keeps indexing visible while the remote total is not known yet', async () =>
   });
   cutover.run.mockReturnValue(new Promise(() => undefined));
   render(<LocalizationProvider><ReadwiseSourceModeSection
-    apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
-    committedMode="api"
+    committedMode="relay"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('combobox', { name: 'Sync frequency' })).toBeInTheDocument();
   await waitFor(() => expect(screen.getAllByText(/^Migrating · Downloading/)).toHaveLength(2));
-  expect(screen.getAllByText('Migrating · Downloading')).toHaveLength(2);
+  expect(screen.getAllByText('Migrating · Downloading')).toHaveLength(1);
   expect(screen.queryByText(/0 \/ 12/)).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).not.toHaveAttribute('aria-busy');
@@ -144,9 +142,8 @@ it('restores merging progress and explains a paused migration in place', async (
   });
   cutover.run.mockResolvedValue({ error_reason: 'request_failed', migrated_count: 7, status: 'failed', unmatched_count: 0 });
   render(<LocalizationProvider><ReadwiseSourceModeSection
-    apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
-    committedMode="api"
+    committedMode="relay"
     mode="api"
     onChange={() => undefined}
   /></LocalizationProvider>);
@@ -159,7 +156,7 @@ it('restores merging progress and explains a paused migration in place', async (
   await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());
 });
 
-it('keeps migration indexing separate from the ordinary sync action', async () => {
+it('shows an ordinary sync only on the sync button after API cutover', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 31, error_reason: null, phase: null, status: 'already_completed', topic_count: 31, total_count: 31
   });
@@ -179,16 +176,17 @@ it('keeps migration indexing separate from the ordinary sync action', async () =
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Sync now' })).not.toHaveAttribute('aria-busy');
+  const syncButton = await screen.findByRole('button', { name: 'Syncing…' });
+  expect(syncButton).toBeDisabled();
+  expect(syncButton).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText(/Migration:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/First sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Routine sync:/)).not.toBeInTheDocument();
   expect(screen.queryByText('Syncing Readwise sources...')).not.toBeInTheDocument();
-  expect(screen.getByText('Migrating · Downloading')).toBeInTheDocument();
+  expect(screen.queryByText('Migrating · Downloading')).not.toBeInTheDocument();
 });
 
-it('keeps migration visible while the initial import is incomplete, regardless of failure', async () => {
+it('does not revive migration UI after API cutover', async () => {
   schedule.load.mockResolvedValue({
     cutover: { completed_count: 31, failed_count: 0, pending_count: 0, status: 'in_progress', total_count: 31, unexplained_failure_count: 0 },
     eligibility: 'ready',
@@ -211,13 +209,9 @@ it('keeps migration visible while the initial import is incomplete, regardless o
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Sync now' })).not.toHaveAttribute('aria-busy');
-  const migrationStatus = screen.getByRole('status');
-  expect(migrationStatus).toHaveTextContent('Migrating · Downloading');
-  expect(migrationStatus).not.toHaveTextContent('failed');
-  expect(migrationStatus.querySelector('.animate-spin')).not.toBeNull();
-  expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' }).parentElement).toContainElement(migrationStatus);
+  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeEnabled();
+  expect(screen.queryByText(/Migrating/)).not.toBeInTheDocument();
+  expect(screen.getByRole('radiogroup', { name: 'Readwise source mode' })).not.toHaveAttribute('aria-disabled', 'true');
 });
 
 it('uses the same instruction for a missing or invalid token', async () => {

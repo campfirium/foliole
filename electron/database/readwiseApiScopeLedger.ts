@@ -1,3 +1,4 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type {
   ReadwiseApiIndexScope,
@@ -35,6 +36,25 @@ export function loadOrCreateReadwiseApiScopeLedgers(
       status: 'running'
     });
   });
+}
+
+export function seedReadwiseApiScopeCheckpoints(
+  driver: DatabaseDriver,
+  connectionRef: string,
+  policy: ReadwiseAutoImportPolicy,
+  checkpoint: string,
+  runStartedAt: string
+) {
+  for (const scope of createReadwiseApiIndexPlan(policy)) {
+    saveScope(connectionRef, {
+      checkpoint,
+      cursor: null,
+      policySignature: readwiseApiScopePolicySignature(scope, policy),
+      runStartedAt,
+      scope,
+      status: 'complete'
+    }, driver);
+  }
 }
 
 function deleteInactiveScopes(connectionRef: string, active: ReadonlySet<ReadwiseApiIndexScope>) {
@@ -108,8 +128,12 @@ function loadScope(connectionRef: string, scope: ReadwiseApiIndexScope) {
   return row ? parse(row.payload_json)[0] ?? null : null;
 }
 
-function saveScope(connectionRef: string, ledger: ReadwiseApiScopeLedger) {
-  openDatabaseConnection().driver.execute(
+function saveScope(
+  connectionRef: string,
+  ledger: ReadwiseApiScopeLedger,
+  driver: DatabaseDriver = openDatabaseConnection().driver
+) {
+  driver.execute(
     `INSERT INTO readwise_api_import_stage (connection_ref, record_kind, remote_id, payload_json)
      VALUES (?, ?, ?, ?) ON CONFLICT(connection_ref, record_kind, remote_id)
      DO UPDATE SET payload_json = excluded.payload_json`,
