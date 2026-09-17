@@ -75,14 +75,16 @@ it('persists both first pages and resumes only unsaved pages after reopening the
     calls.push(key);
     if (key.endsWith(':reader-next') && fail) throw new Error('offline');
     const reader = url.pathname.includes('/v3/');
-    return Response.json({ count: reader ? 2 : 1, nextPageCursor: reader && !url.searchParams.has('pageCursor') ? 'reader-next' : null,
+    return Response.json({ count: reader ? 2 : 2, nextPageCursor: reader && !url.searchParams.has('pageCursor') ? 'reader-next' : null,
       results: reader ? [{ category: 'article', id: url.searchParams.has('pageCursor') ? 'second' : 'first', title: 'Article' }]
-        : [{ source: 'reader', external_id: 'first', highlights: [] }] });
+        : [{ source: 'reader', external_id: 'first', highlights: [
+          { external_id: 'highlight-1', text: 'One' }, { external_id: 'highlight-2', text: 'Two' }
+        ] }] });
   });
   const options = { allowFolderModeForCutover: true, fetchImpl, minIntervalMs: 0 };
   await expect(fetchReadwiseSourceCutoverSnapshot(source.connectionRef, options)).rejects.toThrow('network_failed');
   expect(calls.slice(0, 2)).toEqual(['/api/v3/list/:first', '/api/v2/export/:first']);
-  expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 2, total: 3 });
+  expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 3, total: 4 });
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM nodes')?.count).toBe(0);
   closeDatabaseConnection();
   initializeDatabaseConnection(openDatabaseConnection());
@@ -90,7 +92,7 @@ it('persists both first pages and resumes only unsaved pages after reopening the
   calls.length = 0;
   await fetchReadwiseSourceCutoverSnapshot(source.connectionRef, options);
   expect(calls).toEqual(['/api/v3/list/:reader-next']);
-  expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 3, total: 3 });
+  expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 4, total: 4 });
 });
 
 it('keeps unknown or changing totals indeterminate instead of inventing percentages', async () => {
@@ -107,7 +109,7 @@ it('keeps unknown or changing totals indeterminate instead of inventing percenta
         results: [{ category: 'article', id: last ? 'b' : 'a', title: 'Article' }] });
     }
   });
-  expect(progress).toEqual([{ completed: 1, total: null }, { completed: 1, total: 2 }, { completed: 2, total: null }]);
+  expect(progress).toEqual([{ completed: 1, total: 2 }, { completed: 1, total: 2 }, { completed: 2, total: null }]);
 });
 
 it('resumes finalization with a frozen denominator and promotes the original download boundary', async () => {

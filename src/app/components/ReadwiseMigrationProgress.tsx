@@ -148,7 +148,7 @@ function progressText(text: string, compact: boolean, completedCount: number, to
 
 function withProgress(text: string, completedCount: number, totalCount: number | null, percent = false) {
   if (percent) return totalCount === null || totalCount === 0
-    ? text
+    ? completedCount === 0 ? `${text} · 0%` : text
     : `${text} · ${Math.floor(completedCount * 100 / totalCount)}%`;
   if (completedCount === 0 && totalCount === null) return text;
   return `${text} · ${completedCount}${totalCount === null ? '' : ` / ${totalCount}`}`;

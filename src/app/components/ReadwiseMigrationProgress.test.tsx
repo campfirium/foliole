@@ -175,12 +175,12 @@ it('keeps download progress active without inventing a percentage', () => {
   expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading$/);
 });
 
-it('does not expose a raw count before the download percentage is available', () => {
+it('starts download progress at an approximate zero percent before the first total arrives', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 0, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Migrating · Downloading · 0%$/);
 });
 
 it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {

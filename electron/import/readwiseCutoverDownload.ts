@@ -7,15 +7,19 @@ import { assertReadwiseApiEligible, type ReadwiseApiFetchDependencies } from './
 
 type Kind = 'reader' | 'export';
 interface PageState { cursor: string | null; done: boolean; saved: number; started: boolean; total: number | null }
-interface DownloadState { reader: PageState; export: PageState; countIssue: string | null; startedAt: string }
+interface DownloadState { reader: PageState; export: PageState; countIssue: string | null; startedAt: string; version?: number }
 const KIND = 'cutover-download-v1';
+const DOWNLOAD_STATE_VERSION = 2;
 
 export function readCutoverDownloadProgress(connectionRef: string) {
   const state = loadReadwiseCutoverStage<DownloadState>(connectionRef, KIND);
   if (!state) return { completed: 0, total: null };
-  const completed = state.reader.saved + state.export.saved;
-  const total = state.countIssue || state.reader.total === null || state.export.total === null
-    ? null : state.reader.total + state.export.total;
+  const known = [state.reader, state.export].filter((item) => item.total !== null);
+  const completed = known.length
+    ? known.reduce((sum, item) => sum + item.saved, 0)
+    : state.reader.saved + state.export.saved;
+  const total = state.countIssue || known.length === 0
+    ? null : known.reduce((sum, item) => sum + (item.total ?? 0), 0);
   const complete = state.reader.done && state.export.done;
   return { completed, total: total !== null && (completed > total || (!complete && completed === total)) ? null : total };
 }
@@ -42,7 +46,7 @@ export async function downloadReadwiseCutover(
 
 function loadDownload(connectionRef: string): DownloadState {
   const saved = loadReadwiseCutoverStage<DownloadState>(connectionRef, KIND);
-  if (saved) return saved;
+  if (saved) return upgradeDownloadState(connectionRef, saved);
   const run = loadOrCreateReadwiseApiImportRun(connectionRef, new Date().toISOString(), true);
   const facts = loadStagedReadwiseApiContracts(connectionRef);
   const side = (cursor: string | null, done: boolean, count: number): PageState => ({
@@ -50,8 +54,8 @@ function loadDownload(connectionRef: string): DownloadState {
   });
   const state = {
     reader: side(run.readerCursor, run.phase !== 'reader', facts.readerDocuments.length),
-    export: side(run.exportCursor, run.phase === 'ready', facts.exportBooks.length),
-    countIssue: null, startedAt: run.roundStartedAt
+    export: side(run.exportCursor, run.phase === 'ready', exportHighlightCount(facts.exportBooks)),
+    countIssue: null, startedAt: run.roundStartedAt, version: DOWNLOAD_STATE_VERSION
   };
   saveReadwiseCutoverStage(connectionRef, KIND, state);
   return state;
@@ -73,7 +77,8 @@ function persistPage(connectionRef: string, kind: Kind, state: DownloadState, pa
   const previous = state[kind];
   const changed = previous.started && previous.total !== null && previous.total !== total;
   const next: DownloadState = { ...state, countIssue: state.countIssue ?? (changed ? 'remote_total_changed' : null),
-    [kind]: { cursor, done: !cursor, saved: previous.saved + items.length, started: true, total } };
+    [kind]: { cursor, done: !cursor, saved: previous.saved + savedItemCount(kind, items), started: true, total },
+    version: DOWNLOAD_STATE_VERSION };
   if (!cursor && total !== null && next[kind].saved !== total) next.countIssue = 'remote_count_mismatch';
   openDatabaseConnection().driver.transaction((driver) => {
     saveReadwiseApiStagePage({ connectionRef, cursor, items: items.filter((item) => item !== null), kind });
@@ -82,6 +87,35 @@ function persistPage(connectionRef: string, kind: Kind, state: DownloadState, pa
       [next.reader.done && next.export.done ? 'ready' : nextKind(next), connectionRef]);
   });
   return next;
+}
+
+function upgradeDownloadState(connectionRef: string, state: DownloadState) {
+  if (state.version === DOWNLOAD_STATE_VERSION) return state;
+  const facts = loadStagedReadwiseApiContracts(connectionRef);
+  const next: DownloadState = {
+    ...state,
+    export: { ...state.export, saved: exportHighlightCount(facts.exportBooks) },
+    version: DOWNLOAD_STATE_VERSION
+  };
+  if (state.countIssue === 'remote_count_mismatch' && !hasTerminalCountMismatch(next)) {
+    next.countIssue = null;
+  }
+  saveReadwiseCutoverStage(connectionRef, KIND, next);
+  return next;
+}
+
+function hasTerminalCountMismatch(state: DownloadState) {
+  return (state.reader.done && state.reader.total !== null && state.reader.saved !== state.reader.total)
+    || (state.export.done && state.export.total !== null && state.export.saved !== state.export.total);
+}
+
+function savedItemCount(kind: Kind, items: Array<ReturnType<typeof normalizeReaderDocument> | ReturnType<typeof normalizeExportBook>>) {
+  if (kind === 'reader') return items.length;
+  return items.reduce((total, item) => total + (item && 'highlights' in item ? item.highlights.length : 0), 0);
+}
+
+function exportHighlightCount(books: Array<{ highlights: unknown[] }>) {
+  return books.reduce((total, book) => total + book.highlights.length, 0);
 }
 
 function pageUrl(kind: Kind, cursor: string | null) {
