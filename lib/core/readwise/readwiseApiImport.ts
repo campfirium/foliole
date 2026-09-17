@@ -9,6 +9,7 @@ import {
   type ExportHighlightContract,
   type ReaderDocumentContract
 } from './readwiseApiContract.js';
+import { formatReadwiseApiDocumentContent } from './readwiseApiDocumentContent.js';
 import {
   prepareReadwiseApiEpubStructure,
   type PreparedReadwiseApiEpubStructure
@@ -101,7 +102,9 @@ function prepareDocument(
   const title = document.title?.trim() || 'Untitled';
   return [{
     annotations,
-    body: converted.content,
+    body: converted.content.trim()
+      ? formatReadwiseApiDocumentContent(document, title, converted.content)
+      : '',
     category: document.category as PreparedReadwiseApiDocument['category'],
     coverImageUrl: document.imageUrl,
     createdAt: document.createdAt ?? null,

@@ -22,10 +22,40 @@ it('normalizes readable bodies and only materializes export-verified annotations
     annotations: [
       { content: expect.stringContaining('Comment'), kind: 'highlight', remoteId: 'highlight' }
     ],
-    body: '# Heading\n\nBody',
+    body: expect.stringContaining('---\n'),
     id: 'doc',
     title: 'Title'
   }]);
+  expect(prepareReadwiseApiDocuments(documents, exported)[0]?.body).toContain(
+    'author: Author\ncategory: article\nfull_title: Title\nid: doc'
+  );
+  expect(prepareReadwiseApiDocuments(documents, exported)[0]?.body).toContain(
+    '# Title\n\n## Heading\n\nBody'
+  );
+});
+
+it('writes every available Reader metadata field before the standalone title heading', () => {
+  const document = normalizeReaderDocument({
+    author: 'Author', category: 'rss', created_at: '2026-09-17T00:00:00Z',
+    html_content: '<p>Body</p>', id: 'doc', image_url: 'https://example.com/image.jpg',
+    notes: 'Notes', parent_id: 'parent', raw_source_url: 'https://example.com/raw',
+    source_url: 'https://example.com/source', summary: 'Summary',
+    tags: { favorite: { name: 'Favorite' } }, title: 'Title',
+    updated_at: '2026-09-17T01:00:00Z', url: 'https://read.readwise.io/read/doc'
+  })!;
+
+  const body = prepareReadwiseApiDocuments([document], [])[0]?.body ?? '';
+  expect(body).toContain('created_at: 2026-09-17T00:00:00Z');
+  expect(body).toContain('image_url: https://example.com/image.jpg');
+  expect(body).toContain('notes: Notes');
+  expect(body).toContain('parent_id: parent');
+  expect(body).toContain('raw_source_url: https://example.com/raw');
+  expect(body).toContain('source_url: https://example.com/source');
+  expect(body).toContain('summary: Summary');
+  expect(body).toContain('tags:\n  favorite:\n    name: Favorite');
+  expect(body).toContain('updated_at: 2026-09-17T01:00:00Z');
+  expect(body).toContain('url: https://read.readwise.io/read/doc');
+  expect(body).toContain('---\n\n# Title\n\nBody');
 });
 
 it('rejects a highlight whose Export book and Reader ancestry disagree', () => {

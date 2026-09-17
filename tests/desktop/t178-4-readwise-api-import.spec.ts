@@ -19,7 +19,8 @@ async function installApiFixture(electronApp: ElectronApplication) {
   await electronApp.evaluate(({ clipboard }, token) => {
     const scope = globalThis as typeof globalThis;
     const article = (id: string, body: string) => ({
-      category: 'article', html_content: `<p>${body}</p>`, id, title: id,
+      author: 'API Author', category: 'article', html_content: `<p>${body}</p>`, id,
+      source_url: `https://example.com/${id}`, summary: `Summary for ${id}`, title: id,
       updated_at: '2026-09-07T00:00:00.000Z'
     });
     scope.fetch = async (input) => {
@@ -69,7 +70,10 @@ test('starts automatically and repeats a Reader API import safely', async ({ bro
     await capture(settings, testInfo, 't178-4-api-automatic-import');
 
     const firstCounts = await inspectImportedState(session.electronApp, true);
-    expect(firstCounts).toMatchObject({ annotationContentPreserved: true, importSources: 2, readwiseNodes: 3 });
+    expect(firstCounts).toMatchObject({
+      annotationContentPreserved: true, importSources: 2, metadataProjected: true,
+      readwiseNodes: 3, titleHeadingProjected: true
+    });
     await runApiImport(session.electronApp);
     expect(await inspectImportedState(session.electronApp, false)).toEqual(firstCounts);
   } finally {
@@ -112,9 +116,14 @@ async function inspectImportedState(electronApp: ElectronApplication, addLocalEd
           && annotation.content.includes('Reader note'),
         bodyPreserved: current?.content.includes('Local edit') ?? false,
         importSources: driver.queryOne("SELECT COUNT(*) count FROM import_sources WHERE remote_provider='readwise'").count,
+        metadataProjected: current?.content.includes('author: API Author')
+          && current.content.includes('full_title: article-1')
+          && current.content.includes('summary: Summary for article-1')
+          && current.content.includes('source_url: https://example.com/article-1'),
         readwiseNodes: driver.queryOne(`SELECT COUNT(*) count FROM nodes WHERE deleted_at IS NULL AND
           (id LIKE 'node-readwise-%' OR import_source_fingerprint IN
-            (SELECT source_fingerprint FROM import_sources WHERE remote_provider='readwise'))`).count
+            (SELECT source_fingerprint FROM import_sources WHERE remote_provider='readwise'))`).count,
+        titleHeadingProjected: current?.content.includes('---\n\n# article-1\n\nBody with quoted passage')
       };
     });
   }, { addLocalEdit, cwd: process.cwd() });
