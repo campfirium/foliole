@@ -36,8 +36,11 @@ beforeEach(() => {
 it('requests only the selected Reader document with its current body on every preparation', async () => {
   mocks.request.mockResolvedValue({ results: [readerDocument('article', '<p>Current body.</p>')] });
 
-  await expect(prepareReadwiseSourceResync(target, { minIntervalMs: 0 }))
-    .resolves.toMatchObject({ document: { body: 'Current body.', id: 'document-1' } });
+  const prepared = await prepareReadwiseSourceResync(target, { minIntervalMs: 0 });
+  expect(prepared.document).toMatchObject({ id: 'document-1' });
+  expect(prepared.document.body).toContain('id: document-1');
+  expect(prepared.document.body).toContain('# Source');
+  expect(prepared.document.body).toContain('Current body.');
   await prepareReadwiseSourceResync(target, { minIntervalMs: 0 });
 
   expect(mocks.request).toHaveBeenCalledTimes(2);

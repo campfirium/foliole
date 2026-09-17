@@ -42,7 +42,7 @@ beforeEach(() => {
   });
 });
 
-it('shows only the pending initial sync after API migration completes', async () => {
+it('keeps the normal sync action available after API activation', async () => {
   render(<LocalizationProvider><ReadwiseSourceModeSection
     apiMigrationCompleted
     apiSettings={createReadwiseApiModeTestSettings()}
@@ -51,9 +51,10 @@ it('shows only the pending initial sync after API migration completes', async ()
     onChange={() => undefined}
   /></LocalizationProvider>);
 
-  expect(await screen.findByText('First sync pending')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Sync now' })).toBeEnabled();
   expect(screen.queryByText('API enabled')).not.toBeInTheDocument();
-  expect(screen.getByRole('status').querySelector('.animate-spin')).toBeNull();
+  expect(screen.queryByText('First sync pending')).not.toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
 it('does not repeat the selected API mode after the initial sync completes', async () => {

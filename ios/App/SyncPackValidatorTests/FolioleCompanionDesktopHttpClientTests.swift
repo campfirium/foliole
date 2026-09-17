@@ -37,14 +37,15 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: sharedFixtureURL()))
             as? [String: Any]
         let roleKey = try XCTUnwrap(fixture?["role_txt_key"] as? String)
+        let protocolVersion = String(try XCTUnwrap(fixture?["production_protocol_version"] as? Int))
         let record = NetService.data(fromTXTRecord: [
             roleKey: Data("anchor".utf8),
-            "protocol_version": Data("6".utf8)
+            "protocol_version": Data(protocolVersion.utf8)
         ])
         let decoded = FolioleCompanionBonjourTXT.decode(record)
 
         XCTAssertEqual(decoded[roleKey], "anchor")
-        XCTAssertEqual(decoded["protocol_version"], "6")
+        XCTAssertEqual(decoded["protocol_version"], protocolVersion)
     }
 
     func testRefusesSignedRequestRedirects() throws {
