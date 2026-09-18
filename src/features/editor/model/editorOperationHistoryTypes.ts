@@ -14,9 +14,9 @@ export interface EditorAnnotationOperationSnapshot {
 }
 
 export interface EditorTextEditOperationEntry {
-  afterContent: string;
+  afterDigest: string;
   afterSelection: EditorOperationSelectionSnapshot;
-  beforeContent: string;
+  beforeDigest: string;
   beforeSelection: EditorOperationSelectionSnapshot;
   forwardChanges: ChangeSet;
   inverseChanges: ChangeSet;

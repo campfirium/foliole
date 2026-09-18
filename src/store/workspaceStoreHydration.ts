@@ -1,3 +1,6 @@
+import { deserializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
+import { loadEditorOperationHistoryFromRuntime } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
+
 import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry';
 import { useWorkspaceStore } from './workspaceStore';
 
@@ -20,7 +23,11 @@ export function ensureWorkspaceHydrated() {
   reportWorkspaceHydrateBootStage('requested');
   useWorkspaceStore.setState({ workspaceHydrationError: null });
   workspaceHydrationPromise = Promise.resolve(useWorkspaceStore.persist.rehydrate())
-    .then(() => {
+    .then(async () => {
+      const payload = await loadEditorOperationHistoryFromRuntime();
+      if (payload !== null) {
+        useWorkspaceStore.setState({ editorOperationHistory: deserializeEditorOperationHistory(payload) });
+      }
       reportWorkspaceHydrateBootStage('resolved');
     })
     .catch((error) => {

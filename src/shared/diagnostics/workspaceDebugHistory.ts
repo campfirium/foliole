@@ -2,14 +2,15 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export interface WorkspaceDebugOperationHistory {
   invalidations: Array<{ nodeId: string; reason: string }>;
-  redoStack: Array<{ nodeId?: string; type: string }>;
-  undoStack: Array<{ nodeId?: string; type: string }>;
+  redoStack: Array<{ nodeId?: string; type: string; userEvent?: string }>;
+  undoStack: Array<{ nodeId?: string; type: string; userEvent?: string }>;
 }
 
-function toDebugOperationEntry(entry: { nodeId?: string; type: string }) {
+function toDebugOperationEntry(entry: { nodeId?: string; type: string; userEvent?: string }) {
   return {
     ...('nodeId' in entry ? { nodeId: entry.nodeId } : {}),
-    type: entry.type
+    type: entry.type,
+    ...('userEvent' in entry ? { userEvent: entry.userEvent } : {})
   };
 }
 

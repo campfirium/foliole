@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
+import {
+  applyTextHistoryEntry,
+  createTextHistoryEntry
+} from '../features/editor/model/editorOperationHistory.testSupport';
 
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -107,7 +110,7 @@ function registerHistoryTitleSyncCoverage() {
     historyActions.pushEditorOperationEntry(entry);
     await harness.getState().updateNodeContent('node-1', '# Changed title\n\nBody');
     const applyText = (mode: 'redo' | 'undo') => {
-      const content = mode === 'undo' ? entry.beforeContent : entry.afterContent;
+      const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent('node-1', content, { publishLocal: true });
       return true;
     };

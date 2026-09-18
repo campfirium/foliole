@@ -2,12 +2,14 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { digestEditorContent } from '../model/editorContentDigest';
 import type { EditorTextEditOperationEntry } from '../model/editorOperationHistory';
 
 import {
   applyCodeMirrorTextHistory,
   collectCodeMirrorTextHistoryEntries
 } from './codeMirrorTextHistory';
+import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 
 let view: EditorView | null = null;
 
@@ -31,17 +33,48 @@ function createView() {
   return { entries, view };
 }
 
+describe('CodeMirror text history admission', () => {
+  it('captures rich HTML paste through the CodeMirror user transaction contract', () => {
+    const runtime = createView();
+
+    expect(handleMarkdownCompatibleHtmlPaste({
+      getData: (format: string) => format === 'text/html' ? '<p><strong>Bold</strong> text</p>' : ''
+    }, runtime.view)).toBe(true);
+
+    expect(runtime.view.state.doc.toString()).toBe('**Bold** textA');
+    expect(runtime.entries).toHaveLength(1);
+    expect(runtime.entries[0]).toMatchObject({
+      afterDigest: digestEditorContent('**Bold** textA'),
+      beforeDigest: digestEditorContent('A'),
+      userEvent: 'input.paste'
+    });
+  });
+
+  it('does not turn an unannotated programmatic document sync into user history', () => {
+    const runtime = createView();
+
+    runtime.view.dispatch({ changes: { from: 0, to: 1, insert: 'Synced' } });
+
+    expect(runtime.view.state.doc.toString()).toBe('Synced');
+    expect(runtime.entries).toEqual([]);
+  });
+});
+
 describe('CodeMirror text history transactions', () => {
   it('captures exact user changes and replays undo without creating a second history entry', () => {
     const runtime = createView();
     runtime.view.dispatch({ changes: { from: 1, insert: 'B' }, userEvent: 'input.type' });
     const entry = runtime.entries[0]!;
 
-    expect(entry).toMatchObject({ afterContent: 'AB', beforeContent: 'A', nodeId: 'node-1' });
+    expect(entry).toMatchObject({
+      afterDigest: digestEditorContent('AB'),
+      beforeDigest: digestEditorContent('A'),
+      nodeId: 'node-1'
+    });
     expect(applyCodeMirrorTextHistory({
       changes: entry.inverseChanges,
-      expectedContent: 'AB',
-      expectedNextContent: 'A',
+      expectedDigest: digestEditorContent('AB'),
+      expectedNextDigest: digestEditorContent('A'),
       selection: entry.beforeSelection,
       userEvent: 'undo',
       view: runtime.view
@@ -58,15 +91,17 @@ describe('CodeMirror text history transactions', () => {
 
     expect(applyCodeMirrorTextHistory({
       changes: entry.inverseChanges,
-      expectedContent: 'AB',
-      expectedNextContent: 'A',
+      expectedDigest: digestEditorContent('AB'),
+      expectedNextDigest: digestEditorContent('A'),
       selection: entry.beforeSelection,
       userEvent: 'undo',
       view: runtime.view
     })).toBe(false);
     expect(runtime.view.state.doc.toString()).toBe('ABC');
   });
+});
 
+describe('CodeMirror text history selection', () => {
   it('restores the exact pre-edit selection during undo', () => {
     const runtime = createView();
     runtime.view.dispatch({ selection: { anchor: 0, head: 1 } });
@@ -75,8 +110,8 @@ describe('CodeMirror text history transactions', () => {
 
     expect(applyCodeMirrorTextHistory({
       changes: entry.inverseChanges,
-      expectedContent: 'B',
-      expectedNextContent: 'A',
+      expectedDigest: digestEditorContent('B'),
+      expectedNextDigest: digestEditorContent('A'),
       selection: entry.beforeSelection,
       userEvent: 'undo',
       view: runtime.view
@@ -85,8 +120,8 @@ describe('CodeMirror text history transactions', () => {
 
     expect(applyCodeMirrorTextHistory({
       changes: entry.forwardChanges,
-      expectedContent: 'A',
-      expectedNextContent: 'B',
+      expectedDigest: digestEditorContent('A'),
+      expectedNextDigest: digestEditorContent('B'),
       selection: entry.afterSelection,
       userEvent: 'redo',
       view: runtime.view

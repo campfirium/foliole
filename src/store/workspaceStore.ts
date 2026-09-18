@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
+import { serializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
+import { scheduleEditorOperationHistorySave } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
@@ -190,5 +192,10 @@ workspaceStore.setState = ((partial, replace) =>
   }) as typeof workspaceStore.setState;
 
 registerPendingNodeSyncRendererBoundary(workspaceStore);
+
+workspaceStore.subscribe((state, previousState) => {
+  if (state.editorOperationHistory === previousState.editorOperationHistory) return;
+  void scheduleEditorOperationHistorySave(serializeEditorOperationHistory(state.editorOperationHistory));
+});
 
 export const useWorkspaceStore = workspaceStore;

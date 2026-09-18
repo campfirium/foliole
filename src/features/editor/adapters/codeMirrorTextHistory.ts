@@ -1,12 +1,11 @@
 import { EditorSelection, Transaction, type ChangeSet } from '@codemirror/state';
 import type { EditorView, ViewUpdate } from '@codemirror/view';
 
+import { digestEditorContent } from '../model/editorContentDigest';
 import type {
   EditorOperationSelectionSnapshot,
   EditorTextEditOperationEntry
 } from '../model/editorOperationHistory';
-
-const USER_TEXT_EVENT = /^(input|delete|move)($|\.)/;
 
 function toSelectionSnapshot(selection: EditorSelection): EditorOperationSelectionSnapshot {
   return {
@@ -26,17 +25,13 @@ export function collectCodeMirrorTextHistoryEntries(update: ViewUpdate, nodeId: 
   if (!nodeId) return [];
   return update.transactions.flatMap((transaction): EditorTextEditOperationEntry[] => {
     const userEvent = transaction.annotation(Transaction.userEvent) ?? '';
-    if (
-      !transaction.docChanged ||
-      transaction.annotation(Transaction.addToHistory) === false ||
-      !USER_TEXT_EVENT.test(userEvent)
-    ) {
+    if (!transaction.docChanged || transaction.annotation(Transaction.addToHistory) === false || !userEvent) {
       return [];
     }
     return [{
-      afterContent: transaction.newDoc.toString(),
+      afterDigest: digestEditorContent(transaction.newDoc.toString()),
       afterSelection: toSelectionSnapshot(transaction.newSelection),
-      beforeContent: transaction.startState.doc.toString(),
+      beforeDigest: digestEditorContent(transaction.startState.doc.toString()),
       beforeSelection: toSelectionSnapshot(transaction.startState.selection),
       forwardChanges: transaction.changes,
       inverseChanges: transaction.changes.invert(transaction.startState.doc),
@@ -51,13 +46,13 @@ export function collectCodeMirrorTextHistoryEntries(update: ViewUpdate, nodeId: 
 
 export function applyCodeMirrorTextHistory(args: {
   changes: ChangeSet;
-  expectedContent: string;
-  expectedNextContent: string;
+  expectedDigest: string;
+  expectedNextDigest: string;
   selection: EditorOperationSelectionSnapshot;
   userEvent: 'redo' | 'undo';
   view: EditorView;
 }) {
-  if (args.view.state.doc.toString() !== args.expectedContent) return false;
+  if (digestEditorContent(args.view.state.doc.toString()) !== args.expectedDigest) return false;
   try {
     args.view.dispatch({
       annotations: Transaction.addToHistory.of(false),
@@ -69,7 +64,7 @@ export function applyCodeMirrorTextHistory(args: {
   } catch {
     return false;
   }
-  return args.view.state.doc.toString() === args.expectedNextContent;
+  return digestEditorContent(args.view.state.doc.toString()) === args.expectedNextDigest;
 }
 
 export class CodeMirrorTextHistoryController {
@@ -92,14 +87,14 @@ export class CodeMirrorTextHistoryController {
     const replay = mode === 'undo'
       ? {
           changes: entry.inverseChanges,
-          expectedContent: entry.afterContent,
-          expectedNextContent: entry.beforeContent,
+          expectedDigest: entry.afterDigest,
+          expectedNextDigest: entry.beforeDigest,
           selection: entry.beforeSelection
         }
       : {
           changes: entry.forwardChanges,
-          expectedContent: entry.beforeContent,
-          expectedNextContent: entry.afterContent,
+          expectedDigest: entry.beforeDigest,
+          expectedNextDigest: entry.afterDigest,
           selection: entry.afterSelection
         };
     this.applying = true;

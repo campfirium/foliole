@@ -1,5 +1,6 @@
 import { beforeAll, expect, it } from 'vitest';
 
+import { digestEditorContent } from '../../features/editor/model/editorContentDigest';
 import {
   createEmptyEditorOperationHistory,
   moveEditorOperationEntry,
@@ -109,9 +110,9 @@ it('uses the last focused answer document for command state and titles', () => {
   const history = pushEditorOperationEntry(
     createEmptyEditorOperationHistory(),
     {
-      afterContent: 'Answer after',
+      afterDigest: digestEditorContent('Answer after'),
       afterSelection: { mainIndex: 0, ranges: [{ anchor: 6, head: 6 }] },
-      beforeContent: 'Answer before',
+      beforeDigest: digestEditorContent('Answer before'),
       beforeSelection: { mainIndex: 0, ranges: [{ anchor: 0, head: 6 }] },
       forwardChanges: {} as never,
       inverseChanges: {} as never,

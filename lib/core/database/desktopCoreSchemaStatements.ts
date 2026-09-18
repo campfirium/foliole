@@ -1,4 +1,5 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 
 export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
@@ -153,5 +154,6 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     updated_at TEXT NOT NULL,
     PRIMARY KEY (node_id, host_name)
   )`,
+  ...EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS,
   ...CORE_INDEX_SCHEMA_STATEMENTS
 ];

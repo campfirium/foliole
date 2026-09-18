@@ -1,6 +1,8 @@
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { digestEditorContent } from '../model/editorContentDigest';
+
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
 function createAdapter() {
@@ -134,8 +136,8 @@ it('captures an explicitly marked range replacement for undo and redo', () => {
   };
   const entry = meta.textTransactions?.[0];
   expect(entry).toMatchObject({
-    afterContent: 'clean content',
-    beforeContent: 'old content',
+    afterDigest: digestEditorContent('clean content'),
+    beforeDigest: digestEditorContent('old content'),
     userEvent: 'input.format-cleanup'
   });
   expect(adapter.applyTextHistory(entry!, 'undo')).toBe(true);

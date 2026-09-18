@@ -1,6 +1,6 @@
+import { digestEditorContent } from '../features/editor/model/editorContentDigest';
 import {
   getEditorOperationTopEntry,
-  invalidateEditorOperationSession,
   isPendingEditorAnnotationEntry,
   moveEditorOperationEntry,
   pushEditorOperationEntry,
@@ -37,7 +37,7 @@ interface QueuedEditorOperation {
 const EDITOR_OPERATION_QUEUE_LIMIT = 50;
 
 function expectedTextContent(entry: Extract<EditorOperationHistoryEntry, { type: 'text.edit' }>, mode: 'redo' | 'undo') {
-  return mode === 'undo' ? entry.afterContent : entry.beforeContent;
+  return mode === 'undo' ? entry.afterDigest : entry.beforeDigest;
 }
 
 function applyTextEntry(args: {
@@ -48,22 +48,11 @@ function applyTextEntry(args: {
   set: WorkspaceSet;
 }) {
   const currentContent = args.context?.getCurrentContent?.() ?? args.context?.currentContent;
-  if (!args.context || args.context.nodeId !== args.nodeId || currentContent !== expectedTextContent(args.entry, args.mode)) {
-    args.set((state) => ({
-      editorOperationHistory: invalidateEditorOperationSession(state.editorOperationHistory, {
-        nodeId: args.nodeId,
-        reason: 'current-content-mismatch'
-      })
-    }));
+  if (!args.context || args.context.nodeId !== args.nodeId ||
+    digestEditorContent(currentContent ?? '') !== expectedTextContent(args.entry, args.mode)) {
     return false;
   }
   if (!args.context.applyText(args.entry, args.mode)) {
-    args.set((state) => ({
-      editorOperationHistory: invalidateEditorOperationSession(state.editorOperationHistory, {
-        nodeId: args.nodeId,
-        reason: 'text-replay-failed'
-      })
-    }));
     return false;
   }
   args.set((state) => ({

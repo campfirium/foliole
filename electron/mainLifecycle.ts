@@ -48,6 +48,7 @@ import {
 } from './mainWindowLifecycle.js';
 import { setMainWindow } from './mainWindowRegistry.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
+import { flushReadingProgressForWindows } from './readingProgressWindowFlush.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
@@ -98,6 +99,7 @@ function installBeforeQuitLifecycle() {
       flushCoalescedWorkspaceSearchInvalidations();
     },
     flush: async () => {
+      await flushReadingProgressForWindows(BrowserWindow.getAllWindows());
       await waitForApplicationDatabaseRestoreSettlement();
       await disposeBackupSearchSessions();
       await flushMirrorSync();

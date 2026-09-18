@@ -48,7 +48,7 @@ export function mergeEditorTextOperations(
 ): EditorTextEditOperationEntry {
   return {
     ...previous,
-    afterContent: next.afterContent,
+    afterDigest: next.afterDigest,
     afterSelection: next.afterSelection,
     forwardChanges: previous.forwardChanges.compose(next.forwardChanges),
     inverseChanges: next.inverseChanges.compose(previous.inverseChanges),

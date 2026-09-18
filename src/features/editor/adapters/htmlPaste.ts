@@ -26,7 +26,8 @@ function dispatchInsertedText(view: EditorView, content: string) {
   const { from, to } = view.state.selection.main;
   view.dispatch({
     changes: { from, insert: content, to },
-    selection: { anchor: from + content.length }
+    selection: { anchor: from + content.length },
+    userEvent: 'input.paste'
   });
   return from;
 }

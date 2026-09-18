@@ -47,7 +47,8 @@ function getDispatch(view: MockEditorView) {
 function expectInsert(view: MockEditorView, changes: { from: number; insert: string; to: number }, anchor: number) {
   expect(getDispatch(view)).toHaveBeenCalledWith({
     changes,
-    selection: { anchor }
+    selection: { anchor },
+    userEvent: 'input.paste'
   });
 }
 

@@ -2,12 +2,14 @@ import process from 'node:process';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
+import { clickNativeHistoryCommand } from './harness/contextualWorkspaceHistory';
 import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const SOURCE_ID = 'playwright-editor-save-source';
 const NEIGHBOR_ID = 'playwright-editor-save-neighbor';
 const BASE_CONTENT = '# Save source\n\nBase body';
+const RICH_PASTE_CONTENT = `${BASE_CONTENT}**CopyQ** rich paste`;
 const CREATED_CONTENT = [
   '# Playwright Created Save Source',
   '',
@@ -148,39 +150,60 @@ test('persists a long pasted body after immediate node switch and relaunch', asy
   }
 });
 
-test('keeps redo available after undoing a committed body edit', async ({ desktopWindow }) => {
-  await expectWorkspaceShell(desktopWindow);
-  await seedSaveWorkspace(desktopWindow);
+test('keeps rich paste undo and redo available after relaunch', async ({ desktopApp, desktopSession, desktopWindow }) => {
+  let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
 
-  await pasteAtEnd(desktopWindow, '\nRedo candidate');
-  await expect.poll(() => collectEditorOperationHistory(desktopWindow)).toMatchObject({
-    undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
-  });
-  await expect
-    .poll(() =>
-      desktopWindow.evaluate((position) =>
-        globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', position, position) ?? false,
-      `${BASE_CONTENT}\nRedo candidate`.length)
-    )
-    .toBe(true);
-  await desktopWindow.locator('.prompt-editor-host .cm-content').press('Control+Z');
-  await expect.poll(() => collectActiveEditorState(desktopWindow)).toMatchObject({
-    activeNodeId: SOURCE_ID,
-    editorContent: BASE_CONTENT,
-    nodeContent: BASE_CONTENT
-  });
+  try {
+    await expectWorkspaceShell(desktopWindow);
+    await seedSaveWorkspace(desktopWindow);
+    await desktopApp.evaluate(({ ClipboardItem, clipboard }) => clipboard.write([new ClipboardItem({
+      'text/html': '<p><strong>CopyQ</strong> rich paste</p>',
+      'text/plain': 'CopyQ rich paste'
+    })]));
+    await pasteAtEnd(desktopWindow, '');
+    await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');
+    await expect.poll(() => collectActiveEditorState(desktopWindow)).toMatchObject({
+      activeNodeId: SOURCE_ID,
+      editorContent: RICH_PASTE_CONTENT,
+      nodeContent: RICH_PASTE_CONTENT
+    });
+    await expect.poll(() => collectEditorOperationHistory(desktopWindow)).toMatchObject({
+      undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
+    });
 
-  await expect
-    .poll(() =>
-      desktopWindow.evaluate((position) =>
-        globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', position, position) ?? false,
-      BASE_CONTENT.length)
-    )
-    .toBe(true);
-  await desktopWindow.locator('.prompt-editor-host .cm-content').press('Control+Shift+Z');
-  await expect.poll(() => collectActiveEditorState(desktopWindow)).toMatchObject({
-    activeNodeId: SOURCE_ID,
-    editorContent: `${BASE_CONTENT}\nRedo candidate`,
-    nodeContent: `${BASE_CONTENT}\nRedo candidate`
-  });
+    const stateRoot = desktopSession.target.runtimeStateRoot;
+    await desktopSession.electronApp.close();
+    secondSession = await launchDesktopSession({
+      env: {
+        ...process.env,
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
+      }
+    });
+    await expectWorkspaceShell(secondSession.firstWindow);
+    await openNode(secondSession.firstWindow, SOURCE_ID);
+    await expect.poll(() => collectEditorOperationHistory(secondSession!.firstWindow)).toMatchObject({
+      undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
+    });
+
+    await secondSession.firstWindow.locator('.prompt-editor-host .cm-content').click();
+    await clickNativeHistoryCommand(secondSession.electronApp, secondSession.firstWindow, 'app.undo');
+    await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
+      activeNodeId: SOURCE_ID,
+      editorContent: BASE_CONTENT,
+      nodeContent: BASE_CONTENT
+    });
+    await expect.poll(() => collectEditorOperationHistory(secondSession!.firstWindow)).toEqual({
+      invalidations: [],
+      redoStack: [{ nodeId: SOURCE_ID, type: 'text.edit', userEvent: 'input.paste' }],
+      undoStack: []
+    });
+    await clickNativeHistoryCommand(secondSession.electronApp, secondSession.firstWindow, 'app.redo');
+    await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
+      activeNodeId: SOURCE_ID,
+      editorContent: RICH_PASTE_CONTENT,
+      nodeContent: RICH_PASTE_CONTENT
+    });
+  } finally {
+    await secondSession?.close();
+  }
 });

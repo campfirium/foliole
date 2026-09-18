@@ -104,6 +104,12 @@ export const workspaceMeta = sqliteTable('workspace_meta', {
   updatedAt: text('updated_at').notNull()
 });
 
+export const editorOperationHistory = sqliteTable('editor_operation_history', {
+  singletonId: integer('singleton_id').primaryKey(),
+  payloadJson: text('payload_json').notNull(),
+  updatedAt: text('updated_at').notNull()
+});
+
 export const nodeViewState = sqliteTable('node_view_state', {
   nodeId: text('node_id').notNull(),
   hostName: text('host_name').notNull(),

@@ -6,6 +6,7 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { getDemoRuntimeNowIso, subscribeDemoRuntimeState, useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { flushEditorOperationHistorySave } from '../../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/runtime/foliolePublishedNavigation';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
@@ -171,9 +172,14 @@ function useEditorDraftCloseFlushRegistration(
     if (!isWorkspaceHydrated) {
       return;
     }
-    window.__folioleFlushPendingEditorDraftBeforeClose = flushPendingEditorDraftImmediately;
+    const flushEditorBeforeClose = async () => {
+      const draftFlushed = await flushPendingEditorDraftImmediately();
+      await flushEditorOperationHistorySave();
+      return draftFlushed;
+    };
+    window.__folioleFlushPendingEditorDraftBeforeClose = flushEditorBeforeClose;
     return () => {
-      if (window.__folioleFlushPendingEditorDraftBeforeClose === flushPendingEditorDraftImmediately) {
+      if (window.__folioleFlushPendingEditorDraftBeforeClose === flushEditorBeforeClose) {
         delete window.__folioleFlushPendingEditorDraftBeforeClose;
       }
     };

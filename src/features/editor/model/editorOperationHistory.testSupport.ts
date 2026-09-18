@@ -1,5 +1,6 @@
 import { ChangeSet, Text } from '@codemirror/state';
 
+import { digestEditorContent } from './editorContentDigest';
 import type {
   EditorAnnotationOperationEntry,
   EditorOperationSelectionSnapshot,
@@ -36,9 +37,9 @@ export function createTextHistoryEntry(args: {
 }): EditorTextEditOperationEntry {
   const forwardChanges = createChanges(args.beforeContent, args.afterContent);
   return {
-    afterContent: args.afterContent,
+    afterDigest: digestEditorContent(args.afterContent),
     afterSelection: cursor(args.afterContent.length),
-    beforeContent: args.beforeContent,
+    beforeDigest: digestEditorContent(args.beforeContent),
     beforeSelection: args.selection ?? cursor(args.beforeContent.length),
     forwardChanges,
     inverseChanges: forwardChanges.invert(Text.of(args.beforeContent.split('\n'))),
@@ -48,6 +49,15 @@ export function createTextHistoryEntry(args: {
     type: 'text.edit',
     userEvent: args.userEvent ?? 'input.type'
   };
+}
+
+export function applyTextHistoryEntry(
+  content: string,
+  entry: EditorTextEditOperationEntry,
+  mode: 'redo' | 'undo'
+) {
+  const document = Text.of(content.split('\n'));
+  return (mode === 'undo' ? entry.inverseChanges : entry.forwardChanges).apply(document).toString();
 }
 
 export function createAnnotationHistoryEntry(

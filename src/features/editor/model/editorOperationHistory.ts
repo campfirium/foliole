@@ -11,7 +11,7 @@ import { canGroupEditorTextOperations, mergeEditorTextOperations } from './edito
 
 export type * from './editorOperationHistoryTypes';
 
-const DEFAULT_OPERATION_LIMIT = 50;
+const DEFAULT_OPERATION_LIMIT = 500;
 const DEFAULT_SESSION_LIMIT = 12;
 const INVALIDATION_LIMIT = 20;
 

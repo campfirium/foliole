@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
+import {
+  applyTextHistoryEntry,
+  createTextHistoryEntry
+} from '../features/editor/model/editorOperationHistory.testSupport';
 
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
@@ -49,7 +52,7 @@ function createHarness() {
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
     applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
-      const content = mode === 'undo' ? entry.beforeContent : entry.afterContent;
+      const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent(entry.nodeId, content);
       return true;
     },

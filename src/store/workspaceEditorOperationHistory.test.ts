@@ -1,3 +1,4 @@
+import { Text } from '@codemirror/state';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getEditorOperationSession } from '../features/editor/model/editorOperationHistory';
@@ -49,7 +50,8 @@ function pushTextEdit(historyActions: ReturnType<typeof createWorkspaceEditorOpe
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
     applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
-      const content = mode === 'undo' ? entry.beforeContent : entry.afterContent;
+      const current = Text.of(harness.getState().nodesById[entry.nodeId]!.content.split('\n'));
+      const content = (mode === 'undo' ? entry.inverseChanges : entry.forwardChanges).apply(current).toString();
       void harness.getState().updateNodeContent(entry.nodeId, content, { publishLocal: false });
       return true;
     },
@@ -77,17 +79,14 @@ describe('workspace editor text history', () => {
     expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed\n\nTyped body');
   });
 
-  it('invalidates only the topic session when current content no longer matches', async () => {
+  it('blocks a mismatch without deleting the topic session', async () => {
     const { harness, historyActions } = createHarness();
     pushTextEdit(historyActions);
     await harness.getState().updateNodeContent('node-1', '# Seed\n\nOther body');
 
     expect(historyActions.undoEditorOperation(createTextContext(harness))).toBe(false);
-    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toEqual([]);
-    expect(harness.getState().editorOperationHistory.invalidations.at(-1)).toEqual({
-      nodeId: 'node-1',
-      reason: 'current-content-mismatch'
-    });
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toHaveLength(1);
+    expect(harness.getState().editorOperationHistory.invalidations).toEqual([]);
   });
 
   it('does not consume topic A history while topic B is active', () => {

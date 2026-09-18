@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { loadEditorOperationHistory, saveEditorOperationHistory } from '../database/editorOperationHistory.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
 import { saveNodeOpenState } from '../database/nodeOpenState.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
@@ -32,6 +33,9 @@ function completeHighValueWrite<T>(result: T) {
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.loadEditorOperationHistory) {
+    return loadEditorOperationHistory();
   }
   if (command === NATIVE_COMMANDS.loadSyncIndex) {
     return loadSyncIndex();
@@ -83,6 +87,10 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
       lastOpenedAt: asTimestamp(args.lastOpenedAt, 'lastOpenedAt'),
       nodeId: asString(args.nodeId, 'nodeId')
     });
+  }
+  if (command === NATIVE_COMMANDS.saveEditorOperationHistory) {
+    saveEditorOperationHistory(asString(args.payloadJson, 'payloadJson'));
+    return null;
   }
   if (command === NATIVE_COMMANDS.saveNodeReadingState) {
     return completeHighValueWrite(saveNodeReadingState({

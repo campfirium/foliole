@@ -1,3 +1,4 @@
+import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
@@ -75,5 +76,11 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 92, migrate: reopenReadwiseBoundOriginalFiles },
   { version: 93, migrate: reopenIncompleteReadwiseCompletion },
   { version: 94, migrate: reopenIncompleteReadwiseCompletion },
-  { version: 95, migrate: reopenIncompleteReadwiseCompletion }
+  { version: 95, migrate: reopenIncompleteReadwiseCompletion },
+  {
+    version: 96,
+    migrate: (sqlite) => {
+      for (const statement of EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    }
+  }
 ];

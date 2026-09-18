@@ -1,7 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { getEditorOperationSession } from '../features/editor/model/editorOperationHistory';
-import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
+import {
+  applyTextHistoryEntry,
+  createTextHistoryEntry
+} from '../features/editor/model/editorOperationHistory.testSupport';
 
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import {
@@ -58,7 +61,7 @@ async function createHighlight(harness: ReturnType<typeof createHarness>['harnes
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
     applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
-      const content = mode === 'undo' ? entry.beforeContent : entry.afterContent;
+      const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent(entry.nodeId, content, { publishLocal: false });
       return true;
     },
