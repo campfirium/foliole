@@ -25,7 +25,7 @@ import {
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
 
 type CompleteDesktopSyncGroupJoinOptions = {
-  onMembershipCommitted?(): void;
+  onMembershipCommitted?(): void | Promise<void>;
 };
 
 export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
@@ -115,10 +115,22 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
     } satisfies DesktopSyncGroupPeer;
   });
   saveDesktopSyncGroupRoute(route);
-  options.onMembershipCommitted?.();
-  await runDesktopSyncCoordinator('initial', route);
-  if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
+  await options.onMembershipCommitted?.();
+  queueInitialSync(route);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
+}
+
+function queueInitialSync(route: DesktopSyncGroupPeer) {
+  void runDesktopSyncCoordinator('initial', route)
+    .then(() => {
+      if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
+    })
+    .catch((error) => {
+      console.info('[sync-group] initial convergence will retry while the member remains active', {
+        error: error instanceof Error ? error.message : String(error),
+        peerDeviceId: route.peer_device_id
+      });
+    });
 }
 
 function isMobileProvider(platform: string) {

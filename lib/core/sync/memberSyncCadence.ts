@@ -26,6 +26,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   private freshnessTimer: Timer | null = null;
   private lastActualSyncAt = 0;
   private readonly now: () => number;
+  private retryNotBeforeAt = 0;
   private stopped = false;
   private trailingInput: Input | null = null;
   private trailingTimer: Timer | null = null;
@@ -60,6 +61,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
 
   markActualSync(at = this.now()) {
     this.lastActualSyncAt = Math.max(this.lastActualSyncAt, Math.min(at, this.now()));
+    this.retryNotBeforeAt = 0;
     this.scheduleFreshness();
   }
 
@@ -105,7 +107,10 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     this.clearTimer(this.freshnessTimer);
     this.freshnessTimer = null;
     if (this.stopped || !this.eligible || !this.freshnessInput) return;
-    const dueAt = (this.lastActualSyncAt || this.now()) + MEMBER_SYNC_FRESHNESS_MS;
+    const dueAt = Math.max(
+      (this.lastActualSyncAt || this.now()) + MEMBER_SYNC_FRESHNESS_MS,
+      this.retryNotBeforeAt
+    );
     const delay = Math.min(MAX_TIMER_DELAY_MS, Math.max(0, dueAt - this.now()));
     this.freshnessTimer = setTimeout(() => {
       this.freshnessTimer = null;
@@ -155,6 +160,10 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
       if (this.activeRun !== tracked) return;
       this.activeRun = null;
       if (didSync) this.markActualSync();
+      else {
+        this.retryNotBeforeAt = this.now() + MEMBER_SYNC_FRESHNESS_MS;
+        this.scheduleFreshness();
+      }
       if (this.trailingInput) this.scheduleTrailingCheck();
     });
     this.activeRun = tracked;

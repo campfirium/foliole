@@ -110,17 +110,34 @@ it('runs freshness once per minute only while eligible', async () => {
   expect(run).toHaveBeenCalledOnce();
 });
 
-it('does not reset freshness after a skipped or failed run', async () => {
+it('retries skipped and failed runs once per freshness interval', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(10_000);
   const run = vi.fn<(input: string) => Promise<string>>()
-    .mockResolvedValueOnce('skipped').mockRejectedValueOnce(new Error('offline'));
+    .mockResolvedValueOnce('skipped')
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce('completed');
   const cadence = createMemberSyncCadence({ didSync: (result) => result === 'completed', run });
   cadence.updateFreshness({ eligible: true, input: 'freshness', lastActualSyncAt: 10_000 });
 
   await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
   expect(run).toHaveBeenCalledOnce();
-  await expect(cadence.requestImmediate('foreground')).rejects.toThrow('offline');
   await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
   expect(run).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
+  expect(run).toHaveBeenCalledTimes(3);
+});
+
+it('cancels a queued retry when the member becomes ineligible', async () => {
+  vi.useFakeTimers();
+  const run = vi.fn<(input: string) => Promise<string>>().mockRejectedValue(new Error('offline'));
+  const cadence = createMemberSyncCadence({ didSync: (result) => result === 'completed', run });
+  cadence.updateFreshness({ eligible: true, input: 'freshness' });
+
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS);
+  expect(run).toHaveBeenCalledOnce();
+  cadence.updateFreshness({ eligible: false, input: null });
+  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_FRESHNESS_MS * 2);
+
+  expect(run).toHaveBeenCalledOnce();
 });

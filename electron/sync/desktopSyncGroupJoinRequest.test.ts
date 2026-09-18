@@ -106,7 +106,7 @@ it('requests a Device-scoped join without retired library or authorization metad
   expect(mocks.savePending).toHaveBeenCalledOnce();
 });
 
-it('activates the provider Device route and initial coordinator after acceptance', async () => {
+it('commits membership before queueing initial convergence', async () => {
   mocks.state.pending = {
     candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
@@ -114,8 +114,12 @@ it('activates the provider Device route and initial coordinator after acceptance
   };
   mocks.existingGroup = JOINED_GROUP;
 
-  await completeDesktopSyncGroupJoin();
+  const onMembershipCommitted = vi.fn(async () => {
+    expect(mocks.coordinator).not.toHaveBeenCalled();
+  });
+  await completeDesktopSyncGroupJoin({ onMembershipCommitted });
 
+  expect(onMembershipCommitted).toHaveBeenCalledOnce();
   expect(mocks.route).toHaveBeenCalledWith({
     endpoint_url: CANDIDATE.endpoint_url, group_id: 'group-1',
     local_device_id: DEVICE.identity_key, peer_device_id: CANDIDATE.provider_device_id,
@@ -125,7 +129,7 @@ it('activates the provider Device route and initial coordinator after acceptance
   expect(mocks.coordinator).toHaveBeenCalledWith('initial', expect.any(Object));
 });
 
-it('announces committed membership even when the initial sync fails', async () => {
+it('keeps the committed membership successful when initial sync fails', async () => {
   mocks.state.pending = {
     candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
@@ -135,8 +139,8 @@ it('announces committed membership even when the initial sync fails', async () =
   mocks.coordinator.mockRejectedValueOnce(new Error('initial_sync_failed'));
   const onMembershipCommitted = vi.fn();
 
-  await expect(completeDesktopSyncGroupJoin({ onMembershipCommitted }))
-    .rejects.toThrow('initial_sync_failed');
+  await expect(completeDesktopSyncGroupJoin({ onMembershipCommitted })).resolves.toBe(JOINED_GROUP);
+  await vi.waitFor(() => expect(mocks.coordinator).toHaveBeenCalledOnce());
 
   expect(onMembershipCommitted).toHaveBeenCalledOnce();
   expect(mocks.savePending).toHaveBeenCalledWith(null);

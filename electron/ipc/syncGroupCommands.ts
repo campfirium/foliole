@@ -144,14 +144,12 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin) {
     await completeDesktopSyncGroupJoin({
-      onMembershipCommitted: () => {
+      onMembershipCommitted: async () => {
         getMainWindow()?.webContents.send(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL);
+        await activateDesktopCompanionSync(runtimeIdentity());
       }
     });
-    return runWithDatabaseConnectionOwner(async () => {
-      await activateDesktopCompanionSync(runtimeIdentity());
-      return overview();
-    });
+    return runWithDatabaseConnectionOwner(() => overview());
   }
   if (command === NATIVE_COMMANDS.enableCompanionSync) await enableDesktopCompanionSync(runtimeIdentity());
   else if (command === NATIVE_COMMANDS.disableCompanionSync) await disableDesktopCompanionSync();
