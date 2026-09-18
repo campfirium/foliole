@@ -1,48 +1,21 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
-import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
+import {
+  getUndoRouterContentDocumentId,
+  getUndoRouterOwner,
+  setUndoRouterTarget,
+  subscribeUndoRouter
+} from '../../store/workspaceUndoRouter';
 
-export type UndoRouterOwner = 'content' | 'workspace';
-
-let owner: UndoRouterOwner = 'workspace';
-let contentDocumentId: string | null = null;
-const listeners = new Set<() => void>();
-const contentContexts = new Map<string, EditorOperationApplyContext>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-export function getUndoRouterOwner() {
-  return owner;
-}
-
-export function setUndoRouterOwner(nextOwner: UndoRouterOwner) {
-  setUndoRouterTarget(nextOwner, nextOwner === 'content' ? contentDocumentId : null);
-}
-
-export function getUndoRouterContentDocumentId() {
-  return contentDocumentId;
-}
-
-export function setUndoRouterTarget(nextOwner: UndoRouterOwner, nextContentDocumentId: string | null) {
-  if (owner === nextOwner && contentDocumentId === nextContentDocumentId) return;
-  owner = nextOwner;
-  contentDocumentId = nextContentDocumentId;
-  listeners.forEach((listener) => listener());
-}
-
-export function registerUndoRouterContentContext(documentId: string, context: EditorOperationApplyContext) {
-  contentContexts.set(documentId, context);
-  return () => {
-    if (contentContexts.get(documentId) === context) contentContexts.delete(documentId);
-  };
-}
-
-export function getUndoRouterContentContext(fallback: EditorOperationApplyContext | undefined) {
-  return contentDocumentId ? contentContexts.get(contentDocumentId) : fallback;
-}
+export {
+  getUndoRouterContentContext,
+  getUndoRouterContentDocumentId,
+  getUndoRouterOwner,
+  registerUndoRouterContentContext,
+  setUndoRouterOwner,
+  setUndoRouterTarget,
+  type UndoRouterOwner
+} from '../../store/workspaceUndoRouter';
 
 export function resolveUndoRouterOwner(target: EventTarget | null) {
   if (!(target instanceof Element) || target.closest('[role="dialog"]')) return null;
@@ -52,11 +25,11 @@ export function resolveUndoRouterOwner(target: EventTarget | null) {
 }
 
 export function useUndoRouterOwner() {
-  return useSyncExternalStore(subscribe, getUndoRouterOwner, getUndoRouterOwner);
+  return useSyncExternalStore(subscribeUndoRouter, getUndoRouterOwner, getUndoRouterOwner);
 }
 
 export function useUndoRouterContentDocumentId() {
-  return useSyncExternalStore(subscribe, getUndoRouterContentDocumentId, getUndoRouterContentDocumentId);
+  return useSyncExternalStore(subscribeUndoRouter, getUndoRouterContentDocumentId, getUndoRouterContentDocumentId);
 }
 
 export function useUndoRouterSurfaceTracking() {

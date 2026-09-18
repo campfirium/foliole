@@ -128,6 +128,20 @@ it('leaves current node editing after an editor Escape handler only blurs the ed
   });
 });
 
+it('accepts Delete immediately after editor blur without waiting for a timer', () => {
+  vi.useFakeTimers();
+  const deleteNode = vi.fn();
+  render(<HookHarness deleteNode={deleteNode} />);
+  const editor = screen.getByRole('textbox');
+  editor.focus();
+  fireEvent.focusIn(editor);
+
+  act(() => editor.blur());
+  fireEvent.keyDown(window, { key: 'Delete' });
+
+  expect(deleteNode).toHaveBeenCalledWith('node-1');
+});
+
 it('keeps current node editing context through a dialog and native Escape clears it outside review mode', async () => {
   const dispatchNativeKeyboard = installNativeKeyboardBridge();
   vi.useFakeTimers();

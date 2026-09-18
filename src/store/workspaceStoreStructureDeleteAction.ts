@@ -7,6 +7,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { createWorkspaceDeleteHistoryEntry, type WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import type { WorkspaceState } from './workspaceStore';
 import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
@@ -96,7 +97,9 @@ async function deleteWithWorkspaceHistory(args: {
   if (!mutation) return;
   const entry = createDeleteEntry(snapshot, mutation);
   if (!entry) return;
-  args.set((state) => ({ appActionHistory: beginWorkspaceAction(state.appActionHistory, entry) }));
+  acceptWorkspaceHistoryCommand(args.set, 'workspace', (state) => ({
+    appActionHistory: beginWorkspaceAction(state.appActionHistory, entry)
+  }));
   let result: Awaited<ReturnType<typeof commitWorkspaceDelete>>;
   try {
     result = await commitWorkspaceDelete(args.runtimeHandlers, mutation);

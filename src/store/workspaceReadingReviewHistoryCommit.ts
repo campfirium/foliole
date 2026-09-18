@@ -7,6 +7,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
 import {
@@ -49,7 +50,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
     const result = args.buildPatch(args.get());
     if (!result) return false;
     let began = false;
-    args.set((state) => {
+    acceptWorkspaceHistoryCommand(args.set, 'preserve', (state) => {
       if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate) return state;
       began = true;

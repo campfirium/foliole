@@ -79,7 +79,8 @@ function useCurrentNodeEditingState(blocked: boolean, editingContextRef: Mutable
     syncEditingState(document.activeElement);
     const handleFocusIn = (event: FocusEvent) => syncEditingState(event.target);
     const handleFocus = (event: FocusEvent) => syncEditingState(event.target);
-    const handleFocusOut = () => {
+    const handleFocusOut = (event: FocusEvent) => {
+      if (event.type === 'focusout') syncEditingState(event.relatedTarget);
       window.setTimeout(() => syncEditingState(document.activeElement), 0);
     };
     window.addEventListener('focusin', handleFocusIn);

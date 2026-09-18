@@ -7,12 +7,24 @@ import {
 } from '../../features/editor/model/editorOperationHistory';
 import { createAnnotationHistoryEntry } from '../../features/editor/model/editorOperationHistory.testSupport';
 import { preloadTranslationCatalog, translate } from '../../shared/localization/translations';
-import { createEmptyWorkspaceActionHistory } from '../../store/workspaceActionHistory';
+import { beginWorkspaceAction, createEmptyWorkspaceActionHistory } from '../../store/workspaceActionHistory';
+import { createStructureRenameEntry } from '../../store/workspaceStructureHistoryEntries';
 
 import { resolveEditorAwarePaletteHistoryOptions } from './useAppPaletteItems';
 
 const t = translate.bind(null, 'en');
 const zhHans = translate.bind(null, 'zh-Hans');
+
+it('offers undo while saving a workspace operation and disables stale redo', () => {
+  const entry = createStructureRenameEntry({ afterTitle: 'New', beforeTitle: 'Old', kind: 'topic', nodeId: 'node-1' });
+  const appActionHistory = beginWorkspaceAction({ ...createEmptyWorkspaceActionHistory(), redoStack: [entry] }, entry);
+  const options = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-1', appActionHistory, editorOperationHistory: createEmptyEditorOperationHistory(), owner: 'workspace', t
+  });
+  expect(options).toMatchObject({
+    canUndoWorkspaceAction: true, canRedoWorkspaceAction: false, undoWorkspaceActionTitle: 'Undo Rename Topic'
+  });
+});
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');

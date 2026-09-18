@@ -1,10 +1,5 @@
 import { useMemo } from 'react';
 
-import {
-  getEditorOperationTopEntry,
-  getEditorOperationRedoTitle,
-  getEditorOperationUndoTitle
-} from '../../features/editor/model/editorOperationHistory';
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import {
@@ -15,8 +10,9 @@ import {
 import { useContentRegionScaleCommandRevision } from '../../shared/commands/contentRegionScaleCommands';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
-import { getWorkspaceRedoTitle, getWorkspaceUndoTitle } from '../../store/workspaceActionHistory';
+import { getHistoryCommandState } from '../../store/historyCommands';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
+import { resolveUndoCommandTarget } from '../../store/workspaceUndoRouter';
 
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -62,32 +58,19 @@ function canReimportSelectedTopic(args: {
 export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
   contentDocumentId?: string | null;
-  appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
-  editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
+  appActionHistory: Parameters<typeof getHistoryCommandState>[0]['appActionHistory'];
+  editorOperationHistory: Parameters<typeof getHistoryCommandState>[0]['editorOperationHistory'];
   owner: UndoRouterOwner;
   t: Translate;
 }) {
-  const contentOwner = args.owner === 'content';
-  const historyNodeId = contentOwner ? args.contentDocumentId ?? args.activeNodeId : args.activeNodeId;
-  const undoEntry = getEditorOperationTopEntry(args.editorOperationHistory, historyNodeId, 'undo');
-  const redoEntry = getEditorOperationTopEntry(args.editorOperationHistory, historyNodeId, 'redo');
-  const canUndoEditorOperation = Boolean(undoEntry && (undoEntry.type === 'text.edit' || !undoEntry.applyingMode));
-  const canRedoEditorOperation = Boolean(redoEntry && (redoEntry.type === 'text.edit' || !redoEntry.applyingMode));
+  const target = resolveUndoCommandTarget(args.owner, args.contentDocumentId, args.activeNodeId);
+  const undo = getHistoryCommandState({ ...args, mode: 'undo', target });
+  const redo = getHistoryCommandState({ ...args, mode: 'redo', target });
   return {
-    canRedoWorkspaceAction: contentOwner
-      ? canRedoEditorOperation
-      : !args.appActionHistory.applying && args.appActionHistory.redoStack.length > 0,
-    canUndoWorkspaceAction: contentOwner
-      ? canUndoEditorOperation
-      : !args.appActionHistory.applying && Boolean(
-          args.appActionHistory.pendingCreate || args.appActionHistory.undoStack.length > 0
-        ),
-    redoWorkspaceActionTitle: contentOwner
-      ? getEditorOperationRedoTitle(args.editorOperationHistory, historyNodeId, args.t)
-      : getWorkspaceRedoTitle(args.appActionHistory, args.t),
-    undoWorkspaceActionTitle: contentOwner
-      ? getEditorOperationUndoTitle(args.editorOperationHistory, historyNodeId, args.t)
-      : getWorkspaceUndoTitle(args.appActionHistory, args.t)
+    canRedoWorkspaceAction: redo.enabled,
+    canUndoWorkspaceAction: undo.enabled,
+    redoWorkspaceActionTitle: redo.title,
+    undoWorkspaceActionTitle: undo.title
   };
 }
 

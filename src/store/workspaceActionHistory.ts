@@ -1,6 +1,7 @@
 import type { Translate } from '../shared/localization/LocalizationProvider';
 
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
+import { resolveWorkspaceHistoryCommand } from './workspaceHistoryCommandState';
 import { applyWorkspaceHistoryEntry } from './workspaceHistoryEntryApply';
 import type { WorkspaceState } from './workspaceStore';
 import type {
@@ -141,12 +142,10 @@ function requestPendingUndo(set: WorkspaceSet, expectedEntryId?: string) {
 function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet, mode: 'redo' | 'undo') {
   return (expectedEntryId?: string) => {
     const snapshot = get();
-    if (snapshot.appActionHistory.applying) return false;
-    if (snapshot.appActionHistory.pendingAction || snapshot.appActionHistory.pendingCreate) {
-      return mode === 'undo' && requestPendingUndo(set, expectedEntryId);
-    }
-    const entry = getTopEntry(snapshot.appActionHistory, mode);
-    if (!entry || (expectedEntryId && entry.id !== expectedEntryId)) return false;
+    const command = resolveWorkspaceHistoryCommand(snapshot.appActionHistory, mode, expectedEntryId);
+    if (!command) return false;
+    if (command.phase === 'pending') return requestPendingUndo(set, expectedEntryId);
+    const { entry } = command;
     set((state) => ({
       appActionHistory: { ...state.appActionHistory, applying: { entryId: entry.id, mode } }
     }));

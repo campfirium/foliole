@@ -10,6 +10,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
 import {
@@ -137,7 +138,7 @@ export function createSetReviewTopicDelayActionWithPending(
       const result = buildTopicDelayPatch({ level, nodeId, now, snapshot, state: get() });
       if (!result) return false;
       let began = false;
-      set((state) => {
+      acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
         if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
             state.appActionHistory.pendingCreate) return state;
         began = true;

@@ -16,6 +16,7 @@ import {
   areRelatedReadingsValid,
   isSameReadingProfile
 } from './workspaceActionHistoryReading';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
@@ -198,7 +199,7 @@ function buildDismissNodesMutation(args: {
 export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNodes'] {
   return (nodeIds, now = new Date().toISOString()) => {
     let mutation: ReturnType<typeof buildDismissNodesMutation> = null;
-    set((state) => {
+    acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
       if (get && (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate)) return state;
       mutation = buildDismissNodesMutation({ nodeIds, now, state, withHistory: Boolean(get) });

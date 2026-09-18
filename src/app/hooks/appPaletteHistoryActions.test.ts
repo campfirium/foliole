@@ -67,3 +67,22 @@ it('does not fall back to body history when the selected answer context is unava
   expect(actions.undoWorkspaceAction()).toBe(false);
   expect(ws.undoEditorOperation).not.toHaveBeenCalled();
 });
+
+it('does not fall back to workspace redo when the current content has no redo', () => {
+  setUndoRouterOwner('content');
+  const { actions, ws } = createActions();
+  expect(actions.redoWorkspaceAction()).toBe(false);
+  expect(ws.redoEditorOperation).toHaveBeenCalledWith(context);
+  expect(ws.redoWorkspaceAction).not.toHaveBeenCalled();
+});
+
+it('rejects a registered context belonging to a different document for both commands', () => {
+  const unregister = registerUndoRouterContentContext('answer', context);
+  setUndoRouterTarget('content', 'answer');
+  const { actions, ws } = createActions();
+  expect(actions.undoWorkspaceAction()).toBe(false);
+  expect(actions.redoWorkspaceAction()).toBe(false);
+  expect(ws.undoEditorOperation).not.toHaveBeenCalled();
+  expect(ws.redoEditorOperation).not.toHaveBeenCalled();
+  unregister();
+});

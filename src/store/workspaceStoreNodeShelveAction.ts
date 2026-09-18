@@ -5,6 +5,7 @@ import {
   beginWorkspaceAction
 } from './workspaceActionHistory';
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import {
   captureWorkspaceHistoryContext
 } from './workspaceHistoryContext';
@@ -145,7 +146,7 @@ function createSetNodeShelvedAtAction(
     let nextNodesForSync: Node[] = [];
     let historyEntry: WorkspaceTopicShelveHistoryEntry | null = null;
     let beforeNodesById: WorkspaceState['nodesById'] = {};
-    set((state) => {
+    acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
       if (get && (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate)) return state;
       const mutation = buildNodeShelveMutation({ mode, nodeId, now, state });

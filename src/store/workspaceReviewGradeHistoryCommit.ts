@@ -7,6 +7,7 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
+import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import type { WorkspaceReviewPersistenceAdapter } from './workspaceReviewPersistence';
@@ -22,7 +23,7 @@ type WorkspaceSet = (
 
 function beginReviewGradeHistory(set: WorkspaceSet, entry: WorkspaceReviewGradeHistoryEntry) {
   let began = false;
-  set((state) => {
+  acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
     if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
         state.appActionHistory.pendingCreate) return state;
     began = true;
