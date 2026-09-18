@@ -127,6 +127,7 @@ export const HOSTED_RUNNERS = [
 
 export const RELEASE_CONTROLS = [
   ['release-control:draft-body', 'unpublished-draft'],
+  ['release-control:published-body', 'user-confirmed-published-release-body-correction'],
   ['release-control:abandon-draft', 'explicitly-abandoned-unpublished-draft'],
   ['release-control:abandon-ref', 'explicitly-abandoned-release-ref'],
   ['release-control:publish', 'user-confirmed-unpublished-draft'],

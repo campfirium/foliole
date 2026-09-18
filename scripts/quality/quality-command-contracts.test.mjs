@@ -87,10 +87,13 @@ describe('quality command registry', () => {
   it('requires exact release state and rejects unknown mutations', () => {
     expect(readFileSync(new URL('../release-publish.mjs', import.meta.url), 'utf8'))
       .toContain("assertQualityCommandAllowed('release-control:publish'");
+    expect(readFileSync(new URL('../release-published-body.mjs', import.meta.url), 'utf8'))
+      .toContain("assertQualityCommandAllowed('release-control:published-body'");
     expect(readFileSync(new URL('../release-latest.mjs', import.meta.url), 'utf8'))
       .toContain("assertQualityCommandAllowed('release-control:latest'");
     const expectedStates = new Map([
       ['release-control:draft-body', 'unpublished-draft'],
+      ['release-control:published-body', 'user-confirmed-published-release-body-correction'],
       ['release-control:abandon-draft', 'explicitly-abandoned-unpublished-draft'],
       ['release-control:abandon-ref', 'explicitly-abandoned-release-ref'],
       ['release-control:publish', 'user-confirmed-unpublished-draft'],
