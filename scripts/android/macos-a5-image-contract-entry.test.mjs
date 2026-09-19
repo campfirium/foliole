@@ -1,0 +1,56 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, expect, it, vi } from 'vitest';
+
+import { dispatchMacosA5Action } from './macos-a5-action-dispatch.mjs';
+import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
+import { assertImageContractOutput, IMAGE_TEST_CLASS, runMacosA5ImageContractEntry } from './macos-a5-image-contract-entry.mjs';
+
+const roots = [];
+afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
+function fixture() {
+  const root = mkdtempSync(path.join(os.tmpdir(), 's203-command-'));
+  roots.push(root);
+  const events = [];
+  return { events, args: { assertFixed: vi.fn(), pairingReadiness: vi.fn(), readiness: vi.fn(),
+    build: vi.fn(), buildIdentity: () => 'run', markMutationBoundary: vi.fn(), serial: '87a33a4b', env: {},
+    paths: { artifactsRoot: root, deviceBackupRoot: root, buildRoot: root, adb: 'adb', apk: 'main.apk', androidTestApk: 'test.apk' },
+    checked: vi.fn((_command, args) => events.push(args.join(' '))),
+    protectData: vi.fn(async (mode) => events.push(mode)),
+    execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: 'OK (4 tests)' }; }) } };
+}
+it('registers the native test behind the existing mutation lease and frozen build contract', () => {
+  expect(assertRegisteredMacosA5Action('image-contract')).toMatchObject({ deviceLeaseMode: 'mutation',
+    formalSourceClass: 'frozen-build', mutatesFixedA5: true, formalEvidence: { root: 'a5-image-contract' } });
+});
+it.each(['pairingReadiness', 'readiness'])('does not build or mutate after rejected %s', async (gate) => {
+  const { args } = fixture();
+  args[gate].mockImplementation(() => { throw new Error('approval_required'); });
+  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('approval_required');
+  expect(args.build).not.toHaveBeenCalled();
+  expect(args.checked).not.toHaveBeenCalled();
+  expect(args.execute).not.toHaveBeenCalled();
+});
+it('runs only the fixed class after backup and restores the main Activity', async () => {
+  const { args, events } = fixture();
+  await dispatchMacosA5Action({ ...args, action: 'image-contract' });
+  expect(args.execute.mock.calls[0][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
+    '-e', 'class', IMAGE_TEST_CLASS, 'com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
+  expect(events.indexOf('backup')).toBeLessThan(events.findIndex((event) => event.includes('install -r main.apk')));
+  expect(events).toContain('check');
+  expect(events.some((event) => event.includes('am start -n com.foliole.android/.MainActivity'))).toBe(true);
+  expect(events.some((event) => /pm clear|uninstall com\.foliole\.android$/u.test(event))).toBe(false);
+});
+it('retains a test failure while checking protected data and restoring the Activity', async () => {
+  const { args, events } = fixture();
+  args.execute.mockResolvedValue({ code: 0, output: 'FAILURES!!!' });
+  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('four tests');
+  expect(events).toContain('check');
+  expect(events.some((event) => event.includes('am start -n'))).toBe(true);
+});
+it('rejects partial or failed instrumentation output', () => {
+  for (const output of ['OK (3 tests)', '', 'INSTRUMENTATION_FAILED\nOK (4 tests)']) {
+    expect(() => assertImageContractOutput(output)).toThrow();
+  }
+});

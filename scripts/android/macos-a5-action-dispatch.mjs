@@ -31,6 +31,12 @@ export async function dispatchMacosA5Action({
   if (action === 'capture-annotation') {
     await captureAnnotation(paths, buildIdentity, markMutationBoundary, build);
   }
+  if (action === 'image-contract') {
+    const { runMacosA5ImageContractEntry } = await import('./macos-a5-image-contract-entry.mjs');
+    await runMacosA5ImageContractEntry({ assertFixed: () => assertFixed(paths),
+      build: () => build(paths), buildIdentity, checked, env, execute, markMutationBoundary,
+      pairingReadiness, paths, protectData, readiness, serial });
+  }
   if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
     env, execute, markMutationBoundary, paths, serial });
