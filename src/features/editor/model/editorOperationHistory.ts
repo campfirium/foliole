@@ -53,17 +53,41 @@ function trim(stack: EditorOperationHistoryEntry[], limit = DEFAULT_OPERATION_LI
   return stack.slice(Math.max(0, stack.length - limit));
 }
 
+function retainApplicableTextHistory(stack: EditorOperationHistoryEntry[], currentDigest: string) {
+  const matchingIndex = stack.findLastIndex((item) =>
+    item.type === 'text.edit' && item.afterDigest === currentDigest
+  );
+  let expectedDigest = currentDigest;
+  let continuous = matchingIndex >= 0;
+  const retained = stack.map((item) => item.type !== 'text.edit');
+  for (let index = matchingIndex; index >= 0; index -= 1) {
+    const item = stack[index]!;
+    if (item.type !== 'text.edit') continue;
+    if (!continuous || item.afterDigest !== expectedDigest) {
+      continuous = false;
+      continue;
+    }
+    expectedDigest = item.beforeDigest;
+    retained[index] = true;
+  }
+  return stack.filter((_item, index) => retained[index]);
+}
+
 export function pushEditorOperationEntry(
   history: EditorOperationHistoryState,
   entry: EditorOperationHistoryEntry,
   limit = DEFAULT_OPERATION_LIMIT
 ): EditorOperationHistoryState {
   const session = getEditorOperationSession(history, entry.nodeId);
-  const previous = session.undoStack.at(-1);
+  const undoStack = entry.type === 'text.edit'
+    ? retainApplicableTextHistory(session.undoStack, entry.beforeDigest)
+    : session.undoStack;
+  const previous = undoStack.at(-1);
   const nextUndoStack = previous?.type === 'text.edit' && entry.type === 'text.edit' &&
+    previous.afterDigest === entry.beforeDigest &&
     canGroupEditorTextOperations(previous, entry)
-    ? [...session.undoStack.slice(0, -1), mergeEditorTextOperations(previous, entry)]
-    : [...session.undoStack, entry];
+    ? [...undoStack.slice(0, -1), mergeEditorTextOperations(previous, entry)]
+    : [...undoStack, entry];
   return touchSession(history, entry.nodeId, { redoStack: [], undoStack: trim(nextUndoStack, limit) });
 }
 
