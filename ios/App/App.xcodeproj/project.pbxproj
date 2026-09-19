@@ -70,7 +70,9 @@
 		50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */; };
 		50F100411FED79650016851F /* FoliolePhysicalPermissionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */; };
 		50F100211FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */; };
+		50F203011FED79650016851F /* FoliolePhysicalArticleImageUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */; };
 		50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */; };
+		50F203111FED79650016851F /* FolioleArticleImageProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */; };
 		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -155,8 +157,10 @@
 		50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupMutationUITestSupport.swift; sourceTree = "<group>"; };
 		50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalPermissionUITests.swift; sourceTree = "<group>"; };
 		50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalDevWorkflowUITests.swift; sourceTree = "<group>"; };
+		50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalArticleImageUITests.swift; sourceTree = "<group>"; };
 		50F100031FED79650016851F /* AppPhysicalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppPhysicalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceSyncEventProjectionTests.swift; sourceTree = "<group>"; };
+		50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleArticleImageProjectionTests.swift; sourceTree = "<group>"; };
 		50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceGroupDiscoveryTests.swift; sourceTree = "<group>"; };
 		50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppAcceptanceProjectionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -278,6 +282,7 @@
 			isa = PBXGroup;
 			children = (
 				50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */,
+				50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */,
 				50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */,
 				50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */,
 				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
@@ -291,6 +296,7 @@
 			children = (
 				50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */,
 				50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */,
+				50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */,
 			);
 			path = AppAcceptanceProjectionTests;
 			sourceTree = "<group>";
@@ -498,6 +504,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				50F100211FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift in Sources */,
+				50F203011FED79650016851F /* FoliolePhysicalArticleImageUITests.swift in Sources */,
 				50F100411FED79650016851F /* FoliolePhysicalPermissionUITests.swift in Sources */,
 				50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */,
 				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
@@ -511,6 +518,7 @@
 			files = (
 				50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */,
 				50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */,
+				50F203111FED79650016851F /* FolioleArticleImageProjectionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
