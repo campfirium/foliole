@@ -37,10 +37,11 @@ const attachmentResourceResolutionCache = createBoundedCache<
 
 export { registerAttachmentResourceDescriptions };
 
-export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
+export async function resolveRuntimeAttachmentResource(resourceUrl: string, options?: { refresh?: boolean }) {
   const storageKey = parseAssetMarkdownUrl(resourceUrl);
   const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
   if (!storageKey || !parsed) return null;
+  if (options?.refresh) attachmentResourceResolutionCache.delete(storageKey);
 
   if (isNativeCompanionAttachmentResourceRuntime()) {
     return resolveNativeAttachmentResource(parsed);

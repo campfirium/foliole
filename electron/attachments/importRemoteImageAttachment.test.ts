@@ -12,6 +12,8 @@ const { importImageAttachmentBytes, resolveImageMimeType, normalizeImageFileName
   resolveImageMimeType: vi.fn()
 }));
 
+vi.mock('../database/nodeImageSources.js', () => ({ registerNodeImageSources: vi.fn() }));
+
 vi.mock('./importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes,
   normalizeImageFileName,

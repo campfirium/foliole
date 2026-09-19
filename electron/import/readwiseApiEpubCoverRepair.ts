@@ -3,6 +3,7 @@ import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApi
 import { createNodeAttachmentLink } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
@@ -71,6 +72,7 @@ async function repairPreparedTarget(
   const content = placeReadwiseApiEpubCover({ body: before.body!, cover: cover.text, title: target.title });
   const linkedIds = new Set(readImageAttachmentIds(target.nodeId));
   const linksChanged = cover.attachmentIds.some((id) => !linkedIds.has(id));
+  registerNodeImageSources(target.nodeId, cover.imageSources ?? {});
   if (content === before.body && !linksChanged) return { nodeId: target.nodeId, status: 'unchanged' } as const;
   commitRepair({
     attachmentIds: cover.attachmentIds,

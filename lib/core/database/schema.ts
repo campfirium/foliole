@@ -22,6 +22,7 @@ export const nodes = sqliteTable('nodes', {
   anchorResolutionStatus: text('anchor_resolution_status'),
   anchorSourceVersionId: text('anchor_source_version_id'),
   imageRegions: text('image_regions'),
+  imageSources: text('image_sources'),
   importSourceFingerprint: text('import_source_fingerprint'),
   importContentFingerprint: text('import_content_fingerprint'),
   position: integer('position'),

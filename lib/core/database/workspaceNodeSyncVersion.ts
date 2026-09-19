@@ -26,6 +26,7 @@ export function canonicalWorkspaceNodePayload(node: WorkspaceNodeSnapshot) {
     hideTitleHeading: node.hideTitleHeading,
     id: node.id,
     imageRegions: serialize(node.imageRegions),
+    imageSources: serialize(node.imageSources),
     importContentFingerprint: node.importContentFingerprint ?? null,
     importSourceFingerprint: node.importSourceFingerprint ?? null,
     isTitleManual: node.isTitleManual,

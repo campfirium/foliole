@@ -52,6 +52,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   reveal: string | null;
   anchor_link: string | null;
   image_regions: string | null;
+  image_sources?: string | null;
   import_content_fingerprint: string | null;
   import_source_fingerprint: string | null;
   created_at: string;
@@ -139,7 +140,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        ${contentExpression} AS content,
        n.reveal,
        CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link,
-       n.image_regions,
+       n.image_regions, n.image_sources,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
        ${READWISE_REMOTE_LIFECYCLE_SQL} AS readwise_remote_lifecycle,

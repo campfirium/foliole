@@ -24,6 +24,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     anchor_resolution_status TEXT,
     anchor_source_version_id TEXT,
     image_regions TEXT,
+    image_sources TEXT,
     import_source_fingerprint TEXT,
     import_content_fingerprint TEXT,
     position INTEGER,

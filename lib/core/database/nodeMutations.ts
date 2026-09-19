@@ -4,6 +4,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { serializeImageSources } from './imageSources.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -98,6 +99,7 @@ function runNodeTableUpsert(
     input.reveal,
     toAnchorLinkValue(input.anchorLink),
     toImageRegionsValue(input.imageRegions),
+    serializeImageSources(input.imageSources ?? {}),
     null,
     input.hostName ?? null,
     input.createdAt,

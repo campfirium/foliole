@@ -8,6 +8,7 @@ const COVER_PREPARATION_BUDGET_MS = 30_000;
 
 export interface PreparedReadwiseApiEpubCover {
   attachmentIds: string[];
+  imageSources?: Record<string, string>;
   degradedReason: string | null;
   text: string;
 }
@@ -42,6 +43,6 @@ export async function prepareReadwiseApiEpubCover(
     return Boolean(parseAssetMarkdownUrl(target));
   });
   return usable
-    ? { attachmentIds: localized.attachmentIds, degradedReason: null, text: localized.text }
+    ? { attachmentIds: localized.attachmentIds, imageSources: localized.imageSources, degradedReason: null, text: localized.text }
     : { attachmentIds: [], degradedReason: 'Reader EPUB cover unavailable.', text: '' };
 }

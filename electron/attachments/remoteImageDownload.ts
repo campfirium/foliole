@@ -28,6 +28,7 @@ export {
 export type RemoteImageErrorResult = Extract<NativeImportLocalImageAttachmentResult, { status: 'error' }>;
 
 export interface RemoteImageFetchOptions {
+  refresh?: boolean;
   bypassFailureCache?: boolean;
   sourceOrigin?: string | null;
 }

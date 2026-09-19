@@ -51,5 +51,5 @@ it('resolves iOS attachment images through the shared native resource capability
       'capacitor://localhost/_capacitor_file_/attachments/hash-ios'
     );
   });
-  expect(attachmentMock.resolve).toHaveBeenCalledWith(source);
+  expect(attachmentMock.resolve).toHaveBeenCalledWith(source, { refresh: true });
 });

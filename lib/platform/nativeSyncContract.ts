@@ -124,6 +124,7 @@ export interface NativeSyncNodeRecord {
     hide_title_heading: boolean;
     id: string;
     image_regions: string | null;
+    image_sources?: string | null;
     import_content_fingerprint?: string | null;
     import_source_fingerprint?: string | null;
     is_title_manual: boolean;

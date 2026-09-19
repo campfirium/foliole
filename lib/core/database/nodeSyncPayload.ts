@@ -21,6 +21,7 @@ export interface NodeSyncHashInput {
   hideTitleHeading: boolean;
   id: string;
   imageRegions: string | null;
+  imageSources?: string | null;
   importContentFingerprint: string | null;
   importSourceFingerprint: string | null;
   isTitleManual: boolean;
@@ -74,6 +75,7 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     hide_title_heading: input.hideTitleHeading,
     id: input.id,
     image_regions: normalizeNullableText(input.imageRegions),
+    image_sources: normalizeNullableText(input.imageSources ?? null),
     import_content_fingerprint: provenance.importContentFingerprint,
     import_source_fingerprint: provenance.importSourceFingerprint,
     is_title_manual: input.isTitleManual,

@@ -26,6 +26,7 @@ type RemoteImageResolution = LocalizedImage | 'omit' | null;
 
 export interface ImageLocalizationResult {
   attachmentIds: string[];
+  imageSources: Record<string, string>;
   degradedMessages: string[];
   text: string;
 }
@@ -91,9 +92,10 @@ export class ImageLocalizationContext {
   async localizeMarkdown(markdown: string, options: ImageLocalizationOptions = {}): Promise<ImageLocalizationResult> {
     const matches = collectRemoteMarkdownImages(markdown);
     if (matches.length === 0) {
-      return { attachmentIds: [], degradedMessages: [], text: markdown };
+      return { attachmentIds: [], imageSources: {}, degradedMessages: [], text: markdown };
     }
     const attachmentIds = new Set<string>();
+    const imageSources: Record<string, string> = {};
     let localized = '';
     let cursor = 0;
     for (const match of matches) {
@@ -104,6 +106,7 @@ export class ImageLocalizationContext {
         cursor = match.to;
       } else if (localization) {
         attachmentIds.add(localization.attachmentId);
+        imageSources[localization.markdownUrl.slice(8)] = match.sourceUrl;
         const imageMarkdown = buildLocalizedMarkdownImage(match, localization.markdownUrl);
         const layout = options.layoutLargeImages === false
           ? { before: textBeforeImage, cursor: match.to, image: imageMarkdown }
@@ -126,6 +129,7 @@ export class ImageLocalizationContext {
     localized += markdown.slice(cursor);
     return {
       attachmentIds: [...attachmentIds],
+      imageSources,
       degradedMessages: [...new Set(this.degradedByUrl.values())],
       text: localized
     };

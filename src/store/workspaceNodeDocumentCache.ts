@@ -53,6 +53,7 @@ export function toWorkspaceNodeDocument(node: Node): WorkspaceNodeDocument {
     content: node.content,
     hideTitleHeading: node.hideTitleHeading ?? false,
     imageRegions: node.imageRegions ?? null,
+    imageSources: node.imageSources ?? null,
     kind: node.kind,
     reveal: node.reveal,
     updatedAt: node.updatedAt,

@@ -11,6 +11,7 @@ import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerpri
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from '../../lib/platform/nativeContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import { resolveImportKind } from '../ipc/importSourcePipeline.js';
 import { selectImportFilePath } from '../ipc/importTextFile.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
@@ -103,6 +104,7 @@ async function selectHighlightFilePath(window?: BrowserWindow | null) {
 
 function persistMergedHighlights(input: {
   importedAt: string;
+  imageSources: Record<string, string>;
   nodeId: string;
   previousContent: string;
   update: ReturnType<typeof resolveReadwiseHighlightUpdate>;
@@ -123,6 +125,7 @@ function persistMergedHighlights(input: {
         driver: connection.driver,
         highlights: input.update.highlights,
         importedAt: input.importedAt,
+        imageSources: input.imageSources,
         parentNodeId: input.nodeId,
         parentContent: input.update.content
       });
@@ -180,11 +183,13 @@ export async function mergeReadwiseTopicHighlightsFromFile(
 
   persistMergedHighlights({
     importedAt,
+    imageSources: mergeInput.localized.imageSources,
     nodeId,
     previousContent: sourceNode.content,
     update: readwiseUpdate
   });
   linkLocalizedImagesToNode(nodeId, mergeInput.localized.attachmentIds);
+  registerNodeImageSources(nodeId, mergeInput.localized.imageSources);
 
   scheduleMirrorSync([nodeId]);
   return {

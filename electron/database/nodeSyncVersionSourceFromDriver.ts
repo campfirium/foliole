@@ -20,6 +20,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  image_sources: string | null;
   import_content_fingerprint: string | null;
   import_source_fingerprint: string | null;
   is_title_manual: number;
@@ -54,7 +55,7 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
        sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
        hide_title_heading, content, nodes.body_blob_hash, cbd.data AS body_blob_data,
        opening_text, virtual_filter, reveal,
-       anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_content_fingerprint, import_source_fingerprint,
+       anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_content_fingerprint, import_source_fingerprint,
        node_order.position AS position, current_version_id, sync_dirty, created_at, updated_at, deleted_at
      FROM nodes
      LEFT JOIN node_order ON node_order.node_id = nodes.id
@@ -86,6 +87,7 @@ export function buildNodeSyncSnapshotFromDriver(
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
+    image_sources: row.image_sources,
     import_content_fingerprint: row.import_content_fingerprint,
     import_source_fingerprint: row.import_source_fingerprint,
     is_title_manual: row.is_title_manual === 1,
@@ -125,6 +127,7 @@ export function computeNodeSyncVersionHashFromDriver(
     hideTitleHeading: row.hide_title_heading === 1,
     id: row.id,
     imageRegions: row.image_regions,
+    imageSources: row.image_sources,
     importContentFingerprint: row.import_content_fingerprint,
     importSourceFingerprint: row.import_source_fingerprint,
     isTitleManual: row.is_title_manual === 1,

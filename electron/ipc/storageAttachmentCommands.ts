@@ -4,6 +4,7 @@ import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../attach
 import { importClipboardImageAttachment } from '../attachments/importClipboardImageAttachment.js';
 import { importLocalImageAttachment } from '../attachments/importLocalImageAttachment.js';
 import { importRemoteImageAttachment } from '../attachments/importRemoteImageAttachment.js';
+import { recoverArticleImageAttachment } from '../attachments/recoverArticleImageAttachment.js';
 import {
   forgetRemoteImageLearnedSource,
   learnRemoteImageSourceOrigin
@@ -83,7 +84,15 @@ export function handleStorageAttachmentCommand(
   }
 
   if (command === NATIVE_COMMANDS.importRemoteImageAttachment) {
+    if (typeof args.recoverStorageKey === 'string') {
+      return recoverArticleImageAttachment({
+        nodeId: asString(args.nodeId, 'nodeId'), sourceUrl: '',
+        recoverStorageKey: args.recoverStorageKey,
+        ...(typeof args.expectedContent === 'string' ? { expectedContent: args.expectedContent } : {})
+      });
+    }
     return importRemoteImageAttachment({
+      ...(args.refresh === true ? { refresh: true } : {}),
       nodeId: asString(args.nodeId, 'nodeId'),
       ...(typeof args.sourceOrigin === 'string' ? { sourceOrigin: args.sourceOrigin } : {}),
       sourceUrl: asString(args.sourceUrl, 'sourceUrl')

@@ -9,6 +9,7 @@ import type { ReadwiseApiDocumentImportState } from '../../lib/core/readwise/rea
 import { READWISE_API_IMPORT_STATE_VERSION } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import { saveReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
@@ -138,6 +139,7 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
     root.nodeId,
     [...projectedCover.attachmentIds, ...projectedStructure.rootAttachmentIds]
   );
+  registerNodeImageSources(root.nodeId, { ...input.preparedCover?.imageSources, ...input.preparedImages?.rootImageSources });
   persistReadwiseApiEpubBookNodes({
     connectionRef: input.connectionRef,
     documentId: input.document.id,

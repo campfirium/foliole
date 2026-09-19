@@ -20,6 +20,7 @@ export class NativeCompanionCapabilityUnavailableError extends Error {
 
 const IOS_NATIVE_CAPABILITIES = new Set([
   'attachment-resource-sync',
+  'remote-image-import',
   'bootstrap',
   'content-blob-sync',
   'external-document-directory',

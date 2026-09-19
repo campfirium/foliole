@@ -134,6 +134,7 @@ function toPendingWorkspaceNode(
     reveal: pendingNode.reveal,
     anchorLink: pendingNode.anchorLink,
     imageRegions: pendingNode.imageRegions ?? null,
+    imageSources: pendingNode.imageSources ?? null,
     reading: pendingNode.reading ?? null,
     review: pendingNode.review ?? currentNode?.review ?? null,
     createdAt: pendingNode.createdAt,

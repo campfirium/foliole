@@ -75,6 +75,7 @@ export interface UpsertNodeSnapshotInput {
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
   imageRegions?: NodeImageRegionGroupPayload[] | null;
+  imageSources?: Record<string, string> | null;
   reading?: NodeReadingPayload | null;
   review?: NodeReviewPayload | null;
   position: number | null;

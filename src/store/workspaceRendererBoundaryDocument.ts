@@ -10,6 +10,7 @@ export interface WorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
   imageRegions?: Node['imageRegions'];
+  imageSources?: Node['imageSources'];
   kind: NodeKind;
   reveal: string | null;
   updatedAt?: string;
@@ -93,6 +94,7 @@ export function mergeWorkspaceNodeDocument<T extends object & { id?: string; upd
     hasContent: content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,
     imageRegions: document.imageRegions ?? null,
+    imageSources: document.imageSources ?? null,
     kind: document.kind,
     reveal: document.reveal,
     virtualFilter: document.virtualFilter ?? null,

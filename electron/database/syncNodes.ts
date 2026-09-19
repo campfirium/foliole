@@ -21,6 +21,7 @@ interface SyncNodeRow extends DatabaseRow {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  image_sources: string | null;
   is_title_manual: number;
   kind: string;
   opening_text: string | null;
@@ -106,6 +107,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
+    image_sources: row.image_sources,
     is_title_manual: row.is_title_manual === 1,
     kind: row.kind,
     opening_text: row.opening_text,
@@ -169,6 +171,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.reveal,
   n.anchor_link,
   n.image_regions,
+  n.image_sources,
   node_order.position,
   n.current_version_id,
   n.created_at,

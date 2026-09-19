@@ -19,6 +19,8 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "stopDiscoverySession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncGroupProviderState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readRemoteImageResponse", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "writeImageAttachment", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startSyncGroupProvider", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopSyncGroupProvider", returnType: CAPPluginReturnPromise),

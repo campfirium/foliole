@@ -5,6 +5,7 @@ import {
 
 const CURRENT_REPAIR_RULE_NAMES = [
   'nodeViewStateSource',
+  'nodesImageSources',
   'syncBaseContentHash',
   'nodesEnableShortTerm',
   'nodesSequentialReadingEnabled',

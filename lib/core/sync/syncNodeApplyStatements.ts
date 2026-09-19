@@ -10,10 +10,10 @@ export interface SyncNodeStatement {
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
-  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions,
+  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources,
   import_source_fingerprint, import_content_fingerprint, position,
   current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -35,6 +35,7 @@ ON CONFLICT(id) DO UPDATE SET
   anchor_resolution_status = excluded.anchor_resolution_status,
   anchor_source_version_id = excluded.anchor_source_version_id,
   image_regions = excluded.image_regions,
+  image_sources = excluded.image_sources,
   import_source_fingerprint = excluded.import_source_fingerprint,
   import_content_fingerprint = excluded.import_content_fingerprint,
   position = excluded.position,
@@ -50,7 +51,7 @@ export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
   sequential_reading_enabled = ?, shelved_at = ?, manual_child_order = ?, title = ?,
   is_title_manual = ?, hide_title_heading = ?, content = ?, body_blob_hash = ?,
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
-  anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?,
+  anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?, image_sources = ?,
   import_source_fingerprint = ?, import_content_fingerprint = ?, position = ?,
   current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = ?,
   created_at = ?, updated_at = ?, deleted_at = ?
@@ -126,6 +127,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.anchor_resolution_status ?? null,
       snapshot.anchor_source_version_id ?? null,
       snapshot.image_regions,
+      snapshot.image_sources ?? null,
       provenance.importSourceFingerprint,
       provenance.importContentFingerprint,
       snapshot.position ?? null,

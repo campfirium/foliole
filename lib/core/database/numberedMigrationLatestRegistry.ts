@@ -3,7 +3,7 @@ import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
-import { tableExists } from './numberedMigrationHelpers.js';
+import { addColumnIfMissing, tableExists } from './numberedMigrationHelpers.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
@@ -82,5 +82,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrate: (sqlite) => {
       for (const statement of EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS) sqlite.exec(statement);
     }
-  }
+  },
+  { version: 97, migrate: (sqlite) => addColumnIfMissing(sqlite, 'nodes', 'image_sources', 'TEXT') }
 ];

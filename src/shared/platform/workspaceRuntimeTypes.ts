@@ -29,6 +29,7 @@ export interface WorkspaceRuntimeNode {
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;
   imageRegions?: NativeNodeSnapshotArgs['imageRegions'];
+  imageSources?: Record<string, string> | null;
   isTitleManual?: boolean;
   kind: NodeKind;
   parentNodeId: string | null;
@@ -45,6 +46,7 @@ export interface WorkspaceRuntimeNodeDocument {
   content: string;
   hideTitleHeading: boolean;
   imageRegions?: NativeNodeSnapshotArgs['imageRegions'];
+  imageSources?: Record<string, string> | null;
   kind: NodeKind;
   reveal: string | null;
   updatedAt?: string;

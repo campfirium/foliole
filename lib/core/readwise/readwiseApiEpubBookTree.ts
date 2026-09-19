@@ -2,6 +2,7 @@ import type { PreparedReadwiseApiDocument } from './readwiseApiImport.js';
 
 export interface ReadwiseApiEpubBookNode {
   attachmentIds: string[];
+  imageSources?: Record<string, string>;
   content: string;
   key: string;
   parentKey: string | null;
@@ -11,6 +12,7 @@ export interface ReadwiseApiEpubBookNode {
 export function buildReadwiseApiEpubBookNodes(
   sections: Array<NonNullable<PreparedReadwiseApiDocument['epubStructure']>['sections'][number] & {
     attachmentIds?: string[];
+    imageSources?: Record<string, string>;
   }>
 ) {
   const stack: Array<{ key: string; level: number }> = [];
@@ -28,6 +30,7 @@ export function buildReadwiseApiEpubBookNodes(
     if (level > 3) {
       const carrier = nodes.find((node) => node.key === stack.at(-1)?.key);
       if (!carrier) continue;
+      carrier.imageSources = { ...carrier.imageSources, ...section.imageSources };
       carrier.content = joinContent(carrier.content, section.content);
       carrier.attachmentIds = [...new Set([...carrier.attachmentIds, ...(section.attachmentIds ?? [])])];
       continue;
@@ -45,6 +48,7 @@ function toNode(
 ): ReadwiseApiEpubBookNode {
   return {
     attachmentIds: section.attachmentIds ?? [], content: section.content,
+    imageSources: section.imageSources ?? {},
     key: section.markerKey, parentKey, title: section.title
   };
 }

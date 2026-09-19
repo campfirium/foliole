@@ -6,6 +6,7 @@ import { isReadingState, type ReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
+import { parseImageSources } from './imageSources.js';
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -55,6 +56,7 @@ export interface WorkspaceNodeSnapshot {
   reveal: string | null;
   anchorLink: StoredAnchorLink | null;
   imageRegions?: StoredImageRegionGroup[] | null;
+  imageSources?: Record<string, string> | null;
   importContentFingerprint?: string | null;
   importSourceFingerprint?: string | null;
   reading: WorkspaceReadingProfile | null;
@@ -92,6 +94,7 @@ export interface WorkspaceNodeRowShape {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  image_sources?: string | null;
   import_content_fingerprint?: string | null;
   import_source_fingerprint?: string | null;
   is_title_manual: number;
@@ -167,6 +170,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   const imageRegions = parseStoredImageRegions(row.image_regions);
   const node: WorkspaceNodeSnapshot = {
     id: row.id,
+    imageSources: parseImageSources(row.image_sources),
     parentNodeId: row.parent_id,
     kind: parseNodeKind(row.kind),
     title: row.title,

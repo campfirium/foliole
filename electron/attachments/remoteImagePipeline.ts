@@ -3,6 +3,7 @@ import type {
   NativeImportRemoteImageAttachmentArgs
 } from '../../lib/platform/nativeStorageContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { importImageAttachmentBytes } from './importImageAttachmentBytes.js';
@@ -90,9 +91,10 @@ export async function fetchRemoteImageResource(
   if (!cacheKey) {
     return { status: 'error', error: createRemoteImagePolicyError('The remote image URL is not supported.', sourceUrl) };
   }
-  const cachedResource = await readCachedRemoteImageResource(sourceUrl, cacheKey, options);
+  const cachedResource = options.refresh ? null : await readCachedRemoteImageResource(sourceUrl, cacheKey, options);
   if (cachedResource) return cachedResource;
   const fetchKey = resolveRemoteImageFetchKey(cacheKey, options.sourceOrigin ?? null);
+  if (options.refresh) fetchByCacheKey.delete(fetchKey);
   const cachedError = readCachedRemoteImageFailure(sourceUrl, fetchKey, options);
   if (cachedError) return cachedError;
   if (!fetchByCacheKey.has(fetchKey)) {
@@ -145,7 +147,7 @@ function readCachedRemoteImageFailure(
   fetchKey: string,
   options: RemoteImageFetchOptions
 ): RemoteImageFetchResult | null {
-  const cachedError = options.bypassFailureCache ? null : readFailureCache(fetchKey);
+  const cachedError = options.bypassFailureCache || options.refresh ? null : readFailureCache(fetchKey);
   if (!cachedError) return null;
   recordRemoteImageDiagnostic({
     attempt: 0,
@@ -202,20 +204,27 @@ export async function importRemoteImageAttachment(
   args: NativeImportRemoteImageAttachmentArgs
 ): Promise<NativeImportLocalImageAttachmentResult> {
   const normalizedNodeId = args.nodeId.trim();
-  const fetchResult = await fetchRemoteImageResource(args.sourceUrl, { sourceOrigin: args.sourceOrigin ?? null });
+  const fetchResult = await fetchRemoteImageResource(args.sourceUrl, { sourceOrigin: args.sourceOrigin ?? null, refresh: args.refresh ?? false });
   if (fetchResult.status === 'error') {
     return fetchResult.error;
   }
 
   const importKey = `${normalizedNodeId}\u0000${fetchResult.resource.cacheKey}`;
+  if (args.refresh) importByNodeAndCacheKey.delete(importKey);
   if (!importByNodeAndCacheKey.has(importKey)) {
-    const promise = runWithDatabaseConnectionOwner(() => importImageAttachmentBytes({
-      bytes: fetchResult.resource.bytes,
-      errorSource: fetchResult.resource.sourceUrl,
-      mimeType: fetchResult.resource.mimeType,
-      nodeId: normalizedNodeId,
-      originalName: fetchResult.resource.originalName
-    }));
+    const promise = runWithDatabaseConnectionOwner(async () => {
+      const result = await importImageAttachmentBytes({
+        bytes: fetchResult.resource.bytes,
+        errorSource: fetchResult.resource.sourceUrl,
+        mimeType: fetchResult.resource.mimeType,
+        nodeId: normalizedNodeId,
+        originalName: fetchResult.resource.originalName
+      });
+      if (result.status === 'imported') {
+        registerNodeImageSources(normalizedNodeId, { [result.storage_key]: args.sourceUrl });
+      }
+      return result;
+    });
     importByNodeAndCacheKey.set(importKey, promise);
   }
   return importByNodeAndCacheKey.get(importKey)!;

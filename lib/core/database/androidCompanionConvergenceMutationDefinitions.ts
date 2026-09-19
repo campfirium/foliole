@@ -5,9 +5,9 @@ export const ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS = {
     'INSERT OR IGNORE INTO nodes (' +
     'id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, ' +
     'manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, ' +
-    'reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, ' +
+    'reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_source_fingerprint, ' +
     'import_content_fingerprint, position, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   nodeRekeyChildren: 'UPDATE nodes SET parent_id = ? WHERE parent_id = ?',
   nodeRekeyReview: 'UPDATE node_review SET node_id = ? WHERE node_id = ?',
   nodeRekeyReading: 'UPDATE node_reading SET node_id = ? WHERE node_id = ?',

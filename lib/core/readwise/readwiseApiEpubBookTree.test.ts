@@ -13,23 +13,23 @@ it('maps each Reader EPUB marker to exactly one body topic', () => {
   ]);
 
   expect(nodes).toEqual([
-    { attachmentIds: [], content: '# Part 1\n\nPart body', key: 'part', parentKey: null, title: 'Part 1' },
+    { attachmentIds: [], imageSources: {}, content: '# Part 1\n\nPart body', key: 'part', parentKey: null, title: 'Part 1' },
     {
-      attachmentIds: [],
+      attachmentIds: [], imageSources: {},
       content: 'Ordinary paragraph',
       key: 'paragraph',
       parentKey: null,
       title: 'Ordinary paragraph'
     },
     {
-      attachmentIds: [],
+      attachmentIds: [], imageSources: {},
       content: '## Chapter 1\n\nChapter body',
       key: 'chapter',
       parentKey: 'part',
       title: 'Chapter 1'
     },
     {
-      attachmentIds: [],
+      attachmentIds: [], imageSources: {},
       content: '### Unmarked heading stays here',
       key: 'next',
       parentKey: 'part',

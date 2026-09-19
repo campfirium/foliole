@@ -43,6 +43,7 @@ it('localizes the top-level API cover without reading EPUB HTML images', async (
 
   expect(result).toEqual({
     attachmentIds: ['cover-attachment'], degradedReason: null,
+    imageSources: { [`${'a'.repeat(64)}.jpg`]: 'https://cdn.example.com/cover.jpeg' },
     text: `![Book cover](asset://${'a'.repeat(64)}.jpg)`
   });
   expect(mocks.fetchRemoteImageResource).toHaveBeenCalledOnce();

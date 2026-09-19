@@ -5,6 +5,7 @@ import {
 } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
 
 import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
@@ -79,6 +80,7 @@ export function buildReadwiseApiEpubBodyOverwrite(
   if (!root) throw new Error('readwise_body_repair_root_missing');
   const desired = [{
     attachmentIds: referencedRootAttachmentIds(target.nodeId, root.content, images.rootAttachmentIds),
+    imageSources: images.rootImageSources ?? {},
     content: rebuildRoot(root.content, target.title, images.rootBody),
     nodeId: target.nodeId,
     title: target.title
@@ -87,7 +89,7 @@ export function buildReadwiseApiEpubBodyOverwrite(
     const nodeId = stableReadwiseEpubNodeId(target.connectionRef, target.documentId, node.key);
     const current = before.get(nodeId);
     if (!current) throw new Error(`readwise_body_repair_node_missing:${nodeId}`);
-    desired.push({ attachmentIds: node.attachmentIds, content: node.content, nodeId, title: current.title });
+    desired.push({ imageSources: node.imageSources ?? {}, attachmentIds: node.attachmentIds, content: node.content, nodeId, title: current.title });
   }
   if (desired.length !== before.size) throw new Error('readwise_body_repair_node_scope_changed');
   return desired;
@@ -129,6 +131,7 @@ function commitBodies(
       driver.execute(`UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
         [loadOrCreateDesktopHostName(now), item.nodeId]);
       replaceReadwiseApiEpubImageLinks(item.nodeId, item.attachmentIds);
+      registerNodeImageSources(item.nodeId, item.imageSources);
       flushNodeSyncVersion(item.nodeId, now);
     }
   });

@@ -55,6 +55,7 @@ export interface NativeWorkspaceNodeSnapshot {
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
+  imageSources?: Record<string, string> | null;
   importContentFingerprint?: string | null;
   importSourceFingerprint?: string | null;
   reading: NativeWorkspaceReadingProfile | null;
@@ -79,6 +80,7 @@ export interface NativeWorkspaceNodeDocument {
   hideTitleHeading: boolean;
   kind: NodeKind;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
+  imageSources?: Record<string, string> | null;
   nodeId: string;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
@@ -147,6 +149,9 @@ export interface NativeImportClipboardImageAttachmentArgs {
 }
 
 export interface NativeImportRemoteImageAttachmentArgs {
+  refresh?: boolean;
+  recoverStorageKey?: string;
+  expectedContent?: string;
   nodeId: string;
   sourceOrigin?: string | null;
   sourceUrl: string;
@@ -163,6 +168,7 @@ export type NativeImportLocalImageAttachmentErrorCode =
 export type NativeImportLocalImageAttachmentResult =
   | {
       status: 'imported';
+      recovered_content?: string;
       attachment_id: string;
       attachment_record: 'created' | 'reused';
       created_at: string;
@@ -208,6 +214,7 @@ export interface NativeNodeSnapshotArgs {
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
+  imageSources?: Record<string, string> | null;
   reading?: NativeWorkspaceReadingProfile | null;
   review?: NativeWorkspaceReviewProfile | null;
   position: number | null;

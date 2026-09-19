@@ -179,3 +179,12 @@ it('keeps the desktop no-bridge fallback returning null', async () => {
 
   await expect(resolveRuntimeAttachmentResource(resource.assetUrl)).resolves.toBeNull();
 });
+
+it('checks the current file when display requests a fresh resolution', async () => {
+  const resource = createTestAttachmentResource();
+  capacitorMock.plugin.resolveAttachmentResource.mockResolvedValueOnce({
+    status: 'ready', resource_url: 'file:///attachments/image.png', mime_type: 'image/png'
+  }).mockResolvedValueOnce({ status: 'missing_file', resource_url: null, mime_type: 'image/png' });
+  expect((await resolveRuntimeAttachmentResource(resource.assetUrl))?.status).toBe('ready');
+  expect((await resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true }))?.status).toBe('missing_file');
+});

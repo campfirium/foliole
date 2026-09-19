@@ -137,6 +137,7 @@ export interface Node {
   virtualFilter?: VirtualNodeFilter | null;
   anchorLink?: NodeAnchorLink | null;
   imageRegions?: NodeImageRegionGroup[] | null;
+  imageSources?: Record<string, string> | null;
   reveal: string | null;
   reading?: NodeReadingProfile | null;
   review: NodeReviewProfile | null;

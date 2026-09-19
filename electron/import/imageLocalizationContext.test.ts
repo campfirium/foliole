@@ -57,6 +57,7 @@ it('turns localized large inline images into independent blocks', async () => {
 
   await expect(context.localizeMarkdown('Lead ![](https://cdn.example.com/image.png) trailing')).resolves.toEqual({
     attachmentIds: ['attachment-large-image'],
+    imageSources: { [`${'a'.repeat(64)}.png`]: 'https://cdn.example.com/image.png' },
     degradedMessages: [],
     text: `Lead\n\n![](asset://${'a'.repeat(64)}.png)\n\ntrailing`
   });
@@ -78,6 +79,7 @@ it('omits 1x1 tracking images before attachment persistence', async () => {
 
   await expect(context.localizeMarkdown('Lead![tracking](https://cdn.example.com/stat)tail')).resolves.toEqual({
     attachmentIds: [],
+    imageSources: {},
     degradedMessages: [],
     text: 'Leadtail'
   });

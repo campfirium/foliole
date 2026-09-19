@@ -153,6 +153,7 @@ function expectedSyncNodeRecord() {
         hide_title_heading: false,
         id: 'node-1',
         image_regions: '[{"attachmentId":"att-2","regions":[]}]',
+        image_sources: null,
         is_title_manual: true,
         kind: 'item',
         manual_child_order: null,

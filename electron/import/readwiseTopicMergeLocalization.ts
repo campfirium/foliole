@@ -26,6 +26,7 @@ export async function localizeReadwiseTopicMergeTexts(sourceContent: string, hig
   ]);
   return {
     attachmentIds: [...new Set([...source.attachmentIds, ...highlight.attachmentIds])],
+    imageSources: { ...source.imageSources, ...highlight.imageSources },
     highlightMarkdown: highlight.text,
     sourceContent: source.text
   };

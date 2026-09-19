@@ -43,6 +43,7 @@ describe('native invoke contract dispatch', () => {
       content: '# Node',
       hideTitleHeading: false,
       imageRegions: [],
+      imageSources: {},
       kind: 'topic',
       nodeId: 'node-1',
       reveal: null,

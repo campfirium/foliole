@@ -24,7 +24,7 @@ export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
     sql:
       'SELECT parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, ' +
       'manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, ' +
-      'reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, ' +
+      'reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_source_fingerprint, ' +
       'import_content_fingerprint, position, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at ' +
       'FROM nodes WHERE id = ? LIMIT 1',
     columns: nodeRekeyColumns()
@@ -61,7 +61,7 @@ function nodeRekeyColumns() {
   return [
     'parent_id', 'kind', 'priority', 'desired_retention', 'enable_short_term', 'sequential_reading_enabled', 'shelved_at',
     'manual_child_order', 'title', 'is_title_manual', 'hide_title_heading', 'content', 'body_blob_hash', 'opening_text',
-    'virtual_filter', 'reveal', 'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'image_regions',
+    'virtual_filter', 'reveal', 'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'image_regions', 'image_sources',
     'import_source_fingerprint', 'import_content_fingerprint', 'position', 'current_version_id',
     'last_modified_by_host_name', 'sync_dirty', 'created_at', 'updated_at', 'deleted_at'
   ].map((key) => ({ key, source: key, type: longs.has(key) ? 'long' : doubles.has(key) ? 'double' : 'nullableString' }));

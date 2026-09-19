@@ -59,7 +59,10 @@ it('localizes body images independently from the document cover', async () => {
   expect(prepared?.rootBody).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(prepared?.sections[0]?.content).toContain(`asset://${'a'.repeat(64)}.png`);
   expect(prepared?.sections[0]?.content).toContain('**Image unavailable.**');
-  expect(JSON.stringify(prepared)).not.toContain('https://');
+  expect(prepared?.rootBody).not.toContain('https://');
+  expect(prepared?.sections[0]?.content).not.toContain('https://');
+  expect(prepared?.rootImageSources).toEqual({ [`${'a'.repeat(64)}.png`]: 'https://cdn.example.com/root.png' });
+  expect(prepared?.sections[0]?.imageSources).toEqual({ [`${'a'.repeat(64)}.png`]: 'https://cdn.example.com/section.png' });
   expect(JSON.stringify(prepared)).not.toContain('../images/missing.png');
   expect(prepared?.rootAttachmentIds).toEqual([
     'attachment-root.png.png'

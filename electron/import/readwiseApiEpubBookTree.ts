@@ -7,6 +7,7 @@ import {
 } from '../../lib/core/readwise/readwiseApiEpubBookTree.js';
 import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { registerNodeImageSources } from '../database/nodeImageSources.js';
 
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 
@@ -41,6 +42,7 @@ export function persistReadwiseApiEpubBookNodes(input: {
       updatedAt: input.importedAt
     });
     replaceReadwiseApiEpubImageLinks(nodeId, node.attachmentIds);
+    registerNodeImageSources(nodeId, node.imageSources ?? {});
   });
   retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);
   orderBookNodes(driver, input.rootNodeId, [...nodeIds.values()]);

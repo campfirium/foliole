@@ -5,6 +5,7 @@ import { projectImageOnlyMarkdownLabel } from '../import/markdownImageLabel.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { parseImageSources, serializeImageSources, type ImageSources } from './imageSources.js';
 import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
@@ -70,6 +71,7 @@ export function insertImportedHighlightNodes(input: {
   driver: DatabaseDriver;
   highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> | undefined;
   importedAt: string;
+  imageSources?: ImageSources;
   parentNodeId: string;
   parentContent: string;
 }) {
@@ -93,7 +95,15 @@ export function insertImportedHighlightNodes(input: {
 
   input.highlights.forEach((highlight) => {
     const nodeId = insertImportedHighlight(input, highlight, insertNode, insertClozeNode);
-    if (nodeId) insertedNodeIds.push(nodeId);
+    if (nodeId) {
+      const sources = Object.fromEntries(Object.entries(parseImageSources(input.imageSources))
+        .filter(([key]) => highlight.content.includes(`asset://${key}`)));
+      if (Object.keys(sources).length) input.driver.execute(
+        "UPDATE nodes SET image_sources = json_patch(COALESCE(image_sources, '{}'), ?) WHERE id = ?",
+        [serializeImageSources(sources), nodeId]
+      );
+      insertedNodeIds.push(nodeId);
+    }
   });
 
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);

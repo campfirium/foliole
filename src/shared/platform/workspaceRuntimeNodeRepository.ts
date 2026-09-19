@@ -46,6 +46,7 @@ export function createWorkspaceRuntimeNodeSnapshot(
     reveal: node.reveal,
     anchorLink: node.anchorLink ?? null,
     imageRegions: node.imageRegions ?? null,
+    imageSources: node.imageSources ?? null,
     reading: node.reading ?? null,
     review: node.review ?? null,
     position: typeof position === 'number' && position >= 0 ? position : null,

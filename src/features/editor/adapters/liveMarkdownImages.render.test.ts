@@ -11,7 +11,10 @@ import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresent
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: vi.fn(() => null)
+  getRuntimeInvoke: vi.fn(() => async (command: string, args: { storage_key?: string }) =>
+    command === 'resolve_attachment_resource'
+      ? { status: 'ready', resource_url: `foliole-asset://attachment/${args.storage_key}`, mime_type: 'image/png' }
+      : { intrinsic_size: null })
 }));
 
 vi.mock('../../../shared/platform/bridge', () => ({
@@ -132,8 +135,8 @@ describe('live markdown image rendering basics', () => {
 
   it('shows an unavailable placeholder when an internal attachment image fails to load', async () => {
     const { adapter, host } = createAdapterHost(`![Cover](${TEST_ATTACHMENT_ASSET_URL})`);
+    await expectInternalImageRendered(host);
     const image = host.querySelector('.cm-md-image-element');
-    expect(image).not.toBeNull();
     image!.dispatchEvent(new Event('error'));
     await waitFor(() => {
       expect(new URL((image as HTMLImageElement).src).searchParams.get('retry')).toBe('1');

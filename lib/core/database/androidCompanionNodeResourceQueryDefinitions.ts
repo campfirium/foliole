@@ -125,7 +125,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       `${VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
       'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
-      'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.import_source_fingerprint, n.import_content_fingerprint, ' +
+      'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.image_sources, n.import_source_fingerprint, n.import_content_fingerprint, ' +
       "(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i " +
       "WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, " +
       'n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
@@ -159,6 +159,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'reveal', source: 'reveal', type: 'nullableString' },
       { key: 'anchor_link', source: 'anchor_link', type: 'nullableString' },
       { key: 'image_regions', source: 'image_regions', type: 'nullableString' },
+      { key: 'image_sources', source: 'image_sources', type: 'nullableString' },
       { key: 'import_source_fingerprint', source: 'import_source_fingerprint', type: 'nullableString' },
       { key: 'import_content_fingerprint', source: 'import_content_fingerprint', type: 'nullableString' },
       { key: 'readwise_remote_lifecycle', source: 'readwise_remote_lifecycle', type: 'nullableString' },

@@ -13,6 +13,7 @@ const UNAVAILABLE_IMAGE_PLACEHOLDER = '**Image unavailable.**';
 
 export interface PreparedReadwiseApiEpubImageSection extends PreparedReadwiseApiEpubSection {
   attachmentIds: string[];
+  imageSources?: Record<string, string>;
 }
 
 export interface PreparedReadwiseApiEpubImages {
@@ -25,12 +26,14 @@ export interface PreparedReadwiseApiEpubImages {
   };
   degradedReason: string | null;
   rootAttachmentIds: string[];
+  rootImageSources?: Record<string, string>;
   rootBody: string;
   sections: PreparedReadwiseApiEpubImageSection[];
 }
 
 interface FinalizedMarkdown {
   attachmentIds: string[];
+  imageSources?: Record<string, string>;
   localizedCount: number;
   text: string;
   unavailableCount: number;
@@ -50,7 +53,7 @@ export async function prepareReadwiseApiEpubImages(
   const sections: PreparedReadwiseApiEpubImageSection[] = [];
   for (const section of structure.sections) {
     const localized = await localizeAndFinalize(section.content, context);
-    sections.push({ ...section, attachmentIds: localized.attachmentIds, content: localized.text });
+    sections.push({ ...section, attachmentIds: localized.attachmentIds, imageSources: localized.imageSources ?? {}, content: localized.text });
   }
   const sourceBodyCount = structure.imageCount;
   const treeBodyCount = countImageReferences(structure.rootBody)
@@ -68,6 +71,7 @@ export async function prepareReadwiseApiEpubImages(
       unavailableBodyCount
     }),
     rootAttachmentIds: root.attachmentIds,
+    rootImageSources: root.imageSources ?? {},
     rootBody: root.text,
     sections
   };
@@ -85,6 +89,7 @@ async function localizeAndFinalize(markdown: string, context: ImageLocalizationC
   }
   return {
     attachmentIds: unique(localized.attachmentIds),
+    imageSources: localized.imageSources,
     localizedCount: countAssetReferences(text),
     text,
     unavailableCount

@@ -76,6 +76,7 @@ async function buildCurrentSnapshot(
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
+    image_sources: row.image_sources,
     import_content_fingerprint: row.import_content_fingerprint,
     import_source_fingerprint: row.import_source_fingerprint,
     is_title_manual: row.is_title_manual === 1,

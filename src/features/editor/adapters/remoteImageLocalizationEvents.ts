@@ -1,4 +1,5 @@
 export interface RemoteImageLocalizationRequest {
+  recovery?: boolean;
   from: number;
   handled: boolean;
   nodeId: string;
@@ -11,7 +12,7 @@ const EVENT_NAME = 'foliole:remote-image-localization-request';
 
 export function requestRemoteImageLocalization(
   target: HTMLElement,
-  input: Pick<RemoteImageLocalizationRequest, 'from' | 'nodeId' | 'source' | 'to'>
+  input: Pick<RemoteImageLocalizationRequest, 'from' | 'nodeId' | 'source' | 'to' | 'recovery'>
 ) {
   return new Promise<boolean>((resolve) => {
     const detail: RemoteImageLocalizationRequest = { ...input, handled: false, resolve };

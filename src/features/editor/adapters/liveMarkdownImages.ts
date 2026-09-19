@@ -2,7 +2,6 @@ import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
-import { isNativeCompanionAttachmentResourceRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
 import type { RemoteImageSourceContextState } from '../../../shared/platform/remoteImageSourceRecovery';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
@@ -29,6 +28,7 @@ import {
   resolveRemoteRenderSourceContext
 } from './liveMarkdownRemoteRenderSource';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
+import { requestRemoteImageLocalization } from './remoteImageLocalizationEvents';
 
 export { disposeMarkdownImageWidgetDom } from './liveMarkdownImageDisposal';
 
@@ -86,7 +86,7 @@ function appendLoadingImageSurface(
   }
 }
 
-function appendResolvedNativeAttachmentImage(
+function appendResolvedAttachmentImage(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
   renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
@@ -97,9 +97,21 @@ function appendResolvedNativeAttachmentImage(
 ) {
   wrapper.append(createImageStatusElement('loading', renderPlan.display));
   let didRetry = false;
+  let didRecover = false;
   async function resolveImage() {
-    const resolution = await resolveRuntimeAttachmentResource(imageMatch.source);
+    const resolution = await resolveRuntimeAttachmentResource(imageMatch.source, { refresh: true });
     if (resolution?.status !== 'ready' || !resolution.resource_url) {
+      if (!didRecover && editorNodeId) {
+        didRecover = true;
+        const recovered = await requestRemoteImageLocalization(wrapper, {
+          ...imageMatch, nodeId: editorNodeId, recovery: true
+        });
+        if (recovered) {
+          invalidateAttachmentResourceResolution(imageMatch.source);
+          await resolveImage();
+          return;
+        }
+      }
       if (!didRetry && imageMatch.attachmentId && onMissingAttachmentResource) {
         didRetry = true;
         try {
@@ -177,20 +189,6 @@ export function createMarkdownImageWidgetDom(
     return wrapper;
   }
 
-  if (isNativeCompanionAttachmentResourceRuntime()) {
-    appendResolvedNativeAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
-    return wrapper;
-  }
-
-  wrapper.append(
-    createImageSurface(imageMatch, attachmentSrc, editorNodeId, {
-      onError: () => {
-        closeActiveRemoteImageFailureMenu();
-        wrapper.replaceChildren(createUnavailableImageStatus(imageMatch, onRemoveImage));
-      },
-      onLoad: () => finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure),
-      requestMeasure
-    })
-  );
+  appendResolvedAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
   return wrapper;
 }

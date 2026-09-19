@@ -1,6 +1,7 @@
 {
   "syncProtocol": {
     "capabilities": [
+      "article-image-sources-v1",
       "author-host-snapshots-v1",
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
@@ -89,6 +90,7 @@
       "reveal",
       "anchor_link",
       "image_regions",
+      "image_sources",
       "import_source_fingerprint",
       "import_content_fingerprint",
       "current_version_id"

@@ -81,6 +81,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWorkgroupHttp.java',
       'FolioleCompanionWebView.java',
+      'FolioleRemoteImageFiles.java',
       'MainActivity.java'
     ]
   },

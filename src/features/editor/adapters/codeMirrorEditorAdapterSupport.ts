@@ -2,6 +2,7 @@ import { Compartment, EditorState, type StateEffect } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
+import { recoverMissingArticleImage } from '../../../shared/platform/external/articleImageRecovery';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
@@ -195,7 +196,10 @@ export class RemoteImageLocalizationController {
     if (request.nodeId !== this.args.getNodeId()) return;
     request.handled = true;
     const contentSnapshot = this.args.getContent();
-    void localizeRemoteMarkdownImageOccurrence(request.nodeId, contentSnapshot, request)
+    const operation = request.recovery
+      ? recoverMissingArticleImage(request.nodeId, request.source, contentSnapshot)
+      : localizeRemoteMarkdownImageOccurrence(request.nodeId, contentSnapshot, request);
+    void operation
       .then((localized) => {
         if (!localized || this.args.getNodeId() !== request.nodeId || this.args.getContent() !== contentSnapshot) {
           request.resolve(false);

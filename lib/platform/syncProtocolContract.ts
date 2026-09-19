@@ -14,6 +14,7 @@ export const SYNC_GROUP_MEMBER_STATE_CAPABILITY = 'sync-group-member-state-v1';
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
+    'article-image-sources-v1',
     'canonical-attachment-storage-key-v1',
     'device-delivery-receipts-v1',
     DESKTOP_SOFT_ANCHOR_CAPABILITY,

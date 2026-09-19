@@ -156,3 +156,12 @@ function insertExistingNode() {
     )
   `);
 }
+
+it('preserves article image sources through the actual pack apply path', async () => {
+  const sources = JSON.stringify({ [`${'a'.repeat(64)}.png`]: 'https://example.com/original.png' });
+  const incoming = new Database(incomingPath);
+  try { incoming.prepare('UPDATE nodes SET image_sources = ? WHERE id = ?').run(sources, 'node-1'); }
+  finally { incoming.close(); }
+  await applyIncomingPack();
+  expect(openDatabaseConnection().sqlite.prepare('SELECT image_sources FROM nodes WHERE id = ?').pluck().get('node-1')).toBe(sources);
+});

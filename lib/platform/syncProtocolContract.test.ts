@@ -39,7 +39,7 @@ describe('syncProtocolContract', () => {
   it('reports missing required capabilities', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor({ capabilities: [] }))).toEqual({
       missing_capabilities: [
-        'author-host-snapshots-v1', 'canonical-attachment-storage-key-v1',
+        'article-image-sources-v1', 'author-host-snapshots-v1', 'canonical-attachment-storage-key-v1',
         'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
       'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
       'readwise-library-source-mode-v1',
@@ -88,4 +88,12 @@ it('requires the display-name contract as part of the exact v7 generation', () =
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
     .toMatchObject({ negotiated_version: 7, status: 'compatible' });
+});
+
+it('rejects peers that cannot preserve article image sources', () => {
+  const oldPeer = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter((capability) => capability !== 'article-image-sources-v1') });
+  expect(evaluateSyncProtocolCompatibility(oldPeer)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing', missing_capabilities: ['article-image-sources-v1']
+  });
 });
