@@ -5,6 +5,7 @@ const capacitorMock = vi.hoisted(() => ({
   isNativePlatform: vi.fn(() => false),
   plugin: {
     clearAppData: vi.fn(),
+    maintainAttachmentFiles: vi.fn(),
     loadPairingState: vi.fn(),
     loadDiscoveryCandidates: vi.fn(),
     loadReadableArticle: vi.fn(),
@@ -157,6 +158,9 @@ function registerNativeAppDataClearTest() {
     await clearCompanionAppData();
 
     expect(clearActiveData).toHaveBeenCalledWith();
+    expect(capacitorMock.plugin.maintainAttachmentFiles).toHaveBeenCalledWith({
+      operation: 'write-state', state: 'null'
+    });
     expect(capacitorMock.plugin.clearAppData).toHaveBeenCalledWith();
   });
 }

@@ -8,6 +8,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const PLATFORM_ROOT = path.join(ROOT, 'src/shared/platform');
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
 const TYPES_FILES = [
+  '../../../lib/platform/attachmentMaintenanceHostContract.ts',
+  '../../../lib/platform/remoteImageResourceContract.ts',
   'companionWorkspaceSyncPluginTypes.ts',
   'companionAttachmentResourceSyncPluginTypes.ts',
   'companionContentBlobSyncPluginTypes.ts'

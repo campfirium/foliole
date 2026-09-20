@@ -75,7 +75,7 @@ it('does not replay a queued pending undo through a newer text entry', async () 
     .toMatchObject({ canonical: 'confirmed', type: 'annotation.create' });
 });
 
-it('invalidates the topic session when exact text replay fails', () => {
+it('keeps exact text history recoverable when replay temporarily fails', () => {
   const { actions, harness } = createHarness();
   actions.pushEditorOperationEntry(createTextHistoryEntry({
     afterContent: '# Seed\n\nTyped text',
@@ -88,9 +88,7 @@ it('invalidates the topic session when exact text replay fails', () => {
     currentContent: '# Seed\n\nTyped text',
     nodeId: 'node-1'
   })).toBe(false);
-  expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toEqual([]);
-  expect(harness.getState().editorOperationHistory.invalidations.at(-1)).toEqual({
-    nodeId: 'node-1',
-    reason: 'text-replay-failed'
-  });
+  expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack)
+    .toEqual([expect.objectContaining({ type: 'text.edit' })]);
+  expect(harness.getState().editorOperationHistory.invalidations).toEqual([]);
 });

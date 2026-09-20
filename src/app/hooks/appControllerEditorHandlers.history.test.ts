@@ -78,6 +78,8 @@ function createArgs(mode?: 'after-create' | 'after-undo') {
   };
 }
 
+const DERIVED_TITLE_OPTIONS = { deriveTitle: true };
+
 describe('app controller editor history handlers', () => {
   it('ignores the stale blank editor change that can arrive after creating an annotation', () => {
     const { args, pushEditorOperationEntry, updateNodeContent } = createArgs();
@@ -122,7 +124,7 @@ describe('app controller editor history handlers', () => {
     createNodeContentChangeHandler(args)('node-1', 'Alpha Beta Gamma Delta');
 
     expect(pushEditorOperationEntry).not.toHaveBeenCalled();
-    expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'Alpha Beta Gamma Delta', undefined);
+    expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'Alpha Beta Gamma Delta', DERIVED_TITLE_OPTIONS);
   });
 
   it('allows a history replay to save an intentional empty body', () => {
@@ -130,7 +132,11 @@ describe('app controller editor history handlers', () => {
 
     createNodeContentChangeHandler(args)('node-1', '', { historyReplay: true, publishLocal: true });
 
-    expect(updateNodeContent).toHaveBeenCalledWith('node-1', '', { publishLocal: true });
+    expect(updateNodeContent).toHaveBeenCalledWith('node-1', '', {
+      deriveTitle: true,
+      historyReplay: true,
+      publishLocal: true
+    });
   });
 
   it('matches text history against the current editor document instead of the stale store body', () => {
@@ -152,5 +158,4 @@ describe('app controller editor history handlers', () => {
     expect(context?.applyText({} as never, 'undo')).toBe(true);
     expect(applyTextHistory).toHaveBeenCalledWith({}, 'undo');
   });
-
 });

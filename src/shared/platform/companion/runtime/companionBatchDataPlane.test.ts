@@ -35,25 +35,30 @@ it('carries only a native pack path through the Web contract before shared conte
 
 it('stages native attachment files and commits only their small manifest', async () => {
   const { owner, port } = fakeOwner();
-  port.query = vi.fn(async () => [{ content_hash: 'b'.repeat(64), size_bytes: 32_600_000 }]) as DbPort['query'];
+  const attachmentId = 'b'.repeat(64);
+  port.query = vi.fn(async () => [{
+    id: attachmentId, mime_type: 'image/png', size_bytes: 32_600_000
+  }]) as DbPort['query'];
   const plugin = {
     finishAttachmentResourceBatch: vi.fn(async () => ({})),
     stageAttachmentResourceBatch: vi.fn(async () => ({
       failed_attachment_ids: [],
       manifest: [{
-        attachment_id: 'att-1', content_hash: 'b'.repeat(64), mime_type: 'image/png',
-        size_bytes: 32_600_000, storage_key: `${'b'.repeat(64)}.png`
+        attachment_id: attachmentId, content_hash: attachmentId, mime_type: 'image/png',
+        size_bytes: 32_600_000, storage_key: `${attachmentId}.png`
       }]
     }))
   };
 
   await expect(commitStagedCompanionAttachmentBatch(
     owner, plugin as never, 'attachment-token', '2026-08-06T00:00:00.000Z'
-  )).resolves.toEqual({ failedIds: [], syncedIds: ['att-1'] });
+  )).resolves.toEqual({ failedIds: [], syncedIds: [attachmentId] });
 
   expect(plugin.stageAttachmentResourceBatch).toHaveBeenCalledWith({ batch_token: 'attachment-token' });
   expect(plugin.finishAttachmentResourceBatch).toHaveBeenCalledWith({ batch_token: 'attachment-token', committed: true });
-  expect(port.run).toHaveBeenCalledWith(expect.stringContaining("availability = 'cached'"), expect.any(Array));
+  expect(port.query).toHaveBeenCalledWith(
+    'SELECT id, mime_type, size_bytes FROM attachments WHERE id = ? LIMIT 1', [attachmentId]
+  );
 });
 
 it('reports failed shared commits so native staging can roll back', async () => {

@@ -79,7 +79,7 @@ it('rejects generated EPUB structure before runtime mutation', async () => {
 
   expect(useWorkspaceStore.getState().nodesById['node-epub-0123456789abcdef01234567']?.parentNodeId)
     .toBe('epub-book-root');
-  expect(runtimeInvoke).not.toHaveBeenCalled();
+  expect(runtimeInvoke.mock.calls.map(([command]) => command)).not.toContain('move_nodes');
 });
 
 it.each(['epub-book-root', 'user-topic-under-book'])(

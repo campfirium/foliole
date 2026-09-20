@@ -15,6 +15,7 @@ const controlledElectronSqliteTests = [
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/companionOpaqueSyncRefMigration.test.ts',
   'electron/database/companionSourceHostOwnershipMigration.test.ts',
+  'electron/database/companionWatchedBindingMigration.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
   'electron/database/dataMigrationState.test.ts',
   'electron/database/deliveryAuthorizationMigration.test.ts',
@@ -27,8 +28,10 @@ const controlledElectronSqliteTests = [
   'electron/database/externalSearchMirrorAvailability.test.ts',
   'electron/database/externalSearchSidecar.test.ts',
   'electron/database/hostStateCutoverPreparation.test.ts',
+  'electron/database/editorOperationHistoryMigration.test.ts',
   'electron/database/iosHostedSyncPackGenerator.test.ts',
   'electron/database/iosHostedSyncPackIllegalDagOracle.test.ts',
+  'electron/database/iosUpgradeAttachmentRetirement.test.ts',
   'electron/database/legacySyncGroupMigrationSequence.test.ts',
   'electron/database/libraryDataMigration.test.ts',
   'electron/database/mainFtsCleanup.test.ts',
@@ -70,6 +73,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackNodeOpenLineageApply.test.ts',
   'electron/sync/syncPackGroupFactsExecutor.test.ts',
   'electron/sync/syncPackPushAcksExecutor.test.ts',
+  'electron/sync/watchedFolderPayloadIsolation.test.ts',
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',
@@ -92,6 +96,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncStateObjects.test.ts',
   'src/shared/platform/companion/sync/syncGroupStore.test.ts',
   'src/shared/platform/companion/sync/syncGroupMemberStateStore.test.ts',
+  'src/shared/platform/companion/runtime/companionArticleImageStore.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 

@@ -47,6 +47,7 @@ function createNodeFixture(): Node {
       }
     },
     imageRegions: null,
+    imageSources: null,
     reveal: 'Reveal',
     reading: {
       intervalDurationMs: 0,
@@ -108,6 +109,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
       }
     },
     imageRegions: null,
+    imageSources: null,
     reading: {
       intervalDurationMs: 0,
       intervalGrowthFactor: 1,

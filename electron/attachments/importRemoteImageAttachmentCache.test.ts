@@ -6,10 +6,18 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const { importImageAttachmentBytes, normalizeImageFileName, resolveImageMimeType } = vi.hoisted(() => ({
+const {
+  importImageAttachmentBytes,
+  normalizeImageFileName,
+  registerNodeImageSources,
+  resolveImageMimeType,
+  runWithDatabaseConnectionOwner
+} = vi.hoisted(() => ({
   importImageAttachmentBytes: vi.fn(),
   normalizeImageFileName: vi.fn((value: string) => value || 'pasted-image.png'),
-  resolveImageMimeType: vi.fn()
+  registerNodeImageSources: vi.fn(),
+  resolveImageMimeType: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
 vi.mock('./importImageAttachmentBytes.js', () => ({
@@ -17,6 +25,8 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
   normalizeImageFileName,
   resolveImageMimeType
 }));
+vi.mock('../database/connection.js', () => ({ runWithDatabaseConnectionOwner }));
+vi.mock('../database/nodeImageSources.js', () => ({ registerNodeImageSources }));
 
 import {
   configureRemoteImagePipelineCacheRoot,
@@ -54,7 +64,19 @@ it('imports from the remote image cache without downloading again', async () => 
     })
   );
   vi.stubGlobal('fetch', fetchMock);
-  importImageAttachmentBytes.mockResolvedValue({ status: 'imported', attachment_id: 'hash-1' });
+  const imported = {
+    status: 'imported',
+    attachment_id: 'hash-1',
+    attachment_record: 'created',
+    created_at: '2026-09-20T00:00:00.000Z',
+    hash: 'hash-1',
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: PNG_BYTES.length,
+    storage_key: 'hash-1.png',
+    stored_file: 'created'
+  } as const;
+  importImageAttachmentBytes.mockResolvedValue(imported);
 
   await fetchRemoteImageResource('https://example.com/images/cover.png');
   resetRemoteImagePipelineForTests();
@@ -66,9 +88,12 @@ it('imports from the remote image cache without downloading again', async () => 
   await expect(importRemoteImageAttachment({
     nodeId: 'node-1',
     sourceUrl: 'https://example.com/images/cover.png'
-  })).resolves.toEqual({ status: 'imported', attachment_id: 'hash-1' });
+  })).resolves.toEqual(imported);
   expect(importImageAttachmentBytes).toHaveBeenCalledWith(expect.objectContaining({
     bytes: PNG_BYTES
   }));
+  expect(registerNodeImageSources).toHaveBeenCalledWith('node-1', {
+    'hash-1.png': 'https://example.com/images/cover.png'
+  });
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
