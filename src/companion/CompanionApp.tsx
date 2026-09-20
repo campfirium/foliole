@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
+import { useAttachmentObservation } from '../shared/hooks/useAttachmentObservation';
 import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import { useSystemEntryDisplayNamesSnapshot } from '../shared/localization/systemEntryDisplayNamesStore';
 import {
@@ -21,6 +22,7 @@ function CompanionAppContent() {
   useSystemEntryDisplayNamesSnapshot();
   const t = useTranslation();
   const bootstrap = useCompanionBootstrap();
+  useAttachmentObservation(bootstrap.status === 'ready');
   useEffect(() => {
     if (bootstrap.status === 'ready')
       void hydrateCompanionSystemEntryDisplayNames().catch(() => undefined);

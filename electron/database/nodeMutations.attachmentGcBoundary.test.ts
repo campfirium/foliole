@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { restoreAttachmentFromTrash } from '../attachments/attachmentTrashFiles.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
 import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
@@ -26,8 +27,7 @@ import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import {
   cleanupOrphanAttachments,
-  createAttachmentCleanupPlan,
-  deleteAttachmentFiles
+  createAttachmentCleanupPlan
 } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
 
@@ -153,7 +153,7 @@ it('keeps mounted pdf attachments held only by a restorable trashed node', async
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-it('keeps file deletion outside rollbackable orphan cleanup transactions', async () => {
+it('keeps moved files recoverable when orphan metadata cleanup rolls back', async () => {
   seedNode('node-cleanup', `![Cover](asset://${DB_ONLY_IMAGE_ID}.png)`);
   const filePath = await seedAttachment({
     attachmentId: DB_ONLY_IMAGE_ID,
@@ -174,16 +174,18 @@ it('keeps file deletion outside rollbackable orphan cleanup transactions', async
   ).toThrow('rollback cleanup');
 
   expect(readCounts(DB_ONLY_IMAGE_ID)).toEqual({ attachmentRows: 1, linkRows: 1, pdfRows: 0 });
+  const trashPath = path.join(`${path.dirname(filePath)}.trash`, path.basename(filePath));
+  await expect(fs.readFile(trashPath, 'utf8')).resolves.toBe(`image/png:${DB_ONLY_IMAGE_ID}`);
+  restoreAttachmentFromTrash(path.dirname(filePath), path.basename(filePath));
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
-  const filesToDelete = withTransaction(connection.driver, () => {
+  withTransaction(connection.driver, () => {
     connection.driver.execute('DELETE FROM nodes WHERE id = ?', ['node-cleanup']);
     return cleanupOrphanAttachments(connection.driver, plan);
   });
 
   expect(readCounts(DB_ONLY_IMAGE_ID)).toEqual({ attachmentRows: 0, linkRows: 0, pdfRows: 0 });
-  await expect(fs.stat(filePath)).resolves.toBeDefined();
-  deleteAttachmentFiles(filesToDelete);
+  await expect(fs.readFile(trashPath, 'utf8')).resolves.toBe(`image/png:${DB_ONLY_IMAGE_ID}`);
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 

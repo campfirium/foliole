@@ -17,6 +17,7 @@ final class FolioleCompanionAttachmentFileResolver {
         File file = !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)
             ? null
             : new File(new File(context.getFilesDir(), "attachments"), storageKey.trim());
+        if (file != null && !file.exists()) FolioleAttachmentMaintenanceFiles.move(context, storageKey, false);
         boolean ready = isRegularFileWithoutFollowingLinks(file) &&
             contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file));
         JSObject result = new JSObject();

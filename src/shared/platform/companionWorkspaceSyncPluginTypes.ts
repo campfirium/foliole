@@ -1,3 +1,4 @@
+import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
 import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
@@ -36,7 +37,7 @@ export interface CompanionSyncGroupProviderState {
 export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
-  extends RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
+  extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;

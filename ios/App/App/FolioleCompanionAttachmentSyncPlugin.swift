@@ -77,6 +77,9 @@ extension FolioleCompanionSyncPlugin {
                 return
             }
             let fileURL = try attachmentRoot(contract).appendingPathComponent(storageKey)
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                try FolioleAttachmentMaintenanceFiles.move(storageKey, toTrash: false)
+            }
             let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             let exists = values?.isRegularFile == true && values?.isSymbolicLink != true &&
                 (try? FolioleCompanionAttachmentResourceDownloader.digestHex(fileURL)) == contentHash

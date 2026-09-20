@@ -22,6 +22,11 @@ final class FolioleCompanionCanonicalAttachmentKey {
             ? contentHash + extension : null;
     }
 
+    static boolean valid(String key) {
+        return key != null && key.length() > 64 && key.substring(0, 64).matches("[a-f0-9]{64}")
+            && EXTENSIONS.containsValue(key.substring(64));
+    }
+
     static boolean matches(String contentHash, String mimeType, String storageKey) {
         return storageKey != null && storageKey.equals(storageKey(contentHash, mimeType));
     }

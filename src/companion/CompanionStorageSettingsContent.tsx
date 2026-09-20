@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
 import { AppSpinner } from '../shared/ui';
@@ -82,6 +83,7 @@ export function CompanionStorageSettingsContent() {
 
   return (
     <section className="px-5 py-5">
+      <SettingsAttachmentStorageSection />
       <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
         <h3 className="text-base font-semibold text-foreground">{t('companion.settings.storage.appData')}</h3>
         <p className="mt-2 text-sm leading-6 text-companion-text-secondary">

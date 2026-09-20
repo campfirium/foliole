@@ -1,10 +1,9 @@
-import fs from 'node:fs';
-
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { NodeBodyUnavailableError, resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
+import { moveAttachmentToTrash } from '../attachments/attachmentTrashFiles.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { recordAttachmentDeleted } from './attachmentSyncState.js';
@@ -130,21 +129,9 @@ function listStillMountedAttachmentIds(candidateIds: string[]) {
 
 function resolveOrphanAttachmentIds(plan: AttachmentCleanupPlan) {
   const inlineStillReferenced = new Set(plan.retainedInlineAttachmentIds);
-  const mountedStillReferenced = listStillMountedAttachmentIds(plan.mountedAttachmentIds);
-  const orphanAttachmentIds = new Set<string>();
-
-  for (const attachmentId of plan.inlineAttachmentIds) {
-    if (!inlineStillReferenced.has(attachmentId)) {
-      orphanAttachmentIds.add(attachmentId);
-    }
-  }
-  for (const attachmentId of plan.mountedAttachmentIds) {
-    if (!mountedStillReferenced.has(attachmentId)) {
-      orphanAttachmentIds.add(attachmentId);
-    }
-  }
-
-  return toUniqueSortedArray(orphanAttachmentIds);
+  const candidates = [...new Set([...plan.inlineAttachmentIds, ...plan.mountedAttachmentIds])];
+  const mountedStillReferenced = listStillMountedAttachmentIds(candidates);
+  return candidates.filter((id) => !inlineStillReferenced.has(id) && !mountedStillReferenced.has(id)).sort();
 }
 
 function listAttachmentFileRows(attachmentIds: string[]) {
@@ -178,19 +165,16 @@ export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
   const { assetsDir } = resolveRuntimeDataPaths();
   for (const row of rows) {
     if (!row.mime_type) continue;
-    for (const filePath of resolveAttachmentStoragePathCandidates(row.id, row.mime_type, assetsDir)) {
-      try {
-        fs.rmSync(filePath, { force: true });
-      } catch {
-        // Keep database cleanup successful even if a stale file path is already gone or locked.
-      }
-    }
+    const key = buildCanonicalAttachmentStorageKey(row.id, row.mime_type);
+    if (!key) throw new Error('attachment_delete_noncanonical_identity');
+    moveAttachmentToTrash(assetsDir, key);
   }
 }
 
 export function cleanupOrphanAttachments(driver: DatabaseDriver, plan: AttachmentCleanupPlan) {
   const orphanAttachmentIds = resolveOrphanAttachmentIds(plan);
   const attachmentFiles = listAttachmentFileRows(orphanAttachmentIds);
+  deleteAttachmentFiles(attachmentFiles);
   deleteAttachmentRows(driver, orphanAttachmentIds);
   return attachmentFiles;
 }

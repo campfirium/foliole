@@ -1,6 +1,8 @@
+import { parseAttachmentMaintenanceRequest } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../attachments/attachmentImageActions.js';
+import { runDesktopAttachmentMaintenance } from '../attachments/attachmentMaintenanceService.js';
 import { importClipboardImageAttachment } from '../attachments/importClipboardImageAttachment.js';
 import { importLocalImageAttachment } from '../attachments/importLocalImageAttachment.js';
 import { importRemoteImageAttachment } from '../attachments/importRemoteImageAttachment.js';
@@ -67,6 +69,9 @@ export function handleStorageAttachmentCommand(
   args: Record<string, unknown>,
   window: Parameters<typeof exportAttachmentImage>[1] = null
 ) {
+  if (command === NATIVE_COMMANDS.maintainAttachments) {
+    return runDesktopAttachmentMaintenance(parseAttachmentMaintenanceRequest(args));
+  }
   if (command === NATIVE_COMMANDS.importClipboardImageAttachment) {
     return importClipboardImageAttachment({
       bytesBase64: asString(args.bytesBase64, 'bytesBase64'),

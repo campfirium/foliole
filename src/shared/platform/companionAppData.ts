@@ -6,6 +6,7 @@ import {
   isNativeAndroidCompanionRuntime
 } from './companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import { FolioleCompanionSync } from './companionWorkspaceRuntimeRepository';
 import {
   normalizeWorkspaceSyncState,
   readWebSyncState,
@@ -25,6 +26,7 @@ export async function clearCompanionAppData(): Promise<NativeCompanionWorkspaceS
       workspace_snapshot: null
     });
   }
+  await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'write-state', state: 'null' });
   const state = await clearIosCompanionActiveData();
   if (isNativeAndroidCompanionRuntime()) await FolioleCompanionAppData.clearAppData();
   return normalizeWorkspaceSyncState(state);

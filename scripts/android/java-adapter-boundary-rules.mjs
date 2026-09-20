@@ -82,6 +82,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionWorkgroupHttp.java',
       'FolioleCompanionWebView.java',
       'FolioleRemoteImageFiles.java',
+      'FolioleAttachmentMaintenanceFiles.java',
       'MainActivity.java'
     ]
   },

@@ -4,6 +4,7 @@ import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionComma
 export const NATIVE_COMMANDS = {
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
+  maintainAttachments: 'maintain_attachments',
   appGetVersion: 'app_get_version',
   folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',

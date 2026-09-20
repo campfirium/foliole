@@ -1,3 +1,4 @@
+import type { AttachmentMaintenanceRequest, AttachmentMaintenanceStatus } from './attachmentMaintenanceContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDatabaseCompactionResult, NativeDatabaseSpaceStatus } from './nativeDatabaseCompactionContract.js';
 import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
@@ -29,6 +30,7 @@ import type {
 } from './nativeUtilityContract.js';
 
 export type NativeUtilityCommandMap = {
+  [NATIVE_COMMANDS.maintainAttachments]: { args: AttachmentMaintenanceRequest; result: AttachmentMaintenanceStatus };
   [NATIVE_COMMANDS.folioleCliInstall]: {
     args: { action: 'install' | 'remove' | 'repair' | 'status' };
     result: NativeFolioleCliInstallState;

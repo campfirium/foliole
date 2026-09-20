@@ -14,6 +14,11 @@ enum FolioleCompanionCanonicalAttachmentKey {
         return contentHash + suffix
     }
 
+    static func valid(_ key: String) -> Bool {
+        guard key.count > 64, String(key.prefix(64)).range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else { return false }
+        return extensions.values.contains(String(key.dropFirst(64)))
+    }
+
     static func matches(contentHash: String, mimeType: String, storageKey: String) -> Bool {
         return storageKey == self.storageKey(contentHash: contentHash, mimeType: mimeType)
     }

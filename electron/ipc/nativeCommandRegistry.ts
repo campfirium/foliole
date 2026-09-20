@@ -16,6 +16,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   ...NATIVE_BACKUP_COMMAND_REGISTRY,
+  { command: NATIVE_COMMANDS.maintainAttachments, route: 'storage', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appGetVersion, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },

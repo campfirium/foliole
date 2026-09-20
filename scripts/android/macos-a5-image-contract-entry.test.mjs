@@ -18,7 +18,7 @@ function fixture() {
     paths: { artifactsRoot: root, deviceBackupRoot: root, buildRoot: root, adb: 'adb', apk: 'main.apk', androidTestApk: 'test.apk' },
     checked: vi.fn((_command, args) => events.push(args.join(' '))),
     protectData: vi.fn(async (mode) => events.push(mode)),
-    execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: 'OK (4 tests)' }; }) } };
+    execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: 'OK (6 tests)' }; }) } };
 }
 it('registers the native test behind the existing mutation lease and frozen build contract', () => {
   expect(assertRegisteredMacosA5Action('image-contract')).toMatchObject({ deviceLeaseMode: 'mutation',
@@ -45,12 +45,12 @@ it('runs only the fixed class after backup and restores the main Activity', asyn
 it('retains a test failure while checking protected data and restoring the Activity', async () => {
   const { args, events } = fixture();
   args.execute.mockResolvedValue({ code: 0, output: 'FAILURES!!!' });
-  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('four tests');
+  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('six tests');
   expect(events).toContain('check');
   expect(events.some((event) => event.includes('am start -n'))).toBe(true);
 });
 it('rejects partial or failed instrumentation output', () => {
-  for (const output of ['OK (3 tests)', '', 'INSTRUMENTATION_FAILED\nOK (4 tests)']) {
+  for (const output of ['OK (3 tests)', '', 'INSTRUMENTATION_FAILED\nOK (6 tests)']) {
     expect(() => assertImageContractOutput(output)).toThrow();
   }
 });
@@ -80,7 +80,7 @@ it('passes only the bounded case and observed PID to the native projection', asy
   args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE = '1';
   args.env.FOLIOLE_S203_IMAGE_PROJECTION = 'cases-inspect';
   args.env.FOLIOLE_S203_IMAGE_PID = '1234';
-  args.execute.mockResolvedValueOnce({ code: 0, output: 'OK (4 tests)' })
+  args.execute.mockResolvedValueOnce({ code: 0, output: 'OK (6 tests)' })
     .mockResolvedValueOnce({ code: 0, output: 'OK (1 test)' });
   await runMacosA5ImageContractEntry(args);
   expect(args.execute.mock.calls[1][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
@@ -93,7 +93,7 @@ it('runs the bounded native fixture and preserves its failure while restoring th
   const { args, events } = fixture();
   args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE = '1';
   args.env.FOLIOLE_S203_IMAGE_PROJECTION = 'remove';
-  args.execute.mockResolvedValueOnce({ code: 0, output: 'OK (4 tests)' })
+  args.execute.mockResolvedValueOnce({ code: 0, output: 'OK (6 tests)' })
     .mockResolvedValueOnce({ code: 0, output: 'FAILURES!!!' });
   await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('projection failed');
   expect(args.execute.mock.calls[1][1]).toContain('com.foliole.android.FolioleArticleImageProjectionTest');

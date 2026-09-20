@@ -10,6 +10,7 @@ import {
 } from '../../../../shared/ui';
 import { settingsSearchRowProps, type SettingsSearchRowMeta } from '../../model/settingsSearch';
 
+import { SettingsAttachmentStorageSection } from './SettingsAttachmentStorageSection';
 import { getLibraryRows, ImportPathRows, LibraryPathRows } from './settingsImportSectionLibraryRows';
 import type { SettingsImportSectionProps } from './settingsImportSectionTypes';
 
@@ -102,6 +103,7 @@ export function SettingsImportSection(props: SettingsImportSectionProps) {
       >
         <LibraryPathRows {...props} />
       </SettingsSection>
+      <SettingsAttachmentStorageSection />
       <MirrorMaintenanceSection {...props} />
     </>
   );

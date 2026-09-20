@@ -44,6 +44,7 @@ describe('Android Java SQL surface', () => {
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
+      'maintainAttachmentFiles',
       'readRemoteImageResponse', 'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',

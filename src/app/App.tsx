@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type Dispatch, type ReactNode, type S
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { useReviewSchedulerSettings } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
+import { useAttachmentObservation } from '../shared/hooks/useAttachmentObservation';
 import type { AppLanguagePreference } from '../shared/localization/appLanguage';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { useDemoRuntimeState } from '../shared/platform/runtime/demoRuntime';
@@ -42,6 +43,7 @@ function AppContent() {
   const { isDemo } = useDemoRuntimeState();
   const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
   const isAppReady = Boolean(controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady);
+  useAttachmentObservation(isAppReady && !isDemo);
   const [hasReportedAppReady, setHasReportedAppReady] = useState(false);
   const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
     controller.layoutProps.imports.onCloseImportManagement();

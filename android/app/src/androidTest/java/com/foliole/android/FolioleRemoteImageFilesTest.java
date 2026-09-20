@@ -82,6 +82,34 @@ public class FolioleRemoteImageFilesTest {
         assertArrayEquals(bytes, Files.readAllBytes(other.toPath()));
     }
 
+    @Test public void movesRestoresAndExplicitlyEmptiesAttachmentTrash() throws Exception {
+        String key = hash(bytes) + ".png";
+        FolioleRemoteImageFiles.write(context, input(bytes, key));
+        File active = new File(root, "attachments/" + key);
+        File trash = new File(root, "attachments.trash/" + key);
+        FolioleAttachmentMaintenanceFiles.move(context, key, true);
+        assertFalse(active.exists());
+        assertArrayEquals(bytes, Files.readAllBytes(trash.toPath()));
+        JSObject resolved = FolioleCompanionAttachmentFileResolver.resolve(context, hash(bytes), "image/png", key);
+        assertEquals("ready", resolved.getString("status"));
+        assertArrayEquals(bytes, Files.readAllBytes(active.toPath()));
+        assertFalse(trash.exists());
+        FolioleAttachmentMaintenanceFiles.move(context, key, true);
+        FolioleAttachmentMaintenanceFiles.execute(context, call(new JSObject()
+            .put("operation", "remove-trash").put("storageKey", key)));
+        assertFalse(trash.exists());
+    }
+
+    @Test public void preservesSourceWhenTrashDestinationConflicts() throws Exception {
+        String key = hash(bytes) + ".png";
+        FolioleRemoteImageFiles.write(context, input(bytes, key));
+        File trash = new File(root, "attachments.trash");
+        assertTrue(trash.mkdir());
+        Files.write(new File(trash, key).toPath(), new byte[] {1, 2, 3});
+        assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, true));
+        assertArrayEquals(bytes, Files.readAllBytes(new File(root, "attachments/" + key).toPath()));
+    }
+
     private PluginCall input(byte[] value, String key) throws Exception { return call(data(value, key)); }
     private JSObject data(byte[] value, String key) throws Exception {
         return new JSObject().put("bytesBase64", Base64.encodeToString(value, Base64.NO_WRAP))

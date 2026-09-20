@@ -8,8 +8,8 @@ const TEST_ID = `${APP_ID}.test`;
 export const IMAGE_TEST_CLASS = `${APP_ID}.FolioleRemoteImageFilesTest`;
 
 export function assertImageContractOutput(output) {
-  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(4 tests\)/u.test(output)) {
-    throw new Error('Android image native contracts did not pass all four tests.');
+  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(6 tests\)/u.test(output)) {
+    throw new Error('Android image native contracts did not pass all six tests.');
   }
 }
 

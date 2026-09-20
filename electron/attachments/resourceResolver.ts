@@ -7,6 +7,7 @@ import type { NativeAttachmentResourceResolution } from '../../lib/platform/nati
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 import { readAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
+import { restoreAttachmentFromTrash } from './attachmentTrashFiles.js';
 import { buildAttachmentStorageFileName, resolveAttachmentStorageKeyPath } from './storagePath.js';
 
 export type ResolvedAttachmentFile =
@@ -47,6 +48,7 @@ export function resolveAttachmentFile(storageKey: string, assetsDir?: string): R
   const canonicalPath = resolveAttachmentStorageKeyPath(resolvedAssetsDir, storageKey);
   let bytes: Buffer;
   try {
+    if (!fs.existsSync(canonicalPath)) restoreAttachmentFromTrash(resolvedAssetsDir, storageKey);
     const linkStat = fs.lstatSync(canonicalPath);
     if (linkStat.isSymbolicLink() || !linkStat.isFile()) {
       return { status: 'missing_file', mimeType: parsed.mimeType };

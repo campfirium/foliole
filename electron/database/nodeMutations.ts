@@ -26,8 +26,7 @@ import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportIt
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import {
   cleanupOrphanAttachments,
-  createAttachmentCleanupPlan,
-  deleteAttachmentFiles
+  createAttachmentCleanupPlan
 } from './orphanAttachmentCleanup.js';
 import {
   clearNodeSourceDisposition,
@@ -194,10 +193,9 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
     ...input,
     deletedAt
   });
-  const attachmentFilesToDelete = withTransaction(connection.driver, () => {
+  withTransaction(connection.driver, () => {
     return cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
   });
-  deleteAttachmentFiles(attachmentFilesToDelete);
   return affectedParentNodeIds;
 }
 

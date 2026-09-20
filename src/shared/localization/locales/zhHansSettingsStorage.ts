@@ -1,6 +1,21 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.attachments.title': "本机附件",
+  'settings.attachments.error': "附件操作未完成，请重试。",
+  'settings.attachments.used': "总占用",
+  'settings.attachments.refresh': "刷新",
+  'settings.attachments.threshold': "清理阈值",
+  'settings.attachments.thresholdHint': "连续未被引用的观察次数；每个使用日最多计一次。",
+  'settings.attachments.automatic': "自动清理",
+  'settings.attachments.automaticHint': "完成观察后，将达到阈值的文件移入附件回收站。",
+  'settings.attachments.eligible': "可清理",
+  'settings.attachments.clean': "清理",
+  'settings.attachments.trash': "附件回收站",
+  'settings.attachments.restore': "全部恢复",
+  'settings.attachments.empty': "清空回收站",
+  'settings.attachments.emptyHint': "永久删除附件回收站中的所有文件？此操作无法撤销。",
+
   'settings.category.library.label': '存储',
   'settings.category.library.description': '设置导入和存储文件夹。',
   'settings.category.backups.label': '备份',

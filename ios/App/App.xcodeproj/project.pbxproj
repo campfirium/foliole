@@ -37,6 +37,7 @@
 		50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */; };
 		50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */; };
 		F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */; };
+		F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */; };
 		50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */; };
 		50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */; };
 		50F023161FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */; };
@@ -124,6 +125,7 @@
 		50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentResourceDownload.swift; sourceTree = "<group>"; };
 		50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentSyncPlugin.swift; sourceTree = "<group>"; };
 		F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRemoteImageFiles.swift; sourceTree = "<group>"; };
+		F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentMaintenanceFiles.swift; sourceTree = "<group>"; };
 		50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContentBlobPack.swift; sourceTree = "<group>"; };
 		50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentFileStage.swift; sourceTree = "<group>"; };
 		50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionCanonicalAttachmentKey.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */,
 				50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */,
 				F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */,
+				F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */,
 				50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */,
 				50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */,
 				50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */,
@@ -472,6 +475,7 @@
 				50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */,
 				50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */,
 				F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */,
+				F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */,
 				50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */,
 				50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */,
 				50F023161FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift in Sources */,
