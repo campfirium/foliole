@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { submitInternalUpdateFailureHandoff } from './internal-update-handoff.mjs';
+import { runtimeDownloadCacheEnv } from './runtime-download-cache.mjs';
 
 function assertRevision(revision) {
   if (!/^[0-9a-f]{40}$/u.test(revision ?? '')) {
@@ -158,7 +159,7 @@ export async function runInternalUpdate(options) {
     for (const step of build.steps) {
       runStep(step.label, step.command, step.args, {
         cwd: step.cwd,
-        env: { ...process.env, FOLIOLE_INTERNAL_BUILD_REVISION: revision }
+        env: { ...process.env, ...runtimeDownloadCacheEnv(repositoryRoot), FOLIOLE_INTERNAL_BUILD_REVISION: revision }
       }, run);
     }
     await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);

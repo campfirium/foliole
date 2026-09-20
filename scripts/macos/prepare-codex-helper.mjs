@@ -6,6 +6,7 @@ import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path';
 
 import { loadPinnedCodexHelperRelease } from './codex-helper-release.mjs';
+import { runtimeArchivePath } from './runtime-download-cache.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -22,7 +23,7 @@ export async function prepareCodexHelper(options = {}) {
   const release = options.release ?? await loadPinnedCodexHelperRelease(options.lockPath);
   const root = options.root ?? ROOT;
   const directory = path.join(root, '.tmp/macos/codex', release.version);
-  const archive = path.join(directory, release.assetName);
+  const archive = await runtimeArchivePath(path.join(directory, release.assetName), release.sha256, options.env);
   const command = path.join(directory, 'codex');
   await mkdir(directory, { recursive: true });
   if (!await hasExpectedHash(archive, release.sha256)) {

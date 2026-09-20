@@ -1,8 +1,9 @@
-/* global Buffer, fetch */
+/* global Buffer, fetch, process */
 
 import { createHash } from 'node:crypto';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { runtimeArchivePath } from './runtime-download-cache.mjs';
 
 export const NODE_SEA_RELEASE = {
   archive: 'node-v22.23.1-darwin-arm64.tar.gz',
@@ -30,7 +31,13 @@ async function downloadArchive(archivePath, fetchImpl) {
   if (!response.ok) throw new Error(`Node SEA runtime download failed with HTTP ${response.status}`);
   const data = Buffer.from(await response.arrayBuffer());
   if (checksum(data) !== NODE_SEA_RELEASE.sha256) throw new Error('Node SEA runtime checksum mismatch');
-  await writeFile(archivePath, data);
+  const temporaryPath = `${archivePath}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporaryPath, data);
+    await rename(temporaryPath, archivePath);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 }
 
 export async function prepareNodeSeaRuntime(root, options = {}) {
@@ -42,6 +49,7 @@ export async function prepareNodeSeaRuntime(root, options = {}) {
     // The pinned official runtime has not been prepared in this workspace yet.
   }
   await mkdir(paths.cacheDirectory, { recursive: true });
+  paths.archivePath = await runtimeArchivePath(paths.archivePath, NODE_SEA_RELEASE.sha256, options.env);
   try {
     const archive = await readFile(paths.archivePath);
     if (checksum(archive) !== NODE_SEA_RELEASE.sha256) throw new Error('invalid cache');

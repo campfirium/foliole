@@ -13,6 +13,7 @@ import {
 import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
 
 import { frozenNpmCiArgs } from '../lib/frozen-npm-cache.mjs';
+import { runtimeDownloadCacheEnv } from './runtime-download-cache.mjs';
 
 const OWNER_FILE = 'owner.json';
 const MAX_OUTPUT = 64 * 1024 * 1024;
@@ -103,7 +104,7 @@ export function runMacosFrozenRevisionPreflight({
   fsApi.mkdirSync(path.dirname(paths.evidenceRoot), { recursive: true });
   const manager = openFrozenPreflightReceipt({ attemptId, evidenceRoot: paths.evidenceRoot,
     host: 'macos', source }, { fsApi });
-  manager.env = env;
+  manager.env = { ...env, ...runtimeDownloadCacheEnv(repoRoot) };
   manager.repoRoot = repoRoot;
   updateFrozenPreflightReceipt(manager, { resourceLock: {
     className: 'node-heavy', resultStatus: 'held'

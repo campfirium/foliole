@@ -54,7 +54,10 @@ describe('Internal update fixed-input worker', () => {
       pathExists: vi.fn(async () => false), remove: vi.fn(), repositoryRoot: '/repo',
       revision: REVISION, run, stateRoot: '/state', writeBaseline: vi.fn()
     })).resolves.toEqual({ revision: REVISION, status: 'installed' });
-    expect(run).toHaveBeenCalled();
+    expect(run).toHaveBeenCalledWith('npm', ['run', 'macos:internal:update'], expect.objectContaining({
+      cwd: '/tmp/job/source',
+      env: expect.objectContaining({ FOLIOLE_RUNTIME_DOWNLOAD_CACHE: '/repo/.cache/desktop-runtime-downloads' })
+    }));
   });
 
   it('ignores an older queued revision without moving the baseline backward', async () => {
