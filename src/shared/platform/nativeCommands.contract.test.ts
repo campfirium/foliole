@@ -3,40 +3,13 @@ import { join } from 'node:path';
 
 import ts from 'typescript';
 
+import contractFiles from '../../../lib/platform/nativeCommandContractFiles.json';
 import { canRecordNativeCommandArgs } from '../../../lib/platform/nativeCommandPrivacy';
 import { NATIVE_COMMANDS, isTypedNativeCommand } from '../../../lib/platform/nativeCommands';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from '../../../lib/platform/nativeSourceConnectionCommands';
 
-const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
-const CONTRACT_FILES = [
-  'nativeAideStorageContract.ts',
-  'nativeAssistantContract.ts',
-  'nativeAssistantByokContract.ts',
-  'nativeAssistantCommandContract.ts',
-  'nativeAssistantModelSettingsContract.ts',
-  'nativeBackupSearchContract.ts',
-  'nativeContract.ts',
-  'nativeDiscoursePublishContract.ts',
-  'nativeDisplayScaleContract.ts',
-  'nativeExternalSearchCommandMap.ts',
-  'nativeFoliolePublishContract.ts',
-  'nativeImportCommandMap.ts',
-  'nativeInitialLibrarySetupContract.ts',
-  'nativeLocalFileCommandMap.ts',
-  'nativeMoveCommandMap.ts',
-  'nativeReadwiseCommandMap.ts',
-  'nativeRemoteImageCommandMap.ts',
-  'nativeSearchIndexCommandMap.ts',
-  'nativeSplitTopicPreferencesContract.ts',
-  'nativeSyncCommandMap.ts',
-  'nativeTrashCommandMap.ts',
-  'nativeUpdateContract.ts',
-  'nativeWordPressPublishContract.ts',
-  'nativeUtilityCommandMap.ts'
-];
-
 function readPlatformSource(fileName: string) {
-  return readFileSync(join(PLATFORM_DIR, fileName), 'utf8');
+  return readFileSync(join(process.cwd(), fileName), 'utf8');
 }
 
 function collectNativeCommandReferences(fileName: string) {
@@ -63,7 +36,7 @@ function collectNativeCommandReferences(fileName: string) {
 }
 
 function collectContractCommandReferences() {
-  return CONTRACT_FILES.reduce<Set<string>>((references, fileName) => {
+  return contractFiles.reduce<Set<string>>((references, fileName) => {
     collectNativeCommandReferences(fileName).forEach((commandKey) => references.add(commandKey));
     return references;
   }, new Set(Object.keys(NATIVE_SOURCE_CONNECTION_COMMANDS)));

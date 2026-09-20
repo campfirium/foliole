@@ -3,32 +3,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const CONTRACT_FILES = [
-  'lib/platform/nativeAideStorageContract.ts',
-  'lib/platform/nativeAssistantContract.ts',
-  'lib/platform/nativeAssistantCommandContract.ts',
-  'lib/platform/nativeAssistantImageContract.ts',
-  'lib/platform/nativeBackupSearchContract.ts',
-  'lib/platform/nativeContract.ts',
-  'lib/platform/nativeDiscoursePublishContract.ts',
-  'lib/platform/nativeDisplayScaleContract.ts',
-  'lib/platform/nativeEditorOperationHistoryContract.ts',
-  'lib/platform/nativeExternalSearchCommandMap.ts',
-  'lib/platform/nativeFoliolePublishContract.ts',
-  'lib/platform/nativeImportCommandMap.ts',
-  'lib/platform/nativeInitialLibrarySetupContract.ts',
-  'lib/platform/nativeLocalFileCommandMap.ts',
-  'lib/platform/nativeMoveCommandMap.ts',
-  'lib/platform/nativeReadwiseCommandMap.ts',
-  'lib/platform/nativeRemoteImageCommandMap.ts',
-  'lib/platform/nativeSearchIndexCommandMap.ts',
-  'lib/platform/nativeSplitTopicPreferencesContract.ts',
-  'lib/platform/nativeSyncCommandMap.ts',
-  'lib/platform/nativeTrashCommandMap.ts',
-  'lib/platform/nativeUpdateContract.ts',
-  'lib/platform/nativeUtilityCommandMap.ts',
-  'lib/platform/nativeWordPressPublishContract.ts'
-];
+const CONTRACT_FILES = JSON.parse(fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/platform/nativeCommandContractFiles.json'),
+  'utf8'
+));
 const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
   'electron/ipc/assistantLocalHistoryCommands.ts',
