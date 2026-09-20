@@ -3,6 +3,7 @@ import path from 'node:path';
 import { assertPerformanceApkIdentity, performanceScenario, PERFORMANCE_APP_ID } from './a5-database-performance-build.mjs';
 import { parseLibraryCapacityResult } from '../mobile/library-capacity-result.mjs';
 import { extractTopActivity, matchesLaunchComponent } from './verify-android-launch.mjs';
+import { removeA5AcceptanceApplication } from './macos-a5-acceptance-package-cleanup.mjs';
 
 import {
   evaluateCompanionDatabasePerformanceResults,
@@ -20,12 +21,22 @@ const BATCH_DATA_PLANE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionBatchData
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, captured, paths, serial }) {
   const identities = assertPerformanceApkIdentity({ captured, paths, env });
   const capacity = performanceScenario(env) === 'library-capacity';
+  const resetFixture = env.FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE;
+  if (resetFixture !== undefined && (resetFixture !== '1' || !capacity)) {
+    throw new Error('Capacity fixture reset requires the explicit library-capacity scenario and value 1.');
+  }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const testApk = paths.androidTestApk;
   const options = { env, timeoutCode: 'database_performance_timeout', timeoutMs: 20 * 60_000 };
   const output = [];
   let testInstalled = false;
   try {
+    if (resetFixture === '1') {
+      await removeA5AcceptanceApplication({ env, execute, paths, serial });
+      fs.writeFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'),
+        `${JSON.stringify({ appId: APP_ID, serial, scenario: 'library-capacity', identities,
+          status: 'reset', resetAt: new Date().toISOString() }, null, 2)}\n`);
+    }
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options)).output);
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options)).output);
     testInstalled = true;

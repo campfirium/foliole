@@ -65,14 +65,14 @@ function performanceOutput() {
 
 it('refuses a mismatched APK before any device command', async () => {
   const calls = [];
-  await expect(runA5DatabasePerformance({ env: { ANDROID_SDK_ROOT: '/sdk' }, paths: {},
+  await expect(runA5DatabasePerformance({ env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' }, paths: {},
     captured: () => '<manifest package="com.foliole.android"/>',
     execute: (...args) => calls.push(args)
   })).rejects.toThrow('identities');
   expect(calls).toEqual([]);
 });
 
-it('runs only the selected capacity scenario and restores the isolated activity', async () => {
+it.each([false, true])('runs capacity with explicit reset=%s and restores the isolated activity', async (reset) => {
   const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-capacity-test-'));
   created.push(evidenceRoot);
   const calls = [];
@@ -83,7 +83,8 @@ it('runs only the selected capacity scenario and restores the isolated activity'
       runs: Array.from({ length: 4 }, () => ({ totalMs: 2, queryWallMs: 1, jsResidualMs: 1, snapshotHash: 'a'.repeat(64) }))
     })) };
   const outcome = await runA5DatabasePerformance({
-    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity' },
+    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity',
+      ...(reset ? { FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' } : {}) },
     evidenceRoot, serial: 'fixed-a5',
     paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
     captured: (_cmd, args) => args.at(-1) === '/app.apk'
@@ -100,4 +101,28 @@ it('runs only the selected capacity scenario and restores the isolated activity'
   expect(calls.find(args => args.includes('instrument'))).toContain('com.foliole.android.FolioleLibraryCapacityTest');
   expect(calls.at(-2)).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
   expect(JSON.parse(fs.readFileSync(outcome.evidencePath)).measurements).toEqual(result);
+  const appRemoval = calls.findIndex(args => args.includes('uninstall') && args.at(-1) === 'com.foliole.android.acceptance');
+  expect(appRemoval >= 0).toBe(reset);
+  expect(calls.some(args => args.includes('com.foliole.android'))).toBe(false);
+  if (reset) {
+    expect(appRemoval).toBeLessThan(calls.findIndex(args => args.includes('install')));
+    expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'))))
+      .toMatchObject({ appId: 'com.foliole.android.acceptance', status: 'reset' });
+  }
+});
+
+
+it.each([
+  { FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' },
+  { FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity', FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: 'true' }
+])('rejects reset outside the exact capacity opt-in before device commands', async env => {
+  const calls = [];
+  await expect(runA5DatabasePerformance({
+    env: { ANDROID_SDK_ROOT: '/sdk', ...env }, paths: { apk: '/app.apk', androidTestApk: '/test.apk' },
+    captured: (_cmd, args) => args.at(-1) === '/app.apk'
+      ? '<manifest package="com.foliole.android.acceptance"/>'
+      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+    execute: (...args) => calls.push(args)
+  })).rejects.toThrow('reset requires');
+  expect(calls).toEqual([]);
 });
