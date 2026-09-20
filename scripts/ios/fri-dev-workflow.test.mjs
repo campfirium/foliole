@@ -94,3 +94,12 @@ describe('Fri development workflow', () => {
       .toContain('Fri-dev-workflow-operated');
   });
 });
+
+it('builds the fixed capacity resource and selects its physical UI test', () => {
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot: '/evidence', repoRoot: '/repo',
+    scenario: 'library-capacity' });
+  expect(commands[0].env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('library-capacity');
+  expect(commands[2].args).toContain('AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testMeasuresLibraryCapacity');
+  expect(commands[3].args).toContain(FRI_DEV_APP_ID);
+  expect(commands[3].args).not.toContain('--allow-wireless');
+});

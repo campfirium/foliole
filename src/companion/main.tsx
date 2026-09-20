@@ -21,7 +21,9 @@ if (!rootElement) {
 }
 
 if (isIosBridgeAcceptance) {
-  const module = iosAcceptanceScenario === 'foreground-sync-lifecycle'
+  const module = iosAcceptanceScenario === 'library-capacity'
+    ? import('./capacityAcceptance').then(({ mountCapacityAcceptance }) => mountCapacityAcceptance(rootElement))
+    : iosAcceptanceScenario === 'foreground-sync-lifecycle'
     ? import('./iosForegroundSyncLifecycleAcceptance').then(({ runIosForegroundSyncLifecycleAcceptance }) =>
       runIosForegroundSyncLifecycleAcceptance(rootElement))
     : iosAcceptanceScenario === 'resource-provider-failover'

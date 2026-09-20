@@ -38,14 +38,18 @@ function execute(command, args, options = {}) {
   }
 }
 
-export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER }) {
+export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER, scenario = 'browse' }) {
+  if (!['browse', 'library-capacity'].includes(scenario)) throw new Error('Unsupported Fri development scenario.');
+  const capacity = scenario === 'library-capacity';
+  const buildEnv = { ...process.env, VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: capacity ? '1' : '0',
+    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity ? 'library-capacity' : '' };
   const runnerArgs = [runnerPath,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
     '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
-    '--only-testing', FRI_DEV_TEST];
+    '--only-testing', capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', 'testMeasuresLibraryCapacity') : FRI_DEV_TEST];
   return [
-    { command: 'npm', args: ['run', 'android:web:build'], stage: 'companion-build' },
+    { command: 'npm', args: ['run', 'android:web:build'], env: buildEnv, stage: 'companion-build' },
     { command: 'npx', args: ['cap', 'sync', 'ios'], stage: 'capacitor-ios-sync' },
     {
       command: 'bash',
@@ -71,13 +75,14 @@ export async function runFriDevWorkflow({
   readiness = createFriPhysicalReadinessAdapter(),
   retention = retainFriDevelopmentApps,
   runnerPath = FRI_XCUITEST_RUNNER,
+  scenario = 'browse',
   run = execute
 }) {
   if (!fs.existsSync(runnerPath)) {
     throw new Error(`Fixed Fri XCUITest runner is missing: ${runnerPath}`);
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath });
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath, scenario });
   for (const entry of commands.slice(0, 2)) {
     run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
@@ -89,13 +94,13 @@ export async function runFriDevWorkflow({
   for (const entry of commands.slice(2)) {
     await run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
-  return { evidenceRoot, testIdentifier: FRI_DEV_TEST };
+  return { evidenceRoot, testIdentifier: commands[2].args[commands[2].args.indexOf('--only-testing') + 1] };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const repoRoot = process.cwd();
   const evidenceRoot = path.resolve(option(process.argv.slice(2), '--artifacts-dir')
     ?? path.join(repoRoot, '.tmp/artifacts/t162-fri-dev-workflow', timestamp()));
-  const result = await runFriDevWorkflow({ evidenceRoot, repoRoot });
+  const result = await runFriDevWorkflow({ evidenceRoot, repoRoot, scenario: option(process.argv.slice(2), '--scenario') ?? 'browse' });
   console.log(`[fri-dev-workflow] status=success evidence=${result.evidenceRoot}`);
 }

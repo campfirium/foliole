@@ -6,6 +6,7 @@ import {
   runMacosA5SettledStoppedStatus,
   runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
+import { buildA5DatabasePerformance } from './a5-database-performance-build.mjs';
 import { runMacosA5DatabasePerformanceEntry } from './macos-a5-database-performance-entry.mjs';
 import { runMacosA5HiddenDesktopStatusEntry } from './macos-a5-hidden-desktop-status.mjs';
 import {
@@ -19,7 +20,10 @@ export async function dispatchMacosA5Action({
   action, assertFixed, build, buildIdentity, captureAnnotation, captured, checked, deploy,
   env, execute, markMutationBoundary, pairingReadiness, paths, protectData, readiness, serial
 }) {
-  if (action === 'build') build(paths);
+  if (action === 'build') {
+    if (env.FOLIOLE_DATABASE_PERFORMANCE_SCENARIO) buildA5DatabasePerformance({ checked, captured, env, paths });
+    else build(paths);
+  }
   if (action === 'status') {
     assertFixed(paths); pairingReadiness(paths); readiness(paths);
   }
@@ -38,7 +42,7 @@ export async function dispatchMacosA5Action({
       pairingReadiness, paths, protectData, readiness, serial });
   }
   if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
-    assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
+    assertFixed: () => assertFixed(paths), buildIdentity, checked, captured,
     env, execute, markMutationBoundary, paths, serial });
   if (action === 'device-profile') {
     const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');

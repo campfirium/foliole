@@ -23,17 +23,21 @@ describe('fixed A5 database performance action', () => {
       const isContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest')
         || args.includes('com.foliole.android.FolioleCompanionBatchDataPlaneTest');
       const isInstrumentation = args.includes('instrument');
-      const output = isContract ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
+      const output = args.includes('dumpsys') ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}' : isContract ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
       return { code: 0, output, stderr: '', stdout: '' };
     };
     const result = await runA5DatabasePerformance({
-      env: {}, evidenceRoot, execute,
-      paths: { adb: '/fixed/adb', apk: '/repo/main.apk', buildRoot: '/repo' },
+      env: { ANDROID_SDK_ROOT: "/sdk" }, evidenceRoot, execute,
+      captured: (_command, args) => args.at(-1) === "/repo/main.apk"
+        ? '<manifest package="com.foliole.android.acceptance"/>'
+        : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+      paths: { adb: '/fixed/adb', apk: '/repo/main.apk', androidTestApk: '/repo/test.apk', buildRoot: '/repo' },
       serial: 'fixed-a5'
     });
     const evidence = JSON.parse(fs.readFileSync(result.evidencePath, 'utf8'));
     expect(evidence.gate).toEqual({ failures: [], passed: true });
     expect(evidence.measurements).toHaveLength(5);
+    expect(calls.find(([, args]) => args.includes('-t'))?.[1].at(-1)).toBe('/repo/test.apk');
     const instrumentation = calls.filter(([, args]) => args.includes('instrument')).map(([, args]) => args);
     expect(instrumentation[0]).toContain(
       'com.foliole.android.FolioleCompanionDatabasePerformanceGateTest'
@@ -44,7 +48,8 @@ describe('fixed A5 database performance action', () => {
     expect(instrumentation[2]).toContain(
       'com.foliole.android.FolioleCompanionBatchDataPlaneTest'
     );
-    expect(calls.at(-1)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.foliole.android.test']);
+    expect(calls.at(-3)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.foliole.android.acceptance.test']);
+    expect(calls.at(-2)?.[1]).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
   });
 });
 
@@ -57,3 +62,42 @@ function performanceOutput() {
     })}`
   ).join('\n');
 }
+
+it('refuses a mismatched APK before any device command', async () => {
+  const calls = [];
+  await expect(runA5DatabasePerformance({ env: { ANDROID_SDK_ROOT: '/sdk' }, paths: {},
+    captured: () => '<manifest package="com.foliole.android"/>',
+    execute: (...args) => calls.push(args)
+  })).rejects.toThrow('identities');
+  expect(calls).toEqual([]);
+});
+
+it('runs only the selected capacity scenario and restores the isolated activity', async () => {
+  const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-capacity-test-'));
+  created.push(evidenceRoot);
+  const calls = [];
+  const result = { status: 'passed', scenario: 'library-capacity', appId: 'com.foliole.android.acceptance',
+    platform: 'android', results: [1000, 10000].map(count => ({
+      fixture: { count, bodyBytes: 4096, imports: 0, analyzed: false },
+      environment: { version: [{ version: 'test-only' }] }, plans: [{}],
+      runs: Array.from({ length: 4 }, () => ({ totalMs: 2, queryWallMs: 1, jsResidualMs: 1, snapshotHash: 'a'.repeat(64) }))
+    })) };
+  const outcome = await runA5DatabasePerformance({
+    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity' },
+    evidenceRoot, serial: 'fixed-a5',
+    paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
+    captured: (_cmd, args) => args.at(-1) === '/app.apk'
+      ? '<manifest package="com.foliole.android.acceptance"/>'
+      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+    execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0, output: args.includes('dumpsys')
+        ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}' : args.includes('instrument')
+        ? `FOLIOLE_LIBRARY_CAPACITY_RESULT=${JSON.stringify(result)}\nOK (1 test)\n` : 'Success' };
+    }
+  });
+  expect(calls.filter(args => args.includes('instrument'))).toHaveLength(1);
+  expect(calls.find(args => args.includes('instrument'))).toContain('com.foliole.android.FolioleLibraryCapacityTest');
+  expect(calls.at(-2)).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
+  expect(JSON.parse(fs.readFileSync(outcome.evidencePath)).measurements).toEqual(result);
+});

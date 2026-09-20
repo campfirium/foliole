@@ -57,6 +57,64 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         }
     }
 
+    func testMeasuresLibraryCapacity() throws {
+        executionTimeAllowance = 1200
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.devworkflow")
+        app.launchArguments += ["--foliole-physical-acceptance"]
+        app.launch()
+        let run = app.buttons["Run T219 capacity"]
+        XCTAssertTrue(run.waitForExistence(timeout: 45))
+        run.tap()
+        let output = app.textViews["T219 capacity result"]
+        let terminal = NSPredicate { _, _ in
+            guard let text = output.value as? String,
+                  let data = text.data(using: .utf8),
+                  let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return false }
+            return ["passed", "failed"].contains(result["status"] as? String ?? "")
+        }
+        let expectation = XCTNSPredicateExpectation(predicate: terminal, object: output)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 900), .completed)
+        let text = try XCTUnwrap(output.value as? String)
+        let data = try XCTUnwrap(text.data(using: .utf8))
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+        attachment.name = "T219-library-capacity.json"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        attachScreenshot(named: "T219-library-capacity")
+        try assertCapacityResult(data)
+    }
+
+    private func assertCapacityResult(_ data: Data) throws {
+        let result = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(result["status"] as? String, "passed", String(describing: result["error"]))
+        XCTAssertEqual(result["appId"] as? String, "com.foliole.ios.devworkflow")
+        XCTAssertEqual(result["platform"] as? String, "ios")
+        XCTAssertEqual(result["scenario"] as? String, "library-capacity")
+        let cases = try XCTUnwrap(result["results"] as? [[String: Any]])
+        XCTAssertEqual(cases.count, 2)
+        for (entry, count) in zip(cases, [1000, 10000]) {
+            let fixture = try XCTUnwrap(entry["fixture"] as? [String: Any])
+            XCTAssertEqual(fixture["count"] as? Int, count)
+            XCTAssertEqual(fixture["bodyBytes"] as? Int, 4096)
+            XCTAssertEqual(fixture["analyzed"] as? Bool, false)
+            XCTAssertEqual(fixture["imports"] as? Int, 0)
+            XCTAssertFalse(try XCTUnwrap(entry["plans"] as? [[String: Any]]).isEmpty)
+            let runs = try XCTUnwrap(entry["runs"] as? [[String: Any]])
+            XCTAssertEqual(runs.count, 4)
+            let hashes = runs.compactMap { $0["snapshotHash"] as? String }
+            XCTAssertEqual(hashes.count, 4)
+            XCTAssertEqual(Set(hashes).count, 1)
+            XCTAssertEqual(hashes.first?.count, 64)
+            for run in runs {
+                let elapsed = try XCTUnwrap(run["totalMs"] as? Double)
+                XCTAssertTrue(elapsed.isFinite && elapsed >= 0)
+                XCTAssertNotNil(run["queryWallMs"] as? Double)
+                XCTAssertNotNil(run["jsResidualMs"] as? Double)
+            }
+        }
+    }
+
     private func attachScreenshot(named name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
