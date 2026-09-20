@@ -2,8 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { activateReadwiseOnThisHost, canPrepareReadwiseOnThisHost,
-  loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
+import { canPrepareReadwiseOnThisHost, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseOwnerGuard, saveReadwiseOwnerGuard } from '../database/readwiseOwnerGuard.js';
 import { loadReadwiseSourceModeState } from '../database/readwiseSourceMode.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
@@ -41,7 +40,7 @@ function stopTargets(groupId: string, localId: string, ownerId: string | null) {
   if (!desktopIds.includes(localId)) throw new Error('readwise_local_member_inactive');
   if (ownerId && ownerId !== localId) return [ownerId];
   if (ownerId === localId) return [localId];
-  return [...desktopIds.filter((id) => id !== localId), localId];
+  return desktopIds.sort();
 }
 
 function snapshot() {
@@ -116,9 +115,6 @@ export async function activateReadwiseWithHandoff() {
     }
   }
   const targets = await runWithDatabaseConnectionOwner(() => stopTargets(groupId, localId, ownerId));
-  if (targets.length === 1 && targets[0] === localId && !ownerId) {
-    return runWithDatabaseConnectionOwner(activateReadwiseOnThisHost);
-  }
   const request: ReadwiseStopRequest = { epoch: initial.assignment.active_owner_epoch,
     groupId, mode: initial.mode as 'api' | 'relay', ownerId,
     requestId: randomUUID(), targetId: localId };

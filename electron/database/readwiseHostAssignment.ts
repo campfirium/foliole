@@ -78,6 +78,15 @@ function hasLocalGuardHistory(groupId: string | null) {
   catch { return true; }
 }
 
+function canRetryOwnBootstrap(groupId: string | null, localId: string | null, epoch: number) {
+  if (!groupId || !localId) return false;
+  try {
+    const guard = loadReadwiseOwnerGuard(groupId);
+    return guard?.state === 'relinquished' && guard.ownerId === localId &&
+      guard.targetId === localId && guard.epoch === epoch;
+  } catch { return false; }
+}
+
 function readWorkgroupDesktopHosts(currentHostName: string, activeHostName: string | null) {
   const hosts = openDatabaseConnection().driver.queryAll<NativeReadwiseWorkgroupHost & DatabaseRow>(
     `SELECT d.device_name AS host_name, d.platform
@@ -121,7 +130,8 @@ export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
   const blockedReason = isActive || !group.localId ? null
     : ownerMatches && (relinquished || stopping) ? 'handoff-in-progress'
       : ownerMatches && !guardReady ? 'guard-unavailable'
-      : unassigned && hasLocalGuardHistory(group.groupId) ? 'guard-history'
+      : unassigned && hasLocalGuardHistory(group.groupId) &&
+          !canRetryOwnBootstrap(group.groupId, group.localId, owner.epoch) ? 'guard-history'
       : !canPrepareReadwiseOnThisHost() ? 'connection-unavailable'
       : !unassigned ? 'handoff-required'
       : group.members.length !== 1 || group.members[0]?.device_identity_key !== group.localId

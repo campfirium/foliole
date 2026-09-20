@@ -115,7 +115,7 @@ it('requires every member stop confirmation for an unassigned legacy group', asy
   state.ownerId = null;
   await expect(activateReadwiseWithHandoff()).resolves.toMatchObject({ is_active: true });
   expect(writes.owner).toHaveBeenCalledTimes(1);
-  expect(stopOrder).toEqual(['remote', 'local']);
+  expect(stopOrder).toEqual(['local', 'remote']);
   expect(writes.resume).toHaveBeenCalledTimes(1);
 });
 

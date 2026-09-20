@@ -97,7 +97,9 @@ test('keeps an unassigned library paused, survives offline retry, and rejects ow
   await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toHaveCount(0);
   await host.getByRole('button', { name: /^(Use this device|由此设备负责)$/ }).click();
   await expect(host.getByText(/Could not change|未能切换/)).toBeVisible();
-  expect((await readOwnerFacts(desktopApp)).guard).toBeNull();
+  expect((await readOwnerFacts(desktopApp)).guard).toMatchObject({
+    epoch: 0, ownerId: LOCAL_ID, state: 'relinquished', targetId: LOCAL_ID
+  });
 
   await updateGroup(desktopApp, 'leave-remote');
   await desktopWindow.reload();

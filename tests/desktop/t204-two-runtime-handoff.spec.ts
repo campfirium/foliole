@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import path from 'node:path';
 
 import type { ElectronApplication } from '@playwright/test';
@@ -9,6 +8,7 @@ import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifi
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
+import { freePort } from './harness/freePort';
 import { expectWorkspaceShell } from './harness/settings';
 
 const GROUP_ID = 't204-two-runtime-group';
@@ -20,17 +20,8 @@ const NEW_ID = createSyncGroupDeviceIdentity({ device_anchor: NEW_ANCHOR,
   group_id: GROUP_ID, library_path: '/library/new', path_flavor: 'posix' }).identity_key;
 const RECEIPT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/t204/two-runtime-handoff.json');
 
-async function freePort() {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('No free port.');
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return address.port;
-}
-
 async function seed(app: ElectronApplication, input: {
-  groupKey: string; isOld: boolean; sourceRoot: string;
+  groupKey: string; isOld: boolean; sourceRoot: string; unassigned?: boolean;
 }) {
   await app.evaluate(async (_electron, fixture) => {
     const fs = process.getBuiltinModule('fs')!;
@@ -65,8 +56,9 @@ async function seed(app: ElectronApplication, input: {
       imports.saveImportManagerSettings({ ...current, readwiseRootPath: fixture.sourceRoot,
         readwiseSources: sources.map((source: Record<string, unknown>, index: number) =>
           index === 0 ? { ...source, keepState: 'enabled' } : source) });
-      settings.saveJsonSetting('readwise_active_host', { device_identity_key: fixture.oldId,
-        epoch: 0, host_name: 'Old Desktop' });
+      if (!fixture.unassigned) settings.saveJsonSetting('readwise_active_host', {
+        device_identity_key: fixture.oldId, epoch: 0, host_name: 'Old Desktop'
+      });
     });
   }, { ...input, groupId: GROUP_ID, oldId: OLD_ID, newId: NEW_ID,
     oldAnchor: OLD_ANCHOR, newAnchor: NEW_ANCHOR });
@@ -194,6 +186,40 @@ test('hands off between independent runtimes only after the old runner drains', 
     await writeFile(RECEIPT_PATH, JSON.stringify({ restoredOld,
       newOwner: await facts(candidate.electronApp) }, null, 2));
     await testInfo.attach('t204-two-runtime-facts', { contentType: 'application/json', path: RECEIPT_PATH });
+  } finally {
+    await candidate?.close();
+    await old?.close();
+  }
+});
+
+test('serializes simultaneous bootstrap candidates in two independent runtimes', async ({ browserName }, testInfo) => {
+  void browserName;
+  test.setTimeout(180_000);
+  const [oldPort, newPort] = await Promise.all([freePort(), freePort()]);
+  const groupKey = randomBytes(32).toString('base64url');
+  const oldEnv = { ...process.env, FOLIOLE_COMPANION_SYNC_PORT: String(oldPort),
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: testInfo.outputPath('race-old-state') };
+  const newEnv = { ...process.env, FOLIOLE_COMPANION_SYNC_PORT: String(newPort),
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: testInfo.outputPath('race-new-state') };
+  let old: DesktopSession | null = null;
+  let candidate: DesktopSession | null = null;
+  try {
+    old = await launchDesktopSession({ env: oldEnv }) as DesktopSession;
+    candidate = await launchDesktopSession({ env: newEnv }) as DesktopSession;
+    await seed(old.electronApp, { groupKey, isOld: true, unassigned: true,
+      sourceRoot: path.join(old.target.runtimeStateRoot, 'readwise') });
+    await seed(candidate.electronApp, { groupKey, isOld: false, unassigned: true,
+      sourceRoot: path.join(candidate.target.runtimeStateRoot, 'readwise') });
+    await Promise.all([startServer(old), startServer(candidate)]);
+    await expect.poll(async () => (await facts(old!.electronApp)).peerIds.includes(NEW_ID)).toBe(true);
+    await expect.poll(async () => (await facts(candidate!.electronApp)).peerIds.includes(OLD_ID)).toBe(true);
+    const outcomes = await Promise.allSettled([old, candidate].map((session) =>
+      session.firstWindow.evaluate(() => globalThis.window!.electronAPI!.invoke('activate_readwise_on_this_host'))));
+    expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const [oldFacts, newFacts] = await Promise.all([facts(old.electronApp), facts(candidate.electronApp)]);
+    expect([oldFacts, newFacts].filter((result) => result.assignment.is_active)).toHaveLength(1);
+    expect([oldFacts, newFacts].filter((result) => result.canRun)).toHaveLength(1);
+    expect([oldFacts, newFacts].filter((result) => result.guard?.state === 'active')).toHaveLength(1);
   } finally {
     await candidate?.close();
     await old?.close();
