@@ -45,7 +45,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       '-e', 'class', capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
     ], options);
     output.push(result.output);
-    if (capacity) return saveCapacityEvidence({ evidenceRoot, identities, result, output });
+    if (capacity) return await saveCapacityEvidence({ evidenceRoot, identities, result, output,
+      execute, paths, serial, options });
     for (const testClass of [LIFECYCLE_TEST_CLASS, BATCH_DATA_PLANE_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
@@ -79,12 +80,15 @@ async function restoreAcceptanceActivity({ execute, paths, serial, options, evid
   }
 }
 
-function saveCapacityEvidence({ evidenceRoot, identities, result, output }) {
+async function saveCapacityEvidence({ evidenceRoot, identities, result, output, execute, paths, serial, options }) {
   fs.writeFileSync(path.join(evidenceRoot, 'android-performance.log'), result.output);
   if (!/OK \(1 test\)/u.test(result.output) || /FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(result.output)) {
     throw new Error('Library capacity instrumentation failed.');
   }
-  const measurements = parseLibraryCapacityResult(result.output);
+  const artifact = await checked(execute, paths.adb, ['-s', serial, 'exec-out', 'run-as', APP_ID,
+    'cat', 'files/t219-library-capacity.json'], options);
+  fs.writeFileSync(path.join(evidenceRoot, 'capacity-result.json'), artifact.output);
+  const measurements = parseLibraryCapacityResult(`FOLIOLE_LIBRARY_CAPACITY_RESULT=${artifact.output}`);
   const evidencePath = path.join(evidenceRoot, 'android-performance.json');
   fs.writeFileSync(evidencePath, `${JSON.stringify({ identities, measurements }, null, 2)}\n`);
   return { evidencePath, output: output.join('') };

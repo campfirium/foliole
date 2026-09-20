@@ -8,7 +8,6 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Bundle;
 import android.webkit.WebView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -16,6 +15,9 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import java.util.concurrent.TimeUnit;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleLibraryCapacityTest {
@@ -39,13 +41,13 @@ public class FolioleLibraryCapacityTest {
             webView, "t219-run-capacity", "click", "");
         assertTrue(click.toString(), click.optBoolean("ok"));
         JSONObject result = awaitResult(instrumentation, webView);
-        Bundle evidence = new Bundle();
-        evidence.putString("stream", "FOLIOLE_LIBRARY_CAPACITY_RESULT=" + result + "\n");
-        instrumentation.sendStatus(2, evidence);
         assertEquals(result.toString(), "passed", result.getString("status"));
         assertEquals(APP_ID, result.getString("appId"));
         assertEquals("android", result.getString("platform"));
         assertEquals(2, result.getJSONArray("results").length());
+        try (FileOutputStream output = new FileOutputStream(new File(context.getFilesDir(), "t219-library-capacity.json"))) {
+            output.write(result.toString().getBytes(StandardCharsets.UTF_8));
+        }
         // Leave the acceptance Activity foregrounded; the fixed host owner restores it after instrumentation exits.
     }
 

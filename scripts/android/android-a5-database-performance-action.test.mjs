@@ -94,13 +94,18 @@ it.each([false, true])('runs capacity with explicit reset=%s and restores the is
       calls.push(args);
       return { code: 0, output: args.includes('dumpsys')
         ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}' : args.includes('instrument')
-        ? `FOLIOLE_LIBRARY_CAPACITY_RESULT=${JSON.stringify(result)}\nOK (1 test)\n` : 'Success' };
+        ? 'OK (1 test)\n' : args.includes('exec-out') ? JSON.stringify(result) : 'Success' };
     }
   });
   expect(calls.filter(args => args.includes('instrument'))).toHaveLength(1);
   expect(calls.find(args => args.includes('instrument'))).toContain('com.foliole.android.FolioleLibraryCapacityTest');
   expect(calls.at(-2)).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
   expect(JSON.parse(fs.readFileSync(outcome.evidencePath)).measurements).toEqual(result);
+  expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-result.json')))).toEqual(result);
+  expect(calls.find(args => args.includes('exec-out'))).toEqual(['-s', 'fixed-a5', 'exec-out',
+    'run-as', 'com.foliole.android.acceptance', 'cat', 'files/t219-library-capacity.json']);
+  expect(calls.findIndex(args => args.includes('exec-out')))
+    .toBeLessThan(calls.findLastIndex(args => args.includes('uninstall')));
   const appRemoval = calls.findIndex(args => args.includes('uninstall') && args.at(-1) === 'com.foliole.android.acceptance');
   expect(appRemoval >= 0).toBe(reset);
   expect(calls.some(args => args.includes('com.foliole.android'))).toBe(false);
