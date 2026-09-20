@@ -2,6 +2,7 @@ import type { DbPort, DbRow } from '../sync/dbPort.js';
 
 import { ANDROID_COMPANION_MIGRATION_QUERY_DEFINITIONS } from './androidCompanionMigrationQueryDefinitions.js';
 import {
+  ANDROID_COMPANION_MIGRATION_REPAIR_RULES as REPAIRS,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS as MUTATIONS } from './androidCompanionMutationDefinitions.js';
@@ -27,9 +28,18 @@ interface AttachmentSnapshotRow extends DbRow {
 }
 
 export async function installCompanionSchema(db: DbPort) {
+  // Existing import tables need these columns before their current indexes are installed.
+  if (await companionTableExists(db, 'import_sources')) {
+    for (const rule of [REPAIRS.importSourcesRemoteProvider,
+      REPAIRS.importSourcesRemoteConnectionRef, REPAIRS.importSourcesRemoteDocumentId]) {
+      await addColumnIfMissing(db, rule);
+    }
+  }
   const legacyMembers = await companionColumnExists(db, 'sync_group_members', 'device_id');
+  const legacyLocalState = await companionTableExists(db, 'sync_group_local_state') &&
+    !await companionColumnExists(db, 'sync_group_local_state', 'local_device_identity_key');
   for (const statement of COMPANION_SCHEMA_STATEMENTS) {
-    if (legacyMembers && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
+    if ((legacyMembers || legacyLocalState) && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
     await db.run(statement);
   }
 }
