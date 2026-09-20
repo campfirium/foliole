@@ -92,3 +92,50 @@ it('publishes actual completion but not failure or a no-peer skip', async () => 
   expect(completed).toHaveBeenCalledOnce();
   unsubscribe();
 });
+
+
+it('serializes three distinct targets and reuses a queued target', async () => {
+  const firstWork = deferred<{ complete: boolean; cursor: number }>();
+  const secondWork = deferred<{ complete: boolean; cursor: number }>();
+  const peerC = { peer_device_id: 'peer-c' } as never;
+  transport.continueDesktopSyncGroupSync.mockReturnValueOnce(firstWork.promise)
+    .mockReturnValueOnce(secondWork.promise);
+  const first = runDesktopSyncCoordinator('automatic', peer);
+  const second = runDesktopSyncCoordinator('automatic', peerB);
+  const third = runDesktopSyncCoordinator('automatic', peerC);
+  expect(runDesktopSyncCoordinator('manual', peerC)).toBe(third);
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1);
+  firstWork.resolve({ complete: true, cursor: 1 });
+  await first;
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2);
+  secondWork.resolve({ complete: true, cursor: 2 });
+  await Promise.all([second, third]);
+  expect(transport.continueDesktopSyncGroupSync.mock.calls.map(([target]) => target.peer_device_id))
+    .toEqual(['peer-a', 'peer-b', 'peer-c']);
+});
+
+it('runs queued targets after a predecessor fails', async () => {
+  transport.continueDesktopSyncGroupSync.mockRejectedValueOnce(new Error('offline'));
+  const first = runDesktopSyncCoordinator('automatic', peer);
+  const second = runDesktopSyncCoordinator('automatic', peerB);
+  await expect(first).rejects.toThrow('offline');
+  await expect(second).resolves.toMatchObject({ status: 'completed' });
+});
+
+it.each([null, { complete: false, cursor: 9 }])('does not publish completion for unfinished transport: %j', async (outcome) => {
+  const completed = vi.fn();
+  const unsubscribe = subscribeDesktopSyncCompleted(completed);
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([peer, peerB]);
+  transport.continueDesktopSyncGroupSync.mockResolvedValueOnce(outcome);
+  try {
+    await expect(runDesktopSyncCoordinator('manual')).rejects.toThrow('sync_group_sync_incomplete');
+    expect(settings.saveJsonSetting).toHaveBeenLastCalledWith('sync_group_last_trigger_result',
+      expect.objectContaining({ status: 'failed', error: 'sync_group_sync_incomplete' }));
+    expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2);
+    expect(completed).not.toHaveBeenCalled();
+    await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });
+    expect(completed).toHaveBeenCalledOnce();
+  } finally {
+    unsubscribe();
+  }
+});
