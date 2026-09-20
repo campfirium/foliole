@@ -8,6 +8,7 @@ import {
   SYNC_PACK_FORMAT,
   SYNC_PACK_FORMAT_VERSION
 } from '../../lib/core/sync/syncPackEnvelopeContract.js';
+import { parseSyncPackManifest } from '../../lib/core/sync/syncPackManifestValidation.js';
 
 export async function extractSyncPackDatabase(args: {
   body: Buffer;
@@ -24,14 +25,14 @@ export async function extractSyncPackDatabase(args: {
     throw new Error('invalid_sync_pack_manifest');
   }
   assertSyncPackSchemaVersion(manifest.schema_version);
+  const verifiedManifest = parseSyncPackManifest(manifest);
   const compressed = required(entries, SYNC_PACK_DATABASE_ENTRY);
   if (sha(compressed) !== manifest.database_compressed_sha256) throw new Error('invalid_sync_pack_compressed_checksum');
   const database = inflateSync(compressed);
   if (sha(database) !== manifest.database_uncompressed_sha256) throw new Error('invalid_sync_pack_database_checksum');
   await fs.writeFile(args.outputPath, database);
   return {
-    fromStateSeq: Number(manifest.from_state_seq),
-    toStateSeq: Number(manifest.to_state_seq)
+    ...verifiedManifest
   };
 }
 

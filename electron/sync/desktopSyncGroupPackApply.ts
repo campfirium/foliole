@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { assertSyncPackManifestMatchesDatabase } from '../../lib/core/sync/syncPackManifestValidation.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -82,14 +83,14 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   });
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
   try {
-    return await applyDownloadedPack(args, body, tempRoot);
+    return await applyDesktopSyncGroupPack(args, body, tempRoot);
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
 }
 
-async function applyDownloadedPack(
-  args: Parameters<typeof downloadAndApplyDesktopSyncGroupPack>[0],
+export async function applyDesktopSyncGroupPack(
+  args: Pick<Parameters<typeof downloadAndApplyDesktopSyncGroupPack>[0], 'after' | 'peer'>,
   body: Buffer,
   tempRoot: string
 ) {
@@ -105,18 +106,21 @@ async function applyDownloadedPack(
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   let event;
+  let cursor: number;
   let participatingArticleIds: string[] = [];
   try {
+    await assertSyncPackManifestMatchesDatabase(port, manifest);
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName,
       incomingAlias: 'inc', sourceHostName: sourceDeviceName,
       sourcePeerId: args.peer.peer_device_id
     });
+    cursor = result.toStateSeq;
     event = await collectSyncPackAppliedEvent(port, result);
     participatingArticleIds = result.participatingArticleIds;
   } finally {
     await port.run('DETACH DATABASE inc');
   }
   notifyWorkspaceSyncApplied(event);
-  return { cursor: manifest.toStateSeq, participatingArticleIds };
+  return { cursor, participatingArticleIds };
 }
