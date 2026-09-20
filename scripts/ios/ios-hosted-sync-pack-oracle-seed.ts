@@ -1,11 +1,16 @@
+import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.js';
 import type { SqliteDatabase } from '../../electron/database/connection.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion.js';
+import { buildWorkspaceSnapshotNode, type WorkspaceNodeRowShape } from '../../lib/core/database/workspaceSnapshotHelpers.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
+import { IOS_SYNC_PACK_RESTORE_VERSION_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.js';
 
 import { readHostedPack } from './ios-hosted-sync-pack-evidence.js';
 import {
@@ -26,6 +31,10 @@ export async function seedHostedSourceFromOracle(args: {
   try {
     ensureOracleExternalReferenceColumns(args.source);
     canonicalizeOracleAttachmentPayloads(args.source);
+    // The successor predicts this scenario's new restore, not a historical user version.
+    if (pack.manifest.pack_id === 'ios-acceptance-successor') {
+      await canonicalizeScenarioRestoreVersion(args.source);
+    }
     await applySyncPackNodeSurfaceWithDbPort(
       createBetterSqliteDbPort(args.source, { name: 'ios-hosted-oracle-seed' }),
       {
@@ -47,6 +56,51 @@ export async function seedHostedSourceFromOracle(args: {
     };
   } finally {
     args.source.exec('DETACH DATABASE oracle_seed');
+  }
+}
+
+interface ScenarioRestoreVersionRow {
+  body_text: string | null;
+  created_at: string;
+  host_name: string;
+  object_id: string;
+  parent_version_id: string | null;
+  snapshot_json: string;
+  version_id: string;
+  content_hash: string;
+}
+
+async function canonicalizeScenarioRestoreVersion(database: SqliteDatabase) {
+  const version = database.prepare(
+    'SELECT * FROM oracle_seed.node_sync_versions WHERE version_id = ?'
+  ).get(IOS_SYNC_PACK_RESTORE_VERSION_ID) as ScenarioRestoreVersionRow | undefined;
+  const row = database.prepare(
+    'SELECT * FROM oracle_seed.nodes WHERE id = ?'
+  ).get(version?.object_id) as WorkspaceNodeRowShape | undefined;
+  if (!version || !row || row.current_version_id !== version.version_id) {
+    throw new Error('ios_hosted_scenario_restore_version_missing');
+  }
+  if (createHash('sha256').update(version.snapshot_json).digest('hex') !== version.content_hash) {
+    throw new Error('ios_hosted_scenario_restore_oracle_corrupt');
+  }
+  const current = await toWorkspaceNativeNodeVersion({
+    ...buildWorkspaceSnapshotNode(row), currentVersionId: version.parent_version_id,
+    deletedAt: null, updatedAt: version.created_at
+  }, version.host_name, version.version_id);
+  const { image_sources: imageSources, ...otherFields } = current.snapshot;
+  if (imageSources !== '{}' || !isDeepStrictEqual(otherFields, JSON.parse(version.snapshot_json)) ||
+      current.body_text !== version.body_text) {
+    throw new Error('ios_hosted_scenario_restore_version_drift');
+  }
+  const updatedVersion = database.prepare(
+    'UPDATE oracle_seed.node_sync_versions SET content_hash = ?, snapshot_json = ? WHERE version_id = ?'
+  ).run(current.content_hash, JSON.stringify(current.snapshot), version.version_id);
+  const updatedState = database.prepare(
+    `UPDATE oracle_seed.sync_object_state SET content_hash = ?
+     WHERE object_type = 'node' AND object_id = ? AND content_hash = ?`
+  ).run(current.content_hash, version.object_id, version.content_hash);
+  if (updatedVersion.changes !== 1 || updatedState.changes !== 1) {
+    throw new Error('ios_hosted_scenario_restore_state_drift');
   }
 }
 
