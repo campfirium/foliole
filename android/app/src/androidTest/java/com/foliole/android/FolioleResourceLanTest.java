@@ -66,7 +66,8 @@ public final class FolioleResourceLanTest {
         while (System.nanoTime() < deadline) {
             observed = FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, view,
                 "JSON.stringify({node:document.querySelector('[data-companion-readable-document]')?.getAttribute('data-node-id')," +
-                "bodyReadable:document.body.innerText.includes('Resource LAN body remains readable.')," +
+                "linkError:document.querySelector('[data-mobile-link-error]')?.getAttribute('data-mobile-link-error')," +
+                "surface:document.body.innerText.slice(0,1600),bodyReadable:document.body.innerText.includes('Resource LAN body remains readable.')," +
                 "loadedImages:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
                 ".filter(i=>i.complete&&i.naturalWidth>0).length})");
             boolean resources = good.isFile() && ("missing".equals(phase) ? !recovering.exists() : recovering.isFile());

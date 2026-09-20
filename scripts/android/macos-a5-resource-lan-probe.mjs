@@ -23,12 +23,16 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
   const now = new Date().toISOString();
   const nodeId = `resource-lan-${Date.now()}`;
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-  const payload = { activeNodeId: nodeId, anchorLink: null, content: 'Resource LAN body remains readable.',
+  const images = IMAGES.map((bytes) => {
+    const hash = createHash('sha256').update(Buffer.from(bytes, 'base64')).digest('hex');
+    return { hash, storageKey: `${hash}.png` };
+  });
+  const content = `Resource LAN body remains readable.\n\n${images.map((image, i) => `![LAN ${i}](asset://${image.storageKey})`).join('\n\n')}`;
+  const payload = { activeNodeId: nodeId, anchorLink: null, content,
     createdAt: now, isTitleManual: true, kind: 'topic', nodeId,
     nodeOrder: [...snapshot.nodeOrder, nodeId], parentNodeId: 'special-inbox',
     position: snapshot.nodeOrder.length, reveal: null, title: 'Resource LAN', updatedAt: now };
   await session.invoke('create_topic', payload);
-  const images = [];
   for (const bytesBase64 of IMAGES) {
     const result = await session.invoke('import_clipboard_image_attachment', {
       bytesBase64, mimeType: 'image/png', nodeId, originalName: 'resource-lan.png'
@@ -36,10 +40,7 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
     if (result?.status !== 'imported') throw new Error('Resource LAN image import failed.');
     const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
     if (result.attachment_id !== hash) throw new Error('Resource LAN fixture bytes changed on import.');
-    images.push({ hash, storageKey: `${hash}.png` });
   }
-  await session.invoke('update_node_content', { ...payload,
-    content: `${payload.content}\n\n${images.map((image, i) => `![LAN ${i}](asset://${image.storageKey})`).join('\n\n')}` });
   const paths = await session.invoke('load_library_path_settings');
   const missingPath = assertOwnedResourcePath(libraryHome, paths.assets_dir, images[1].storageKey);
   const savedBytes = fs.readFileSync(missingPath);

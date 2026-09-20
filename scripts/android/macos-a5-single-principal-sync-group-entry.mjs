@@ -104,8 +104,6 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       observeWhileTransportOpen: (options) => observeAndAccept(session, options), paths: args.paths,
       serial: args.serial, testClass: TEST_CLASS,
       validateInstrumentation: (evidence) => validateA5TwoDeviceJoin({ ...evidence, args }) });
-    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
-      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     await runMacosA5SyncGroupMaintenance({
       action: 'activate-participation', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
@@ -113,6 +111,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
+      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
     const androidFact = await runMacosA5SyncGroupMaintenance({
