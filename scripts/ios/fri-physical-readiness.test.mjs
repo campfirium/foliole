@@ -8,15 +8,24 @@ import {
   prepareFriControlPlaneProbe, runFriControlPlaneProbe
 } from './fri-physical-readiness.mjs';
 
+function details(transportType = 'wired', udid = FRI_UDID) {
+  return JSON.stringify({ result: {
+    deviceProperties: { name: 'Fri', developerModeStatus: 'enabled' },
+    hardwareProperties: { deviceType: 'iPhone', udid },
+    connectionProperties: { pairingState: 'paired', transportType }
+  } });
+}
+
+function lockState(passcodeRequired, deviceIdentifier = FRI_COREDEVICE_ID) {
+  return JSON.stringify({ result: { passcodeRequired, deviceIdentifier, unlockedSinceBoot: true } });
+}
+
 it('requires the fixed wired physical Fri destination', async () => {
   const calls = [];
   const execute = async (command, args) => {
     calls.push([command, args]);
-    if (args.includes('details')) return [
-      'name: Fri', 'deviceType: iPhone', 'pairingState: paired',
-      'developerModeStatus: enabled', 'transportType: wired'
-    ].join('\n');
-    if (args.includes('lockState')) return 'passcodeRequired: false\nunlockedSinceBoot: true\n';
+    if (args.includes('details')) return details();
+    if (args.includes('lockState')) return lockState(false);
     return `Fri (${FRI_UDID})`;
   };
   await expect(createFriPhysicalReadinessAdapter({ execute })()).resolves.toMatchObject({
@@ -24,15 +33,14 @@ it('requires the fixed wired physical Fri destination', async () => {
   });
   expect(calls.every(([, args]) => !args.some((arg) => /Simulator/u.test(arg)))).toBe(true);
   expect(calls[0][1]).toContain(FRI_COREDEVICE_ID);
+  expect(calls[0][1].slice(-2)).toEqual(['--json-output', '-']);
+  expect(calls[1][1].slice(-2)).toEqual(['--json-output', '-']);
 });
 
 it('rejects Fri when it was unlocked since boot but is currently locked', async () => {
   const execute = async (_command, args) => {
-    if (args.includes('details')) return [
-      'name: Fri', 'deviceType: iPhone', 'pairingState: paired',
-      'developerModeStatus: enabled', 'transportType: wired'
-    ].join('\n');
-    if (args.includes('lockState')) return 'passcodeRequired: true\nunlockedSinceBoot: true\n';
+    if (args.includes('details')) return details();
+    if (args.includes('lockState')) return lockState(true);
     return `Fri (${FRI_UDID})`;
   };
   await expect(createFriPhysicalReadinessAdapter({ execute })()).rejects.toMatchObject({
@@ -41,14 +49,28 @@ it('rejects Fri when it was unlocked since boot but is currently locked', async 
 });
 
 it('rejects a wireless Fri before XCUITest', async () => {
-  const execute = async () => [
-    'name: Fri', 'deviceType: iPhone', 'pairingState: paired',
-    'developerModeStatus: enabled', 'transportType: network'
-  ].join('\n');
+  const execute = async () => details('network');
   await expect(createFriPhysicalReadinessAdapter({ execute })()).rejects.toMatchObject({
     missingFact: 'fri_not_wired'
   });
 });
+
+it('rejects another device even if its name is Fri', async () => {
+  const execute = async () => details('wired', 'another-device');
+  await expect(createFriPhysicalReadinessAdapter({ execute })()).rejects.toMatchObject({
+    missingFact: 'fri_udid_mismatch'
+  });
+});
+
+it.each([[undefined, FRI_COREDEVICE_ID], [false, 'another-device']])(
+  'rejects an unknown lock state or mismatched lock identity', async (locked, deviceId) => {
+    const execute = async (_command, args) => args.includes('details')
+      ? details() : lockState(locked, deviceId);
+    await expect(createFriPhysicalReadinessAdapter({ execute })()).rejects.toMatchObject({
+      missingFact: 'fri_current_unlock_required'
+    });
+  }
+);
 
 it('runs the isolated physical XCUITest control-plane probe', async () => {
   const calls = [];

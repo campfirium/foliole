@@ -14,7 +14,7 @@ const FRI_XCUITEST_TIMEOUT_MS = 2 * 60_000;
 async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
     timeout: 20_000, ...options });
-  return `${result.stdout}${result.stderr}`;
+  return args.includes('--json-output') ? result.stdout : `${result.stdout}${result.stderr}`;
 }
 
 function blocked(message, missingFact, lastSuccessfulAction) {
@@ -23,18 +23,21 @@ function blocked(message, missingFact, lastSuccessfulAction) {
 
 export function createFriPhysicalReadinessAdapter({ execute = bounded } = {}) {
   return async () => {
-    const details = await execute('xcrun', ['devicectl', 'device', 'info', 'details',
-      '--device', FRI_COREDEVICE_ID]);
-    for (const [pattern, fact] of [
-      [/name: Fri/u, 'fri_name_mismatch'], [/deviceType: iPhone/u, 'fri_not_iphone'],
-      [/pairingState: paired/u, 'fri_not_paired'],
-      [/developerModeStatus: enabled/u, 'fri_developer_mode_disabled'],
-      [/transportType: wired/u, 'fri_not_wired']
-    ]) if (!pattern.test(details)) throw blocked('Fixed Fri is not ready.', fact, 'fri_details_read');
-    const lock = await execute('xcrun', ['devicectl', 'device', 'info', 'lockState',
-      '--device', FRI_COREDEVICE_ID]);
-    if (!/passcodeRequired: false/u.test(lock)) {
-      throw blocked('Fri is currently locked.', 'fri_current_unlock_required', 'fri_details_ready');
+    const details = JSON.parse(await execute('xcrun', ['devicectl', 'device', 'info', 'details',
+      '--device', FRI_COREDEVICE_ID, '--json-output', '-'])).result;
+    for (const [actual, expected, fact] of [
+      [details?.deviceProperties?.name, 'Fri', 'fri_name_mismatch'],
+      [details?.hardwareProperties?.deviceType, 'iPhone', 'fri_not_iphone'],
+      [details?.hardwareProperties?.udid, FRI_UDID, 'fri_udid_mismatch'],
+      [details?.connectionProperties?.pairingState, 'paired', 'fri_not_paired'],
+      [details?.deviceProperties?.developerModeStatus, 'enabled', 'fri_developer_mode_disabled'],
+      [details?.connectionProperties?.transportType, 'wired', 'fri_not_wired']
+    ]) if (actual !== expected) throw blocked('Fixed Fri is not ready.', fact, 'fri_details_read');
+    const lock = JSON.parse(await execute('xcrun', ['devicectl', 'device', 'info', 'lockState',
+      '--device', FRI_COREDEVICE_ID, '--json-output', '-'])).result;
+    if (lock?.deviceIdentifier !== FRI_COREDEVICE_ID || lock?.passcodeRequired !== false) {
+      throw blocked('Fri is currently locked or lock identity is unknown.',
+        'fri_current_unlock_required', 'fri_details_ready');
     }
     const devices = await execute('xcrun', ['xctrace', 'list', 'devices']);
     if (!devices.includes(FRI_UDID)) {
