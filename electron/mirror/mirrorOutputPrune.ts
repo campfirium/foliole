@@ -1,8 +1,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { mirrorPathKey } from './mirrorPathIdentity.js';
+
 function toRelativeKey(rootPath: string, targetPath: string) {
-  return path.relative(rootPath, targetPath).split(path.sep).join('/');
+  return mirrorPathKey(path.relative(rootPath, targetPath).split(path.sep).join('/'));
 }
 
 function isInsideRoot(rootPath: string, targetPath: string) {

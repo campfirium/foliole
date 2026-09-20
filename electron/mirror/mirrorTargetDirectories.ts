@@ -108,5 +108,5 @@ export function resolveArticleDirectory(
 }
 
 export function createRootReservedDirectoryNames(mirrorRoot: string) {
-  return new Map<string, Set<string>>([[mirrorRoot, new Set<string>(['Inbox', 'Trash'])]]);
+  return new Map<string, Set<string>>([[mirrorRoot, new Set<string>(['inbox', 'trash'])]]);
 }

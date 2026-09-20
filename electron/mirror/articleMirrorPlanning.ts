@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { collectArticleData } from './articleMirrorTree.js';
+import { mirrorPathKey } from './mirrorPathIdentity.js';
 import { createRootReservedDirectoryNames, resolveArticleDirectory } from './mirrorTargetDirectories.js';
 
 export interface ArticleMirrorPlan {
@@ -36,27 +37,29 @@ function createStableFileName(title: string, createdAt: string, usedNames: Set<s
   const baseName = sanitizeArticleTitle(title);
   const candidates = [`${baseName}.md`, `${baseName}${formatTimestamp(createdAt)}.md`];
   for (const candidate of candidates) {
-    if (!usedNames.has(candidate)) {
-      usedNames.add(candidate);
+    if (!usedNames.has(mirrorPathKey(candidate))) {
+      usedNames.add(mirrorPathKey(candidate));
       return candidate;
     }
   }
   let duplicateIndex = 2;
-  while (usedNames.has(`${baseName}${formatTimestamp(createdAt)}${duplicateIndex}.md`)) duplicateIndex += 1;
+  while (usedNames.has(mirrorPathKey(`${baseName}${formatTimestamp(createdAt)}${duplicateIndex}.md`))) duplicateIndex += 1;
   const candidate = `${baseName}${formatTimestamp(createdAt)}${duplicateIndex}.md`;
-  usedNames.add(candidate);
+  usedNames.add(mirrorPathKey(candidate));
   return candidate;
 }
 
 function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
   const baseName = sanitizeArticleTitle(title);
-  if (!usedNames.has(baseName)) {
-    usedNames.add(baseName);
+  if (!usedNames.has(mirrorPathKey(baseName))) {
+    usedNames.add(mirrorPathKey(baseName));
     return baseName;
   }
   const suffix = nodeId.replace(/^node-/, '').slice(0, 8) || nodeId.slice(-8);
-  const candidate = `${baseName}--${suffix}`;
-  usedNames.add(candidate);
+  let candidate = `${baseName}--${suffix}`;
+  let duplicateIndex = 2;
+  while (usedNames.has(mirrorPathKey(candidate))) candidate = `${baseName}--${suffix}-${duplicateIndex++}`;
+  usedNames.add(mirrorPathKey(candidate));
   return candidate;
 }
 
@@ -69,21 +72,22 @@ function resolveSourceUpdatedAt(snapshot: WorkspaceSnapshot, nodeIds: string[], 
 
 export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorPlan[] {
   const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
-  const usedFileNamesByDirectory = new Map<string, Set<string>>();
   const usedDirectoryNamesByParent = createRootReservedDirectoryNames(mirrorRoot);
   const resolvedFolderDirectories = new Map<string, string>();
 
-  return articles.map((article) => {
-    const targetDirectory = resolveArticleDirectory(
-      article,
-      snapshot,
-      mirrorRoot,
-      resolvedFolderDirectories,
-      usedDirectoryNamesByParent,
-      createStableDirectoryName
-    );
-    const usedNames = usedFileNamesByDirectory.get(targetDirectory) ?? new Set<string>();
-    usedFileNamesByDirectory.set(targetDirectory, usedNames);
+  const targetDirectories = articles.map((article) => resolveArticleDirectory(
+    article,
+    snapshot,
+    mirrorRoot,
+    resolvedFolderDirectories,
+    usedDirectoryNamesByParent,
+    createStableDirectoryName
+  ));
+
+  return articles.map((article, index) => {
+    const targetDirectory = targetDirectories[index]!;
+    const usedNames = usedDirectoryNamesByParent.get(targetDirectory) ?? new Set<string>();
+    usedDirectoryNamesByParent.set(targetDirectory, usedNames);
     const targetPath = path.join(targetDirectory, createStableFileName(article.title, article.createdAt, usedNames));
     const derivedNodeIds = Object.values(snapshot.nodesById)
       .filter((node) => node.parentNodeId === article.id && node.anchorLink !== null)

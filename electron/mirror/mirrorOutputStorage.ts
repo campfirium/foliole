@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { openDatabaseConnection } from '../database/connection.js';
 
+import { mirrorPathKey } from './mirrorPathIdentity.js';
+
 export interface MirrorArticleRecord {
   articleId: string;
   mirroredAt: string;
@@ -57,18 +59,24 @@ export async function readMirrorFileUpdatedAt(filePath: string) {
   }
 }
 
-export async function removeMirrorFileAndLegacyDirectory(filePath: string) {
-  await fs.rm(filePath, { force: true });
-  await fs.rm(resolveLegacyArticleDirectory(filePath), { force: true, recursive: true });
+async function removeUnprotectedMirrorPath(targetPath: string, protectedPaths: Set<string>, recursive = false) {
+  if (!protectedPaths.has(mirrorPathKey(path.resolve(targetPath)))) {
+    await fs.rm(targetPath, { force: true, recursive });
+  }
 }
 
-export async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: string[]) {
+export async function removeMirrorFileAndLegacyDirectory(filePath: string, protectedPaths = new Set<string>()) {
+  await removeUnprotectedMirrorPath(filePath, protectedPaths);
+  await removeUnprotectedMirrorPath(resolveLegacyArticleDirectory(filePath), protectedPaths, true);
+}
+
+export async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: string[], protectedPaths = new Set<string>()) {
   await Promise.all([
-    fs.rm(path.join(mirrorRoot, 'Highlights.md'), { force: true }),
-    fs.rm(path.join(mirrorRoot, 'Clozes.md'), { force: true })
+    removeUnprotectedMirrorPath(path.join(mirrorRoot, 'Highlights.md'), protectedPaths),
+    removeUnprotectedMirrorPath(path.join(mirrorRoot, 'Clozes.md'), protectedPaths)
   ]);
   await Promise.all(targetPaths.map((targetPath) =>
-    fs.rm(resolveLegacyArticleDirectory(targetPath), { force: true, recursive: true })
+    removeUnprotectedMirrorPath(resolveLegacyArticleDirectory(targetPath), protectedPaths, true)
   ));
 }
 

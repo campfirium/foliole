@@ -24,6 +24,8 @@ import {
   resolveAbsoluteMirrorPath,
   saveMirrorArticleRecord
 } from './mirrorOutputStorage.js';
+import { collectProtectedMirrorPaths } from './mirrorPathIdentity.js';
+import { collectChangedMirrorOwners } from './mirrorPathOwnership.js';
 
 type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
@@ -87,6 +89,7 @@ async function removeObsoleteMirrorRecords(
   mirrorRoot: string,
   recordsByArticleId: Map<string, MirrorArticleRecord>,
   targetArticleIds: Set<string>,
+  protectedPaths: Set<string>,
   selectedArticleIds?: Set<string>
 ) {
   if (mode === 'missing') {
@@ -99,7 +102,7 @@ async function removeObsoleteMirrorRecords(
     if (targetArticleIds.has(record.articleId)) {
       continue;
     }
-    await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath));
+    await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath), protectedPaths);
     deleteMirrorArticleRecord(record.articleId);
   }
 }
@@ -128,6 +131,8 @@ async function processMirrorPlans(args: {
   recordsByArticleId: Map<string, MirrorArticleRecord>;
   snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>;
   updatedAt: string;
+  protectedPaths: Set<string>;
+  changedOwners: Set<string>;
 }) {
   let rebuiltArticleCount = 0;
   let visitedArticleCount = 0;
@@ -141,9 +146,9 @@ async function processMirrorPlans(args: {
       persistedRecord ??
       (fileUpdatedAt ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
     const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== plan.relativePath);
-    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged) {
+    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged || args.changedOwners.has(plan.articleId)) {
       if (persistedRecord && persistedRecord.relativePath !== plan.relativePath) {
-        await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(args.paths.mirror, persistedRecord.relativePath));
+        await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(args.paths.mirror, persistedRecord.relativePath), args.protectedPaths);
       }
       await args.options.taskContext?.yieldIfNeeded();
       const markdown = await renderMirrorPlan(
@@ -181,7 +186,10 @@ async function syncMirrorOutput(
   const recordsByArticleId = loadMirrorArticleRecords();
   const targetArticleIds = new Set(plans.map((plan) => plan.articleId));
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
-  const selectedPlans = selectedArticleIds ? plans.filter((plan) => selectedArticleIds.has(plan.articleId)) : plans;
+  const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId);
+  const protectedPaths = collectProtectedMirrorPaths(plans.map((plan) => plan.targetPath));
+  const selectedPlans = selectedArticleIds
+    ? plans.filter((plan) => selectedArticleIds.has(plan.articleId) || changedOwners.has(plan.articleId)) : plans;
 
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
@@ -189,12 +197,12 @@ async function syncMirrorOutput(
     await pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath));
   }
 
-  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, selectedArticleIds);
+  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
 
-  await removeLegacyMirrorArtifacts(paths.mirror, selectedPlans.map((plan) => plan.targetPath));
+  await removeLegacyMirrorArtifacts(paths.mirror, selectedPlans.map((plan) => plan.targetPath), protectedPaths);
 
   const rebuiltArticleCount = snapshot
-    ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot })
+    ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
     : 0;
 
   return {
