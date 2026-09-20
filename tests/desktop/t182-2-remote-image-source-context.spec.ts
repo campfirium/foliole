@@ -103,12 +103,11 @@ async function openNode(page: Page, nodeId: string) {
     await exitFlow.click();
     await expect(exitFlow).toBeHidden();
   }
-  const opened = await page.evaluate(async (id) =>
-    window.__folioleWorkspaceDebug?.openNode?.(id) ?? false, nodeId);
-  expect(opened).toBe(true);
+  await page.locator(`[role="treeitem"][data-node-id="${nodeId}"]`).click();
   await expect.poll(() => page.evaluate(
     () => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null
   )).toBe(nodeId);
+  await expect(page.locator(`.cm-md-image-widget[data-md-image-editor-node-id="${nodeId}"]`)).toBeVisible();
 }
 
 async function expectImageLoaded(page: Page, alt: string) {

@@ -135,6 +135,8 @@ async function acceptAnswerCut(page: Page) {
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(ANSWER_NODE_ID);
   const cutFrom = ANSWER.indexOf('CUTME');
+  const resumeReview = page.getByRole('button', { name: /^(Resume review|继续复习|繼續複習)$/ });
+  if (await resumeReview.isVisible().catch(() => false)) await resumeReview.click();
   await page.getByRole('button', { name: /^(Show answer|显示答案)$/ }).click();
   await selectEditorText(page, 'answer-editor', cutFrom, cutFrom + 'CUTME'.length);
   await page.keyboard.press('Meta+X');
