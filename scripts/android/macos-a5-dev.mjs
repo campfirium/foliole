@@ -176,6 +176,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     if (receipt && actionContract.mutatesFixedA5) {
       markFormalA5Stage(receipt, 'data-protection');
       assertFixedA5(paths);
+      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
       await runProtection('backup', path.join(path.dirname(receipt.path), 'device-baseline.json'),
         path.join(context.deviceBackupRoot, context.runId));
     }
