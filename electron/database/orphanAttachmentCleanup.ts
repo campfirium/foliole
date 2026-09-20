@@ -2,12 +2,12 @@ import fs from 'node:fs';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { NodeBodyUnavailableError, resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
-import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
+import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
-import { recordAttachmentDeleted } from './attachmentBlobs.js';
+import { recordAttachmentDeleted } from './attachmentSyncState.js';
 import { openDatabaseConnection } from './connection.js';
 import { deletePdfPageTextRowsForAttachment } from './pdfPageTextRows.js';
 
@@ -31,18 +31,10 @@ interface AttachmentCleanupPlan {
 }
 
 function collectInlineAttachmentIds(text: string) {
-  const storageKeys = new Set<string>();
-  for (const reference of collectMarkdownImageReferences(text)) {
-    const target = parseMarkdownImageTarget(reference.rawTarget);
-    const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
-    if (storageKey) storageKeys.add(storageKey);
-  }
-  if (!storageKeys.size) return new Set<string>();
-  const keys = [...storageKeys];
-  const rows = openDatabaseConnection().driver.queryAll<{ attachment_id: string }>(
-    `SELECT attachment_id FROM attachment_blobs WHERE storage_key IN (${buildInClause(keys.length)})`, keys
-  );
-  return new Set(rows.map((row) => row.attachment_id));
+  return new Set(collectArticleImageStorageKeys(text).flatMap((key) => {
+    const parsed = parseCanonicalAttachmentStorageKey(key);
+    return parsed ? [parsed.contentHash] : [];
+  }));
 }
 
 function toUniqueSortedArray(values: Set<string>) {

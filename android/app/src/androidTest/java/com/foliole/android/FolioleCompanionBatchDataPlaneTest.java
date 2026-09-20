@@ -85,15 +85,14 @@ public class FolioleCompanionBatchDataPlaneTest {
         snapshot.delete();
         SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(snapshot, null);
         try {
-            database.execSQL("CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, " +
-                "content_hash TEXT, storage_key TEXT, mime_type TEXT)");
-            database.execSQL("INSERT INTO attachment_blobs VALUES (?, ?, ?, ?)",
-                new Object[] { "attachment-1", hash, storageKey, "image/png" });
+            database.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT)");
+            database.execSQL("INSERT INTO attachments VALUES (?, ?)",
+                new Object[] { hash, "image/png" });
         } finally { database.close(); }
         try {
             FolioleCompanionSyncGroupResources.Resource resource =
                 FolioleCompanionSyncGroupResources.attachment(
-                    context, snapshot.getAbsolutePath(), "attachment-1", hash);
+                    context, snapshot.getAbsolutePath(), hash, hash);
             assertEquals("image/png", resource.mimeType);
             assertArrayEquals(bytes, resource.body);
         } finally {

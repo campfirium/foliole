@@ -19,8 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
-import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
+import { recordAttachmentMetadata } from './attachmentSyncState.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
@@ -64,17 +64,7 @@ async function seedAttachment(args: { attachmentId: string; mimeType: string; no
     sizeBytes: 32,
     createdAt: '2026-04-18T08:00:00.000Z'
   });
-  const extension = args.mimeType === 'application/pdf' ? '.pdf' : '.png';
-  upsertAttachmentBlobManifest({
-    attachmentId: args.attachmentId,
-    availability: 'local',
-    contentHash: args.attachmentId,
-    createdAt: '2026-04-18T08:00:00.000Z',
-    mimeType: args.mimeType,
-    sizeBytes: 32,
-    sourceHostName: null,
-    storageKey: `${args.attachmentId}${extension}`
-  });
+  recordAttachmentMetadata(args.attachmentId, '2026-04-18T08:00:00.000Z');
   for (const nodeId of args.nodeIds) {
     createNodeAttachmentLink({
       nodeId,

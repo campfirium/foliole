@@ -3,18 +3,6 @@ import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatement
 
 export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
   ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
-  `CREATE TABLE IF NOT EXISTS attachment_blobs (
-    attachment_id TEXT PRIMARY KEY,
-    content_hash TEXT,
-    storage_key TEXT,
-    size_bytes INTEGER,
-    mime_type TEXT,
-    availability TEXT NOT NULL DEFAULT 'missing',
-    source_host_name TEXT,
-    created_at TEXT NOT NULL,
-    cached_at TEXT,
-    last_verified_at TEXT
-  )`,
   `CREATE TABLE IF NOT EXISTS content_blobs (
     hash TEXT PRIMARY KEY,
     storage_key TEXT NOT NULL,

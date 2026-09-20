@@ -4,12 +4,12 @@ import path from 'node:path';
 
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
-import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
   findAttachmentRecordById
 } from '../database/attachments.js';
+import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
@@ -193,11 +193,7 @@ export async function importImageAttachmentBytes(
       ({ attachment, attachmentRecord } = createAttachmentRecordIfNeeded(
         prepared.hash, normalizedOriginalName, prepared.mimeType, prepared.sizeBytes
       ));
-      upsertAttachmentBlobManifest({
-        attachmentId: attachment.id, contentHash: prepared.hash, storageKey: prepared.storageKey,
-        sizeBytes: prepared.sizeBytes, mimeType: prepared.mimeType, availability: 'local', sourceHostName: null,
-        createdAt: attachment.createdAt, cachedAt: attachment.createdAt, lastVerifiedAt: attachment.createdAt
-      });
+      recordAttachmentMetadata(attachment.id, attachment.createdAt);
       if (normalizedNodeId) {
         createNodeAttachmentLink({ nodeId: normalizedNodeId, attachmentId: attachment.id, role: IMAGE_ATTACHMENT_ROLE });
       }

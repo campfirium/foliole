@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { findAttachmentBlobManifestById } from '../database/attachmentBlobs.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -73,7 +73,7 @@ it('corrects misleading source hints and persists one canonical resource', async
   });
   await expect(fs.readFile(path.join(assetsDir(), `${contentHash}.jpg`))).resolves.toEqual(jpeg);
   await expect(fs.access(path.join(assetsDir(), `${contentHash}.png`))).rejects.toThrow();
-  expect(findAttachmentBlobManifestById(contentHash)).toMatchObject({
+  expect(loadAttachmentResourceDescription(contentHash)).toMatchObject({
     attachmentId: contentHash,
     contentHash,
     mimeType: 'image/jpeg',
@@ -89,14 +89,14 @@ it('leaves no file or database rows when bytes are unsupported', async () => {
     originalName: 'image.png'
   })).resolves.toMatchObject({ error_code: 'unsupported_format', status: 'error' });
   expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get()).toEqual({ count: 0 });
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachment_blobs').get()).toEqual({ count: 0 });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
   await expect(fs.readdir(assetsDir())).resolves.toEqual([]);
 });
 
 it('removes a newly created canonical file when database persistence fails', async () => {
   const contentHash = hash(jpeg);
   openDatabaseConnection().sqlite.exec(
-    `CREATE TRIGGER reject_image_manifest BEFORE INSERT ON attachment_blobs
+    `CREATE TRIGGER reject_image_manifest BEFORE INSERT ON attachments
      BEGIN SELECT RAISE(ABORT, 'reject image manifest'); END`
   );
   await expect(importImageAttachmentBytes({
@@ -107,5 +107,5 @@ it('removes a newly created canonical file when database persistence fails', asy
   })).resolves.toMatchObject({ error_code: 'storage_write_failed', status: 'error' });
   await expect(fs.access(path.join(assetsDir(), `${contentHash}.jpg`))).rejects.toThrow();
   expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get()).toEqual({ count: 0 });
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachment_blobs').get()).toEqual({ count: 0 });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
 });

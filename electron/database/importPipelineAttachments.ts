@@ -6,7 +6,6 @@ import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../l
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
-import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
@@ -14,6 +13,7 @@ import {
   findAttachmentRecordById,
   listNodeAttachments
 } from './attachments.js';
+import { recordAttachmentMetadata } from './attachmentSyncState.js';
 import { openDatabaseConnection } from './connection.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
@@ -108,18 +108,7 @@ function recordAttachmentBlobManifest(input: {
   sizeBytes: number;
   storageKey: string;
 }) {
-  upsertAttachmentBlobManifest({
-    attachmentId: input.attachment.id,
-    contentHash: input.hash,
-    storageKey: input.storageKey,
-    sizeBytes: input.sizeBytes,
-    mimeType: input.mimeType,
-    availability: 'local',
-    sourceHostName: null,
-    createdAt: input.attachment.createdAt,
-    cachedAt: input.attachment.createdAt,
-    lastVerifiedAt: input.attachment.createdAt
-  });
+  recordAttachmentMetadata(input.attachment.id, input.attachment.createdAt);
 }
 
 function importLocalImageAttachment(nodeId: string, sourcePath: string) {

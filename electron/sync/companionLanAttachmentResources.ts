@@ -1,7 +1,6 @@
 import { promises as fs } from 'node:fs';
 
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
-import { findAttachmentBlobManifestById } from '../database/attachmentBlobs.js';
 import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 
 export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
@@ -38,13 +37,9 @@ export async function loadCompanionAttachmentResource(
     return errorResult('invalid_request', 400);
   }
 
-  const manifest = findAttachmentBlobManifestById(normalizedAttachmentId);
-  if (!manifest?.contentHash || manifest.contentHash !== normalizedContentHash) {
-    return errorResult('content_hash_mismatch', manifest ? 409 : 404);
-  }
-
   const description = loadAttachmentResourceDescription(normalizedAttachmentId);
   if (!description) return errorResult('not_found', 404);
+  if (description.contentHash !== normalizedContentHash) return errorResult('content_hash_mismatch', 409);
   const resolved = resolveAttachmentFile(description.storageKey);
   if (resolved.status === 'not_found') {
     return errorResult('not_found', 404);

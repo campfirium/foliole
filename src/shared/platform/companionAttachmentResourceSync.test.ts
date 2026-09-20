@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   load: vi.fn(),
   platform: vi.fn(() => 'ios'),
   plugin: {
+    resolveAttachmentResource: vi.fn(async () => ({ status: 'missing_file', resource_url: null })),
     loadMissingAttachmentResource: vi.fn(async () => ({
       resource: { attachment_id: 'att-ios', content_hash: 'hash-ios', size_bytes: 42 }
     })),
@@ -43,4 +44,10 @@ it('loads iOS attachment manifests through the shared native contract', async ()
   });
   expect(mocks.load).toHaveBeenNthCalledWith(1, 4);
   expect(mocks.load).toHaveBeenNthCalledWith(2, 1, 'att-ios');
+});
+
+it('does not request an attachment already held as an actual local file', async () => {
+  mocks.plugin.resolveAttachmentResource.mockResolvedValueOnce({ status: 'ready', resource_url: null });
+  const api = await import('./companionAttachmentResourceSync');
+  await expect(api.loadCompanionMissingAttachmentResource('att-ios')).resolves.toBeNull();
 });

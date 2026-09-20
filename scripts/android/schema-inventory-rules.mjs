@@ -1,6 +1,5 @@
 export const CORE_TABLES = [
   'attachments',
-  'attachment_blobs',
   'content_blobs',
   'content_blob_data',
   'external_documents',
@@ -53,7 +52,6 @@ const FIELD_CLASSIFICATIONS = new Map([
   ['attachments.columns.pdf_index_version', 'desktop-only-column'],
   ['attachments.columns.pdf_indexed_at', 'desktop-only-column'],
   ['attachments.createSql', 'desktop-only-column'],
-  ['attachment_blobs.createSql', 'android-missing-constraint'],
   ['content_blob_data.createSql', 'android-missing-constraint'],
   ['external_documents.columns.title', 'android-missing-not-null'],
   ['external_documents.createSql', 'android-missing-not-null'],
@@ -69,8 +67,6 @@ const FIELD_CLASSIFICATIONS = new Map([
 ]);
 
 const MISSING_ANDROID_INDEX_FIELDS = [
-  'attachment_blobs.indexes.idx_attachment_blobs_availability',
-  'attachment_blobs.indexes.idx_attachment_blobs_content_hash',
   'external_documents.indexes.idx_external_documents_folder_relative',
   'external_documents.indexes.idx_external_documents_hash',
   'external_documents.indexes.idx_external_documents_present_updated',

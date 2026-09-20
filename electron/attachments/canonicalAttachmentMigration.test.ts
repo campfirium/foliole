@@ -33,6 +33,9 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(root, 'app-data');
   mockedDocumentsDir = path.join(root, 'documents');
   initializeDatabase();
+  openDatabaseConnection().sqlite.exec(`CREATE TABLE attachment_blobs (
+    attachment_id TEXT PRIMARY KEY, content_hash TEXT, storage_key TEXT, size_bytes INTEGER,
+    mime_type TEXT, availability TEXT, source_host_name TEXT, created_at TEXT, cached_at TEXT, last_verified_at TEXT)`);
   openDatabaseConnection().sqlite.prepare('DELETE FROM data_migration_state WHERE migration_id = ?')
     .run(CANONICAL_ATTACHMENT_MIGRATION_ID);
 });

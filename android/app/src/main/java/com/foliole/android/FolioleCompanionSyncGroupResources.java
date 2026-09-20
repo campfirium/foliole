@@ -26,12 +26,12 @@ final class FolioleCompanionSyncGroupResources {
         if (attachmentId == null || attachmentId.trim().isEmpty() || contentHash == null || contentHash.trim().isEmpty()) return null;
         SQLiteDatabase db = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
         try (Cursor cursor = db.rawQuery(
-            "SELECT content_hash, storage_key, mime_type FROM attachment_blobs WHERE attachment_id = ?",
+            "SELECT id, mime_type FROM attachments WHERE id = ?",
             new String[] { attachmentId })) {
-            if (!cursor.moveToFirst() || cursor.isNull(0) || cursor.isNull(1) || cursor.isNull(2)) return null;
+            if (!cursor.moveToFirst() || cursor.isNull(0) || cursor.isNull(1)) return null;
             String storedHash = cursor.getString(0);
-            String storageKey = cursor.getString(1);
-            String mimeType = cursor.getString(2);
+            String mimeType = cursor.getString(1);
+            String storageKey = FolioleCompanionCanonicalAttachmentKey.storageKey(storedHash, mimeType);
             if (!contentHash.equals(storedHash) ||
                 !FolioleCompanionCanonicalAttachmentKey.matches(storedHash, mimeType, storageKey)) return null;
             File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);

@@ -128,12 +128,6 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
      VALUES (?, NULL, 'image/png', 1, ?)`
   ).run(hash, createdAt);
-  db.prepare(
-    `INSERT INTO attachment_blobs (
-       attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_host_name, created_at
-     ) VALUES (?, ?, ?, 1, 'image/png', 'local', ?, ?)`
-  ).run(hash, hash, `${hash}.png`, `${suffix}-device`, createdAt);
   db.prepare('INSERT INTO node_attachments VALUES (?, ?, ?)').run(nodeId, hash, 'reference');
   db.prepare(
     `INSERT INTO node_reading (

@@ -2,12 +2,11 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
+import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
-import { buildAttachmentStorageFileName } from './storagePath.js';
 import { validateSupportedImageBytes } from './supportedImageFormats.js';
 
 const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
@@ -49,18 +48,7 @@ export async function persistCreatedNodeImageAttachment(args: {
       if (!existing) {
         createAttachmentRecord({ id: hash, originalName, mimeType: args.mimeType, sizeBytes: args.bytes.byteLength, createdAt });
       }
-      upsertAttachmentBlobManifest({
-        attachmentId: hash,
-        availability: 'local',
-        cachedAt: createdAt,
-        contentHash: hash,
-        createdAt,
-        lastVerifiedAt: createdAt,
-        mimeType: args.mimeType,
-        sizeBytes: args.bytes.byteLength,
-        sourceHostName: null,
-        storageKey: buildAttachmentStorageFileName(hash, args.mimeType)
-      });
+      recordAttachmentMetadata(hash, createdAt);
       createNodeAttachmentLink({ attachmentId: hash, nodeId: args.nodeId, role: 'image' });
     });
   } catch (error) {

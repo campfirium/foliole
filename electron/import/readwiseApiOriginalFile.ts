@@ -4,9 +4,8 @@ import path from 'node:path';
 
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { buildAttachmentStorageFileName } from '../attachments/storagePath.js';
-import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
+import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from '../database/pdfIndexing.js';
 
 import { fetchReadwiseRawSourceDocument, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -116,12 +115,7 @@ export async function stageReadwiseApiOriginalFile(input: {
       originalName, sizeBytes: input.state.sizeBytes
     });
   }
-  upsertAttachmentBlobManifest({
-    attachmentId: input.state.attachmentId, availability: 'local', cachedAt: createdAt,
-    contentHash: input.state.contentHash, createdAt, lastVerifiedAt: createdAt,
-    mimeType: input.state.mimeType, sizeBytes: input.state.sizeBytes,
-    sourceHostName: null, storageKey: buildAttachmentStorageFileName(input.state.contentHash, input.state.mimeType)
-  });
+  recordAttachmentMetadata(input.state.attachmentId, createdAt);
 }
 
 export function attachReadwiseApiOriginalFile(

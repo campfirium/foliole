@@ -123,11 +123,8 @@ async function loadPreparedReadwiseFixture(fullDir: string, highlightDir: string
 function seedAvatarAttachment(contentHash: string, storageKey: string) {
   openDatabaseConnection().sqlite.prepare(
     'INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).run('attachment-avatar', 'avatar.png', 'image/png', 1, '2026-05-13T00:00:00.000Z');
-  openDatabaseConnection().sqlite.prepare(`INSERT INTO attachment_blobs
-    (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .run('attachment-avatar', contentHash, storageKey, 1, 'image/png', 'local', '2026-05-13T00:00:00.000Z');
+  ).run(contentHash, storageKey, 'image/png', 1, '2026-05-13T00:00:00.000Z');
+
 }
 
 it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {

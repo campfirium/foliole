@@ -5,11 +5,6 @@ export const EXPECTED_SCHEMA_SOURCES = {
 };
 
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {
-  attachment_blobs: [
-    'indexes.idx_attachment_blobs_availability',
-    'indexes.idx_attachment_blobs_content_hash',
-    'createSql'
-  ],
   attachments: [
     'columns.pdf_index_attempt',
     'columns.pdf_index_error',

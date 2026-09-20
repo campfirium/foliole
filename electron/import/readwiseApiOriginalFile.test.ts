@@ -93,9 +93,9 @@ it('refreshes an S3 URL without forwarding the token and persists one verified P
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM attachments')).toEqual({ count: 1 });
   expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM node_attachments')).toEqual({ count: 1 });
-  expect(driver.queryOne<{ availability: string; content_hash: string }>(
-    'SELECT availability, content_hash FROM attachment_blobs'
-  )).toEqual({ availability: 'local', content_hash: prepared.state.contentHash });
+  expect(driver.queryOne<{ id: string; mime_type: string }>(
+    'SELECT id, mime_type FROM attachments'
+  )).toEqual({ id: prepared.state.contentHash, mime_type: prepared.state.mimeType });
 });
 
 it('uses the paged raw URL and refreshes only that document when the URL has expired', async () => {

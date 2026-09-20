@@ -34,17 +34,15 @@ it('detaches a corrupt content pack without writing', async () => {
   expect(port.run).toHaveBeenLastCalledWith('DETACH DATABASE content_batch');
 });
 
-it('commits attachment availability from a small manifest without attachment bytes', async () => {
+it('validates staged files against retained metadata without persisting possession state', async () => {
   const port = fakePort();
-  port.query = vi.fn(async () => [{ content_hash: 'c'.repeat(64), size_bytes: 12 }]) as DbPort['query'];
+  port.query = vi.fn(async () => [{ id: 'c'.repeat(64), mime_type: 'image/png', size_bytes: 12 }]) as DbPort['query'];
   await expect(applyCompanionAttachmentManifest(port, {
-    entries: [{ attachmentId: 'att-1', contentHash: 'c'.repeat(64), mimeType: 'image/png',
+    entries: [{ attachmentId: 'c'.repeat(64), contentHash: 'c'.repeat(64), mimeType: 'image/png',
       sizeBytes: 12, storageKey: `${'c'.repeat(64)}.png` }],
     failedIds: [], now: '2026-08-06T00:00:00.000Z'
-  })).resolves.toEqual({ failedIds: [], syncedIds: ['att-1'] });
-  expect(port.run).toHaveBeenCalledWith(expect.stringContaining("availability = 'cached'"), [
-    `${'c'.repeat(64)}.png`, '2026-08-06T00:00:00.000Z', '2026-08-06T00:00:00.000Z', 'att-1'
-  ]);
+  })).resolves.toEqual({ failedIds: [], syncedIds: ['c'.repeat(64)] });
+  expect(port.run).not.toHaveBeenCalled();
 });
 
 function fakePort(): DbPort {

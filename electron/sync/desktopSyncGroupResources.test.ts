@@ -106,8 +106,7 @@ it('keeps successes and attempts other files once when a request fails', async (
   const result = await downloadDesktopSyncGroupResources(peer, ['article']);
   expect(result.failedStorageKeys).toEqual([items[1]!.storageKey]);
   expect(fetchMock).toHaveBeenCalledTimes(3);
-  expect(runtime.run).toHaveBeenCalledTimes(2);
-  expect(runtime.run.mock.calls.map(([, params]) => params.at(-1))).toEqual(expect.arrayContaining(['complete', 'other']));
+  expect(runtime.run).not.toHaveBeenCalled();
   expect(runtime.needs).toHaveBeenCalledWith(expect.any(Object), ['article']);
 });
 

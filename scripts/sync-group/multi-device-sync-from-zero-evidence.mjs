@@ -22,11 +22,11 @@ function peerProgress(database) {
   }));
 }
 
-export function collectAndroidSyncFromZeroSnapshot(paths, includeAttachments = false) {
-  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeAttachments,
+export function collectAndroidSyncFromZeroSnapshot(paths) {
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeAttachmentFacts: true, includeAttachments: true,
     includeEvents: false, serial: A5_SERIAL,
-    tables: ['attachments', 'content_blobs', 'nodes'], databaseInspector: (database) => ({
-      ...inspectPairSyncRecoveryWorkspace(database), ...inspectSyncFromZeroDatasetFacts(database),
+    tables: ['attachments', 'content_blobs', 'nodes'], databaseInspector: (database, archive) => ({
+      ...inspectPairSyncRecoveryWorkspace(database), ...inspectSyncFromZeroDatasetFacts(database, archive?.files?.map(({ contentHash }) => contentHash)),
       peerCursors: peerProgress(database)
     }) });
 }

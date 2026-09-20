@@ -44,12 +44,6 @@ beforeEach(() => {
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
      VALUES ('attachment-1', 'sample.pdf', 'application/pdf', 12, ?)`, [now]
   );
-  driver.execute(
-    `INSERT INTO attachment_blobs
-       (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, source_host_name, created_at)
-     VALUES ('attachment-1', 'attachment-hash', 'sample.pdf', 12, 'application/pdf', 'available', 'android-b', ?)`,
-    [now]
-  );
   upsertSyncObjectState(driver, {
     contentHash: 'attachment-state-hash', lastModifiedByHostName: 'android-b',
     objectId: 'attachment-1', objectType: 'attachment', updatedAt: now
@@ -72,7 +66,7 @@ it('builds a baseline payload with structure, body manifest, and payload objects
   expect(JSON.parse((pack.prepare(
     "SELECT payload_json FROM sync_objects WHERE object_type = 'attachment'"
   ).get() as { payload_json: string }).payload_json)).toMatchObject({
-    attachment_id: 'attachment-1', blob: { content_hash: 'attachment-hash', size_bytes: 12 }
+    attachment_id: 'attachment-1', mime_type: 'application/pdf', size_bytes: 12
   });
   pack.close();
 });

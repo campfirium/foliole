@@ -17,7 +17,6 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { findAttachmentBlobManifestById } from './attachmentBlobs.js';
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
@@ -177,7 +176,7 @@ it('advances node sync state when attachment links change', () => {
 });
 
 
-it('stores attachment blob manifests separately from attachment records', () => {
+it('stores attachment metadata without a possession manifest', () => {
   createAttachmentRecord({
     id: 'hash-blob',
     originalName: 'diagram.png',
@@ -186,7 +185,8 @@ it('stores attachment blob manifests separately from attachment records', () => 
     createdAt: '2026-03-20T00:00:00.000Z'
   });
 
-  expect(findAttachmentBlobManifestById('hash-blob')).toBeNull();
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
+  expect(getAttachmentRowCount('hash-blob')).toBe(1);
 });
 
 it('supports reusing the same attachment across multiple nodes and keeps the attachment after unlink', () => {

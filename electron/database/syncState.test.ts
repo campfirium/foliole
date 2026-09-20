@@ -148,26 +148,13 @@ it('stores independent peer cursors per stream', () => {
   expect(getPeerCursor(driver, 'peer-2', 'state')).toBeNull();
 });
 
-it('creates attachment blob and setting record tables in fresh databases', () => {
+it('creates attachment metadata and setting record tables in fresh databases', () => {
   const driver = openInitializedDriver();
 
   driver.execute(
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
      VALUES (?, ?, ?, ?, ?)`,
     ['att-1', 'paper.pdf', 'application/pdf', 42, '2026-04-24T00:00:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO attachment_blobs (
-       attachment_id,
-       content_hash,
-       storage_key,
-       size_bytes,
-       mime_type,
-       availability,
-       source_host_name,
-       created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['att-1', 'sha256:abc', 'attachments/sha256/abc', 42, 'application/pdf', 'local', 'desktop-1', '2026-04-24T00:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO setting_records (
@@ -183,6 +170,6 @@ it('creates attachment blob and setting record tables in fresh databases', () =>
     ['font_scale', 'device', '*', 'desktop', 'desktop-1', '1.0', 'hash-setting', '2026-04-24T00:00:00.000Z']
   );
 
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM attachment_blobs')?.count).toBe(1);
+  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM attachments')?.count).toBe(1);
   expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM setting_records')?.count).toBe(1);
 });

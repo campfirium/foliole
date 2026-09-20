@@ -126,14 +126,6 @@ function insertAttachmentRecord() {
     ['att-1', 'cover.png', 'image/png', 12, '2026-04-21T10:00:00.000Z']
   );
   driver.execute(
-    `INSERT INTO attachment_blobs (
-       attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_host_name, created_at, cached_at, last_verified_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['att-1', 'sha256:att-1', 'sha256-att-1.png', 12, 'image/png',
-      'local', 'desktop-1', '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z']
-  );
-  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
@@ -211,10 +203,8 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
   expect(JSON.parse(record?.payload_json ?? '{}')).toMatchObject({
     attachment_id: 'att-1',
     original_name: 'cover.png',
-    blob: {
-      content_hash: 'sha256:att-1',
-      storage_key: 'sha256-att-1.png'
-    }
+    mime_type: 'image/png',
+    size_bytes: 12
   });
 });
 

@@ -63,8 +63,7 @@ export async function waitForAndroidJourneyFact(paths, factId, expectedDevice = 
 
 export function androidJourneyFactComplete(snapshot) {
   const facts = snapshot.database?.inspection;
-  return facts?.desktopFactPresent === true && facts.missingContentBlobCount === 0
-    && facts.missingAttachmentCount === 0;
+  return facts?.desktopFactPresent === true && facts.missingContentBlobCount === 0;
 }
 
 export async function proveABConvergence({ execute, reportProgress, repoRoot, runId }) {

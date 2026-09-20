@@ -2,11 +2,10 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import { createAttachmentRecord, findAttachmentRecordById } from '../database/attachments.js';
+import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
-import { buildAttachmentStorageFileName } from './storagePath.js';
 
 export interface StagedManagedAttachment {
   contentHash: string;
@@ -74,18 +73,7 @@ export function persistStagedManagedAttachment(stage: StagedManagedAttachment) {
       sizeBytes: stage.sizeBytes
     });
   }
-  upsertAttachmentBlobManifest({
-    attachmentId: stage.contentHash,
-    availability: 'local',
-    cachedAt: stage.createdAt,
-    contentHash: stage.contentHash,
-    createdAt: existing?.createdAt ?? stage.createdAt,
-    lastVerifiedAt: stage.createdAt,
-    mimeType: stage.mimeType,
-    sizeBytes: stage.sizeBytes,
-    sourceHostName: null,
-    storageKey: buildAttachmentStorageFileName(stage.contentHash, stage.mimeType)
-  });
+  recordAttachmentMetadata(stage.contentHash, existing?.createdAt ?? stage.createdAt);
 }
 
 export async function cleanCreatedManagedAttachmentFiles(stages: StagedManagedAttachment[]) {

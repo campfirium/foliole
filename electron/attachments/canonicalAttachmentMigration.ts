@@ -9,7 +9,7 @@ import {
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { rewriteCanonicalAssetMarkdownTargets } from '../../lib/platform/canonicalAssetMarkdownMigration.js';
-import { refreshAttachmentSyncState } from '../database/attachmentBlobs.js';
+import { refreshAttachmentSyncState } from '../database/attachmentSyncState.js';
 import type { SqliteDatabase } from '../database/connection.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';

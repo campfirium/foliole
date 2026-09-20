@@ -1,28 +1,13 @@
-import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
-import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 
-const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
+const storageKey = attachmentStorageKeySql('a.id', 'a.mime_type');
+const resourceRow = `SELECT a.id AS attachment_id, a.id AS content_hash, COALESCE(a.size_bytes, 0) AS size_bytes,
+  'unresolved' AS availability, ${storageKey} AS storage_key, a.mime_type FROM attachments a`;
 
 export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   attachmentResourceMissingRows: {
     resultKey: 'resources',
-    sql:
-      `${VISIBLE_NODES_CTE_SQL}, attachment_refs AS (` +
-      'SELECT na.attachment_id AS attachment_id, ' +
-      "CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 " +
-      "WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 ELSE 2 END AS priority, " +
-      'n.updated_at AS updated_at FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
-      'INNER JOIN visible_nodes visible ON visible.id = n.id ' +
-      'LEFT JOIN node_review nr ON nr.node_id = n.id' +
-      '), ranked_refs AS (' +
-      'SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id' +
-      ') SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key, b.mime_type ' +
-      'FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id ' +
-      "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-      "ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = '" +
-      RESOURCE_STATUS.failed +
-      "' THEN 2 ELSE 1 END ASC, " +
-      'COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC',
+    sql: `${resourceRow} WHERE 0`,
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },
@@ -34,18 +19,8 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   attachmentResourceMissingSummaryRows: {
     resultKey: 'resources',
-    sql:
-      `${VISIBLE_NODES_CTE_SQL} ` +
-      "SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0) AS size_bytes, lower(COALESCE(b.mime_type, '')) AS mime_type, " +
-      'EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
-      'JOIN visible_nodes visible ON visible.id = n.id ' +
-      'JOIN node_review nr ON nr.node_id = n.id WHERE na.attachment_id = b.attachment_id ' +
-      "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1) AS due_review, " +
-      'EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
-      'JOIN visible_nodes visible ON visible.id = n.id ' +
-      'WHERE na.attachment_id = b.attachment_id ' +
-      "AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) LIMIT 1) AS active_topic " +
-      `FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''`,
+    sql: `SELECT 'unresolved' AS availability, NULL AS storage_key, 0 AS size_bytes,
+      '' AS mime_type, 0 AS due_review, 0 AS active_topic WHERE 0`,
     columns: [
       { key: 'availability', source: 'availability', type: 'string' },
       { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
@@ -57,9 +32,7 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   attachmentResourceMissingById: {
     resultKey: 'resources',
-    sql:
-      'SELECT attachment_id, content_hash, COALESCE(size_bytes, 0) AS size_bytes, availability, storage_key, mime_type FROM attachment_blobs ' +
-      "WHERE attachment_id = ? AND content_hash IS NOT NULL AND TRIM(content_hash) != '' LIMIT 1",
+    sql: `${resourceRow} WHERE a.id = ? LIMIT 1`,
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },
@@ -71,7 +44,7 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   attachmentResourceResolve: {
     resultKey: 'resources',
-    sql: 'SELECT b.storage_key, b.mime_type FROM attachment_blobs b WHERE b.attachment_id = ? LIMIT 1',
+    sql: `SELECT ${storageKey} AS storage_key, a.mime_type FROM attachments a WHERE a.id = ? LIMIT 1`,
     columns: [
       { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
       { key: 'mime_type', source: 'mime_type', type: 'nullableString' }
@@ -79,7 +52,7 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   attachmentResourceContentHashesByIds: {
     resultKey: 'resources',
-    sql: 'SELECT attachment_id, content_hash FROM attachment_blobs WHERE attachment_id IN (__ATTACHMENT_ID_FILTER__)',
+    sql: 'SELECT id AS attachment_id, id AS content_hash FROM attachments WHERE id IN (__ATTACHMENT_ID_FILTER__)',
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' }

@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import path from 'node:path';
 
 import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
 import {
@@ -10,7 +9,6 @@ import {
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
-import { runCanonicalAttachmentMigration } from '../attachments/canonicalAttachmentMigration.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
 import {
@@ -106,11 +104,6 @@ function initializeSchemaWorkspaceAndSearch(
     beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
   });
   const assetsDir = resolveRuntimeDataPaths().assetsDir;
-  runCanonicalAttachmentMigration({
-    assetsDir,
-    journalPath: path.join(path.dirname(initializedConnection.dbPath), 'attachment-migrations', 'canonical-v1.json'),
-    sqlite: initializedConnection.sqlite
-  });
   ensureReadwiseSourceModeInitialized();
   migrateLegacyReadwiseDeviceConnection();
   publishAttachmentLibraryPathSnapshot({

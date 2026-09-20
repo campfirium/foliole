@@ -26,16 +26,14 @@ it('reads dataset content identity through the current nodes body blob schema', 
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
     CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT);
-    CREATE TABLE attachment_blobs (
-      attachment_id TEXT PRIMARY KEY, content_hash TEXT, availability TEXT
-    );
+    CREATE TABLE attachments (id TEXT PRIMARY KEY);
     INSERT INTO nodes VALUES ('sync-from-zero-a-001', 'body-1', NULL);
     INSERT INTO content_blobs VALUES ('body-1');
     INSERT INTO content_blob_data VALUES ('body-1', X'01');
     INSERT INTO node_attachments VALUES ('sync-from-zero-a-001', 'attachment-1');
-    INSERT INTO attachment_blobs VALUES ('attachment-1', 'attachment-hash-1', 'cached');
+    INSERT INTO attachments VALUES ('attachment-1');
   `);
-  expect(inspectSyncFromZeroDatasetFacts(database)).toMatchObject({
+  expect(inspectSyncFromZeroDatasetFacts(database, ['attachment-1'])).toMatchObject({
     datasetAttachmentCount: 1,
     datasetAttachmentIds: ['attachment-1'],
     datasetCachedAttachmentCount: 1,

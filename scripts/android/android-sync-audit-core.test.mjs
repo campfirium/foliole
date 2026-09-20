@@ -103,7 +103,7 @@ describe('android sync audit core', () => {
     expect(report.structural.find((item) => item.name === 'nodes')?.missingOnAndroid).not.toContain('deleted-node');
     expect(report.resources.availableWithoutData).toContain('blob-1');
     expect(report.resources.missingReferencedContentBlobs).toBe(2);
-    expect(report.resources.missingAttachmentResources).toBe(1);
+    expect(report.resources.missingAttachmentResources).toBeNull();
     expect(output).toContain('referenced content blobs missing bytes: 2');
     expect(output).toContain('unreferenced content_blob availability=missing: 1');
     expect(report.suspectedBrokenLayer).toBe('cursor advancement: Android cursor is ahead of desktop');

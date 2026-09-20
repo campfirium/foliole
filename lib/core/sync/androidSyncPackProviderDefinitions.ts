@@ -13,11 +13,8 @@ import { PACK_SCHEMA } from './syncPackSchema.js';
 
 const nodeColumns = SYNC_PACK_NODE_COLUMNS.join(', ');
 const payloadPlans = [
-  { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id, a.original_name, a.mime_type, a.size_bytes, a.created_at,
-    b.content_hash blob__content_hash, b.storage_key blob__storage_key, b.size_bytes blob__size_bytes,
-    b.mime_type blob__mime_type, b.availability blob__availability, b.source_host_name blob__source_host_name,
-    b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at
-    FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id` },
+  { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id,
+    a.original_name, a.mime_type, a.size_bytes, a.created_at FROM source.attachments a` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
     f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
     s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref

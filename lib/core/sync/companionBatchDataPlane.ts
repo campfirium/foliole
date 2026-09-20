@@ -56,26 +56,17 @@ export async function applyCompanionAttachmentManifest(
   assertAttachmentEntries(args.entries);
   const syncedIds: string[] = [];
   const failedIds = new Set(args.failedIds);
-  await port.transaction(async (tx) => {
-    for (const entry of args.entries) {
-      const rows = await tx.query<{ content_hash: unknown; size_bytes: unknown }>(
-        'SELECT content_hash, size_bytes FROM attachment_blobs WHERE attachment_id = ? LIMIT 1',
-        [entry.attachmentId]
-      );
-      if (rows[0]?.content_hash !== entry.contentHash || Number(rows[0]?.size_bytes) !== entry.sizeBytes) {
-        failedIds.add(entry.attachmentId);
-        continue;
-      }
-      await tx.run(
-        "UPDATE attachment_blobs SET storage_key = ?, availability = 'cached', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-        [entry.storageKey, args.now, args.now, entry.attachmentId]
-      );
-      syncedIds.push(entry.attachmentId);
+  for (const entry of args.entries) {
+    const [row] = await port.query<{ id: string; mime_type: string; size_bytes: number | null }>(
+      'SELECT id, mime_type, size_bytes FROM attachments WHERE id = ? LIMIT 1', [entry.attachmentId]
+    );
+    if (entry.attachmentId !== entry.contentHash || !row || row.mime_type !== entry.mimeType
+        || (row.size_bytes != null && row.size_bytes !== entry.sizeBytes)) {
+      failedIds.add(entry.attachmentId);
+      continue;
     }
-    for (const attachmentId of failedIds) {
-      await tx.run("UPDATE attachment_blobs SET availability = 'failed' WHERE attachment_id = ?", [attachmentId]);
-    }
-  });
+    syncedIds.push(entry.attachmentId);
+  }
   return { failedIds: [...failedIds], syncedIds };
 }
 

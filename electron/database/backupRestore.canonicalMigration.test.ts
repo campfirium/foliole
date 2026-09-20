@@ -19,8 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { CANONICAL_ATTACHMENT_MIGRATION_ID } from '../attachments/canonicalAttachmentMigration.js';
-
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -39,28 +37,24 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('runs the normal canonical migration after restoring a database without its completion record', async () => {
+it('retires a restored representable manifest without changing article bodies or files', async () => {
   const bytes = Buffer.from([0xff, 0xd8, 0xff, ...Buffer.from('restore-canonical')]);
   const hash = createHash('sha256').update(bytes).digest('hex');
   const connection = openDatabaseConnection();
   const assetsDir = path.join(mockedAppDataDir, 'Foliole', 'Assets');
   await fs.writeFile(path.join(assetsDir, `${hash}.jpg`), bytes);
-  connection.sqlite.prepare('DELETE FROM data_migration_state WHERE migration_id = ?')
-    .run(CANONICAL_ATTACHMENT_MIGRATION_ID);
+  connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
+    content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);
+    PRAGMA user_version = 97;`);
   seedLegacyAttachment(hash, bytes.length);
-  const backupPath = path.join(tempRoot, 'pre-canonical.db');
+  const backupPath = path.join(tempRoot, 'pre-retirement.db');
   await connection.sqlite.backup(backupPath);
-
   initializeDatabase();
-  expect(readStorageKey()).toBe(`${hash}.jpg`);
-
+  expect(readRetiredTable()).toBeUndefined();
   await restoreApplicationDatabaseBackup({ sourcePath: backupPath });
-
-  expect(readStorageKey()).toBe(`${hash}.jpg`);
+  expect(readRetiredTable()).toBeUndefined();
   expect(readBody()).toContain(`asset://${hash}.jpg`);
-  expect(openDatabaseConnection().sqlite.prepare(
-    'SELECT status FROM data_migration_state WHERE migration_id = ?'
-  ).get(CANONICAL_ATTACHMENT_MIGRATION_ID)).toEqual({ status: 'completed' });
+  await expect(fs.readFile(path.join(assetsDir, `${hash}.jpg`))).resolves.toEqual(bytes);
 });
 
 function seedLegacyAttachment(hash: string, sizeBytes: number) {
@@ -71,9 +65,9 @@ function seedLegacyAttachment(hash: string, sizeBytes: number) {
   sqlite.prepare(`INSERT INTO attachment_blobs
     (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .run(hash, hash, hash, sizeBytes, 'image/jpeg', 'cached', '2026-09-14T00:00:00.000Z');
+    .run(hash, hash, `${hash}.jpg`, sizeBytes, 'image/jpeg', 'cached', '2026-09-14T00:00:00.000Z');
   upsertNodeSnapshot({
-    anchorLink: null, content: `![legacy](asset://${hash})`, createdAt: '2026-09-14T00:00:00.000Z',
+    anchorLink: null, content: `![legacy](asset://${hash}.jpg)`, createdAt: '2026-09-14T00:00:00.000Z',
     isTitleManual: true, kind: 'topic', nodeId: 'node-legacy', parentNodeId: null, position: 0,
     reveal: null, title: 'Legacy', updatedAt: '2026-09-14T00:00:00.000Z'
   });
@@ -82,10 +76,8 @@ function seedLegacyAttachment(hash: string, sizeBytes: number) {
     .run('node-legacy', hash, 'image');
 }
 
-function readStorageKey() {
-  return (openDatabaseConnection().sqlite.prepare(
-    "SELECT storage_key FROM attachment_blobs WHERE attachment_id = content_hash"
-  ).get() as { storage_key: string }).storage_key;
+function readRetiredTable() {
+  return openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get();
 }
 
 function readBody() {

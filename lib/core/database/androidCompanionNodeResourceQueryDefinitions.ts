@@ -4,6 +4,7 @@ import {
   androidReadableArticleSql,
   androidSearchExcerptExpression,
 } from './androidCompanionDerivedReadSql.js';
+import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
@@ -11,9 +12,8 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
     resultKey: 'attachments',
     sql:
-      'SELECT na.attachment_id, na.role, a.mime_type, a.original_name, b.content_hash, b.storage_key, b.availability ' +
+      `SELECT na.attachment_id, na.role, a.mime_type, a.original_name, a.id AS content_hash, ${attachmentStorageKeySql('a.id', 'a.mime_type')} AS storage_key, 'unresolved' AS availability ` +
       'FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id ' +
-      'LEFT JOIN attachment_blobs b ON b.attachment_id = na.attachment_id ' +
       'WHERE na.node_id = ? ORDER BY na.role ASC, na.attachment_id ASC',
     columns: [
       { key: 'attachmentId', source: 'attachment_id', type: 'string' },

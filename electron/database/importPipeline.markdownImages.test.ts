@@ -85,7 +85,7 @@ function expectAttachmentSyncRows(count: number) {
     .prepare("SELECT COUNT(DISTINCT object_id) AS count FROM sync_object_state WHERE object_type = 'attachment'")
     .get()).toEqual({ count });
   expect(openDatabaseConnection().sqlite
-    .prepare('SELECT COUNT(*) AS count FROM attachment_blobs')
+    .prepare('SELECT COUNT(*) AS count FROM attachments')
     .get()).toEqual({ count });
 }
 

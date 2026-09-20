@@ -2,6 +2,7 @@
   "syncProtocol": {
     "capabilities": [
       "article-image-sources-v1",
+      "attachment-metadata-only-v1",
       "author-host-snapshots-v1",
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
@@ -18,9 +19,9 @@
       "system-entry-display-names-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 7,
-    "min_supported_version": 7,
-    "version": 7
+    "max_supported_version": 8,
+    "min_supported_version": 8,
+    "version": 8
   },
   "pushAck": {
     "clientOpIdKeys": [
@@ -536,8 +537,7 @@
         "objectType": "attachment",
         "pushIssue": "review_required",
         "storage": [
-          "attachments",
-          "attachment_blobs"
+          "attachments"
         ],
         "userVisible": true
       },

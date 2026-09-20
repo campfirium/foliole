@@ -2,8 +2,8 @@ import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentR
 import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
+import { syncCompanionAttachmentResourceRequestsFromDesktop } from '../shared/platform/companionDesktopAttachmentResources';
 import { pullMissingContentBlobs } from '../shared/platform/companionDesktopSyncContentBlobs';
-import { pullMissingAttachmentResources } from '../shared/platform/companionDesktopSyncResources';
 import { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import { searchCompanionFullText } from '../shared/platform/companionFullTextSearch';
 import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
@@ -16,12 +16,12 @@ import { postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
 const IDS = {
-  corrupt: 'ios-acceptance-corrupt-attachment',
+  corrupt: '5703850972e2da20d5cd065cbb73c20c5d18778148a664b1238ce99120b1d301',
   external: 'ios-external:orchid.md',
-  failed: 'ios-acceptance-failed-attachment',
-  missing: 'ios-acceptance-missing-attachment',
+  failed: 'e4bd1f4f95e08bac38c59af1b1ef34aeb05e77d1e54492c14c12b1ac570e2318',
+  missing: '654aa8b756a2aa8b8acc8db2d4cee7746dd98a07ca7f2f2d5f19c1777bc37e2d',
   topic: 'ios-content-topic',
-  valid: 'ios-acceptance-valid-attachment'
+  valid: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d'
 } as const;
 const TOKENS = {
   external: 'external-orchid-token',
@@ -90,7 +90,11 @@ export async function runIosContentResourceAcceptance() {
       await applyStructure(endpoint, joined.peer);
       resourceSync = {
         content: await pullMissingContentBlobs(endpoint),
-        attachments: await pullMissingAttachmentResources(endpoint)
+        attachments: await syncCompanionAttachmentResourceRequestsFromDesktop(endpoint,
+          (['corrupt', 'failed', 'missing', 'valid'] as const).map((key) => ({
+            attachmentId: IDS[key], contentHash: IDS[key], storageKey: RESOURCE_KEYS[key],
+            mimeType: key === 'valid' ? 'application/pdf' : 'image/png'
+          })))
       };
     }
     postResult({

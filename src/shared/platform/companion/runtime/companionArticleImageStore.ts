@@ -54,25 +54,14 @@ export function commitCompanionImageArticle(nodeId: string, before: RecoverableI
 export async function saveCompanionImportedImage(db: DbPort, image: Awaited<ReturnType<typeof importCompanionImageResource>>) {
   const now = new Date().toISOString();
   const hostName = await iosCompanionHostName(db);
-  const blob = {
-    attachment_id: image.contentHash, content_hash: image.contentHash, storage_key: image.storageKey,
-    size_bytes: image.sizeBytes, mime_type: image.mimeType, availability: 'local', source_host_name: hostName,
-    created_at: now, cached_at: now, last_verified_at: now
-  };
-  const payload = { id: image.contentHash, original_name: image.storageKey, mime_type: image.mimeType,
-    size_bytes: image.sizeBytes, created_at: now, blob };
+  const payload = { attachment_id: image.contentHash, original_name: image.storageKey, mime_type: image.mimeType,
+    size_bytes: image.sizeBytes, created_at: now };
   const contentHash = await iosCompanionContentHash(payload);
   await db.transaction(async (tx) => {
     const [existing] = await tx.query<{ id: string }>('SELECT id FROM attachments WHERE id = ?', [image.contentHash]);
-    if (existing) {
-      await tx.run("UPDATE attachment_blobs SET availability = 'local', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-        [now, now, image.contentHash]);
-      return;
-    }
+    if (existing) return;
     await applyAttachmentObject(tx, { object_id: image.contentHash, object_type: 'attachment',
       content_hash: contentHash, payload_json: JSON.stringify(payload), updated_at: now, deleted_at: null });
-    await tx.run("UPDATE attachment_blobs SET availability = 'local', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-      [now, now, image.contentHash]);
     await markIosCompanionMutation({ contentHash, db: tx, hostName, objectId: image.contentHash,
       objectType: 'attachment', updatedAt: now });
   });

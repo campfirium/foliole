@@ -15,6 +15,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
     'article-image-sources-v1',
+    'attachment-metadata-only-v1',
     'canonical-attachment-storage-key-v1',
     'device-delivery-receipts-v1',
     DESKTOP_SOFT_ANCHOR_CAPABILITY,
@@ -30,9 +31,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
   ].sort()),
-  max_supported_version: 7,
-  min_supported_version: 7,
-  version: 7
+  max_supported_version: 8,
+  min_supported_version: 8,
+  version: 8
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

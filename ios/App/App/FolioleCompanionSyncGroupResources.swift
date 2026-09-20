@@ -13,18 +13,19 @@ enum FolioleCompanionSyncGroupResources {
     }
 
     static func attachment(snapshot: URL, attachmentId: String?, contentHash: String?) throws -> Resource? {
-        guard let attachmentId, !attachmentId.isEmpty, let contentHash,
+        guard let attachmentId, attachmentId == contentHash, let contentHash,
               contentHash.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
-              let row = try query(snapshot,
-                "SELECT mime_type, CAST(storage_key AS BLOB) FROM attachment_blobs WHERE attachment_id = ? AND content_hash = ?",
-                [attachmentId, contentHash]), String(data: row.1, encoding: .utf8) == contentHash else { return nil }
+              let row = try query(snapshot, "SELECT mime_type, CAST(id AS BLOB) FROM attachments WHERE id = ?",
+                [attachmentId]), let mimeType = row.0,
+              let storageKey = FolioleCompanionCanonicalAttachmentKey.storageKey(contentHash: contentHash, mimeType: mimeType)
+              else { return nil }
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                                   appropriateFor: nil, create: false)
-        let candidates = ["attachments", "foliole-attachments"].map {
-            support.appendingPathComponent($0, isDirectory: true).appendingPathComponent(contentHash)
-        }
-        guard let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else { return nil }
-        return Resource(body: try Data(contentsOf: url), contentType: row.0 ?? "application/octet-stream")
+        let contract = try FolioleCompanionContractStore().attachmentResourceContract()
+        let url = support.appendingPathComponent(contract.directoryName, isDirectory: true).appendingPathComponent(storageKey)
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard values?.isRegularFile == true, values?.isSymbolicLink != true else { return nil }
+        return Resource(body: try Data(contentsOf: url), contentType: mimeType)
     }
 
     static func contentBlobBatch(snapshot: URL, requestData: Data) throws -> Resource {

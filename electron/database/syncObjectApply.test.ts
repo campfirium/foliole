@@ -162,50 +162,18 @@ it('applies import source and external folder payloads', async () => {
     .toEqual({ folder_path: '/docs' });
 });
 
-it('applies attachment metadata and blob manifests', async () => {
-  const records: NativeSyncObjectRecord[] = [{
-    content_hash: 'hash-attachment',
-    deleted_at: null,
-    object_id: 'att-1',
-    object_type: 'attachment',
-    payload_json: JSON.stringify({
-      created_at: '2026-04-21T10:00:00.000Z',
-      mime_type: 'image/png',
-      original_name: 'cover.png',
-      size_bytes: 12,
-      blob: {
-        availability: 'remote_known',
-        cached_at: '2026-04-21T11:00:00.000Z',
-        content_hash: 'a'.repeat(64),
-        created_at: '2026-04-21T10:00:00.000Z',
-        last_verified_at: '2026-04-21T12:00:00.000Z',
-        mime_type: 'image/png',
-        size_bytes: 12,
-        storage_key: `${'a'.repeat(64)}.png`
-      }
-    }),
+it('applies canonical attachment metadata without a possession manifest', async () => {
+  const id = 'a'.repeat(64);
+  const payload = { attachment_id: id, created_at: '2026-04-21T10:00:00.000Z',
+    mime_type: 'image/png', original_name: 'cover.png', size_bytes: 12 };
+  await expect(applySyncObjectsAsync([{ content_hash: 'hash-attachment', deleted_at: null,
+    object_id: id, object_type: 'attachment', payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:00:00.000Z'
-  }];
-
-  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['attachment:att-1']);
-
+  }])).resolves.toEqual([`attachment:${id}`]);
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ original_name: string }>('SELECT original_name FROM attachments WHERE id = ?', ['att-1']))
-    .toEqual({ original_name: 'cover.png' });
-  expect(driver.queryOne<{
-    availability: string;
-    cached_at: string | null;
-    content_hash: string;
-    last_verified_at: string | null;
-  }>(
-    'SELECT availability, cached_at, content_hash, last_verified_at FROM attachment_blobs WHERE attachment_id = ?',
-    ['att-1']
-  )).toEqual({
-    availability: 'remote_known',
-    cached_at: null,
-    content_hash: 'a'.repeat(64),
-    last_verified_at: null
-  });
+  expect(driver.queryOne('SELECT original_name, mime_type, size_bytes FROM attachments WHERE id = ?', [id]))
+    .toEqual({ original_name: 'cover.png', mime_type: 'image/png', size_bytes: 12 });
+  expect(driver.queryOne("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'")).toBeUndefined();
 });
 
 it('applies tombstones to payload table and sync object state', async () => {

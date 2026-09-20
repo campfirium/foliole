@@ -49,7 +49,6 @@ struct FolioleCompanionAttachmentResourceContract {
     let resolveResponseKeys: [String: String]
     let resolveStatuses: [String: String]
     let sql: [String: String]
-    let statuses: [String: String]
 }
 
 final class FolioleCompanionContractStore {
@@ -144,8 +143,7 @@ final class FolioleCompanionContractStore {
             requestKeys: try stringMap(path: ["requestKeys"], root: root),
             resolveResponseKeys: try stringMap(path: ["resolveResponseKeys"], root: root),
             resolveStatuses: try stringMap(path: ["resolveStatuses"], root: root),
-            sql: try stringMap(path: ["sql"], root: root),
-            statuses: try stringMap(path: ["statuses"], root: root)
+            sql: try stringMap(path: ["sql"], root: root)
         )
     }
 

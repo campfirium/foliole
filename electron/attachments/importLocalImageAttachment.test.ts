@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { findAttachmentBlobManifestById } from '../database/attachmentBlobs.js';
+import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { listAttachmentNodeLinks, listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -84,11 +84,11 @@ function expectAttachmentSyncState(attachmentId: string, sizeBytes: number) {
     `SELECT content_hash, object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
     [attachmentId]
   )).toEqual({ content_hash: expect.any(String), object_type: 'attachment', sync_dirty: 1 });
-  expect(findAttachmentBlobManifestById(attachmentId)).toEqual(expect.objectContaining({
+  expect(openDatabaseConnection().sqlite.prepare('SELECT size_bytes FROM attachments WHERE id = ?').get(attachmentId)).toEqual({ size_bytes: sizeBytes });
+  expect(loadAttachmentResourceDescription(attachmentId)).toEqual(expect.objectContaining({
     attachmentId,
     availability: 'local',
     contentHash: attachmentId,
-    sizeBytes,
     storageKey: `${attachmentId}.png`
   }));
 }
@@ -132,17 +132,13 @@ it('imports a local png into the app attachment directory and links it to the no
     fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
-  expect(findAttachmentBlobManifestById(hashBytes(imageBytes))).toEqual({
+  expect(loadAttachmentResourceDescription(hashBytes(imageBytes))).toEqual({
     attachmentId: hashBytes(imageBytes),
     contentHash: hashBytes(imageBytes),
     storageKey: `${hashBytes(imageBytes)}.png`,
-    sizeBytes: imageBytes.byteLength,
     mimeType: 'image/png',
     availability: 'local',
-    sourceHostName: null,
-    createdAt: expect.any(String),
-    cachedAt: expect.any(String),
-    lastVerifiedAt: expect.any(String)
+    libraryScope: expect.any(String)
   });
   expect(openDatabaseConnection().driver.queryOne<{ object_type: string; sync_dirty: number }>(
     `SELECT object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
@@ -177,7 +173,7 @@ it('reuses the same stored file and attachment record for repeated imports of id
   });
 
   expect(countAttachments()).toBe(1);
-  expect(findAttachmentBlobManifestById((firstResult as { attachment_id: string }).attachment_id)).toMatchObject({
+  expect(loadAttachmentResourceDescription((firstResult as { attachment_id: string }).attachment_id)).toMatchObject({
     attachmentId: (firstResult as { attachment_id: string }).attachment_id,
     contentHash: (firstResult as { attachment_id: string }).attachment_id,
     storageKey: `${(firstResult as { attachment_id: string }).attachment_id}.png`,
@@ -203,7 +199,7 @@ it('uses JPEG bytes as truth when the source file is named png', async () => {
     hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/jpeg'
   ))).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${hash}.png`))).rejects.toThrow();
-  expect(findAttachmentBlobManifestById(hash)).toMatchObject({
+  expect(loadAttachmentResourceDescription(hash)).toMatchObject({
     attachmentId: hash, contentHash: hash, mimeType: 'image/jpeg', storageKey: `${hash}.jpg`
   });
 });
@@ -221,7 +217,7 @@ it('rejects files whose bytes do not match the declared image type', async () =>
     source_path: sourcePath
   });
   expect(countAttachments()).toBe(0);
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachment_blobs').get()).toEqual({ count: 0 });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toEqual({ count: 0 });
   expect(listNodeAttachments('node-1')).toEqual([]);
 });
 

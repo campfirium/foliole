@@ -80,15 +80,6 @@ export function insertAttachmentSyncState() {
     ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
   );
   driver.execute(
-    `INSERT INTO attachment_blobs (
-       attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_host_name, created_at, cached_at, last_verified_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['att-1', 'sha256:att-1', 'attachments/sha256-att-1.png', 12, 'image/png',
-      'local', 'desktop-fixture', '2026-04-27T00:02:00.000Z',
-      '2026-04-27T00:02:00.000Z', '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('attachment', 'att-1', 3, 'attachment-hash', 'desktop', '2026-04-27T00:02:00.000Z', 1)`

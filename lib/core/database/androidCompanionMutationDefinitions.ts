@@ -58,12 +58,6 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   textBodyBlobDataInsert: 'INSERT OR IGNORE INTO content_blob_data (hash, data) VALUES (?, ?)',
   nodeAttachmentDeleteByNode: 'DELETE FROM node_attachments WHERE node_id = ?',
   nodeAttachmentUpsert: 'INSERT OR REPLACE INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
-  attachmentResourceMarkCached:
-    "UPDATE attachment_blobs SET storage_key = ?, availability = '" +
-    RESOURCE_STATUS.cached +
-    "', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-  attachmentResourceMarkFailed:
-    "UPDATE attachment_blobs SET availability = '" + RESOURCE_STATUS.failed + "' WHERE attachment_id = ?",
   contentBlobDataReplace: 'INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)',
   contentBlobMarkCached:
     "UPDATE content_blobs SET availability = '" +
@@ -100,7 +94,6 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearNodeOrder: 'DELETE FROM node_order',
   appDataClearNodeOpenState: 'DELETE FROM node_open_state',
   appDataClearNodeAttachments: 'DELETE FROM node_attachments',
-  appDataClearAttachmentBlobs: 'DELETE FROM attachment_blobs',
   appDataClearAttachments: 'DELETE FROM attachments',
   appDataClearPdfPageText: 'DELETE FROM pdf_page_text',
   appDataClearContentBlobData: 'DELETE FROM content_blob_data',
@@ -139,11 +132,7 @@ export const ANDROID_COMPANION_MUTATION_SHAPE_KEYS = {
 } as const;
 
 export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
-  groupKeys: { attachmentResources: 'attachmentResources', contentBlobs: 'contentBlobs' },
-  attachmentResources: {
-    markCachedMutationName: 'attachmentResourceMarkCached',
-    markFailedMutationName: 'attachmentResourceMarkFailed'
-  },
+  groupKeys: { contentBlobs: 'contentBlobs' },
   contentBlobs: {
     dataReplaceMutationName: 'contentBlobDataReplace',
     markCachedMutationName: 'contentBlobMarkCached',

@@ -97,19 +97,6 @@ export const syncPeerCursors = sqliteTable(
   (table) => [primaryKey({ columns: [table.peerId, table.streamName] })]
 );
 
-export const attachmentBlobs = sqliteTable('attachment_blobs', {
-  attachmentId: text('attachment_id').primaryKey(),
-  contentHash: text('content_hash'),
-  storageKey: text('storage_key'),
-  sizeBytes: integer('size_bytes'),
-  mimeType: text('mime_type'),
-  availability: text('availability').notNull().default('missing'),
-  sourceHostName: text('source_host_name'),
-  createdAt: text('created_at').notNull(),
-  cachedAt: text('cached_at'),
-  lastVerifiedAt: text('last_verified_at')
-});
-
 export const contentBlobs = sqliteTable('content_blobs', {
   hash: text('hash').primaryKey(),
   storageKey: text('storage_key').notNull(),

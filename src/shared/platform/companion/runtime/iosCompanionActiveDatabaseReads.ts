@@ -144,10 +144,9 @@ export async function loadIosMissingContentBlobs(limit = 50) {
 }
 
 export async function loadIosMissingAttachments(limit = 50, attachmentId?: string) {
-  const rows = attachmentId
-    ? await queryIosCompanionDatabase<DbRow>('attachmentResourceMissingById', [attachmentId])
-    : await queryIosCompanionDatabase<DbRow>('attachmentResourceMissingRows');
-  return rows.filter(isMissing).slice(0, Math.max(1, limit));
+  if (!attachmentId) return [];
+  const rows = await queryIosCompanionDatabase<DbRow>('attachmentResourceMissingById', [attachmentId]);
+  return rows.slice(0, Math.max(1, limit));
 }
 
 function search<T extends DbRow>(name: 'topicSearch' | 'pdfPageTextSearch' | 'externalDocumentSearch', query: string, limit: number) {
@@ -184,8 +183,4 @@ async function payloadParams(row: NativeSyncObjectRecord, mode: string) {
 
 function sumBytes(rows: DbRow[]) {
   return rows.reduce((total, row) => total + Number(row.size_bytes ?? 0), 0);
-}
-
-function isMissing(row: DbRow) {
-  return row.availability !== 'cached' || typeof row.storage_key !== 'string' || row.storage_key.length === 0;
 }

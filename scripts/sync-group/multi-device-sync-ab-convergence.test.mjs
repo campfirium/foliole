@@ -83,7 +83,7 @@ it('observes a journey fact only when its exact device origin matches', () => {
   expect(expectedJourneyFactPresent(facts, 'fact-c', 'A')).toBe(false);
 });
 
-it('does not take the provider offline before the exact fact resources are complete', () => {
+it('requires the fact body but ignores unrelated historical attachment backlog', () => {
   const inspection = {
     desktopFactPresent: true, missingAttachmentCount: 0, missingContentBlobCount: 0
   };
@@ -93,5 +93,5 @@ it('does not take the provider offline before the exact fact resources are compl
   } } })).toBe(false);
   expect(androidJourneyFactComplete({ database: { inspection: {
     ...inspection, missingAttachmentCount: 1
-  } } })).toBe(false);
+  } } })).toBe(true);
 });

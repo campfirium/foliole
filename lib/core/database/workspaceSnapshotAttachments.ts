@@ -1,3 +1,4 @@
+import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import type { WorkspaceNodeAttachmentSnapshot, WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 
@@ -20,12 +21,11 @@ function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshot
        node_attachments.role,
        attachments.mime_type,
        attachments.original_name
-       , attachment_blobs.content_hash
-       , attachment_blobs.storage_key
-       , attachment_blobs.availability
+       , attachments.id AS content_hash
+       , ${attachmentStorageKeySql('attachments.id', 'attachments.mime_type')} AS storage_key
+       , 'unresolved' AS availability
      FROM node_attachments
      LEFT JOIN attachments ON attachments.id = node_attachments.attachment_id
-     LEFT JOIN attachment_blobs ON attachment_blobs.attachment_id = node_attachments.attachment_id
      ORDER BY node_attachments.node_id ASC, node_attachments.role ASC, node_attachments.attachment_id ASC`
   );
 }

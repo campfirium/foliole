@@ -6,6 +6,7 @@ import {
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES as REPAIRS,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
+import { retireCompanionAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
 import {
   addColumnIfMissing,
@@ -60,6 +61,7 @@ export async function migrateCompanionDatabase(
     }
   }
   await repairCompanionDatabase(db);
+  if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

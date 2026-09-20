@@ -1,3 +1,5 @@
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../sync/syncObjectPayloadSql.js';
+
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 
 export type CompanionNativePlatform = 'android' | 'ios';
@@ -16,13 +18,7 @@ const NODE_TEXT_ALTERNATIVE_COLUMNS = [
 export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadAttachment: {
     syncPayload: { argMode: 'object_id', objectType: 'attachment' },
-    sql:
-      "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, " +
-      "'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object(" +
-      "'content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes, " +
-      "'mime_type', b.mime_type, 'availability', b.availability, 'source_host_name', b.source_host_name, " +
-      "'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at)) AS payload_json " +
-      'FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1'
+    sql: SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.attachment
   },
   syncPayloadExternalDocument: {
     syncPayload: {

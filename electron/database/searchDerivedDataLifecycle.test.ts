@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 
-import { upsertAttachmentBlobManifest } from './attachmentBlobs.js';
+import { recordAttachmentMetadata } from './attachmentSyncState.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -87,16 +87,7 @@ function upsertSearchNode(input: {
 
 function linkReadyPdf(nodeId: string, attachmentId: string, text = 'pdf lifecycle marker') {
   insertPdfAttachment({ id: attachmentId, originalName: `${attachmentId}.pdf`, status: 'ready' });
-  upsertAttachmentBlobManifest({
-    attachmentId,
-    availability: 'local',
-    contentHash: attachmentId,
-    createdAt: '2026-05-26T00:01:00.000Z',
-    mimeType: 'application/pdf',
-    sizeBytes: 128,
-    sourceHostName: null,
-    storageKey: `${attachmentId}.pdf`
-  });
+  recordAttachmentMetadata(attachmentId, '2026-05-26T00:01:00.000Z');
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
     .run(nodeId, attachmentId, 'reference');

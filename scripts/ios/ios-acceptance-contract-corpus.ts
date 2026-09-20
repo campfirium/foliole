@@ -41,7 +41,7 @@ export function loadIosAcceptanceContractCorpus() {
 
 function contentResourceFixture(packPath: string) {
   const attachment = (kind: 'corrupt' | 'failed' | 'missing' | 'valid', bytes: Buffer) => ({
-    bytes, hash: sha256(bytes), id: `ios-acceptance-${kind}-attachment`,
+    bytes, hash: sha256(bytes), id: sha256(bytes),
     mimeType: kind === 'valid' ? 'application/pdf' : 'image/png'
   });
   const content = (text: string) => {

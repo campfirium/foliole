@@ -16,7 +16,7 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.compression).toBe('zlib');
   expect(definitions.protocol).toMatchObject({
     capabilities: [
-      'article-image-sources-v1', 'author-host-snapshots-v1', 'canonical-attachment-storage-key-v1',
+      'article-image-sources-v1', 'attachment-metadata-only-v1', 'author-host-snapshots-v1', 'canonical-attachment-storage-key-v1',
       'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
       'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
       'readwise-library-source-mode-v1',
@@ -24,7 +24,7 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'sync-group-member-state-v1',
       'system-entry-display-names-v1', 'workgroup-aead-v1'
     ],
-    version: 7
+    version: 8
   });
   expect(definitions.payloadPlans).toContainEqual(expect.objectContaining({
     objectType: 'watched_folder', sql: expect.stringContaining('s.host_name')

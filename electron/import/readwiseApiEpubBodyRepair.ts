@@ -1,3 +1,4 @@
+import { attachmentStorageKeySql } from '../../lib/core/database/attachmentMetadataSql.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import {
   prepareReadwiseApiDocuments,
@@ -107,8 +108,8 @@ function referencedRootAttachmentIds(rootNodeId: string, content: string, bodyAt
   const rows = openDatabaseConnection().driver.queryAll<{
     attachment_id: string;
     storage_key: string;
-  }>(`SELECT na.attachment_id, ab.storage_key FROM node_attachments na
-      JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
+  }>(`SELECT na.attachment_id, ${attachmentStorageKeySql('a.id', 'a.mime_type')} AS storage_key FROM node_attachments na
+      JOIN attachments a ON a.id = na.attachment_id
       WHERE na.node_id = ? AND na.role = 'image'`, [rootNodeId]);
   const retained = rows.filter((row) => content.includes(`asset://${row.storage_key}`))
     .map((row) => row.attachment_id);

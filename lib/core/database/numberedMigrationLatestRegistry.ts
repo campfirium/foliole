@@ -1,3 +1,4 @@
+import { retireAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
@@ -83,5 +84,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       for (const statement of EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS) sqlite.exec(statement);
     }
   },
-  { version: 97, migrate: (sqlite) => addColumnIfMissing(sqlite, 'nodes', 'image_sources', 'TEXT') }
+  { version: 97, migrate: (sqlite) => addColumnIfMissing(sqlite, 'nodes', 'image_sources', 'TEXT') },
+  { version: 98, migrate: retireAttachmentManifest }
 ];

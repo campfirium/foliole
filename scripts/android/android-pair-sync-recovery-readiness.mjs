@@ -119,9 +119,7 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     journeyFacts: journeyFacts(database),
     localMemberAuthorizationFingerprint:
       inspectLocalActiveMemberAuthorizationFingerprint(database),
-    missingAttachmentCount: tableExists(database, 'attachment_blobs')
-      ? scalar(database, `SELECT COUNT(*) AS count FROM attachment_blobs
-        WHERE availability NOT IN ('cached', 'local')`) : null,
+    missingAttachmentCount: null, // Possession is checked from files, never a database-wide queue.
     missingContentBlobCount: tableExists(database, 'content_blobs')
       && tableExists(database, 'content_blob_data')
       ? scalar(database, `SELECT COUNT(*) AS count FROM content_blobs cb

@@ -7,6 +7,7 @@ final class FolioleCompanionCanonicalAttachmentKey {
     private static final Map<String, String> EXTENSIONS = new HashMap<>();
     static {
         EXTENSIONS.put("application/pdf", ".pdf");
+        EXTENSIONS.put("application/epub+zip", ".epub");
         EXTENSIONS.put("image/gif", ".gif");
         EXTENSIONS.put("image/jpeg", ".jpg");
         EXTENSIONS.put("image/png", ".png");
@@ -15,9 +16,13 @@ final class FolioleCompanionCanonicalAttachmentKey {
 
     private FolioleCompanionCanonicalAttachmentKey() {}
 
-    static boolean matches(String contentHash, String mimeType, String storageKey) {
+    static String storageKey(String contentHash, String mimeType) {
         String extension = EXTENSIONS.get(mimeType == null ? null : mimeType.trim().toLowerCase());
-        return extension != null && contentHash != null && contentHash.matches("[a-f0-9]{64}") &&
-            storageKey != null && storageKey.equals(contentHash + extension);
+        return extension != null && contentHash != null && contentHash.matches("[a-f0-9]{64}")
+            ? contentHash + extension : null;
+    }
+
+    static boolean matches(String contentHash, String mimeType, String storageKey) {
+        return storageKey != null && storageKey.equals(storageKey(contentHash, mimeType));
     }
 }

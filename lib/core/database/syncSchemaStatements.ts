@@ -52,23 +52,6 @@ export const SYNC_SCHEMA_STATEMENTS = [
     PRIMARY KEY (peer_id, stream_name)
   )`,
   ...SYNC_DELIVERY_SCHEMA_STATEMENTS,
-  `CREATE TABLE IF NOT EXISTS attachment_blobs (
-    attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE,
-    content_hash TEXT,
-    storage_key TEXT,
-    size_bytes INTEGER,
-    mime_type TEXT,
-    availability TEXT NOT NULL DEFAULT 'missing',
-    source_host_name TEXT,
-    created_at TEXT NOT NULL,
-    cached_at TEXT,
-    last_verified_at TEXT
-  )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_attachment_blobs_content_hash
-    ON attachment_blobs (content_hash)
-    WHERE content_hash IS NOT NULL`,
-  `CREATE INDEX IF NOT EXISTS idx_attachment_blobs_availability
-    ON attachment_blobs (availability)`,
   `CREATE TABLE IF NOT EXISTS setting_records (
     key TEXT NOT NULL,
     scope TEXT NOT NULL,

@@ -25,10 +25,7 @@ function resourceBacklog(android) {
     availableWithoutData: all(android,
       "SELECT b.hash FROM content_blobs b LEFT JOIN content_blob_data d ON d.hash = b.hash WHERE b.availability <> 'missing' AND d.hash IS NULL LIMIT 20"
     ).map((row) => row.hash),
-    missingAttachmentResources: scalar(android,
-      "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL AND TRIM(content_hash) <> '' AND availability IN ('missing', 'failed')",
-      0
-    ),
+    missingAttachmentResources: null, // File evidence is required after manifest retirement.
     missingAvailabilityCount: scalar(android, "SELECT COUNT(*) FROM content_blobs WHERE availability = 'missing'", 0),
     missingExternalDocumentBodies: scalar(android,
       'SELECT COUNT(*) FROM external_documents e LEFT JOIN content_blob_data d ON d.hash = e.body_blob_hash WHERE e.is_present = 1 AND e.body_blob_hash IS NOT NULL AND d.hash IS NULL',

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/attachmentResources', () => ({ resolveRuntimeAttachmentResource: mocks.resolveResource }));
-vi.mock('../shared/platform/companionDesktopSyncResources', () => ({ pullMissingAttachmentResources: mocks.pullAttachments }));
+vi.mock('../shared/platform/companionDesktopAttachmentResources', () => ({ syncCompanionAttachmentResourceRequestsFromDesktop: mocks.pullAttachments }));
 vi.mock('../shared/platform/companionDesktopSyncContentBlobs', () => ({ pullMissingContentBlobs: mocks.pullContent }));
 vi.mock('../shared/platform/companionExternalDocuments', () => ({ loadCompanionExternalDocument: mocks.loadExternal }));
 vi.mock('../shared/platform/companionFullTextSearch', () => ({ searchCompanionFullText: mocks.search }));
@@ -39,16 +39,16 @@ beforeEach(() => {
     peer: { sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' } });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });
-  mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['ios-acceptance-valid-attachment'] });
+  mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d'] });
   mocks.loadWorkspace.mockResolvedValue({ workspace_snapshot: { nodesById: {} } });
   mocks.resolveArticle.mockImplementation((_snapshot: unknown, nodeId: string) => nodeId === 'ios-content-topic'
     ? { bodyStatus: 'ready', content: 'topic-amber-token', nodeId }
     : { bodyStatus: 'failed', content: '', nodeId });
-  mocks.loadPdf.mockResolvedValue([{ attachment_id: 'ios-acceptance-valid-attachment', page: 1, text: 'pdf-cobalt-token' }]);
+  mocks.loadPdf.mockResolvedValue([{ attachment_id: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d', page: 1, text: 'pdf-cobalt-token' }]);
   mocks.loadExternal.mockResolvedValue({ bodyStatus: 'ready', content: 'external-orchid-token', document_id: 'ios-external:orchid.md' });
   mocks.search.mockImplementation(async (token: string) => ({
     external: token.includes('external') ? [{ document_id: 'ios-external:orchid.md' }] : [],
-    pdf: token.includes('pdf') ? [{ attachment_id: 'ios-acceptance-valid-attachment' }] : [],
+    pdf: token.includes('pdf') ? [{ attachment_id: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d' }] : [],
     topics: token.includes('topic') ? [{ nodeId: 'ios-content-topic' }] : []
   }));
   mocks.resolveResource.mockImplementation(async (url: string) => url.endsWith('.pdf')

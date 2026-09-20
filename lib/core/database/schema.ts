@@ -224,7 +224,6 @@ export const settings = sqliteTable('settings', {
 });
 
 export {
-  attachmentBlobs,
   contentBlobData,
   contentBlobs,
   nodeSyncConflicts,

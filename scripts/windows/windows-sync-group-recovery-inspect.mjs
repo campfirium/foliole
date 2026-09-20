@@ -8,6 +8,7 @@ import BetterSqlite3 from 'better-sqlite3';
 import {
   identityFingerprint, inspectPairSyncRecoveryWorkspace
 } from '../android/android-pair-sync-recovery-readiness.mjs';
+import { readVerifiedAttachmentIds } from '../sync-group/attachment-file-evidence.mjs';
 import { inspectSyncFromZeroDatasetFacts } from '../sync-group/sync-from-zero-dataset-inspect.mjs';
 
 function hostsByPlatform(rows) {
@@ -62,6 +63,7 @@ function peerProgress(database) {
 export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
+    const availableAttachmentIds = readVerifiedAttachmentIds(path.resolve(path.dirname(databasePath), '..', 'Assets'));
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
     const local = db.prepare(`SELECT local.group_id, local.local_device_identity_key,
       device.device_name AS local_host_name, local.state AS member_state, NULL AS timeline_id
@@ -74,16 +76,14 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
     const factExists = db.prepare('SELECT COUNT(*) FROM nodes WHERE id = ? AND deleted_at IS NULL').pluck();
     const facts = Object.fromEntries(factIds.map((id) => [id, Number(factExists.get(id)) === 1]));
     return {
-      ...inspectSyncFromZeroDatasetFacts(db),
+      ...inspectSyncFromZeroDatasetFacts(db, availableAttachmentIds),
       ...peerProgress(db),
       activeHosts: activeHosts(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_devices WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
-      availableAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
-        WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).pluck().all(),
-      cachedAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
-        WHERE availability = 'cached' ORDER BY attachment_id`).pluck().all(),
+      availableAttachmentIds,
+      cachedAttachmentIds: availableAttachmentIds,
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
       departedAtByHost: departedAtByHost(db),
       departedHosts: departedHosts(db),
@@ -96,8 +96,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       localHostName: local?.local_host_name ?? null,
       localMemberState: local?.member_state ?? null,
       localTimelineId: local?.timeline_id ?? null,
-      missingAttachmentCount: count(`SELECT COUNT(*) FROM attachment_blobs
-        WHERE availability NOT IN ('cached', 'local')`),
+      missingAttachmentCount: null,
       missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
       maxStateSeq: count('SELECT MAX(state_seq) FROM sync_object_state'),

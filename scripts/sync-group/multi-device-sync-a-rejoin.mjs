@@ -30,17 +30,13 @@ import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile
 const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
 function androidSnapshot(paths) {
-  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeAttachmentFacts: true, includeEvents: false,
     serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
-    databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
+    databaseInspector: (database, archive) => ({ ...inspectPairSyncRecoveryWorkspace(database),
       activeMemberHosts: database.prepare(`SELECT device_name FROM sync_group_devices
         WHERE state = 'active' ORDER BY device_name`).all().map(({ device_name }) => device_name),
-      availableAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
-        WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).all()
-        .map(({ attachment_id }) => attachment_id),
-      cachedAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
-        WHERE availability = 'cached' ORDER BY attachment_id`).all()
-        .map(({ attachment_id }) => attachment_id) }) });
+      availableAttachmentIds: archive?.files?.map(({ contentHash }) => contentHash) ?? null,
+      cachedAttachmentIds: archive?.files?.map(({ contentHash }) => contentHash) ?? null }) });
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
@@ -143,7 +139,6 @@ export async function proveARejoin({
     'three_facts_missing');
     await waitUntil('Android B fresh fact and resource convergence', () => androidSnapshot(paths),
       (value) => Object.values(ids).every((id) => value.database?.inspection?.journeyFacts?.[id])
-        && value.database.inspection.missingAttachmentCount === 0
         && value.database.inspection.missingContentBlobCount === 0
         && value.database.counts.attachments >= 1,
       'android_three_facts_missing', (value) => [

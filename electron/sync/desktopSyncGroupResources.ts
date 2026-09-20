@@ -63,7 +63,6 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer, arti
     try {
       const downloaded = await downloadAttachment(peer, item);
       await persistAttachmentFile(downloaded);
-      await persistAttachmentRow(port, downloaded);
     } catch (error) {
       failedStorageKeys.push(item.storageKey);
       console.warn('[sync] article attachment remains missing', { storageKey: item.storageKey, error });
@@ -118,14 +117,6 @@ async function persistAttachmentFile(input: Awaited<ReturnType<typeof downloadAt
   await fs.mkdir(path.dirname(input.filePath), { recursive: true });
   await fs.writeFile(`${input.filePath}.partial`, input.body);
   await fs.rename(`${input.filePath}.partial`, input.filePath);
-}
-
-async function persistAttachmentRow(port: DbPort, input: Awaited<ReturnType<typeof downloadAttachment>>) {
-  const now = new Date().toISOString();
-  await port.run(
-    "UPDATE attachment_blobs SET availability = 'cached', storage_key = ?, cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-    [path.basename(input.filePath), now, now, input.attachment.attachmentId]
-  );
 }
 
 async function downloadResource(peer: ResourcePeer, pathWithQuery: string) {

@@ -113,11 +113,9 @@ it('reads missing resource counts through the Node SQLite row shape', () => {
     };
   } };
   expect(inspectPairSyncRecoveryWorkspace(database)).toMatchObject({
-    missingAttachmentCount: 2, missingContentBlobCount: 1
+    missingAttachmentCount: null, missingContentBlobCount: 1
   });
-  expect(queries).toContainEqual(expect.stringContaining(
-    "availability NOT IN ('cached', 'local')"
-  ));
+  expect(queries.some((sql) => sql.includes('attachment_blobs'))).toBe(false);
 });
 
 it('allows an empty unpaired workspace without inventing a credential identity', () => {

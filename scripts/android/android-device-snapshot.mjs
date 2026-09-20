@@ -7,6 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import { inspectAndroidAttachmentArchive } from './android-attachment-archive-evidence.mjs';
+
 import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
 import { classifySqliteReadError } from './android-database-read-error.mjs';
 
@@ -128,7 +130,7 @@ function countTable(database, table) {
   return database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
 }
 
-async function inspectDatabase(filePath, sidecarPaths, tables, inspector) {
+async function inspectDatabase(filePath, sidecarPaths, tables, inspector, attachments) {
   const size = (await stat(filePath)).size;
   let database = null;
   try {
@@ -136,7 +138,7 @@ async function inspectDatabase(filePath, sidecarPaths, tables, inspector) {
     const integrity = database.prepare('PRAGMA integrity_check').get()?.integrity_check;
     if (integrity !== 'ok') throw new Error(`SQLite integrity check failed: ${integrity ?? 'missing'}`);
     const counts = Object.fromEntries(tables.map((table) => [table, countTable(database, table)]));
-    return { counts, exists: true, inspection: inspector?.(database), integrity, path: filePath,
+    return { counts, exists: true, inspection: inspector?.(database, attachments), integrity, path: filePath,
       sidecarPaths, size };
   } catch (error) {
     const errorDetail = String(error?.message ?? error).replaceAll(filePath, '<snapshot>').slice(0, 500);
@@ -178,9 +180,12 @@ export async function collectAndroidDeviceSnapshot(rawOptions) {
       collectPackageInfo(options), rawOptions.includeEvents === false ? [] : collectEvents(options),
       rawOptions.includeAttachments === false ? null : pullAttachmentArchive(options, attachmentArchivePath)
     ]);
+    if (attachments && rawOptions.includeAttachmentFacts) {
+      attachments.files = await inspectAndroidAttachmentArchive(attachments.path);
+    }
     const sidecarPaths = await pullDatabase(options, dbPath);
     const database = sidecarPaths
-      ? await inspectDatabase(dbPath, sidecarPaths, options.tables, rawOptions.databaseInspector)
+      ? await inspectDatabase(dbPath, sidecarPaths, options.tables, rawOptions.databaseInspector, attachments)
       : { exists: false };
     return { adb: options.adb, appId: options.appId, attachments, database, events, packageInfo, serial };
   } finally {
