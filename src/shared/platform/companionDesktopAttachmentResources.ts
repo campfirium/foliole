@@ -1,7 +1,9 @@
 import { isCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
+import { classifyResourceFailure, resourceKey } from '../../../lib/platform/resourceAvailabilityContract';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
+import { runCompanionResourceProviderBatch } from './companion/network/companionResourceProviders';
 import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import { commitStagedCompanionAttachmentBatch } from './companion/runtime/companionBatchDataPlane';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
@@ -104,7 +106,14 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   const uniqueRequests = [...new Map(requests.map((request) => [request.storageKey, request])).values()];
   for (let index = 0; index < uniqueRequests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
     const chunk = uniqueRequests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
-    const results = await syncAttachmentResourceRequestBatch(endpoint, chunk);
+    const result = await runCompanionResourceProviderBatch({ endpointUrl: endpoint,
+      needs: chunk.map((request) => ({ kind: 'attachment', id: request.attachmentId })),
+      transfer: async (providerEndpoint, selected) => {
+        const requested = chunk.filter((request) => selected.some((need) => need.id === request.attachmentId));
+        return syncAttachmentResourceRequestBatch(providerEndpoint, requested);
+      }
+    });
+    const results = result.ready.map((key) => key.slice('attachment:'.length));
     syncedAttachmentIds.push(...results);
     if (results.length > 0) {
       onSyncedChunk?.(results);
@@ -116,8 +125,10 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
 async function syncAttachmentResourceRequestBatch(endpoint: string, requests: AttachmentResourceRequest[]) {
   try {
     return await syncAttachmentResourceRequestBatchOnce(endpoint, requests);
-  } catch {
-    return [];
+  } catch (error) {
+    return { ready: [], errors: Object.fromEntries(requests.map((request) => [
+      resourceKey({ kind: 'attachment', id: request.attachmentId }), classifyResourceFailure(error)
+    ])) };
   }
 }
 
@@ -127,7 +138,12 @@ async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests
   const result = await commitStagedCompanionAttachmentBatch(
     getIosCompanionDatabaseOwner(), FolioleCompanionSync, download.batch_token
   );
-  return result.syncedIds;
+  return { ready: result.syncedIds.map((id) => `attachment:${id}`),
+    errors: Object.fromEntries(requests.filter((request) => !result.syncedIds.includes(request.attachmentId)).map((request) => [
+      `attachment:${request.attachmentId}`, download.failed_attachment_errors?.[request.attachmentId] ??
+        (download.failed_attachment_ids?.includes(request.attachmentId) ? 'protocol_error' as const : 'checksum_mismatch' as const)
+    ]))
+  };
 }
 
 export async function syncCompanionAttachmentResourceFromDesktop(

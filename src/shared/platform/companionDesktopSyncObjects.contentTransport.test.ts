@@ -35,7 +35,7 @@ async function testRoutesAckThroughNativeHttp() {
   }));
 }
 
-async function testFallsBackToSingleBodyBatchWhenNativeBatchFails() {
+async function testKeepsFailedBodyUnresolvedWithoutAnUnverifiedFallback() {
   const bodyHash = '4'.repeat(64);
   syncBridgeMock.loadCompanionMissingContentBlobs
     .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
@@ -46,7 +46,9 @@ async function testFallsBackToSingleBodyBatchWhenNativeBatchFails() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-  expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
+  expect(result.syncedContentBlobHashes).toEqual([]);
+  expect(result.contentBlobError).toBeTruthy();
+  expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenCalledTimes(1);
   expect(syncBridgeMock.syncCompanionContentBlob).not.toHaveBeenCalled();
   expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenLastCalledWith(expect.objectContaining({
     body: JSON.stringify({ hashes: [bodyHash] }),
@@ -62,5 +64,5 @@ describe('companion desktop sync content transport', () => {
 
   it('routes content blob acknowledgements through native desktop HTTP on Android', testRoutesAckThroughNativeHttp);
 
-  it('falls back to a single body split batch when native batch sync fails', testFallsBackToSingleBodyBatchWhenNativeBatchFails);
+  it('keeps a failed batch unresolved without retrying the same unverified provider', testKeepsFailedBodyUnresolvedWithoutAnUnverifiedFallback);
 });

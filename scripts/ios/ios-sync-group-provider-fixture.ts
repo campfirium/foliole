@@ -99,6 +99,7 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
       fixture: contentResourceFixture,
       method: request.method ?? 'GET',
       observations: observations.content_resource,
+      providerDeviceId: provider.discovery.provider_device_id,
       requestUrl: request.url ?? '/'
     });
     if (routed) {

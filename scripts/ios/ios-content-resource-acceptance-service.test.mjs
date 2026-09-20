@@ -11,6 +11,13 @@ it('serves fixed-corpus resources with exact retry observations', () => {
   const fixture = loadIosAcceptanceContractCorpus().contentResource;
   const observations = createIosContentResourceObservations();
   const hashes = Object.values(fixture.contentBlobs).map((blob) => blob.hash);
+  const available = route({ fixture, observations, method: 'POST', providerDeviceId: 'fixture-provider',
+    requestUrl: '/companion/resource-availability', bodyText: JSON.stringify({
+      resources: hashes.map((id) => ({ kind: 'content_blob', id }))
+    }) });
+  const declaration = JSON.parse(available.body.toString());
+  expect(declaration.provider_device_id).toBe('fixture-provider');
+  expect(declaration.resources.map((claim) => claim.status)).toEqual(hashes.map(() => 'available'));
   const content = route({ bodyText: JSON.stringify({ hashes }), fixture, observations, requestUrl: '/companion/content-blobs', method: 'POST' });
 
   expect(content).toMatchObject({ status: 200, headers: { 'Content-Type': expect.stringContaining('multipart/mixed') } });

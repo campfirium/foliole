@@ -80,6 +80,9 @@ export async function syncCompanionContentBlobs(args: {
     getIosCompanionDatabaseOwner(), FolioleCompanionSync, download
   );
   return {
+    failed_hash_errors: Object.fromEntries(commit.failedHashes.map((hash) => [
+      hash, download.failed_hash_errors?.[hash] ?? (download.failed_hashes?.includes(hash) ? 'protocol_error' as const : 'checksum_mismatch' as const)
+    ])),
     db_elapsed_ms: 0,
     http_elapsed_ms: download.http_elapsed_ms,
     parse_elapsed_ms: download.parse_elapsed_ms,

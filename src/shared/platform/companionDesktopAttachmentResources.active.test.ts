@@ -116,3 +116,5 @@ describe('companion desktop active attachment resource priority', () => {
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('./companion/network/companionResourceProviders', () => import('./companion/network/resourceProviderTestSupport'));

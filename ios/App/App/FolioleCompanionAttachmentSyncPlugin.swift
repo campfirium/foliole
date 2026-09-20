@@ -57,6 +57,7 @@ extension FolioleCompanionSyncPlugin {
                 call.resolve([
                     try attachmentValue("batchToken", contract.batchResponseKeys): token,
                     try attachmentValue("failedAttachmentIds", contract.batchResponseKeys): result.failedIds,
+                    try attachmentValue("failedAttachmentErrors", contract.batchResponseKeys): result.errors,
                     try attachmentValue("syncedAttachmentIds", contract.batchResponseKeys): result.downloaded.map(\.attachmentId)
                 ])
             } catch { call.reject("Failed to download companion attachment resources: \(error.localizedDescription)") }

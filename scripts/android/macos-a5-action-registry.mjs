@@ -18,6 +18,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });
 const FORMAL_EVIDENCE = Object.freeze({
+  'resource-provider-contract': { kind: 'run-directory', root: 'a5-resource-provider' },
   'mobile-link': { kind: 'run-directory', root: 'a5-mobile-link' },
   'image-contract': { kind: 'run-directory', root: 'a5-image-contract' },
   'capture-annotation': { kind: 'run-directory', root: 'a5-capture-annotation' },
@@ -42,6 +43,7 @@ const FORMAL_EVIDENCE = Object.freeze({
 });
 const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
+  'resource-provider-contract',
   'mobile-link', 'image-contract', 'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials', 'system-entry-sync', 'sync-existing',
   'sync-group-join-prepare', 'sync-group-rejoin', 'sync-group-rejoin-recover',

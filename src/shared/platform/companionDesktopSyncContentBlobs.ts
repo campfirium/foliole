@@ -1,3 +1,6 @@
+import { resourceKey } from '../../../lib/platform/resourceAvailabilityContract';
+
+import { runCompanionResourceProviderBatch } from './companion/network/companionResourceProviders';
 import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import { loadLocalSyncDiagnostics } from './companion/sync/diagnostics/companionSyncDiagnostics';
 import { postDesktopJson } from './companionDesktopSyncHttp';
@@ -116,7 +119,6 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     const batch = await batchPromise;
     nativeTiming = sumNativeTiming(nativeTiming, batch.nativeTiming);
     const syncedBatchHashes = batch.syncedContentBlobHashes;
-    await ackContentBlobs(endpoint, syncedBatchHashes);
     if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
       if (syncedContentBlobHashes.length > 0) break;
       throw new Error('Topic body batch could not download any requested body.');
@@ -139,34 +141,22 @@ async function pullContentBlobBatch(
   hashes: string[],
   onSyncedChunk?: (hashes: string[]) => void
 ): Promise<ContentBlobBatchResult> {
-  try {
-    const batch = await pullContentBlobNativeBatch(endpoint, hashes);
-    const syncedContentBlobHashes = batch.syncedContentBlobHashes;
-    if (syncedContentBlobHashes.length > 0) onSyncedChunk?.(syncedContentBlobHashes);
-    return {
-      failedContentBlobCount: hashes.length - syncedContentBlobHashes.length,
-      ...(batch.nativeTiming ? { nativeTiming: batch.nativeTiming } : {}),
-      syncedContentBlobHashes
-    };
-  } catch {
-    const syncedContentBlobHashes: string[] = [];
-    let failedContentBlobCount = 0;
-    for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
-      const chunk = hashes.slice(index, index + CONTENT_BLOB_CONCURRENT_FETCH_LIMIT);
-      const syncedChunkHashes = await Promise.all(chunk.map(async (hash) => {
-        try {
-          return await pullContentBlob(endpoint, hash);
-        } catch {
-          failedContentBlobCount += 1;
-          return null;
-        }
-      }));
-      const syncedHashes = syncedChunkHashes.filter((hash): hash is string => Boolean(hash));
-      syncedContentBlobHashes.push(...syncedHashes);
-      if (syncedHashes.length > 0) onSyncedChunk?.(syncedHashes);
+  let nativeTiming: CompanionContentBlobNativeTiming | undefined;
+  const result = await runCompanionResourceProviderBatch({ endpointUrl: endpoint,
+    needs: hashes.map((id) => ({ kind: 'content_blob', id })),
+    transfer: async (providerEndpoint, selected) => {
+      const batch = await pullContentBlobNativeBatch(providerEndpoint, selected.map((need) => need.id));
+      nativeTiming = sumNativeTiming(nativeTiming, batch.nativeTiming);
+      if (batch.syncedContentBlobHashes.length) onSyncedChunk?.(batch.syncedContentBlobHashes);
+      await ackContentBlobs(providerEndpoint, batch.syncedContentBlobHashes);
+      return { ready: batch.syncedContentBlobHashes.map((hash) => `content_blob:${hash}`),
+        errors: Object.fromEntries(selected.filter((need) => !batch.syncedContentBlobHashes.includes(need.id))
+          .map((need) => [resourceKey(need), batch.failedHashErrors?.[need.id] ?? 'protocol_error'])) };
     }
-    return { failedContentBlobCount, syncedContentBlobHashes };
-  }
+  });
+  return { failedContentBlobCount: result.unresolved.length,
+    syncedContentBlobHashes: result.ready.map((key) => key.slice('content_blob:'.length)),
+    ...(nativeTiming ? { nativeTiming } : {}) };
 }
 
 async function pullContentBlobNativeBatch(endpoint: string, hashes: string[]) {
@@ -178,6 +168,7 @@ async function pullContentBlobNativeBatch(endpoint: string, hashes: string[]) {
     url: `${endpoint}${pathWithQuery}`
   });
   return {
+    failedHashErrors: result.failed_hash_errors,
     nativeTiming: normalizeNativeTiming(result),
     syncedContentBlobHashes: result.synced_hashes
   };
@@ -193,15 +184,12 @@ function normalizeNativeTiming(result: Awaited<ReturnType<typeof syncCompanionCo
 }
 
 async function pullContentBlob(endpoint: string, hash: string) {
-  const result = await pullContentBlobNativeBatch(endpoint, [hash]);
+  const result = await pullContentBlobBatch(endpoint, [hash]);
   return result.syncedContentBlobHashes.includes(hash) ? hash : null;
 }
 
 export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, hash: string) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedHash = await pullContentBlob(endpoint, hash);
-  if (syncedHash) {
-    await ackContentBlobs(endpoint, [syncedHash]);
-  }
   return { availability: syncedHash ? 'cached' as const : 'missing' as const, hash };
 }

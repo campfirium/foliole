@@ -23,6 +23,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'group-key-routing-v1',
     'lan-sync-v1',
     'opaque-sync-refs-v1',
+    'resource-availability-v1',
     READWISE_LIBRARY_SOURCE_MODE_CAPABILITY,
     'source-host-ownership-v1',
     'sync-group-device-facts-v1',

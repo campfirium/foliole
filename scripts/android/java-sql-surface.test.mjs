@@ -8,6 +8,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
 const ISOLATED_SQLITE = new Set([
   'FolioleCompanionContentBlobPack.java',
+  'FolioleCompanionResourceAvailability.java',
   'FolioleCompanionSyncGroupDatabase.java',
   'FolioleCompanionSyncGroupContentBlobBatch.java',
   'FolioleCompanionSyncGroupResources.java',

@@ -2,14 +2,14 @@ import Foundation
 import Network
 
 final class FolioleCompanionSyncGroupJoinServer {
-    private var discovery: [String: Any]
-    private let dataBridge: FolioleCompanionSyncGroupDataRequesting?
+    var discovery: [String: Any]
+    let dataBridge: FolioleCompanionSyncGroupDataRequesting?
     private let listener: NWListener
-    private let provider: FolioleCompanionSyncGroupJoinProvider
-    private let snapshots: FolioleCompanionSyncGroupSnapshot?
-    private var memberStateReady = Set<String>()
+    let provider: FolioleCompanionSyncGroupJoinProvider
+    let snapshots: FolioleCompanionSyncGroupSnapshot?
+    var memberStateReady = Set<String>()
     private let queue = DispatchQueue(label: "com.foliole.ios.sync-group-provider")
-    private let stateChanged: () -> Void
+    let stateChanged: () -> Void
     private(set) var port: UInt16?
     let runtimeInstanceId: String
 
@@ -81,110 +81,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         }
     }
 
-    private func respond(_ connection: NWConnection, _ request: FolioleCompanionHttpMessage) throws {
-        let route = request.path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? request.path
-        if request.method == "GET" && route == "/health" { return try send(connection, 200, ["ok": true]) }
-        if request.method == "GET" && route == "/companion/discovery" {
-            return try send(connection, 200, FolioleCompanionSyncGroupDiscoveryPayload.make(discovery))
-        }
-        if request.method == "POST" && route == "/sync-group/join-requests" {
-            let created = try provider.receive(request.body)
-            stateChanged()
-            return try send(connection, 202, created)
-        }
-        if request.method == "POST" && route == "/sync-group/join-acceptance" {
-            let requestId = try FolioleCompanionSyncGroupJoinRequest.required(request.body, "request_id")
-            guard let accepted = try provider.collect(requestId) else {
-                return try send(connection, 409, ["error": "sync_group_join_request_pending"])
-            }
-            stateChanged()
-            return try send(connection, 200, accepted)
-        }
-        if request.method == "POST" && route == "/sync-group/member-state" {
-            guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-            let accepted = try FolioleCompanionSyncGroupMemberStateEndpoint.accept(
-                request, bridge: dataBridge, groupId: provider.groupId,
-                groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
-                workgroupKey: provider.workgroupKey
-            )
-            memberStateReady.insert(accepted.peer)
-            try sendWorkgroup(connection, request, "application/json; charset=utf-8", accepted.body)
-            stateChanged()
-            return
-        }
-        if request.method == "GET" && route == "/companion/sync-pack" {
-            guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-            let peer = try authenticate(request)
-            let after = Int(Self.query(request.path, "after_state_seq") ?? "0") ?? 0
-            let result = try snapshots.refresh(peer) { snapshot in
-                try FolioleCompanionSyncPackProvider.build(
-                    snapshot: snapshot,
-                    fromDevice: try Self.requiredDiscovery(discovery, "provider_device_id"),
-                    toDevice: peer, fromSequence: after
-                )
-            }
-            _ = try dataBridge.request("record_supply_cursor", [
-                "from_cursor": after, "peer_id": peer, "to_cursor": result.toSequence
-            ])
-            return try sendWorkgroup(connection, request, "application/zip", result.body)
-        }
-        if request.method == "POST" && route == "/companion/content-blobs" {
-            guard let snapshots else { throw Self.invalid("sync_group_data_owner_unavailable") }
-            let peer = try authenticate(request)
-            let plaintext = try FolioleCompanionSyncGroupWorkgroup.decryptRequest(
-                request, groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
-                workgroupKey: provider.workgroupKey
-            )
-            let resource = try snapshots.read(peer) {
-                try FolioleCompanionSyncGroupResources.contentBlobBatch(snapshot: $0, requestData: plaintext)
-            }
-            return try sendWorkgroup(connection, request, resource.contentType, resource.body)
-        }
-        if request.method == "GET" && route == "/companion/content-blob" {
-            return try sendResource(connection, request, kind: "blob")
-        }
-        if request.method == "GET" && route == "/companion/attachment-resource" {
-            return try sendResource(connection, request, kind: "attachment")
-        }
-        try send(connection, 404, ["error": "not_found"])
-    }
-
-    private func authenticate(_ request: FolioleCompanionHttpMessage) throws -> String {
-        guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-        let peer = try FolioleCompanionSyncGroupWorkgroup.authenticate(
-            request, groupId: provider.groupId, workgroupKey: provider.workgroupKey,
-            dataBridge: dataBridge
-        )
-        guard memberStateReady.contains(peer) else {
-            throw Self.invalid("sync_group_member_state_required")
-        }
-        return peer
-    }
-
-    private func sendResource(
-        _ connection: NWConnection, _ request: FolioleCompanionHttpMessage, kind: String
-    ) throws {
-        let peer = try authenticate(request)
-        guard let snapshots else { throw Self.invalid("sync_group_data_owner_unavailable") }
-        let resource = try snapshots.read(peer) { snapshot in
-            if kind == "blob" {
-                return try FolioleCompanionSyncGroupResources.contentBlob(
-                    snapshot: snapshot, hash: Self.query(request.path, "hash")
-                )
-            }
-            return try FolioleCompanionSyncGroupResources.attachment(
-                snapshot: snapshot, attachmentId: Self.query(request.path, "attachment_id"),
-                contentHash: Self.query(request.path, "content_hash")
-            )
-        }
-        guard let resource else {
-            let body = try JSONSerialization.data(withJSONObject: ["error": kind == "blob" ? "blob_not_found" : "missing_file"])
-            return try sendWorkgroup(connection, request, "application/json; charset=utf-8", body, status: 404)
-        }
-        try sendWorkgroup(connection, request, resource.contentType, resource.body)
-    }
-
-    private func sendWorkgroup(
+    func sendWorkgroup(
         _ connection: NWConnection, _ request: FolioleCompanionHttpMessage,
         _ contentType: String, _ body: Data, status: Int = 200
     ) throws {
@@ -203,17 +100,17 @@ final class FolioleCompanionSyncGroupJoinServer {
         try? send(connection, status, ["error": message])
     }
 
-    private func send(_ connection: NWConnection, _ status: Int, _ value: [String: Any]) throws {
+    func send(_ connection: NWConnection, _ status: Int, _ value: [String: Any]) throws {
         let response = try FolioleCompanionHttpMessage.response(status: status, value: value)
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
     }
 
-    private static func requiredDiscovery(_ value: [String: Any], _ key: String) throws -> String {
+    static func requiredDiscovery(_ value: [String: Any], _ key: String) throws -> String {
         guard let result = value[key] as? String, !result.isEmpty else { throw invalid("\(key)_missing") }
         return result
     }
 
-    private static func query(_ path: String, _ name: String) -> String? {
+    static func query(_ path: String, _ name: String) -> String? {
         guard let query = path.split(separator: "?", maxSplits: 1).dropFirst().first else { return nil }
         for item in query.split(separator: "&") {
             let pair = item.split(separator: "=", maxSplits: 1).map(String.init)
@@ -222,7 +119,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         return nil
     }
 
-    private static func invalid(_ message: String) -> Error {
+    static func invalid(_ message: String) -> Error {
         NSError(domain: "FolioleCompanionSyncGroupProvider", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: message])
     }

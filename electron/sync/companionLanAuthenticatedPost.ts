@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { RESOURCE_AVAILABILITY_PATH } from '../../lib/platform/resourceAvailabilityContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import {
@@ -18,6 +19,7 @@ import {
   SYNC_GROUP_MEMBER_STATE_PATH
 } from './desktopSyncGroupMemberState.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { loadResourceAvailability } from './resourceAvailability.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
 type WriteJson = (
@@ -29,6 +31,7 @@ type WriteJson = (
 ) => void;
 
 function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
+  if (parsedRequestUrl.pathname === RESOURCE_AVAILABILITY_PATH) return 'resource-availability';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
@@ -63,7 +66,15 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
-  if (route === 'content-blob-ack') {
+  if (route === 'resource-availability') {
+    try {
+      writeJson(request, response, 200, await loadResourceAvailability(bodyText), 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 400, {
+        error: error instanceof Error ? error.message : 'resource_availability_invalid_request'
+      }, 'POST, OPTIONS');
+    }
+  } else if (route === 'content-blob-ack') {
     const ack = acknowledgeCompanionContentBlobs(bodyText);
     writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode,
       ack.status === 'ok' ? ack : { error: ack.error }, 'POST, OPTIONS');

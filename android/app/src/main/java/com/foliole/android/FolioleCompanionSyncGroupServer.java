@@ -75,6 +75,7 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack")) syncPack(request, output);
+        else if (request.method.equals("POST") && path.equals("/companion/resource-availability")) availability(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/content-blobs")) contentBlobs(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/content-blob")) contentBlob(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/attachment-resource")) attachment(request, output);
@@ -136,6 +137,18 @@ final class FolioleCompanionSyncGroupServer {
             peer, snapshot -> FolioleCompanionSyncGroupResources.contentBlob(snapshot, query(request.path, "hash")));
         if (resource == null) workgroupJson(request, output, 404, error("blob_not_found"));
         else workgroupBytes(request, output, resource.mimeType, resource.body);
+    }
+
+    private void availability(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
+        String peer = authenticate(request);
+        String body = decryptRequest(request);
+        try {
+            JSONObject result = snapshots.refresh(peer, snapshot -> FolioleCompanionResourceAvailability.reply(
+                context, snapshot, body, config.getString("device_id")));
+            workgroupJson(request, output, 200, result);
+        } catch (Exception error) {
+            workgroupJson(request, output, 400, error(error.getMessage()));
+        }
     }
 
     private void contentBlobs(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {

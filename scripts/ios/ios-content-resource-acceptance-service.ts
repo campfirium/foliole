@@ -1,4 +1,7 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+
+import { parseResourceNeeds } from '../../lib/platform/resourceAvailabilityContract.js';
 
 export interface IosContentResourceAcceptanceFixture {
   attachments: Record<'corrupt' | 'failed' | 'missing' | 'valid', ResourceEntry & { id: string }>;
@@ -36,7 +39,19 @@ export function routeIosContentResourceRequest(args: {
   method: string;
   observations: IosContentResourceObservations;
   requestUrl: string;
+  providerDeviceId?: string;
 }): IosContentResourceResponse | null {
+  if (args.method === 'POST' && args.requestUrl === '/companion/resource-availability') {
+    const resources = parseResourceNeeds(JSON.parse(args.bodyText)).map((need) => {
+      const entries = need.kind === 'attachment' ? Object.values(args.fixture.attachments) : Object.values(args.fixture.contentBlobs);
+      const entry = entries.find((value) => value.hash === need.id);
+      // The corpus owns original bytes; deliberate loss/corruption happens in the following transfer.
+      return { ...need, status: entry ? 'available' : 'missing', ...(entry ? {
+        sha256: createHash('sha256').update(entry.bytes).digest('hex'), size_bytes: entry.bytes.length
+      } : {}) };
+    });
+    return binary(Buffer.from(JSON.stringify({ provider_device_id: args.providerDeviceId, resources })), 'application/json; charset=utf-8');
+  }
   if (args.method === 'GET' && args.requestUrl === '/acceptance/sync-pack/content-resource') {
     return binary(readFileSync(args.fixture.packPath), 'application/vnd.foliole.sync-pack');
   }

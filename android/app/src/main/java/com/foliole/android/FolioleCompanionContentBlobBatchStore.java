@@ -18,25 +18,28 @@ final class FolioleCompanionContentBlobBatchStore {
         long startedAt = System.nanoTime();
         List<String> requestedHashes = requestedHashes(body);
         long httpStartedAt = System.nanoTime();
-        try {
-            FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
-                context,
-                FolioleCompanionContentBlobBatchText.requireText(
-                    url,
-                    FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)
-                ),
-                "POST",
-                headers,
-                body
-            );
-            long httpElapsedMs = elapsedMs(httpStartedAt);
-            long parseStartedAt = System.nanoTime();
-            List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs = validatedBlobs(context, response);
-            long parseElapsedMs = elapsedMs(parseStartedAt);
-            return downloadResponse(context, blobs, failedHashes(requestedHashes, blobs), httpElapsedMs, parseElapsedMs, elapsedMs(startedAt));
-        } catch (Exception error) {
-            return downloadResponse(context, new ArrayList<>(), requestedHashes, elapsedMs(httpStartedAt), 0L, elapsedMs(startedAt));
+        FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
+            context, FolioleCompanionContentBlobBatchText.requireText(url,
+                FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)), "POST", headers, body);
+        long httpElapsedMs = elapsedMs(httpStartedAt);
+        long parseStartedAt = System.nanoTime();
+        List<FolioleCompanionContentBlobMultipartBatch.Blob> parsed = parseBlobs(context, response);
+        List<FolioleCompanionContentBlobMultipartBatch.Blob> accepted = new ArrayList<>();
+        JSONObject errors = new JSONObject();
+        for (String hash : requestedHashes) {
+            List<FolioleCompanionContentBlobMultipartBatch.Blob> matches = new ArrayList<>();
+            for (FolioleCompanionContentBlobMultipartBatch.Blob blob : parsed) if (blob.hash.equals(hash)) matches.add(blob);
+            if (matches.isEmpty()) errors.put(hash, "missing_file");
+            else if (matches.size() != 1) errors.put(hash, "protocol_error");
+            else if (!hash.equals(FolioleCompanionContentBlobCasRules.digestHex(context, matches.get(0).bytes))) {
+                errors.put(hash, "checksum_mismatch");
+            } else accepted.add(matches.get(0));
         }
+        long parseElapsedMs = elapsedMs(parseStartedAt);
+        JSObject result = downloadResponse(context, accepted, failedHashes(requestedHashes, accepted),
+            httpElapsedMs, parseElapsedMs, elapsedMs(startedAt));
+        result.put(batchResponseKey(context, "failedHashErrors"), errors);
+        return result;
     }
 
     private static List<String> requestedHashes(String body) throws Exception {
@@ -48,30 +51,12 @@ final class FolioleCompanionContentBlobBatchStore {
         return result;
     }
 
-    private static List<FolioleCompanionContentBlobMultipartBatch.Blob> validatedBlobs(
-        Context context,
-        FolioleCompanionDesktopHttpClient.BinaryResponse response
+    private static List<FolioleCompanionContentBlobMultipartBatch.Blob> parseBlobs(
+        Context context, FolioleCompanionDesktopHttpClient.BinaryResponse response
     ) throws Exception {
-        List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs =
-            FolioleCompanionContentBlobMultipartBatch.parse(
-                response.body,
-                response.contentType,
-                FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context),
-                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context),
-                context
-            );
-        for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
-            String hash = FolioleCompanionContentBlobCasRules.requireHash(
-                context,
-                blob.hash,
-                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
-            );
-            String actualHash = FolioleCompanionContentBlobCasRules.digestHex(context, blob.bytes);
-            if (!hash.equals(actualHash)) {
-                throw new IllegalStateException("Content blob hash mismatch.");
-            }
-        }
-        return blobs;
+        return FolioleCompanionContentBlobMultipartBatch.parse(response.body, response.contentType,
+            FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context),
+            FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context), context);
     }
 
     private static List<String> failedHashes(

@@ -21,9 +21,8 @@ async function testContinuesContentBatchAfterSingleBodyFailure() {
   });
   syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => {
     const hashes = JSON.parse(body).hashes as string[];
-    if (hashes.length > 1) throw new Error('Batch endpoint unavailable.');
-    if (hashes[0] === failedHash) throw new Error('Desktop returned 404.');
-    return { synced_hashes: hashes };
+    return { synced_hashes: hashes.filter((hash) => hash !== failedHash),
+      failed_hash_errors: { [failedHash]: 'missing_file' as const } };
   });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [cachedHash], status: 'ok' }), { status: 200 })));
 

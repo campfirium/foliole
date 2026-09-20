@@ -43,6 +43,7 @@ describe('syncProtocolContract', () => {
         'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
       'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
       'readwise-library-source-mode-v1',
+      'resource-availability-v1',
       'source-host-ownership-v1', 'sync-group-device-facts-v1', 'sync-group-member-state-v1',
         'system-entry-display-names-v1', 'workgroup-aead-v1'
       ],

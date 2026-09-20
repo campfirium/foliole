@@ -268,3 +268,5 @@ describe('companion desktop attachment resource runtime guard', () => {
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('./companion/network/companionResourceProviders', () => import('./companion/network/resourceProviderTestSupport'));

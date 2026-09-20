@@ -49,6 +49,10 @@ export function startDesktopSyncGroupMemberStateSession(
   };
 }
 
+export function loadDesktopSyncGroupMemberEndpoints(groupId: string) {
+  return [...endpoints.values()].filter((peer) => peer.group_id === groupId);
+}
+
 export async function exchangeDesktopSyncGroupMemberStateWithDevice(deviceId: string) {
   const peer = endpoints.get(deviceId);
   if (!peer) return false;

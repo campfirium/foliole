@@ -26,6 +26,8 @@ let package = Package(
             ],
             sources: [
                 "FolioleCompanionCanonicalAttachmentKey.swift",
+                "FolioleCompanionResourceAvailability.swift",
+                "FolioleCompanionResourceTransferValidation.swift",
                 "FolioleCompanionAttachmentFileStage.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",
                 "FolioleCompanionBonjourEndpoint.swift",
@@ -39,6 +41,7 @@ let package = Package(
                 "FolioleCompanionSyncGroupJoinProvider.swift",
                 "FolioleCompanionSyncGroupJoinRequest.swift",
                 "FolioleCompanionSyncGroupJoinServer.swift",
+                "FolioleCompanionSyncGroupRequestRoutes.swift",
                 "FolioleCompanionSyncGroupMemberStateEndpoint.swift",
                 "FolioleCompanionSyncGroupResources.swift",
                 "FolioleCompanionSyncGroupSnapshot.swift",

@@ -57,6 +57,9 @@ export async function dispatchMacosA5Action({
   if (action === 'mobile-link') {
     await (await import('./macos-a5-mobile-link-entry.mjs')).runMacosA5MobileLinkEntry(productArgs);
   }
+  if (action === 'resource-provider-contract') {
+    await (await import('./macos-a5-resource-provider-entry.mjs')).runMacosA5ResourceProviderEntry(productArgs);
+  }
   if (action === 'pair-credentials') {
     await (await import('./macos-a5-pair-credentials-action.mjs'))
       .runMacosA5PairCredentialsEntry(productArgs);

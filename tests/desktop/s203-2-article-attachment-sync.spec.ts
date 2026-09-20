@@ -7,7 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { loadNodeDocument } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
-type ResourceFixture = { keys: string[]; requests: string[]; endpoint: string };
+type ResourceFixture = { keys: string[]; requests: string[]; endpoint: string; peerDeviceId: string };
 declare global {
   var __s203Batch: ResourceFixture & { server: import('node:http').Server };
 }
@@ -16,32 +16,10 @@ async function startProvider(app: ElectronApplication) {
   return app.evaluate(async ({ nativeImage }) => {
     const moduleApi = process.getBuiltinModule('module')!;
     const pathApi = process.getBuiltinModule('path')!;
-    const http = process.getBuiltinModule('http')!;
-    const crypto = process.getBuiltinModule('crypto')!;
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
-    const encryption = require(pathApi.join(process.cwd(), 'dist/electron/sync/workgroupHttpCrypto.js'));
-    const source = nativeImage.createFromPath(pathApi.join(process.cwd(), 'assets/brand/foliole-leaf-tight.png'));
-    const files = [128, 129, 130, 131].map((width) => source.resize({ width, height: 80 }).toPNG());
-    const keys = files.map((bytes) => `${crypto.createHash('sha256').update(bytes).digest('hex')}.png`);
-    const requests: string[] = [];
-    const server = http.createServer((request, response) => {
-      const id = new URL(request.url!, 'http://localhost').searchParams.get('attachment_id')!;
-      requests.push(id);
-      const index = keys.findIndex((key) => key.startsWith(id));
-      if (index === 2) { request.socket.destroy(); return; }
-      const found = index === 0 || index === 3;
-      const contentType = found ? 'image/png' : 'application/json';
-      const body = found ? files[index]! : Buffer.from('{"error":"missing_file"}');
-      response.writeHead(found ? 200 : 404, {
-        'Content-Type': encryption.WORKGROUP_ENVELOPE_CONTENT_TYPE,
-        'X-Foliole-Original-Content-Type': contentType
-      });
-      response.end(encryption.encryptWorkgroupResponse(request, body, contentType));
-    });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const address = server.address() as import('node:net').AddressInfo;
-    globalThis.__s203Batch = { endpoint: `http://127.0.0.1:${address.port}`, keys, requests, server };
-    return { keys, endpoint: globalThis.__s203Batch.endpoint };
+    const fixture = require(pathApi.join(process.cwd(), 'tests/desktop/harness/resourceProviderFixture.cjs'));
+    globalThis.__s203Batch = await fixture.startResourceProvider(nativeImage);
+    return { keys: globalThis.__s203Batch.keys, endpoint: globalThis.__s203Batch.endpoint };
   });
 }
 
@@ -53,7 +31,8 @@ async function runBatch(app: ElectronApplication, ids: string[]) {
     const group = require(pathApi.join(process.cwd(), 'dist/electron/database/syncGroupStore.js')).loadDesktopSyncGroup();
     const resources = require(pathApi.join(process.cwd(), 'dist/electron/sync/desktopSyncGroupResources.js'));
     const result = await resources.downloadDesktopSyncGroupResources({ endpoint_url: globalThis.__s203Batch.endpoint,
-      group_id: group.group_id, local_device_id: group.local_device_identity_key }, articleIds);
+      group_id: group.group_id, local_device_id: group.local_device_identity_key,
+      peer_device_id: globalThis.__s203Batch.peerDeviceId }, articleIds);
     const resolver = require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js'));
     return { ...result, requests: [...globalThis.__s203Batch.requests],
       files: globalThis.__s203Batch.keys.map((key) => resolver.resolveAttachmentFile(key).status) };

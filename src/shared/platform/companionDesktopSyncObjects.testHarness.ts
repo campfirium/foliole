@@ -158,3 +158,5 @@ export function resetCompanionDesktopSyncMocks() {
   attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
   resetSignedRequestMocks();
 }
+
+vi.mock('./companion/network/companionResourceProviders', () => import('./companion/network/resourceProviderTestSupport'));

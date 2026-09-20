@@ -23,19 +23,21 @@ enum FolioleCompanionAttachmentResourceDownloader {
         _ requests: [FolioleCompanionAttachmentDownloadRequest],
         temporaryRoot: URL,
         hashPattern: String
-    ) async throws -> (downloaded: [FolioleCompanionDownloadedAttachment], failedIds: [String]) {
+    ) async throws -> (downloaded: [FolioleCompanionDownloadedAttachment], failedIds: [String], errors: [String: String]) {
         let expression = try NSRegularExpression(pattern: hashPattern)
         var downloaded: [FolioleCompanionDownloadedAttachment] = []
         var failedIds: [String] = []
+        var errors: [String: String] = [:]
         try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
         for request in requests {
             do {
                 downloaded.append(try await downloadOne(request, temporaryRoot: temporaryRoot, expression: expression))
             } catch {
                 failedIds.append(request.attachmentId)
+                errors[request.attachmentId] = resourceFailure(error)
             }
         }
-        return (downloaded, failedIds)
+        return (downloaded, failedIds, errors)
     }
 
     private static func downloadOne(
@@ -60,14 +62,17 @@ enum FolioleCompanionAttachmentResourceDownloader {
             url: endpoint, method: "GET", headers: request.headers, body: nil
         )
         let (sourceURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: urlRequest)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw invalid("Desktop attachment response failed.")
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        guard let http = response as? HTTPURLResponse else { throw invalid("protocol_error") }
+        let decrypted = try signed?.decrypt(Data(contentsOf: sourceURL), response: http).0
+        guard (200..<300).contains(http.statusCode) else {
+            throw invalid(http.statusCode == 404 ? "missing_file" :
+              http.statusCode == 401 || http.statusCode == 403 ? "authentication_failed" : "protocol_error")
         }
         let outputURL = temporaryRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent(request.contentHash)
         try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if let signed {
-            let decrypted = try signed.decrypt(Data(contentsOf: sourceURL), response: http).0
+        if let decrypted {
             try decrypted.write(to: outputURL, options: .atomic)
             try? FileManager.default.removeItem(at: sourceURL)
         } else {
@@ -92,6 +97,15 @@ enum FolioleCompanionAttachmentResourceDownloader {
         var digest = SHA256()
         while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty { digest.update(data: chunk) }
         return digest.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func resourceFailure(_ error: Error) -> String {
+        let message = error.localizedDescription
+        if ["missing_file", "authentication_failed", "protocol_error"].contains(message) { return message }
+        if message.contains("hash mismatch") { return "checksum_mismatch" }
+        if message.contains("aead") || message.contains("signature") { return "authentication_failed" }
+        if (error as NSError).domain == NSURLErrorDomain { return "network_error" }
+        return "protocol_error"
     }
 
     private static func matches(_ value: String, expression: NSRegularExpression) -> Bool {

@@ -88,21 +88,19 @@ final class FolioleCompanionDesktopHttpClient {
             }
         }
         int status = connection.getResponseCode();
-        if (status < 200 || status >= 300) {
-            String errorCode = readSafeErrorCode(connection, status);
-            connection.disconnect();
-            throw binaryResourceError(status, errorCode, method, prepared.path);
-        }
-        try (InputStream inputStream = connection.getInputStream()) {
-            byte[] responseBody = readBytes(inputStream);
+        try {
+            byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
             String contentType = connection.getContentType();
             if (prepared.headers.has("X-Sync-Group-Id")) {
                 responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
                     context, connection, method, prepared.path, responseBody);
                 contentType = connection.getHeaderField("X-Foliole-Original-Content-Type");
             }
+            if (status < 200 || status >= 300) {
+                throw binaryResourceError(status, readSafeErrorCode(responseBody), method, prepared.path);
+            }
             return new BinaryResponse(responseBody, contentType);
-        }
+        } finally { connection.disconnect(); }
     }
 
     static void downloadToFile(Context context, String url, JSONObject headers, java.io.File outputFile) throws Exception {
@@ -159,13 +157,11 @@ final class FolioleCompanionDesktopHttpClient {
             || "/companion/content-blobs".equals(route) ? route : "/companion/resource";
     }
 
-    private static String readSafeErrorCode(HttpURLConnection connection, int status) {
+    private static String readSafeErrorCode(byte[] body) {
         try {
-            String error = new JSONObject(readBody(connection, status)).optString("error", "");
+            String error = new JSONObject(new String(body, StandardCharsets.UTF_8)).optString("error", "");
             return isSafeErrorCode(error) ? error : null;
-        } catch (Exception ignored) {
-            return null;
-        }
+        } catch (Exception ignored) { return null; }
     }
 
     private static boolean isSafeErrorCode(String value) {

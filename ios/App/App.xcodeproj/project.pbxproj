@@ -75,6 +75,9 @@
 		50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */; };
 		50F203111FED79650016851F /* FolioleArticleImageProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */; };
 		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
+		203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */; };
+		203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */; };
+		203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -166,6 +169,9 @@
 		50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceGroupDiscoveryTests.swift; sourceTree = "<group>"; };
 		50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppAcceptanceProjectionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionResourceAvailability.swift; sourceTree = "<group>"; };
+		203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionResourceTransferValidation.swift; sourceTree = "<group>"; };
+		203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupRequestRoutes.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -255,6 +261,9 @@
 				50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */,
 				50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */,
 				50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */,
+				203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */,
+				203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */,
+				203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */,
 				50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */,
 				50F195011FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift */,
 				50F195211FED79650016851F /* FolioleCompanionSyncGroupDiscoveryPayload.swift */,
@@ -486,6 +495,9 @@
 				50F031111FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift in Sources */,
 				50F032111FED79650016851F /* FolioleCompanionSyncGroupSigning.swift in Sources */,
 				50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */,
+				203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */,
+				203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */,
+				203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */,
 				50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */,
 				50F195111FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift in Sources */,
 				50F195311FED79650016851F /* FolioleCompanionSyncGroupDiscoveryPayload.swift in Sources */,

@@ -5,7 +5,7 @@ const writerQueueMock = vi.hoisted(() => ({
 }));
 
 const iosDatabaseMock = vi.hoisted(() => ({
-  commit: vi.fn(async () => ({ syncedHashes: ['a'.repeat(64)] })),
+  commit: vi.fn(async () => ({ failedHashes: [] as string[], syncedHashes: ['a'.repeat(64)] })),
   missing: vi.fn(async () => ({ blobs: [{ hash: 'a'.repeat(64) }], hashes: ['a'.repeat(64)] })),
   owner: {}
 }));
@@ -92,7 +92,7 @@ describe('companion content blob sync split bridge', () => {
       failed_hashes: ['b'.repeat(64)],
       synced_hashes: []
     });
-    iosDatabaseMock.commit.mockResolvedValueOnce({ syncedHashes: [] });
+    iosDatabaseMock.commit.mockResolvedValueOnce({ failedHashes: [], syncedHashes: [] });
 
     const api = await import('./companionContentBlobSync');
     await expect(api.syncCompanionContentBlobs({
@@ -132,6 +132,7 @@ describe('iOS companion content blob sync bridge', () => {
       headers: { 'X-Authorization-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual({
+      failed_hash_errors: {},
       db_elapsed_ms: 0,
       http_elapsed_ms: 3,
       parse_elapsed_ms: 1,

@@ -54,12 +54,15 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     body: body,
                     contract: contract
                 )
-                let failed = requested.filter { hash in !parts.contains(where: { $0.hash == hash }) }
-                let packURL = try FolioleCompanionContentBlobPack.create(parts: parts)
+                let validated = FolioleCompanionResourceTransferValidation.contentParts(parts, requested: requested)
+                let failed = Array(validated.errors.keys)
+                let packURL = try FolioleCompanionContentBlobPack.create(parts: validated.accepted)
                 let token = await contentBlobSessions.create(packURL: packURL, failedHashes: failed)
-                call.resolve(try FolioleCompanionContentBlobBridgePayload.downloadResponse(
-                    token, packURL: packURL, parts: parts, failed: failed, started: started, contract: contract
-                ))
+                var result = try FolioleCompanionContentBlobBridgePayload.downloadResponse(
+                    token, packURL: packURL, parts: validated.accepted, failed: failed, started: started, contract: contract
+                )
+                result[try key("failedHashErrors", contract.batchResponseKeys)] = validated.errors
+                call.resolve(result)
             } catch { call.reject("Failed to download companion content blobs: \(error.localizedDescription)") }
         }
     }

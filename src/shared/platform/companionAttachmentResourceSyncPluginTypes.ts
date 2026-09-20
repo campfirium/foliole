@@ -1,3 +1,5 @@
+import type { ResourceFailure } from '../../../lib/platform/resourceAvailabilityContract';
+
 export interface CompanionAttachmentResourceSyncPlugin {
   downloadAttachmentResourceBatch(args: {
     resources: Array<{
@@ -11,6 +13,7 @@ export interface CompanionAttachmentResourceSyncPlugin {
   }): Promise<{
     batch_token: string;
     failed_attachment_ids?: string[];
+    failed_attachment_errors?: Record<string, ResourceFailure>;
     synced_attachment_ids: string[];
   }>;
   finishAttachmentResourceBatch(args: { batch_token: string; committed: boolean }): Promise<Record<string, never>>;

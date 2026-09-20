@@ -1,3 +1,5 @@
+import type { ResourceFailure } from '../../../lib/platform/resourceAvailabilityContract';
+
 export interface CompanionContentBlobSyncPlugin {
   downloadContentBlobBatch(args: {
     body: string;
@@ -6,6 +8,7 @@ export interface CompanionContentBlobSyncPlugin {
   }): Promise<{
     batch_token: string;
     failed_hashes?: string[];
+    failed_hash_errors?: Record<string, ResourceFailure>;
       http_elapsed_ms?: number;
       pack_path?: string;
       parse_elapsed_ms?: number;

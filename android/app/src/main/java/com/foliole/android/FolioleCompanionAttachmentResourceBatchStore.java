@@ -40,6 +40,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         JSObject response = new JSObject();
         response.put(batchResponseKey(context, "batchToken"), token);
         response.put(batchResponseKey(context, "failedAttachmentIds"), strings(result.failedIds));
+        response.put(batchResponseKey(context, "failedAttachmentErrors"), new JSONObject(result.errors));
         response.put(batchResponseKey(context, "syncedAttachmentIds"), syncedAttachmentIds);
         return response;
     }
@@ -56,6 +57,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             Map<String, String> contentHashesById = new HashMap<>();
             Map<String, String> mimeTypesById = new HashMap<>();
             Map<String, String> storageKeysById = new HashMap<>();
+            Map<String, String> errors = new HashMap<>();
             List<String> failedIds = new ArrayList<>();
             List<String> syncedIds = new ArrayList<>();
             Map<String, File> tempFilesById = new HashMap<>();
@@ -70,9 +72,10 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                     tempFilesById.put(result.attachmentId, result.tempFile);
                 } else {
                     failedIds.add(result.attachmentId);
+                    errors.put(result.attachmentId, result.error);
                 }
             }
-            return new DownloadResult(contentHashesById, mimeTypesById, storageKeysById, failedIds, syncedIds, tempFilesById);
+            return new DownloadResult(contentHashesById, mimeTypesById, storageKeysById, failedIds, syncedIds, tempFilesById, errors);
         } finally {
             executor.shutdownNow();
         }
@@ -85,7 +88,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             try {
                 return downloadResourceFile(context, attachmentId, resource);
             } catch (Exception error) {
-                return SingleDownloadResult.failed(attachmentId);
+                return SingleDownloadResult.failed(attachmentId, FolioleCompanionResourceFailure.classify(error));
             }
         };
     }
@@ -106,17 +109,22 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
-        FolioleCompanionDesktopHttpClient.downloadToFile(
-            context,
-            requireText(resource.optString(urlKey, null), urlKey),
-            resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
-            tempFile
-        );
-        if (!contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, tempFile))) {
+        try {
+            FolioleCompanionDesktopHttpClient.downloadToFile(
+                context,
+                requireText(resource.optString(urlKey, null), urlKey),
+                resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
+                tempFile
+            );
+            if (!contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, tempFile))) {
+                tempFile.delete();
+                throw new IllegalStateException("Attachment resource hash mismatch.");
+            }
+            return SingleDownloadResult.synced(attachmentId, contentHash, mimeType, storageKey, tempFile);
+        } catch (Exception error) {
             tempFile.delete();
-            throw new IllegalStateException("Attachment resource hash mismatch.");
+            throw error;
         }
-        return SingleDownloadResult.synced(attachmentId, contentHash, mimeType, storageKey, tempFile);
     }
 
     private static File tempAttachmentFile(Context context, String contentHash) throws Exception {
@@ -146,6 +154,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     }
 
     private static final class DownloadResult {
+        final Map<String, String> errors;
         final Map<String, String> contentHashesById;
         final List<String> failedIds;
         final Map<String, String> mimeTypesById;
@@ -159,8 +168,9 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             Map<String, String> storageKeysById,
             List<String> failedIds,
             List<String> syncedIds,
-            Map<String, File> tempFilesById
+            Map<String, File> tempFilesById, Map<String, String> errors
         ) {
+            this.errors = errors;
             this.contentHashesById = contentHashesById;
             this.mimeTypesById = mimeTypesById;
             this.storageKeysById = storageKeysById;
@@ -175,11 +185,13 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         final String contentHash;
         final String mimeType;
         final String storageKey;
+        final String error;
         final boolean synced;
         final File tempFile;
 
         private SingleDownloadResult(String attachmentId, String contentHash, String mimeType, String storageKey,
-                                     boolean synced, File tempFile) {
+                                     boolean synced, File tempFile, String error) {
+            this.error = error;
             this.attachmentId = attachmentId;
             this.contentHash = contentHash;
             this.mimeType = mimeType;
@@ -188,13 +200,13 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             this.tempFile = tempFile;
         }
 
-        static SingleDownloadResult failed(String attachmentId) {
-            return new SingleDownloadResult(attachmentId, null, null, null, false, null);
+        static SingleDownloadResult failed(String attachmentId, String error) {
+            return new SingleDownloadResult(attachmentId, null, null, null, false, null, error);
         }
 
         static SingleDownloadResult synced(String attachmentId, String contentHash, String mimeType,
                                            String storageKey, File tempFile) {
-            return new SingleDownloadResult(attachmentId, contentHash, mimeType, storageKey, true, tempFile);
+            return new SingleDownloadResult(attachmentId, contentHash, mimeType, storageKey, true, tempFile, null);
         }
     }
 }
