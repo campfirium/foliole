@@ -1,4 +1,6 @@
 export const EN_COMPANION_APP_TRANSLATIONS = {
+  'companion.link.unavailable': 'This link cannot be opened in this library.',
+  'companion.link.dismiss': 'Dismiss',
   'companion.app.retry': 'Retry',
   'companion.app.starting.eyebrow': 'Companion runtime',
   'companion.app.starting.message':

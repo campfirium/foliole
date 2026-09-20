@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_APP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.link.unavailable': '无法在当前资料库打开此链接。',
+  'companion.link.dismiss': '关闭',
   'companion.app.retry': '重试',
   'companion.app.starting.eyebrow': '移动端运行环境',
   'companion.app.starting.message': '正在准备稳定的设备身份和本地移动端存储，然后加载主题界面。',

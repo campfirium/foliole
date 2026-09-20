@@ -54,6 +54,9 @@ export async function dispatchMacosA5Action({
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
     checked, env, execute, markMutationBoundary, paths, protectData, serial
   };
+  if (action === 'mobile-link') {
+    await (await import('./macos-a5-mobile-link-entry.mjs')).runMacosA5MobileLinkEntry(productArgs);
+  }
   if (action === 'pair-credentials') {
     await (await import('./macos-a5-pair-credentials-action.mjs'))
       .runMacosA5PairCredentialsEntry(productArgs);

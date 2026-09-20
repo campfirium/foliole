@@ -6,6 +6,7 @@ import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextCon
 import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
+import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
@@ -206,7 +207,9 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
     >
       <CompanionSyncGroupRuntime bootstrapState={props.bootstrapState} workspaceSync={model.workspaceSync}>
         <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
-          <CompanionShellView model={model} />
+          <CompanionNodeLinkRuntime model={model}>
+            <CompanionShellView model={model} />
+          </CompanionNodeLinkRuntime>
         </CompanionHandoffReminderRuntime>
       </CompanionSyncGroupRuntime>
     </CompanionCustomCssProvider>
