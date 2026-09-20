@@ -33,7 +33,7 @@ function referenceImage(node: SyntaxNode, content: string, references: ReturnTyp
   return reference ? { ...reference, alt } : null;
 }
 
-export function replaceArticleImageSource(content: string, oldKey: string, newKey: string) {
+function replaceImageTarget(content: string, matches: (source: string) => boolean, newKey: string) {
   const replacements: { from: number; to: number; text: string }[] = [];
   const tree = folioleMarkdownParser.parse(content);
   const references = referenceTargets(tree, content);
@@ -45,7 +45,7 @@ export function replaceArticleImageSource(content: string, oldKey: string, newKe
       if (!url && !reference) return;
       const raw = url ? content.slice(url.from, url.to) : reference!.raw;
       const wrapped = raw.startsWith('<') && raw.endsWith('>');
-      if (parseAssetMarkdownUrl(wrapped ? raw.slice(1, -1) : raw) !== oldKey) return;
+      if (!matches(wrapped ? raw.slice(1, -1) : raw)) return;
       const target = buildAssetMarkdownUrl(newKey);
       replacements.push(url
         ? { from: url.from, to: url.to, text: wrapped ? `<${target}>` : target }
@@ -57,4 +57,12 @@ export function replaceArticleImageSource(content: string, oldKey: string, newKe
     next = next.slice(0, change.from) + change.text + next.slice(change.to);
   }
   return next;
+}
+
+export function replaceArticleImageSource(content: string, oldKey: string, newKey: string) {
+  return replaceImageTarget(content, (source) => parseAssetMarkdownUrl(source) === oldKey, newKey);
+}
+
+export function localizeArticleImageSource(content: string, sourceUrl: string, storageKey: string) {
+  return replaceImageTarget(content, (source) => source === sourceUrl, storageKey);
 }

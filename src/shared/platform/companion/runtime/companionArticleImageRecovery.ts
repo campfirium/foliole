@@ -1,5 +1,5 @@
 import { recoverArticleImage } from '../../../../../lib/core/import/articleImageRecovery';
-import { replaceArticleImageSource } from '../../../../../lib/core/import/replaceArticleImageSource';
+import { localizeArticleImageSource, replaceArticleImageSource } from '../../../../../lib/core/import/replaceArticleImageSource';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
@@ -41,7 +41,8 @@ export async function importCompanionArticleImage(nodeId: string, sourceUrl: str
   const image = await importCompanionImageResource(sourceUrl);
   await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => saveCompanionImportedImage(db, image)));
   const saved = await commitCompanionImageArticle(nodeId, before, {
-    ...before, imageSources: { ...before.imageSources, [image.storageKey]: sourceUrl }
+    content: localizeArticleImageSource(before.content, sourceUrl, image.storageKey),
+    imageSources: { ...before.imageSources, [image.storageKey]: sourceUrl }
   });
   if (!saved) return null;
   return {

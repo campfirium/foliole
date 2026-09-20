@@ -6,6 +6,9 @@ import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../companionSyncNodeVersionsTestSupport';
 
 const state = vi.hoisted(() => ({ port: null as unknown }));
+const importer = vi.hoisted(() => ({ importCompanionImageResource: vi.fn() }));
+vi.mock('./companionImageImporter', () => importer);
+vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {} }));
 vi.mock('./iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({
     read: <T>(task: (db: DbPort) => Promise<T>) => task(state.port as DbPort),
@@ -13,6 +16,7 @@ vi.mock('./iosCompanionDatabaseBootstrap', () => ({
   })
 }));
 
+import { importCompanionArticleImage } from './companionArticleImageRecovery';
 import { commitCompanionImageArticle, readCompanionImageArticle, saveCompanionImportedImage } from './companionArticleImageStore';
 
 let database: Database.Database;
@@ -48,4 +52,16 @@ it('retains original metadata when restoring an already registered image', async
   await saveCompanionImportedImage(state.port as DbPort, image);
   expect(database.prepare('SELECT original_name, created_at FROM attachments WHERE id = ?').get(image.contentHash))
     .toEqual({ original_name: 'Original.png', created_at: '2020-01-01' });
+});
+
+it('persists localized content and its source without an editable renderer or save callback', async () => {
+  const original = `![image](${url})\n\n[ordinary](${url})\n\n\`![example](${url})\``;
+  database.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(original, 'article');
+  importer.importCompanionImageResource.mockResolvedValue({ contentHash: 'a'.repeat(64),
+    storageKey: key, sizeBytes: 8, mimeType: 'image/png', storedFile: 'created' });
+  expect(await importCompanionArticleImage('article', url)).toMatchObject({ status: 'imported' });
+  const expected = { content: original.replace(`![image](${url})`, `![image](asset://${key})`), imageSources: { [key]: url } };
+  expect(await readCompanionImageArticle('article')).toEqual(expected);
+  const version = database.prepare('SELECT snapshot_json FROM node_sync_versions WHERE object_id = ?').get('article') as { snapshot_json: string };
+  expect(JSON.parse(version.snapshot_json)).toMatchObject({ image_sources: JSON.stringify(expected.imageSources) });
 });

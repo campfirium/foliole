@@ -54,3 +54,34 @@ it('rejects partial or failed instrumentation output', () => {
     expect(() => assertImageContractOutput(output)).toThrow();
   }
 });
+
+it('honors explicit disposable test data without requiring sync credentials or preserving data', async () => {
+  const { args } = fixture();
+  args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE = '1';
+  args.pairingReadiness.mockImplementation(() => { throw new Error('unsynced data'); });
+  await runMacosA5ImageContractEntry(args);
+  expect(args.assertFixed).toHaveBeenCalled();
+  expect(args.pairingReadiness).not.toHaveBeenCalled();
+  expect(args.readiness).not.toHaveBeenCalled();
+  expect(args.protectData).not.toHaveBeenCalled();
+  expect(args.execute).toHaveBeenCalledTimes(1);
+});
+
+it('rejects file removal without explicit disposable data authorization before mutation', async () => {
+  const { args } = fixture();
+  args.env.FOLIOLE_S203_IMAGE_PROJECTION = 'remove';
+  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('disposable');
+  expect(args.build).not.toHaveBeenCalled();
+  expect(args.checked).not.toHaveBeenCalled();
+});
+
+it('runs the bounded native fixture and preserves its failure while restoring the Activity', async () => {
+  const { args, events } = fixture();
+  args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE = '1';
+  args.env.FOLIOLE_S203_IMAGE_PROJECTION = 'remove';
+  args.execute.mockResolvedValueOnce({ code: 0, output: 'OK (4 tests)' })
+    .mockResolvedValueOnce({ code: 0, output: 'FAILURES!!!' });
+  await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('projection failed');
+  expect(args.execute.mock.calls[1][1]).toContain('com.foliole.android.FolioleArticleImageProjectionTest');
+  expect(events.some((event) => event.includes('am start -n'))).toBe(true);
+});

@@ -1,6 +1,7 @@
 /* global process */
 import fs from 'node:fs';
 import path from 'node:path';
+import { imageProjectionMode, runImageProjection } from './macos-a5-image-projection.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_ID = `${APP_ID}.test`;
@@ -13,9 +14,13 @@ export function assertImageContractOutput(output) {
 }
 
 export async function runMacosA5ImageContractEntry(args) {
+  const projectionMode = imageProjectionMode(args.env);
   args.assertFixed();
-  args.pairingReadiness(args.paths);
-  args.readiness(args.paths);
+  const disposableData = args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE === '1';
+  if (!disposableData) {
+    args.pairingReadiness(args.paths);
+    args.readiness(args.paths);
+  }
   args.build();
   const runId = args.buildIdentity();
   const root = path.join(args.paths.artifactsRoot, 'a5-image-contract', runId);
@@ -29,8 +34,8 @@ export async function runMacosA5ImageContractEntry(args) {
   const command = (argv) => args.checked(args.paths.adb, ['-s', args.serial, ...argv]);
   try {
     command(['shell', 'am', 'force-stop', APP_ID]);
-    await args.protectData('backup', manifest, backup);
-    protectedData = true;
+    if (!disposableData) await args.protectData('backup', manifest, backup);
+    protectedData = !disposableData;
     command(['install', '-r', args.paths.apk]);
     command(['install', '-r', '-t', args.paths.androidTestApk]);
     installed = true;
@@ -40,6 +45,7 @@ export async function runMacosA5ImageContractEntry(args) {
     fs.writeFileSync(path.join(root, 'instrumentation.log'), result.output ?? '');
     if (result.code !== 0) throw Object.assign(new Error('Android image instrumentation failed'), { result });
     assertImageContractOutput(result.output);
+    await runImageProjection(args, root, projectionMode);
   } catch (error) { failure = error; }
   for (const cleanup of [
     () => installed && command(['uninstall', TEST_ID]),
@@ -56,7 +62,7 @@ export async function runMacosA5ImageContractEntry(args) {
   } catch (error) { failure ??= error; }
   const evidencePath = path.join(root, 'image-contract.json');
   fs.writeFileSync(evidencePath, `${JSON.stringify({ runId, serial: args.serial,
-    testClass: IMAGE_TEST_CLASS, resultStatus: failure ? 'failed' : 'success',
+    testClass: IMAGE_TEST_CLASS, disposableData, resultStatus: failure ? 'failed' : 'success',
     error: failure?.message ?? null, completedAt: new Date().toISOString() }, null, 2)}\n`);
   if (failure) throw failure;
   return { evidencePath };
