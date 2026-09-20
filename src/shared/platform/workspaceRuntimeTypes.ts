@@ -16,6 +16,7 @@ import type {
 } from '../../../lib/platform/nativeContract';
 
 export interface WorkspaceRuntimeNode {
+  contentEdit?: import('../../../lib/core/sync/localContentEdit').LocalContentEdit;
   anchorLink?: NativeNodeSnapshotArgs['anchorLink'];
   content: string;
   createdAt: string;

@@ -1,5 +1,8 @@
+import type { LocalContentEdit } from '../../lib/core/sync/localContentEdit';
 import type { RuntimeNodeContentMutationDiagnostics } from '../shared/platform/workspaceRuntimeRepository';
 
+import { createNodeContentPersistQueue } from './nodeContentPersistQueue';
+import { acknowledgeContentEdit, captureContentEdit, continueContentEdit, resetContentEditAcknowledgementsForTests } from './workspaceContentEditAcknowledgements';
 import { readEditorInputDiagnosticTime } from './workspaceEditorInputDiagnostics';
 import {
   createUpdateNodeContentMetrics,
@@ -26,24 +29,11 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 const NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS = 800;
 
-interface PendingNodeContentRuntimePersist {
-  args: Parameters<typeof runNodeContentRuntimePersist>[0];
-  timer: ReturnType<typeof globalThis.setTimeout> | null;
-}
-
-const pendingNodeContentRuntimePersists = new Map<string, PendingNodeContentRuntimePersist>();
-
-function armNodeContentRuntimePersist(nodeId: string, args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
-  const timer = globalThis.setTimeout(() => {
-    const pending = pendingNodeContentRuntimePersists.get(nodeId);
-    if (!pending || pending.timer !== timer) {
-      return;
-    }
-    pendingNodeContentRuntimePersists.delete(nodeId);
-    void runNodeContentRuntimePersist(pending.args);
-  }, NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS);
-  pendingNodeContentRuntimePersists.set(nodeId, { args, timer });
-}
+const contentPersistQueue = createNodeContentPersistQueue({
+  delayMs: NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS,
+  isBlocked: isNodeCreatePending,
+  persist: runNodeContentRuntimePersist
+});
 
 export async function applyNodeContentRuntimePatch(args: {
   diagnosticsEnabled: boolean;
@@ -110,6 +100,7 @@ export function applyNodeContentLocalPatch(args: {
 }
 
 async function runNodeContentRuntimePersist(args: {
+  edit?: LocalContentEdit | undefined;
   contentLength: number;
   diagnosticsEnabled: boolean;
   localState: UpdateNodeContentLocalState;
@@ -118,12 +109,14 @@ async function runNodeContentRuntimePersist(args: {
   set: WorkspaceSet;
   version: number;
 }) {
+  if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync);
+  continueContentEdit(args.nextNodeForSync.id, args.edit);
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
   const runtimeResult = await applyNodeContentRuntimePatch({
     ...args.localState,
     diagnosticsEnabled: args.diagnosticsEnabled,
     metrics: runtimeMetrics,
-    nextNodeForSync: args.nextNodeForSync
+    nextNodeForSync: Object.assign({}, args.nextNodeForSync, args.edit ? { contentEdit: args.edit } : {})
   });
   const runtimeAccepted = Boolean(runtimeResult) || !hasWorkspaceNodeMutationRuntime();
   applyRuntimeAnchorAcknowledgements(args.set, runtimeResult);
@@ -138,52 +131,19 @@ async function runNodeContentRuntimePersist(args: {
     });
   }
   if (runtimeAccepted) {
+    acknowledgeContentEdit({ ...args, edit: args.edit, node: args.nextNodeForSync, result: runtimeResult });
     markNodeContentPersisted(args.nextNodeForSync.id, args.version);
   }
   return runtimeAccepted;
 }
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
-  const nodeId = args.nextNodeForSync.id;
   syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
-  const previous = pendingNodeContentRuntimePersists.get(nodeId);
-  if (previous) {
-    if (previous.timer) {
-      globalThis.clearTimeout(previous.timer);
-    }
-  }
-  if (isNodeCreatePending(nodeId)) {
-    pendingNodeContentRuntimePersists.set(nodeId, { args, timer: null });
-    return;
-  }
-  armNodeContentRuntimePersist(nodeId, args);
+  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit: captureContentEdit(args.nextNodeForSync) });
 }
 
-export function deferNodeContentRuntimePersist(nodeId: string) {
-  const previous = pendingNodeContentRuntimePersists.get(nodeId);
-  if (!previous) {
-    return;
-  }
-  if (previous.timer) {
-    globalThis.clearTimeout(previous.timer);
-  }
-  armNodeContentRuntimePersist(nodeId, previous.args);
-}
-
-export async function drainPendingNodeContentRuntimePersist(nodeId: string) {
-  const pending = pendingNodeContentRuntimePersists.get(nodeId);
-  if (!pending) {
-    return true;
-  }
-  if (isNodeCreatePending(nodeId)) {
-    return false;
-  }
-  pendingNodeContentRuntimePersists.delete(nodeId);
-  if (pending.timer) {
-    globalThis.clearTimeout(pending.timer);
-  }
-  return runNodeContentRuntimePersist(pending.args);
-}
+export const deferNodeContentRuntimePersist = contentPersistQueue.defer;
+export const drainPendingNodeContentRuntimePersist = contentPersistQueue.drain;
 
 export async function completeNodeCreateRuntimePersist(nodeId: string) {
   markNodeCreateConfirmed(nodeId);
@@ -191,38 +151,19 @@ export async function completeNodeCreateRuntimePersist(nodeId: string) {
 }
 
 export function cancelNodeCreateRuntimePersist(nodeId: string) {
-  const pending = pendingNodeContentRuntimePersists.get(nodeId);
-  if (pending?.timer) globalThis.clearTimeout(pending.timer);
-  pendingNodeContentRuntimePersists.delete(nodeId);
+  contentPersistQueue.cancel(nodeId);
   markNodeCreateConfirmed(nodeId);
 }
 
 export async function drainPendingNodeContentRuntimePersists() {
-  const blockedNodeIds = [...pendingNodeContentRuntimePersists.keys()]
-    .filter((nodeId) => isNodeCreatePending(nodeId));
-  if (blockedNodeIds.length) {
-    await waitForNodeCreateConfirmations(blockedNodeIds);
-  }
-  const runnable = [...pendingNodeContentRuntimePersists.entries()]
-    .filter(([nodeId]) => !isNodeCreatePending(nodeId));
-  const blocked = pendingNodeContentRuntimePersists.size - runnable.length;
-  for (const [nodeId, entry] of runnable) {
-    pendingNodeContentRuntimePersists.delete(nodeId);
-    if (entry.timer) {
-      globalThis.clearTimeout(entry.timer);
-    }
-  }
-  const results = await Promise.all(runnable.map(([, entry]) => {
-    return runNodeContentRuntimePersist(entry.args);
-  }));
-  return blocked === 0 && results.every(Boolean);
+  const nodeIds = contentPersistQueue.nodeIds();
+  const blocked = nodeIds.filter(isNodeCreatePending);
+  if (blocked.length) await waitForNodeCreateConfirmations(blocked);
+  const results = await Promise.all(nodeIds.map(contentPersistQueue.drain));
+  return results.every(Boolean);
 }
 
 export function resetPendingNodeContentRuntimePersistsForTests() {
-  for (const entry of pendingNodeContentRuntimePersists.values()) {
-    if (entry.timer) {
-      globalThis.clearTimeout(entry.timer);
-    }
-  }
-  pendingNodeContentRuntimePersists.clear();
+  contentPersistQueue.reset();
+  resetContentEditAcknowledgementsForTests();
 }

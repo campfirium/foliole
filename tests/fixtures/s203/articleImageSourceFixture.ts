@@ -1,6 +1,6 @@
-import { isAllowedRemoteImageHostname } from '../../../lib/platform/remoteImageUrlGuard';
+import { isAllowedRemoteImageHostname } from '../../../lib/platform/remoteImageUrlGuard.js';
 
-import { createArticleImageFixture, type ImageCase } from './articleImageFixture';
+import { createArticleImageFixture, type ImageCase } from './articleImageFixture.js';
 
 /** A bounded HTTP response fixture; it never opens a listener or changes TLS policy. */
 export function createArticleImageSourceFixture(baseUrl: string, scenario: ImageCase) {

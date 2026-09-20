@@ -94,3 +94,11 @@ export function resetNodeContentVersionGuardForTests() {
   nodeCreateConfirmWaiters.clear();
   nodeContentVersions.clear();
 }
+
+export function isLatestNodeContentVersion(nodeId: string, version: number) {
+  return (nodeContentVersions.get(nodeId)?.currentVersion ?? 0) <= version;
+}
+
+export function hasUnconfirmedNodeContent(nodeId: string) {
+  return nodeContentVersions.get(nodeId)?.dirtyVersion != null;
+}

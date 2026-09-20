@@ -89,8 +89,6 @@ export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsA
     if (!options?.historyReplay && isBlankTextEditAfterAnnotation(args, nodeId, content)) {
       return;
     }
-    args.ws.updateNodeContent(nodeId, content, options && 'publishLocal' in options
-      ? { publishLocal: options.publishLocal }
-      : undefined);
+    args.ws.updateNodeContent(nodeId, content, { ...options, deriveTitle: true });
   };
 }

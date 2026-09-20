@@ -26,6 +26,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
   }, [props.onEditorChange, props.onNodeContentChange]);
   const editorDraft = useEditorDraftSync({
     committedContent: props.editorContent,
+    committedVersionId: draftNodeId ? props.nodesById[draftNodeId]?.currentVersionId : undefined,
     nodeId: draftNodeId,
     onCommit: commitEditorContent,
     ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),

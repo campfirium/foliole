@@ -9,6 +9,7 @@ type NativeNodeAnchorUpdateArgs = NativeNodeAnchorLocatorUpdateArgs & {
 };
 
 export interface NativeNodeMutationPatchResult {
+  contentEdit?: { currentVersionId: string; submittedVersionId: string };
   activeNodeId?: string | null;
   anchorUpdates?: NativeNodeAnchorUpdateArgs[];
   createdNodeIds?: string[];
@@ -67,7 +68,7 @@ export type NativeSplitTopicMutationSpec = {
 };
 
 export type NativeNodeSnapshotBatchMutationSpec = {
-  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorUpdateArgs[] };
+  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorUpdateArgs[]; edit?: import('../core/sync/localContentEdit.js').LocalContentEdit };
   result: NativeNodeMutationPatchResult;
 };
 

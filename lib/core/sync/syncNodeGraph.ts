@@ -14,7 +14,8 @@ export interface StoredSyncNodeVersionRow extends DbRow {
 
 export async function loadCurrentSyncNodeRecord(
   port: DbPort,
-  objectId: string
+  objectId: string,
+  includeAncestors = true
 ): Promise<NativeSyncNodeRecord | null> {
   const [row] = await port.query<StoredSyncNodeVersionRow>(
     `SELECT v.* FROM nodes n
@@ -22,18 +23,19 @@ export async function loadCurrentSyncNodeRecord(
      WHERE n.id = ? LIMIT 1`,
     [objectId]
   );
-  return row ? storedVersionToRecord(port, row) : null;
+  return row ? storedVersionToRecord(port, row, includeAncestors) : null;
 }
 
 export async function loadStoredSyncNodeVersionRecord(
   port: DbPort,
-  versionId: string
+  versionId: string,
+  includeAncestors = true
 ): Promise<NativeSyncNodeRecord | null> {
   const [row] = await port.query<StoredSyncNodeVersionRow>(
     'SELECT * FROM node_sync_versions WHERE version_id = ? LIMIT 1',
     [versionId]
   );
-  return row ? storedVersionToRecord(port, row) : null;
+  return row ? storedVersionToRecord(port, row, includeAncestors) : null;
 }
 
 export async function isStoredVersionIdentical(port: DbPort, record: NativeSyncNodeRecord) {
@@ -69,12 +71,13 @@ export async function loadMergeBase(port: DbPort, leftId: string, rightId: strin
 
 async function storedVersionToRecord(
   port: DbPort,
-  row: StoredSyncNodeVersionRow
+  row: StoredSyncNodeVersionRow,
+  includeAncestors: boolean
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const parents = await loadParents(port, row.version_id);
   return {
-    ancestor_version_ids: await loadAncestors(port, row.version_id),
+    ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],
     body_text: row.body_text ?? snapshot.content ?? '',
     content_hash: row.content_hash,
     host_name: row.host_name,

@@ -142,6 +142,7 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
     const invokeStartedAt = args.diagnostics ? readNowMs() : 0;
     const result = await runtimeInvoke(NATIVE_COMMANDS.updateNodeContentWithAnchors, {
       parent,
+      ...(args.parentNode.contentEdit ? { edit: args.parentNode.contentEdit } : {}),
       affectedAnchors: args.affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload),
       ...(args.diagnosticsEnabled ? { diagnostics: true } : {})
     });
@@ -153,7 +154,7 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
     if (args.diagnostics) {
       args.diagnostics.resultCheckMs = readNowMs() - resultCheckStartedAt;
     }
-    return checkedResult;
+    return args.parentNode.contentEdit && !checkedResult?.contentEdit ? null : checkedResult;
   } catch (error) {
     logRuntimeError('runtime sync failed', {
       area: 'native',

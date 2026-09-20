@@ -35,13 +35,14 @@ export function buildNodeMutationPatchResult(args: {
 
 export function completeCreatedNodeCreation(
   parsed: ReturnType<typeof parseNodeCreationMutationArgs>,
-  originWindow: OriginWindow
+  originWindow: OriginWindow,
+  currentVersionId?: string | null
 ) {
   return buildNodeMutationPatchResult({
     activeNodeId: parsed.activeNodeId,
     createdNodeIds: [parsed.node.nodeId],
     nodeOrder: parsed.nodeOrder,
-    nodes: [parsed.node],
+    nodes: [{ ...parsed.node, ...(currentVersionId ? { currentVersionId } : {}) }],
     originWindow
   });
 }

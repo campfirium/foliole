@@ -1,10 +1,10 @@
 import {
-  extractUniqueArticleTitleHeading,
   replaceUniqueArticleTitleHeading
 } from '../features/nodes/model/articleTitleHeading';
-import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
+import { resolveNodeDerivedTitle } from './workspaceNodeDerivedTitle';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import {
@@ -30,16 +30,6 @@ function syncUniqueArticleHeadingFromTitle(
     return node.content;
   }
   return replaceUniqueArticleTitleHeading(node.content, title) ?? node.content;
-}
-
-function resolveDerivedTitle(node: WorkspaceState['nodesById'][string], content: string) {
-  if (node.kind === 'topic') {
-    const articleTitle = extractUniqueArticleTitleHeading(content)?.title;
-    if (articleTitle) {
-      return articleTitle;
-    }
-  }
-  return node.isTitleManual ? node.title : deriveNodeTitleFromContent(content);
 }
 
 export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeTitle'] {
@@ -105,7 +95,7 @@ export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): Workspace
       if (!node || isProtectedRootNode(node)) {
         return state;
       }
-      const nextTitle = resolveDerivedTitle(node, content ?? node.content);
+      const nextTitle = resolveNodeDerivedTitle(node, content ?? node.content);
       if (node.title === nextTitle) {
         return state;
       }

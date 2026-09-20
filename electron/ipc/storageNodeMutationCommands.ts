@@ -32,6 +32,7 @@ import {
 } from './nodeCommandArgs.js';
 import { parseSplitTopicArgs } from './splitTopicCommandArgs.js';
 import { readObjectArg } from './storageCommandSupport.js';
+import { handleLocalContentEditCommand } from './storageLocalContentEditCommand.js';
 import { buildNodeMutationPatchResult, completeCreatedNodeCreation, completeWorkspaceMutation, type OriginWindow } from './storageNodeMutationResult.js';
 
 function readNowMs() {
@@ -63,9 +64,9 @@ function buildNodeContentWithAnchorsResult(args: {
 
 function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' | 'topic' | 'item', originWindow: OriginWindow) {
   const parsed = parseNodeCreationMutationArgs(args, kind);
-  upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
+  const currentVersionId = upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
   scheduleMirrorSync([parsed.node.nodeId]);
-  return completeCreatedNodeCreation(parsed, originWindow);
+  return completeCreatedNodeCreation(parsed, originWindow, currentVersionId);
 }
 
 function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
@@ -147,10 +148,13 @@ function handleUpdateNodeContentCommand(command: string, args: Record<string, un
       updatedNodeIds: renamed.updatedNodeIds
     });
   }
-  upsertVersionedNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  const currentVersionId = upsertVersionedNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
   enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
   scheduleMirrorSync([parsed.nodeId]);
-  return buildNodeMutationPatchResult({ nodes: [parsed], originWindow, updatedNodeIds: [parsed.nodeId] });
+  return buildNodeMutationPatchResult({
+    nodes: [{ ...parsed, ...(currentVersionId ? { currentVersionId } : {}) }],
+    originWindow, updatedNodeIds: [parsed.nodeId]
+  });
 }
 
 export function handleNodeMutationCommand(command: string, args: Record<string, unknown>, originWindow: OriginWindow = null) {
@@ -170,6 +174,7 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     return handleUpdateNodeContentCommand(command, args, originWindow);
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
+    if (args.edit !== undefined) return handleLocalContentEditCommand(args, originWindow);
     return handleNodeContentWithAnchorsCommand(args, originWindow);
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {

@@ -13,6 +13,7 @@ import {
   type UpdateNodeContentMetrics
 } from './workspaceNodeContentUpdateDiagnostics';
 import { markNodeContentEdited } from './workspaceNodeContentVersionGuard';
+import { resolveNodeDerivedTitle } from './workspaceNodeDerivedTitle';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -24,11 +25,9 @@ import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLoc
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
-function resolveSyncedArticleTitle(node: WorkspaceNode, content: string) {
-  if (node.kind !== 'topic') {
-    return node.title;
-  }
-  return extractUniqueArticleTitleHeading(content)?.title ?? node.title;
+function resolveContentTitle(node: WorkspaceNode, content: string, deriveTitle?: boolean) {
+  if (deriveTitle) return resolveNodeDerivedTitle(node, content);
+  return node.kind === 'topic' ? extractUniqueArticleTitleHeading(content)?.title ?? node.title : node.title;
 }
 
 function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: string, node: WorkspaceNode) {
@@ -42,6 +41,8 @@ function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: stri
 }
 
 function prepareNodeContentLocalState(args: {
+  baseVersionId?: string | null | undefined;
+  deriveTitle?: boolean | undefined;
   buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
@@ -68,6 +69,7 @@ function prepareNodeContentLocalState(args: {
   args.metrics.guardMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - guardStartedAt : 0;
   const timestamp = new Date().toISOString();
   const nextNode = prepareNextContentNode(node, args.content, timestamp, args);
+  if (args.baseVersionId !== undefined) nextNode.currentVersionId = args.baseVersionId;
   args.localState.nextNodeForSync = nextNode;
   args.localState.nodeOrderForSync = args.state.nodeOrder;
   if (args.buildHeavyPatch) {
@@ -87,7 +89,7 @@ function prepareNextContentNode(
   node: WorkspaceNode,
   content: string,
   timestamp: string,
-  args: { diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics; preserveTitle?: boolean }
+  args: { deriveTitle?: boolean | undefined; diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics; preserveTitle?: boolean }
 ) {
   const nextNodeStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const nextNode = {
@@ -95,7 +97,7 @@ function prepareNextContentNode(
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,
-    title: args.preserveTitle ? node.title : resolveSyncedArticleTitle(node, content),
+    title: args.preserveTitle ? node.title : resolveContentTitle(node, content, args.deriveTitle),
     updatedAt: timestamp
   };
   args.metrics.nextNodeMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - nextNodeStartedAt : 0;
@@ -134,6 +136,8 @@ function syncTextAnchorLocatorsForNextContentNode(
 }
 
 function collectUpdateNodeContentLocalState(args: {
+  baseVersionId?: string | null | undefined;
+  deriveTitle?: boolean | undefined;
   buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
@@ -153,12 +157,14 @@ async function updateNodeContent(
   set: WorkspaceSet,
   nodeId: string,
   content: string,
-  options: { preserveTitle?: boolean; publishLocal?: boolean } = {}
+  options: { baseVersionId?: string | null | undefined; deriveTitle?: boolean; preserveTitle?: boolean; publishLocal?: boolean } = {}
 ) {
   const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
   const metrics = createUpdateNodeContentMetrics(diagnosticsEnabled);
   const publishLocal = options.publishLocal !== false;
   const localState = collectUpdateNodeContentLocalState({
+    baseVersionId: options.baseVersionId,
+    deriveTitle: options.deriveTitle,
     buildHeavyPatch: publishLocal,
     content,
     diagnosticsEnabled,

@@ -17,35 +17,35 @@ import {
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { withTransaction } from './transaction.js';
 
-function flushVersion(driver: ReturnType<typeof openDatabaseConnection>['driver'], nodeId: string, hostName: string, now: string) {
-  return flushNodeSyncVersionWithDriver(driver, nodeId, hostName, now);
+function flushVersion(driver: ReturnType<typeof openDatabaseConnection>['driver'], nodeId: string, hostName: string, now: string, versionId?: string) {
+  return flushNodeSyncVersionWithDriver(driver, nodeId, hostName, now, versionId);
 }
 
 export function upsertVersionedNodeSnapshot(
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
-): void {
+) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
-  withTransaction(driver, () => {
+  return withTransaction(driver, () => {
     upsertNodeSnapshot(input, options);
-    flushVersion(driver, input.nodeId, hostName, input.updatedAt);
+    return flushVersion(driver, input.nodeId, hostName, input.updatedAt);
   });
 }
 
-export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[]): void {
+export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[]) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
-  withTransaction(driver, () => {
+  return withTransaction(driver, () => {
     upsertNodeSnapshotWithOrder(input, nodeOrder);
-    flushVersion(driver, input.nodeId, hostName, input.updatedAt);
+    return flushVersion(driver, input.nodeId, hostName, input.updatedAt);
   });
 }
 
 export function upsertVersionedNodeContentWithAnchors(
   parent: UpsertNodeSnapshotInput,
   affectedAnchors: UpdateNodeAnchorLinkInput[],
-  options: UpsertNodeSnapshotOptions = {}
+  options: UpsertNodeSnapshotOptions & { versionId?: string } = {}
 ) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
@@ -59,7 +59,7 @@ export function upsertVersionedNodeContentWithAnchors(
     });
     upsertNodeSnapshot(parent, options);
     updateNodeAnchorLinks(affectedAnchors);
-    flushVersion(driver, parent.nodeId, hostName, parent.updatedAt);
+    flushVersion(driver, parent.nodeId, hostName, parent.updatedAt, options.versionId);
     const anchorIds = [...new Set([
       ...contentChange.affectedChildIds,
       ...affectedAnchors.map((anchor) => anchor.nodeId)

@@ -5,6 +5,7 @@ import type {
   WorkspaceRuntimeNodeSnapshot
 } from '../shared/platform/workspaceRuntimeTypes';
 
+import { rememberCreatedContentVersion } from './workspaceContentEditAcknowledgements';
 import { shouldKeepLocalNodeContent } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -13,6 +14,7 @@ type WorkspacePatch = Partial<Pick<WorkspaceState, 'activeNodeId' | 'nodeOrder' 
 function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node): Node {
   return {
     id: snapshot.nodeId,
+    currentVersionId: snapshot.currentVersionId ?? current?.currentVersionId ?? null,
     parentNodeId: snapshot.parentNodeId,
     kind: snapshot.kind,
     ...(current?.specialKind ? { specialKind: current.specialKind } : {}),
@@ -160,6 +162,11 @@ export function createWorkspaceNodeCreateAckPatch(
 ): WorkspacePatch & Partial<WorkspaceState> {
   const acknowledgedNodeIds = new Set(result.createdNodeIds ?? []);
   const createdNodeIds = new Set(requestedNodeIds.filter((nodeId) => acknowledgedNodeIds.has(nodeId)));
+  for (const node of result.nodes) {
+    if (createdNodeIds.has(node.nodeId) && node.currentVersionId) {
+      rememberCreatedContentVersion(node.nodeId, node.currentVersionId);
+    }
+  }
   const runtimePatch = createWorkspaceNodeMutationPatch(state, {
     createdNodeIds: [...createdNodeIds],
     nodes: result.nodes.filter((node) => createdNodeIds.has(node.nodeId))

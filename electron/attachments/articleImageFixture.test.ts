@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification';
-import { createArticleImageFixture, IMAGE_CASES } from '../../tests/fixtures/s203/articleImageFixture';
+import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
+import { createArticleImageFixture, IMAGE_CASES } from '../../tests/fixtures/s203/articleImageFixture.js';
 
 describe('isolated S203 device fixture data', () => {
   it.each(IMAGE_CASES)('describes independent %s preconditions without device writes', (scenario) => {

@@ -79,6 +79,9 @@ export function isNodeMutationPatchResult(value: unknown): value is WorkspaceNod
     return false;
   }
   return (
+    (value.contentEdit === undefined || (isObjectRecord(value.contentEdit)
+      && typeof value.contentEdit.currentVersionId === 'string'
+      && typeof value.contentEdit.submittedVersionId === 'string')) &&
     (value.anchorUpdates === undefined ||
       (Array.isArray(value.anchorUpdates) && value.anchorUpdates.every(isAnchorUpdateLike))) &&
     (value.nodeOrder === undefined || isStringArray(value.nodeOrder)) &&

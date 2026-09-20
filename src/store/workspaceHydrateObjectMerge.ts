@@ -1,6 +1,7 @@
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
+import { hasUnconfirmedNodeContent } from './workspaceNodeContentVersionGuard';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
 export function mergeNodeOpenStateById(
@@ -78,7 +79,8 @@ export function mergeHydratedNode(current: Node | undefined, next: Node) {
   if (!current) {
     return next;
   }
-  const baseNode = isNewerTimestamp(current.updatedAt, next.updatedAt) ? current : next;
+  const baseNode = hasUnconfirmedNodeContent(current.id) || isNewerTimestamp(current.updatedAt, next.updatedAt)
+    ? current : next;
   return mergeDeletedAt({
     ...baseNode,
     reading: chooseReadingProfile(current.reading, next.reading),

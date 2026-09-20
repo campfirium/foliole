@@ -8,6 +8,7 @@ import {
 } from './useEditorDraftFlushDiagnostics';
 
 export interface PendingDraftCommit {
+  baseVersionId?: string | null | undefined;
   committedContent: string | null;
   content: string;
   nodeId: string | null;
@@ -34,6 +35,7 @@ interface FlushPendingDraftArgs {
 }
 
 interface FlushFreshDraftArgs {
+  baseVersionId?: string | null | undefined;
   committedContent: string | null;
   content: string;
   finalizeTitle: boolean;
@@ -76,7 +78,10 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
     return { flushed: false, pendingTitle };
   }
   const commitPendingDraft = (options?: EditorDraftCommitOptions) =>
-    pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, options);
+    pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, {
+      ...options,
+      ...(pendingCommit.baseVersionId !== undefined ? { baseVersionId: pendingCommit.baseVersionId } : {})
+    });
   if (args.finalizeTitle || args.syncCommit === true) {
     commitPendingDraft({ publishLocal: false });
   } else {
@@ -107,12 +112,15 @@ function clearPendingCommitForNode(args: {
 
 function flushFreshDraft(args: FlushFreshDraftArgs): DraftFlushResult {
   clearDraftTimer(args.timerRef);
+  const pending = args.pendingCommitRef.current;
+  const baseVersionId = pending?.nodeId === args.nodeId ? pending.baseVersionId : args.baseVersionId;
   clearPendingCommitForNode(args);
   const pendingTitle = args.finalizeTitle ? args.finalizeTitleRefresh(args.nodeId) : null;
   if (!args.nodeId || args.content === args.committedContent) {
     return { flushed: false, pendingTitle };
   }
-  args.onCommit(args.nodeId, args.content);
+  if (baseVersionId !== undefined) args.onCommit(args.nodeId, args.content, { baseVersionId });
+  else args.onCommit(args.nodeId, args.content);
   return { flushed: true, pendingTitle: pendingTitle ?? args.finalizeTitleRefresh(args.nodeId) };
 }
 
@@ -124,6 +132,7 @@ function useFreshDraftFlush(args: {
 }) {
   const { finalizeTitleRefresh, pendingCommitRef, pendingCommitStartedAtRef, timerRef } = args;
   return useCallback((freshArgs: {
+    baseVersionId?: string | null | undefined;
     committedContent: string | null;
     content: string;
     finalizeTitle?: boolean;

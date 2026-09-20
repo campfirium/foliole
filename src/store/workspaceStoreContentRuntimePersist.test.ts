@@ -119,6 +119,58 @@ describe('workspaceStoreContentRuntimePersist queue', () => {
     await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(false);
   });
 
+});
+
+describe('workspace content persistence recovery', () => {
+  it('retries a rejected snapshot at the next drain', async () => {
+    vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockResolvedValueOnce(null);
+    schedulePersist(createNode('node-1', 'Recoverable draft'));
+    await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(false);
+    await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(true);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for an in-flight save when another drain arrives', async () => {
+    let resolveSave!: (value: null) => void;
+    vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveSave = resolve; })
+    );
+    schedulePersist(createNode('node-1', 'In flight'));
+    const first = drainPendingNodeContentRuntimePersists();
+    let secondFinished = false;
+    const second = drainPendingNodeContentRuntimePersists().then((result) => {
+      secondFinished = true;
+      return result;
+    });
+    await Promise.resolve();
+    expect(secondFinished).toBe(false);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+    resolveSave(null);
+    await expect(first).resolves.toBe(false);
+    await expect(second).resolves.toBe(false);
+  });
+
+  it('serializes newer input behind the pending runtime write', async () => {
+    let resolveSave!: (value: { nodes: never[] }) => void;
+    vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveSave = resolve; })
+    );
+    schedulePersist(createNode('node-1', 'First'));
+    const first = drainPendingNodeContentRuntimePersists();
+    schedulePersist(createNode('node-1', 'Second'));
+    const second = drainPendingNodeContentRuntimePersists();
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+    resolveSave({ nodes: [] });
+    await expect(first).resolves.toBe(true);
+    await expect(second).resolves.toBe(true);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenLastCalledWith(
+      expect.objectContaining({ content: 'Second' }), [], ['node-1']
+    );
+  });
+
+});
+
+describe('workspace content persistence acknowledgements', () => {
   it('does not let a late older persist acknowledgement clear a newer edit version', async () => {
     let resolveFirst!: (value: { nodes: never[] }) => void;
     vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockImplementationOnce(

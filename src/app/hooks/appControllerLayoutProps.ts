@@ -125,7 +125,7 @@ export interface BuildControllerLayoutPropsArgs {
     pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
     undoEditorOperation: WorkspaceState['undoEditorOperation'];
     redoEditorOperation: WorkspaceState['redoEditorOperation'];
-    updateNodeContent: (nodeId: string, content: string, options?: { publishLocal?: boolean }) => Promise<boolean>;
+    updateNodeContent: WorkspaceState['updateNodeContent'];
     updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
     updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
     updateVirtualNodeFilter: (nodeId: string, value: string) => void;

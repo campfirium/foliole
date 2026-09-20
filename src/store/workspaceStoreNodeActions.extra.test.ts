@@ -250,3 +250,14 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
   });
 });
+
+it('includes an automatic title in the queued body save without a second body writer', async () => {
+  vi.clearAllMocks();
+  vi.useFakeTimers();
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+  await actions.updateNodeContent('node-1', 'Plain title\nBody', { deriveTitle: true, publishLocal: false });
+  await actions.updateNodeDerivedTitle('node-1', 'Plain title\nBody');
+  expect(harness.getState().nodesById['node-1']?.title).toBe('Plain title');
+  expect(syncNodeContentMutationToRuntime).not.toHaveBeenCalled();
+});

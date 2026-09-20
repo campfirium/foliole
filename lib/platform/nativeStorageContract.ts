@@ -197,6 +197,7 @@ export interface NativeReviewSchedulerSettings {
 }
 
 export interface NativeNodeSnapshotArgs {
+  currentVersionId?: string | null;
   nodeId: string;
   parentNodeId: string | null;
   kind: NodeKind;

@@ -9,6 +9,7 @@ import {
 const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
 
 export interface EditorDraftCommitOptions {
+  baseVersionId?: string | null;
   historyReplay?: boolean;
   publishLocal?: boolean;
 }
@@ -26,6 +27,7 @@ export type EditorDraftFlushRegistration = (
 ) => void;
 
 interface DraftFlushCallbacksArgs {
+  committedVersionId?: string | null | undefined;
   clearFreshDraftEvidence: (nodeId: string | null) => void;
   flushDraft: ReturnType<typeof usePendingDraftCommit>['flushDraft'];
   flushFreshDraftForNode: ReturnType<typeof usePendingDraftCommit>['flushFreshDraftForNode'];
@@ -47,6 +49,7 @@ function useFreshDraftFlushCallback(args: DraftFlushCallbacksArgs) {
     const committedContent = effectiveNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;
     const result = args.flushFreshDraftForNode({
       committedContent,
+      baseVersionId: args.committedVersionId,
       content,
       nodeId: effectiveNodeId,
       onCommit: args.onCommit

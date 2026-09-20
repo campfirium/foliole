@@ -49,7 +49,7 @@ export interface WorkspaceState {
   setBrowseRootNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
-  updateNodeContent: (nodeId: string, content: string, options?: { preserveTitle?: boolean; publishLocal?: boolean }) => Promise<boolean>;
+  updateNodeContent: (nodeId: string, content: string, options?: { baseVersionId?: string | null; deriveTitle?: boolean; preserveTitle?: boolean; publishLocal?: boolean }) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;

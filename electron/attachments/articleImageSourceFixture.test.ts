@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 
-import { recoverArticleImage } from '../../lib/core/import/articleImageRecovery';
-import { replaceArticleImageSource } from '../../lib/core/import/replaceArticleImageSource';
-import { createArticleImageSourceFixture } from '../../tests/fixtures/s203/articleImageSourceFixture';
+import { recoverArticleImage } from '../../lib/core/import/articleImageRecovery.js';
+import { replaceArticleImageSource } from '../../lib/core/import/replaceArticleImageSource.js';
+import { createArticleImageSourceFixture } from '../../tests/fixtures/s203/articleImageSourceFixture.js';
 
 it.each(['existing', 'same', 'changed', 'failed', 'local'] as const)(
   'records the source requests made by the actual shared recovery decision: %s', async (scenario) => {
