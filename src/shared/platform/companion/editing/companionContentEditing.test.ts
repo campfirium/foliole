@@ -43,8 +43,10 @@ function edit(content: string, versionId = 'local', baseVersionId = 'base'): Com
 beforeEach(async () => {
   directory = mkdtempSync(path.join(tmpdir(), 'foliole-content-edit-'));
   database = new Database(path.join(directory, 'companion.db'));
-  installCompanionNodeSchema(database);
-  database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)').run('device_id', 'test-mobile', now);
+  database.transaction(() => {
+    installCompanionNodeSchema(database);
+    database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)').run('device_id', 'test-mobile', now);
+  })();
   const connection = { ...createFakeCapacitorConnection(database),
     getUrl: async () => ({ url: path.join(directory, 'companion.db') }) };
   const manager = {
@@ -97,7 +99,7 @@ it('retains overlapping input as current content or an existing text alternative
 });
 
 it('remaps child anchors and rolls back the entire edit if a child cannot be versioned', async () => {
-  await insert(node({ id: 'child', kind: 'note', parentNodeId: 'topic', content: 'Note',
+  await insert(node({ id: 'child', kind: 'item', parentNodeId: 'topic', content: 'Note',
     anchorLink: { id: 'anchor', kind: 'highlight', locator: { from: 7, to: 12, originalText: 'Bread' } } }), 'child-base');
   await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
   const row = database.prepare('SELECT anchor_link, current_version_id FROM nodes WHERE id = ?').get('child') as {

@@ -6,27 +6,29 @@ import {
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
 
-async function testReportsContentProgressAfterEachConcurrentChunk() {
-  const { CONTENT_BLOB_CONCURRENT_FETCH_LIMIT } = await import('./companionDesktopSyncResources');
+async function testReportsContentProgressAfterEachBatch() {
+  const { CONTENT_BLOB_BATCH_LIMIT } = await import('./companionDesktopSyncResources');
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const hashes = Array.from({ length: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1 }, (_, index) => `${index}`.padStart(64, '0'));
+  const hashes = Array.from({ length: CONTENT_BLOB_BATCH_LIMIT + 1 }, (_, index) => `${index}`.padStart(64, '0'));
   syncBridgeMock.loadCompanionMissingContentBlobs
-    .mockResolvedValueOnce(hashes.map((hash) => ({ hash, size_bytes: 2 })))
+    .mockResolvedValueOnce(hashes.slice(0, CONTENT_BLOB_BATCH_LIMIT).map((hash) => ({ hash, size_bytes: 2 })))
+    .mockResolvedValueOnce(hashes.slice(CONTENT_BLOB_BATCH_LIMIT).map((hash) => ({ hash, size_bytes: 2 })))
     .mockResolvedValueOnce([]);
-  syncBridgeMock.syncCompanionContentBlobs.mockRejectedValueOnce(new Error('batch unavailable'));
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
   const onProgress = vi.fn();
 
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
 
+  expect(syncBridgeMock.syncCompanionContentBlobs.mock.calls.map(([request]) => JSON.parse(request.body).hashes))
+    .toEqual([hashes.slice(0, CONTENT_BLOB_BATCH_LIMIT), hashes.slice(CONTENT_BLOB_BATCH_LIMIT)]);
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT,
-    completedBytes: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT * 2,
+    completed: CONTENT_BLOB_BATCH_LIMIT,
+    completedBytes: CONTENT_BLOB_BATCH_LIMIT * 2,
     phase: 'content'
   }));
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1,
-    completedBytes: (CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1) * 2,
+    completed: CONTENT_BLOB_BATCH_LIMIT + 1,
+    completedBytes: (CONTENT_BLOB_BATCH_LIMIT + 1) * 2,
     phase: 'content'
   }));
 }
@@ -72,7 +74,7 @@ async function testReportsAttachmentProgressAfterEachConcurrentChunk() {
 describe('companion desktop sync resource progress', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
-  it('reports missing content blob progress after each concurrent chunk', testReportsContentProgressAfterEachConcurrentChunk);
+  it('reports missing content blob progress after each successful batch', testReportsContentProgressAfterEachBatch);
 
   it('reports missing attachment resource progress after each concurrent chunk', testReportsAttachmentProgressAfterEachConcurrentChunk);
 });

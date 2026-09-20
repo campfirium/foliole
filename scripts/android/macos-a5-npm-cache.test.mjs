@@ -10,6 +10,8 @@ import { execFileSync } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
 import { expect, it } from 'vitest';
 
+import { resolvePortableCommand } from '../run-with-timeout.mjs';
+
 import { openMacosA5BuildCapsule, closeMacosA5BuildCapsule } from './macos-a5-build-capsule.mjs';
 import { createMacosA5ExecutionContext } from './macos-a5-execution-context.mjs';
 
@@ -68,9 +70,15 @@ function install(repo, revision, offline = false) {
   const context = createMacosA5ExecutionContext({ repoRoot: repo, action: 'build',
     acceptedRevision: revision, formalSourceClass: 'frozen-build' });
   return openMacosA5BuildCapsule(context, { run(command, args, options) {
+    if (command === 'git') {
+      const { cwd, ...gitOptions } = options;
+      execFileSync(command, ['-C', cwd, ...args], gitOptions);
+      return;
+    }
     const effectiveArgs = command === 'npm'
       ? [...args, '--fetch-retries=0', ...(offline ? ['--offline'] : [])] : args;
-    execFileSync(command, effectiveArgs, { ...options, encoding: 'utf8', stdio: 'pipe',
+    const portable = resolvePortableCommand(command, effectiveArgs);
+    execFileSync(portable.command, portable.args, { ...options, encoding: 'utf8', stdio: 'pipe',
       timeout: 15000, env: { ...process.env, npm_config_update_notifier: 'false' } });
   } });
 }
@@ -148,6 +156,6 @@ it('reuses verified downloads across frozen capsules and repairs corrupt cache w
     expect(fs.existsSync(path.join(repo, 'node_modules'))).toBe(false);
   } finally {
     await server?.worker.terminate();
-    fs.rmSync(root, { recursive: true, force: true });
+    await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }, 60000);

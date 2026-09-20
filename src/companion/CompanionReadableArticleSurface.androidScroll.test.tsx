@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createContentSaveMock } from './companionContentEditingTestSupport';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 
 const readableArticleDocumentMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => <article>Readable body</article>);
@@ -148,7 +149,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
       <ImmersiveReadableArticle
         onExit={vi.fn()}
         onCreateSelectionAnnotation={vi.fn()}
-        onSaveArticleContent={vi.fn()}
+        onSaveArticleContent={createContentSaveMock()}
         readableArticle={createReadableArticle()}
         snapshot={null}
       />
@@ -192,7 +193,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
       <ImmersiveReadableArticle
         onExit={vi.fn()}
         onCreateSelectionAnnotation={vi.fn()}
-        onSaveArticleContent={vi.fn()}
+        onSaveArticleContent={createContentSaveMock()}
         readableArticle={createReadableArticle()}
         snapshot={null}
       />
@@ -212,7 +213,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
       <ImmersiveReadableArticle
         onExit={vi.fn()}
         onCreateSelectionAnnotation={vi.fn()}
-        onSaveArticleContent={vi.fn()}
+        onSaveArticleContent={createContentSaveMock()}
         readableArticle={createReadableArticle()}
         snapshot={null}
       />
@@ -226,7 +227,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
       <ImmersiveReadableArticle
         onExit={vi.fn()}
         onCreateSelectionAnnotation={vi.fn()}
-        onSaveArticleContent={vi.fn()}
+        onSaveArticleContent={createContentSaveMock()}
         readableArticle={createReadableArticle()}
         snapshot={null}
       />

@@ -62,6 +62,7 @@ describe('electron-builder release packaging config', () => {
     expect(packageJson.dependencies['@lezer/markdown']).toEqual(expect.any(String));
     expect(packageJson.dependencies['@lezer/markdown']).not.toHaveLength(0);
     expect(config.files).not.toContain('!node_modules/@lezer/**');
+    expect(config.files).not.toContain('!node_modules/@codemirror/**');
     expect(config.files).toEqual(expect.arrayContaining([
       '!node_modules/@capacitor/**',
       '!node_modules/@capacitor-community/**',
@@ -74,7 +75,8 @@ describe('electron-builder release packaging config', () => {
       '!node_modules/sql.js/**',
       '!node_modules/better-sqlite3/deps/**',
       '!node_modules/better-sqlite3/src/**',
-      '!node_modules/@codemirror/**',
+      '!node_modules/@codemirror/commands/**',
+      '!node_modules/@codemirror/merge/**',
       '!node_modules/@radix-ui/**',
       '!node_modules/@tanstack/**',
       '!node_modules/clsx/**',
