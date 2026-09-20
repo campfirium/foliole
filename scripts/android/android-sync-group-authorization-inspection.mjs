@@ -10,15 +10,26 @@ export function authorizationFingerprint(value) {
   return value ? createHash('sha256').update(value).digest('hex').slice(0, 16) : null;
 }
 
-export function inspectLocalActiveMemberAuthorizationFingerprint(database) {
-  if (!tableExists(database, 'sync_group_local_state')
-      || !tableExists(database, 'sync_group_members')) return null;
-  const statement = database.prepare(`SELECT member.authorization_id
-    FROM sync_group_local_state local JOIN sync_group_members member
-      ON member.group_id = local.group_id AND member.host_name = local.local_host_name
-    WHERE local.singleton_id = 1 AND local.member_state = 'active'
-      AND member.state = 'active' LIMIT 2`);
-  if (typeof statement.all !== 'function') return null;
-  const rows = statement.all();
-  return rows.length === 1 ? authorizationFingerprint(rows[0].authorization_id) : null;
+export function inspectLocalActiveDeviceIdentityFingerprint(database) {
+  const required = {
+    sync_groups: ['group_id'],
+    sync_group_local_state: ['singleton_id', 'group_id', 'local_device_identity_key', 'state'],
+    sync_group_devices: ['group_id', 'device_identity_key', 'state']
+  };
+  for (const [table, columns] of Object.entries(required)) {
+    if (!tableExists(database, table)) return null;
+    const statement = database.prepare(`PRAGMA table_info(${table})`);
+    if (typeof statement.all !== 'function') return null;
+    const actual = new Set(statement.all().map((column) => column.name));
+    if (columns.some((column) => !actual.has(column))) return null;
+  }
+  const rows = database.prepare(`SELECT device.device_identity_key
+    FROM sync_group_local_state local JOIN sync_groups groups ON groups.group_id = local.group_id
+    JOIN sync_group_devices device ON device.group_id = local.group_id
+      AND device.device_identity_key = local.local_device_identity_key
+    WHERE local.singleton_id = 1 AND local.state = 'active'
+      AND device.state = 'active' LIMIT 2`).all();
+  const identity = rows.length === 1 ? rows[0].device_identity_key : null;
+  return typeof identity === 'string' && identity.trim()
+    ? authorizationFingerprint(identity) : null;
 }

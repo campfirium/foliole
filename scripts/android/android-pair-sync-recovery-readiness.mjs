@@ -12,7 +12,7 @@ import {
   classifySyncFailureRoute, classifySyncFailureStage
 } from './android-sync-failure-classification.mjs';
 import {
-  authorizationFingerprint, inspectLocalActiveMemberAuthorizationFingerprint
+  authorizationFingerprint, inspectLocalActiveDeviceIdentityFingerprint
 } from './android-sync-group-authorization-inspection.mjs';
 import { inspectWorkgroupKeyPresent } from './android-sync-group-readiness-inspection.mjs';
 
@@ -117,8 +117,8 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     latestSyncFailureRoute: classifySyncFailureRoute(latestSyncRun),
     latestSyncFailureStage: classifySyncFailureStage(latestSyncRun),
     journeyFacts: journeyFacts(database),
-    localMemberAuthorizationFingerprint:
-      inspectLocalActiveMemberAuthorizationFingerprint(database),
+    localDeviceIdentityFingerprint: inspectLocalActiveDeviceIdentityFingerprint(database),
+    localMemberAuthorizationFingerprint: null,
     missingAttachmentCount: null, // Possession is checked from files, never a database-wide queue.
     missingContentBlobCount: tableExists(database, 'content_blobs')
       && tableExists(database, 'content_blob_data')
@@ -155,8 +155,8 @@ export function pairSyncRecoveryReadiness(
   if (!snapshot.database?.exists || snapshot.database.unreadable || !inspection) {
     missingPrerequisites.push('database_unavailable');
   }
-  if (inspection && (inspection.activeSyncGroupMemberCount ?? 0) > 0
-      && !inspection.localMemberAuthorizationFingerprint) {
+  if (inspection && (inspection.syncGroupId || (inspection.activeSyncGroupMemberCount ?? 0) > 0)
+      && !/^[0-9a-f]{16}$/u.test(inspection.localDeviceIdentityFingerprint ?? '')) {
     missingPrerequisites.push('local_authorization_missing');
   }
   const groupAuthorityPresent = databaseWorkgroupKeyPresent || pairingCredentialsPresent;
@@ -192,7 +192,8 @@ export function pairSyncRecoveryReadiness(
     pairingCredentialRejectionReason: inspection?.pairingCredentialRejectionReason ?? null,
     pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,
     pairingPeerConflict,
-    localMemberAuthorizationFingerprint: inspection?.localMemberAuthorizationFingerprint ?? null,
+    localDeviceIdentityFingerprint: inspection?.localDeviceIdentityFingerprint ?? null,
+    localMemberAuthorizationFingerprint: null,
     hostName: typeof inspection?.hostName === 'string' ? inspection.hostName : null,
     pairingPeerAuthorizationFingerprint,
     storedAuthorizationFingerprint,
