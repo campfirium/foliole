@@ -6,7 +6,10 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 import { verifyPackagedEntitlements } from './packaged-entitlements-contract.mjs';
-import { verifyPackagedMainMarkdownParser } from './packaged-main-module-smoke.mjs';
+import {
+  verifyPackagedMainMarkdownParser,
+  verifyPackagedMirrorRenderWorker
+} from './packaged-main-module-smoke.mjs';
 import { verifyPackagedVersion } from './verify-packaged-version.mjs';
 
 const TEAM_ID = 'V589TQH334';
@@ -184,6 +187,7 @@ export async function verifyPackagedMacosApp(options) {
   if (mode === 'developer-id') await verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess);
   verifyPackagedSignatures(appPath, mode, run);
   verifyPackagedMainMarkdownParser(appPath, run);
+  verifyPackagedMirrorRenderWorker(appPath, run);
   runChecked('CLI help', publicLauncherPath, ['--help'], run);
   runChecked('CLI version', publicLauncherPath, ['--version'], run);
   if (options.version) {

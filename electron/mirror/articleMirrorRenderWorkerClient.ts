@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 
 import { renderSingleArticleMirror, type MirrorRenderableNode } from './articleMirrorOutput.js';
+import { rewriteMirrorMarkdownAttachmentPaths } from './markdownAttachmentPaths.js';
 
 interface MirrorRenderWorkerInput {
   article: MirrorRenderableNode;
@@ -54,7 +55,11 @@ export function renderArticleMirrorInWorker(input: MirrorRenderWorkerInput, sign
         reject(new Error('Article mirror render worker returned no markdown.'));
         return;
       }
-      resolve(result.markdown);
+      try {
+        resolve(rewriteMirrorMarkdownAttachmentPaths(result.markdown));
+      } catch (error) {
+        reject(error);
+      }
     });
   });
 }

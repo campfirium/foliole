@@ -1,6 +1,6 @@
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { renderSingleArticleMirror, type MirrorRenderableNode } from './articleMirrorOutput.js';
+import { renderSingleArticleMirrorRaw, type MirrorRenderableNode } from './articleMirrorRenderCore.js';
 
 interface MirrorRenderWorkerInput {
   article: MirrorRenderableNode;
@@ -16,7 +16,7 @@ interface MirrorRenderWorkerResult {
 function run(input: MirrorRenderWorkerInput): MirrorRenderWorkerResult {
   try {
     return {
-      markdown: renderSingleArticleMirror(input.article, input.derivedChildren, input.manualTopics)
+      markdown: renderSingleArticleMirrorRaw(input.article, input.derivedChildren, input.manualTopics)
     };
   } catch (error) {
     const normalized = error instanceof Error ? error : new Error(String(error));
