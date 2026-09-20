@@ -5,7 +5,11 @@ import type {
   NativeCompanionBootstrapState
 } from '../../../lib/platform/nativeCompanionContract';
 
-import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
+import {
+  getCompanionRuntimeCapability,
+  requireAvailableCompanionRuntime,
+  requireCompanionNativePlugin
+} from './companionRuntimeCapabilities';
 
 const WEB_PREVIEW_DATABASE_NAME = 'foliole-companion-preview.db';
 
@@ -66,6 +70,7 @@ export function isNativeCompanionRuntime() {
 }
 
 async function initializeNativeCompanionBootstrapState() {
+  requireCompanionNativePlugin('bootstrap', 'FolioleCompanionBootstrap');
   const result = normalizeCompanionBootstrapState(await FolioleCompanionBootstrap.loadBootstrap());
   if (!result) {
     throw new Error('Native companion bootstrap returned an invalid payload.');

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capacitorState = vi.hoisted(() => ({
   beginSyncRun: vi.fn(),
+  isPluginAvailable: vi.fn(() => true),
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   registerPlugin: vi.fn(() => ({ beginSyncRun: capacitorState.beginSyncRun }))

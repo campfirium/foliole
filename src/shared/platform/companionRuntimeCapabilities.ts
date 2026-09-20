@@ -18,7 +18,7 @@ export class NativeCompanionCapabilityUnavailableError extends Error {
   }
 }
 
-const IOS_NATIVE_CAPABILITIES = new Set([
+export const COMPANION_CAPABILITY_NAMES = [
   'attachment-resource-sync',
   'attachment-maintenance',
   'remote-image-import',
@@ -42,8 +42,12 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'sync-participation',
   'sync-trigger',
   'topic-search',
-  'view-state-write'
-]);
+  'view-state-write',
+  'native-runtime'
+] as const;
+
+export type CompanionCapabilityName = typeof COMPANION_CAPABILITY_NAMES[number];
+const KNOWN_CAPABILITIES: ReadonlySet<string> = new Set(COMPANION_CAPABILITY_NAMES);
 
 export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   if (!Capacitor.isNativePlatform()) {
@@ -57,14 +61,24 @@ export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
 }
 
 export function isCompanionRuntimeCapabilityAvailable(capability: string) {
+  if (!KNOWN_CAPABILITIES.has(capability)) return false;
   const runtime = getCompanionRuntimeCapability();
   return runtime.kind !== 'native-unavailable'
-    && !(runtime.kind === 'ios-native' && !IOS_NATIVE_CAPABILITIES.has(capability));
+    && !(runtime.kind === 'ios-native' && capability === 'native-runtime');
 }
 
 export function requireAvailableCompanionRuntime(capability: string) {
   const runtime = getCompanionRuntimeCapability();
   if (!isCompanionRuntimeCapabilityAvailable(capability)) {
+    throw new NativeCompanionCapabilityUnavailableError(capability, runtime.platform);
+  }
+  return runtime;
+}
+
+// Declaration support does not imply that a particular native plugin is installed.
+export function requireCompanionNativePlugin(capability: CompanionCapabilityName, pluginName: string) {
+  const runtime = requireAvailableCompanionRuntime(capability);
+  if (runtime.kind === 'web-preview' || !Capacitor.isPluginAvailable(pluginName)) {
     throw new NativeCompanionCapabilityUnavailableError(capability, runtime.platform);
   }
   return runtime;

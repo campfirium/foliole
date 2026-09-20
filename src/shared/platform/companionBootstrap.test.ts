@@ -5,6 +5,7 @@ const initializeDatabase = vi.hoisted(() => vi.fn(async (state) => ({
   ...state, device_id: 'frozen-execution-id', device_name: state.host_name
 })));
 const capacitorState = vi.hoisted(() => ({
+  isPluginAvailable: vi.fn(() => true),
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false)
 }));

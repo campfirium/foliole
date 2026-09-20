@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const loadBootstrap = vi.fn();
 const initializeIosCompanionDatabase = vi.fn();
 const capacitorState = vi.hoisted(() => ({
+  isPluginAvailable: vi.fn(() => true),
   getPlatform: vi.fn(() => 'ios'),
   isNativePlatform: vi.fn(() => true)
 }));
