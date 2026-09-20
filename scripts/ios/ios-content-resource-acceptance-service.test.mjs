@@ -1,11 +1,36 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { IOS_HOSTED_PROVIDER_DEVICE_ID, IOS_HOSTED_SYNC_GROUP_ID } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import { parseSyncGroupMemberState } from '../../lib/platform/syncGroupMemberStateContract.ts';
+
 import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
 import {
   createIosContentResourceObservations,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
+
+it('qualifies the resource provider through the shared member-state contract', () => {
+  const request = {
+    fixture: loadIosAcceptanceContractCorpus().contentResource,
+    observations: createIosContentResourceObservations(),
+    method: 'POST', requestUrl: '/sync-group/member-state'
+  };
+  const state = {
+    contract_version: 1, group_id: IOS_HOSTED_SYNC_GROUP_ID,
+    sender_device_identity_key: 'ios-member', removals: [],
+    devices: [{ device_identity_key: IOS_HOSTED_PROVIDER_DEVICE_ID, state: 'active' }]
+  };
+  const response = route({ ...request, bodyText: JSON.stringify(state) });
+  expect(response.status).toBe(200);
+  expect(parseSyncGroupMemberState(JSON.parse(response.body.toString()))).toEqual({
+    ...state, sender_device_identity_key: IOS_HOSTED_PROVIDER_DEVICE_ID
+  });
+  for (const invalid of [{ ok: true }, { ...state, group_id: 'other' }, { ...state, devices: [] }]) {
+    expect(() => route({ ...request, bodyText: JSON.stringify(invalid) })).toThrow();
+  }
+  expect(request.observations.content_batch_requests).toBe(0);
+});
 
 it('serves fixed-corpus resources with exact retry observations', () => {
   const fixture = loadIosAcceptanceContractCorpus().contentResource;

@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 import { parseResourceNeeds } from '../../lib/platform/resourceAvailabilityContract.js';
 
+import { routeIosHostedMemberStateRequest } from './ios-sync-group-member-state-service.ts';
+
 export interface IosContentResourceAcceptanceFixture {
   attachments: Record<'corrupt' | 'failed' | 'missing' | 'valid', ResourceEntry & { id: string }>;
   contentBlobs: Record<'corrupt' | 'external' | 'missing' | 'topic', ResourceEntry>;
@@ -41,6 +43,10 @@ export function routeIosContentResourceRequest(args: {
   requestUrl: string;
   providerDeviceId?: string;
 }): IosContentResourceResponse | null {
+  const memberState = routeIosHostedMemberStateRequest({
+    bodyText: args.bodyText, method: args.method, url: args.requestUrl
+  });
+  if (memberState) return binary(Buffer.from(memberState.body), memberState.contentType);
   if (args.method === 'POST' && args.requestUrl === '/companion/resource-availability') {
     const resources = parseResourceNeeds(JSON.parse(args.bodyText)).map((need) => {
       const entries = need.kind === 'attachment' ? Object.values(args.fixture.attachments) : Object.values(args.fixture.contentBlobs);
