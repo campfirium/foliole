@@ -19,7 +19,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
   nodeId: string;
   title: string;
   updatedAt: string;
-}, applyFastForward?: () => void) {
+}, applyFastForward?: () => void, options: { enqueueSearchInvalidations?: boolean } = {}) {
   return port.transaction(async (tx) => {
     const [live] = await tx.query<{ deleted_at: string | null }>(
       'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
@@ -38,7 +38,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
       return { current, submittedVersionId: input.versionId };
     }
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward();
-    else await applyBranch(tx, stored ?? record);
+    else await applyBranch(tx, stored ?? record, options);
     const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
     if (!applied) throw new Error('content_edit_result_unavailable');
     return { current: applied, submittedVersionId: input.versionId };
@@ -81,8 +81,8 @@ function matchesEdit(stored: NativeSyncNodeRecord, record: NativeSyncNodeRecord)
     && stored.updated_at === record.updated_at;
 }
 
-async function applyBranch(port: DbPort, record: NativeSyncNodeRecord) {
-  const result = await applySyncNodesWithDbPort(port, [record], { operation: 'local_mutation' });
+async function applyBranch(port: DbPort, record: NativeSyncNodeRecord, options: { enqueueSearchInvalidations?: boolean }) {
+  const result = await applySyncNodesWithDbPort(port, [record], { ...options, operation: 'local_mutation' });
   if (result.blockedIds.length || result.tombstoneBlockedIds.length) throw new Error('content_edit_blocked');
   if (result.conflictNodes.length) {
     if (record.snapshot.kind !== 'topic') throw new Error('content_edit_conflict_requires_topic');

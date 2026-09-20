@@ -7,7 +7,7 @@ import {
 
 export function useCompanionNodeTextAlternative(args: {
   nodeId: string;
-  onSetAsBody?: (nodeId: string, content: string) => Promise<void>;
+  onSetAsBody?: (nodeId: string, content: string) => Promise<unknown>;
 }) {
   const [alternative, setAlternative] = useState<Awaited<ReturnType<typeof loadCompanionNodeTextAlternative>>>(null);
   const [busy, setBusy] = useState(false);

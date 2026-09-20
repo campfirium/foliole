@@ -1,5 +1,7 @@
 import { lazy, Suspense, type CSSProperties, useCallback } from 'react';
 
+import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
+
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import {
@@ -86,7 +88,7 @@ function renderOriginalPdf(
 function useReadableArticleEditorState(props: {
   allowContentEditing?: boolean;
   isViewingPdfOriginal: boolean;
-  onSaveContent?: (nodeId: string, content: string) => Promise<void>;
+  onSaveContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
 }) {
   const saveContent = props.onSaveContent;
@@ -98,11 +100,10 @@ function useReadableArticleEditorState(props: {
   const editorState = useCompanionTopicEditAutosave({
     canEdit: canEdit && !props.isViewingPdfOriginal,
     initialContent: props.readableArticle.content,
+    initialVersionId: props.readableArticle.currentVersionId ?? null,
     nodeId: props.readableArticle.nodeId,
     ...definedProps({
       onSaveContent: saveContent
-        ? (content: string) => saveContent(props.readableArticle.nodeId, content)
-        : undefined
     })
   });
   return { canEdit, editorState };
@@ -131,7 +132,7 @@ function ReadableArticleTextDocument(props: {
         content={props.editorState.value}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
-        onBlurCapture={() => void props.editorState.flushPendingSave()}
+        onBlurCapture={() => void props.editorState.flushPendingSave().catch(() => undefined)}
         onMissingAttachmentResource={props.syncMissingAttachmentResource}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
@@ -152,7 +153,7 @@ export function ReadableArticleDocument(props: {
   allowContentEditing?: boolean;
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
-  onSaveContent?: (nodeId: string, content: string) => Promise<void>;
+  onSaveContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
   readingSelection?: EditorSelection | null;

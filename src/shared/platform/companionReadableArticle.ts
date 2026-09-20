@@ -18,6 +18,7 @@ import { resolveCompanionArticleContentPaddingTop } from './companionReadableArt
 export type { CompanionRecentArticle } from './companionBrowseLists';
 
 export interface CompanionReadableArticle {
+  currentVersionId?: string | null;
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
@@ -46,6 +47,7 @@ function hasReadableContent(node: CompanionReadableNode | undefined): node is Co
 
 function buildReadableArticle(node: CompanionReadableNode, persistedNodeViewState: PersistedNodeViewState | null) {
   return {
+    currentVersionId: node.currentVersionId ?? null,
     bodyStatus: normalizeBodyStatus(node.bodyStatus) ?? 'ready' as const,
     bodyBlobHash: node.bodyBlobHash ?? null,
     content: node.content,

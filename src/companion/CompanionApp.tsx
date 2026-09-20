@@ -10,6 +10,7 @@ import {
   StartupSurface
 } from '../shared/ui/StartupSurface';
 
+import { CompanionDraftProvider } from './CompanionDraftProvider';
 import { CompanionShell } from './CompanionShell';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { useCompanionBootstrap } from './useCompanionBootstrap';
@@ -58,7 +59,7 @@ function CompanionAppContent() {
       );
     }
 
-    return <CompanionShell bootstrapState={bootstrap.state} />;
+    return <CompanionDraftProvider><CompanionShell bootstrapState={bootstrap.state} /></CompanionDraftProvider>;
   })();
 
   return <MouseGestureSettingsProvider>{content}</MouseGestureSettingsProvider>;

@@ -2,6 +2,7 @@ import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as R
 import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
@@ -41,7 +42,7 @@ interface ImmersiveReadableArticleProps {
   onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
-  onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
+  onSaveArticleContent?: CompanionContentSaveHandler;
   onScrollTopChange?: (scrollTop: number) => void;
   readableArticle: ReadableArticle;
   snapshot: WorkspaceSnapshot | null;
@@ -52,7 +53,7 @@ function ImmersiveArticleContent(props: {
   onAttachmentResourceSynced?: () => void;
   isContentEditing: boolean;
   onEditorReady(adapter: EditorAdapter | null): void;
-  onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
+  onSaveArticleContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
   readingSelection: EditorSelection | null;

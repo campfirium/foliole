@@ -77,6 +77,7 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result).toEqual({
+      currentVersionId: null,
       bodyBlobHash: null,
       bodyStatus: 'ready',
       content: '# First\n\nBody',
