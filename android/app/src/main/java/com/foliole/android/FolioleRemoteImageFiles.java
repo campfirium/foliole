@@ -27,6 +27,7 @@ final class FolioleRemoteImageFiles {
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(30000);
         try {
+            if (BuildConfig.DEBUG) android.util.Log.d("FolioleImage", "readRemoteImageResponse");
             int status = connection.getResponseCode();
             JSObject result = new JSObject().put("status", status);
             String location = connection.getHeaderField("Location");

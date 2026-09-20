@@ -162,6 +162,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void resolveAttachmentResource(PluginCall call) {
+        if (BuildConfig.DEBUG) android.util.Log.d("FolioleImage", "resolveAttachmentResource");
         async(call, "Failed to resolve companion attachment resource.", () ->
             FolioleCompanionResourcePluginActions.resolveAttachmentResource(getContext(), call));
     }
