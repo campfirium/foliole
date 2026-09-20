@@ -77,7 +77,8 @@ class MarkdownImageWidget extends WidgetType {
       () => view.requestMeasure(),
       () => removeMarkdownImage(view, resolveCurrentImageMatchFromDom(widgetDom, this.imageMatch)),
       this.presentationVersion,
-      this.localDocumentPath
+      this.localDocumentPath,
+      () => attachMarkdownImageResize(widgetDom!, view, this.imageMatch)
     );
     attachMarkdownImageResize(widgetDom, view, this.imageMatch);
     return widgetDom;

@@ -1,3 +1,4 @@
+import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
@@ -6,7 +7,12 @@ import {
   TEST_ATTACHMENT_ASSET_URL
 } from '../../../test/attachmentResourceTestSupport';
 
-vi.mock('../../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn(() => null) }));
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => async (command: string, args: { storage_key?: string }) =>
+    command === 'resolve_attachment_resource'
+      ? { status: 'ready', resource_url: `foliole-asset://attachment/${args.storage_key}`, mime_type: 'image/png' }
+      : { intrinsic_size: null })
+}));
 vi.mock('../../../shared/platform/bridge', () => ({ openExternalUrl: vi.fn() }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
@@ -38,10 +44,11 @@ describe('live markdown image resize', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders an Obsidian width suffix without exposing it as alt text', () => {
+  it('renders an Obsidian width suffix without exposing it as alt text', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: `![Cover|268](${TEST_ATTACHMENT_ASSET_URL})` });
+    await waitFor(() => expect(host.querySelector('.cm-md-image-surface-block')).not.toBeNull());
     const surface = host.querySelector('.cm-md-image-surface-block') as HTMLElement;
 
     expect(surface.style.width).toBe('268px');
@@ -54,10 +61,11 @@ describe('live markdown image resize', () => {
     adapter.destroy();
   });
 
-  it('writes the dragged width into markdown and resets it on double click', () => {
+  it('writes the dragged width into markdown and resets it on double click', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: `![Cover|268](${TEST_ATTACHMENT_ASSET_URL})` });
+    await waitFor(() => expect(host.querySelector('.cm-md-image-surface-block')).not.toBeNull());
     const widget = host.querySelector('.cm-md-image-widget') as HTMLElement;
     const surface = host.querySelector('.cm-md-image-surface-block') as HTMLElement;
     const handle = host.querySelector('.cm-md-image-resize-handle') as HTMLButtonElement;
@@ -70,6 +78,7 @@ describe('live markdown image resize', () => {
     handle.dispatchEvent(pointer('pointerup', 150));
 
     expect(adapter.getContent()).toBe(`![Cover|318](${TEST_ATTACHMENT_ASSET_URL})`);
+    await waitFor(() => expect(host.querySelector('.cm-md-image-resize-handle')).not.toBeNull());
     (host.querySelector('.cm-md-image-resize-handle') as HTMLButtonElement).dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true })
     );

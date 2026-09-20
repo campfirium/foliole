@@ -6,7 +6,6 @@ export const allowedRegexInventory = [
   { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "if (!indentation || !/^[\\t ]+$/.test(indentation)) return null;", owner: 'structured list editing', reason: 'Restricts outdent changes to whitespace before a parser-identified list marker.' },
   { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "taskState: /x/i.test(markerText) ? 'checked' as const : 'unchecked' as const", owner: 'structured list editing', reason: 'Reads the state of a parser-identified task marker.' },
   { path: 'src/features/editor/adapters/codeMirrorStructuredListCommands.ts', line: "while (position < limit && /[\\t ]/.test(state.sliceDoc(position, position + 1))) position += 1;", owner: 'structured list editing', reason: 'Finds content after a bounded parser-identified list prefix.' },
-  { path: 'src/features/editor/adapters/codeMirrorTextHistory.ts', line: '!USER_TEXT_EVENT.test(userEvent)', owner: 'editor text history', reason: 'Limits native history capture to CodeMirror user text events.' },
   {
     path: 'src/features/editor/adapters/markdownInputAssist.ts',
     line: 'const CODE_FENCE_PATTERN = /^\\s*`{3,}/;',
@@ -87,26 +86,6 @@ export const allowedRegexInventory = [
     path: 'src/features/editor/model/highlightAnnotationPrefixSetting.ts',
     line: "const normalized = (value ?? '').replace(/\\r\\n?/g, '\\n').split('\\n')[0]?.slice(0, HIGHLIGHT_ANNOTATION_PREFIX_MAX_LENGTH) ?? '';",
     owner: 'single-line annotation prefix setting'
-  },
-  {
-    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
-    line: 'const match = /^(#{1,6})([ \\t]+)(\\S.*)$/.exec(inner);',
-    owner: 'lenient strong ATX heading compatibility'
-  },
-  {
-    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
-    line: 'function addLenientStrongATXHeading(cx: BlockContext, line: Line, text: string, match: RegExpExecArray) {',
-    owner: 'lenient strong ATX heading compatibility'
-  },
-  {
-    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
-    line: 'return /\\p{P}/u.test(String.fromCodePoint(value));',
-    owner: 'lenient strong marker punctuation guard'
-  },
-  {
-    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
-    line: 'return /^(#{1,6})([ \\t]+)(\\S.*)$/.test(inner);',
-    owner: 'lenient strong ATX heading compatibility'
   },
   {
     path: 'src/features/editor/adapters/htmlPaste.ts',

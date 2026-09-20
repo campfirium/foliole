@@ -14,6 +14,13 @@ vi.mock('../../../shared/platform/remoteImageLocalization', () => ({
   }
 }));
 
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => async (command: string, args: { storage_key?: string }) =>
+    command === 'resolve_attachment_resource'
+      ? { status: 'ready', resource_url: `foliole-asset://attachment/${args.storage_key}`, mime_type: 'image/png' }
+      : { intrinsic_size: null })
+}));
+
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
 const IMAGE_HASH = 'a'.repeat(64);

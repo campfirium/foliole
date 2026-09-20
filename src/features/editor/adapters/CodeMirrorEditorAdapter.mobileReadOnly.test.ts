@@ -13,7 +13,11 @@ vi.mock('@codemirror/commands', () => ({
 
 vi.mock('@codemirror/lang-markdown', () => ({
   markdown: vi.fn(() => 'markdown'),
-  markdownLanguage: {}
+  markdownLanguage: {
+    parser: {
+      configure: vi.fn(() => 'foliole-markdown-parser')
+    }
+  }
 }));
 
 vi.mock('@codemirror/state', () => ({

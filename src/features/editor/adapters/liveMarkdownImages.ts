@@ -95,7 +95,8 @@ function appendResolvedAttachmentImage(
   editorNodeId: string | null,
   onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null,
   requestMeasure: RequestEditorMeasure,
-  onRemoveImage: (() => void) | null
+  onRemoveImage: (() => void) | null,
+  onSurfaceReady: (() => void) | null
 ) {
   wrapper.append(createImageStatusElement('loading', renderPlan.display));
   let didRetry = false;
@@ -140,6 +141,7 @@ function appendResolvedAttachmentImage(
         requestMeasure
       })
     );
+    onSurfaceReady?.();
     requestMeasure?.();
   }
   void resolveImage();
@@ -152,7 +154,8 @@ export function createMarkdownImageWidgetDom(
   requestMeasure: RequestEditorMeasure = null,
   onRemoveImage: (() => void) | null = null,
   presentationVersion = 0,
-  localDocumentPath: string | null = null
+  localDocumentPath: string | null = null,
+  onSurfaceReady: (() => void) | null = null
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const localDocumentImageSrc = resolveLocalDocumentImageSource(imageMatch, localDocumentPath);
@@ -191,6 +194,15 @@ export function createMarkdownImageWidgetDom(
     return wrapper;
   }
 
-  appendResolvedAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
+  appendResolvedAttachmentImage(
+    wrapper,
+    imageMatch,
+    renderPlan,
+    editorNodeId,
+    onMissingAttachmentResource,
+    requestMeasure,
+    onRemoveImage,
+    onSurfaceReady
+  );
   return wrapper;
 }

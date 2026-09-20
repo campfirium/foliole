@@ -8,7 +8,10 @@ import {
 } from '../../../test/attachmentResourceTestSupport';
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: vi.fn(() => null)
+  getRuntimeInvoke: vi.fn(() => async (command: string, args: { storage_key?: string }) =>
+    command === 'resolve_attachment_resource'
+      ? { status: 'ready', resource_url: `foliole-asset://attachment/${args.storage_key}`, mime_type: 'image/png' }
+      : { intrinsic_size: null })
 }));
 
 vi.mock('../../../shared/platform/bridge', () => ({
