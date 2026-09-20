@@ -20,23 +20,23 @@ final class FolioleCompanionCaptureNavigation {
         WebView webView,
         long timeoutMs
     ) throws Exception {
-        if (!hasTestId(instrumentation, webView, BROWSE_READY)) {
-            String entry = waitForBrowseEntry(instrumentation, webView, timeoutMs);
+        long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
+        while (!hasTestId(instrumentation, webView, BROWSE_READY)) {
+            long remainingMs = (deadline - System.nanoTime()) / 1_000_000L;
+            if (remainingMs <= 0) {
+                throw new IllegalStateException("Timed out entering Browse; semantic="
+                    + FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView));
+            }
+            String entry = waitForBrowseEntry(instrumentation, webView, remainingMs);
+            if (BROWSE_READY.equals(entry)) return;
             JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
                 instrumentation, webView, entry, "click", ""
             );
             if (!receipt.optBoolean("ok") && !"target_missing".equals(receipt.optString("code"))) {
                 throw new IllegalStateException("Browse navigation failed: " + receipt);
             }
-            if (READING_EXIT.equals(entry)) {
-                Thread.sleep(250);
-                enterBrowseSurface(instrumentation, webView, timeoutMs);
-                return;
-            }
+            Thread.sleep(250);
         }
-        FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-            instrumentation, webView, BROWSE_READY, timeoutMs
-        );
     }
 
     private static String waitForBrowseEntry(
@@ -46,8 +46,10 @@ final class FolioleCompanionCaptureNavigation {
     ) throws Exception {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         while (System.nanoTime() < deadline) {
+            if (hasTestId(instrumentation, webView, BROWSE_READY)) return BROWSE_READY;
             if (hasTestId(instrumentation, webView, READING_EXIT)) return READING_EXIT;
             if (hasTestId(instrumentation, webView, BROWSE_TAB)) return BROWSE_TAB;
+            if (hasTestId(instrumentation, webView, TOP_BAR_BACK)) return TOP_BAR_BACK;
             if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;
             Thread.sleep(100);
         }
