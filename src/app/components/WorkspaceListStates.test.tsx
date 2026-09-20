@@ -16,6 +16,8 @@ vi.mock('../../store/workspaceStoreHydration', async () => {
 });
 
 beforeEach(() => {
+  document.body.dataset.bootSkeleton = '';
+  vi.mocked(ensureWorkspaceHydrated).mockResolvedValue(undefined);
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-30T00:00:00.000Z')));
 });
 
@@ -37,6 +39,8 @@ it('shows a retryable error when workspace hydration fails', async () => {
   renderWithLocalization(<WorkspaceListLoadingState />);
 
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load the workspace.');
+  expect(document.body.dataset.bootSkeleton).toBe('hidden');
+  expect(useWorkspaceStore.getState().isHydrated).toBe(false);
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

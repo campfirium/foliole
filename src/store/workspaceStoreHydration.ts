@@ -24,6 +24,10 @@ export function ensureWorkspaceHydrated() {
   useWorkspaceStore.setState({ workspaceHydrationError: null });
   workspaceHydrationPromise = Promise.resolve(useWorkspaceStore.persist.rehydrate())
     .then(async () => {
+      const state = useWorkspaceStore.getState();
+      if (!state.isHydrated) {
+        throw new Error(state.workspaceHydrationError ?? 'Could not load the workspace.');
+      }
       const payload = await loadEditorOperationHistoryFromRuntime();
       if (payload !== null) {
         useWorkspaceStore.setState({ editorOperationHistory: deserializeEditorOperationHistory(payload) });

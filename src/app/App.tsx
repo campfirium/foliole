@@ -208,7 +208,7 @@ export function App({ initialLanguagePreference, providerBridge }: AppProps = {}
         return;
       }
       didRequestHydration = true;
-      void ensureWorkspaceRuntimeHydrated();
+      void ensureWorkspaceRuntimeHydrated().catch(() => undefined);
     };
     const firstFrameId = window.requestAnimationFrame(() => {
       secondFrameId = window.requestAnimationFrame(() => {

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton, AppEmptyState, AppErrorState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -6,6 +8,9 @@ import { ensureWorkspaceHydrated } from '../../store/workspaceStoreHydration';
 export function WorkspaceListLoadingState() {
   const t = useTranslation();
   const hydrationError = useWorkspaceStore((state) => state.workspaceHydrationError);
+  useEffect(() => {
+    if (hydrationError) document.body.dataset.bootSkeleton = 'hidden';
+  }, [hydrationError]);
   if (hydrationError) {
     return (
       <aside
@@ -14,7 +19,7 @@ export function WorkspaceListLoadingState() {
       >
         <AppErrorState
           action={
-            <AppButton onClick={() => void ensureWorkspaceHydrated()} size="sm">
+            <AppButton onClick={() => void ensureWorkspaceHydrated().catch(() => undefined)} size="sm">
               {t('desktop.nodeList.retry')}
             </AppButton>
           }

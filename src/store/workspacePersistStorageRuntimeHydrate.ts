@@ -25,7 +25,6 @@ import { hydrateActiveNodeDocument } from './workspacePersistStorageRuntimeActiv
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import {
-  isWorkspaceRestoreHydratePending,
   prepareWorkspaceRestoreHydrate
 } from './workspaceRestoreSession';
 
@@ -196,11 +195,10 @@ export async function getRuntimeWorkspaceState(name: string) {
     logRuntimeError('workspace hydrate failed', {
       area: 'persistence',
       action: 'hydrate_workspace_state',
-      fallback: 'return_null',
+      fallback: 'report_hydration_failure',
       storageKey: name,
       error
     });
-    if (isWorkspaceRestoreHydratePending()) throw error;
-    return null;
+    throw error;
   }
 }
