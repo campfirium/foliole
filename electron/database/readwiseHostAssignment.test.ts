@@ -38,6 +38,7 @@ import {
   canCurrentHostRunReadwise,
   loadReadwiseHostAssignment
 } from './readwiseHostAssignment.js';
+import { saveReadwiseOwnerGuard } from './readwiseOwnerGuard.js';
 import { saveJsonSetting } from './settingsStore.js';
 
 let tempRoot = '';
@@ -56,7 +57,24 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('keeps Readwise active until a Host is explicitly selected, then runs only on that Host', () => {
+function expectOwnerSettingSynced() {
+  expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
+    `SELECT s.sync_dirty FROM sync_object_state s
+     JOIN setting_records r ON s.object_id = r.scope || ':' || r.platform || ':' || r.form_factor || ':' || r.host_name || ':' || r.key
+     WHERE s.object_type = 'setting' AND r.key = 'readwise_active_host'`
+  )).toEqual({ sync_dirty: 1 });
+}
+
+async function makeRelaySourceReady() {
+  const rootPath = path.join(tempRoot, 'Readwise');
+  await fs.mkdir(rootPath, { recursive: true });
+  upsertDesktopSource({
+    configRef: 'readwise-a', rootPath, sourceType: 'readwise',
+    typeSettings: { keepState: 'draft' }, updatedAt: 'now'
+  });
+}
+
+it('pauses an unassigned workgroup and rejects a switch without a handoff', async () => {
   const currentHost = 'This Mac';
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -86,24 +104,57 @@ it('keeps Readwise active until a Host is explicitly selected, then runs only on
       { host_name: 'Office PC', platform: 'darwin' },
       { host_name: currentHost, platform: 'darwin' }
     ],
-    is_active: true,
-    legacy_unassigned: true
+    is_active: false,
+    legacy_unassigned: true,
+    activation_blocked_reason: 'connection-unavailable'
   });
+  await makeRelaySourceReady();
+  expect(loadReadwiseHostAssignment()).toMatchObject({
+    is_active: false, activation_blocked_reason: 'group-quiescence-required'
+  });
+  expect(canCurrentHostRunReadwise()).toBe(false);
   saveJsonSetting('readwise_active_host', { host_name: 'Office PC' });
 
   expect(loadReadwiseHostAssignment()).toMatchObject({
-    active_host_name: 'Office PC', current_host_name: currentHost, is_active: false, legacy_unassigned: false
+    active_host_name: 'Office PC', current_host_name: currentHost, is_active: false,
+    legacy_unassigned: false, activation_blocked_reason: 'handoff-required'
   });
   expect(canCurrentHostRunReadwise()).toBe(false);
+  expect(() => activateReadwiseOnThisHost()).toThrow('readwise_handoff-required');
 
+  driver.execute("UPDATE sync_group_devices SET state = 'left' WHERE device_identity_key = 'device-office-pc'");
+  saveJsonSetting('readwise_active_host', null);
   expect(activateReadwiseOnThisHost()).toMatchObject({
-    active_host_name: currentHost, current_host_name: currentHost, is_active: true, legacy_unassigned: false
+    active_host_name: currentHost, active_device_identity_key: 'device-this-mac',
+    current_host_name: currentHost, is_active: true, legacy_unassigned: false
   });
-  expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
-    `SELECT s.sync_dirty FROM sync_object_state s
-     JOIN setting_records r ON s.object_id = r.scope || ':' || r.platform || ':' || r.form_factor || ':' || r.host_name || ':' || r.key
-     WHERE s.object_type = 'setting' AND r.key = 'readwise_active_host'`
-  )).toEqual({ sync_dirty: 1 });
+  expectOwnerSettingSynced();
+  saveReadwiseOwnerGuard({ epoch: 1, groupId: 'group', mode: 'relay',
+    ownerId: 'device-this-mac', state: 'relinquished', targetId: 'device-office-pc' });
+  expect(loadReadwiseHostAssignment()).toMatchObject({
+    is_active: false, activation_blocked_reason: 'handoff-in-progress'
+  });
+  expect(canCurrentHostRunReadwise()).toBe(false);
+});
+
+it('does not replace a newer local stop record after an unassigned library rollback', async () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+    VALUES ('group', 'Workgroup', 'workgroup-key', 'now', 'now')`);
+  driver.execute(`INSERT INTO sync_group_local_state
+    (singleton_id, group_id, local_device_identity_key, state, updated_at)
+    VALUES (1, 'group', 'device-this-mac', 'active', 'now')`);
+  driver.execute(`INSERT INTO sync_group_devices
+    (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+     platform, state, joined_at, left_at, last_seen_at, updated_at)
+    VALUES ('group', 'device-this-mac', 'anchor', '/library/mac', 'This Mac',
+      'macOS', 'active', 'now', NULL, 'now', 'now')`);
+  await makeRelaySourceReady();
+  saveReadwiseOwnerGuard({ epoch: 3, groupId: 'group', mode: 'relay',
+    ownerId: 'device-this-mac', state: 'relinquished', targetId: 'other-device' });
+  expect(() => activateReadwiseOnThisHost()).toThrow('readwise_guard-history');
+  expect(loadReadwiseHostAssignment()).toMatchObject({ is_active: false,
+    legacy_unassigned: true, activation_blocked_reason: 'guard-history' });
 });
 
 it('runs Readwise for the current Host when another enabled category directory is absent', async () => {

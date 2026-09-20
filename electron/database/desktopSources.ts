@@ -181,11 +181,12 @@ function transferReadwiseActiveHost(
   currentHostName: string,
   updatedAt: string
 ) {
-  const valueJson = JSON.stringify({ host_name: currentHostName });
-  driver.execute(`UPDATE settings SET value = ?, updated_at = ? WHERE key = 'readwise_active_host'
-    AND json_extract(value, '$.host_name') = ?`, [valueJson, updatedAt, previousHostName]);
-  driver.execute(`UPDATE setting_records SET value_json = ?, updated_at = ? WHERE key = 'readwise_active_host'
-    AND json_extract(value_json, '$.host_name') = ?`, [valueJson, updatedAt, previousHostName]);
+  driver.execute(`UPDATE settings SET value = json_set(value, '$.host_name', ?), updated_at = ?
+    WHERE key = 'readwise_active_host' AND json_extract(value, '$.host_name') = ?`,
+  [currentHostName, updatedAt, previousHostName]);
+  driver.execute(`UPDATE setting_records SET value_json = json_set(value_json, '$.host_name', ?), updated_at = ?
+    WHERE key = 'readwise_active_host' AND json_extract(value_json, '$.host_name') = ?`,
+  [currentHostName, updatedAt, previousHostName]);
 }
 
 function recordHostProjectionSync(

@@ -78,11 +78,15 @@ export function loadReadwiseApiConnection() {
   return toPublicReadwiseApiConnection();
 }
 
+function canPrepareLocalConnection() {
+  return loadReadwiseHostAssignment().is_active || Boolean(loadReadwiseRemoteSource());
+}
+
 export async function connectReadwiseApiFromClipboard(
   dependencies: ConnectionDependencies = {},
   connectionIntent: NativeReadwiseConnectionIntent = 'normal'
 ): Promise<NativeReadwiseApiConnectionResult> {
-  if (!loadReadwiseHostAssignment().is_active) return result('not_active_host');
+  if (!canPrepareLocalConnection()) return result('not_active_host');
   const settings = loadStoredReadwiseHostSettings();
   if (loadReadwiseSourceModeState().mode !== 'api' && connectionIntent !== 'migration') {
     return result('source_mode_mismatch');
@@ -140,7 +144,6 @@ export async function connectReadwiseApiFromClipboard(
 }
 
 export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
-  if (!loadReadwiseHostAssignment().is_active) return result('not_active_host');
   const settings = loadStoredReadwiseHostSettings();
   const secretRef = settings.apiConnection.secretRef;
   let previousToken = '';

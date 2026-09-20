@@ -16,12 +16,16 @@ import type {
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeImportContract';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
+import { SettingsSection } from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import type { ReadwiseApiModeSettings } from './ReadwiseApiModeSettingsRows';
+import { ReadwiseApiConnectionRow } from './ReadwiseApiModeSettingsRows';
 import { ReadwiseFolderSettingsSections } from './ReadwiseFolderSettingsSections';
 import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
+import { ReadwiseRelayPreparationSection } from './ReadwiseRelayPreparationSection';
 import { ReadwiseSourceModeSection } from './ReadwiseSourceModeSection';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
 import {
@@ -141,12 +145,26 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
   const hostAssignment = useReadwiseHostAssignment();
   const hasActiveSyncGroup = useActiveSyncGroup();
+  const t = useTranslation();
   if (hasActiveSyncGroup && hostAssignment.assignment?.is_active === false) {
     return (
-      <ReadwiseHostAssignmentRow
-        assignment={hostAssignment.assignment}
-        onActivate={() => void hostAssignment.activate()}
-      />
+      <>
+        <ReadwiseHostAssignmentRow
+          assignment={hostAssignment.assignment}
+          error={hostAssignment.error}
+          onActivate={() => void hostAssignment.activate()}
+          pending={hostAssignment.pending}
+        />
+        {props.readwiseSourceMode === 'api' ? (
+          <SettingsSection ariaLabel={t('desktop.readwise.api.connection.title')}>
+            <ReadwiseApiConnectionRow migration={false}
+              onConnectionChange={hostAssignment.refresh} />
+          </SettingsSection>
+        ) : (props.readwiseSourceMode ?? 'relay') === 'relay' ? (
+          <ReadwiseRelayPreparationSection config={props.config} onSave={props.onSave}
+            readwiseRootPath={props.readwiseRootPath} readwiseSources={props.readwiseSources} />
+        ) : null}
+      </>
     );
   }
   return <ReadwiseLocalSettingsContent {...props} />;

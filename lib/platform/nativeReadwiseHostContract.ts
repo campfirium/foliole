@@ -5,8 +5,14 @@ export interface NativeReadwiseWorkgroupHost {
 
 export interface NativeReadwiseHostAssignment {
   active_host_name: string | null;
+  active_device_identity_key: string | null;
+  active_owner_epoch: number;
   current_host_name: string;
+  current_device_identity_key: string | null;
   hosts: NativeReadwiseWorkgroupHost[];
   is_active: boolean;
   legacy_unassigned: boolean;
+  activation_blocked_reason:
+    | 'handoff-required' | 'handoff-in-progress' | 'group-quiescence-required'
+    | 'connection-unavailable' | 'guard-unavailable' | 'guard-history' | null;
 }

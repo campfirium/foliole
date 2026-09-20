@@ -33,6 +33,7 @@ const syncPushMock = vi.hoisted(() => ({
 const memberStateMock = vi.hoisted(() => ({
   accept: vi.fn(() => ({ localExited: false, state: { contract_version: 1 } }))
 }));
+const readwiseStopMock = vi.hoisted(() => ({ handle: vi.fn() }));
 const workgroupHttpMock = vi.hoisted(() => ({
   decryptWorkgroupRequestBody: vi.fn((_request, body: string) => Buffer.from(body)),
   writeWorkgroupBinary: vi.fn()
@@ -60,6 +61,10 @@ vi.mock('./desktopSyncGroupMemberState.js', () => ({
 }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: vi.fn()
+}));
+vi.mock('./readwiseOwnerStop.js', () => ({
+  READWISE_OWNER_STOP_PATH: '/companion/readwise-owner-stop',
+  handleReadwiseOwnerStop: readwiseStopMock.handle
 }));
 vi.mock('./companionLanResponses.js', () => ({
   writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
@@ -103,6 +108,28 @@ it('binds sync push provenance to the authenticated Host', async () => {
 
   expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'Android A5');
   expect(writeJson).toHaveBeenCalledWith(request, response, 200, { acks: [] }, 'POST, OPTIONS');
+});
+
+it('routes Readwise stop only after member authentication and decryption', async () => {
+  authMock.authenticateCompanionRequest.mockReturnValue({
+    device_id: 'candidate', device_name: 'Candidate', ok: true
+  } as never);
+  readwiseStopMock.handle.mockReturnValue({ status: 'stopped', requestId: 'request-one' });
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const requestBody = JSON.stringify({ requestId: 'request-one' });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = '/companion/readwise-owner-stop';
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+  expect(authMock.authenticateCompanionRequest).toHaveBeenCalledWith({
+    allowUnknownDevice: false, bodyText: requestBody, request, requireMemberState: true
+  });
+  expect(workgroupHttpMock.decryptWorkgroupRequestBody).toHaveBeenCalledWith(request, requestBody);
+  expect(readwiseStopMock.handle).toHaveBeenCalledWith(requestBody, 'candidate');
+  expect(writeJson).toHaveBeenCalledWith(request, response, 200,
+    { status: 'stopped', requestId: 'request-one' }, 'POST, OPTIONS');
 });
 
 function createResponse() {

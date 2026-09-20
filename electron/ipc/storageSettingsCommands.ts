@@ -3,10 +3,7 @@ import type { BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
-import {
-  activateReadwiseOnThisHost,
-  loadReadwiseHostAssignment
-} from '../database/readwiseHostAssignment.js';
+import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   resetSourceDispositions,
@@ -45,6 +42,7 @@ import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
+import { activateReadwiseWithHandoff } from '../sync/readwiseOwnerHandoff.js';
 
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
@@ -133,7 +131,7 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   if (cutoverResult !== undefined) return cutoverResult;
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
   if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) {
-    const result = activateReadwiseOnThisHost();
+    const result = await activateReadwiseWithHandoff();
     refreshReadwiseApiScheduler();
     return result;
   }

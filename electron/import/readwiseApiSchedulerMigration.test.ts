@@ -20,8 +20,10 @@ it('runs a reopened one-time migration at startup while the durable mode remains
       status: 'migration-in-progress' as const, version: 2 as const
     })),
     loadHostAssignment: vi.fn(() => ({
-      active_host_name: 'Mac', current_host_name: 'Mac', hosts: [], is_active: true,
-      legacy_unassigned: false
+      active_host_name: 'Mac', active_device_identity_key: 'mac-device',
+      active_owner_epoch: 1,
+      current_host_name: 'Mac', current_device_identity_key: 'mac-device',
+      hosts: [], is_active: true, legacy_unassigned: false, activation_blocked_reason: null
     })),
     loadMigrationPending: vi.fn(() => false),
     loadScheduleState: vi.fn(() => ({
@@ -73,8 +75,10 @@ it('keeps cutover and initial candidate progress independent', () => {
       totalCandidateCount: 31, unmatchedCount: 1, version: 1 as const
     })),
     loadHostAssignment: vi.fn(() => ({
-      active_host_name: 'Mac', current_host_name: 'Mac', hosts: [], is_active: true,
-      legacy_unassigned: false
+      active_host_name: 'Mac', active_device_identity_key: 'mac-device',
+      active_owner_epoch: 1,
+      current_host_name: 'Mac', current_device_identity_key: 'mac-device',
+      hosts: [], is_active: true, legacy_unassigned: false, activation_blocked_reason: null
     })),
     loadMigrationPending: vi.fn(() => false),
     loadScheduleState: vi.fn(() => ({

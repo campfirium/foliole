@@ -30,5 +30,14 @@ export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.host.path': 'Path',
   'desktop.readwise.host.unavailable': 'Host unavailable',
   'desktop.readwise.host.pathUnavailable': 'Path unavailable',
-  'desktop.readwise.host.switch': 'Switch to this host'
+  'desktop.readwise.host.switch': 'Switch to this host',
+  'desktop.readwise.host.notSelected': 'No device selected',
+  'desktop.readwise.host.useThisDevice': 'Use this device',
+  'desktop.readwise.host.waitForDevices': 'Readwise is paused. Both desktops must be available to choose a device.',
+  'desktop.readwise.host.waitForHandoff': 'Both desktops must be available to switch.',
+  'desktop.readwise.host.handoffInProgress': 'This device has stopped. Complete the switch on the other desktop.',
+  'desktop.readwise.host.restoreGuard': 'Readwise is paused until this device is reconnected.',
+  'desktop.readwise.host.guardHistory': 'A previous handoff is recorded on this device. Readwise stays paused until ownership is recovered.',
+  'desktop.readwise.host.retry': 'Could not change the responsible device. Check both desktops and try again.',
+  'desktop.readwise.host.connectFirst': 'Connect Readwise on this device first.'
 } as const;

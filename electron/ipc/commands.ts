@@ -110,6 +110,7 @@ function shouldCoordinateStorageDispatch(command: string) {
 }
 
 const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
+  NATIVE_COMMANDS.activateReadwiseOnThisHost,
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.importRemoteImageAttachment,
   NATIVE_COMMANDS.loadRemoteImageMetadata,

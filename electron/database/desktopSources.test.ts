@@ -25,6 +25,7 @@ import {
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
+import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 let tempRoot = '';
 
@@ -56,6 +57,10 @@ it('resolves current addresses without rewriting locations when Host or Source c
   });
   expect(resolveDesktopSourceAddress(source.source_ref, location)).toBe(path.join(secondRoot, location));
 
+  saveJsonSetting('readwise_active_host', {
+    device_identity_key: 'device-a', epoch: 2, host_name: 'Host A'
+  });
+
   openDatabaseConnection().driver.execute(
     "UPDATE settings SET value = '\"Host B\"' WHERE key = 'host_name'"
   );
@@ -70,6 +75,9 @@ it('resolves current addresses without rewriting locations when Host or Source c
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT host_name, root_path FROM desktop_sources WHERE source_ref = ?', [source.source_ref]
   )).toEqual({ host_name: 'Host B', root_path: secondRoot });
+  expect(loadJsonSetting('readwise_active_host')).toMatchObject({
+    device_identity_key: 'device-a', epoch: 2, host_name: 'Host B'
+  });
   expect(location).toBe('nested/topic.md');
 });
 

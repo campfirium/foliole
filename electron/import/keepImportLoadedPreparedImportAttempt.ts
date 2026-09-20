@@ -1,5 +1,6 @@
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import {
   recordReadwiseImportSourceMapping,
   recordWatchedImportSourceMapping
@@ -120,6 +121,13 @@ function recordWatchedMapping(
   });
 }
 
+function assertReadwiseOwner(config: KeepImportRuleConfig, signal?: AbortSignal) {
+  throwIfKeepImportAborted(signal);
+  if (config.sourceType === 'readwise' && !canCurrentHostRunReadwise('relay')) {
+    throw new Error('readwise_host_not_active');
+  }
+}
+
 export async function runLoadedPreparedImportAttempt(input: {
   automaticDuplicateNoop: boolean;
   config: KeepImportRuleConfig;
@@ -133,7 +141,7 @@ export async function runLoadedPreparedImportAttempt(input: {
     primary: { mtimeMs: number; sizeBytes: number };
   };
 }) {
-  throwIfKeepImportAborted(input.signal);
+  assertReadwiseOwner(input.config, input.signal);
   const highlightTotalCount = countPreparedImportHighlights(input.prepared);
   const duplicateNoop = input.automaticDuplicateNoop
     ? persistAutomaticDuplicateNoop({
@@ -145,6 +153,7 @@ export async function runLoadedPreparedImportAttempt(input: {
     })
     : null;
   if (duplicateNoop) {
+    assertReadwiseOwner(input.config);
     const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);
     publishNoopHighlightProgress({
       highlightTotalCount,
@@ -166,9 +175,11 @@ export async function runLoadedPreparedImportAttempt(input: {
     ...(input.signal ? { signal: input.signal } : {}),
     sourceName: input.source.sourceName
   });
+  assertReadwiseOwner(input.config);
   const importStatus = resolveKeepImportResultStatus(indexedRecord);
   persistKeepImportState(input.config, input.source, input.sourceSignature, indexedRecord, importStatus, input.hasSourceUpdate);
   recordWatchedMapping(input, indexedRecord);
+  assertReadwiseOwner(input.config);
   const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);
   return {
     detail: cleanupDetail ?? resolveKeepImportResultDetail(indexedRecord, importStatus),

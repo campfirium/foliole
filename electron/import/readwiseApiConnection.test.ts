@@ -106,6 +106,19 @@ it('blocks non-active Hosts before reading the clipboard or sending a request', 
   expect(fetchImpl).not.toHaveBeenCalled();
 });
 
+it('prepares and removes a local token on a non-active Host for an existing shared source', async () => {
+  state.active = false;
+  state.remoteSource = { connectionRef: 'readwise-existing' };
+  const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl }))
+    .resolves.toMatchObject({ status: 'connected' });
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(state.remoteSource).toEqual({ connectionRef: 'readwise-existing' });
+  expect(disconnectReadwiseApi()).toMatchObject({ status: 'disconnected' });
+  expect(state.secret).toBe('');
+});
+
 it('blocks relay mode before reading the clipboard or sending a request', async () => {
   state.sourceMode = 'relay';
   const fetchImpl = vi.fn();

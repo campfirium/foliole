@@ -20,7 +20,10 @@ const SOURCE = {
   updatedAt: '2026-09-08T00:00:00.000Z', version: 1 as const
 };
 const HOST_ASSIGNMENT = {
-  active_host_name: 'Mac', current_host_name: 'Mac', hosts: [], legacy_unassigned: false
+  active_host_name: 'Mac', active_device_identity_key: 'mac-device',
+  active_owner_epoch: 1,
+  current_host_name: 'Mac', current_device_identity_key: 'mac-device',
+  hosts: [], legacy_unassigned: false, activation_blocked_reason: null
 };
 
 function updateCandidateProgress(progress: ReturnType<typeof candidateProgress>, completed: number, total: number, failed = 0) {

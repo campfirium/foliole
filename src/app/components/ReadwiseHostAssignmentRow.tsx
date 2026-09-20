@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type {
   NativeReadwiseHostAssignment,
@@ -21,6 +21,11 @@ const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux'
 
 export function useReadwiseHostAssignment() {
   const [assignment, setAssignment] = useState<NativeReadwiseHostAssignment | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
+  const refresh = useCallback(async () => {
+    setAssignment(await loadReadwiseHostAssignmentFromRuntime());
+  }, []);
   useEffect(() => {
     let active = true;
     void loadReadwiseHostAssignmentFromRuntime().then((value) => {
@@ -30,7 +35,16 @@ export function useReadwiseHostAssignment() {
   }, []);
   return {
     assignment,
-    activate: async () => setAssignment(await activateReadwiseOnThisHostInRuntime())
+    error,
+    pending,
+    refresh,
+    activate: async () => {
+      setPending(true);
+      setError(false);
+      try { setAssignment(await activateReadwiseOnThisHostInRuntime()); }
+      catch { setError(true); await refresh(); }
+      finally { setPending(false); }
+    }
   };
 }
 
@@ -44,7 +58,9 @@ function activeHost(assignment: NativeReadwiseHostAssignment): NativeReadwiseWor
 
 export function ReadwiseHostAssignmentRow(props: {
   assignment: NativeReadwiseHostAssignment | null;
+  error?: boolean;
   onActivate: () => void;
+  pending?: boolean;
 }) {
   const t = useTranslation();
   if (!props.assignment || props.assignment.is_active) return null;
@@ -53,15 +69,30 @@ export function ReadwiseHostAssignmentRow(props: {
   const unavailable = !host || (
     host.host_name === props.assignment.active_host_name && host.platform === null
   );
+  const reason = props.assignment.activation_blocked_reason;
+  const description = props.error ? t('desktop.readwise.host.retry')
+    : reason === 'group-quiescence-required'
+    ? t('desktop.readwise.host.waitForDevices')
+    : reason === 'handoff-required' ? t('desktop.readwise.host.waitForHandoff')
+      : reason === 'handoff-in-progress' ? t('desktop.readwise.host.handoffInProgress')
+      : reason === 'guard-unavailable' ? t('desktop.readwise.host.restoreGuard')
+      : reason === 'guard-history' ? t('desktop.readwise.host.guardHistory')
+      : reason === 'connection-unavailable' ? t('desktop.readwise.host.connectFirst')
+        : !unavailable && host?.platform ? PLATFORM_NAMES[host.platform] ?? host.platform : undefined;
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.host.title')} title={t('desktop.readwise.host.title')}>
       <SettingsRow
-        description={!unavailable && host?.platform ? PLATFORM_NAMES[host.platform] ?? host.platform : undefined}
-        title={!unavailable && host ? host.host_name : t('desktop.readwise.host.unavailable')}
+        description={description}
+        title={props.assignment.legacy_unassigned ? t('desktop.readwise.host.notSelected')
+          : !unavailable && host ? host.host_name : t('desktop.readwise.host.unavailable')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <AppButton onClick={props.onActivate} size="sm">
-            {t('desktop.readwise.host.switch')}
+          <AppButton disabled={props.pending || reason === 'connection-unavailable' ||
+            reason === 'guard-history' ||
+            reason === 'handoff-in-progress'}
+            loading={Boolean(props.pending)} onClick={props.onActivate} size="sm">
+            {props.assignment.legacy_unassigned
+              ? t('desktop.readwise.host.useThisDevice') : t('desktop.readwise.host.switch')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>

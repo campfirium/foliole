@@ -32,5 +32,14 @@ export const ZH_HANS_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS: Partial<Record<Tran
   'desktop.readwise.host.path': '路径',
   'desktop.readwise.host.unavailable': '主机不可用',
   'desktop.readwise.host.pathUnavailable': '路径不可用',
-  'desktop.readwise.host.switch': '切换到此主机'
+  'desktop.readwise.host.switch': '切换到此主机',
+  'desktop.readwise.host.notSelected': '尚未指定设备',
+  'desktop.readwise.host.useThisDevice': '由此设备负责',
+  'desktop.readwise.host.waitForDevices': 'Readwise 已暂停。选择负责设备时，两台桌面设备都需要在线。',
+  'desktop.readwise.host.waitForHandoff': '切换时两台桌面设备都需要在线。',
+  'desktop.readwise.host.handoffInProgress': '此设备已停止运行，请在另一台桌面设备完成切换。',
+  'desktop.readwise.host.restoreGuard': 'Readwise 已暂停，请重新连接此设备。',
+  'desktop.readwise.host.guardHistory': '此设备留有上次交接记录。恢复执行权之前，Readwise 将保持暂停。',
+  'desktop.readwise.host.retry': '未能切换负责设备，请检查两台桌面设备后重试。',
+  'desktop.readwise.host.connectFirst': '请先在此设备连接 Readwise。'
 };

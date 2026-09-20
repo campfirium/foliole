@@ -1,87 +1,119 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication, Locator, Page, TestInfo } from '@playwright/test';
-
-import {
-  applyReadwiseRootPath,
-  createDefaultImportManagerSettings
-} from '../../lib/core/import/importManagerSettings';
+import type { ElectronApplication } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
-const ARTIFACT_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance');
-const READWISE_ROOT = 'D:\\Readwise Reader';
+const GROUP_ID = 't204-readwise-owner-group';
+const LOCAL_ID = 't204-local';
+const REMOTE_ID = 't204-remote';
+const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t204');
 
-async function seedRemoteActiveHost(desktopApp: ElectronApplication) {
-  await desktopApp.evaluate(async ({ app }, cwd) => {
-    const moduleApi = process.getBuiltinModule('module');
-    const pathApi = process.getBuiltinModule('path');
-    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string) {
+  await app.evaluate(async (_electron, fixture) => {
+    const crypto = process.getBuiltinModule('crypto')!;
+    const fs = process.getBuiltinModule('fs')!;
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
+    const imports = require(pathApi.join(process.cwd(), 'dist/electron/import/importManagerSettings.js'));
+    const defaults = require(pathApi.join(process.cwd(), 'dist/lib/core/import/importManagerSettings.js'));
+    fs.mkdirSync(fixture.root, { recursive: true });
     await connection.runWithDatabaseConnectionOwner(() => {
-      connection.openDatabaseConnection().sqlite.exec(`
-        INSERT OR REPLACE INTO sync_groups
-          (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-          VALUES ('t135-19-group', 'Workgroup', 't135-19-timeline', 'This Mac', 'now', 'now');
-        INSERT OR REPLACE INTO sync_group_members
-          (group_id, host_name, host_platform, state, approved_by_host_name,
-           authorization_id, joined_at, updated_at)
-          VALUES
-          ('t135-19-group', 'This Mac', 'darwin', 'active', 'This Mac', 'local-auth', 'now', 'now'),
-          ('t135-19-group', 'Office PC', 'win32', 'active', 'This Mac', 'remote-auth', 'now', 'now');
-        INSERT OR REPLACE INTO sync_group_local_state
-          (singleton_id, group_id, local_host_name, member_state, updated_at)
-          VALUES (1, 't135-19-group', 'This Mac', 'active', 'now');
-        INSERT OR REPLACE INTO settings (key, value, updated_at)
-          VALUES ('readwise_active_host', '{"host_name":"Office PC"}', 'now');
-      `);
+      const driver = connection.openDatabaseConnection().driver;
+      const hostName = host.loadReadwiseHostAssignment().current_host_name;
+      driver.execute(`INSERT INTO sync_groups
+        (group_id,display_name,workgroup_key,created_at,updated_at)
+        VALUES (?,?,?,?,?)`, [fixture.groupId, 'Workgroup', crypto.randomBytes(32).toString('base64url'), 'now', 'now']);
+      driver.execute(`INSERT INTO sync_group_local_state
+        (singleton_id,group_id,local_device_identity_key,state,updated_at)
+        VALUES (1,?,?,?,?)`, [fixture.groupId, fixture.localId, 'active', 'now']);
+      for (const [id, name, platform] of [[fixture.localId, hostName, process.platform],
+        [fixture.remoteId, 'Offline Desktop', 'Windows 11']]) {
+        driver.execute(`INSERT INTO sync_group_devices
+          (group_id,device_identity_key,device_anchor,canonical_library_path,device_name,
+           platform,state,joined_at,left_at,last_seen_at,updated_at)
+          VALUES (?,?,?,?,?,?,'active','now',NULL,'now','now')`,
+        [fixture.groupId, id, `${id}-anchor`, `/library/${id}`, name, platform]);
+      }
+      const current = imports.loadImportManagerSettings();
+      const sources = defaults.applyReadwiseRootPath(current.readwiseSources, fixture.root);
+      fs.mkdirSync(sources[0].primaryPath, { recursive: true });
+      fs.mkdirSync(sources[0].highlightPath, { recursive: true });
+      imports.saveImportManagerSettings({ ...current, readwiseRootPath: fixture.root,
+        readwiseSources: sources.map((source: { kind?: string; keepState: string }, index: number) =>
+          index === 0 ? { ...source, keepState: 'draft' } : source) });
     });
-    return app.getPath('userData');
-  }, process.cwd());
+  }, { groupId: GROUP_ID, localId: LOCAL_ID, remoteId: REMOTE_ID, root: sourceRoot });
 }
 
-async function capture(dialog: Locator, testInfo: TestInfo, name: string) {
-  await mkdir(ARTIFACT_DIR, { recursive: true });
-  const screenshot = path.join(ARTIFACT_DIR, `${name}.png`);
-  await dialog.screenshot({ path: screenshot });
-  await testInfo.attach(name, { contentType: 'image/png', path: screenshot });
+async function readOwnerFacts(app: ElectronApplication) {
+  return app.evaluate((_electron, groupId) => {
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const assignment = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
+    const guard = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseOwnerGuard.js'));
+    return connection.runWithDatabaseConnectionOwner(() => ({
+      assignment: assignment.loadReadwiseHostAssignment(),
+      canRun: assignment.canCurrentHostRunReadwise('relay'),
+      guard: guard.loadReadwiseOwnerGuard(groupId)
+    }));
+  }, GROUP_ID);
 }
 
-async function expectLocalSettingsRestored(page: Page, dialog: Locator, testInfo: TestInfo) {
-  await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
-  const rootFolder = dialog.getByRole('button', { name: /^(Readwise root folder|Readwise 根文件夹)$/ });
-  await rootFolder.hover();
-  await expect(page.getByRole('tooltip')).toHaveText(READWISE_ROOT);
-  await capture(dialog, testInfo, 't135-19-readwise-local-restored');
+async function updateGroup(app: ElectronApplication, action: 'leave-remote' | 'rollback-owner') {
+  await app.evaluate((_electron, fixture) => {
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const settings = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
+    connection.runWithDatabaseConnectionOwner(() => {
+      if (fixture.action === 'leave-remote') {
+        connection.openDatabaseConnection().driver.execute(
+          "UPDATE sync_group_devices SET state='left' WHERE device_identity_key=?", [fixture.remoteId]
+        );
+      } else settings.saveJsonSetting('readwise_active_host', null);
+    });
+  }, { action, remoteId: REMOTE_ID });
 }
 
-test('keeps Readwise settings private to their Host when active ownership changes', async ({
-  desktopApp,
-  desktopWindow
-}, testInfo) => {
-  const settings = createDefaultImportManagerSettings();
-  settings.readwiseRootPath = READWISE_ROOT;
-  settings.readwiseSources = applyReadwiseRootPath(settings.readwiseSources, READWISE_ROOT);
-  await desktopWindow.evaluate(async (nextSettings) => {
-    await globalThis.window?.electronAPI?.invoke('save_import_manager_settings', { settings: nextSettings });
-  }, settings);
-  await seedRemoteActiveHost(desktopApp);
+test('keeps an unassigned library paused, survives offline retry, and rejects owner rollback', async ({
+  desktopApp, desktopSession, desktopWindow
+}) => {
+  test.setTimeout(180_000);
+  await expectWorkspaceShell(desktopWindow);
+  const sourceRoot = path.join(desktopSession.target.runtimeStateRoot, 'Readwise');
+  await seedIsolatedLibrary(desktopApp, sourceRoot);
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
-
-  const dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
-  const hostRegion = dialog.getByRole('region', { name: /^(Current active host|当前生效主机)$/ });
-  await expect(hostRegion.getByText('Office PC', { exact: true })).toBeVisible();
-  await expect(hostRegion.getByText('Windows', { exact: true })).toBeVisible();
-  await expect(dialog.getByText(READWISE_ROOT, { exact: true })).toHaveCount(0);
+  let dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
+  const host = dialog.getByRole('region', { name: /^(Current active host|当前生效主机)$/ });
+  await expect(host.getByText(/^(No device selected|尚未指定设备)$/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Readwise root folder|Readwise 根文件夹)$/ })).toBeVisible();
   await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toHaveCount(0);
-  await capture(dialog, testInfo, 't135-19-readwise-remote-private');
+  await host.getByRole('button', { name: /^(Use this device|由此设备负责)$/ }).click();
+  await expect(host.getByText(/Could not change|未能切换/)).toBeVisible();
+  expect((await readOwnerFacts(desktopApp)).guard).toBeNull();
 
-  const switchToThisHost = hostRegion.getByRole('button', { name: /^(Switch to this host|切换到此主机)$/ });
-  await switchToThisHost.click();
-  await expect(switchToThisHost).toHaveCount(0);
-  await expectLocalSettingsRestored(desktopWindow, dialog, testInfo);
+  await updateGroup(desktopApp, 'leave-remote');
+  await desktopWindow.reload();
+  dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
+  await dialog.getByRole('button', { name: /^(Use this device|由此设备负责)$/ }).click();
+  await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
+  const active = await readOwnerFacts(desktopApp);
+  expect(active.assignment.is_active).toBe(true);
+  expect(active.guard).toMatchObject({ epoch: 1, ownerId: LOCAL_ID, state: 'active' });
+  expect(active.canRun).toBe(false);
+
+  await updateGroup(desktopApp, 'rollback-owner');
+  await desktopWindow.reload();
+  dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
+  await expect(dialog.getByRole('button', { name: /^(Use this device|由此设备负责)$/ })).toBeDisabled();
+  expect((await readOwnerFacts(desktopApp)).assignment.activation_blocked_reason).toBe('guard-history');
+  await mkdir(ARTIFACT_DIR, { recursive: true });
+  await dialog.screenshot({ path: path.join(ARTIFACT_DIR, 'readwise-owner-rollback.png') });
 });

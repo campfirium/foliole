@@ -19,6 +19,7 @@ import {
   SYNC_GROUP_MEMBER_STATE_PATH
 } from './desktopSyncGroupMemberState.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH } from './readwiseOwnerStop.js';
 import { loadResourceAvailability } from './resourceAvailability.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
@@ -31,6 +32,7 @@ type WriteJson = (
 ) => void;
 
 function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
+  if (parsedRequestUrl.pathname === READWISE_OWNER_STOP_PATH) return 'readwise-owner-stop';
   if (parsedRequestUrl.pathname === RESOURCE_AVAILABILITY_PATH) return 'resource-availability';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
@@ -66,7 +68,15 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
-  if (route === 'resource-availability') {
+  if (route === 'readwise-owner-stop') {
+    try {
+      writeJson(request, response, 200, handleReadwiseOwnerStop(bodyText, auth.device_id), 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 409, {
+        error: error instanceof Error ? error.message : 'readwise_stop_failed'
+      }, 'POST, OPTIONS');
+    }
+  } else if (route === 'resource-availability') {
     try {
       writeJson(request, response, 200, await loadResourceAvailability(bodyText), 'POST, OPTIONS');
     } catch (error) {

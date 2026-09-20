@@ -94,6 +94,10 @@ export function cancelReadwiseApiImport() {
   return { status: 'cancelled' as const };
 }
 
+export function isReadwiseApiImportActive() {
+  return activeApiImport !== null;
+}
+
 async function runNow(
   input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal
 ): Promise<NativeReadwiseImportRunResult> {
