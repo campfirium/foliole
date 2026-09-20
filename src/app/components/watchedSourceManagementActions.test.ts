@@ -20,7 +20,7 @@ vi.mock('../../shared/platform/desktop/sourceManagementRepository', () => ({
 }));
 vi.mock('../../shared/ui', () => ({ requestAppConfirmation: mocks.requestConfirmation }));
 
-import { removeWatchedSource, replaceWatchedSourceHost } from './watchedSourceManagementActions';
+import { removeWatchedSource } from './watchedSourceManagementActions';
 
 const t = (key: string, values?: Record<string, unknown>) => `${key}:${JSON.stringify(values ?? {})}`;
 
@@ -40,19 +40,4 @@ it('leaves watched Source data unchanged when removal is cancelled after preview
 
   expect(mocks.preview).toHaveBeenCalledWith({ action: 'remove_source', sourceRef: 'watched:a' });
   expect(mocks.confirm).not.toHaveBeenCalled();
-});
-
-it('confirms one atomic Host replacement only after showing affected Sources and Topics', async () => {
-  const refresh = vi.fn();
-  mocks.requestConfirmation.mockResolvedValue(true);
-
-  await replaceWatchedSourceHost('Old Mac', refresh, t as never);
-
-  expect(mocks.requestConfirmation).toHaveBeenCalledWith(expect.objectContaining({
-    description: expect.stringContaining('"paths":"/old/a, /old/b"')
-  }));
-  expect(mocks.confirm).toHaveBeenCalledWith({
-    action: 'replace_host', hostName: 'Old Mac', sourceType: 'watched'
-  });
-  expect(refresh).toHaveBeenCalledTimes(1);
 });

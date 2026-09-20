@@ -22,6 +22,7 @@ import { migrateCompanionHostPermanentState } from './companionHostPermanentStat
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
+import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
 type RepairName = keyof typeof REPAIRS;
@@ -45,7 +46,8 @@ const COLUMN_ACTIONS: Partial<Record<string, RepairName>> = {
   [ACTIONS.addImportSourcesRemoteAnnotationsJsonIfMissing]: 'importSourcesRemoteAnnotationsJson',
   [ACTIONS.addImportSourcesRemoteImportStateJsonIfMissing]: 'importSourcesRemoteImportStateJson',
   [ACTIONS.addExternalDocumentsReferenceKindIfMissing]: 'externalDocumentsReferenceKind',
-  [ACTIONS.addExternalDocumentsReferenceJsonIfMissing]: 'externalDocumentsReferenceJson'
+  [ACTIONS.addExternalDocumentsReferenceJsonIfMissing]: 'externalDocumentsReferenceJson',
+  [ACTIONS.addWatchedBindingsOwnerIfMissing]: 'watchedBindingsOwner'
 };
 
 export async function migrateCompanionDatabase(
@@ -62,6 +64,7 @@ export async function migrateCompanionDatabase(
   }
   await repairCompanionDatabase(db);
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
+  if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

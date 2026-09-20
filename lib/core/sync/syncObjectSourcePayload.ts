@@ -27,6 +27,7 @@ export async function writeSourceHostProjection(
     rootPath: string;
     sourceType: 'external' | 'watched';
     updatedAt: string;
+    preserveLocalPaths?: boolean;
   }
 ) {
   const pathFlavor = /^[A-Za-z]:[\\/]/u.test(input.rootPath) || input.rootPath.includes('\\')
@@ -36,13 +37,16 @@ export async function writeSourceHostProjection(
        root_path, path_flavor, type_settings_json, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(source_ref) DO UPDATE SET host_name = excluded.host_name,
-       host_platform = excluded.host_platform, root_path = excluded.root_path,
-       path_flavor = excluded.path_flavor, type_settings_json = excluded.type_settings_json,
+       host_platform = excluded.host_platform,
+       root_path = CASE WHEN ? THEN desktop_sources.root_path ELSE excluded.root_path END,
+       path_flavor = CASE WHEN ? THEN desktop_sources.path_flavor ELSE excluded.path_flavor END,
+       type_settings_json = CASE WHEN ? THEN desktop_sources.type_settings_json ELSE excluded.type_settings_json END,
        updated_at = excluded.updated_at
      WHERE desktop_sources.source_type = excluded.source_type
        AND desktop_sources.config_ref = excluded.config_ref`,
     [input.sourceRef, input.sourceType, input.configRef, input.hostName, input.hostPlatform,
-      input.rootPath, pathFlavor, input.typeSettingsJson, input.createdAt, input.updatedAt]
+      input.rootPath, pathFlavor, input.typeSettingsJson, input.createdAt, input.updatedAt,
+      input.preserveLocalPaths ? 1 : 0, input.preserveLocalPaths ? 1 : 0, input.preserveLocalPaths ? 1 : 0]
   );
   if (result.changes !== 1) throw new Error('source_identity_conflict');
 }

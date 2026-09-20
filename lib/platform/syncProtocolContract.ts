@@ -29,12 +29,13 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'sync-group-device-facts-v1',
     SYNC_GROUP_MEMBER_STATE_CAPABILITY,
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
+    'watched-device-binding-v1',
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
   ].sort()),
-  max_supported_version: 8,
-  min_supported_version: 8,
-  version: 8
+  max_supported_version: 9,
+  min_supported_version: 9,
+  version: 9
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

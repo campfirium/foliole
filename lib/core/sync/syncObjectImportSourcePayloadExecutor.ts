@@ -8,13 +8,19 @@ export async function applyImportSourceObject(port: DbPort, record: SyncPackSync
     return;
   }
   const payload = asObject(record);
+  if (text(payload.watched_binding_id) && text(payload.source_locator)) {
+    throw new Error('invalid_watched_import_source_locator');
+  }
   await port.run(
     `INSERT INTO import_sources (source_fingerprint, provider, source_kind, source_name, source_locator, ` +
     `first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id, watched_binding_id, ` +
     `watched_relative_path, source_ref, source_location, remote_provider, remote_connection_ref, ` +
     `remote_document_id, remote_annotations_json, remote_import_state_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(source_fingerprint) DO UPDATE SET provider = excluded.provider, source_kind = excluded.source_kind, ` +
-    `source_name = excluded.source_name, source_locator = excluded.source_locator, last_imported_at = excluded.last_imported_at, ` +
+    `source_name = excluded.source_name, source_locator = CASE
+       WHEN excluded.watched_binding_id IS NOT NULL AND import_sources.source_locator <> ''
+       THEN import_sources.source_locator ELSE excluded.source_locator END,
+     last_imported_at = excluded.last_imported_at, ` +
     `last_content_fingerprint = excluded.last_content_fingerprint, latest_node_id = excluded.latest_node_id, ` +
     `watched_binding_id = COALESCE(excluded.watched_binding_id, import_sources.watched_binding_id), ` +
     `watched_relative_path = COALESCE(excluded.watched_relative_path, import_sources.watched_relative_path), ` +

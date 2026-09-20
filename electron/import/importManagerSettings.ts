@@ -12,7 +12,6 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 import {
   hydrateWatchedImportManagerSources,
-  upsertWatchedImportManagerSources
 } from '../database/desktopSources.js';
 import {
   loadReadwiseSourceModeState,
@@ -61,6 +60,18 @@ function watchedSourceChanged(
     .some((key) => previous[key as keyof typeof previous] !== next[key as keyof typeof next]);
 }
 
+function withoutWatchedLocalPaths(settings: ImportManagerSettings) {
+  const shared = withoutReadwiseImportManagerFields(settings);
+  const sources = Array.isArray(shared.sources) ? shared.sources as Array<Record<string, unknown>> : [];
+  return { ...shared, sources: sources.map((item) => {
+    const source = { ...item };
+    delete source.primaryPath;
+    delete source.highlightPath;
+    delete source.archivePath;
+    return source;
+  }) };
+}
+
 export function loadImportManagerSettings(): ImportManagerSettings {
   const globalSettings = hydrateWatchedImportManagerSources(
     normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY))
@@ -99,7 +110,6 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
       ...normalized,
       readwiseSources: saveCurrentHostReadwiseSources(normalized.readwiseSources, normalized.updatedAt)
     };
-    upsertWatchedImportManagerSources(normalized);
     normalized.sources.forEach((source) => {
       if (watchedSourceChanged(current.sources.find((item) => item.id === source.id), source)) {
         upsertChangedWatchedFolderSource(source, normalized.updatedAt);
@@ -108,7 +118,7 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
     writeJsonSetting(
       driver,
       IMPORT_MANAGER_SETTINGS_KEY,
-      withoutReadwiseImportManagerFields(normalized),
+      withoutWatchedLocalPaths(normalized),
       normalized.updatedAt
     );
     if (normalized.readwiseSourceMode !== sourceMode.mode) {

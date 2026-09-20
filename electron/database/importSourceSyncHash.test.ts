@@ -17,9 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { writeImportSource } from '../../lib/core/database/importPipelineRecords.js';
+import { recordImportSourceSync, writeImportSource } from '../../lib/core/database/importPipelineRecords.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
@@ -71,4 +73,26 @@ it('does not change import source sync hash for last imported time only changes'
   });
 
   expect(readImportSourceContentHash()).toBe(firstHash);
+});
+
+it('hashes a watched source without its local file locator', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO desktop_sources
+    (source_ref, source_type, config_ref, host_name, host_platform, root_path,
+     path_flavor, type_settings_json, created_at, updated_at)
+    VALUES ('watched:old', 'watched', 'old', 'Mac', 'macOS', '/private',
+      'posix', '{}', 'now', 'now')`);
+  driver.execute(`INSERT INTO import_sources
+    (source_fingerprint, provider, source_kind, source_name, source_locator,
+     first_imported_at, last_imported_at, last_content_fingerprint, source_ref)
+    VALUES ('source-1', 'markdown', 'file', 'note.md', '/private/note.md',
+      'now', 'now', 'content', 'watched:old')`);
+  recordImportSourceSync(driver, 'source-1', 'now');
+  const payload = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.import_source,
+    ['source-1'])!.payload_json;
+  expect(payload).not.toContain('/private');
+  const hashedPayload = JSON.parse(payload) as Record<string, unknown>;
+  delete hashedPayload.last_imported_at;
+  expect(readImportSourceContentHash()).toBe(computeSyncContentHash('import_source',
+    hashedPayload as Parameters<typeof computeSyncContentHash>[1]));
 });

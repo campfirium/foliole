@@ -152,7 +152,7 @@ it('returns unavailable without deleting topics or historical source fields', as
     source.source_ref,
     'topic.md',
     { requireAvailableRoot: false }
-  )).toBe(path.join(rootPath, 'topic.md'));
+  )).toBeNull();
   expect(driver.queryOne('SELECT id, deleted_at FROM nodes WHERE id = ?', ['topic-a']))
     .toEqual({ deleted_at: null, id: 'topic-a' });
   expect(driver.queryOne(`SELECT source_locator, source_fingerprint FROM import_sources

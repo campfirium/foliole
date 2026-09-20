@@ -30,6 +30,7 @@ interface ImportSourceRow {
   source_ref?: string | null;
   watched_binding_id?: string | null;
   watched_relative_path?: string | null;
+  watched_source?: number;
 }
 
 interface ExistingNodeRow {
@@ -126,7 +127,7 @@ function toImportSourcePayload(row: ImportSourceRow) {
     source_fingerprint: row.source_fingerprint ?? '',
     source_kind: row.source_kind ?? '',
     source_location: row.source_location ?? null,
-    source_locator: row.source_locator ?? '',
+    source_locator: row.watched_binding_id || row.watched_source ? '' : row.source_locator ?? '',
     source_name: row.source_name ?? '',
     source_ref: row.source_ref ?? null,
     watched_binding_id: row.watched_binding_id ?? null,
@@ -149,6 +150,8 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
        watched_binding_id,
        watched_relative_path,
        source_ref,
+       EXISTS (SELECT 1 FROM desktop_sources s WHERE s.source_ref = import_sources.source_ref
+         AND s.source_type = 'watched') AS watched_source,
        source_location,
        remote_provider,
        remote_connection_ref,

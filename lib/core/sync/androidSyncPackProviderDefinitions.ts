@@ -19,7 +19,10 @@ const payloadPlans = [
     f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
     s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref
     FROM source.external_search_folders f JOIN source.desktop_sources s ON s.source_ref = f.source_ref` },
-  { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,
+  { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name,
+    CASE WHEN watched_binding_id IS NOT NULL OR EXISTS (
+      SELECT 1 FROM source.desktop_sources s WHERE s.source_ref = import_sources.source_ref AND s.source_type = 'watched'
+    ) THEN '' ELSE source_locator END source_locator,
     first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,
     watched_binding_id, watched_relative_path, source_ref, source_location,
     remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json
@@ -44,8 +47,8 @@ const payloadPlans = [
       ON s.object_id LIKE '%:' || v.host_name || ':node:' || v.node_id
     WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` },
   { objectType: 'watched_folder', sql: `SELECT b.binding_id __object_id, b.binding_id,
-    s.host_name, s.host_platform, s.type_settings_json, b.connection_status, b.action_mode,
-    b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.created_at, b.updated_at, b.source_ref
+    s.host_name, s.host_platform, b.owner_device_identity_key, b.connection_status, b.action_mode,
+    b.highlight_mode, b.created_at, b.updated_at, b.source_ref
     FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref` }
 ] as const;
 

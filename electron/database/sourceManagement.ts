@@ -14,6 +14,7 @@ import {
   loadDesktopSource,
   type DesktopSourceRecord
 } from './desktopSources.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 
 function topicCount(sourceRef: string) {
   return openDatabaseConnection().driver.queryOne<{ count: number }>(
@@ -23,8 +24,14 @@ function topicCount(sourceRef: string) {
 }
 
 function toSummary(source: DesktopSourceRecord): NativeSourceManagementSummary {
+  const owner = source.source_type === 'watched'
+    ? openDatabaseConnection().driver.queryOne<{ owner_device_identity_key: string | null }>(
+      'SELECT owner_device_identity_key FROM watched_folder_bindings WHERE source_ref = ?', [source.source_ref]
+    )?.owner_device_identity_key : null;
+  const localId = loadDesktopDeviceId();
   return {
-    root_path: source.root_path,
+    root_path: source.source_type === 'watched' && (!localId || owner !== localId)
+      ? '' : source.root_path,
     source_ref: source.source_ref,
     source_type: source.source_type as NativeSourceManagementType,
     topic_count: topicCount(source.source_ref)
@@ -46,6 +53,7 @@ function sourcesForPreview(
   sourceType?: NativeSourceManagementType
 ) {
   if (action === 'remove_source') return [requireManageableSource(sourceRef ?? '')];
+  if (sourceType === 'watched') throw new Error('watched_host_replacement_requires_source_reconnect');
   if ((sourceType !== 'external' && sourceType !== 'watched') || !hostName?.trim()) {
     throw new Error('source_management_host_required');
   }

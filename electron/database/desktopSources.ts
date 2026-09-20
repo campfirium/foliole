@@ -9,6 +9,7 @@ import type { ImportManagerSourceDraft } from '../../lib/core/import/importManag
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 
 export type DesktopSourceType = 'external' | 'readwise' | 'watched';
 
@@ -76,21 +77,17 @@ export function upsertDesktopSource(input: {
   return loadDesktopSourceByConfig(input.sourceType, input.configRef)!;
 }
 
-export function upsertWatchedImportManagerSources(input: {
-  sources: ImportManagerSourceDraft[]; updatedAt: string;
-}) {
-  for (const source of input.sources) {
-    if (!source.id.trim() || !source.primaryPath.trim()) continue;
-    upsertDesktopSource({
-      configRef: source.id, rootPath: source.primaryPath, sourceType: 'watched',
-      typeSettings: { archivePath: source.archivePath, highlightPath: source.highlightPath },
-      updatedAt: input.updatedAt
-    });
-  }
-}
-
 function hydrateSource(sourceType: 'readwise' | 'watched', source: ImportManagerSourceDraft) {
   const persisted = loadDesktopSourceByConfig(sourceType, source.id);
+  if (sourceType === 'watched') {
+    const binding = persisted && openDatabaseConnection().driver.queryOne<{
+      owner_device_identity_key: string | null
+    }>('SELECT owner_device_identity_key FROM watched_folder_bindings WHERE source_ref = ?', [persisted.source_ref]);
+    const localId = loadDesktopDeviceId();
+    if (!localId || !binding || binding.owner_device_identity_key !== localId) {
+      return { ...source, archivePath: '', highlightPath: '', primaryPath: '' };
+    }
+  }
   if (!persisted) return source;
   let settings: Record<string, unknown> = {};
   try { settings = JSON.parse(persisted.type_settings_json) as Record<string, unknown>; } catch { /* history only */ }
@@ -141,7 +138,17 @@ export function isDesktopSourceExecutable(source: DesktopSourceRecord) {
 }
 
 export function isDesktopSourceConnected(source: DesktopSourceRecord) {
-  if (source.host_name !== loadCurrentDesktopHost().name || !source.root_path.trim()) return false;
+  if (!source.root_path.trim()) return false;
+  if (source.source_type === 'watched') {
+    const binding = openDatabaseConnection().driver.queryOne<{
+      connection_status: string; owner_device_identity_key: string | null
+    }>(`SELECT connection_status, owner_device_identity_key FROM watched_folder_bindings
+      WHERE source_ref = ? AND deleted_at IS NULL`, [source.source_ref]);
+    const localId = loadDesktopDeviceId();
+    return Boolean(localId) && binding?.owner_device_identity_key === localId &&
+      binding?.connection_status === 'connected';
+  }
+  if (source.host_name !== loadCurrentDesktopHost().name) return false;
   try {
     const settings = JSON.parse(source.type_settings_json) as Record<string, unknown>;
     return settings.connectionStatus !== 'needs-folder';
@@ -155,6 +162,7 @@ export function updateLocalDesktopSourceHosts(input: {
   previousHostName: string; updatedAt: string;
 }) {
   const { driver } = input;
+  const localId = loadDesktopDeviceId();
   if (!driver.queryOne("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'desktop_sources'")) return;
   driver.transaction((tx) => {
     const changed = tx.queryAll<{ object_id: string; source_type: DesktopSourceType }>(
@@ -163,13 +171,18 @@ export function updateLocalDesktopSourceHosts(input: {
          WHEN 'watched' THEN COALESCE((SELECT binding_id FROM watched_folder_bindings WHERE source_ref = source.source_ref), config_ref)
          ELSE config_ref END object_id
        FROM desktop_sources source WHERE host_name = ?
-         AND (host_name IS NOT ? OR host_platform IS NOT ?)`,
-      [input.previousHostName, input.currentHostName, input.currentHostPlatform]
+         AND (host_name IS NOT ? OR host_platform IS NOT ?)
+         AND (source_type <> 'watched' OR EXISTS (
+           SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = source.source_ref
+             AND binding.owner_device_identity_key = ?))`,
+      [input.previousHostName, input.currentHostName, input.currentHostPlatform, localId]
     );
     if (!changed.length) return;
     tx.execute(`UPDATE desktop_sources SET host_name = ?, host_platform = ?, updated_at = ?
-      WHERE host_name = ?`, [input.currentHostName, input.currentHostPlatform,
-      input.updatedAt, input.previousHostName]);
+      WHERE host_name = ? AND (source_type <> 'watched' OR EXISTS (
+        SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = desktop_sources.source_ref
+          AND binding.owner_device_identity_key = ?))`, [input.currentHostName, input.currentHostPlatform,
+      input.updatedAt, input.previousHostName, localId]);
     transferReadwiseActiveHost(tx, input.previousHostName, input.currentHostName, input.updatedAt);
     for (const source of changed) recordHostProjectionSync(tx, source, input);
   });

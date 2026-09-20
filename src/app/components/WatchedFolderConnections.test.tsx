@@ -28,6 +28,7 @@ function binding(id: string, overrides: Record<string, unknown> = {}) {
     binding_id: id,
     host_name: 'This Mac',
     host_platform: 'darwin',
+    owner_device_identity_key: 'local-device',
     connection_status: 'connected',
     created_at: '2026-08-18T00:00:00.000Z',
     highlight_mode: 'merged',
@@ -44,36 +45,37 @@ it('shows remote and waiting sources above the unchanged local settings', async 
     bindings: [
       binding('local'),
       binding('remote', {
-        host_name: 'Office PC', host_platform: 'win32'
+        host_name: 'Office PC', host_platform: 'win32', owner_device_identity_key: 'remote-device',
+        primary_path: ''
       }),
       binding('waiting', {
-        host_name: '', host_platform: '', connection_status: 'needs-folder'
+        host_name: '', host_platform: '', connection_status: 'needs-folder',
+        owner_device_identity_key: null, primary_path: ''
       }),
       binding('replaced', {
         connection_status: 'needs-folder'
       })
     ],
-    current_host_name: 'This Mac'
+    current_host_name: 'This Mac', current_device_identity_key: 'local-device'
   });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  const region = await screen.findByRole('region', { name: 'Other hosts' });
+  const region = await screen.findByRole('region', { name: 'Watched folders in this workgroup' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
   const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
   const replacedGroup = screen.getByRole('group', { name: 'This Mac' });
   expect(within(region).getByText('Path')).toBeInTheDocument();
   expect(within(remoteGroup).getByText('Windows')).toBeInTheDocument();
-  expect(within(remoteGroup).getByRole('button', { name: 'More actions for Office PC' })).toBeInTheDocument();
-  expect(within(remoteGroup).getByRole('button', { name: 'More actions for /source/remote' })).toBeInTheDocument();
-  expect(within(waitingGroup).getByRole('button', { name: 'More actions for /source/waiting' })).toBeInTheDocument();
+  expect(within(remoteGroup).getByRole('button', { name: 'More actions for Watched folder' })).toBeInTheDocument();
+  expect(within(waitingGroup).getByRole('button', { name: 'More actions for Watched folder' })).toBeInTheDocument();
   expect(within(replacedGroup).getByRole('button', { name: 'More actions for /source/replaced' })).toBeInTheDocument();
 });
 
 it('does not add an empty workgroup block before local watched-folder settings', async () => {
-  load.mockResolvedValue({ bindings: [], current_host_name: 'This Mac' });
+  load.mockResolvedValue({ bindings: [], current_host_name: 'This Mac', current_device_identity_key: 'local-device' });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  expect(await screen.findByRole('region', { name: 'Other hosts' }).catch(() => null)).toBeNull();
+  expect(await screen.findByRole('region', { name: 'Watched folders in this workgroup' }).catch(() => null)).toBeNull();
 });

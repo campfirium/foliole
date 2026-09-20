@@ -4,6 +4,7 @@ export interface NativeWatchedFolderBinding {
   binding_id: string;
   host_name: string;
   host_platform: string;
+  owner_device_identity_key: string | null;
   connection_status: 'connected' | 'needs-folder';
   created_at: string;
   highlight_mode: 'merged' | 'split';
@@ -25,4 +26,5 @@ export interface NativeWatchedFolderMatchPreview {
 export interface NativeWatchedFolderBindingsState {
   bindings: NativeWatchedFolderBinding[];
   current_host_name: string;
+  current_device_identity_key: string | null;
 }

@@ -11,7 +11,8 @@ export const WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS = [
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
-    source_ref TEXT NOT NULL
+    source_ref TEXT NOT NULL,
+    owner_device_identity_key TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS idx_watched_folder_bindings_source
     ON watched_folder_bindings (source_ref, updated_at)`

@@ -136,7 +136,7 @@ it('applies import source and Source Host payload records', async () => {
         object_type: 'watched_folder',
         payload_json: JSON.stringify({ action_mode: 'keep', binding_id: 'watched-1',
           connection_status: 'connected', host_name: 'Desktop Host', host_platform: 'darwin',
-          primary_path: '/inbox', source_ref: 'watched:watched-1', type_settings_json: '{}' }),
+          owner_device_identity_key: 'desktop-device', source_ref: 'watched:watched-1' }),
         updated_at: '2026-05-04T02:02:00.000Z'
       }
     ]),
@@ -155,7 +155,7 @@ it('applies import source and Source Host payload records', async () => {
     '{"bodyState":"materialized"}'
   ]);
   expect(runs[1]?.sql).toContain('INSERT INTO desktop_sources');
-  expect(runs[1]?.sql).toContain('type_settings_json = excluded.type_settings_json');
+  expect(runs[1]?.sql).toContain('ELSE excluded.type_settings_json END');
   expect(runs[1]?.params.slice(0, 5))
     .toEqual(['external:folder-1', 'external', 'folder-1', 'Desktop Host', 'darwin']);
   expect(runs[2]?.sql).toContain('INSERT INTO external_search_folders');

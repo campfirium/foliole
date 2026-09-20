@@ -14,7 +14,10 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     JOIN desktop_sources s ON s.source_ref = f.source_ref WHERE f.id = ?`,
   import_source: `SELECT json_object(
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,
-    'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at,
+    'source_name', source_name, 'source_locator', CASE WHEN watched_binding_id IS NOT NULL OR EXISTS (
+      SELECT 1 FROM desktop_sources s WHERE s.source_ref = import_sources.source_ref AND s.source_type = 'watched'
+    ) THEN '' ELSE source_locator END,
+    'first_imported_at', first_imported_at,
     'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint,
     'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id,
     'watched_relative_path', watched_relative_path, 'source_ref', source_ref,
@@ -51,9 +54,9 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ?`,
   watched_folder: `SELECT json_object(
     'binding_id', b.binding_id, 'host_name', s.host_name, 'host_platform', s.host_platform,
-    'type_settings_json', s.type_settings_json, 'connection_status', b.connection_status,
-    'action_mode', b.action_mode, 'archive_path', b.archive_path,
-    'highlight_mode', b.highlight_mode, 'highlight_path', b.highlight_path, 'primary_path', b.primary_path,
+    'owner_device_identity_key', b.owner_device_identity_key,
+    'connection_status', b.connection_status, 'action_mode', b.action_mode,
+    'highlight_mode', b.highlight_mode,
     'created_at', b.created_at, 'updated_at', b.updated_at, 'source_ref', b.source_ref
   ) AS payload_json FROM watched_folder_bindings b
     JOIN desktop_sources s ON s.source_ref = b.source_ref WHERE b.binding_id = ?`

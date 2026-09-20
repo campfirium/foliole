@@ -13,7 +13,8 @@ export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_STATEMENTS = {
   importSourcesRemoteImportStateJsonColumn:
     "ALTER TABLE import_sources ADD COLUMN remote_import_state_json TEXT NOT NULL DEFAULT '{}'",
   importSourcesWatchedBindingIdColumn: 'ALTER TABLE import_sources ADD COLUMN watched_binding_id TEXT',
-  importSourcesWatchedRelativePathColumn: 'ALTER TABLE import_sources ADD COLUMN watched_relative_path TEXT'
+  importSourcesWatchedRelativePathColumn: 'ALTER TABLE import_sources ADD COLUMN watched_relative_path TEXT',
+  watchedBindingsOwnerColumn: 'ALTER TABLE watched_folder_bindings ADD COLUMN owner_device_identity_key TEXT'
 };
 
 export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_REPAIR_RULES = {
@@ -64,5 +65,9 @@ export const ANDROID_COMPANION_DESKTOP_SOURCE_MIGRATION_REPAIR_RULES = {
   importSourcesWatchedRelativePath: {
     columnName: 'watched_relative_path', errorMessage: 'Failed to add watched source location.',
     statementName: 'importSourcesWatchedRelativePathColumn', tableName: 'import_sources'
+  },
+  watchedBindingsOwner: {
+    columnName: 'owner_device_identity_key', errorMessage: 'Failed to add watched Source owner.',
+    statementName: 'watchedBindingsOwnerColumn', tableName: 'watched_folder_bindings'
   }
 } as const;

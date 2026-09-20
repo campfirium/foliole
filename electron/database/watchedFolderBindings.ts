@@ -7,6 +7,7 @@ import type { NativeWatchedFolderBinding } from '../../lib/platform/nativeWatche
 
 import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadDesktopSource, loadDesktopSourceByConfig, upsertDesktopSource } from './desktopSources.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 interface WatchedFolderBindingRow extends DatabaseRow {
@@ -15,6 +16,7 @@ interface WatchedFolderBindingRow extends DatabaseRow {
   binding_id: string;
   host_name: string;
   host_platform: string;
+  owner_device_identity_key: string | null;
   connection_status: string;
   created_at: string;
   highlight_mode: string;
@@ -25,17 +27,20 @@ interface WatchedFolderBindingRow extends DatabaseRow {
 }
 
 function toBinding(row: WatchedFolderBindingRow): NativeWatchedFolderBinding {
+  const localId = loadDesktopDeviceId();
+  const local = Boolean(localId) && row.owner_device_identity_key === localId;
   return {
     action_mode: row.action_mode === 'delete' ? 'delete' : 'keep',
-    archive_path: row.archive_path,
+    archive_path: local ? row.archive_path : '',
     binding_id: row.binding_id,
     host_name: row.host_name,
     host_platform: row.host_platform,
-    connection_status: row.connection_status === 'connected' ? 'connected' : 'needs-folder',
+    owner_device_identity_key: row.owner_device_identity_key,
+    connection_status: local && row.connection_status === 'connected' ? 'connected' : 'needs-folder',
     created_at: row.created_at,
     highlight_mode: row.highlight_mode === 'split' ? 'split' : 'merged',
-    highlight_path: row.highlight_path,
-    primary_path: row.primary_path,
+    highlight_path: local ? row.highlight_path : '',
+    primary_path: local ? row.primary_path : '',
     source_ref: row.source_ref,
     updated_at: row.updated_at
   };
@@ -71,7 +76,7 @@ function recordBindingSync(binding: NativeWatchedFolderBinding, deletedAt?: stri
 
 export function loadWatchedFolderBindings() {
   return openDatabaseConnection().driver.queryAll<WatchedFolderBindingRow>(
-    `SELECT b.binding_id, s.host_name, s.host_platform, b.connection_status,
+    `SELECT b.binding_id, s.host_name, s.host_platform, b.owner_device_identity_key, b.connection_status,
        b.action_mode, b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.source_ref,
        b.created_at, b.updated_at
      FROM watched_folder_bindings b JOIN desktop_sources s ON s.source_ref = b.source_ref
@@ -82,22 +87,29 @@ export function loadWatchedFolderBindings() {
 export function loadWatchedFolderBindingState() {
   return {
     bindings: loadWatchedFolderBindings(),
-    current_host_name: localHostProfile(new Date().toISOString()).hostName
+    current_host_name: localHostProfile(new Date().toISOString()).hostName,
+    current_device_identity_key: loadDesktopDeviceId()
   };
 }
 
-export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraft, now: string) {
+export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraft, now: string,
+  allowTransfer = false) {
   if (!source.primaryPath.trim()) return null;
   const driver = openDatabaseConnection().driver;
   const profile = localHostProfile(now);
-  const configuredSource = loadDesktopSourceByConfig('watched', source.id);
-  if (configuredSource && configuredSource.host_name !== profile.hostName) return null;
   const existing = driver.queryOne<WatchedFolderBindingRow>(
     `SELECT binding.*, source.host_name, source.host_platform FROM watched_folder_bindings binding
      JOIN desktop_sources source ON source.source_ref = binding.source_ref
      WHERE binding.binding_id = ? OR source.config_ref = ? ORDER BY binding.binding_id = ? DESC LIMIT 1`,
     [source.id, source.id, source.id]
   );
+  const localId = loadDesktopDeviceId();
+  if (!localId) throw new Error('watched_folder_device_unavailable');
+  if (!allowTransfer && existing && existing.owner_device_identity_key !== localId) return null;
+  if (allowTransfer && existing && existing.owner_device_identity_key !== localId &&
+    existing.connection_status !== 'needs-folder') {
+    throw new Error('watched_folder_owner_must_disconnect');
+  }
   const existingSource = existing ? loadDesktopSource(existing.source_ref) : null;
   const bindingId = existing?.binding_id ?? source.id;
   const desktopSource = upsertDesktopSource({
@@ -112,16 +124,17 @@ export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraf
   driver.execute(
     `INSERT INTO watched_folder_bindings (
        binding_id, connection_status, action_mode, archive_path, highlight_mode, highlight_path,
-       primary_path, created_at, updated_at, deleted_at, source_ref
-     ) VALUES (?, 'connected', ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+       primary_path, created_at, updated_at, deleted_at, source_ref, owner_device_identity_key
+     ) VALUES (?, 'connected', ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
      ON CONFLICT(binding_id) DO UPDATE SET connection_status = 'connected',
        action_mode = excluded.action_mode, archive_path = excluded.archive_path,
        highlight_mode = excluded.highlight_mode, highlight_path = excluded.highlight_path,
        primary_path = excluded.primary_path, updated_at = excluded.updated_at, deleted_at = NULL,
-       source_ref = excluded.source_ref`,
+       source_ref = excluded.source_ref,
+       owner_device_identity_key = excluded.owner_device_identity_key`,
     [bindingId, source.actionMode, source.archivePath,
       source.highlightMode, source.highlightPath.trim(), source.primaryPath.trim(), existing?.created_at ?? now, now,
-      desktopSource.source_ref]
+      desktopSource.source_ref, localId]
   );
   const binding = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId) ?? null;
   if (binding) recordBindingSync(binding);
@@ -137,13 +150,12 @@ export function resolveExecutableWatchedBinding(ruleId: string, primaryPath: str
      JOIN desktop_sources source ON source.source_ref = binding.source_ref
      WHERE binding.deleted_at IS NULL AND binding.source_ref = ? LIMIT 1`, [source.source_ref]
   );
-  if (!binding) return {
-    bindingId: null,
-    executable: isDesktopSourceExecutable(source) && source.root_path === primaryPath.trim()
-  };
+  if (!binding) return { bindingId: null, executable: false };
   return {
     bindingId: binding.binding_id,
-    executable: binding.connection_status === 'connected' && isDesktopSourceExecutable(source) &&
+    executable: Boolean(loadDesktopDeviceId()) &&
+      binding.owner_device_identity_key === loadDesktopDeviceId() &&
+      binding.connection_status === 'connected' && isDesktopSourceExecutable(source) &&
       source.root_path === primaryPath.trim()
   };
 }
@@ -187,7 +199,8 @@ export function disconnectWatchedFolderBinding(bindingId: string) {
   const driver = openDatabaseConnection().driver;
   const current = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId);
   if (!current) throw new Error('watched_folder_not_found');
-  if (current.host_name !== localHostProfile(new Date().toISOString()).hostName) {
+  const localId = loadDesktopDeviceId();
+  if (!localId || current.owner_device_identity_key !== localId) {
     throw new Error('watched_folder_not_local');
   }
   const now = new Date().toISOString();
@@ -204,7 +217,8 @@ export function removeWatchedFolderBinding(bindingId: string) {
   const driver = openDatabaseConnection().driver;
   const current = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId);
   if (!current) throw new Error('watched_folder_not_found');
-  if (current.host_name !== localHostProfile(new Date().toISOString()).hostName) {
+  const localId = loadDesktopDeviceId();
+  if (!localId || current.owner_device_identity_key !== localId) {
     throw new Error('watched_folder_not_local');
   }
   const now = new Date().toISOString();

@@ -109,7 +109,7 @@ it('disconnects and reconnects one watched source while preserving its imported 
   expect(resolveExecutableWatchedBinding(binding.binding_id, nextPath).executable).toBe(true);
 });
 
-it('only claims a watched Source owned by another Host after an explicit preview and confirm', async () => {
+it('claims a remote watched Source only after its owner disconnects and explicit confirmation', async () => {
   const folderPath = path.join(tempRoot, 'remote-watched');
   await fs.mkdir(folderPath, { recursive: true });
   const source = {
@@ -119,6 +119,8 @@ it('only claims a watched Source owned by another Host after an explicit preview
   const binding = upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:00.000Z')!;
   const driver = openDatabaseConnection().driver;
   driver.execute("UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_ref = ?", [binding.source_ref]);
+  driver.execute(`UPDATE watched_folder_bindings SET owner_device_identity_key = 'remote-device'
+    WHERE source_ref = ?`, [binding.source_ref]);
 
   expect(upsertChangedWatchedFolderSource(source, '2026-08-18T00:01:00.000Z')).toBeNull();
   await expect(previewWatchedFolderReconnect(binding.binding_id, folderPath)).resolves.toMatchObject({
@@ -128,6 +130,10 @@ it('only claims a watched Source owned by another Host after an explicit preview
     .toEqual({ host_name: 'Other Mac' });
   expect(() => disconnectWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
   expect(() => removeWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  await expect(confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath }))
+    .rejects.toThrow('watched_folder_owner_must_disconnect');
+  driver.execute(`UPDATE watched_folder_bindings SET connection_status = 'needs-folder'
+    WHERE binding_id = ?`, [binding.binding_id]);
   await confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath });
   expect(driver.queryOne('SELECT host_name FROM desktop_sources WHERE source_ref = ?', [binding.source_ref]))
     .toEqual({ host_name: loadWatchedFolderBindingState().current_host_name });

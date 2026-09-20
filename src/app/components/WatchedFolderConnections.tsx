@@ -22,8 +22,7 @@ import {
 
 import {
   reconnectWatchedSource,
-  removeWatchedSource,
-  replaceWatchedSourceHost
+  removeWatchedSource
 } from './watchedSourceManagementActions';
 
 const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
@@ -36,7 +35,7 @@ function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: str
     platformName: string | null;
   }>();
   bindings.forEach((binding) => {
-    const key = binding.host_name;
+    const key = binding.owner_device_identity_key ?? binding.source_ref;
     const group = groups.get(key) ?? {
       bindings: [],
       hostName: binding.host_name.trim() || waitingLabel,
@@ -60,22 +59,6 @@ function MenuButton(props: { label: string }) {
   );
 }
 
-function HostActions(props: { hostName: string; onReplace: () => void }) {
-  const t = useTranslation();
-  return (
-    <AppDropdownMenu>
-      <AppDropdownMenuTrigger asChild>
-        <MenuButton label={t('desktop.watchedFolder.connections.hostActions', { host: props.hostName })} />
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem onSelect={props.onReplace}>
-          {t('desktop.watchedFolder.management.replaceHost')}
-        </AppDropdownMenuItem>
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
-  );
-}
-
 function SourceActions(props: {
   binding: NativeWatchedFolderBinding;
   onReconnect: () => void;
@@ -85,7 +68,9 @@ function SourceActions(props: {
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
-        <MenuButton label={t('desktop.watchedFolder.connections.folderActions', { path: props.binding.primary_path })} />
+        <MenuButton label={t('desktop.watchedFolder.connections.folderActions', {
+          path: props.binding.primary_path || t('desktop.watchedFolder.source')
+        })} />
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
         <AppDropdownMenuItem onSelect={props.onReconnect}>
@@ -123,7 +108,6 @@ function WatchedFolderGroupList(props: {
   bindings: NativeWatchedFolderBinding[];
   onReconnect: (bindingId: string) => void;
   onRemove: (bindingId: string) => void;
-  onReplaceHost: (hostName: string) => void;
 }) {
   const t = useTranslation();
   const groups = groupBindings(props.bindings, t('desktop.watchedFolder.connections.waiting'));
@@ -140,7 +124,6 @@ function WatchedFolderGroupList(props: {
             <div className="flex min-w-0 items-center gap-1">
               <span className="truncate text-sm font-semibold">{group.hostName}</span>
               {group.platformName ? <span className="shrink-0 text-xs text-foreground/48">{group.platformName}</span> : null}
-              <HostActions hostName={group.hostName} onReplace={() => props.onReplaceHost(group.hostName)} />
             </div>
           </div>
           <div className="grid min-w-0 gap-0.5">
@@ -173,20 +156,20 @@ export function WatchedFolderConnections() {
   };
 
   const remoteBindings = state?.bindings.filter((binding) => (
-    binding.host_name !== state.current_host_name || binding.connection_status === 'needs-folder'
+    binding.owner_device_identity_key !== state.current_device_identity_key ||
+    binding.connection_status === 'needs-folder'
   )) ?? [];
   if (!hasActiveSyncGroup || !remoteBindings.length) return null;
   return (
-    <section aria-label={t('desktop.watchedFolder.connections.otherHosts')} className="mb-6 min-w-0">
+    <section aria-label={t('desktop.watchedFolder.connections.title')} className="mb-6 min-w-0">
       <div className={settingsActionTableHeaderClassName(REMOTE_SOURCE_COLUMNS)}>
-        <span>{t('desktop.watchedFolder.connections.otherHosts')}</span>
+        <span>{t('desktop.watchedFolder.connections.title')}</span>
         <span>{t('desktop.watchedFolder.connections.path')}</span>
       </div>
       <WatchedFolderGroupList
         bindings={remoteBindings}
         onReconnect={(bindingId) => void reconnect(bindingId)}
         onRemove={(bindingId) => void remove(bindingId)}
-        onReplaceHost={(hostName) => void replaceWatchedSourceHost(hostName, refresh, t)}
       />
     </section>
   );

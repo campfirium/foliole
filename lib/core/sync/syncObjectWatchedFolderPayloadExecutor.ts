@@ -9,34 +9,37 @@ export async function applyWatchedFolderObject(port: DbPort, record: SyncPackSyn
     return;
   }
   const payload = asObject(record);
-  const source = requireSourceHostPayload(payload);
-  const rootPath = text(payload.primary_path) ?? '';
+  if (['root_path', 'path_flavor', 'primary_path', 'highlight_path', 'archive_path', 'type_settings_json']
+    .some((key) => key in payload) || !('owner_device_identity_key' in payload)) {
+    throw new Error('invalid_watched_folder_payload');
+  }
+  const source = requireSourceHostPayload({ ...payload, type_settings_json: '{}' });
+  const ownerId = text(payload.owner_device_identity_key);
+  if (payload.owner_device_identity_key !== null && !ownerId) throw new Error('invalid_watched_folder_owner');
   await writeSourceHostProjection(port, {
     ...source,
     configRef: record.object_id,
     createdAt: text(payload.created_at) ?? record.updated_at,
-    rootPath,
+    preserveLocalPaths: true,
+    rootPath: '',
     sourceType: 'watched',
     updatedAt: record.updated_at
   });
   await port.run(
     `INSERT INTO watched_folder_bindings (
-       binding_id, connection_status, action_mode, archive_path, highlight_mode, highlight_path,
-       primary_path, created_at, updated_at, deleted_at, source_ref
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+       binding_id, connection_status, action_mode, highlight_mode,
+       created_at, updated_at, deleted_at, source_ref, owner_device_identity_key
+     ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
      ON CONFLICT(binding_id) DO UPDATE SET
        connection_status = excluded.connection_status,
        action_mode = excluded.action_mode,
-       archive_path = excluded.archive_path,
        highlight_mode = excluded.highlight_mode,
-       highlight_path = excluded.highlight_path,
-       primary_path = excluded.primary_path,
        updated_at = excluded.updated_at,
        deleted_at = NULL,
-       source_ref = excluded.source_ref`,
+       source_ref = excluded.source_ref,
+       owner_device_identity_key = excluded.owner_device_identity_key`,
     [record.object_id, text(payload.connection_status) ?? 'needs-folder',
-      text(payload.action_mode) ?? 'keep', text(payload.archive_path) ?? '',
-      text(payload.highlight_mode) ?? 'merged', text(payload.highlight_path) ?? '',
-      rootPath, text(payload.created_at) ?? record.updated_at, record.updated_at, source.sourceRef]
+      text(payload.action_mode) ?? 'keep', text(payload.highlight_mode) ?? 'merged',
+      text(payload.created_at) ?? record.updated_at, record.updated_at, source.sourceRef, ownerId]
   );
 }

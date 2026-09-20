@@ -46,21 +46,3 @@ export async function removeWatchedSource(sourceRef: string, refresh: () => void
   await confirmSourceManagement(input);
   refresh();
 }
-
-export async function replaceWatchedSourceHost(hostName: string, refresh: () => void, t: Translate) {
-  const input = { action: 'replace_host' as const, hostName, sourceType: 'watched' as const };
-  const preview = await previewSourceManagement(input);
-  const confirmed = await requestAppConfirmation({
-    cancelLabel: t('desktop.watchedFolder.remove.cancel'),
-    confirmLabel: t('desktop.watchedFolder.management.replaceConfirm'),
-    description: t('desktop.watchedFolder.management.summary', {
-      paths: preview.sources.map((source) => source.root_path).join(', '),
-      sources: preview.source_count,
-      topics: preview.topic_count
-    }),
-    title: t('desktop.watchedFolder.management.replaceTitle', { host: hostName })
-  });
-  if (!confirmed) return;
-  await confirmSourceManagement(input);
-  refresh();
-}
