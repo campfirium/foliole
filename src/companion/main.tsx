@@ -24,6 +24,9 @@ if (isIosBridgeAcceptance) {
   const module = iosAcceptanceScenario === 'foreground-sync-lifecycle'
     ? import('./iosForegroundSyncLifecycleAcceptance').then(({ runIosForegroundSyncLifecycleAcceptance }) =>
       runIosForegroundSyncLifecycleAcceptance(rootElement))
+    : iosAcceptanceScenario === 'resource-provider-failover'
+      ? import('./iosResourceProviderFailoverAcceptance').then(({ runIosResourceProviderFailoverAcceptance }) =>
+        runIosResourceProviderFailoverAcceptance())
     : iosAcceptanceScenario === 'content-resource-read'
     ? import('./iosContentResourceAcceptance').then(({ runIosContentResourceAcceptance }) => runIosContentResourceAcceptance())
     : iosAcceptanceScenario === 'state-writeback-runtime'

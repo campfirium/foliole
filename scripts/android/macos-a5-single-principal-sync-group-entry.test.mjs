@@ -73,6 +73,9 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   const restartSource = fs.readFileSync(
     'scripts/android/macos-a5-single-principal-macos-restart.mjs', 'utf8'
   );
+  const factWaitSource = fs.readFileSync(
+    'scripts/android/macos-a5-single-principal-sync-group-facts.mjs', 'utf8'
+  );
   expect(source).toContain('buildA5TwoDeviceAcceptance(args)');
   expect(buildSource).toContain("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: ACCEPTANCE_APP_ID");
   expect(buildSource).toContain('macosAcceptanceEnv(args.env)');
@@ -85,7 +88,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(source).toContain('observeAndAccept(session, options)');
   expect(source).not.toContain('waitForCurrentA5Provider');
   expect(source).not.toContain('macos-a5-current-provider-readiness');
-  expect(source).toContain("eventName: 'onWorkspaceSyncApplied'");
+  expect(factWaitSource).toContain("eventName: 'onWorkspaceSyncApplied'");
   expect(source).toContain('FOLIOLE_T152_ACCEPTANCE_ROOT');
   expect(source).toContain("FOLIOLE_T152_SYNC_CREATOR === 'windows'");
   expect(source).toContain("action: 'activate-participation'");

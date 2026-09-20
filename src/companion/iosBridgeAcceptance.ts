@@ -16,11 +16,12 @@ export type AcceptanceResult = {
   error: string | null;
   phase: 'applied' | 'background' | 'disconnected' | 'failed' | 'foreground' | 'paired' | 'reapplied' | 'rejected' |
     'resources-restored' | 'resources-synced' | 'ready' | 'upgraded' | 'anchor-observed' | 'events-observed' |
-    'trigger-observed' | 'join-observed' | 'restart-clean';
+    'trigger-observed' | 'join-observed' | 'join-requested' | 'restart-clean' | 'provider-selected';
   scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'sync-group-signed-transport' |
     'device-identity' |
     'foreground-sync-lifecycle' | 'state-writeback-runtime' |
-    'sync-pack-runtime' | 'sync-group-discovery-events' | 'sync-trigger-runtime';
+    'sync-pack-runtime' | 'sync-group-discovery-events' | 'sync-trigger-runtime' |
+    'resource-provider-failover';
   status: 'failed' | 'passed';
   [key: string]: unknown;
 };

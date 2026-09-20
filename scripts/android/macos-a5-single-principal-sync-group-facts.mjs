@@ -1,3 +1,10 @@
+export async function waitForMacFact(session) {
+  return session.waitForState({ command: 'load_workspace_list_snapshot',
+    commandArgs: { includePdfOpenings: false }, condition: {
+      counts: { 'Multi-device sync B fact': 1 }, kind: 'fact-prefix-counts'
+    }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
+}
+
 export function inspectExpectedJourneyFacts(database, expectedFacts) {
   const ids = expectedFacts.map(({ factId }) => factId);
   const placeholders = ids.map(() => '?').join(', ');

@@ -78,3 +78,21 @@ export async function verifyA5ResourceLanProbe({ args, buildIdentity, env, evide
     failure: 'Mac isolated attachment bytes temporarily absent, then restored', resultStatus: 'success'
   }, null, 2)}\n`);
 }
+
+export async function verifyA5ResourceLanPresence({ args, buildIdentity, env, evidenceRoot, fixture, groupId }) {
+  const phase = 'missing';
+  const result = await runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
+    evidenceRoot, execute: args.execute, installMain: false, needsTransport: false,
+    instrumentationOwnsActivity: true,
+    instrumentationArgs: ['-e', 'resourcePhase', phase, '-e', 'resourceNodeId', fixture.nodeId,
+      '-e', 'resourceGroupId', groupId, '-e', 'availableHash', fixture.images[0].hash,
+      '-e', 'recoveringHash', fixture.images[1].hash], paths: args.paths, serial: args.serial,
+    testClass: 'com.foliole.android.FolioleResourceLanTest',
+    validateInstrumentation: ({ stdout }) => {
+      if (!/folioleResourceLanReceipt=.*"passed":true/u.test(stdout)) {
+        throw new Error('A5 did not retain the independently cached attachment.');
+      }
+    }
+  });
+  return { evidencePath: result.evidencePath, hash: fixture.images[0].hash };
+}

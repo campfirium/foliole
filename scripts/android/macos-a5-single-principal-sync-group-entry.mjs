@@ -9,9 +9,7 @@ import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
 import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
 import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
-import { openMacosSyncGroupDesktopSession,
-  waitForMacosDeviceRequest
-} from './macos-sync-group-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import {
   assertMacosAnchorReady, observeMacosAnchorAfterElection
 } from './macos-a5-anchor-observation.mjs';
@@ -27,39 +25,12 @@ import {
   ACCEPTANCE_APP_ID, removeA5AcceptanceApplication
 } from './macos-a5-acceptance-package-cleanup.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
+import { runMacosA5IosResourceFailover } from './macos-a5-ios-resource-failover.mjs';
+import { waitForMacFact } from './macos-a5-single-principal-sync-group-facts.mjs';
+import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
 
 const PRODUCT_APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
-
-async function waitForMacFact(session) {
-  return session.waitForState({ command: 'load_workspace_list_snapshot',
-    commandArgs: { includePdfOpenings: false }, condition: {
-      counts: { 'Multi-device sync B fact': 1 }, kind: 'fact-prefix-counts'
-    }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
-}
-
-async function observeAndAccept(session, options = {}) {
-  const request = await waitForMacosDeviceRequest(session, null, options);
-  const before = await session.load();
-  const previousDeviceIds = new Set(before.sync_group?.devices?.map(
-    (device) => device.device_identity_key
-  ) ?? []);
-  const expectedDeviceCount = (before.sync_group?.devices?.length ?? 0) + 1;
-  await session.accept(request.request_id);
-  const overview = await session.load();
-  if (overview.sync_group?.devices?.length !== expectedDeviceCount) {
-    throw new Error('Mac did not persist the fixed A5 as the next Device.');
-  }
-  const joinedDevice = overview.sync_group.devices.find(
-    (device) => !previousDeviceIds.has(device.device_identity_key)
-  );
-  if (!joinedDevice) throw new Error('Mac did not identify the fixed A5 Device.');
-  return { acceptedRequestId: request.request_id,
-    deviceCount: overview.sync_group.devices.length,
-    deviceId: joinedDevice.device_identity_key, deviceName: request.device_name,
-    groupId: overview.sync_group.group_id,
-    serverPort: overview.server_status.port };
-}
 
 export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies = {}) {
   const mechanics = dependencies.mechanics ?? runMacosA5InstrumentationMechanics;
@@ -111,6 +82,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    if (process.env.FOLIOLE_T203_IOS_PROVIDER_FAILOVER === '1') {
+      await runMacosA5IosResourceFailover({ args, buildIdentity, env, evidenceRoot,
+        fixture: resourceFixture, groupId: providerOverview.sync_group.group_id,
+        macDeviceId: providerOverview.sync_group.local_device_identity_key,
+        a5DeviceId: result.observation.deviceId, macosLibrary, session,
+        acceptIos: () => observeAndAccept(session) });
+      return;
+    }
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
