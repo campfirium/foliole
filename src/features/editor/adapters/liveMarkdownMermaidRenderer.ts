@@ -1,4 +1,4 @@
-import mermaid from 'mermaid';
+import type { Mermaid } from 'mermaid';
 
 let activeThemeSignature: string | null = null;
 
@@ -55,7 +55,7 @@ function resolveMermaidThemeConfig() {
   };
 }
 
-function ensureMermaidInitialized() {
+function ensureMermaidInitialized(mermaid: Mermaid) {
   const { config, signature } = resolveMermaidThemeConfig();
   if (activeThemeSignature === signature) return;
   mermaid.initialize(config);
@@ -63,6 +63,7 @@ function ensureMermaidInitialized() {
 }
 
 export async function renderMermaidSvg(id: string, source: string) {
-  ensureMermaidInitialized();
+  const { default: mermaid } = await import('mermaid');
+  ensureMermaidInitialized(mermaid);
   return mermaid.render(id, source);
 }

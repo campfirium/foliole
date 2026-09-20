@@ -19,7 +19,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -397,6 +399,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
             "kind": "paragraph",
             "text": "Die Online-Demo wird gemeinsam mit der Desktop-App weiterentwickelt und kann eigene, von der Desktop-Version abweichende Probleme haben. Über die linke Seitenleiste kannst du direkt Feedback senden. Du kannst das Projekt außerdem auf GitHub verfolgen, Probleme melden oder dich an Diskussionen beteiligen.",
             "id": "what-the-foliole-demo-is-for-block-8"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
           }
         ],
         "highlights": [],
@@ -806,6 +845,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -827,7 +903,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -1210,6 +1288,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -1231,7 +1346,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -1614,6 +1731,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -1635,7 +1789,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -2018,6 +2174,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -2039,7 +2232,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -2422,6 +2617,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -2443,7 +2675,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -2826,6 +3060,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -2847,7 +3118,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -3230,6 +3503,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -3251,7 +3561,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -3634,6 +3946,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -3655,7 +4004,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -4033,6 +4384,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
             "kind": "paragraph",
             "text": "Онлайн-демоверсия будет развиваться вместе с настольным приложением и может сталкиваться с проблемами, которых нет в настольной версии. Отзыв можно отправить прямо с левой боковой панели. Вы также можете следить за проектом, сообщать о проблемах и участвовать в обсуждениях на GitHub.",
             "id": "what-the-foliole-demo-is-for-block-8"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
           }
         ],
         "highlights": [],
@@ -4437,6 +4825,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "从 Readwise Reader 导入",
+        "description": "桌面版提供两种彼此独立的 Readwise 来源。Readwise API 会让 Foliole 直接连接你的 Reader 账号，不需要安装 Obsidian，也不依赖本地导出文件夹。复制 Readwise Token，选择 Readwise API，并在当前负责 Readwise 的桌面主机上完成连接；之后 Foliole 会自动导入，并按你选择的频率检查变化。断开连接、切换来源模式或把 Readwise 交给另一台主机后，旧主机会在继续保存变化前停止。文件夹模式仍适用于使用 Readwise Reader for Obsidian 导出的人，它会读取本地导出，因此对应文件夹必须保持可用。两种模式不会同时运行，也不会自动切换。",
+        "summary": "桌面版提供两种彼此独立的 Readwise 来源。Readwise API 会让 Foliole 直接连接你的 Reader 账号，不需要安装 Obsidian，也不依赖本地导出文件夹。复制 Readwise Token，选择 Readwise API，并在当前负责 Readwise 的桌面主机上完成连接；之后 Foliole 会自动导入，并按你选择的频率检查变化。断开连接、切换来源模式或把 Readwise 交给另一台主机后，旧主机会在继续保存变化前停止。文件夹模式仍适用于使用 Readwise Reader for Obsidian 导出的人，它会读取本地导出，因此对应文件夹必须保持可用。两种模式不会同时运行，也不会自动切换。",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "桌面版提供两种彼此独立的 Readwise 来源。Readwise API 会让 Foliole 直接连接你的 Reader 账号，不需要安装 Obsidian，也不依赖本地导出文件夹。复制 Readwise Token，选择 Readwise API，并在当前负责 Readwise 的桌面主机上完成连接；之后 Foliole 会自动导入，并按你选择的频率检查变化。断开连接、切换来源模式或把 Readwise 交给另一台主机后，旧主机会在继续保存变化前停止。文件夹模式仍适用于使用 Readwise Reader for Obsidian 导出的人，它会读取本地导出，因此对应文件夹必须保持可用。两种模式不会同时运行，也不会自动切换。",
+            "id": "readwise-reader-import-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -4458,7 +4883,9 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
     "source": {
       "rootNodeId": null,
       "rootTitle": "docs/i18n/guides",
-      "warnings": []
+      "warnings": [
+        "fallback-en: readwise-reader-import"
+      ]
     },
     "topics": [
       {
@@ -4836,6 +5263,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
             "kind": "paragraph",
             "text": "線上體驗版會隨桌面應用程式持續更新，也可能出現與桌面版不同的問題。你可以透過左側工具列直接提交意見，也歡迎在 GitHub 關注專案進度、回報問題或參與討論。",
             "id": "what-the-foliole-demo-is-for-block-8"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "readwise-reader-import",
+        "slug": "readwise-reader-import",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Import from Readwise Reader",
+        "description": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "summary": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "readwise-reader-import"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The desktop app offers two separate Readwise sources. Readwise API connects Foliole directly to your Reader account, so it does not require Obsidian or a local export folder. Copy your Readwise token, choose Readwise API, and connect on the desktop host responsible for Readwise. Foliole then imports automatically and checks for changes at the frequency you choose. Disconnecting, changing source mode, or moving Readwise to another host stops the old host before it can save more changes. Folder mode remains available for people who use the Readwise Reader export for Obsidian; it reads that local export and therefore requires its folders to remain available. The two modes never run together or switch automatically.",
+            "id": "readwise-reader-import-block-1"
           }
         ],
         "highlights": [],

@@ -10,6 +10,7 @@ import {
   DEMO_MANIFEST_FILE,
   stableJson,
 } from './demoManifest';
+import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
 
 const topic = {
   blocks: [
@@ -106,4 +107,28 @@ describe('Demo manifest contract', () => {
   it('uses stable JSON ordering for hash inputs', () => {
     expect(stableJson({ b: 1, a: { d: 2, c: 3 } })).toBe('{"a":{"c":3,"d":2},"b":1}');
   });
+});
+
+it('keeps reciprocal locale routes when a guide falls back to English', () => {
+  const pack = GENERATED_DEMO_PACKS.de;
+  if (!pack) throw new Error('Missing German Demo pack fixture');
+  const slug = 'untranslated-guide';
+  const originalWarnings = [...pack.source.warnings];
+  pack.source.warnings.push(`fallback-en: ${slug}`);
+  try {
+    const manifest = createDemoManifest({ assets: [], topics: [{ ...topic, slug }] });
+    const english = manifest.localePublishPacks.find((entry) => entry.locale === 'en')?.topics[0];
+    const german = manifest.localePublishPacks.find((entry) => entry.locale === 'de')?.topics[0];
+    expect(german).toMatchObject({
+      canonicalPath: '/de/guides/untranslated-guide/',
+      title: topic.title,
+      xDefaultPath: '/en/guides/untranslated-guide/'
+    });
+    expect(german?.alternates).toEqual(english?.alternates);
+    expect(german?.alternates).toContainEqual({
+      locale: 'de', hreflang: 'de', path: '/de/guides/untranslated-guide/'
+    });
+  } finally {
+    pack.source.warnings.splice(0, pack.source.warnings.length, ...originalWarnings);
+  }
 });

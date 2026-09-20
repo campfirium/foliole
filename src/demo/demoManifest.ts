@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto';
 import { APP_LOCALES, appLocaleRouteSegment } from '../../lib/core/localization/appLocaleRegistry';
 
 import { canonicalDemoPath, canonicalGuidePath, getDemoTopicsForLocale, type DemoTopic } from './demoContent';
-import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
 
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
 export const DEMO_CONTRACT_VERSION = 3;
@@ -116,17 +115,9 @@ export function demoManifestProjection(topic: DemoTopic) {
   };
 }
 
-function fallbackWarningForSlug(slug: string) {
-  return `fallback-en: ${slug}`;
-}
-
-function localeHasTopicSource(locale: DemoPublishedLocale, slug: string) {
-  if (locale.locale === 'en') return true;
-  return !GENERATED_DEMO_PACKS[locale.locale]?.source.warnings.includes(fallbackWarningForSlug(slug));
-}
-
 function createAlternates(slug: string): DemoAlternatePath[] {
-  return DEMO_PUBLISHED_LOCALES.filter((locale) => localeHasTopicSource(locale, slug)).map((locale) => ({
+  // Every locale publishes a route, including guides using the English source.
+  return DEMO_PUBLISHED_LOCALES.map((locale) => ({
     locale: locale.locale,
     hreflang: locale.hreflang,
     path: canonicalGuidePath(slug, locale.locale)
