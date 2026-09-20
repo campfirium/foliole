@@ -16,10 +16,10 @@ import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
-function SettingsHarness() {
+function SettingsHarness({ runtimeKind = 'web-preview' }: { runtimeKind?: 'web-preview' | 'ios-capacitor' }) {
   const [settingsPage, setSettingsPage] = useState<CompanionSettingsPage>('list');
   return (
-    <CompanionCustomCssProvider runtimeKind="web-preview">
+    <CompanionCustomCssProvider runtimeKind={runtimeKind}>
       {renderCompanionSettingsContent({
         onBackToSettingsList: () => setSettingsPage('list'),
         onOpenSyncSettings: () => setSettingsPage('sync'),
@@ -47,8 +47,8 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.queryByText('Device')).not.toBeInTheDocument();
   });
 
-  it('opens the web-preview custom CSS management surface', () => {
-    render(<SettingsHarness />);
+  it.each(['web-preview', 'ios-capacitor'] as const)('opens the %s custom CSS management surface', (runtimeKind) => {
+    render(<SettingsHarness runtimeKind={runtimeKind} />);
 
     expect(screen.getByTestId('companion-settings-appearance')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Customize Topic reading/ }));

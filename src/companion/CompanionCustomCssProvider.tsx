@@ -58,8 +58,7 @@ function compileEmptyCollection() {
   return compileCompanionCustomCssCollection(createEmptyCompanionCustomCssCollection());
 }
 
-function createInitialState(runtimeKind: NativeCompanionRuntimeKind): ProviderState {
-  if (runtimeKind === 'ios-capacitor') return { compiled: compileEmptyCollection(), issue: null };
+function createInitialState(): ProviderState {
   const cached = loadCompanionCustomCssCache();
   if (cached.kind === 'valid') return { compiled: cached.compiled, issue: null };
   return { compiled: compileEmptyCollection(), issue: cached.kind === 'invalid' ? 'invalid' : null };
@@ -103,14 +102,14 @@ function applyNativeCollection(valueJson: string, setState: Dispatch<SetStateAct
   }
 }
 
-function useAndroidCustomCssHydration(args: {
-  isAndroid: boolean;
+function useNativeCustomCssHydration(args: {
+  isNative: boolean;
   refreshKey?: string | null;
   revisionRef: MutableRefObject<number>;
   setState: Dispatch<SetStateAction<ProviderState>>;
 }) {
   useEffect(() => {
-    if (!args.isAndroid) return undefined;
+    if (!args.isNative) return undefined;
     let cancelled = false;
     const hydrationRevision = args.revisionRef.current;
     void loadCompanionSyncSettingValueJson(COMPANION_CUSTOM_CSS_SETTING_KEY).then((valueJson) => {
@@ -126,11 +125,11 @@ function useAndroidCustomCssHydration(args: {
       }
     });
     return () => { cancelled = true; };
-  }, [args.isAndroid, args.refreshKey, args.revisionRef, args.setState]);
+  }, [args.isNative, args.refreshKey, args.revisionRef, args.setState]);
 }
 
 function useSaveCustomCssCollection(args: {
-  isAndroid: boolean;
+  isNative: boolean;
   isSupported: boolean;
   revisionRef: MutableRefObject<number>;
   setState: Dispatch<SetStateAction<ProviderState>>;
@@ -146,7 +145,7 @@ function useSaveCustomCssCollection(args: {
     const saveRevision = args.revisionRef.current + 1;
     args.revisionRef.current = saveRevision;
     try {
-      if (args.isAndroid) {
+      if (args.isNative) {
         const nativeResult = await saveCompanionSyncSettingRecord({
           key: COMPANION_CUSTOM_CSS_SETTING_KEY,
           valueJson: JSON.stringify(compiled.collection)
@@ -162,7 +161,7 @@ function useSaveCustomCssCollection(args: {
       }
       return { kind: 'save', ok: false };
     }
-  }, [args.isAndroid, args.isSupported, args.revisionRef, args.setState]);
+  }, [args.isNative, args.isSupported, args.revisionRef, args.setState]);
 }
 
 export function CompanionCustomCssProvider(props: {
@@ -170,13 +169,13 @@ export function CompanionCustomCssProvider(props: {
   refreshKey?: string | null;
   runtimeKind: NativeCompanionRuntimeKind;
 }) {
-  const isSupported = props.runtimeKind !== 'ios-capacitor';
-  const isAndroid = props.runtimeKind === 'android-capacitor';
-  const [state, setState] = useState(() => createInitialState(props.runtimeKind));
+  const isSupported = true;
+  const isNative = props.runtimeKind !== 'web-preview';
+  const [state, setState] = useState(createInitialState);
   const revisionRef = useRef(0);
   useCustomCssStyleNode(isSupported, state.compiled.compiledCss);
-  useAndroidCustomCssHydration({ isAndroid, refreshKey: props.refreshKey ?? null, revisionRef, setState });
-  const saveCollection = useSaveCustomCssCollection({ isAndroid, isSupported, revisionRef, setState });
+  useNativeCustomCssHydration({ isNative, refreshKey: props.refreshKey ?? null, revisionRef, setState });
+  const saveCollection = useSaveCustomCssCollection({ isNative, isSupported, revisionRef, setState });
   const markDraftEdited = useCallback(() => { revisionRef.current += 1; }, []);
 
   const resetCollection = useCallback(

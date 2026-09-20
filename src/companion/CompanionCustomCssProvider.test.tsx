@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const syncObjects = vi.hoisted(() => ({
   load: vi.fn<(key: string) => Promise<string | null>>(async () => null),
-  save: vi.fn(async () => ({ content_hash: 'hash', object_id: 'setting' }))
+  save: vi.fn<
+    (record: { key: string; valueJson: string }) => Promise<{ content_hash: string; object_id: string }>
+  >(async () => ({ content_hash: 'hash', object_id: 'setting' }))
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => ({
@@ -28,6 +30,10 @@ function Probe() {
     <>
       <output data-testid="name">{customCss.collection.snippets[0]?.name ?? 'empty'}</output>
       <output data-testid="issue">{customCss.issue ?? 'none'}</output>
+      <button onClick={() => void customCss.saveCollection(collection('Disabled', 'p { color: red; }', false))} type="button">
+        Disable styles
+      </button>
+      <button onClick={() => void customCss.resetCollection()} type="button">Reset styles</button>
       <button onClick={customCss.markDraftEdited} type="button">Edit draft</button>
       <button onClick={() => void customCss.saveCollection(collection('Saved', 'h1 { color: blue; }'))} type="button">
         Save styles
@@ -57,7 +63,7 @@ beforeEach(() => {
   syncObjects.save.mockResolvedValue({ content_hash: 'hash', object_id: 'setting' });
 });
 
-describe('CompanionCustomCssProvider success paths', () => {
+describe('CompanionCustomCssProvider web preview', () => {
   it('uses verified local state immediately and maintains one compiled style after style-mod', async () => {
     const sourceCss = 'p { color: red; }';
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local', sourceCss)));
@@ -82,9 +88,12 @@ describe('CompanionCustomCssProvider success paths', () => {
     expect(syncObjects.save).not.toHaveBeenCalled();
   });
 
-  it('hydrates Android native state and saves it before replacing cache and runtime CSS', async () => {
+});
+
+describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomCssProvider %s success paths', (runtimeKind) => {
+  it('hydrates native state and saves it before replacing cache and runtime CSS', async () => {
     syncObjects.load.mockResolvedValue(JSON.stringify(collection('Native', 'blockquote { opacity: .8; }')));
-    renderProvider('android-capacitor');
+    renderProvider(runtimeKind);
 
     await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Native'));
     expect(customStyleNode()?.textContent).toContain('blockquote');
@@ -101,12 +110,12 @@ describe('CompanionCustomCssProvider success paths', () => {
   });
 });
 
-describe('CompanionCustomCssProvider safety paths', () => {
+describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomCssProvider %s safety paths', (runtimeKind) => {
   it('uses a local revision guard when a native hydrate resolves after draft editing', async () => {
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
     let resolveHydrate!: (value: string | null) => void;
     syncObjects.load.mockReturnValue(new Promise((resolve) => { resolveHydrate = resolve; }));
-    renderProvider('android-capacitor');
+    renderProvider(runtimeKind);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit draft' }));
     await act(async () => resolveHydrate(JSON.stringify(collection('Stale'))));
@@ -118,18 +127,46 @@ describe('CompanionCustomCssProvider safety paths', () => {
   it('removes injected CSS for a corrupted native payload and exposes recovery', async () => {
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
     syncObjects.load.mockResolvedValue(JSON.stringify({ snippets: [], version: 2 }));
-    renderProvider('android-capacitor');
+    renderProvider(runtimeKind);
 
     await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('invalid'));
     expect(screen.getByTestId('name')).toHaveTextContent('empty');
     expect(customStyleNode()?.textContent).toBe('');
   });
 
+  it('persists disabled styles across a cache-free remount and can reset corrupted native state', async () => {
+    let nativeValue = JSON.stringify(collection('Native'));
+    syncObjects.load.mockImplementation(async () => nativeValue);
+    syncObjects.save.mockImplementation(async (record: { valueJson: string }) => {
+      nativeValue = record.valueJson;
+      return { content_hash: 'hash', object_id: 'setting' };
+    });
+    const first = renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Native'));
+    fireEvent.click(screen.getByRole('button', { name: 'Disable styles' }));
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Disabled'));
+    expect(customStyleNode()?.textContent).toBe('');
+    first.unmount();
+    window.localStorage.clear();
+    const restarted = renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Disabled'));
+    expect(customStyleNode()?.textContent).toBe('');
+    restarted.unmount();
+    nativeValue = '{"version":2,"snippets":[]}';
+    renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('invalid'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset styles' }));
+    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('none'));
+    expect(JSON.parse(nativeValue)).toEqual({ snippets: [], version: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Save styles' }));
+    await waitFor(() => expect(customStyleNode()?.textContent).toContain('h1'));
+  });
+
   it('keeps the last valid state on native load or save failure', async () => {
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
     syncObjects.load.mockRejectedValue(new Error('offline'));
     syncObjects.save.mockRejectedValue(new Error('write failed'));
-    renderProvider('android-capacitor');
+    renderProvider(runtimeKind);
 
     await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('sync'));
     expect(screen.getByTestId('name')).toHaveTextContent('Local');
@@ -138,23 +175,13 @@ describe('CompanionCustomCssProvider safety paths', () => {
     expect(screen.getByTestId('name')).toHaveTextContent('Local');
     expect(customStyleNode()?.textContent).toContain('color: red');
   });
-
-  it('keeps iOS at zero cache, native setting, and style activity', () => {
-    window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
-    renderProvider('ios-capacitor');
-
-    expect(screen.getByTestId('name')).toHaveTextContent('empty');
-    expect(customStyleNode()).toBeNull();
-    expect(syncObjects.load).not.toHaveBeenCalled();
-    expect(syncObjects.save).not.toHaveBeenCalled();
-  });
 });
 
-describe('CompanionCustomCssProvider platform gates', () => {
-  it('retains verified local styles when Android has no native setting yet', async () => {
+describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomCssProvider %s platform gates', (runtimeKind) => {
+  it('retains verified local styles when the host has no native setting yet', async () => {
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
     syncObjects.load.mockResolvedValue(null);
-    renderProvider('android-capacitor');
+    renderProvider(runtimeKind);
 
     await waitFor(() => expect(syncObjects.load).toHaveBeenCalledWith('custom_css_snippets'));
     expect(screen.getByTestId('name')).toHaveTextContent('Local');
