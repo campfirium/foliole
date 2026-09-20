@@ -8,6 +8,8 @@ const IMAGES = [
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/bo8wWQAAAABJRU5ErkJggg=='
 ];
+export const RESOURCE_LAN_FIRST_HASH = createHash('sha256')
+  .update(Buffer.from(IMAGES[0], 'base64')).digest('hex');
 const APP_ID = 'com.foliole.android.acceptance';
 
 export function assertOwnedResourcePath(libraryHome, assetsDir, storageKey) {

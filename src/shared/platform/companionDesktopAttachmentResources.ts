@@ -96,7 +96,8 @@ export async function syncCompanionAttachmentResourcesFromDesktop(
 export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   endpointUrl: string,
   requests: AttachmentResourceRequest[],
-  onSyncedChunk?: (attachmentIds: string[]) => void
+  onSyncedChunk?: (attachmentIds: string[]) => void,
+  onProviderTransfer?: Parameters<typeof runCompanionResourceProviderBatch>[0]['onTransfer']
 ) {
   if (!isNativeCompanionAttachmentResourceRuntime()) {
     return [];
@@ -107,6 +108,7 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   for (let index = 0; index < uniqueRequests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
     const chunk = uniqueRequests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
     const result = await runCompanionResourceProviderBatch({ endpointUrl: endpoint,
+      ...(onProviderTransfer ? { onTransfer: onProviderTransfer } : {}),
       needs: chunk.map((request) => ({ kind: 'attachment', id: request.attachmentId })),
       transfer: async (providerEndpoint, selected) => {
         const requested = chunk.filter((request) => selected.some((need) => need.id === request.attachmentId));
@@ -148,7 +150,8 @@ async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests
 
 export async function syncCompanionAttachmentResourceFromDesktop(
   endpointUrl: string,
-  attachmentId: string
+  attachmentId: string,
+  onProviderTransfer?: Parameters<typeof runCompanionResourceProviderBatch>[0]['onTransfer']
 ) {
   const request = await loadCompanionMissingAttachmentResource(attachmentId);
   if (!request) {
@@ -159,7 +162,7 @@ export async function syncCompanionAttachmentResourceFromDesktop(
     contentHash: request.content_hash,
     mimeType: request.mime_type,
     storageKey: request.storage_key
-  }]);
+  }], undefined, onProviderTransfer);
   if (syncedIds.includes(attachmentId)) {
     invalidateAttachmentResourceResolution(attachmentId);
   }

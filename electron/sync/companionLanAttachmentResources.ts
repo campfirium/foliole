@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 
+import { recordMissingResourceGetForAcceptance } from './acceptanceResourceGet404.js';
+
 export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
 
 export type CompanionAttachmentResourceResult =
@@ -45,6 +47,7 @@ export async function loadCompanionAttachmentResource(
     return errorResult('not_found', 404);
   }
   if (resolved.status === 'missing_file') {
+    await recordMissingResourceGetForAcceptance(normalizedAttachmentId, normalizedContentHash);
     return errorResult('missing_file', 404);
   }
 

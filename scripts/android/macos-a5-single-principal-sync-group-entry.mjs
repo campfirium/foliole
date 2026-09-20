@@ -1,6 +1,7 @@
 /* global console, process */
 
-import { seedA5ResourceLanProbe, verifyA5ResourceLanProbe } from './macos-a5-resource-lan-probe.mjs';
+import { RESOURCE_LAN_FIRST_HASH, seedA5ResourceLanProbe,
+  verifyA5ResourceLanProbe } from './macos-a5-resource-lan-probe.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -54,7 +55,13 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   }
   let cellProofInput;
   let resourceFixture;
-  let session = await openSession({ env, libraryHome: macosLibrary,
+  const transfer404 = process.env.FOLIOLE_T203_IOS_PROVIDER_FAILOVER === '1' &&
+    process.env.FOLIOLE_T203_TRANSFER_404 === '1';
+  const sessionEnv = transfer404 ? { ...env, FOLIOLE_T203_RESOURCE_GET_404: '1',
+    FOLIOLE_T203_RESOURCE_GET_404_HASH: RESOURCE_LAN_FIRST_HASH,
+    FOLIOLE_T203_RESOURCE_GET_404_LIBRARY: macosLibrary,
+    FOLIOLE_T203_RESOURCE_GET_404_EVIDENCE: path.join(evidenceRoot, 't203-ios-provider-failover') } : env;
+  let session = await openSession({ env: sessionEnv, libraryHome: macosLibrary,
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);

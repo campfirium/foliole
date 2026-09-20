@@ -9,6 +9,7 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
+import { expireAvailableResourceForAcceptance } from './acceptanceResourceGet404.js';
 import { loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
 
 export async function hashResourceFile(filePath: string) {
@@ -32,6 +33,9 @@ async function inspectResource(need: ResourceNeed): Promise<ResourceClaim> {
     const resource = await loadCompanionAttachmentResource(need.id, need.id);
     if (resource.status !== 'ready') return { ...need, status: 'missing' };
     const sha256 = await hashResourceFile(resource.filePath);
+    if (sha256 === need.id) {
+      await expireAvailableResourceForAcceptance(resource.filePath, sha256, resource.contentLength);
+    }
     return sha256 === need.id
       ? { ...need, status: 'available', sha256, size_bytes: resource.contentLength }
       : { ...need, status: 'checksum_mismatch' };

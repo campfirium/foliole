@@ -16,7 +16,8 @@ const SCENARIO = 'resource-provider-failover';
 const VITE_KEYS = ['VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE',
   'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'VITE_FOLIOLE_ACCEPTANCE_GROUP_ID',
   'VITE_FOLIOLE_ACCEPTANCE_MAC_ID', 'VITE_FOLIOLE_ACCEPTANCE_A5_ID',
-  'VITE_FOLIOLE_ACCEPTANCE_NODE_ID', 'VITE_FOLIOLE_ACCEPTANCE_IMAGE_HASH'];
+  'VITE_FOLIOLE_ACCEPTANCE_NODE_ID', 'VITE_FOLIOLE_ACCEPTANCE_IMAGE_HASH',
+  'VITE_FOLIOLE_ACCEPTANCE_TRANSFER_404'];
 
 function command(root, name, args, options = {}) {
   const result = spawnSync(name, args, { cwd: root, encoding: 'utf8', timeout: 600_000,
@@ -70,6 +71,7 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
   if (digest(macImage) !== fixture.images[0].hash) throw new Error('Mac source fixture hash changed.');
   const savedBytes = fs.readFileSync(macImage);
   const iosRoot = args.paths.buildRoot;
+  const transfer404 = process.env.FOLIOLE_T203_TRANSFER_404 === '1';
   const mode = resolveIosResourceMode();
   const derivedData = prepareIosAcceptanceCache(iosRoot).derivedData;
   let owned;
@@ -77,7 +79,7 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
   let resultPath;
   try {
     fixture.restore();
-    fs.unlinkSync(macImage);
+    if (!transfer404) fs.unlinkSync(macImage);
     owned = createOwnedIosSimulator({ artifactDir: root,
       create: (argv) => command(iosRoot, 'xcrun', argv),
       listAvailable: () => JSON.parse(command(iosRoot, 'xcrun', ['simctl', 'list', 'devices', 'available', '--json'])),
@@ -87,7 +89,8 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
       VITE_FOLIOLE_ACCEPTANCE_GROUP_ID: groupId, VITE_FOLIOLE_ACCEPTANCE_MAC_ID: macDeviceId,
       VITE_FOLIOLE_ACCEPTANCE_A5_ID: a5DeviceId,
       VITE_FOLIOLE_ACCEPTANCE_NODE_ID: fixture.nodeId,
-      VITE_FOLIOLE_ACCEPTANCE_IMAGE_HASH: fixture.images[0].hash };
+      VITE_FOLIOLE_ACCEPTANCE_IMAGE_HASH: fixture.images[0].hash,
+      VITE_FOLIOLE_ACCEPTANCE_TRANSFER_404: transfer404 ? '1' : '0' };
     buildChanged = true;
     heavy(iosRoot, 'npm', ['run', 'android:web:build'], mode, { env: scenarioEnv });
     command(iosRoot, 'npx', ['--no-install', 'cap', 'copy', 'ios']);
@@ -111,6 +114,7 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
     command(iosRoot, 'xcrun', ['simctl', 'launch', owned.udid, BUNDLE_ID]);
     const requested = await readResult(resultPath, 'join-requested');
     if (requested.status !== 'passed') throw new Error(requested.error);
+    if (transfer404) fs.writeFileSync(path.join(root, 'arm-after-a5-presence'), 'armed\n');
     const joined = await acceptIos();
     const first = await readResult(resultPath, 'provider-selected');
     if (first.status !== 'passed') throw new Error(first.error);
@@ -122,11 +126,21 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
     const restarted = await readResult(resultPath, 'restart-clean');
     if (restarted.status !== 'passed') throw new Error(restarted.error);
     if (digest(iosImage) !== fixture.images[0].hash) throw new Error('iOS cached resource changed on restart.');
-    const result = { sourceHead: command(iosRoot, 'git', ['rev-parse', 'HEAD']).trim(),
-      sourceTreeClean: !command(iosRoot, 'git', ['status', '--porcelain', '--untracked-files=no']).trim(),
+    const claimMarker = path.join(root, 'available-then-removed.json');
+    const getMarker = path.join(root, 'first-get-404.json');
+    if (transfer404 && (!fs.existsSync(claimMarker) || !fs.existsSync(getMarker))) {
+      throw new Error('Mac did not record both its available claim and actual signed GET 404.');
+    }
+    const result = { sourceHead: args.paths.acceptedRevision ??
+      command(iosRoot, 'git', ['rev-parse', 'HEAD']).trim(),
+      sourceTreeClean: Boolean(args.paths.acceptedRevision) ||
+        !command(iosRoot, 'git', ['status', '--porcelain', '--untracked-files=no']).trim(),
       a5Presence, first, joined, macImageAbsentDuringTransfer: !fs.existsSync(macImage),
       macImageHashBeforeRemoval: fixture.images[0].hash, restarted, signature,
       iosImageHashAfterRestart: fixture.images[0].hash,
+      mode: transfer404 ? 'actual-get-404-then-a5' : 'availability-missing-then-a5',
+      macClaimBeforeGet: transfer404 ? JSON.parse(fs.readFileSync(claimMarker, 'utf8')) : null,
+      macGetFailure: transfer404 ? JSON.parse(fs.readFileSync(getMarker, 'utf8')) : null,
       simulator: owned, topology: ['Mac isolated desktop', 'physical A5 acceptance app',
         'independent iOS Simulator'], status: 'passed' };
     fs.writeFileSync(path.join(root, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);

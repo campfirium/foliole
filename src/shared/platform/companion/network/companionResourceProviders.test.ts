@@ -42,9 +42,15 @@ it('exchanges member state before availability and changes provider after a 404'
   const transfer = vi.fn(async (endpoint: string) => endpoint === 'http://member'
     ? { ready: [], errors: { [`attachment:${need.id}`]: 'missing_file' as const } }
     : { ready: [`attachment:${need.id}`], errors: {} });
-  const result = await runCompanionResourceProviderBatch({ endpointUrl: 'http://anchor', needs: [need], transfer });
+  const onTransfer = vi.fn();
+  const result = await runCompanionResourceProviderBatch({ endpointUrl: 'http://anchor',
+    needs: [need], onTransfer, transfer });
   expect(result.ready).toEqual([`attachment:${need.id}`]);
   expect(transfer.mock.calls.map(([endpoint]) => endpoint)).toEqual(['http://member','http://mobile']);
+  expect(onTransfer.mock.calls.map(([attempt]) => [attempt.deviceId, attempt.ready,
+    attempt.errors[`attachment:${need.id}`]])).toEqual([
+    ['member', [], 'missing_file'], ['mobile', [`attachment:${need.id}`], undefined]
+  ]);
   expect(mocks.exchange.mock.invocationCallOrder[0]).toBeLessThan(mocks.post.mock.invocationCallOrder[0]!);
 });
 

@@ -48,6 +48,8 @@ async function queryAvailability(provider: CompanionResourceProvider, needs: rea
 export async function runCompanionResourceProviderBatch(args: {
   endpointUrl: string; needs: readonly ResourceNeed[];
   transfer: (endpointUrl: string, needs: readonly ResourceNeed[]) => Promise<ResourceTransfer>;
+  onTransfer?: (attempt: { deviceId: string; endpointUrl: string;
+    errors: ResourceTransfer['errors']; ready: string[] }) => void;
 }) {
   const peers = await loadCompanionResourceProviders(args.endpointUrl);
   const observed = await observeResourceProviders({ providers: peers.providers, needs: args.needs, query: queryAvailability });
@@ -55,7 +57,10 @@ export async function runCompanionResourceProviderBatch(args: {
     eligibleDeviceIds: await eligibleMemberIds(peers.groupId),
     transfer: async (provider, needs) => {
       if (!(await eligibleMemberIds(peers.groupId)).includes(provider.deviceId)) throw new Error('sync_group_device_not_active');
-      return args.transfer(provider.endpointUrl, needs);
+      const result = await args.transfer(provider.endpointUrl, needs);
+      args.onTransfer?.({ deviceId: provider.deviceId, endpointUrl: provider.endpointUrl,
+        errors: result.errors, ready: result.ready });
+      return result;
     }
   });
   const issues = [...observed.issues, ...result.issues];
