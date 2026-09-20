@@ -7,6 +7,7 @@ import type {
   ExternalSourceSettingsFolderPatch
 } from '../../../shared/platform/externalSourceSettingsRepository';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
+import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';
 import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
@@ -32,6 +33,7 @@ import { definedProps } from '@/shared/lib/definedProps';
 
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
+  desktopAdapters?: SettingsDesktopAdapters;
   assetsPath: string;
   errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
   externalSearchError: string | null;
@@ -202,9 +204,13 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'typography':
       return <SettingsTypographySection />;
     case 'rail':
-      return <SettingsRailSection actionItems={props.hotkeyItems} />;
+      return props.desktopAdapters
+        ? <SettingsRailSection actionItems={props.hotkeyItems} renderRailItemIcon={props.desktopAdapters.renderRailItemIcon} />
+        : null;
     case 'document-menu':
-      return <SettingsDocumentMenuSection actionItems={props.hotkeyItems} />;
+      return props.desktopAdapters
+        ? <SettingsDocumentMenuSection actionItems={props.hotkeyItems} resolveDocumentMenuLabel={props.desktopAdapters.resolveDocumentMenuLabel} />
+        : null;
     case 'mouse-gestures':
       return <SettingsMouseGesturesSection />;
     case 'library':

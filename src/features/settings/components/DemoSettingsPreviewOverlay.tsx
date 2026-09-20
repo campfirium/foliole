@@ -1,6 +1,7 @@
 import { Info } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -8,6 +9,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
 
 export interface DemoSettingsPreviewOverlayProps {
+  desktopAdapters?: SettingsDesktopAdapters;
   onClose: () => void;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   readwiseReaderCategoryContent?: ReactNode;
@@ -15,6 +17,7 @@ export interface DemoSettingsPreviewOverlayProps {
 }
 
 export function DemoSettingsPreviewOverlay({
+  desktopAdapters,
   onClose,
   onRunSupportCommand,
   readwiseReaderCategoryContent,
@@ -22,6 +25,7 @@ export function DemoSettingsPreviewOverlay({
 }: DemoSettingsPreviewOverlayProps) {
   return (
     <SettingsPanel
+      {...(desktopAdapters ? { desktopAdapters } : {})}
       contentNotice={<DemoSettingsPreviewNotice />}
       onClose={onClose}
       onRunSupportCommand={onRunSupportCommand}

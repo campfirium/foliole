@@ -1,9 +1,10 @@
-import { normalizeUnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
+import { normalizeUnifiedPushQueueRules } from '../../review/model/unifiedPushQueueRules';
+
 import {
   type ReviewSchedulerSettings,
   type ReviewSchedulerSettingsSavePatch,
   saveReviewSchedulerSettings
-} from '../../features/settings/model/reviewSchedulerSettings';
+} from './reviewSchedulerSettings';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 

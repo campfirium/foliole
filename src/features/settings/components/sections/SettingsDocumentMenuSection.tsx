@@ -1,8 +1,6 @@
 import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
-import { APP_PALETTE_COMMANDS } from '../../../../app/hooks/appPaletteCommandList';
-import { localizePaletteCommandTitle } from '../../../../app/hooks/appPaletteCommandLocalization';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
@@ -15,13 +13,9 @@ import {
 import { useDocumentHeaderMenuSettings } from '../../context/DocumentHeaderMenuSettingsProvider';
 import type { DocumentHeaderMenuItemConfig } from '../../model/documentHeaderMenuSettings';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
+import type { SettingsDesktopAdapters } from '../../model/settingsDesktopAdapters';
 
 import { AddRailActionRow } from './SettingsRailAddActionRow';
-
-function getDocumentMenuItemLabel(item: DocumentHeaderMenuItemConfig, t: ReturnType<typeof useTranslation>) {
-  const command = APP_PALETTE_COMMANDS.find((candidate) => candidate.id === item.commandId);
-  return item.labelOverride ?? localizePaletteCommandTitle(item.commandId, command?.title ?? item.commandId, t);
-}
 
 function DocumentMenuVisibilitySwitch(props: {
   item: DocumentHeaderMenuItemConfig;
@@ -119,7 +113,10 @@ function DocumentMenuManagerRow(props: {
   );
 }
 
-export function SettingsDocumentMenuSection({ actionItems }: { actionItems: HotkeySettingItem[] }) {
+export function SettingsDocumentMenuSection({ actionItems, resolveDocumentMenuLabel }: {
+  actionItems: HotkeySettingItem[];
+  resolveDocumentMenuLabel: SettingsDesktopAdapters['resolveDocumentMenuLabel'];
+}) {
   const t = useTranslation();
   const menu = useDocumentHeaderMenuSettings();
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -151,7 +148,7 @@ export function SettingsDocumentMenuSection({ actionItems }: { actionItems: Hotk
           <DocumentMenuManagerRow
             item={item}
             key={item.id}
-            label={getDocumentMenuItemLabel(item, t)}
+            label={resolveDocumentMenuLabel(item, t)}
             onDragStart={setDraggedItemId}
             onDropItem={dropOnItem}
             onRemove={menu.onRemoveMenuItem}

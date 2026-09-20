@@ -102,6 +102,24 @@ describe('layer topology rules', () => {
     expect(result.violations).not.toContainEqual({ file: 'src/demo/goodShell.ts', line: 1, kind: 'renderer-shell-import' });
   });
 
+  it('blocks shared renderer business from importing desktop and companion shells', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/features/badBusiness.ts', `
+      import { App } from '../app/App';
+      export { CompanionApp } from '../companion/CompanionApp';
+    `);
+    await writeFixtureFile(repoRoot, 'src/features/goodBusiness.ts', `
+      import { loadRuntimeLibraryPathSettings } from '../shared/platform/libraryPathSettingsRepository';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/features/badBusiness.ts', line: 1, kind: 'renderer-shell-import' },
+      { file: 'src/features/badBusiness.ts', line: 2, kind: 'renderer-shell-import' }
+    ]);
+  });
+
   it('blocks Electron host adapters from importing renderer layers', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'electron/badHost.ts', `

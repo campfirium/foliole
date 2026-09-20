@@ -4,6 +4,7 @@ import { createDefaultImportManagerSettings } from '../../../lib/core/import/imp
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 
+import { settingsDesktopAdapters } from './settingsDesktopAdapters';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
 function loadWorkspaceSettingsOverlayContent() {
@@ -81,6 +82,7 @@ export function WorkspaceSettingsOverlay({
     return (
       <Suspense fallback={null}>
         <DemoSettingsPreviewOverlay
+          desktopAdapters={settingsDesktopAdapters}
           onClose={onClose}
           onRunSupportCommand={onRunSupportCommand}
           readwiseReaderCategoryContent={<DemoReadwiseReaderSettingsPreview />}

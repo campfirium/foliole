@@ -90,6 +90,11 @@ export const RUNTIME_COMMAND_BOUNDARY_DIRS = [
 
 export const HOST_ISOLATION_RULES = [
   {
+    from: ['renderer-business'],
+    forbiddenPrefixes: ['src/app/', 'src/companion/', 'src/demo/'],
+    kind: 'renderer-shell-import'
+  },
+  {
     from: [
       'desktop-renderer',
       'companion-renderer',

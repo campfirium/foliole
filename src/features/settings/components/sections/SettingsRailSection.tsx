@@ -1,7 +1,6 @@
 import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
-import { RailItemIcon } from '../../../../app/components/WorkspaceRailActions';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
@@ -13,6 +12,7 @@ import {
 } from '../../../../shared/ui';
 import { useWorkspaceRailSettings } from '../../context/WorkspaceRailSettingsProvider';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
+import type { SettingsDesktopAdapters } from '../../model/settingsDesktopAdapters';
 import {
   getWorkspaceRailItemLabel,
   getWorkspaceRailSectionItems,
@@ -43,6 +43,7 @@ function RailVisibilitySwitch({ item, label, onToggle }: { item: WorkspaceRailIt
 function RailManagerRow({
   item,
   label,
+  renderRailItemIcon,
   onDropItem,
   onDragStart,
   onRemove,
@@ -50,6 +51,7 @@ function RailManagerRow({
 }: {
   item: WorkspaceRailItemConfig;
   label: string;
+  renderRailItemIcon: SettingsDesktopAdapters['renderRailItemIcon'];
   onDropItem: (item: WorkspaceRailItemConfig, droppedItemId?: string) => void;
   onDragStart: (itemId: string) => void;
   onRemove: (itemId: string) => void;
@@ -73,7 +75,7 @@ function RailManagerRow({
         <GripVertical aria-hidden="true" size={16} />
       </div>
       <div className="pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 text-foreground/68">
-        <RailItemIcon commandId={item.commandId} {...(item.iconId ? { iconId: item.iconId } : {})} />
+        {renderRailItemIcon(item.commandId, item.iconId)}
       </div>
       <div className="flex flex-[0_0_auto] items-center justify-end gap-2">
         {item.source === 'user' ? (
@@ -144,12 +146,14 @@ function RailPlainDivider() {
 
 function RailManagerRows({
   items,
+  renderRailItemIcon,
   onDragStart,
   onDropItem,
   onRemove,
   onToggle
 }: {
   items: WorkspaceRailItemConfig[];
+  renderRailItemIcon: SettingsDesktopAdapters['renderRailItemIcon'];
   onDragStart: (itemId: string) => void;
   onDropItem: (item: WorkspaceRailItemConfig, droppedItemId?: string) => void;
   onRemove: (itemId: string) => void;
@@ -161,6 +165,7 @@ function RailManagerRows({
       item={item}
       key={item.id}
       label={getWorkspaceRailItemLabel(item, t)}
+      renderRailItemIcon={renderRailItemIcon}
       onDragStart={onDragStart}
       onDropItem={onDropItem}
       onRemove={onRemove}
@@ -169,7 +174,10 @@ function RailManagerRows({
   ));
 }
 
-export function SettingsRailSection({ actionItems }: { actionItems: HotkeySettingItem[] }) {
+export function SettingsRailSection({ actionItems, renderRailItemIcon }: {
+  actionItems: HotkeySettingItem[];
+  renderRailItemIcon: SettingsDesktopAdapters['renderRailItemIcon'];
+}) {
   const t = useTranslation();
   const rail = useWorkspaceRailSettings();
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -204,9 +212,9 @@ export function SettingsRailSection({ actionItems }: { actionItems: HotkeySettin
       title={t('settings.rail.title')}
     >
       <RailSectionDivider label={t('settings.rail.area.top')} section="top" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
-      <RailManagerRows items={topItems} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
+      <RailManagerRows items={topItems} renderRailItemIcon={renderRailItemIcon} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
       <RailSectionDivider label={t('settings.rail.area.bottom')} section="bottom" onDropDivider={(section, itemId) => moveDraggedItem(section, 0, itemId)} />
-      <RailManagerRows items={bottomItems} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
+      <RailManagerRows items={bottomItems} renderRailItemIcon={renderRailItemIcon} onDragStart={setDraggedItemId} onDropItem={dropOnItem} onRemove={rail.onRemoveRailItem} onToggle={rail.onToggleRailItem} />
       <RailDropPlaceholder onDrop={(itemId) => moveDraggedItem('bottom', bottomItems.length, itemId)} />
       <RailPlainDivider />
       <AddRailActionRow actionItems={actionItems} currentCommandIds={currentCommandIds} onAdd={rail.onAddRailItem} />

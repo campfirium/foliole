@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { settingsDesktopAdapters } from '../../../../app/components/settingsDesktopAdapters';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { DocumentHeaderMenuSettingsProvider } from '../../context/DocumentHeaderMenuSettingsProvider';
@@ -14,7 +15,7 @@ beforeEach(() => {
 function renderDocumentMenuSettings() {
   return renderWithLocalization(
     <DocumentHeaderMenuSettingsProvider>
-      <SettingsDocumentMenuSection actionItems={[]} />
+      <SettingsDocumentMenuSection actionItems={[]} resolveDocumentMenuLabel={settingsDesktopAdapters.resolveDocumentMenuLabel} />
     </DocumentHeaderMenuSettingsProvider>
   );
 }

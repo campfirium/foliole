@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
+import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';
 import {
   getSettingsCategoryOption,
   getInitialSettingsCategory,
@@ -30,6 +31,7 @@ import { definedProps } from '@/shared/lib/definedProps';
 import { AppStatusBadge } from '@/shared/ui';
 
 interface SettingsPanelProps {
+  desktopAdapters?: SettingsDesktopAdapters;
   contentNotice?: ReactNode;
   headerNotice?: ReactNode;
   importCategoryContent?: ReactNode;
@@ -84,6 +86,7 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
 }
 
 type SettingsPanelBodyProps = {
+  desktopAdapters?: SettingsDesktopAdapters;
   activeCategory: SettingsCategoryId;
   assetsPath: string;
   errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
@@ -138,6 +141,7 @@ function createSettingsCategoryProps(
 ): SettingsPanelCategoryProps {
   return {
     activeCategory: props.activeCategory,
+    ...definedProps({ desktopAdapters: props.desktopAdapters }),
     assetsPath: props.assetsPath,
     errorByLocation: props.errorByLocation,
     externalSearchError: props.externalSearchError,

@@ -51,6 +51,7 @@ it('keeps the real hotkey settings surface in the Live Demo preview', async () =
           primaryShortcutLabel: 'Ctrl+,',
           secondaryShortcutLabel: '',
           shortcutSummaryLabel: 'Ctrl+,',
+          shortcutDisplayEntries: [{ label: 'Ctrl+,', slot: 'primary' }],
           title: 'Open settings'
         }]
       }

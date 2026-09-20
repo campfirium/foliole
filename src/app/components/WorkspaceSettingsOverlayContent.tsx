@@ -7,6 +7,7 @@ import { requestAppConfirmation } from '../../shared/ui';
 import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
 import { loadImportSourceWorkspaceSettings } from './importSourceWorkspaceSettings';
 import { KeepImportPreviewDialog } from './KeepImportPreviewDialog';
+import { settingsDesktopAdapters } from './settingsDesktopAdapters';
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
@@ -47,6 +48,7 @@ export function WorkspaceSettingsOverlayContent({
   return (
     <>
       <SettingsPanel
+        desktopAdapters={settingsDesktopAdapters}
         importCategoryContent={<ImportCategoryContent importSettings={importSettings} keepPreview={keepPreview} />}
         onClose={onClose}
         onRunSupportCommand={onRunSupportCommand}

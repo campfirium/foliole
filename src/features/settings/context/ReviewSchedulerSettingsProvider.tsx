@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { createReviewActions } from '../../../app/hooks/reviewSettingsLayoutActions';
 import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
   loadReviewSchedulerSettings,
   type ReviewSchedulerSettings
 } from '../model/reviewSchedulerSettings';
+import { createReviewActions } from '../model/reviewSettingsActions';
 
 import {
   ReviewSchedulerSettingsContext,
