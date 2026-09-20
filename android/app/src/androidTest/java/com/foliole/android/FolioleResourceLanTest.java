@@ -14,7 +14,9 @@ import com.getcapacitor.JSObject;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,20 +86,31 @@ public final class FolioleResourceLanTest {
         throw new IllegalStateException("Physical LAN resource observation timed out: " + observed);
     }
 
-    private static String discoverLanProvider(Context context, String groupId) throws Exception {
+    private static JSONObject discoverLanProvider(Context context, String groupId) throws Exception {
+        JSONArray failedCandidates = new JSONArray();
         for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
             String endpoint = candidate.optString(FolioleCompanionHostBridgeContractDefinitions
                 .networkEndpointUrlCandidateKey(context));
             if (endpoint.contains("127.0.0.1") || endpoint.contains("localhost") || endpoint.contains("[::1]")) continue;
-            JSObject response = FolioleCompanionDesktopHttpClient.request(context,
-                endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+            JSObject response;
+            try {
+                response = FolioleCompanionDesktopHttpClient.request(context,
+                    endpoint + "/companion/discovery", "GET", new JSONObject(), null);
+            } catch (IOException failure) {
+                failedCandidates.put(new JSONObject().put("endpoint", endpoint)
+                    .put("error", failure.toString()));
+                continue;
+            }
             JSONObject discovery = new JSONObject(response.getString(
                 FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context)));
             if (groupId.equals(discovery.optString("group_id"))
                 && ("macOS".equals(discovery.optString("provider_platform"))
-                    || "darwin".equals(discovery.optString("provider_platform")))) return endpoint;
+                    || "darwin".equals(discovery.optString("provider_platform")))) {
+                return new JSONObject().put("endpoint", endpoint).put("groupId", groupId)
+                    .put("failedCandidates", failedCandidates);
+            }
         }
-        throw new IllegalStateException("Physical LAN Mac provider discovery was not verified.");
+        throw new IllegalStateException("Physical LAN Mac provider discovery was not verified: " + failedCandidates);
     }
 
     private static File attachment(Context context, String hash) {
