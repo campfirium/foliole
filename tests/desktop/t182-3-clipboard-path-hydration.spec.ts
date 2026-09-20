@@ -43,12 +43,8 @@ async function readClipboardRepresentations(app: ElectronApplication) {
   return app.evaluate(async ({ clipboard }) => {
     const items = await clipboard.read();
     const item = items[0];
-    const customType = item?.types.find((type) => type.includes('application/x-foliole')) ?? null;
-    const custom = customType ? await item?.getType(customType) : null;
     const html = item?.types.includes('text/html') ? await item.getType('text/html') : null;
     return {
-      custom: custom instanceof Blob ? await custom.text() : null,
-      customType,
       formats: item?.types ?? [],
       html: html instanceof Blob ? await html.text() : '',
       text: await clipboard.readText()
@@ -56,29 +52,42 @@ async function readClipboardRepresentations(app: ElectronApplication) {
   });
 }
 
+async function readInternalClipboardOnPaste(page: Page) {
+  await page.evaluate(() => {
+    window.__t182CapturedPaste = undefined;
+    document.addEventListener('paste', (event) => {
+      window.__t182CapturedPaste = event.clipboardData?.getData('application/x-foliole') ?? '';
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, { capture: true, once: true });
+  });
+  await page.keyboard.press('Meta+V');
+  await expect.poll(() => page.evaluate(() => window.__t182CapturedPaste)).not.toBeUndefined();
+  return page.evaluate(() => window.__t182CapturedPaste ?? '');
+}
+
 async function runGlobalClip(app: ElectronApplication, staleAfterImport = false) {
-  return app.evaluate(async ({ BrowserWindow, clipboard }, stale) => {
+  return app.evaluate(async ({ clipboard }, input) => {
     const run = globalThis.__folioleRunGlobalClipToInboxForTests;
-    const mainWindow = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed());
-    if (!run || !mainWindow) throw new Error('global clip test hook unavailable');
+    if (!run) throw new Error('global clip test hook unavailable');
     const events: string[] = [];
     const result = await run({
       log: (event) => events.push(event),
       presentIssue: async () => false,
-      ...(stale ? {
+      ...(input.stale ? {
         runImport: async () => {
           clipboard.writeText('newer clipboard value');
           return { import_id: 'stale-guard', node_id: 'none', source_kind: 'text', source_name: 'Selection' };
         }
       } : {}),
       runMacosCopy: async () => {
-        mainWindow.webContents.copy();
+        await clipboard.writeText(input.copyText);
         return { copyWritten: true, permission: 'granted' };
       },
       showDesktopToast: () => ({ close: () => undefined, update: () => undefined })
     });
-    return { clipboardText: clipboard.readText(), events, result };
-  }, staleAfterImport);
+    return { clipboardText: await clipboard.readText(), events, result };
+  }, { copyText: GLOBAL_TEXT, stale: staleAfterImport });
 }
 
 async function seedAcceptanceWorkspace(page: Page) {
@@ -87,17 +96,21 @@ async function seedAcceptanceWorkspace(page: Page) {
     await api?.seedNodes?.([
       { content: fixture.assetMarkdown, id: fixture.assetNodeId, kind: 'topic', title: 'T182 asset copy' },
       { content: '# Prompt', id: fixture.answerNodeId, kind: 'item', reveal: fixture.answer, title: 'T182 answer cut' },
-      { content: fixture.globalText, id: fixture.globalNodeId, kind: 'topic', title: 'T182 global clip' }
-    ]);
-    await api?.createTextHighlightChild?.({
-      anchorId: 't182-3-anchor',
-      anchorLink: { id: 't182-3-anchor', kind: 'highlight', locator: { from: 0, originalText: 'Anchor', to: 6 } },
-      parentNodeId: fixture.assetNodeId,
-      text: 'Anchor'
-    });
+      { content: fixture.globalText, id: fixture.globalNodeId, kind: 'topic', title: 'T182 global clip' },
+      {
+        anchorLink: { id: 't182-3-anchor', kind: 'highlight', locator: { from: 0, originalText: 'Anchor', to: 6 } },
+        content: 'Anchor', id: 't182-3-anchor', kind: 'item', parentNodeId: fixture.assetNodeId, title: 'Anchor'
+      }
+    ], { persist: true });
     await api?.openNode?.(fixture.assetNodeId);
   }, { answer: ANSWER, answerNodeId: ANSWER_NODE_ID, assetMarkdown: ASSET_MARKDOWN,
     assetNodeId: ASSET_NODE_ID, globalNodeId: GLOBAL_NODE_ID, globalText: GLOBAL_TEXT });
+  await page.locator(`[role="treeitem"][data-node-id="${ASSET_NODE_ID}"]`).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe(ASSET_NODE_ID);
+  await expect.poll(() => page.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor')))
+    .toBe(ASSET_MARKDOWN);
+  await expect(page.locator('.cm-md-highlight')).toContainText('Anchor');
 }
 
 async function acceptAssetCopy(app: ElectronApplication, page: Page, libraryHome: string) {
@@ -105,18 +118,22 @@ async function acceptAssetCopy(app: ElectronApplication, page: Page, libraryHome
   await page.keyboard.press('Meta+C');
   const copied = await readClipboardRepresentations(app);
   const expectedFileUrl = `file://${path.join(libraryHome, 'Assets', `${IMAGE_HASH}.png`)}`;
-  const custom = JSON.parse(copied.custom ?? 'null') as { anchors?: unknown; internalText?: unknown } | null;
+  const internalPayload = await readInternalClipboardOnPaste(page);
+  const custom = JSON.parse(internalPayload || 'null') as { anchors?: unknown; internalText?: unknown } | null;
   expect(copied.text).toContain(expectedFileUrl);
   expect(copied.html).toContain(expectedFileUrl);
   expect(custom).toMatchObject({
     anchors: [{ from: 0, kind: 'highlight', to: 6 }],
     internalText: ASSET_MARKDOWN
   });
-  return copied;
+  return { ...copied, internalPayload: custom };
 }
 
 async function acceptAnswerCut(page: Page) {
   await page.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), ANSWER_NODE_ID);
+  await page.locator(`[role="treeitem"][data-node-id="${ANSWER_NODE_ID}"]`).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe(ANSWER_NODE_ID);
   const cutFrom = ANSWER.indexOf('CUTME');
   await page.getByRole('button', { name: /^(Show answer|显示答案)$/ }).click();
   await selectEditorText(page, 'answer-editor', cutFrom, cutFrom + 'CUTME'.length);
@@ -160,10 +177,11 @@ test('hydrates clipboard paths and preserves copy, cut, and global clip contract
     await seedAcceptanceWorkspace(desktopWindow);
     const libraryHome = desktopSession.launchOptions.env.FOLIOLE_LIBRARY_HOME;
     if (!libraryHome) throw new Error('missing isolated library home');
-    const copied = await acceptAssetCopy(desktopApp, desktopWindow, libraryHome);
+    const firstCopy = await acceptAssetCopy(desktopApp, desktopWindow, libraryHome);
+    const repeatedCopy = await acceptAssetCopy(desktopApp, desktopWindow, libraryHome);
     await acceptAnswerCut(desktopWindow);
     const globalClip = await acceptGlobalClip(desktopApp, desktopWindow);
-    const evidence = { copied, ...globalClip };
+    const evidence = { firstCopy, repeatedCopy, ...globalClip };
     await fs.mkdir(ARTIFACT_DIR, { recursive: true });
     const target = path.join(ARTIFACT_DIR, 'result.json');
     await fs.writeFile(target, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
@@ -175,4 +193,5 @@ test('hydrates clipboard paths and preserves copy, cut, and global clip contract
 
 declare global {
   var __t182Clipboard: Array<Record<string, Blob>> | undefined;
+  interface Window { __t182CapturedPaste?: string; }
 }

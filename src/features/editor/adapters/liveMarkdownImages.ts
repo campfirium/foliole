@@ -79,7 +79,9 @@ function appendLoadingImageSurface(
   void resolveRemoteContextAndRender();
   async function resolveRemoteContextAndRender() {
     sourceContext = existingContext ?? await resolveRemoteRenderSourceContext(imageMatch.source, editorNodeId);
-    resolveRemoteMarkdownImageDisplay({ imageMatch, nodeId: editorNodeId, requestMeasure, retry: Boolean(retryKey), widget: wrapper });
+    resolveRemoteMarkdownImageDisplay({
+      imageMatch, requestMeasure, retry: Boolean(retryKey), sourceOrigin: sourceContext.sourceOrigin, widget: wrapper
+    });
     const source = buildRemoteRenderSource(imageMatch.source, editorNodeId, sourceContext, retryKey);
     const image = surface.querySelector<HTMLImageElement>('.cm-md-image-element');
     if (image) image.src = source;

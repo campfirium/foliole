@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export type NativeRemoteImageCommandMap = {
   [NATIVE_COMMANDS.loadRemoteImageMetadata]: {
-    args: { bypass_failure_cache?: boolean; node_id?: string | null; source_url: string };
+    args: { bypass_failure_cache?: boolean; source_origin: string | null; source_url: string };
     result: { intrinsic_size: { height: number; width: number } | null };
   };
   [NATIVE_COMMANDS.loadRemoteImageSourceContext]: {

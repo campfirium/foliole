@@ -4,8 +4,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   fetchRemoteImageMetadata: vi.fn(),
+  normalizeRemoteImageSourceOrigin: vi.fn((value: string) => value),
   resolveRemoteImageSourceContext: vi.fn(),
-  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
 vi.mock('../attachments/attachmentImageActions.js', () => ({
@@ -15,7 +15,8 @@ vi.mock('../attachments/importClipboardImageAttachment.js', () => ({ importClipb
 vi.mock('../attachments/importLocalImageAttachment.js', () => ({ importLocalImageAttachment: vi.fn() }));
 vi.mock('../attachments/importRemoteImageAttachment.js', () => ({ importRemoteImageAttachment: vi.fn() }));
 vi.mock('../attachments/remoteImageLearnedSources.js', () => ({
-  forgetRemoteImageLearnedSource: vi.fn(), learnRemoteImageSourceOrigin: vi.fn()
+  forgetRemoteImageLearnedSource: vi.fn(), learnRemoteImageSourceOrigin: vi.fn(),
+  normalizeRemoteImageSourceOrigin: mocks.normalizeRemoteImageSourceOrigin
 }));
 vi.mock('../attachments/remoteImageSourceContext.js', () => ({
   resolveRemoteImageSourceContext: mocks.resolveRemoteImageSourceContext
@@ -24,9 +25,6 @@ vi.mock('../attachments/remoteImagePipeline.js', () => ({
   fetchRemoteImageMetadata: mocks.fetchRemoteImageMetadata
 }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource: vi.fn() }));
-vi.mock('../database/connection.js', () => ({
-  runWithDatabaseConnectionOwner: mocks.runWithDatabaseConnectionOwner
-}));
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
@@ -55,18 +53,29 @@ it('returns only normalized origin and provenance fields to the renderer', () =>
   );
 });
 
-it('loads metadata with the node source context and retry intent', async () => {
-  mocks.resolveRemoteImageSourceContext.mockReturnValue({ sourceOrigin: 'https://source.example/' });
+it('loads metadata with the already resolved source context and retry intent', async () => {
   mocks.fetchRemoteImageMetadata.mockResolvedValue({ height: 240, width: 320 });
 
   await expect(handleStorageAttachmentCommand(NATIVE_COMMANDS.loadRemoteImageMetadata, {
     bypass_failure_cache: true,
-    node_id: 'node-1',
+    source_origin: 'https://source.example/',
     source_url: 'https://cdn.example/image.png'
   })).resolves.toEqual({ intrinsic_size: { height: 240, width: 320 } });
   expect(mocks.fetchRemoteImageMetadata).toHaveBeenCalledWith('https://cdn.example/image.png', {
     bypassFailureCache: true,
     sourceOrigin: 'https://source.example/'
   });
-  expect(mocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
+  expect(mocks.normalizeRemoteImageSourceOrigin).toHaveBeenCalledWith('https://source.example/');
+  expect(mocks.resolveRemoteImageSourceContext).not.toHaveBeenCalled();
+});
+
+it('uses a direct metadata request when the resolved source context has no origin', async () => {
+  mocks.fetchRemoteImageMetadata.mockResolvedValue(null);
+  await expect(handleStorageAttachmentCommand(NATIVE_COMMANDS.loadRemoteImageMetadata, {
+    source_origin: null, source_url: 'https://cdn.example/image.png'
+  })).resolves.toEqual({ intrinsic_size: null });
+  expect(mocks.fetchRemoteImageMetadata).toHaveBeenCalledWith('https://cdn.example/image.png', {
+    bypassFailureCache: false, sourceOrigin: null
+  });
+  expect(mocks.resolveRemoteImageSourceContext).not.toHaveBeenCalled();
 });

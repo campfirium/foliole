@@ -10,14 +10,14 @@ function isIntrinsicSize(value: unknown): value is { height: number; width: numb
 
 export async function loadRemoteImageMetadata(
   sourceUrl: string,
-  nodeId: string | null,
+  sourceOrigin: string | null,
   bypassFailureCache = false
 ) {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   const result = await invoke(NATIVE_COMMANDS.loadRemoteImageMetadata, {
     bypass_failure_cache: bypassFailureCache,
-    node_id: nodeId,
+    source_origin: sourceOrigin,
     source_url: sourceUrl
   });
   return isIntrinsicSize(result.intrinsic_size) ? result.intrinsic_size : null;

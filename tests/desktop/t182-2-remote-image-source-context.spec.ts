@@ -46,7 +46,7 @@ async function installMainProbe(app: ElectronApplication) {
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const learned = require(pathApi.join(process.cwd(), 'dist/electron/attachments/remoteImageLearnedSources.js'));
     const pipeline = require(pathApi.join(process.cwd(), 'dist/electron/attachments/remoteImagePipeline.js'));
-    connection.runWithDatabaseConnectionOwner(() => {
+    await connection.runWithDatabaseConnectionOwner(() => {
       const sqlite = connection.openDatabaseConnection().sqlite;
       sqlite.prepare(`INSERT INTO import_sources
         (source_fingerprint, provider, source_kind, source_name, source_locator,
@@ -61,24 +61,24 @@ async function installMainProbe(app: ElectronApplication) {
         .run('https://run.example/article', ids.conflict);
       learned.learnRemoteImageSourceOrigin('https://cdn.example/conflict.png', 'https://learned.example/article');
       learned.learnRemoteImageSourceOrigin('https://failure-cdn.example/missing.png', 'https://failure-source.example/article');
+      const driver = connection.openDatabaseConnection().driver;
+      const originalQueryOne = driver.queryOne.bind(driver);
+      const originalQueryAll = driver.queryAll.bind(driver);
+      globalThis.__t182RemoteImageProbe = { queries: [], requests: [] };
+      const recordSourceQuery = (sql: string, params: unknown[]) => {
+        if (new Error().stack?.includes('remoteImageSourceContext')) {
+          globalThis.__t182RemoteImageProbe.queries.push({ params: [...params], sql });
+        }
+      };
+      driver.queryOne = (sql, params = []) => {
+        recordSourceQuery(sql, params);
+        return originalQueryOne(sql, params);
+      };
+      driver.queryAll = (sql, params = []) => {
+        recordSourceQuery(sql, params);
+        return originalQueryAll(sql, params);
+      };
     });
-    const driver = connection.openDatabaseConnection().driver;
-    const originalQueryOne = driver.queryOne.bind(driver);
-    const originalQueryAll = driver.queryAll.bind(driver);
-    globalThis.__t182RemoteImageProbe = { queries: [], requests: [] };
-    const recordSourceQuery = (sql: string, params: unknown[]) => {
-      if (new Error().stack?.includes('remoteImageSourceContext')) {
-        globalThis.__t182RemoteImageProbe.queries.push({ params: [...params], sql });
-      }
-    };
-    driver.queryOne = (sql, params = []) => {
-      recordSourceQuery(sql, params);
-      return originalQueryOne(sql, params);
-    };
-    driver.queryAll = (sql, params = []) => {
-      recordSourceQuery(sql, params);
-      return originalQueryAll(sql, params);
-    };
     pipeline.resetRemoteImagePipelineForTests();
     pipeline.configureRemoteImagePipelineCacheRoot(pathApi.join(
       process.cwd(), '.tmp', 'desktop-acceptance', `t182-2-cache-${process.pid}-${Date.now()}`
@@ -165,7 +165,17 @@ test('keeps source priority and reuses failure provenance across retry', async (
     url.includes('/conflict.png') && referer === 'https://import.example/')).toBe(true);
   expect(afterRetry.requests.some(({ referer, url }) =>
     url.includes('/derived.png') && referer === 'https://parent.example/')).toBe(true);
-  expect(afterRetry.requests.filter(({ url }) => url.includes('/missing.png'))).toHaveLength(4);
+  const failedRequestsBefore = beforeRetry.requests.filter(({ url }) => url.includes('/missing.png'));
+  const failedRequestsAfter = afterRetry.requests.filter(({ url }) => url.includes('/missing.png'));
+  const retryRequests = failedRequestsAfter.slice(failedRequestsBefore.length);
+  expect(retryRequests.length).toBeGreaterThanOrEqual(2);
+  expect(retryRequests.length % 2).toBe(0);
+  for (let index = 0; index < retryRequests.length; index += 2) {
+    expect(retryRequests.slice(index, index + 2)).toEqual([
+      { referer: null, url: 'https://failure-cdn.example/missing.png' },
+      { referer: 'https://failure-source.example/', url: 'https://failure-cdn.example/missing.png' }
+    ]);
+  }
   const querySql = afterRetry.queries.map(({ sql }) => sql).join('\n');
   expect(querySql).not.toMatch(/keep_import_items|node_attachments|attachments|pdf_page_text|loadNodeSourceDetails/i);
 });

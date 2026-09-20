@@ -93,12 +93,12 @@ export function revealLoadedMarkdownImageSurface(surface: HTMLElement) {
 
 export function resolveRemoteMarkdownImageDisplay(args: {
   imageMatch: MarkdownImageMatch;
-  nodeId: string | null;
   requestMeasure: (() => void) | null;
   retry: boolean;
+  sourceOrigin: string | null;
   widget: HTMLElement;
 }) {
-  void loadRemoteImageMetadata(args.imageMatch.source, args.nodeId, args.retry).then((size) => {
+  void loadRemoteImageMetadata(args.imageMatch.source, args.sourceOrigin, args.retry).then((size) => {
     if (size) finalizeMarkdownImageDisplay(args.widget, args.imageMatch, size, args.requestMeasure);
   });
 }
