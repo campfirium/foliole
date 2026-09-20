@@ -61,8 +61,9 @@ describe('iosCompanionWorkspaceSyncStateStore', () => {
 
     await saveIosCompanionWorkspaceSyncState(state, manager as never);
 
-    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
-    expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
+    // Metadata commits before the separate consistent snapshot read.
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(2);
+    expect(connection.commitTransaction).toHaveBeenCalledTimes(2);
     expect(connection.rollbackTransaction).not.toHaveBeenCalled();
     expect(connection.run).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT(key) DO UPDATE'),

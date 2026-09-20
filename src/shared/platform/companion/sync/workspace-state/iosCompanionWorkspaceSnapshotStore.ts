@@ -4,6 +4,7 @@ import { attachmentStorageKeySql } from '../../../../../../lib/core/database/att
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
+import { loadOrderedWorkspaceSnapshotRows } from './iosCompanionWorkspaceSnapshotBatchRead';
 import {
   attachIosWorkspaceNodeAttachments,
   buildIosPersistedNodeViews,
@@ -16,9 +17,13 @@ const HOST_NAME_KEY = 'host_name';
 const ACTIVE_NODE_KEY = 'active_node_id';
 
 export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
+  return connection.transaction(loadSnapshot);
+}
+
+async function loadSnapshot(connection: DbPort) {
   const hostName = await loadMetaValue(connection, 'companion_meta', HOST_NAME_KEY);
   if (!hostName) throw new Error('Companion Host is unavailable.');
-  const nodes = await queryRows(connection, await snapshotSql(connection), [hostName]);
+  const nodes = await loadOrderedWorkspaceSnapshotRows(connection, await snapshotSql(connection), hostName);
   if (nodes.length === 0) return null;
 
   const { nodesById, trashedNodeIds } = buildIosWorkspaceNodes(nodes);

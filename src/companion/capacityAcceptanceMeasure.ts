@@ -27,6 +27,8 @@ async function measureRun(db: DbPort, count: number, run: number) {
     const rows = await db.query(sql, params);
     queries.push({ sql, params: [...params], rows: rows.length, wallMs: performance.now() - start });
     return rows as never;
+  }, transaction(execute) {
+    return db.transaction(() => execute(measured));
   } };
   const start = performance.now();
   const snapshot = await loadIosCompanionWorkspaceSnapshot(measured);

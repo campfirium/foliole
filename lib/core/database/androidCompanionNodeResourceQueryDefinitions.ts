@@ -6,7 +6,7 @@ import {
 } from './androidCompanionDerivedReadSql.js';
 import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
-import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+import { SNAPSHOT_VISIBLE_NODES_CTE_SQL, VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
@@ -108,7 +108,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceOrderedNodeIds: {
     resultKey: 'nodes',
     sql:
-      `${VISIBLE_NODES_CTE_SQL} ` +
+      `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_order no ON no.node_id = n.id ' +
       'ORDER BY COALESCE(no.position, 2147483647) ASC, ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',
@@ -122,7 +122,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceSnapshotNodes: {
     resultKey: 'nodes',
     sql:
-      `${VISIBLE_NODES_CTE_SQL} ` +
+      `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
       'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
       'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.image_sources, n.import_source_fingerprint, n.import_content_fingerprint, ' +
