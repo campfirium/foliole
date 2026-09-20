@@ -47,10 +47,11 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
   const dispositionsByPath = readDispositionsByPath(driver);
   const rows = driver.queryAll<{
     kind: string | null; last_node_id: string; raw: string; rule_id: string;
-    source_fingerprint: string | null; source_path: string; title: string;
+    node_active: number; source_fingerprint: string | null; source_path: string; title: string;
   }>(`SELECT item.rule_id,item.source_path,item.last_node_id,
       COALESCE(cache.content,cache.content_preview,'') raw,
       COALESCE(node.title,cache.title,'') title,
+      CASE WHEN node.id IS NULL THEN 0 ELSE 1 END node_active,
       json_extract(desktop.type_settings_json, '$.kind') kind,
       (SELECT source_fingerprint FROM import_sources source
        WHERE source.latest_node_id=item.last_node_id AND source.remote_document_id IS NULL
@@ -59,25 +60,26 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
     JOIN desktop_sources desktop ON desktop.config_ref=item.rule_id
       AND desktop.source_type='readwise' AND desktop.host_name=?
     LEFT JOIN keep_import_item_cache cache ON cache.rule_id=item.rule_id AND cache.source_path=item.source_path
-    JOIN nodes node ON node.id=item.last_node_id AND node.deleted_at IS NULL
+    LEFT JOIN nodes node ON node.id=item.last_node_id AND node.deleted_at IS NULL
     WHERE item.last_node_id IS NOT NULL`,
   [loadReadwiseHostAssignment().current_host_name]);
-  return rows.map((row) => {
+  return rows.flatMap((row) => {
     const ids = new Set(extractReaderLinkIds(row.raw));
     const dispositions = dispositionsByPath.get(sourcePathKey(row.rule_id, row.source_path)) ?? [];
     if (dispositions.length > 1) throw new Error('readwise_source_disposition_identity_conflict');
-    return {
+    if (row.node_active !== 1 && !dispositions[0]) return [];
+    return [{
       disposition: dispositions[0] ?? null,
       documentIds: ids,
       highlightIds: ids,
       latestNodeId: row.last_node_id,
-      nodeActive: true,
+      nodeActive: row.node_active === 1,
       originalUrl: extractReadwiseSourceUrl(row.raw),
       raw: row.raw,
       sourceCategory: sourceCategory(row.kind),
       sourceFingerprint: row.source_fingerprint,
       title: row.title
-    };
+    }];
   });
 }
 
