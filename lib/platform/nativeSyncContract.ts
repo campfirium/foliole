@@ -46,6 +46,7 @@ export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
 }
 
 export interface NativeSyncPackApplyResult {
+  participating_article_ids?: string[];
   applied_blob_count: number;
   applied_group_fact_count?: number;
   applied_object_count: number;

@@ -89,6 +89,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       sourcePeerId: args.sourcePeerId
     }).then((result) => ({
       ...result,
+      participating_article_ids: result.participatingArticleIds,
       applied_blob_count: result.appliedBlobCount,
       applied_group_fact_count: result.appliedGroupFactCount,
       applied_object_count: result.appliedObjectCount,

@@ -13,7 +13,7 @@ import {
 } from './companionWorkspaceRuntimeRepository';
 
 const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
-export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 64;
+export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 6;
 
 interface AttachmentResourceRequest {
   attachmentId: string;
@@ -101,20 +101,14 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   }
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedAttachmentIds: string[] = [];
-  let failedAttachmentCount = 0;
-  for (let index = 0; index < requests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
-    const chunk = requests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
+  const uniqueRequests = [...new Map(requests.map((request) => [request.storageKey, request])).values()];
+  for (let index = 0; index < uniqueRequests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
+    const chunk = uniqueRequests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
     const results = await syncAttachmentResourceRequestBatch(endpoint, chunk);
-    if (results.length === 0) {
-      failedAttachmentCount += chunk.length;
-    }
     syncedAttachmentIds.push(...results);
     if (results.length > 0) {
       onSyncedChunk?.(results);
     }
-  }
-  if (requests.length > 0 && failedAttachmentCount === requests.length) {
-    throw new Error('Attachment batch could not download any requested file.');
   }
   return syncedAttachmentIds;
 }
@@ -123,7 +117,7 @@ async function syncAttachmentResourceRequestBatch(endpoint: string, requests: At
   try {
     return await syncAttachmentResourceRequestBatchOnce(endpoint, requests);
   } catch {
-    return syncAttachmentResourceRequestFallback(endpoint, requests);
+    return [];
   }
 }
 
@@ -134,19 +128,6 @@ async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests
     getIosCompanionDatabaseOwner(), FolioleCompanionSync, download.batch_token
   );
   return result.syncedIds;
-}
-
-async function syncAttachmentResourceRequestFallback(endpoint: string, requests: AttachmentResourceRequest[]) {
-  const results = await Promise.all(requests.map((request) => syncAttachmentResourceRequest(endpoint, request)));
-  return results.filter((result): result is string => Boolean(result));
-}
-
-async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
-  try {
-    return (await syncAttachmentResourceRequestBatchOnce(endpoint, [request]))[0] ?? null;
-  } catch {
-    return null;
-  }
 }
 
 export async function syncCompanionAttachmentResourceFromDesktop(

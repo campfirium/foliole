@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  attachmentResourceMock,
+  articleNeedsMock,  attachmentResourceMock,
   resetCompanionDesktopSyncMocks,
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
@@ -39,7 +39,7 @@ async function testReportsAttachmentProgressAfterEachConcurrentChunk() {
     content_hash: `hash-att-${index}`,
     size_bytes: 3
   }));
-  syncBridgeMock.loadCompanionMissingAttachmentResources
+  articleNeedsMock
     .mockResolvedValueOnce(resources)
     .mockResolvedValueOnce([]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementationOnce(async (

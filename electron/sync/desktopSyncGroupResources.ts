@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { loadArticleAttachmentNeeds, type ArticleAttachmentNeed } from '../../lib/core/sync/articleAttachmentNeeds.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
+import { resolveAttachmentFile, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -33,27 +34,16 @@ interface BlobRow {
   stored_size_bytes: number;
 }
 
-interface AttachmentRow {
-  [key: string]: null | number | string;
-  attachment_id: string;
-  content_hash: string;
-  mime_type: string;
-  storage_key: string;
-}
-
 export function assertDesktopSyncGroupResourcesComplete() {
   const driver = openDatabaseConnection().driver;
   const missingBlobs = driver.queryOne<{ value: number }>(
     `SELECT COUNT(*) AS value FROM content_blobs cb
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`
   )?.value ?? 0;
-  const missingAttachments = driver.queryOne<{ value: number }>(
-    "SELECT COUNT(*) AS value FROM attachment_blobs WHERE availability NOT IN ('cached', 'local')"
-  )?.value ?? 0;
-  if (missingBlobs || missingAttachments) throw new Error('sync_group_resources_incomplete');
+  if (missingBlobs) throw new Error('sync_group_resources_incomplete');
 }
 
-export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
+export async function downloadDesktopSyncGroupResources(peer: ResourcePeer, articleIds: readonly string[] = []) {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-resources' });
   const blobs = await port.query<BlobRow>(
     `SELECT cb.hash, cb.stored_sha256, cb.stored_size_bytes FROM content_blobs cb
@@ -66,20 +56,20 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
       for (const { blob, body } of downloaded) await persistBlob(tx, blob, body);
     });
   }
-  const attachments = await port.query<AttachmentRow>(
-    `SELECT attachment_id, content_hash, mime_type, storage_key FROM attachment_blobs
-     WHERE content_hash IS NOT NULL AND storage_key IS NOT NULL AND mime_type IS NOT NULL
-       AND availability NOT IN ('cached', 'local')
-     ORDER BY attachment_id`
-  );
-  for (let index = 0; index < attachments.length; index += ATTACHMENT_CONCURRENCY) {
-    const wave = attachments.slice(index, index + ATTACHMENT_CONCURRENCY);
-    await boundedConcurrentMap(wave, ATTACHMENT_CONCURRENCY, async (item) => {
+  const { needs } = await loadArticleAttachmentNeeds(port, articleIds);
+  const failedStorageKeys: string[] = [];
+  await boundedConcurrentMap(needs, ATTACHMENT_CONCURRENCY, async (item) => {
+    if (resolveAttachmentFile(item.storageKey).status === 'ready') return;
+    try {
       const downloaded = await downloadAttachment(peer, item);
       await persistAttachmentFile(downloaded);
       await persistAttachmentRow(port, downloaded);
-    });
-  }
+    } catch (error) {
+      failedStorageKeys.push(item.storageKey);
+      console.warn('[sync] article attachment remains missing', { storageKey: item.storageKey, error });
+    }
+  });
+  return { failedStorageKeys };
 }
 
 async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
@@ -108,12 +98,12 @@ async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
   });
 }
 
-async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow) {
-  const query = new URLSearchParams({ attachment_id: attachment.attachment_id, content_hash: attachment.content_hash });
+async function downloadAttachment(peer: ResourcePeer, attachment: ArticleAttachmentNeed) {
+  const query = new URLSearchParams({ attachment_id: attachment.attachmentId, content_hash: attachment.contentHash });
   const body = await downloadResource(peer, `/companion/attachment-resource?${query.toString()}`);
-  if (sha256(body) !== attachment.content_hash) throw new Error('attachment_checksum_mismatch');
+  if (sha256(body) !== attachment.contentHash) throw new Error('attachment_checksum_mismatch');
   return { attachment, body, filePath: resolveAttachmentStoragePath(
-    attachment.content_hash, undefined, attachment.mime_type
+    attachment.contentHash, undefined, attachment.mimeType
   ) };
 }
 
@@ -134,7 +124,7 @@ async function persistAttachmentRow(port: DbPort, input: Awaited<ReturnType<type
   const now = new Date().toISOString();
   await port.run(
     "UPDATE attachment_blobs SET availability = 'cached', storage_key = ?, cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-    [path.basename(input.filePath), now, now, input.attachment.attachment_id]
+    [path.basename(input.filePath), now, now, input.attachment.attachmentId]
   );
 }
 

@@ -36,28 +36,31 @@ async function pullContentStage(endpointUrl: string, onProgress?: CompanionDeskt
   return { ...blobs, syncedContentBlobElapsedMs: Date.now() - startedAt };
 }
 
-async function pullAttachmentStage(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
+async function pullAttachmentStage(endpointUrl: string, onProgress: CompanionDesktopSyncOptions['onProgress'], articleIds: readonly string[]) {
   const startedAt = Date.now();
   const attachments = await withResourceTimeout(
     'attachment_resource_downloads',
-    pullMissingAttachmentResources(endpointUrl, onProgress)
+    pullMissingAttachmentResources(endpointUrl, onProgress, articleIds)
   );
   return { ...attachments, syncedAttachmentResourceElapsedMs: Date.now() - startedAt };
 }
 
-export async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
+export async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress'], articleIds: readonly string[] = []) {
   const startedAt = Date.now();
   const content = await pullContentStage(endpointUrl, onProgress)
     .then((value) => ({ reason: null, status: 'fulfilled' as const, value }))
     .catch((reason) => ({ reason, status: 'rejected' as const, value: null }));
-  const attachments = content.status === 'fulfilled' && !content.value.contentBacklogRemaining
-    ? await pullAttachmentStage(endpointUrl, onProgress)
+  const attachments = await pullAttachmentStage(endpointUrl, onProgress, articleIds)
       .then((value) => ({ reason: null, status: 'fulfilled' as const, value }))
-      .catch((reason) => ({ reason, status: 'rejected' as const, value: null }))
-    : { reason: null, status: 'skipped' as const, value: null };
+      .catch((reason) => ({ reason, status: 'rejected' as const, value: null }));
   const contentValue = content.value;
   const attachmentValue = attachments.value;
   return {
+    remainingAttachmentResourceCount: attachmentValue?.missingAttachmentCount ?? 0,
+    remainingAttachmentResourceBytes: null,
+    remainingFailedAttachmentResourceCount: attachmentValue?.missingAttachmentCount ?? 0,
+    remainingFailedAttachmentResourceBytes: null,
+    remainingAttachmentBreakdown: undefined,
     attachmentResourceError: attachments.status === 'rejected' ? errorMessage(attachments.reason) : null,
     contentBlobError: content.status === 'rejected' ? errorMessage(content.reason) : null,
     syncedAttachmentResourceElapsedMs: attachmentValue?.syncedAttachmentResourceElapsedMs ?? 0,
@@ -73,6 +76,11 @@ export async function pullResourceStages(endpointUrl: string, onProgress?: Compa
 
 export function createEmptyResourceStages() {
   return {
+    remainingAttachmentResourceCount: 0,
+    remainingAttachmentResourceBytes: null,
+    remainingFailedAttachmentResourceCount: 0,
+    remainingFailedAttachmentResourceBytes: null,
+    remainingAttachmentBreakdown: undefined,
     attachmentResourceError: null,
     contentBlobError: null,
     syncedAttachmentResourceElapsedMs: 0,

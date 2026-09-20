@@ -124,8 +124,14 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   const cursor = await readSyncPackCursorWithDbPort(port, options.incomingAlias);
   const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
   const result = await port.transaction((tx) => applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq));
+  const articles = shouldApply ? await port.query<{ object_id: string }>(
+    `SELECT s.object_id FROM ${options.incomingAlias ?? 'inc'}.sync_object_state s
+     JOIN ${options.incomingAlias ?? 'inc'}.nodes n ON n.id = s.object_id
+     WHERE s.object_type = 'node' AND s.deleted_at IS NULL`
+  ) : [];
   return {
     applied: shouldApply,
+    participatingArticleIds: articles.map((row) => row.object_id),
     appliedBlobCount: result.appliedBlobCount,
     appliedGroupFactCount: result.appliedGroupFactCount,
     appliedObjectCount: result.appliedObjectCount,

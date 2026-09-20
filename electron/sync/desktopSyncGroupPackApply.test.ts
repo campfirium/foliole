@@ -17,7 +17,7 @@ it('reports applied pack identities so the renderer reloads committed sync facts
     ]);
 
   await expect(collectSyncPackAppliedEvent({ query } as unknown as DbPort, {
-    applied: true, appliedBlobCount: 1, appliedGroupFactCount: 3,
+    applied: true, participatingArticleIds: [], appliedBlobCount: 1, appliedGroupFactCount: 3,
     appliedObjectCount: 4, appliedReviewOpIds: ['review-a'],
     fromStateSeq: 0, handledConflictCount: 0, toStateSeq: 4
   })).resolves.toEqual({
@@ -30,7 +30,7 @@ it('reports applied pack identities so the renderer reloads committed sync facts
 it('does not report a replayed pack as a new workspace change', async () => {
   const query = vi.fn();
   await expect(collectSyncPackAppliedEvent({ query } as unknown as DbPort, {
-    applied: false, appliedBlobCount: 0, appliedGroupFactCount: 0,
+    applied: false, participatingArticleIds: [], appliedBlobCount: 0, appliedGroupFactCount: 0,
     appliedObjectCount: 0, appliedReviewOpIds: [],
     fromStateSeq: 4, handledConflictCount: 0, toStateSeq: 4
   })).resolves.toEqual({ appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] });

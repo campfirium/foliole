@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  attachmentResourceMock,
+  articleNeedsMock,  attachmentResourceMock,
   resetCompanionDesktopSyncMocks,
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
@@ -124,16 +124,14 @@ async function testKeepsEarlierAttachmentsWhenLaterBatchFails() {
     content_hash: `hash-att-${index}`,
     size_bytes: 1
   }));
-  syncBridgeMock.loadCompanionMissingAttachmentResources
-    .mockResolvedValueOnce(resources)
-    .mockResolvedValueOnce([{ attachment_id: 'att-fail', content_hash: 'hash-fail', size_bytes: 1024 }]);
+  articleNeedsMock
+    .mockResolvedValueOnce([...resources, { attachment_id: 'att-fail', content_hash: 'hash-fail', size_bytes: 1024 }]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
     _endpointUrl: string,
     requests: Array<{ attachmentId: string }>,
     onSyncedChunk?: (attachmentIds: string[]) => void
   ) => {
-    if (requests[0]?.attachmentId === 'att-fail') throw new Error('Attachment batch could not download any requested file.');
-    const syncedIds = requests.map((request) => request.attachmentId);
+    const syncedIds = requests.filter((request) => request.attachmentId !== 'att-fail').map((request) => request.attachmentId);
     onSyncedChunk?.(syncedIds);
     return syncedIds;
   });
@@ -146,7 +144,7 @@ async function testKeepsEarlierAttachmentsWhenLaterBatchFails() {
 }
 
 async function testFailsAttachmentStageWhenWholeBatchReturnsEmpty() {
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+  articleNeedsMock.mockResolvedValueOnce([
     { attachment_id: 'att-fail', content_hash: 'hash-fail', size_bytes: 1024 }
   ]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockResolvedValue([]);
@@ -154,7 +152,8 @@ async function testFailsAttachmentStageWhenWholeBatchReturnsEmpty() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-  expect(result.attachmentResourceError).toBe('Attachment file batch could not download any requested file.');
+  expect(result.attachmentResourceError).toBeNull();
+  expect(articleNeedsMock).toHaveBeenCalledTimes(1);
   expect(result.syncedAttachmentIds).toEqual([]);
 }
 
@@ -170,5 +169,5 @@ describe('companion desktop sync resource failures', () => {
   it('keeps downloaded content bodies when the ack request fails', testKeepsDownloadedContentWhenAckFails);
   it('fails the content body stage when a whole batch cannot cache anything', testFailsContentStageWhenWholeBodyBatchFails);
   it('keeps earlier attachments when a later batch fails', testKeepsEarlierAttachmentsWhenLaterBatchFails);
-  it('fails the attachment stage when a whole batch returns empty', testFailsAttachmentStageWhenWholeBatchReturnsEmpty);
+  it('keeps applied structure when every attachment stays missing', testFailsAttachmentStageWhenWholeBatchReturnsEmpty);
 });

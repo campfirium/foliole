@@ -27,6 +27,8 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     sourcePeerId: 'desktop-device'
   }, manager as never)).resolves.toEqual({
     applied: true,
+    participatingArticleIds: [],
+    participating_article_ids: [],
     applied_blob_count: 0,
     appliedBlobCount: 0,
     applied_group_fact_count: 0,

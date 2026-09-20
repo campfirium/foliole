@@ -98,6 +98,7 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
       hostName: 'Android test host'
     })).resolves.toMatchObject({
       applied: true,
+      participatingArticleIds: ['node-1'],
       appliedObjectCount: 2,
       fromStateSeq: 0,
       toStateSeq: 1
@@ -108,6 +109,7 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     })).resolves.toMatchObject({
       appliedObjectCount: 0,
       applied: false,
+      participatingArticleIds: [],
       toStateSeq: 1
     });
   } finally {

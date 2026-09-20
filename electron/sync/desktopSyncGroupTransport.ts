@@ -41,12 +41,13 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
   }
   if (memberState.peerBlocked) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
-  const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
+  const pack = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
+  const nextCursor = pack.cursor;
   await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
   await reportDesktopSyncGroupCursorCommitted({
     cursor: nextCursor, peerAuthorizationId: target.peer_device_id
   });
-  await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
+  await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target, pack.participatingArticleIds));
   const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
   return { complete, cursor: nextCursor };
 }

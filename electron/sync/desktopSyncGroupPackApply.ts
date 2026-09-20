@@ -105,6 +105,7 @@ async function applyDownloadedPack(
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   let event;
+  let participatingArticleIds: string[] = [];
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName,
@@ -112,9 +113,10 @@ async function applyDownloadedPack(
       sourcePeerId: args.peer.peer_device_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
+    participatingArticleIds = result.participatingArticleIds;
   } finally {
     await port.run('DETACH DATABASE inc');
   }
   notifyWorkspaceSyncApplied(event);
-  return manifest.toStateSeq;
+  return { cursor: manifest.toStateSeq, participatingArticleIds };
 }

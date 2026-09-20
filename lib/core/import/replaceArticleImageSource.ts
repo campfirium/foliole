@@ -66,3 +66,18 @@ export function replaceArticleImageSource(content: string, oldKey: string, newKe
 export function localizeArticleImageSource(content: string, sourceUrl: string, storageKey: string) {
   return replaceImageTarget(content, (source) => source === sourceUrl, storageKey);
 }
+
+export function collectArticleImageStorageKeys(content: string) {
+  const keys = new Set<string>();
+  const tree = folioleMarkdownParser.parse(content);
+  const references = referenceTargets(tree, content);
+  tree.iterate({ enter(node) {
+    if (node.name !== 'Image') return;
+    const url = node.node.getChild('URL');
+    const raw = url ? content.slice(url.from, url.to) : referenceImage(node.node, content, references)?.raw;
+    if (!raw) return;
+    const key = parseAssetMarkdownUrl(raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw);
+    if (key) keys.add(key);
+  } });
+  return [...keys];
+}

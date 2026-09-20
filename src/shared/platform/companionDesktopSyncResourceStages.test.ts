@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  articleNeedsMock,
   attachmentResourceMock,
   resetCompanionDesktopSyncMocks,
   syncBridgeMock
@@ -38,7 +39,7 @@ async function testDefersAttachmentsUntilContentBacklogClears() {
     now = COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS + 1;
     return { synced_hashes: JSON.parse(body).hashes as string[] };
   });
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+  articleNeedsMock.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
@@ -46,7 +47,7 @@ async function testDefersAttachmentsUntilContentBacklogClears() {
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
-  expect(result.syncedAttachmentIds).toEqual([]);
+  expect(result.syncedAttachmentIds).toEqual(['att-1']);
   expect(result.attachmentResourceError).toBeNull();
   expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
 }
@@ -61,7 +62,7 @@ async function testStopsAttachmentPassAtResourceBudget() {
   }));
   let now = 0;
   vi.spyOn(Date, 'now').mockImplementation(() => now);
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue(resources);
+  articleNeedsMock.mockResolvedValue(resources);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
     _endpointUrl: string,
     requests: Array<{ attachmentId: string }>,
@@ -77,7 +78,7 @@ async function testStopsAttachmentPassAtResourceBudget() {
 
   expect(result.attachmentResourceError).toBeNull();
   expect(result.syncedAttachmentIds).toHaveLength(ATTACHMENT_RESOURCE_BATCH_LIMIT);
-  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledTimes(1);
+  expect(articleNeedsMock).toHaveBeenCalledTimes(1);
 }
 
 describe('companion desktop sync resource stages', () => {
@@ -85,7 +86,7 @@ describe('companion desktop sync resource stages', () => {
 
   it('stops a content body pass at the resource time budget without failing sync', testStopsContentPassAtResourceBudget);
 
-  it('defers attachment resources while the topic body backlog remains', testDefersAttachmentsUntilContentBacklogClears);
+  it('downloads readable participating article attachments despite unrelated body backlog', testDefersAttachmentsUntilContentBacklogClears);
 
-  it('stops an attachment pass at the resource time budget without failing sync', testStopsAttachmentPassAtResourceBudget);
+  it('enumerates participating article needs once and drains their bounded work', testStopsAttachmentPassAtResourceBudget);
 });

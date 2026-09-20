@@ -68,6 +68,7 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   }
   const appliedReviewOpIds = result.applied_review_op_ids ?? [];
   return {
+    participatingArticleIds: result.participating_article_ids ?? [],
     appliedPackBlobCount: result.applied_blob_count,
     appliedPackObjectCount: result.applied_object_count,
     appliedReviewOpIds,
@@ -117,6 +118,7 @@ function pushErrorMessage(error: unknown) {
 
 function createSkippedStructurePack() {
   return {
+    participatingArticleIds: [] as string[],
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
     appliedReviewOpIds: [],
@@ -158,8 +160,8 @@ function mergeCompanionObjectsSyncResult(args: {
     pushedObjectIds: args.pushed.pushedObjectIds,
     pushedReviewOpIds: args.pushed.pushedReviewOpIds,
     requestedObjectIds: [],
-    ...args.resources,
     ...args.finalSummary,
+    ...args.resources,
     pushConflictCount: args.pushed.pushConflictCount,
     pushError: args.pushed.pushError,
     pushRejectedCount: args.pushed.pushRejectedCount
@@ -190,7 +192,7 @@ async function runCompanionObjectsSync(
   }
   const resources = options.includeResources === false
     ? createEmptyResourceStages()
-    : await pullResourceStages(endpointUrl, options.onProgress);
+    : await pullResourceStages(endpointUrl, options.onProgress, pack.participatingArticleIds);
   const finalSummary = options.includeResources === false
     ? createSkippedResourceSummary()
     : await loadCompanionDesktopSyncSummary(endpointUrl, pack.confirmedStructureStateSeq);

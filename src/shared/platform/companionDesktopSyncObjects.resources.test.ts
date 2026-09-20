@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  attachmentResolutionMock,
+  articleNeedsMock,  attachmentResolutionMock,
   attachmentResourceMock,
   diagnosticsMock,
   resetCompanionDesktopSyncMocks,
@@ -33,18 +33,18 @@ async function testPullsContentBlobs() {
 }
 
 async function testPullsAttachmentResources() {
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+  articleNeedsMock.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
 
-  const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const onProgress = vi.fn();
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
 
-  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(ATTACHMENT_RESOURCE_BATCH_LIMIT);
+  expect(articleNeedsMock).toHaveBeenCalledWith(['article']);
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641/',
-    [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }],
+    [expect.objectContaining({ attachmentId: 'att-1', contentHash: 'hash-att-1' })],
     expect.any(Function)
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
@@ -53,13 +53,12 @@ async function testPullsAttachmentResources() {
     completed: 1,
     completedBytes: 2048,
     phase: 'attachment',
-    total: null,
-    totalBytes: null
+    total: 1
   }));
 }
 
 async function testReportsAttachmentBreakdown() {
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+  articleNeedsMock.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   diagnosticsMock.loadLocalSyncDiagnostics
@@ -86,21 +85,9 @@ async function testReportsAttachmentBreakdown() {
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
 
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-    attachmentBreakdown: {
-      activeTopicAttachments: 1,
-      dueReviewAttachments: 2,
-      imageAttachments: 1,
-      imageBytes: 2048,
-      otherAttachments: 2,
-      otherBytes: 4096,
-      pdfAttachments: 1,
-      pdfBytes: 2048
-    },
     completed: 0,
-    completedBytes: 0,
     phase: 'attachment',
-    total: 4,
-    totalBytes: 8192
+    total: 1
   }));
 }
 
@@ -152,7 +139,7 @@ async function testPullsBodiesBeforeAttachments() {
   syncBridgeMock.loadCompanionMissingContentBlobs
     .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
     .mockResolvedValueOnce([]);
-  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+  articleNeedsMock.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
@@ -161,7 +148,7 @@ async function testPullsBodiesBeforeAttachments() {
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]!)
-    .toBeLessThan(syncBridgeMock.loadCompanionMissingAttachmentResources.mock.invocationCallOrder[0]!);
+    .toBeLessThan(articleNeedsMock.mock.invocationCallOrder[0]!);
 }
 
 async function testRefreshesStructureBeforeContentBatch() {
@@ -187,7 +174,7 @@ describe('companion desktop sync resources', () => {
 
   it('pulls missing attachment resources after structure sync', testPullsAttachmentResources);
 
-  it('reports attachment resource breakdown in sync progress', testReportsAttachmentBreakdown);
+  it('reports this delivery demand instead of the library attachment backlog', testReportsAttachmentBreakdown);
 
   it('reports topic and external document body breakdown in sync progress', testReportsContentBreakdown);
 

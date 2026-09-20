@@ -62,7 +62,7 @@ const peer = {
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.getPeerCursor.mockReturnValue('3');
-  runtime.downloadPack.mockResolvedValue(4);
+  runtime.downloadPack.mockResolvedValue({ cursor: 4, participatingArticleIds: ['article'] });
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
   runtime.assertCompatible.mockResolvedValue(undefined);
@@ -93,6 +93,6 @@ it('does not re-advertise after consuming a peer change', async () => {
     cursor: 4,
     peerAuthorizationId: 'desktop-b'
   });
-  expect(runtime.downloadResources).toHaveBeenCalledWith(peer);
+  expect(runtime.downloadResources).toHaveBeenCalledWith(peer, ['article']);
   expect(runtime.refreshAdvertisement).not.toHaveBeenCalled();
 });

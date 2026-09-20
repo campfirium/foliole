@@ -204,27 +204,14 @@ describe('companion iOS attachment resource manifests', () => {
 describe('companion desktop attachment resource queue', () => {
   beforeEach(resetAttachmentResourceMocks);
 
-  it('continues already enumerated attachment resources after one request fails', async () => {
-    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(new Error('Batch failed.'));
-    capacitorMock.plugin.downloadAttachmentResourceBatch
-      .mockRejectedValueOnce(new Error('Desktop returned 404.'))
-      .mockImplementationOnce(async ({ resources }: { resources: Array<{ attachment_id: string }> }) => {
-        capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
-        return {
-          batch_token: 'attachment-batch-token',
-          failed_attachment_ids: [],
-          synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-        };
-      });
-
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-2', '2'),
-      resource('att-3', '3')
-    ])).resolves.toEqual(['att-3']);
-
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(3);
-    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
+  it('does not retry a failed batch and continues the next bounded batch', async () => {
+    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(new Error('Connection interrupted.'));
+    const requests = Array.from({ length: 7 }, (_, index) => resource(`att-${index}`, String(index + 1)));
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', requests))
+      .resolves.toEqual(['att-6']);
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(2);
+    const ids = capacitorMock.plugin.downloadAttachmentResourceBatch.mock.calls.flatMap(([call]) => call.resources.map((item) => item.attachment_id));
+    expect(new Set(ids).size).toBe(7);
   });
 
   it('starts attachment resource downloads in a bounded parallel batch', async () => {
@@ -257,13 +244,14 @@ describe('companion desktop attachment resource queue', () => {
     expect(iosDatabaseMock.commit).toHaveBeenCalledTimes(1);
   });
 
-  it('fails already enumerated attachment resources when the whole batch fails', async () => {
+  it('leaves files missing without retrying when the whole batch fails', async () => {
     capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValue(new Error('Desktop returned 404.'));
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
       resource('att-2', '2'),
       resource('att-3', '3')
-    ])).rejects.toThrow('Attachment batch could not download any requested file.');
+    ])).resolves.toEqual([]);
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 type DesktopSyncPackApplyResult = {
+  participating_article_ids?: string[];
   applied_blob_count: number;
   applied_object_count: number;
   applied_review_op_ids?: string[];
@@ -9,6 +10,7 @@ type DesktopSyncPackApplyResult = {
 
 export const syncBridgeMock = {
   applyCompanionDesktopSyncPack: vi.fn(async (): Promise<DesktopSyncPackApplyResult> => ({
+    participating_article_ids: ['article'],
     applied_blob_count: 2,
     applied_object_count: 3,
     to_state_seq: 8
@@ -46,7 +48,21 @@ export const attachmentResourceMock = {
   })
 };
 
+export const articleNeedsMock = vi.fn<(ids: readonly string[]) => Promise<Array<{
+  attachment_id: string; content_hash: string; mime_type?: string; storage_key?: string; size_bytes?: number
+}>>>().mockResolvedValue([]);
+
+vi.mock('./companion/sync/resources/articleAttachmentNeeds', () => ({
+  loadCompanionArticleAttachmentNeeds: async (_endpoint: string, ids: readonly string[]) => ({
+    needs: (await articleNeedsMock(ids)).map((row) => ({ attachmentId: row.attachment_id,
+      contentHash: row.content_hash, mimeType: row.mime_type ?? 'image/png',
+      storageKey: row.storage_key ?? `${row.content_hash}.png`, sizeBytes: row.size_bytes })),
+    unreadableArticleIds: []
+  })
+}));
+
 export const attachmentResolutionMock = {
+  resolveRuntimeAttachmentResource: vi.fn(async () => ({ status: 'missing_file' })),
   invalidateAttachmentResourceResolution: vi.fn()
 };
 
@@ -102,10 +118,13 @@ export function resetCompanionDesktopSyncMocks() {
   vi.useRealTimers();
   vi.resetAllMocks();
   vi.unstubAllGlobals();
+  articleNeedsMock.mockResolvedValue([]);
+  attachmentResolutionMock.resolveRuntimeAttachmentResource.mockResolvedValue({ status: 'missing_file' });
   capacitorMock.getPlatform.mockReturnValue('web');
   capacitorMock.isNativePlatform.mockReturnValue(false);
   capacitorMock.plugin.desktopHttpRequest.mockReset();
   syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
+    participating_article_ids: ['article'],
     applied_blob_count: 2,
     applied_object_count: 3,
     to_state_seq: 8

@@ -1,100 +1,37 @@
-import { invalidateAttachmentResourceResolution } from './attachmentResources';
-import { loadLocalSyncDiagnostics } from './companion/sync/diagnostics/companionSyncDiagnostics';
+import { invalidateAttachmentResourceResolution, resolveRuntimeAttachmentResource } from './attachmentResources';
+import { loadCompanionArticleAttachmentNeeds } from './companion/sync/resources/articleAttachmentNeeds';
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
 import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
-import {
-  loadCompanionMissingAttachmentResources
-} from './companionSyncObjects';
 
-export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;
-const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
+export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 6;
 export { COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS, CONTENT_BLOB_BATCH_LIMIT, CONTENT_BLOB_CONCURRENT_FETCH_LIMIT, pullMissingContentBlobs, syncCompanionContentBlobFromDesktop } from './companionDesktopSyncContentBlobs';
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
-type AttachmentBreakdown = NonNullable<CompanionDesktopSyncProgress['attachmentBreakdown']>;
 
-function knownNumber(value: number | null | undefined) {
-  return typeof value === 'number' ? value : undefined;
-}
-
-function compactAttachmentBreakdown(values: Record<keyof AttachmentBreakdown, number | undefined>): AttachmentBreakdown {
-  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as AttachmentBreakdown;
-}
-
-async function loadMissingAttachmentResourceSummary() {
-  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
-  return {
-    attachmentBreakdown: diagnostics ? compactAttachmentBreakdown({
-      activeTopicAttachments: diagnostics.content.missing_active_topic_attachment_resource_count,
-      dueReviewAttachments: diagnostics.content.missing_due_review_attachment_resource_count,
-      imageAttachments: diagnostics.content.missing_image_attachment_resource_count,
-      imageBytes: diagnostics.content.missing_image_attachment_resource_bytes,
-      otherAttachments: diagnostics.content.missing_other_attachment_resource_count,
-      otherBytes: diagnostics.content.missing_other_attachment_resource_bytes,
-      pdfAttachments: diagnostics.content.missing_pdf_attachment_resource_count,
-      pdfBytes: diagnostics.content.missing_pdf_attachment_resource_bytes
-    }) : undefined,
-    failed: diagnostics?.content.failed_attachment_resource_count ?? null,
-    failedBytes: diagnostics?.content.failed_attachment_resource_bytes ?? null,
-    total: diagnostics?.content.missing_attachment_resource_count ?? null,
-    totalBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null
-  };
-}
-
-export async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: ProgressHandler) {
-  const startedAt = Date.now();
-  const { attachmentBreakdown, failed, failedBytes, total, totalBytes } = await loadMissingAttachmentResourceSummary();
-  const syncedAttachmentIds: string[] = [];
-  let syncedBytes = 0;
-  const failedAttachmentBytes = knownNumber(failedBytes);
-  const failedAttachmentCount = knownNumber(failed);
-  const progressBase = {
-    ...(attachmentBreakdown ? { attachmentBreakdown } : {}),
-    ...(failedAttachmentBytes !== undefined ? { failedBytes: failedAttachmentBytes } : {}),
-    ...(failedAttachmentCount !== undefined ? { failedCount: failedAttachmentCount } : {}),
-    phase: 'attachment' as const,
-    total,
-    totalBytes
-  };
-  onProgress?.({ ...progressBase, completed: 0, completedBytes: 0, elapsedMs: 0 });
-  for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
-    if (batchIndex > 0 && Date.now() - startedAt >= 45_000) {
-      break;
-    }
-    const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
-    if (resources.length === 0) break;
-    let syncedBatchIds: string[];
-    const sizeByAttachmentId = new Map(resources.map((resource) => [
-      resource.attachment_id,
-      Math.max(0, resource.size_bytes ?? 0)
-    ]));
-    try {
-      syncedBatchIds = await syncCompanionAttachmentResourceRequestsFromDesktop(
-        endpointUrl,
-        resources.map((resource) => ({
-          attachmentId: resource.attachment_id,
-          contentHash: resource.content_hash,
-          mimeType: resource.mime_type,
-          storageKey: resource.storage_key
-        })),
-        (syncedChunkIds) => {
-          syncedAttachmentIds.push(...syncedChunkIds);
-          for (const attachmentId of syncedChunkIds) {
-            invalidateAttachmentResourceResolution(attachmentId);
-          }
-          syncedBytes += syncedChunkIds.reduce((sum, attachmentId) => sum + (sizeByAttachmentId.get(attachmentId) ?? 0), 0);
-          onProgress?.({ ...progressBase, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt });
-        }
-      );
-    } catch (error) {
-      if (syncedAttachmentIds.length > 0) break;
-      throw error;
-    }
-    if (syncedBatchIds.length === 0) {
-      if (syncedAttachmentIds.length > 0) break;
-      throw new Error('Attachment file batch could not download any requested file.');
-    }
-    if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) break;
+export async function pullMissingAttachmentResources(
+  endpointUrl: string,
+  onProgress?: ProgressHandler,
+  articleIds: readonly string[] = []
+) {
+  if (articleIds.length === 0) return { missingAttachmentCount: 0, syncedAttachmentResourceBytes: 0, syncedAttachmentIds: [] as string[] };
+  const { needs } = await loadCompanionArticleAttachmentNeeds(endpointUrl, articleIds);
+  const requests = [];
+  for (const need of needs) {
+    const local = await resolveRuntimeAttachmentResource(`asset://${need.storageKey}`, { refresh: true });
+    if (local?.status !== 'ready') requests.push(need);
   }
-  return { syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
+  const startedAt = Date.now();
+  const syncedAttachmentIds: string[] = [];
+  const sizeById = new Map(requests.map((request) => [request.attachmentId, request.sizeBytes ?? 0]));
+  let syncedBytes = 0;
+  onProgress?.({ phase: 'attachment', completed: 0, total: requests.length });
+  if (requests.length === 0) return { missingAttachmentCount: 0, syncedAttachmentResourceBytes: 0, syncedAttachmentIds };
+  await syncCompanionAttachmentResourceRequestsFromDesktop(endpointUrl, requests, (ids) => {
+    syncedAttachmentIds.push(...ids);
+    syncedBytes += ids.reduce((sum, id) => sum + (sizeById.get(id) ?? 0), 0);
+    for (const id of ids) invalidateAttachmentResourceResolution(id);
+    onProgress?.({ phase: 'attachment', completed: syncedAttachmentIds.length,
+      total: requests.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt });
+  });
+  return { missingAttachmentCount: requests.length - syncedAttachmentIds.length, syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
 }
