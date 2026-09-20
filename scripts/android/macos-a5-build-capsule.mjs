@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
+import { frozenNpmCiArgs } from '../lib/frozen-npm-cache.mjs';
+
 import { checked } from './macos-a5-process.mjs';
 import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
 
@@ -98,7 +100,7 @@ export function openMacosA5BuildCapsule(context, {
     fsApi.unlinkSync(archivePath);
     stage = 'dependencies';
     onStage(stage);
-    run('npm', ['ci'], { cwd: buildRoot });
+    run('npm', frozenNpmCiArgs(context.sourceRepoRoot), { cwd: buildRoot });
     if (context.requiresHiddenDesktopRuntime) {
       stage = 'electron-runtime';
       onStage(stage);

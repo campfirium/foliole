@@ -6,6 +6,7 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { frozenNpmCiArgs } from '../lib/frozen-npm-cache.mjs';
 
 function digestParts(parts) {
   const hash = createHash('sha256');
@@ -78,7 +79,7 @@ export function materializeLocalSourceCapsule(repoRoot, artifactDir, candidate) 
     run(repoRoot, 'git', ['archive', '--format=tar', `--output=${archivePath}`, candidate.revision]);
     const archiveDigest = digestParts([readFileSync(archivePath)]);
     run(repoRoot, 'tar', ['-xf', archivePath, '-C', buildRoot]);
-    run(buildRoot, 'npm', ['ci']);
+    run(buildRoot, 'npm', frozenNpmCiArgs(repoRoot));
     run(buildRoot, 'npm', ['run', 'android:web:build']);
     run(buildRoot, 'npx', ['--no-install', 'cap', 'sync', 'ios']);
     return { archivePath, buildRoot, candidate: { ...candidate, archiveDigest,

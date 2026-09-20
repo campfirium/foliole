@@ -19,9 +19,9 @@ it('uses a unique task copy outside the active runtime and a matching evidence r
 });
 
 it('builds, checks native health, and signs a development package in the task copy', () => {
-  const commands = macosFrozenPreflightCommands('/owned/source');
+  const commands = macosFrozenPreflightCommands('/owned/source', '/repo');
   expect(commands.map(({ args, stage }) => [stage, args.join(' ')])).toEqual([
-    ['dependencies', 'ci'], ['build', 'run build'],
+    ['dependencies', `ci --cache ${path.resolve('/repo', '.cache/npm-downloads')}`], ['build', 'run build'],
     ['native-health', 'run electron:native:health'],
     ['package-sign', 'scripts/macos/package-mas.mjs']
   ]);

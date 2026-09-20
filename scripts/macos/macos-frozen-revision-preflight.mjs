@@ -12,12 +12,14 @@ import {
 } from '../acceptance/frozen-revision-preflight-contract.mjs';
 import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
 
+import { frozenNpmCiArgs } from '../lib/frozen-npm-cache.mjs';
+
 const OWNER_FILE = 'owner.json';
 const MAX_OUTPUT = 64 * 1024 * 1024;
 
-export function macosFrozenPreflightCommands(sourceRoot) {
+export function macosFrozenPreflightCommands(sourceRoot, repoRoot) {
   return [
-    { args: ['ci'], bin: 'npm', stage: 'dependencies' },
+    { args: frozenNpmCiArgs(repoRoot), bin: 'npm', stage: 'dependencies' },
     { args: ['run', 'build'], bin: 'npm', stage: 'build' },
     { args: ['run', 'electron:native:health'], bin: 'npm', stage: 'native-health' },
     { args: ['scripts/macos/package-mas.mjs'], bin: 'node', stage: 'package-sign' }
@@ -110,7 +112,7 @@ export function runMacosFrozenRevisionPreflight({
   let stage = 'task-copy';
   try {
     createTaskCopy(paths, source, run, fsApi, manager);
-    for (const command of macosFrozenPreflightCommands(paths.sourceRoot)) {
+    for (const command of macosFrozenPreflightCommands(paths.sourceRoot, repoRoot)) {
       stage = command.stage;
       checked(run, command, paths.logPath, fsApi, manager);
       if (stage === 'dependencies') updateFrozenPreflightReceipt(manager, { dependencies: {
