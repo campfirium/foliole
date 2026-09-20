@@ -12,6 +12,7 @@ import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import { createHostReadinessAdapters } from './multi-device-sync-host-readiness.mjs';
 import { collectEnvironmentReadiness } from './multi-device-sync-readiness.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import { prepareFriControlPlaneCache } from '../ios/ios-local-storage.mjs';
 
 const HOSTS = ['macos-a', 'android-b', 'windows-c', 'ios-d'];
 
@@ -42,11 +43,10 @@ export async function runT1527HostReadiness({ repoRoot = process.cwd(), id = run
   adapters['ios-d'] = createFriAdapter();
   const readiness = await collectReadiness({ adapters, hosts: HOSTS });
   const root = path.join(repoRoot, '.tmp', 'artifacts', 't152-7-readiness', id);
-  const cacheRoot = path.join(repoRoot, '.tmp', 'artifacts', 't152-7-readiness',
-    'fri-control-plane-cache');
   fs.mkdirSync(root, { recursive: true });
   let probe = null;
   if (readiness.allReady) {
+    const cacheRoot = prepareFriControlPlaneCache(repoRoot);
     probe = await runFriProbe({ artifactRoot: path.join(root, 'fri-control-plane'), cacheRoot });
   }
   const receipt = { candidate, completedAt: new Date().toISOString(), probe,
@@ -62,8 +62,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(
   'scripts/sync-group/t152-7-host-readiness.mjs')) {
   const prepareOnly = process.argv.slice(2).join(' ') === '--prepare-fri';
   const action = prepareOnly
-    ? prepareFriControlPlaneProbe({ cacheRoot: path.join(process.cwd(), '.tmp', 'artifacts',
-      't152-7-readiness', 'fri-control-plane-cache') }).then(() => ({ receipt: {
+    ? prepareFriControlPlaneProbe({ cacheRoot: prepareFriControlPlaneCache(process.cwd()) })
+      .then(() => ({ receipt: {
       resultStatus: 'ready'
     } }))
     : runT1527HostReadiness();

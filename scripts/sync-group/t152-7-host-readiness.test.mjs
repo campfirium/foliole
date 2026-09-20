@@ -15,7 +15,7 @@ function options(repoRoot, readiness, probeCalls) {
     createFriAdapter: () => async () => ({ facts: ['fri'] }), createRoot: () => undefined,
     id: 'gate-test', inspectCandidate: () => candidate,
     inspectOrigin: () => ({ ...candidate, sourceRef: 'refs/remotes/origin/dev' }), repoRoot,
-    runFriProbe: async () => { probeCalls.push(true);
+    runFriProbe: async ({ cacheRoot, artifactRoot }) => { probeCalls.push({ cacheRoot, artifactRoot });
       return { facts: ['fri-probe'], status: 'passed' }; } };
 }
 
@@ -35,7 +35,10 @@ it('runs the physical control-plane probe only after every client is ready', asy
   const readiness = { allReady: true, receipts: [], status: 'passed' };
   const result = await runT1527HostReadiness(options(repoRoot, readiness, probeCalls));
   expect(result.receipt.resultStatus).toBe('ready');
-  expect(probeCalls).toEqual([true]);
+  expect(probeCalls).toEqual([{
+    cacheRoot: path.join(repoRoot, '.cache/fri-control-plane'),
+    artifactRoot: path.join(repoRoot, '.tmp/artifacts/t152-7-readiness/gate-test/fri-control-plane')
+  }]);
 });
 
 it('keeps the gate blocked when the physical control-plane probe fails', async () => {
