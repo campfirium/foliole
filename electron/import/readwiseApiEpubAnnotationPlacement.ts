@@ -63,28 +63,36 @@ export function placeReadwiseApiEpubAnnotations(input: {
   const isUnlocated = (placement: typeof placements[number]) => (
     placement.parentId === input.rootNodeId && placement.highlight.locatorText === null
   );
-  const unmatchedNodeId = placements.some(isUnlocated)
-    ? ensureReadwiseUnlocatedNode({
-      connectionRef: input.connectionRef,
-      documentId: input.documentId,
-      driver: openDatabaseConnection().driver,
-      importedAt: input.importedAt,
-      rootNodeId: input.rootNodeId
-    })
-    : null;
+  const unlocated = placements.filter(isUnlocated).map((placement) => placement.highlight);
   for (const placement of placements) {
-    const parentId = isUnlocated(placement)
-      ? unmatchedNodeId ?? input.rootNodeId
-      : placement.parentId;
+    if (isUnlocated(placement)) continue;
+    const parentId = placement.parentId;
     const values = grouped.get(parentId) ?? [];
     values.push(placement.highlight);
     grouped.set(parentId, values);
   }
-  for (const [parentId, highlights] of grouped) persistGroup(input, parentId, highlights);
-  if (unmatchedNodeId) {
-    placeReadwiseUnlocatedNodeLast(openDatabaseConnection().driver, input.rootNodeId, unmatchedNodeId);
+  for (const [parentId, highlights] of grouped) {
+    unlocated.push(...persistGroup(input, parentId, highlights));
   }
+  persistUnlocated(input, unlocated);
   return input.annotations.length;
+}
+
+function persistUnlocated(
+  input: Parameters<typeof placeReadwiseApiEpubAnnotations>[0],
+  highlights: PreparedImportHighlightRecord[]
+) {
+  if (!highlights.length) return;
+  const driver = openDatabaseConnection().driver;
+  const unmatchedNodeId = ensureReadwiseUnlocatedNode({ ...input, driver });
+  insertImportedHighlightNodes({
+    driver,
+    highlights: highlights.map((highlight) => ({ ...highlight, locatorText: null })),
+    importedAt: input.importedAt,
+    parentContent: '# ※',
+    parentNodeId: unmatchedNodeId
+  });
+  placeReadwiseUnlocatedNodeLast(driver, input.rootNodeId, unmatchedNodeId);
 }
 
 function persistGroup(
@@ -101,12 +109,10 @@ function persistGroup(
   const anchoredIds = new Set(anchored.highlights.map((item) => item.nodeId));
   insertImportedHighlightNodes({
     driver: openDatabaseConnection().driver,
-    highlights: [
-      ...anchored.highlights,
-      ...highlights.filter((item) => !anchoredIds.has(item.nodeId)).map((item) => ({ ...item, locatorText: null }))
-    ],
+    highlights: anchored.highlights,
     importedAt: input.importedAt,
     parentContent: body,
     parentNodeId: parentId
   });
+  return highlights.filter((item) => !anchoredIds.has(item.nodeId));
 }
