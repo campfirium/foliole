@@ -34,14 +34,18 @@ export class CapacitorCompanionDatabaseOwner {
   private db: DbPort | null = null;
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
   private path: string | null = null;
-  private writerTail: Promise<void> = Promise.resolve();
+  private operationTail: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly manager: CapacitorCompanionDatabaseManager,
     readonly platform: 'android' | 'ios'
   ) {}
 
-  async open(request: Omit<CompanionDatabaseBootstrapRequest, 'allowCreate'> & { allowCreate?: boolean }) {
+  open(request: Omit<CompanionDatabaseBootstrapRequest, 'allowCreate'> & { allowCreate?: boolean }) {
+    return this.enqueue(() => this.openDatabase(request));
+  }
+
+  private async openDatabase(request: Omit<CompanionDatabaseBootstrapRequest, 'allowCreate'> & { allowCreate?: boolean }) {
     if (this.connection) throw new Error('Companion database owner is already open.');
     const existed = Boolean((await this.manager.isDatabase(COMPANION_DATABASE_NAME)).result);
     if (!existed && request.allowCreate === false) throw new Error('Companion database creation is blocked.');
@@ -67,9 +71,8 @@ export class CapacitorCompanionDatabaseOwner {
     }
   }
 
-  async read<T>(task: (db: DbPort) => Promise<T>) {
-    await this.writerTail;
-    return task(this.requireDb());
+  read<T>(task: (db: DbPort) => Promise<T>) {
+    return this.enqueue(() => task(this.requireDb()));
   }
 
   get databasePath() {
@@ -78,20 +81,29 @@ export class CapacitorCompanionDatabaseOwner {
   }
 
   runWriter<T>(task: (db: DbPort) => Promise<T>): Promise<T> {
-    const execute = this.writerTail.then(() => task(this.requireDb()));
-    this.writerTail = execute.then(() => undefined, () => undefined);
-    return execute;
+    return this.enqueue(() => task(this.requireDb()));
   }
 
-  async close() {
+  close() {
+    return this.enqueue(() => this.closeDatabase());
+  }
+
+  private async closeDatabase() {
     if (!this.connection || !this.db || !this.journalMode) return;
-    await this.writerTail;
     await checkpointCompanionDatabase(this.db, this.journalMode);
     await this.manager.closeConnection(COMPANION_DATABASE_NAME, false);
     this.connection = null;
     this.db = null;
     this.journalMode = null;
     this.path = null;
+  }
+
+  // Keep the complete operation on the single connection, including asynchronous reads.
+  // Callbacks use their supplied DbPort; they must not enqueue nested owner operations.
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const execute = this.operationTail.then(task);
+    this.operationTail = execute.then(() => undefined, () => undefined);
+    return execute;
   }
 
   private async openConnection() {
