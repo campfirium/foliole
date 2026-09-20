@@ -66,6 +66,7 @@ const expectedWorkspaceSnapshot = {
       title: 'Node 1',
       isTitleManual: true,
       hideTitleHeading: false,
+      imageSources: {},
       attachments: [],
       bodyBlobHash: null,
       openingText: null,

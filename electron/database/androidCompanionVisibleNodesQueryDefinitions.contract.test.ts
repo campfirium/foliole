@@ -37,11 +37,14 @@ it('keeps Android companion node consumers scoped to visible node ancestry', () 
   expectVisibleNodes(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql);
 });
 
-it('keeps Android companion resource priority queries scoped to visible node ancestry', () => {
+it('keeps Android companion content resource priority queries scoped to visible node ancestry', () => {
   expectVisibleNodes(ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS.contentBlobMissingHashes.sql);
   expectVisibleNodes(ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS.contentBlobMissingSummaryRows.sql);
-  expectVisibleNodes(ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingRows.sql);
-  expectVisibleNodes(ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingSummaryRows.sql);
+});
+
+it('keeps retired global attachment resource queues empty', () => {
+  expect(ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingRows.sql).toContain('WHERE 0');
+  expect(ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingSummaryRows.sql).toContain('WHERE 0');
 });
 
 it('downloads hidden body bytes after visible resources so an active member can provide a complete baseline', () => {

@@ -158,6 +158,7 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     null,
     null,
     null,
+    null,
     '2026-03-14T00:00:00.000Z',
     '2026-03-14T00:00:00.000Z'
   ]);

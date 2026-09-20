@@ -81,6 +81,7 @@ const expectedWorkspaceListSnapshot = {
       title: 'Node 1',
       isTitleManual: true,
       hideTitleHeading: true,
+      imageSources: {},
       bodyBlobHash: null,
       bodyStatus: 'ready',
       collections: ['Guide'],

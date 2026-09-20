@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
+import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
@@ -162,7 +163,7 @@ export function updateLocalDesktopSourceHosts(input: {
   previousHostName: string; updatedAt: string;
 }) {
   const { driver } = input;
-  const localId = loadDesktopDeviceId();
+  const localId = loadDatabaseDeviceId(driver);
   if (!driver.queryOne("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'desktop_sources'")) return;
   driver.transaction((tx) => {
     const changed = tx.queryAll<{ object_id: string; source_type: DesktopSourceType }>(
