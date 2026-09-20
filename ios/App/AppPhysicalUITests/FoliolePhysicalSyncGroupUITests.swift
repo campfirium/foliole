@@ -146,6 +146,16 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         openBrowse(in: app)
         waitForVisibleTopicText(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
                                 text: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"), in: app)
+        if let expectedBody = ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_EXPECTED_BODY"] {
+            revealReadingChrome(in: app, matching: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"))
+            tapButton(named: "Edit topic", in: app, timeout: 30)
+            let editor = app.textViews["Topic body"]
+            XCTAssertTrue(editor.waitForExistence(timeout: 30))
+            XCTAssertEqual(editor.value as? String, expectedBody,
+                           "The complete topic body did not persist across application launch.")
+            attachScreenshot(named: "Fri-restored-complete-topic-body")
+            tapButton(named: "Done", in: app, timeout: 30)
+        }
         attachScreenshot(named: "Fri-received-topic-edit")
     }
 
