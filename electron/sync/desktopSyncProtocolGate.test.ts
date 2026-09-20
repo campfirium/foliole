@@ -12,9 +12,9 @@ it('accepts only the current protocol generation from discovery', () => {
     .toMatchObject({ negotiated_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version, status: 'compatible' });
   expect(evaluateDiscoveredSyncProtocol(serializeSyncProtocolTxt({
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    max_supported_version: 2,
-    min_supported_version: 2,
-    version: 2
+    max_supported_version: 8,
+    min_supported_version: 8,
+    version: 8
   }))).toMatchObject({ reason: 'protocol_version_unsupported', status: 'incompatible' });
   expect(evaluateDiscoveredSyncProtocol({}))
     .toMatchObject({ reason: 'protocol_metadata_missing', status: 'incompatible' });

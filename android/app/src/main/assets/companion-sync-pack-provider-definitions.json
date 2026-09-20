@@ -17,7 +17,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 12,
+  "formatVersion": 13,
   "payloadCopyIndex": 4,
   "payloadPlans": [
     {
@@ -30,7 +30,7 @@
     },
     {
       "objectType": "import_source",
-      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,\n    watched_binding_id, watched_relative_path, source_ref, source_location,\n    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json\n    FROM source.import_sources"
+      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name,\n    CASE WHEN watched_binding_id IS NOT NULL OR EXISTS (\n      SELECT 1 FROM source.desktop_sources s WHERE s.source_ref = import_sources.source_ref AND s.source_type = 'watched'\n    ) THEN '' ELSE source_locator END source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,\n    watched_binding_id, watched_relative_path, source_ref, source_location,\n    remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json\n    FROM source.import_sources"
     },
     {
       "objectType": "node_open_state",
@@ -66,7 +66,7 @@
     },
     {
       "objectType": "watched_folder",
-      "sql": "SELECT b.binding_id __object_id, b.binding_id,\n    s.host_name, s.host_platform, s.type_settings_json, b.connection_status, b.action_mode,\n    b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.created_at, b.updated_at, b.source_ref\n    FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref"
+      "sql": "SELECT b.binding_id __object_id, b.binding_id,\n    s.host_name, s.host_platform, b.owner_device_identity_key, b.connection_status, b.action_mode,\n    b.highlight_mode, b.created_at, b.updated_at, b.source_ref\n    FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref"
     }
   ],
   "preparedMemberDataPlane": {
@@ -109,11 +109,12 @@
         "sync-group-device-facts-v1",
         "sync-group-member-state-v1",
         "system-entry-display-names-v1",
+        "watched-device-binding-v1",
         "workgroup-aead-v1"
       ],
-      "max_supported_version": 8,
-      "min_supported_version": 8,
-      "version": 8
+      "max_supported_version": 9,
+      "min_supported_version": 9,
+      "version": 9
     },
     "resourceKinds": [
       "attachment",
@@ -181,13 +182,14 @@
       "sync-group-device-facts-v1",
       "sync-group-member-state-v1",
       "system-entry-display-names-v1",
+      "watched-device-binding-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 8,
-    "min_supported_version": 8,
-    "version": 8
+    "max_supported_version": 9,
+    "min_supported_version": 9,
+    "version": 9
   },
-  "schemaVersion": 85,
+  "schemaVersion": 86,
   "stateCopyIndex": 2,
   "tableNames": [
     "sync_groups",
