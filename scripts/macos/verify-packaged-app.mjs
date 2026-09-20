@@ -6,6 +6,7 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 import { verifyPackagedEntitlements } from './packaged-entitlements-contract.mjs';
+import { verifyPackagedMainMarkdownParser } from './packaged-main-module-smoke.mjs';
 import { verifyPackagedVersion } from './verify-packaged-version.mjs';
 
 const TEAM_ID = 'V589TQH334';
@@ -107,25 +108,13 @@ async function verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess) {
   }
 }
 
-export async function verifyPackagedMacosApp(options) {
-  const run = options.run ?? spawnSync;
-  const checkAccess = options.access ?? access;
-  const appPath = path.resolve(options.appPath);
-  const mode = ['developer-id', 'distribution'].includes(options.mode)
-    ? options.mode
-    : 'development';
+function verifyPackagedSignatures(appPath, mode, run) {
   const codexPath = path.join(appPath, 'Contents/MacOS/codex');
   const helperPath = path.join(appPath, 'Contents/Frameworks/Foliole Helper.app');
   const cliAppPath = path.join(appPath, 'Contents/Helpers/Foliole CLI.app');
-  const publicLauncherPath = path.join(cliAppPath, 'Contents/MacOS/foliole');
   const cliRuntimePath = path.join(cliAppPath, 'Contents/MacOS/foliole-runtime');
   const appProfilePath = path.join(appPath, 'Contents/embedded.provisionprofile');
   const cliProfilePath = path.join(cliAppPath, 'Contents/embedded.provisionprofile');
-  await checkAccess(appProfilePath);
-  await checkAccess(cliProfilePath);
-  await checkAccess(publicLauncherPath, constants.X_OK);
-  await checkAccess(cliRuntimePath, constants.X_OK);
-  if (mode === 'developer-id') await verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess);
   runChecked('app signature verification', 'codesign', ['--verify', '--deep', '--strict', appPath], run);
   const profileAppGroup = 'group.com.campfirium.foliole.agent-control';
   requireProfile(decodeProfile(appProfilePath, run), {
@@ -176,6 +165,25 @@ export async function verifyPackagedMacosApp(options) {
     codex: codexEntitlements,
     helper: helperEntitlements
   }, mode);
+}
+
+export async function verifyPackagedMacosApp(options) {
+  const run = options.run ?? spawnSync;
+  const checkAccess = options.access ?? access;
+  const appPath = path.resolve(options.appPath);
+  const mode = ['developer-id', 'distribution'].includes(options.mode)
+    ? options.mode
+    : 'development';
+  const cliAppPath = path.join(appPath, 'Contents/Helpers/Foliole CLI.app');
+  const publicLauncherPath = path.join(cliAppPath, 'Contents/MacOS/foliole');
+  const cliRuntimePath = path.join(cliAppPath, 'Contents/MacOS/foliole-runtime');
+  await checkAccess(path.join(appPath, 'Contents/embedded.provisionprofile'));
+  await checkAccess(path.join(cliAppPath, 'Contents/embedded.provisionprofile'));
+  await checkAccess(publicLauncherPath, constants.X_OK);
+  await checkAccess(cliRuntimePath, constants.X_OK);
+  if (mode === 'developer-id') await verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess);
+  verifyPackagedSignatures(appPath, mode, run);
+  verifyPackagedMainMarkdownParser(appPath, run);
   runChecked('CLI help', publicLauncherPath, ['--help'], run);
   runChecked('CLI version', publicLauncherPath, ['--version'], run);
   if (options.version) {
