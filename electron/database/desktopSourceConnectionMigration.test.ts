@@ -5,11 +5,14 @@ import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateDesktopSourceConnections } from '../../lib/core/database/numberedMigrationDesktopSourceConnections.js';
+
+import { createHistoricalImportSourcesTable, createHistoricalSettingsAndSyncTables } from './historicalMigration.test-support.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
-it('upgrades v66 without changing existing desktop source data or state', () => {
+it('upgrades v66 while preserving source history and isolating watched connections', () => {
   const sqlite = new BetterSqlite3(':memory:');
   createV66SourceTables(sqlite);
   seedV66SourceData(sqlite);
@@ -23,7 +26,11 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
     watched_binding_id: null,
     watched_relative_path: null
   });
-  expect(sqlite.prepare('SELECT COUNT(*) AS count FROM watched_folder_bindings').get()).toEqual({ count: 0 });
+  expect(sqlite.prepare(`SELECT binding_id, connection_status, owner_device_identity_key
+    FROM watched_folder_bindings`).all()).toEqual([{
+    binding_id: 'draft-import-source-1', connection_status: 'needs-folder', owner_device_identity_key: 'Mac A'
+  }]);
+  expectMigratedSourceSettings(sqlite);
   expect(sqlite.prepare(`SELECT source_type, config_ref, host_name, root_path FROM desktop_sources
     ORDER BY source_type, config_ref`).all()).toEqual([
     { config_ref: 'external-1', host_name: 'Windows PC', root_path: '/Library/External', source_type: 'external' },
@@ -33,7 +40,8 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
   expect(sqlite.prepare(`SELECT type_settings_json FROM desktop_sources
     WHERE source_type = 'readwise' AND config_ref = 'readwise-articles'`).get()).toEqual({
     type_settings_json: JSON.stringify({
-      archivePath: '', highlightPath: '', keepState: 'enabled', kind: 'articles'
+      actionMode: 'keep', archivePath: '', highlightMode: 'split', highlightPath: '/Library/Readwise/Articles',
+      keepPreview: null, keepState: 'enabled', kind: 'articles'
     })
   });
   expect(sqlite.prepare(`SELECT host_name, folder_id, enabled FROM external_folder_host_preferences`).get())
@@ -53,17 +61,17 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
   sqlite.close();
 });
 
-it('upgrades a v66 database without optional import source tables', () => {
+it('creates watched bindings when the source-connection migration has no optional import tables', () => {
   const sqlite = new BetterSqlite3(':memory:');
   sqlite.pragma('user_version = 66');
 
-  initializeDatabaseSchema(sqlite);
+  migrateDesktopSourceConnections(sqlite);
 
   expect(sqlite.prepare(`SELECT name FROM sqlite_master
     WHERE type = 'table' AND name = 'watched_folder_bindings'`).get()).toEqual({
     name: 'watched_folder_bindings'
   });
-  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(66);
   sqlite.close();
 });
 
@@ -143,7 +151,25 @@ it('repairs a deployed v67 unassigned watched source without enabling it', () =>
   sqlite.close();
 });
 
+function expectMigratedSourceSettings(sqlite: import('better-sqlite3').Database) {
+  const sharedSettings = JSON.parse((sqlite.prepare(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  ).get() as { value: string }).value) as Record<string, unknown>;
+  expect(sharedSettings.sources).toEqual([{
+    actionMode: 'keep', highlightMode: 'merged', id: 'draft-import-source-1',
+    keepPreview: null, keepState: 'enabled'
+  }]);
+  expect(sharedSettings).not.toHaveProperty('readwiseSources');
+  expect(sharedSettings).not.toHaveProperty('readwiseRootPath');
+  const hostSettings = JSON.parse((sqlite.prepare(
+    "SELECT value_json FROM setting_records WHERE key = 'readwise_import_settings' AND host_name = 'Mac A'"
+  ).get() as { value_json: string }).value_json) as { readwiseRootPath: string };
+  expect(hostSettings.readwiseRootPath).toBe('/Library/Readwise');
+}
+
 function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
+  createHistoricalSettingsAndSyncTables(sqlite);
+  createHistoricalImportSourcesTable(sqlite);
   sqlite.exec(`CREATE TABLE external_search_folders (
     id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL,
     attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
@@ -156,16 +182,10 @@ function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
     enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)), updated_at TEXT NOT NULL,
     PRIMARY KEY (installation_id, folder_id)
   );
-  CREATE TABLE import_sources (
-    source_fingerprint TEXT PRIMARY KEY, provider TEXT NOT NULL, source_kind TEXT NOT NULL,
-    source_name TEXT NOT NULL, source_locator TEXT NOT NULL, first_imported_at TEXT NOT NULL,
-    last_imported_at TEXT NOT NULL, last_content_fingerprint TEXT NOT NULL, latest_node_id TEXT
-  );
   CREATE TABLE keep_import_items (
     rule_id TEXT NOT NULL, source_path TEXT NOT NULL, last_status TEXT NOT NULL,
     last_seen_at TEXT NOT NULL, last_node_id TEXT, PRIMARY KEY (rule_id, source_path)
   );
-  CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);
   PRAGMA user_version = 66;`);
 }
 
@@ -203,7 +223,6 @@ function readExistingSourceData(sqlite: import('better-sqlite3').Database) {
     external: sqlite.prepare(`SELECT id, folder_path, attachment_mode, attachment_root_path,
       excluded_dirs_json, status, document_count, indexed_at, last_error,
       created_at, updated_at FROM external_search_folders`).all(),
-    importManager: sqlite.prepare("SELECT * FROM settings WHERE key = 'import_manager_settings'").all(),
     importSources: sqlite.prepare(`SELECT source_fingerprint, provider, source_kind, source_name,
       source_locator, first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
       FROM import_sources`).all(),

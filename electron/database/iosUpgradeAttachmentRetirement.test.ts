@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -39,7 +40,7 @@ it.each([false, true])('migrates canonical v4 attachments or atomically rejects 
     }
     for (let run = 0; run < 2; run++) {
       await bootstrapCompanionDatabase(port, request);
-      expect(database.pragma('user_version', { simple: true })).toBe(37);
+      expect(database.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
       expect(database.prepare('SELECT * FROM attachments').all()).toEqual(attachments);
       expect(database.prepare('SELECT * FROM node_attachments').all()).toEqual(links);
       expect(database.prepare('SELECT id, content FROM nodes ORDER BY id').all()).toEqual(bodies);
@@ -68,7 +69,7 @@ it('upgrades the previous mobile schema and preserves attachment relationships a
     for (let run = 0; run < 2; run++) {
       await bootstrapCompanionDatabase(port, { allowCreate: false,
         expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' });
-      expect(database.pragma('user_version', { simple: true })).toBe(37);
+      expect(database.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
       expect(database.prepare('SELECT * FROM attachments').all()).toEqual(before);
       expect(database.prepare('SELECT * FROM node_attachments').all()).toEqual(links);
       expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();

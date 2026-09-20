@@ -24,6 +24,7 @@ import {
 } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { createHistoricalImportSourcesTable, createHistoricalSettingsAndSyncTables } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
@@ -45,6 +46,8 @@ it('installs core indexes in fresh and migrated desktop databases', () => {
 
   const migrated = openDatabaseConnection();
   createV38CoreTables(migrated.sqlite);
+  createHistoricalSettingsAndSyncTables(migrated.sqlite);
+  createHistoricalImportSourcesTable(migrated.sqlite);
   migrated.sqlite.pragma('user_version = 38');
   initializeDatabaseConnection(migrated);
 

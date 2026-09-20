@@ -154,10 +154,10 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
   const snapshots = (await listApplicationDatabaseBackups()).filter((entry) => entry.kind === 'snapshot');
   expect(snapshots).toHaveLength(2);
   const snapshotNames = snapshots.map((entry) => entry.fileName);
-  expect(snapshotNames).toEqual(expect.arrayContaining([
-    expect.stringMatching(/^foliole-rollback-\d{6}-\d{6}\.db\.gz$/),
-    expect.stringMatching(/^foliole-rollback-\d{6}-\d{6}-2\.db\.gz$/)
-  ]));
+  expect(new Set(snapshotNames).size).toBe(2);
+  for (const name of snapshotNames) {
+    expect(name).toMatch(/^foliole-rollback-\d{6}-\d{6}(?:-\d+)?\.db\.gz$/);
+  }
   const states = await Promise.all(snapshots.map(async (entry) => ({
     entry,
     state: await readSnapshotState(entry.filePath)

@@ -37,19 +37,19 @@ afterEach(async () => {
 });
 
 it('syncs watched identity fields and preserves them when a mobile payload omits them', async () => {
-  await applySyncObjectsAsync([sourceRecord({
+  await expect(applySyncObjectsAsync([sourceRecord({
     contentHash: 'desktop-hash',
     payload: {
       watched_binding_id: 'watched-source-1',
       watched_relative_path: 'folder/note.md'
     },
     updatedAt: '2026-08-18T01:00:00.000Z'
-  })]);
-  await applySyncObjectsAsync([sourceRecord({
+  })])).resolves.toEqual(['import_source:source-1']);
+  await expect(applySyncObjectsAsync([sourceRecord({
     contentHash: 'mobile-hash',
     payload: {},
     updatedAt: '2026-08-18T02:00:00.000Z'
-  })]);
+  })])).resolves.toEqual(['import_source:source-1']);
 
   expect(openDatabaseConnection().driver.queryOne(
     `SELECT watched_binding_id, watched_relative_path FROM import_sources
@@ -76,7 +76,7 @@ function sourceRecord(args: {
       last_imported_at: args.updatedAt,
       provider: 'markdown',
       source_kind: 'file',
-      source_locator: '/local/note.md',
+      source_locator: '',
       source_name: 'note.md',
       ...args.payload
     }),

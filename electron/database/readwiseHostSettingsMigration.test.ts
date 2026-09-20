@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateReadwiseHostSettings } from '../../lib/core/database/numberedMigrationReadwiseHostSettings.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -162,19 +163,19 @@ it('moves the local Readwise projection into Host scope without rewriting Source
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
-it('keeps legacy settings unchanged when the historical schema has no canonical setting table', () => {
+it('leaves legacy settings and version unchanged when the Readwise migration has no canonical setting table', () => {
   const connection = prepareV76();
   connection.sqlite.exec('DROP TABLE setting_records');
   const before = connection.driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key = 'import_manager_settings'"
   );
 
-  initializeDatabaseSchema(connection.sqlite);
+  migrateReadwiseHostSettings(connection.sqlite);
 
   expect(connection.driver.queryOne(
     "SELECT value FROM settings WHERE key = 'import_manager_settings'"
   )).toEqual(before);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(76);
 });
 
 it('rolls back the cutover when legacy Readwise Sources name more than one owner', () => {
