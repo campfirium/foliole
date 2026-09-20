@@ -100,8 +100,12 @@ async function applyConflictPack(
   const projection = connection.sqlite.prepare(
     `SELECT content FROM nodes WHERE id = 'shared-topic'`
   ).get() as { content: string };
+  const version = connection.sqlite.prepare(
+    'SELECT snapshot_json, content_hash FROM node_sync_versions WHERE version_id = ?'
+  ).get(current.current_version_id) as { snapshot_json: string; content_hash: string };
   closeDatabaseConnection();
-  return { alternative, current_version_id: current.current_version_id, parents, projection };
+  return { alternative, current_version_id: current.current_version_id, parents, projection,
+    snapshot: JSON.parse(version.snapshot_json), contentHash: version.content_hash };
 }
 
 async function buildCurrentPack(packId: string, fromPeerId: string, toPeerId: string) {

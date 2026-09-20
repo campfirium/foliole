@@ -56,13 +56,14 @@ export function buildResolutionRecord(
   body: string
 ): NativeSyncNodeRecord {
   const parents = [...new Set(records.map((record) => record.version_id!))].sort();
-  const identity = hashText(`${winner.object_id}\n${parents.join('\n')}\n${hashText(body)}`);
   const createdAt = nextResolutionTimestamp(records);
-  const snapshot = { ...winner.snapshot, body_blob_hash: null, content: body, updated_at: createdAt };
+  const snapshot = normalizeResolutionSnapshot(winner.snapshot, body, createdAt);
+  const contentHash = hashText(canonicalResolutionJson({ body, snapshot }));
+  const identity = hashText(`${winner.object_id}\n${parents.join('\n')}\n${contentHash}`);
   return {
-    ancestor_version_ids: [...new Set([...parents, ...records.flatMap((record) => record.ancestor_version_ids)])],
+    ancestor_version_ids: [...new Set([...parents, ...records.flatMap((record) => record.ancestor_version_ids)])].sort(),
     body_text: body,
-    content_hash: hashText(JSON.stringify({ body, snapshot })),
+    content_hash: contentHash,
     host_name: 'desktop-resolution',
     object_id: winner.object_id,
     object_type: 'node',
@@ -206,4 +207,39 @@ export function semanticSnapshot(snapshot: NativeSyncNodeRecord['snapshot']) {
 
 export function hashText(value: string) {
   return bytesToHex(sha256(new TextEncoder().encode(value)));
+}
+
+
+function canonicalResolutionJson(value: unknown): string {
+  return JSON.stringify(value, (_key, entry: unknown) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+    return Object.fromEntries(Object.entries(entry).sort(([left], [right]) => (
+      left < right ? -1 : left > right ? 1 : 0
+    )));
+  });
+}
+
+
+function normalizeResolutionSnapshot(
+  snapshot: NativeSyncNodeRecord['snapshot'], body: string, updatedAt: string
+): NativeSyncNodeRecord['snapshot'] {
+  return {
+    ...snapshot,
+    anchor_resolution_status: snapshot.anchor_resolution_status ?? null,
+    anchor_source_version_id: snapshot.anchor_source_version_id ?? null,
+    attachments: [...snapshot.attachments].sort((left, right) => {
+      const a = `${left.attachment_id}\n${left.role}`;
+      const b = `${right.attachment_id}\n${right.role}`;
+      return a < b ? -1 : a > b ? 1 : 0;
+    }),
+    body_blob_hash: null, content: body,
+    enable_short_term: snapshot.enable_short_term ?? null,
+    image_sources: snapshot.image_sources ?? null,
+    import_content_fingerprint: snapshot.import_content_fingerprint ?? null,
+    import_source_fingerprint: snapshot.import_source_fingerprint ?? null,
+    manual_child_order: snapshot.manual_child_order ?? null,
+    sequential_reading_enabled: snapshot.sequential_reading_enabled ?? null,
+    shelved_at: snapshot.shelved_at ?? null,
+    updated_at: updatedAt
+  };
 }
