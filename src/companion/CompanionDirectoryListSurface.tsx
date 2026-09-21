@@ -1,13 +1,4 @@
-import {
-  ChevronRight,
-  FileText,
-  Folder,
-  FolderOpen,
-  Inbox,
-  Sparkles,
-  Trash2,
-  type LucideIcon
-} from 'lucide-react';
+import { ChevronRight, FolderOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -20,28 +11,15 @@ import { AppEmptyState } from '../shared/ui';
 
 import {
   type DirectorySection,
-  type DirectoryListItem,
-  INBOX_NODE_ID
+  type DirectoryListItem
 } from './CompanionDirectoryModel';
 import {
   resolveDirectoryRowMeta,
   resolveDirectoryRowSubtitle
 } from './CompanionDirectoryVisualModel';
 import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
+import { RecentArticleRow } from './CompanionRecentArticleList';
 import type { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
-
-function resolveDirectoryRowIcon(item: DirectoryListItem): { Icon: LucideIcon; isAccent: boolean } {
-  if (item.source === 'trashRoot' || item.source === 'trash') {
-    return { Icon: item.kind === 'folder' ? Folder : Trash2, isAccent: false };
-  }
-  if (item.source === 'virtual') return { Icon: Sparkles, isAccent: false };
-  if (item.source === 'externalFolder' || item.source === 'externalDirectory') {
-    return { Icon: FolderOpen, isAccent: false };
-  }
-  if (item.source === 'externalDocument') return { Icon: FileText, isAccent: false };
-  if (item.nodeId === INBOX_NODE_ID) return { Icon: Inbox, isAccent: true };
-  return { Icon: item.kind === 'folder' ? Folder : FileText, isAccent: false };
-}
 
 function DirectorySectionGroup(props: { children: ReactNode; title?: string | undefined }) {
   return (
@@ -49,29 +27,31 @@ function DirectorySectionGroup(props: { children: ReactNode; title?: string | un
       {props.title ? (
         <h2 className="px-1 text-[12px] font-medium text-companion-text-tertiary">{props.title}</h2>
       ) : null}
-      <div className="divide-y divide-companion-divider/80">{props.children}</div>
+      <div className="">{props.children}</div>
     </section>
   );
 }
 
-function DirectoryRow(props: {
+type DirectoryRowProps = {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   item: DirectoryListItem;
   onSelectItem(item: DirectoryListItem): void;
   snapshot: WorkspaceSnapshot | null;
-}) {
+};
+
+function DirectoryRow(props: DirectoryRowProps) {
   const { locale, t } = useLocalization();
   const title =
     props.item.source === 'trashRoot'
       ? resolveNodeDisplayTitle(locale, 'special-trash', t(props.item.titleKey))
       : resolveNodeDisplayTitle(locale, props.item.nodeId, props.item.title);
-  const { Icon, isAccent } = resolveDirectoryRowIcon(props.item);
   const subtitle = resolveDirectoryRowSubtitle(props.item, t);
   const meta = resolveDirectoryRowMeta({
     directory: props.directory,
     item: props.item,
     snapshot: props.snapshot
   });
+  if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
   return (
     <button
       aria-label={t(
@@ -80,20 +60,11 @@ function DirectoryRow(props: {
           : 'companion.directory.openTopic',
         { title }
       )}
-      className="flex min-h-16 w-full items-center gap-2.5 bg-transparent px-1 py-2 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent active:bg-companion-subtle/70"
+      className="flex min-h-16 w-full items-center gap-2.5 border-b border-companion-divider bg-transparent py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent"
       data-testid={`companion-directory-node-${props.item.nodeId}`}
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
-          isAccent
-            ? 'bg-companion-accent-soft text-companion-accent'
-            : 'bg-companion-subtle/45 text-companion-text-secondary'
-        }`}
-      >
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">
           {title}
@@ -108,7 +79,7 @@ function DirectoryRow(props: {
         </span>
       ) : null}
       <ChevronRight
-        className={`h-4 w-4 shrink-0 ${isAccent ? 'text-companion-accent' : 'text-companion-text-tertiary/90'}`}
+        className="h-4 w-4 shrink-0 text-companion-text-tertiary"
       />
     </button>
   );
@@ -165,4 +136,22 @@ export function CompanionDirectoryList(props: {
       ))}
     </div>
   );
+}
+
+function DirectoryTopicRow(props: DirectoryRowProps & { title: string }) {
+  const node = props.snapshot?.nodesById[props.item.nodeId];
+  const parent = node?.parentNodeId ? props.snapshot?.nodesById[node.parentNodeId] : null;
+  return <RecentArticleRow
+    article={{
+      nodeId: props.item.nodeId,
+      title: props.title,
+      preview: props.item.preview,
+      updatedAt: node?.updatedAt ?? '',
+      folderLabel: parent?.kind === 'folder' ? parent.title : null,
+      ...('bodyStatus' in props.item && props.item.bodyStatus ? { bodyStatus: props.item.bodyStatus } : {})
+    }}
+    currentArticleId={null}
+    onSelectArticle={() => props.onSelectItem(props.item)}
+    testId={`companion-directory-node-${props.item.nodeId}`}
+  />;
 }

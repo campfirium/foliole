@@ -30,7 +30,7 @@ function TabButton(props: {
       aria-current={props.active ? 'page' : undefined}
       aria-label={props.label}
       className={`flex min-w-0 flex-1 flex-col items-center justify-center ${companionFlexColumnGapHalfClassName} rounded-lg text-xs font-medium transition-colors [height:3rem] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent active:scale-[0.97] ${
-        props.active ? 'text-foreground' : 'text-companion-text-secondary active:bg-companion-subtle/60'
+        props.active ? 'text-companion-accent' : 'text-companion-text-secondary'
       }`}
       onClick={props.onClick}
       data-testid={props.testId}
@@ -38,7 +38,7 @@ function TabButton(props: {
     >
       <span
         className={`inline-flex items-center justify-center rounded-full transition-colors [height:1.5rem] [width:3rem] ${
-          props.active ? 'bg-companion-accent-soft' : ''
+          ''
         }`}
       >
         <Icon className={`h-5 w-5 ${props.active ? 'text-companion-accent' : ''}`} />

@@ -30,13 +30,14 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
   });
 
-  it('renders the active tab with the accent pill so the indicator wraps only the icon', () => {
+  it('uses the theme color for the active tab without a filled indicator', () => {
     renderBottomBar();
 
     const activeTab = document.querySelector('button[aria-current="page"]');
     expect(activeTab).not.toBeNull();
     const pill = activeTab?.querySelector('span');
-    expect(pill?.className).toContain('bg-companion-accent-soft');
+    expect(pill?.className).not.toContain('bg-companion-accent-soft');
+    expect(activeTab?.className).toContain('text-companion-accent');
     expect(pill?.className).toContain('rounded-full');
 
     const inactiveTab = screen.getByRole('button', { name: 'Flow' });

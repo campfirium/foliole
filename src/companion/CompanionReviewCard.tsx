@@ -58,7 +58,7 @@ function ReviewAnswer(props: { nodeId: string; reveal: string }) {
 function ReviewAnswerUnavailable() {
   const t = useTranslation();
   return (
-    <section className="mt-5 rounded-md border border-companion-divider bg-companion-subtle/45 px-3 py-3 text-sm leading-6 text-companion-text-secondary">
+    <section className="mt-5 border-t border-companion-divider py-3 text-sm leading-6 text-companion-text-secondary">
       {t('companion.review.answerUnavailable')}
     </section>
   );

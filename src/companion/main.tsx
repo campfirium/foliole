@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
+import './companionMinimal.css';
 import { installCompanionSyncInstrumentationProbe } from '../shared/platform/companionSyncInstrumentationProbe';
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 

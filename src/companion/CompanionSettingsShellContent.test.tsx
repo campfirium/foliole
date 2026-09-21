@@ -69,7 +69,7 @@ describe('CompanionSettingsShellContent', () => {
 
     render(<SettingsHarness />);
 
-    expect(screen.getByText('3 sections')).toBeInTheDocument();
+    expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
     expect(screen.queryByText('Storage')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   });

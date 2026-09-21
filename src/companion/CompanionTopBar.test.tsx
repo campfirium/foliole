@@ -15,16 +15,16 @@ function expectStatusSlotInBackRow() {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Settings' }).closest('div')).toContainElement(screen.getByText('Sync status'));
+  expect(screen.getByRole('button', { name: 'Settings' }).closest('header')).toContainElement(screen.getByText('Sync status'));
   expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('data-testid', 'companion-top-bar-back');
   expect(screen.getByRole('heading', { name: 'Device sync' })).toBeInTheDocument();
 }
 
 describe('CompanionTopBar', () => {
-  it('starts without the elevated border so scroll triggers the transition', () => {
+  it('keeps a single borderless toolbar', () => {
     const { container } = render(<CompanionTopBar title="Browse" visible />);
     const header = container.querySelector('header');
-    expect(header?.dataset.elevated).toBe('false');
+    expect(header?.className).not.toContain('border-b');
     expect(header?.className).toContain('px-2.5');
     expect(header?.className).toContain('-mx-5');
   });
@@ -41,10 +41,10 @@ describe('CompanionTopBar', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Back' }).closest('div')).toContainElement(screen.getByRole('button', { name: 'Capture' }));
+    expect(screen.getByRole('button', { name: 'Back' }).closest('header')).toContainElement(screen.getByRole('button', { name: 'Capture' }));
   });
 
-  it('uses tighter spacing for review action chrome', () => {
+  it('retains both review actions with touch targets', () => {
     const { container } = render(
       <CompanionTopBar
         density="compact"
@@ -54,8 +54,8 @@ describe('CompanionTopBar', () => {
       />
     );
 
-    expect(container.querySelector('header')?.className).toContain('pb-2');
+    expect(container.querySelector('header')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Exit' })).toHaveAttribute('data-testid', 'companion-top-bar-left-action');
-    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-9');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-11');
   });
 });

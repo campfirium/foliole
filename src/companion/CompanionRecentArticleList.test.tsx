@@ -1,171 +1,67 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  RecentArticleList,
-  resolveRecentArticlePreviewLineClamp
-} from './CompanionRecentArticleList';
+import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
 
-function testResolvesPreviewLineBudget() {
-  expect(resolveRecentArticlePreviewLineClamp(1, true)).toBe(3);
-  expect(resolveRecentArticlePreviewLineClamp(2, true)).toBe(2);
-  expect(resolveRecentArticlePreviewLineClamp(3, true)).toBe(1);
-  expect(resolveRecentArticlePreviewLineClamp(4, true)).toBe(0);
-  expect(resolveRecentArticlePreviewLineClamp(1, false)).toBe(0);
-}
+import { RecentArticleList, formatCompanionTopicDate, resolveRecentArticlePreviewLineClamp } from './CompanionRecentArticleList';
 
-function testUsesFourLineTitleBudgetByDefault() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        nodeId: 'article-1',
-        preview: 'Line one. Line two. Line three. Line four.',
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(screen.getByText('Article 1')).toHaveClass('line-clamp-4');
-  expect(screen.getByText('Line one. Line two. Line three. Line four.').className).toContain('line-clamp-3');
-  expect(screen.getByText('Line one. Line two. Line three. Line four.').className).not.toContain('line-clamp-2');
-}
-
-function testRendersRecentTopicRowsWithFolderMeta() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        authorLabel: 'Ada',
-        folderLabel: 'Inbox',
-        nodeId: 'article-1',
-        preview: 'Opening text',
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }, {
-        authorLabel: 'Grace',
-        folderLabel: 'Readwise',
-        nodeId: 'article-2',
-        preview: 'Second opening text',
-        title: 'Article 2',
-        updatedAt: '2026-04-22T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(screen.queryByText('Continue reading')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('border-l-[3px]');
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('-mx-6');
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('px-1');
-  expect(screen.getByText('Article 1')).toHaveClass('line-clamp-4');
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveTextContent('Apr 21');
-  expect(screen.getByRole('button', { name: 'Open topic Article 2' })).not.toHaveTextContent('Apr 22');
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveTextContent('Inbox · Ada');
-  expect(screen.getByRole('button', { name: 'Open topic Article 2' })).toHaveTextContent('Readwise · Grace');
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveTextContent('min');
-  expect(screen.getByText('Article 2')).toHaveClass('line-clamp-4');
-  expect(screen.getByRole('button', { name: 'Open topic Article 2' })).toHaveTextContent('Second opening text');
-}
-
-function testReservesEmptyMetaLine() {
-  const { container } = render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        nodeId: 'article-1',
-        preview: 'Opening text',
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(container.querySelector('.min-h-4')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveTextContent('min');
-}
-
-function testKeepsCachingTopicsQuiet() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        bodyStatus: 'missing',
-        nodeId: 'article-1',
-        preview: 'Opening text',
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(screen.queryByText('Content syncing')).not.toBeInTheDocument();
-  expect(screen.getByText('Opening text')).toBeInTheDocument();
-}
-
-function testMarksEmptyTopic() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        bodyStatus: 'empty',
-        nodeId: 'article-1',
-        preview: null,
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveTextContent('Empty topic');
-}
-
-function testMarksUnavailableTopicBody() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[{
-        bodyStatus: 'failed',
-        authorLabel: 'Ada',
-        folderLabel: 'Inbox',
-        nodeId: 'article-1',
-        preview: 'Opening text',
-        title: 'Article 1',
-        updatedAt: '2026-04-21T10:00:00.000Z'
-      }]}
-    />
-  );
-
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveTextContent('Inbox · Ada · Topic body unavailable');
-}
-
-function testKeepsEmptyRecentTopicsPassive() {
-  render(
-    <RecentArticleList
-      currentArticleId={null}
-      onSelectArticle={vi.fn()}
-      recentArticles={[]}
-    />
-  );
-
-  expect(screen.getByText('No recent topics are available on this device yet.')).toBeInTheDocument();
-  expect(screen.getByText('Recent topics will appear here after background sync downloads them.')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+const article: CompanionRecentArticle = {
+  nodeId: 'article-1', title: 'Article 1', preview: 'Opening text',
+  folderLabel: 'Inbox', authorLabel: 'Ada', updatedAt: '2026-04-21T10:00:00.000Z'
+};
+function setup(overrides: Partial<CompanionRecentArticle> = {}) {
+  const onSelectArticle = vi.fn();
+  render(<RecentArticleList currentArticleId={article.nodeId} onSelectArticle={onSelectArticle} recentArticles={[{ ...article, ...overrides }]} />);
+  return onSelectArticle;
 }
 
 describe('RecentArticleList', () => {
-  it('resolves the preview line budget from measured title lines', testResolvesPreviewLineBudget);
-  it('uses the four-line title and preview budget by default', testUsesFourLineTitleBudgetByDefault);
-  it('renders recent topics as uniform rows with folder metadata', testRendersRecentTopicRowsWithFolderMeta);
-  it('reserves the metadata line even when no metadata is available', testReservesEmptyMetaLine);
-  it('keeps recent topics quiet while their bodies are still downloading', testKeepsCachingTopicsQuiet);
-  it('marks recent topics whose content is empty', testMarksEmptyTopic);
-  it('marks recent topics whose body is unavailable', testMarksUnavailableTopicBody);
-  it('keeps the empty recent topics state passive while automatic sync owns refresh', testKeepsEmptyRecentTopicsPassive);
+  it('limits the title to two lines and retains four lines across title and body', () => {
+    expect(resolveRecentArticlePreviewLineClamp(1, true)).toBe(3);
+    expect(resolveRecentArticlePreviewLineClamp(2, true)).toBe(2);
+    expect(resolveRecentArticlePreviewLineClamp(10, true)).toBe(2);
+    expect(resolveRecentArticlePreviewLineClamp(1, false)).toBe(0);
+  });
+  it('shows the folder and local date/time without author or an update label', () => {
+    setup();
+    const row = screen.getByRole('button', { name: 'Open topic Article 1' });
+    expect(row).toHaveTextContent('Inbox');
+    expect(row).toHaveTextContent(formatCompanionTopicDate(article.updatedAt, 'en'));
+    expect(row).not.toHaveTextContent('Ada');
+    expect(row).not.toHaveTextContent('Updated');
+    expect(row).toHaveTextContent('Opening text');
+  });
+  it('opens the selected topic from its text', () => {
+    const select = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Open topic Article 1' }));
+    expect(select).toHaveBeenCalledWith('article-1');
+  });
+  it('opens the overflow menu independently without navigating', () => {
+    const select = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'More: Article 1' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(select).not.toHaveBeenCalled();
+  });
+  it('omits unavailable metadata without inventing a folder or timestamp', () => {
+    setup({ folderLabel: null, updatedAt: '' });
+    expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveTextContent('Inbox');
+    expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
+  });
+  it('retains content availability feedback', () => {
+    setup({ bodyStatus: 'failed' });
+    expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveTextContent('Topic body unavailable');
+  });
+  it('marks empty content', () => {
+    setup({ bodyStatus: 'empty', preview: null });
+    expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveTextContent('Empty topic');
+  });
+  it('does not show download noise for missing content', () => {
+    setup({ bodyStatus: 'missing' });
+    expect(screen.queryByText('Content syncing')).not.toBeInTheDocument();
+  });
+  it('keeps the empty state passive', () => {
+    render(<RecentArticleList currentArticleId={null} onSelectArticle={vi.fn()} recentArticles={[]} />);
+    expect(screen.getByText('No recent topics are available on this device yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+  });
 });

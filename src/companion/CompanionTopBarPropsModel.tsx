@@ -58,7 +58,7 @@ export function resolveCompanionTopBarProps(
       t
     });
   }
-  if (surface.activeAction === 'search') return {};
+  if (surface.activeAction === 'search') return { title: t('companion.tabs.search') };
   return resolveReviewTopBar(t, isOnlyReviewOpen, onCloseOnlyReview, onExitReview, onOpenOnlyReview);
 }
 
@@ -78,7 +78,7 @@ function resolveSettingsTopBar(
   if (settingsPage === 'syncActivity') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.activity.title') };
   if (settingsPage === 'syncConnection') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.connection.title') };
   if (settingsPage === 'syncHandoff') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.handoff.title') };
-  return {};
+  return { title: t('companion.settings.title') };
 }
 
 function resolveBrowseTopBar(args: {
@@ -112,10 +112,11 @@ function resolveBrowseTopBar(args: {
   );
   if (args.isBrowseDirectoryOpen) {
     return args.directorySelection.kind === 'root'
-      ? { rightSlot }
-      : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot };
+      ? { rightSlot, title: args.t('companion.directory.title') }
+      : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot, title: args.t('companion.directory.title') };
   }
   return {
+    title: args.t('companion.browse.title'),
     leftAction: { icon: FolderTree, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };
@@ -132,6 +133,7 @@ function resolveReviewTopBar(
     return { backLabel: t('companion.review.learn'), onBack: onCloseOnlyReview, title: t('companion.review.onlyReview') };
   }
   return {
+    title: 'Flow',
     density: 'compact' as const,
     leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview },
     rightAction: { icon: ListFilter, label: t('companion.review.onlyReview'), onClick: onOpenOnlyReview }

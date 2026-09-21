@@ -19,9 +19,7 @@ import {
   resolveDirectorySections
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
-import { resolveDirectoryItemCount } from './CompanionDirectoryVisualModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
-import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
 export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
@@ -107,18 +105,12 @@ function isDirectoryContainer(
 function CompanionDirectoryListContent(props: {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   handleSelectItem(item: DirectoryListItem): void;
-  itemCount: number;
   sections: ReturnType<typeof useCompanionDirectorySections>['sections'];
   snapshot: WorkspaceSnapshot | null;
 }) {
   const t = useTranslation();
   return (
-    <section className="px-1 py-3">
-      <CompanionScreenHeader
-        metric={t('companion.directory.header.count', { count: props.itemCount })}
-        subtitle={t('companion.directory.header.subtitle')}
-        title={t('companion.directory.title')}
-      />
+    <section>
       <CompanionDirectoryList
         directory={props.directory}
         emptyLabel={t('companion.directory.emptyFolder')}
@@ -140,7 +132,6 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     sortDirection: props.sortDirection,
     sortKey: props.sortKey
   });
-  const itemCount = resolveDirectoryItemCount(sections);
   const parentSelection = useMemo(
     () =>
       resolveDirectoryParentSelection({
@@ -175,7 +166,6 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
   return <CompanionDirectoryListContent
     directory={directory}
     handleSelectItem={handleSelectItem}
-    itemCount={itemCount}
     sections={sections}
     snapshot={props.snapshot}
   />;

@@ -10,7 +10,6 @@ import {
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
 import { appInputBorderFocusVisibleClassName } from '../shared/ui';
 
-import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { CompanionSearchResults } from './CompanionSearchResults';
 
 const SEARCH_LIMIT = 20;
@@ -26,13 +25,12 @@ export function CompanionSearchContent(props: {
   const searchState = useCompanionSearch(query);
 
   return (
-    <section className="px-1 pb-4 pt-3" data-search-status={searchState.status}>
-      <CompanionScreenHeader title={t('companion.tabs.search')} />
+    <section className="pb-4 pt-3" data-search-status={searchState.status}>
       <label className="block">
         <span className="sr-only">{t('companion.search.label')}</span>
         <input
           className={cn(
-            'h-11 w-full rounded-md border border-companion-divider bg-companion-content px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
+            'h-11 w-full rounded-none border-0 border-b border-companion-divider bg-transparent px-0 text-base text-foreground transition placeholder:text-companion-text-secondary',
             appInputBorderFocusVisibleClassName
           )}
           data-testid="companion-search-input"
@@ -42,7 +40,7 @@ export function CompanionSearchContent(props: {
           value={query}
         />
       </label>
-      <div className="mt-4 border-t border-companion-divider pt-4">
+      <div className="mt-4">
         <CompanionSearchResults
           onOpenExternalDocument={props.onOpenExternalDocument}
           onOpenPdf={props.onOpenPdf}

@@ -45,7 +45,7 @@ describe('ReadingChrome', () => {
     renderChrome();
 
     expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.className).toContain('pt-10');
-    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-10');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-11');
     expect(screen.getByRole('button', { name: 'Exit' }).className).not.toContain('ring-companion-divider');
     expect(screen.getByText('Long reading title').className).toContain('text-left');
     expect(screen.getByText('Long reading title').closest('div')?.parentElement?.className).toContain('px-2.5');
@@ -69,7 +69,7 @@ describe('ReadingChrome hidden blockers', () => {
 
     expect(screen.queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
-    expect(document.querySelectorAll('.bg-companion-base\\/95')).toHaveLength(2);
+    expect(document.querySelectorAll('.bg-companion-base')).toHaveLength(2);
   });
 });
 

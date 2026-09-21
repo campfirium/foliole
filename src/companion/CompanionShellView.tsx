@@ -31,13 +31,13 @@ function renderCompanionMainContent(model: CompanionShellModel) {
     : companionMainBottomInsetClassName;
   if (!model.workspaceSync.isWorkspaceSyncStateReady) {
     return (
-      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-4 ${bottomInsetClassName}`}>
+      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
         <CompanionWorkspaceSyncLoading />
       </div>
     );
   }
   return (
-    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-4 ${bottomInsetClassName}`}>
+    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
       <CompanionShellTopBar
         onOpenSyncSettings={() => openCompanionSyncSettings(model)}
         topBarProps={model.topBarProps}

@@ -16,7 +16,7 @@ function ReadingChromeButton(props: {
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
       data-testid={props.testId}
       disabled={props.disabled}
       onClick={props.onClick}
@@ -36,8 +36,8 @@ function ReadingChromeTextButton(props: {
     <button
       aria-label={props.label}
       className={props.primary
-        ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition hover:bg-companion-subtle'
-        : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle hover:text-foreground'}
+        ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition'
+        : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:text-foreground'}
       onClick={props.onClick}
       type="button"
     >
@@ -55,10 +55,10 @@ function EditingChrome(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] backdrop-blur`}>
+    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)]`}>
       <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
         <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onToggleContentEditing} />
-        <span className="min-w-0 flex-1 text-center text-sm font-semibold text-foreground">
+        <span className="min-w-0 flex-1 text-center text-[17px] font-normal text-foreground">
           {t('companion.reading.editContent')}
         </span>
         <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} />
@@ -85,7 +85,7 @@ export function ReadingChrome(props: {
   const controlsVisible = props.visible !== false;
   return (
     <>
-      <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] backdrop-blur`}>
+      <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? (
             <>
@@ -105,7 +105,7 @@ export function ReadingChrome(props: {
           ) : <ChromeSpacer />}
         </div>
       </div>
-      <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} py-2 backdrop-blur supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
+      <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? (
             <>

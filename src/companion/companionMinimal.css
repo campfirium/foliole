@@ -1,0 +1,74 @@
+/* Companion-only visual roles: shared by navigation, lists and secondary pages. */
+:root {
+  --companion-divider: #e8e9eb;
+  --companion-list-title: #202226;
+  --companion-list-body: #7b8087;
+  --companion-list-meta: #858b87;
+}
+.dark {
+  --companion-divider: #444541;
+  --companion-list-title: rgb(var(--color-foreground));
+  --companion-list-body: var(--companion-text-secondary);
+  --companion-list-meta: var(--companion-text-tertiary);
+}
+html, body, #root, #root * { scrollbar-width: none; }
+::-webkit-scrollbar { display: none; }
+.companion-toolbar-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 45%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.companion-topic-row {
+  position: relative;
+  border-bottom: 1px solid var(--companion-divider);
+  padding: 17px 0;
+}
+.companion-topic-open { display: block; width: 100%; text-align: left; background: transparent; }
+.companion-topic-title {
+  font-size: 16px;
+  line-height: 23px;
+  font-weight: 550;
+  letter-spacing: -.2px;
+  color: var(--companion-list-title);
+}
+.companion-topic-preview {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--companion-list-body);
+}
+.companion-topic-meta {
+  margin-top: 9px;
+  min-height: 16px;
+  padding-right: 36px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--companion-list-meta);
+}
+.companion-topic-more {
+  position: absolute;
+  right: -12px;
+  bottom: 3px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--companion-list-meta);
+  background: transparent;
+}
+.companion-topic-row button:focus-visible {
+  outline: 2px solid var(--companion-accent);
+  outline-offset: -2px;
+}

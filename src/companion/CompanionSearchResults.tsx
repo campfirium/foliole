@@ -128,16 +128,16 @@ function SearchResultItem(props: { excerpt: string; onOpen?: (() => void) | unde
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <h3 className="line-clamp-2 text-sm font-medium text-foreground">{props.title}</h3>
+        <h3 className="companion-topic-title line-clamp-2">{props.title}</h3>
         {props.status ? <span className="shrink-0 text-xs text-companion-text-secondary">{props.status}</span> : null}
       </div>
-      {props.excerpt ? <p className="mt-1 line-clamp-3 text-sm text-companion-text-secondary">{props.excerpt}</p> : null}
+      {props.excerpt ? <p className="companion-topic-preview line-clamp-2">{props.excerpt}</p> : null}
     </>
   );
-  if (!props.onOpen) return <article className="border-b border-companion-divider px-1 py-3">{content}</article>;
+  if (!props.onOpen) return <article className="companion-topic-row">{content}</article>;
   return (
     <button
-      className="block w-full border-b border-companion-divider px-1 py-3 text-left transition-colors active:bg-companion-subtle/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="block w-full companion-topic-row text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       onClick={props.onOpen}
       type="button"
     >

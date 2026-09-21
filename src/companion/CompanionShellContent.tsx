@@ -4,16 +4,15 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
-import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
+import { CompanionFolderArticleList } from './CompanionFolderArticleList';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
-import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import {
   CompanionShellReadableArticle,
@@ -24,8 +23,6 @@ import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
-
-import { NodeBrowseList } from '@/shared/ui';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -58,19 +55,11 @@ function handleExitReadableArticle(surface: Surface) {
 }
 
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
-  const t = useTranslation();
   if (props.surface.browsedFolder) {
-    const count = props.surface.browsedFolder.items.length;
     return (
       <>
-        <CompanionScreenHeader
-          metric={t('companion.browse.header.count', { count })}
-          subtitle={props.surface.browsedFolder.title}
-          title={t('companion.browse.title')}
-        />
-        <NodeBrowseList
-          currentNodeId={props.surface.selectedBrowseNodeId}
-          emptyLabel={t('companion.directory.emptyShell')}
+        <CompanionFolderArticleList
+          snapshot={props.workspaceSync.state.workspace_snapshot}
           items={props.surface.browsedFolder.items}
           onSelectNode={props.surface.handleSelectBrowseNode}
         />
@@ -88,11 +77,6 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   }
   return (
     <>
-      <CompanionScreenHeader
-        metric={t('companion.browse.header.count', { count: props.surface.recentArticles.length })}
-        subtitle={t('companion.browse.header.subtitle')}
-        title={t('companion.browse.title')}
-      />
       <RecentArticleList
         currentArticleId={props.surface.readableArticle?.nodeId ?? null}
         onSelectArticle={props.surface.handleSelectRecentArticle}

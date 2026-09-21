@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
-import { CompanionScreenHeader } from './CompanionScreenHeader';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function SettingsListItem(props: {
@@ -68,14 +67,8 @@ export function CompanionSettingsList(props: {
   showStorage: boolean;
 }) {
   const t = useTranslation();
-  const sectionCount = props.showStorage ? 4 : 3;
   return (
-    <section className="px-1 pb-4 pt-3">
-      <CompanionScreenHeader
-        metric={t('companion.settings.header.count', { count: sectionCount })}
-        subtitle={t('companion.settings.header.subtitle')}
-        title={t('companion.settings.title')}
-      />
+    <section className="pb-4 pt-3">
       <div className="space-y-5">
         <SettingsListSection title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem

@@ -42,7 +42,7 @@ describe('CompanionSearchContent presentation', () => {
 
     expect(screen.getByTestId('companion-search-input')).toBeInTheDocument();
     expect(screen.getByTestId('companion-search-input').closest('section')).toHaveAttribute('data-search-status', 'idle');
-    expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Search' })).not.toBeInTheDocument();
     expect(screen.getByText('Local search')).toBeInTheDocument();
     expect(screen.getByText('Topics and synced reading materials on this device.')).toBeInTheDocument();
   });

@@ -1,17 +1,18 @@
 import { BookOpen } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
-import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
+import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 
 const RECENT_ARTICLE_TEXT_LINE_BUDGET = 4;
 
 export function resolveRecentArticlePreviewLineClamp(titleLineCount: number, hasPreview: boolean) {
   if (!hasPreview) return 0;
-  const titleLines = Math.min(RECENT_ARTICLE_TEXT_LINE_BUDGET, Math.max(1, Math.ceil(titleLineCount)));
+  const titleLines = Math.min(2, Math.max(1, Math.ceil(titleLineCount)));
   return Math.max(0, RECENT_ARTICLE_TEXT_LINE_BUDGET - titleLines);
 }
 
@@ -24,7 +25,7 @@ function getPreviewClampClass(lineClamp: number) {
 function measureElementLineCount(element: HTMLElement) {
   const lineHeight = Number.parseFloat(window.getComputedStyle(element).lineHeight);
   if (!Number.isFinite(lineHeight) || lineHeight <= 0) return 1;
-  return Math.max(1, Math.round(element.scrollHeight / lineHeight));
+  return Math.max(1, Math.round(element.getBoundingClientRect().height / lineHeight));
 }
 
 function useMeasuredTitleLineCount(title: string) {
@@ -66,54 +67,43 @@ function RecentArticlePreview(props: { lineClamp: number; preview: string | null
     return null;
   }
   return (
-    <p className={`mt-1 ${getPreviewClampClass(props.lineClamp)} break-words text-ui-base leading-5 text-companion-text-secondary [overflow-wrap:anywhere]`}>
+    <p className={`${getPreviewClampClass(props.lineClamp)} companion-topic-preview break-words [overflow-wrap:anywhere]`}>
       {props.preview}
     </p>
   );
 }
 
-function buildRecentArticleMeta(article: CompanionRecentArticle, t: ReturnType<typeof useTranslation>) {
-  const bodyStatusLabel = renderBodyStatus(article.bodyStatus, t);
-  return [
-    article.folderLabel,
-    article.authorLabel,
-    bodyStatusLabel
-  ].filter((item): item is string => Boolean(item));
+export function formatCompanionTopicDate(value: string, locale: string, now = new Date()) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, {
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}),
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+  }).format(date);
 }
 
-function RecentArticleMetaFooter(props: { items: string[] }) {
-  return (
-    <p className="mt-2 line-clamp-1 min-h-4 break-words text-xs font-medium leading-4 text-companion-text-secondary [overflow-wrap:anywhere]">
-      {props.items.join(' · ')}
-    </p>
-  );
-}
-
-function RecentArticleRow(props: {
+export function RecentArticleRow(props: {
   article: CompanionRecentArticle;
   currentArticleId: string | null;
   onSelectArticle(nodeId: string): void;
+  testId?: string;
 }) {
-  const t = useTranslation();
-  const metaItems = buildRecentArticleMeta(props.article, t);
-  const isCurrent = props.article.nodeId === props.currentArticleId;
-  const { lineCount: titleLineCount, ref: titleRef } = useMeasuredTitleLineCount(props.article.title);
-  const previewLineClamp = resolveRecentArticlePreviewLineClamp(titleLineCount, Boolean(props.article.preview));
+  const { locale, t } = useLocalization();
+  const { lineCount, ref: titleRef } = useMeasuredTitleLineCount(props.article.title);
+  const previewLineClamp = resolveRecentArticlePreviewLineClamp(lineCount, Boolean(props.article.preview));
+  const meta = [props.article.folderLabel, formatCompanionTopicDate(props.article.updatedAt, locale)].filter(Boolean).join(' · ');
+  const open = () => props.onSelectArticle(props.article.nodeId);
+  const status = renderBodyStatus(props.article.bodyStatus, t);
   return (
-    <button
-      aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })}
-      className={`block w-full border-b border-companion-divider py-3.5 text-left transition-colors ${
-        isCurrent ? 'bg-companion-subtle' : 'bg-transparent hover:bg-companion-subtle/60 active:bg-companion-subtle/80'
-      }`}
-      onClick={() => props.onSelectArticle(props.article.nodeId)}
-      type="button"
-    >
-      <h2 ref={titleRef} className="line-clamp-4 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
-        {props.article.title}
-      </h2>
-      <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
-      <RecentArticleMetaFooter items={metaItems} />
-    </button>
+    <div className="companion-topic-row" data-testid={props.testId}>
+      <button aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })} className="companion-topic-open" onClick={open} type="button">
+        <h2 ref={titleRef} className="companion-topic-title line-clamp-2 break-words [overflow-wrap:anywhere]">{props.article.title}</h2>
+        <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
+        {status ? <p className="companion-topic-preview">{status}</p> : null}
+        <p className="companion-topic-meta truncate">{meta}</p>
+      </button>
+      <CompanionTopicListMenu metadata={meta} onOpen={open} title={props.article.title} />
+    </div>
   );
 }
 
@@ -137,7 +127,7 @@ export function RecentArticleList(props: {
   }
 
   return (
-    <section className="border-t border-companion-divider pt-3">
+    <section>
       {props.recentArticles.map((article) => (
         <RecentArticleRow
           article={article}

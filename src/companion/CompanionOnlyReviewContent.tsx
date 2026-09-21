@@ -22,7 +22,7 @@ export function CompanionOnlyReviewContent(props: {
     );
   }
   return (
-    <section className="border-t border-companion-divider px-1 py-6">
+    <section className="py-6">
       <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
         description={resolveOnlyReviewDescription(t, props)}
