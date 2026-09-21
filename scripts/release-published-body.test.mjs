@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import path from 'node:path';
 
 import { correctPublishedReleaseBody } from './release-published-body.mjs';
 import { createFixture } from './release-doctor.test-support.mjs';
@@ -41,7 +42,7 @@ describe('published Release body correction', () => {
     })).resolves.toMatchObject({ changed: true, tag: `v${fixture.version}` });
     expect(calls.find((call) => call.includes('edit'))).toEqual([
       'gh', 'release', 'edit', `v${fixture.version}`, '-R', 'campfirium/foliole',
-      '--notes-file', `${fixture.rootDir}/releases/github/v${fixture.version}.md`
+      '--notes-file', path.join(fixture.rootDir, 'releases', 'github', `v${fixture.version}.md`)
     ]);
   });
 
