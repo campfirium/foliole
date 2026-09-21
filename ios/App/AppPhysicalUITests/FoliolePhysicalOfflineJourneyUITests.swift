@@ -43,6 +43,9 @@ extension FoliolePhysicalSyncGroupUITests {
     private func completeCachedReadingReview(in app: XCUIApplication) {
         let cachedReading = app.staticTexts["Multi-device sync D fact"]
         if !cachedReading.exists {
+            if app.buttons["Exit"].waitForExistence(timeout: 3) {
+                app.buttons["Exit"].tap()
+            }
             tapButton(named: "Learn", in: app, timeout: 30)
         }
         XCTAssertTrue(cachedReading.waitForExistence(timeout: 30),
