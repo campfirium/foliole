@@ -10,6 +10,13 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func openSyncSettings(in app: XCUIApplication) {
         resolveOptionalCellularDataDecision()
+        let attention = app.buttons["Sync needs attention"]
+        if attention.waitForExistence(timeout: 3) {
+            attention.tap()
+            XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 30),
+                          "Sync attention did not open the public Sync settings page.")
+            return
+        }
         if app.buttons["Exit"].waitForExistence(timeout: 3) {
             app.buttons["Exit"].tap()
         }

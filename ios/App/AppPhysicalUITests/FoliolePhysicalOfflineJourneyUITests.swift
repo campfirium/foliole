@@ -93,8 +93,14 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     private func openLearn(in app: XCUIApplication) {
+        if app.staticTexts[s220ReviewTitle].exists { return }
         if app.buttons["Exit"].waitForExistence(timeout: 3) { app.buttons["Exit"].tap() }
-        tapButton(named: "Learn", in: app, timeout: 30)
+        let flow = app.buttons["Flow"]
+        if flow.waitForExistence(timeout: 30) {
+            flow.tap()
+            return
+        }
+        tapButton(named: "Learn", in: app, timeout: 5)
     }
 
     private func waitForExternalOfflineSignal() {
