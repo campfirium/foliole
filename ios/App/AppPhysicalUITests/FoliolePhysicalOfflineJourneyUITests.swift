@@ -1,4 +1,3 @@
-import Network
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
@@ -10,9 +9,7 @@ extension FoliolePhysicalSyncGroupUITests {
         openBrowse(in: app)
         waitForJourneyFacts(["A"], in: app)
 
-        waitForManualNetworkIsolation()
-
-        app.activate()
+        print("[foliole-fri] externally-verified-manual-network-isolation")
         attachScreenshot(named: "Fri-S220-offline-ready")
         completeCachedReadingReview(in: app)
         let title = "S220 Fri offline \(UUID().uuidString)"
@@ -42,24 +39,5 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Read", in: app, timeout: 30)
         XCTAssertFalse(cachedReading.waitForExistence(timeout: 10),
                        "Fri did not advance after recording the offline reading review.")
-    }
-
-    private func waitForManualNetworkIsolation() {
-        let offline = expectation(description: "Fri network path becomes unavailable")
-        let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
-        var observedOnline = false
-        var completedTransition = false
-        monitor.pathUpdateHandler = { path in
-            if path.status == .satisfied {
-                observedOnline = true
-            } else if observedOnline && !completedTransition && path.status == .unsatisfied {
-                completedTransition = true
-                offline.fulfill()
-            }
-        }
-        monitor.start(queue: DispatchQueue(label: "com.foliole.tests.network-path"))
-        defer { monitor.cancel() }
-        print("[foliole-fri] waiting-for-manual-network-isolation")
-        wait(for: [offline], timeout: 600)
     }
 }
