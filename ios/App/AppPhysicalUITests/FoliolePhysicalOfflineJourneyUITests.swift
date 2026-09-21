@@ -25,6 +25,7 @@ extension FoliolePhysicalSyncGroupUITests {
         attachScreenshot(named: "Fri-S220-radios-off")
 
         app.activate()
+        completeCachedReadingReview(in: app)
         let title = "S220 Fri offline \(UUID().uuidString)"
         let edit = "S220 Fri offline edit \(UUID().uuidString)"
         print("[foliole-fri] s220-offline-fact-title \(title)")
@@ -38,6 +39,19 @@ extension FoliolePhysicalSyncGroupUITests {
         app.launch()
         waitForVisibleTopicText(prefix: "Multi-device sync A fact", text: edit, in: app)
         waitForVisibleTopic(prefix: title, in: app)
+        tapButton(named: "Learn", in: app, timeout: 30)
+        XCTAssertFalse(app.staticTexts["Multi-device sync D fact"].waitForExistence(timeout: 5),
+                       "Fri restored the reading review as due after offline relaunch.")
         attachScreenshot(named: "Fri-S220-offline-capture-restored")
+    }
+
+    private func completeCachedReadingReview(in app: XCUIApplication) {
+        tapButton(named: "Learn", in: app, timeout: 30)
+        let cachedReading = app.staticTexts["Multi-device sync D fact"]
+        XCTAssertTrue(cachedReading.waitForExistence(timeout: 30),
+                      "Fri did not expose the cached reading review while offline.")
+        tapButton(named: "Read", in: app, timeout: 30)
+        XCTAssertFalse(cachedReading.waitForExistence(timeout: 10),
+                       "Fri did not advance after recording the offline reading review.")
     }
 }
