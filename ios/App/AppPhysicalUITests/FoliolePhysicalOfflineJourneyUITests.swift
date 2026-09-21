@@ -22,6 +22,9 @@ extension FoliolePhysicalSyncGroupUITests {
         print("[foliole-fri] s220-offline-window-ready attempt=\(s220AttemptId)")
 
         waitForExternalOfflineSignal()
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
+                      "Fri did not return to the foreground after the external offline switch.")
         assertPublicSyncNowFailsOffline(in: app)
         completeCachedReadingReview(in: app)
         appendToVisibleTopic(prefix: s220SourceTitle, existingText: s220SourceTitle,

@@ -53,6 +53,8 @@ describe('Fri S220 deterministic journey contract', () => {
     expect(source).toContain('requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID")');
     expect(source).not.toContain('private var s220AttemptId: String { "c3d9c2c02995" }');
     expect(source.indexOf('waitForExternalOfflineSignal()'))
+      .toBeLessThan(source.indexOf('app.activate()'));
+    expect(source.indexOf('app.activate()'))
       .toBeLessThan(source.indexOf('assertPublicSyncNowFailsOffline(in: app)'));
     expect(source.indexOf('assertPublicSyncNowFailsOffline(in: app)'))
       .toBeLessThan(source.indexOf('completeCachedReadingReview(in: app)'));
