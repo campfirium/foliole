@@ -24,9 +24,9 @@ function extractReceipt(stdout) {
 
 function flattenImages(receipt) {
   return receipt.images.map((image) => ({ hash: image.hash, local: image.local,
-    resolver: image.resolver, widget: image.browser?.widget ?? null,
-    dom: image.browser?.dom ?? null,
-    fetch: image.browser?.fetch ?? null, decode: image.browser?.decode ?? null }));
+    resolver: image.resolver, terminal: image.browser?.terminal ?? null,
+    timeline: image.browser?.timeline ?? [], widget: image.browser?.final?.widget ?? null,
+    dom: image.browser?.final?.dom ?? null }));
 }
 
 export async function diagnoseS220A5Resource(args) {

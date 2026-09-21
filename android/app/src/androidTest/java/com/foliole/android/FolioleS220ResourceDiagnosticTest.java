@@ -97,7 +97,8 @@ public final class FolioleS220ResourceDiagnosticTest {
                     "text:text.slice(0,1600),widgets:root?.querySelectorAll(" +
                     "'.cm-md-image-widget').length||0,images:images.length,loadedImages:" +
                     "images.filter(i=>i.complete&&i.naturalWidth>0).length});})()");
-            if (nodeId.equals(observed.optString("node")) && observed.optBoolean("bodyReadable")) {
+            if (nodeId.equals(observed.optString("node")) && observed.optBoolean("bodyReadable")
+                && observed.optInt("widgets") == 2) {
                 return observed;
             }
             Thread.sleep(100);
@@ -108,6 +109,7 @@ public final class FolioleS220ResourceDiagnosticTest {
 
     private static JSONArray captureImages(Instrumentation instrumentation, WebView view,
         Context context, JSONArray hashes) throws Exception {
+        startBrowserDiagnostics(instrumentation, view, hashes);
         JSONArray nativeFacts = new JSONArray();
         for (int index = 0; index < hashes.length(); index += 1) {
             String hash = hashes.getString(index);
@@ -121,7 +123,6 @@ public final class FolioleS220ResourceDiagnosticTest {
                     .put("hashMatches", file.isFile() && hash.equals(
                         FolioleCompanionResourceAvailability.digest(Files.readAllBytes(file.toPath()))))));
         }
-        startBrowserDiagnostics(instrumentation, view, hashes);
         JSONObject browser = waitForBrowserDiagnostics(instrumentation, view);
         JSONArray result = new JSONArray();
         for (int index = 0; index < nativeFacts.length(); index += 1) {
@@ -134,33 +135,41 @@ public final class FolioleS220ResourceDiagnosticTest {
 
     private static void startBrowserDiagnostics(Instrumentation instrumentation, WebView view,
         JSONArray hashes) throws Exception {
-        String script = "(function(){window.__s220ResourceDiagnostic={state:'pending'};" +
-            "(async function(){var out={state:'done'};var root=document.querySelector(" +
-            "'[data-companion-readable-document]');for(const hash of " + hashes + "){var widget=" +
+        String script = "(function(){var hashes=" + hashes + ";var root=document.querySelector(" +
+            "'[data-companion-readable-document]');var started=performance.now();var watched=new WeakSet();" +
+            "var out={state:'watching'};for(const hash of hashes)out[hash]={timeline:[],terminal:null," +
+            "final:null,signature:null};var observer=null;var timer=null;function findWidget(hash){return " +
             "Array.from(root?.querySelectorAll('.cm-md-image-widget')||[]).find(w=>" +
-            "(w.dataset.mdImageSource||'').includes(hash));var img=widget?.querySelector('img')||null;" +
-            "var status=widget?.querySelector('[data-md-image-status]')||null;var fact={widget:widget?" +
-            "{present:true,source:widget.dataset.mdImageSource||null,attachmentId:" +
+            "(w.dataset.mdImageSource||'').includes(hash))||null}function snapshot(hash,event){var widget=" +
+            "findWidget(hash);var status=widget?.querySelector('[data-md-image-status]')||null;var img=" +
+            "widget?.querySelector('img')||null;if(img&&!watched.has(img)){watched.add(img);" +
+            "img.addEventListener('load',()=>record(hash,'load'));img.addEventListener('error'," +
+            "()=>record(hash,'error'))}return {elapsedMs:Math.round(performance.now()-started),event:event," +
+            "widget:widget?{present:true,source:widget.dataset.mdImageSource||null,attachmentId:" +
             "widget.dataset.mdImageAttachmentId||null,status:status?.getAttribute(" +
             "'data-md-image-status')||null,html:widget.outerHTML.slice(0,2400)}:{present:false}," +
-            "dom:img?{src:img.src," +
-            "currentSrc:img.currentSrc,complete:img.complete,naturalWidth:img.naturalWidth," +
-            "naturalHeight:img.naturalHeight}:null};if(img){try{var controller=new AbortController();" +
-            "var timeout=setTimeout(()=>controller.abort(),5000);var response=await fetch(img.src," +
-            "{signal:controller.signal});var bytes=(await response.arrayBuffer()).byteLength;" +
-            "clearTimeout(timeout);fact.fetch={ok:response.ok,status:response.status," +
-            "contentType:response.headers.get('content-type'),bytes:bytes};}catch(e){" +
-            "fact.fetch={ok:false,error:String(e)}}try{await img.decode();fact.decode={status:'decoded'}}" +
-            "catch(e){fact.decode={status:'rejected',error:String(e)}}}out[hash]=fact;}" +
-            "window.__s220ResourceDiagnostic=out;})().catch(e=>window.__s220ResourceDiagnostic=" +
-            "{state:'failed',error:String(e)});return JSON.stringify({started:true});})()";
+            "dom:img?{src:img.src,currentSrc:img.currentSrc,complete:img.complete,naturalWidth:" +
+            "img.naturalWidth,naturalHeight:img.naturalHeight}:null}}function record(hash,event){var entry=" +
+            "out[hash];if(entry.terminal)return;var fact=snapshot(hash,event);var signature=JSON.stringify(" +
+            "[fact.widget.status,fact.widget.html,fact.dom]);if(signature!==entry.signature||event==='load'||" +
+            "event==='error'||event==='timeout'){entry.signature=signature;entry.timeline.push(fact)}if(" +
+            "fact.dom?.complete&&fact.dom.naturalWidth>0){entry.terminal='ready';entry.final=fact}else if(" +
+            "fact.widget.status==='unavailable'){entry.terminal='unavailable';entry.final=fact}finishIfDone()}" +
+            "function finishIfDone(){if(!hashes.every(hash=>out[hash].terminal))return;if(observer)" +
+            "observer.disconnect();if(timer)clearTimeout(timer);out.state='done'}observer=new MutationObserver(" +
+            "()=>{for(const hash of hashes)record(hash,'mutation')});observer.observe(root,{subtree:true," +
+            "childList:true,attributes:true,attributeFilter:['src','data-md-image-status']});for(const hash " +
+            "of hashes)record(hash,'initial');if(out.state!=='done')timer=setTimeout(()=>{for(const hash of " +
+            "hashes){if(out[hash].terminal)continue;var fact=snapshot(hash,'timeout');out[hash].timeline" +
+            ".push(fact);out[hash].terminal='timeout';out[hash].final=fact}finishIfDone()},90000);" +
+            "window.__s220ResourceDiagnostic=out;return JSON.stringify({started:true});})()";
         assertTrue(FolioleCompanionWebViewSemanticAdapter.evaluateJson(
             instrumentation, view, script).optBoolean("started"));
     }
 
     private static JSONObject waitForBrowserDiagnostics(Instrumentation instrumentation,
         WebView view) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(12);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(95);
         JSONObject result = new JSONObject();
         while (System.nanoTime() < deadline) {
             result = FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, view,
