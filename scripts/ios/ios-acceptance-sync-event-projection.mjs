@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const FRI_RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
 const EVENT_KEYS = new Set([
-  'device_identity_key', 'occurred_at', 'result', 'run_id', 'started_at', 'status',
+  'device_identity_key', 'error', 'occurred_at', 'result', 'run_id', 'started_at', 'status',
   'trigger_reason'
 ]);
 const VERSION_KEYS = new Set([

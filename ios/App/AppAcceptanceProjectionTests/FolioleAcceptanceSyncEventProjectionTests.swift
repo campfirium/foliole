@@ -103,6 +103,9 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
     private func project(_ event: [String: Any], identity: String) throws -> [String: Any] {
         var value: [String: Any] = [
             "device_identity_key": identity,
+            "error": event["status"] as? String == "failed"
+                ? (event["message"] as? String ?? "sync_failed")
+                : NSNull(),
             "run_id": try required(event, "run_id"),
             "trigger_reason": try required(event, "trigger_reason"),
             "status": try required(event, "status")
