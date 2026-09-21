@@ -1,5 +1,10 @@
-import Darwin
+import CoreFoundation
 import XCTest
+
+private let friOfflineSignalCallback: CFNotificationCallback = { _, observer, _, _, _ in
+    guard let observer else { return }
+    Unmanaged<XCTestExpectation>.fromOpaque(observer).takeUnretainedValue().fulfill()
+}
 
 extension FoliolePhysicalSyncGroupUITests {
     func testRetainsManuallyOfflineEditAcrossRelaunch() throws {
@@ -44,14 +49,14 @@ extension FoliolePhysicalSyncGroupUITests {
 
     private func waitForExternalOfflineSignal() {
         let received = expectation(description: "Fri receives USB offline confirmation")
-        var token: Int32 = 0
-        let status = notify_register_dispatch(
-            "com.foliole.s220.fri.offline-continue", &token, .main
-        ) { _ in
-            received.fulfill()
-        }
-        XCTAssertEqual(status, NOTIFY_STATUS_OK)
-        defer { notify_cancel(token) }
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = UnsafeRawPointer(Unmanaged.passUnretained(received).toOpaque())
+        let name = CFNotificationName(
+            rawValue: "com.foliole.s220.fri.offline-continue" as CFString
+        )
+        CFNotificationCenterAddObserver(center, observer, friOfflineSignalCallback,
+                                        name.rawValue, nil, .deliverImmediately)
+        defer { CFNotificationCenterRemoveObserver(center, observer, name, nil) }
         print("[foliole-fri] waiting-for-external-offline-signal")
         wait(for: [received], timeout: 600)
         print("[foliole-fri] received-external-offline-signal")
