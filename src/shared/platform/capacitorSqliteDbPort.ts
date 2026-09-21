@@ -1,5 +1,5 @@
-import { Capacitor } from '@capacitor/core';
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import { SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { DbPortError, type DbErrorCode, type DbParams, type DbPort, type DbRow, type DbRunResult, type DbValue } from '../../../lib/core/sync/dbPort.js';
 
@@ -16,6 +16,31 @@ type IosBlobValue = Record<string, number>;
 interface AndroidBlobValue {
   data: number[];
   type: 'Buffer';
+}
+
+export interface IsolatedCapacitorDatabase {
+  close(): Promise<void>;
+  name: string;
+  open(): Promise<void>;
+  port: DbPort;
+}
+
+export function createIsolatedCapacitorDatabaseManager(platform = Capacitor.getPlatform()) {
+  const manager = new SQLiteConnection(registerPlugin('CapacitorSQLite'));
+  return {
+    async exists(name: string) {
+      return (await manager.isDatabase(name)).result;
+    },
+    async create(name: string): Promise<IsolatedCapacitorDatabase> {
+      const connection = await manager.createConnection(name, false, 'no-encryption', 1, false);
+      return {
+        name,
+        port: createCapacitorSqliteDbPort(connection, platform),
+        open: () => connection.open(),
+        close: () => manager.closeConnection(name, false)
+      };
+    }
+  };
 }
 
 export function createCapacitorSqliteDbPort(

@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { SQLiteConnection } from '@capacitor-community/sqlite';
+
+import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort';
 
 import { measureCapacityCase } from './capacityAcceptanceMeasure';
 import { assertIdentity, requireValue } from './capacityAcceptanceSafety';
@@ -10,21 +11,21 @@ export async function runCapacityAcceptance() {
   const app = registerPlugin<{ getInfo(): Promise<{ id: string }> }>('App');
   const identity = await app.getInfo();
   assertIdentity(platform, identity.id);
-  const sqlite = new SQLiteConnection(registerPlugin('CapacitorSQLite'));
+  const sqlite = createIsolatedCapacitorDatabaseManager(platform);
   for (const count of [1000, 10000]) {
-    requireValue((await sqlite.isDatabase(`t219-capacity-${count}`)).result === false,
+    requireValue(await sqlite.exists(`t219-capacity-${count}`) === false,
       'Dedicated database already exists or its absence is unverified; inspect it before reuse');
   }
   const results = [];
   for (const count of [1000, 10000]) {
     const name = `t219-capacity-${count}`;
-    const connection = await sqlite.createConnection(name, false, 'no-encryption', 1, false);
+    const database = await sqlite.create(name);
     try {
-      await connection.open();
-      results.push(await measureCapacityCase(connection, platform, count));
+      await database.open();
+      results.push(await measureCapacityCase(database, count));
     } finally {
       // Retain the isolated database for evidence; do not delete on failure.
-      await sqlite.closeConnection(name, false);
+      await database.close();
     }
   }
   return { status: 'passed', scenario: 'library-capacity', appId: identity.id, platform, results };

@@ -1,7 +1,5 @@
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
-
 import type { DbPort } from '../../lib/core/sync/dbPort';
-import { createCapacitorSqliteDbPort } from '../shared/platform/capacitorSqliteDbPort';
+import type { IsolatedCapacitorDatabase } from '../shared/platform/capacitorSqliteDbPort';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { seedCapacityFixture } from './capacityAcceptanceFixture';
@@ -38,9 +36,9 @@ async function measureRun(db: DbPort, count: number, run: number) {
   return { run, totalMs, queryWallMs, jsResidualMs: totalMs - queryWallMs, snapshotHash, queries };
 }
 
-export async function measureCapacityCase(connection: SQLiteDBConnection, platform: string, count: number) {
-  assertDatabase(connection.getConnectionDBName(), count);
-  const db = createCapacitorSqliteDbPort(connection, platform);
+export async function measureCapacityCase(database: IsolatedCapacitorDatabase, count: number) {
+  assertDatabase(database.name, count);
+  const db = database.port;
   requireValue((await db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata'")).length === 0,
     'Refusing to seed a nonempty database');
   await seedCapacityFixture(db, count);

@@ -5,8 +5,15 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
+
 import { loadIosCompanionWorkspaceSnapshot } from './iosCompanionWorkspaceSnapshotStore';
-import { seedSnapshotDatabase, SNAPSHOT_NODE_COUNT, snapshotNodeId, snapshotPort } from './iosCompanionWorkspaceSnapshotTestSupport';
+import { seedSnapshotDatabase, SNAPSHOT_NODE_COUNT, snapshotConnection, snapshotNodeId } from './iosCompanionWorkspaceSnapshotTestSupport';
+
+function snapshotPort(database: Database.Database) {
+  const connection = snapshotConnection(database);
+  return { connection, port: createCapacitorSqliteDbPort(connection as never, 'android') };
+}
 
 it('preserves every body, original order and hidden descendants across bounded reads', async () => {
   const database = new Database(':memory:');

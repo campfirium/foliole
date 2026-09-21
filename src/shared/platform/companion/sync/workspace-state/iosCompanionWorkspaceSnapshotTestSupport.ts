@@ -1,6 +1,5 @@
 import Database from 'better-sqlite3';
 
-import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
 import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../../companionSyncNodeVersionsTestSupport';
 
 export const SNAPSHOT_NODE_COUNT = 1203;
@@ -36,7 +35,4 @@ export function seedSnapshotDatabase(database: Database.Database) {
   database.prepare('INSERT INTO node_attachments VALUES (?, ?, ?)').run(snapshotNodeId(0), 'attachment', 'reference');
 }
 
-export function snapshotPort(database: Database.Database) {
-  const connection = createFakeCapacitorConnection(database);
-  return { connection, port: createCapacitorSqliteDbPort(connection as never, 'android') };
-}
+export const snapshotConnection = (database: Database.Database) => createFakeCapacitorConnection(database);

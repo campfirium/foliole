@@ -37,16 +37,16 @@ it('never opens or overwrites an existing dedicated database', async () => {
 
 it('rejects the main database before executing SQL', async () => {
   const query = vi.fn();
-  await expect(measureCapacityCase({ getConnectionDBName: () => 'foliole-companion', query } as never,
-    'android', 1000)).rejects.toThrow('dedicated database');
+  await expect(measureCapacityCase({ name: 'foliole-companion', port: { query } } as never,
+    1000)).rejects.toThrow('dedicated database');
   expect(query).not.toHaveBeenCalled();
 });
 
 it('rejects nonempty dedicated databases before any write', async () => {
   const run = vi.fn();
-  const query = vi.fn().mockResolvedValue({ values: [{ name: 'nodes' }] });
-  await expect(measureCapacityCase({ getConnectionDBName: () => 't219-capacity-1000', query, run } as never,
-    'android', 1000)).rejects.toThrow('nonempty');
+  const query = vi.fn().mockResolvedValue([{ name: 'nodes' }]);
+  await expect(measureCapacityCase({ name: 't219-capacity-1000', port: { query, run } } as never,
+    1000)).rejects.toThrow('nonempty');
   expect(run).not.toHaveBeenCalled();
 });
 
