@@ -91,6 +91,11 @@ export async function dispatchMacosA5Action({
     await verifyS220A5Resource({ assertFixed: () => assertFixed(paths), buildIdentity,
       captured, checked, env, execute, paths, serial });
   }
+  if (action === 's220-resource-diagnostic') {
+    const { diagnoseS220A5Resource } = await import('./macos-a5-s220-resource-diagnostic.mjs');
+    await diagnoseS220A5Resource({ assertFixed: () => assertFixed(paths), buildIdentity,
+      env, execute, paths, serial });
+  }
   if (action === 's220-group-inspect') {
     const { inspectS220A5Group } = await import('./macos-a5-s220-group-inspect.mjs');
     const filePath = await inspectS220A5Group({ assertFixed: () => assertFixed(paths),

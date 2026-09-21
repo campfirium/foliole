@@ -29,6 +29,7 @@ const ACTION_OVERRIDES = Object.freeze({
     requiresHiddenDesktopRuntime: true },
   's220-resource-verify': { formalSourceClass: 'ordinary-only',
     requiresHiddenDesktopRuntime: true },
+  's220-resource-diagnostic': { formalSourceClass: 'ordinary-only' },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
@@ -74,6 +75,7 @@ const MACOS_A5_ACTIONS = new Set([
   's220-upgrade', 's220-upgrade-test', 's220-offline-test-upgrade',
   's220-resource-test-upgrade', 's220-final-test-upgrade', 's220-final-fixture',
   's220-offline', 's220-offline-edit', 's220-converge', 's220-resource-verify',
+  's220-resource-diagnostic',
   'sync-group-join-prepare', 'sync-group-rejoin', 'sync-group-rejoin-recover',
   'sync-group-stopped-status', 'sync-now', 'single-principal-sync-group'
 ]);
