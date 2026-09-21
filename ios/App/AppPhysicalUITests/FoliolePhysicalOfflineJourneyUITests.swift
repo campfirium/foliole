@@ -42,9 +42,7 @@ extension FoliolePhysicalSyncGroupUITests {
         print("[foliole-fri] s220-online-batch-complete attempt=\(s220AttemptId)")
     }
 
-    private var s220AttemptId: String {
-        String(requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID").suffix(12))
-    }
+    private var s220AttemptId: String { "c3d9c2c02995" }
 
     private var s220SourceTitle: String { "Multi-device sync A fact" }
     private var s220ReviewTitle: String { "Multi-device sync D fact" }
