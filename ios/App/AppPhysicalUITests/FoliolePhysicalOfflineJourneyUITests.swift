@@ -46,7 +46,7 @@ extension FoliolePhysicalSyncGroupUITests {
 
     private func waitForManualNetworkIsolation() {
         let offline = expectation(description: "Fri network path becomes unavailable")
-        let monitor = NWPathMonitor()
+        let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
         var observedOnline = false
         var completedTransition = false
         monitor.pathUpdateHandler = { path in
