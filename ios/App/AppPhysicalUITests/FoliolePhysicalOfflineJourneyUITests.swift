@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
@@ -9,7 +10,7 @@ extension FoliolePhysicalSyncGroupUITests {
         openBrowse(in: app)
         waitForJourneyFacts(["A"], in: app)
 
-        print("[foliole-fri] externally-verified-manual-network-isolation")
+        waitForExternalOfflineSignal()
         attachScreenshot(named: "Fri-S220-offline-ready")
         completeCachedReadingReview(in: app)
         let title = "S220 Fri offline \(UUID().uuidString)"
@@ -39,5 +40,19 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Read", in: app, timeout: 30)
         XCTAssertFalse(cachedReading.waitForExistence(timeout: 10),
                        "Fri did not advance after recording the offline reading review.")
+    }
+
+    private func waitForExternalOfflineSignal() {
+        let signal = "S220-Fri-offline-continue"
+        let deadline = Date().addingTimeInterval(600)
+        print("[foliole-fri] waiting-for-external-offline-signal")
+        while Date() < deadline {
+            if UIPasteboard.general.string == signal {
+                print("[foliole-fri] received-external-offline-signal")
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        XCTFail("Fri did not receive the external offline confirmation signal.")
     }
 }
