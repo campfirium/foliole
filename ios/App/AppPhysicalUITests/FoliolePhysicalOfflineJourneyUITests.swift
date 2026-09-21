@@ -1,4 +1,4 @@
-import UIKit
+import Darwin
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
@@ -43,16 +43,17 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     private func waitForExternalOfflineSignal() {
-        let signal = "S220-Fri-offline-continue"
-        let deadline = Date().addingTimeInterval(600)
-        print("[foliole-fri] waiting-for-external-offline-signal")
-        while Date() < deadline {
-            if UIPasteboard.general.string == signal {
-                print("[foliole-fri] received-external-offline-signal")
-                return
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        let received = expectation(description: "Fri receives USB offline confirmation")
+        var token: Int32 = 0
+        let status = notify_register_dispatch(
+            "com.foliole.s220.fri.offline-continue", &token, .main
+        ) { _ in
+            received.fulfill()
         }
-        XCTFail("Fri did not receive the external offline confirmation signal.")
+        XCTAssertEqual(status, NOTIFY_STATUS_OK)
+        defer { notify_cancel(token) }
+        print("[foliole-fri] waiting-for-external-offline-signal")
+        wait(for: [received], timeout: 600)
+        print("[foliole-fri] received-external-offline-signal")
     }
 }
