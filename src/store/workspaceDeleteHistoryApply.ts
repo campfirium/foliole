@@ -1,11 +1,12 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import type { WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
-import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import type { WorkspaceState } from './workspaceStore';
+import { createTrashParentUpdates } from './workspaceTrashRuntimeCommit';
 
 function isExactArray(left: string[], right: string[]) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -50,8 +51,8 @@ async function persistDeleteTransition(args: {
   let result;
   try {
     result = args.mode === 'undo'
-      ? await repository.syncRestoreNodes({ nodeIds: args.entry.nodeIds })
-      : await repository.syncSoftDeleteNodes({ nodeIds: args.entry.nodeIds, deletedAt: args.mutationTimestamp });
+      ? await repository.syncRestoreNodes({ nodeIds: args.entry.nodeIds, ...createTrashParentUpdates(args.parentNodes) })
+      : await repository.syncSoftDeleteNodes({ nodeIds: args.entry.nodeIds, deletedAt: args.mutationTimestamp, ...createTrashParentUpdates(args.parentNodes) });
   } catch {
     return 'failed' as const;
   }
@@ -61,13 +62,7 @@ async function persistDeleteTransition(args: {
       isExactIdSet(result.restoredNodeIds, args.entry.nodeIds)
     : 'deletedNodeIds' in result && isExactIdSet(result.deletedNodeIds, args.entry.nodeIds);
   if (!exact) return 'invalid' as const;
-  try {
-    return await getWorkspaceHistoryPersistence().persistNodeSnapshots(args.parentNodes)
-      ? 'applied' as const
-      : 'invalid' as const;
-  } catch {
-    return 'invalid' as const;
-  }
+  return 'applied' as const;
 }
 
 function applyDeletedAtSnapshots(
@@ -95,7 +90,7 @@ function buildAppliedEntry(
   parentNodesById: Record<string, Node>
 ) {
   const updatedEntry = { ...entry, mutationTimestamp };
-  if (mode === 'undo') return updatedEntry;
+  if (mode === 'undo') return { ...updatedEntry, beforeParentNodesById: parentNodesById };
   return {
     ...updatedEntry,
     afterDeletedAtById: Object.fromEntries(entry.nodeIds.map((nodeId) => [nodeId, mutationTimestamp])),
@@ -116,7 +111,10 @@ export async function applyWorkspaceDeleteHistory(args: {
     ...args,
     parentNodes: Object.values(parentNodesById)
   });
-  if (persisted !== 'applied') return { status: persisted };
+  if (persisted !== 'applied') {
+    showAppRuntimeNotice('Could not update Trash. Please try again.', 'error');
+    return { status: persisted };
+  }
   const latest = args.get();
   if (!isApplicable(latest, args.entry, args.mode)) return { status: 'invalid' };
   const trashed = new Set(latest.trashedNodeIds);

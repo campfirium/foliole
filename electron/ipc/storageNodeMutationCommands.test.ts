@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes } from '../database/nodeMutations.js';
+import { deleteNodesPermanently, moveNodes, replaceNodeOrder } from '../database/nodeMutations.js';
+import { restoreNodesWithParents as restoreNodes, softDeleteNodesWithParents as softDeleteNodes } from '../database/nodeTrashTransitions.js';
 import { upsertVersionedNodeSnapshot, upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 
@@ -42,6 +43,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshotWithOrder: vi.fn()
 }));
+vi.mock('../database/nodeTrashTransitions.js', () => ({ restoreNodesWithParents: vi.fn(), softDeleteNodesWithParents: vi.fn() }));
 vi.mock('../database/nodeVersionedMutations.js', () => ({ upsertVersionedNodeContentWithAnchors: vi.fn(),
   upsertVersionedNodeSnapshot: vi.fn(), upsertVersionedNodeSnapshotWithOrder: vi.fn() }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({

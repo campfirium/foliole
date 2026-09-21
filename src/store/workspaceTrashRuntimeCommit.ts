@@ -1,3 +1,4 @@
+import type { NativeSoftDeleteNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
 import type {
   WorkspaceDeleteNodesPermanentlyResult,
   WorkspaceSoftDeleteNodesResult
@@ -10,7 +11,7 @@ import type { DeleteNodeMutationResult } from './workspaceTrashMutations';
 export interface TrashRuntimeHandlers {
   syncNodeContent: (node: WorkspaceState['nodesById'][string], position?: number) => void;
   syncSoftDeleteNodes: (
-    payload: { nodeIds: string[]; deletedAt: string }
+    payload: NativeSoftDeleteNodesArgs
   ) => Promise<WorkspaceSoftDeleteNodesResult | undefined> | WorkspaceSoftDeleteNodesResult | undefined;
   syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
   syncDeleteNodesPermanently: (
@@ -27,14 +28,12 @@ export async function commitSoftDeleteMutation(
   }
   const result = await runtimeHandlers.syncSoftDeleteNodes({
     nodeIds: mutation.nodeIds,
-    deletedAt: mutation.deletedAt
+    deletedAt: mutation.deletedAt,
+    ...createTrashParentUpdates(mutation.parentNodesToSync)
   });
   if (!result || result.deletedNodeIds.length !== mutation.nodeIds.length ||
       !result.deletedNodeIds.every((nodeId) => mutation.nodeIds.includes(nodeId))) {
     return null;
-  }
-  for (const parentNode of mutation.parentNodesToSync) {
-    runtimeHandlers.syncNodeContent(parentNode);
   }
   return result;
 }
@@ -57,4 +56,15 @@ export async function commitPermanentDeleteMutation(
     runtimeHandlers.syncNodeContent(parentNode);
   }
   return result;
+}
+
+export function createTrashParentUpdates(nodes: WorkspaceState['nodesById'][string][]) {
+  if (nodes.length === 0) return {};
+  return {
+    parentUpdates: nodes.map((node) => ({
+      nodeId: node.id,
+      imageRegions: node.imageRegions ?? null,
+      updatedAt: node.updatedAt
+    }))
+  };
 }

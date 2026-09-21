@@ -1,9 +1,25 @@
+import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 import type {
   DeleteNodesPermanentlyInput,
   MoveNodesInput,
-  RestoreNodesInput,
-  SoftDeleteNodesInput
 } from '../database/nodeMutations.js';
+
+import { asImageRegions } from './commandParserImageRegions.js';
+import { asTimestamp } from './commandParserPrimitives.js';
+
+function parseParentUpdates(value: unknown): NativeTrashParentUpdate[] {
+  if (!Array.isArray(value)) throw new Error('invalid argument: parentUpdates');
+  return value.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) || !('imageRegions' in entry)) {
+      throw new Error('invalid argument: parentUpdates');
+    }
+    return {
+      nodeId: asString(entry.nodeId, 'parentUpdates.nodeId'),
+      imageRegions: asImageRegions(entry.imageRegions, 'parentUpdates.imageRegions'),
+      updatedAt: asTimestamp(entry.updatedAt, 'parentUpdates.updatedAt')
+    };
+  });
+}
 
 function asString(value: unknown, field: string): string {
   if (typeof value !== 'string') {
@@ -52,16 +68,18 @@ function asMoveNodePatch(value: unknown) {
   return patch;
 }
 
-export function parseSoftDeleteNodesArgs(args: Record<string, unknown>): SoftDeleteNodesInput {
+export function parseSoftDeleteNodesArgs(args: Record<string, unknown>): NativeSoftDeleteNodesArgs {
   return {
     nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
-    deletedAt: asString(args.deletedAt, 'deletedAt')
+    deletedAt: asString(args.deletedAt, 'deletedAt'),
+    ...(args.parentUpdates !== undefined ? { parentUpdates: parseParentUpdates(args.parentUpdates) } : {})
   };
 }
 
-export function parseRestoreNodesArgs(args: Record<string, unknown>): RestoreNodesInput {
+export function parseRestoreNodesArgs(args: Record<string, unknown>): NativeRestoreNodesArgs {
   return {
-    nodeIds: asStringArray(args.nodeIds, 'nodeIds')
+    nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
+    ...(args.parentUpdates !== undefined ? { parentUpdates: parseParentUpdates(args.parentUpdates) } : {})
   };
 }
 

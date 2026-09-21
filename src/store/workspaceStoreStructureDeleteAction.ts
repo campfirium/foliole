@@ -8,10 +8,9 @@ import {
 } from './workspaceActionHistory';
 import { createWorkspaceDeleteHistoryEntry, type WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
-import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import type { WorkspaceState } from './workspaceStore';
 import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
-import { commitSoftDeleteMutation, type TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
+import { commitSoftDeleteMutation, createTrashParentUpdates, type TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -53,22 +52,15 @@ async function commitWorkspaceDelete(
   try {
     result = await runtimeHandlers.syncSoftDeleteNodes({
       deletedAt: mutation.deletedAt,
-      nodeIds: mutation.nodeIds
+      nodeIds: mutation.nodeIds,
+      ...createTrashParentUpdates(mutation.parentNodesToSync)
     });
   } catch {
     return { status: 'failed' as const };
   }
   if (!result) return { status: 'failed' as const };
   if (!isExactNodeSet(mutation.nodeIds, result.deletedNodeIds)) return { status: 'invalid' as const };
-  let parentsPersisted = false;
-  try {
-    parentsPersisted = await getWorkspaceHistoryPersistence().persistNodeSnapshots(mutation.parentNodesToSync);
-  } catch {
-    parentsPersisted = false;
-  }
-  return parentsPersisted
-    ? { deletedNodeIds: result.deletedNodeIds, status: 'applied' as const }
-    : { status: 'invalid' as const };
+  return { deletedNodeIds: result.deletedNodeIds, status: 'applied' as const };
 }
 
 function createDeleteEntry(snapshot: WorkspaceState, mutation: DeleteNodeMutationResult) {
@@ -125,7 +117,10 @@ async function deleteWithWorkspaceHistory(args: {
     undoRequested = settled.undoRequested;
     return { ...currentMutation.patch, appActionHistory: settled.history };
   });
-  if (!committed) return;
+  if (!committed) {
+    showAppRuntimeNotice('Could not move to Trash. Please try again.', 'error');
+    return;
+  }
   showTrashUndoNotice(entry, args.get);
   if (undoRequested) args.get().undoWorkspaceAction(entry.id);
 }

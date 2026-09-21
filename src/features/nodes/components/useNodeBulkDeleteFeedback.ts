@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
+
 function createDeleteRunner(
   setDeleteStatusLabel: (label: string | null) => void,
   runDelete: (targetNodeIds: string[]) => void,
@@ -11,9 +13,11 @@ function createDeleteRunner(
       return;
     }
     setDeleteStatusLabel(formatLabel(nodeIds.length));
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       try {
-        runDelete(nodeIds);
+        await runDelete(nodeIds);
+      } catch {
+        showAppRuntimeNotice('Could not complete deletion. Please try again.', 'error');
       } finally {
         setDeleteStatusLabel(null);
       }

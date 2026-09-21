@@ -6,9 +6,8 @@ import {
   flushAllDirtyNodeSyncVersions,
   moveNodes,
   replaceNodeOrder,
-  restoreNodes,
-  softDeleteNodes
 } from '../database/nodeMutations.js';
+import { restoreNodesWithParents, softDeleteNodesWithParents } from '../database/nodeTrashTransitions.js';
 import {
   upsertVersionedNodeContentWithAnchors,
   upsertVersionedNodeSnapshot,
@@ -71,8 +70,8 @@ function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' |
 
 function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseSoftDeleteNodesArgs(args);
-  softDeleteNodes(parsed);
-  scheduleMirrorSync(parsed.nodeIds);
+  softDeleteNodesWithParents(parsed);
+  scheduleMirrorSync([...parsed.nodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
   return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds }, originWindow);
 }
 
@@ -194,8 +193,8 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     const parsed = parseRestoreNodesArgs(args);
-    const result = restoreNodes(parsed);
-    scheduleMirrorSync(result.restoredNodeIds);
+    const result = restoreNodesWithParents(parsed);
+    scheduleMirrorSync([...result.restoredNodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
     return completeWorkspaceMutation(result, originWindow);
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {

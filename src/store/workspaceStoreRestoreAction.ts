@@ -1,3 +1,4 @@
+import type { NativeRestoreNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
 import type { WorkspaceRestoreNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { collectNodeSubtreeIds } from './workspaceHelpers';
@@ -14,7 +15,7 @@ type WorkspaceSet = (
 
 export interface RestoreNodeRuntimeHandlers {
   syncRestoreNodes: (
-    payload: { nodeIds: string[] }
+    payload: NativeRestoreNodesArgs
   ) => Promise<WorkspaceRestoreNodesResult | undefined> | WorkspaceRestoreNodesResult | undefined;
 }
 

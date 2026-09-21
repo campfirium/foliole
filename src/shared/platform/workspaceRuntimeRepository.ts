@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../../lib/platform/nativeTrashCommandMap';
 
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
@@ -122,7 +123,7 @@ function logReviewGradeRuntimeError(error: unknown) {
   });
 }
 
-export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
+export async function restoreWorkspaceNodes(payload: NativeRestoreNodesArgs): Promise<WorkspaceRestoreNodesResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return undefined;
@@ -137,7 +138,7 @@ export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Pro
 }
 
 export async function softDeleteWorkspaceNodes(
-  payload: { nodeIds: string[]; deletedAt: string }
+  payload: NativeSoftDeleteNodesArgs
 ): Promise<WorkspaceSoftDeleteNodesResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
