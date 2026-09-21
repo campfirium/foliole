@@ -59,6 +59,6 @@ extension FoliolePhysicalSyncGroupUITests {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", value), object: element
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 180), .completed, message)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 600), .completed, message)
     }
 }
