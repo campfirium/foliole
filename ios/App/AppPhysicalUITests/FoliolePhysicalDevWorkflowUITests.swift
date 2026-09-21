@@ -59,7 +59,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
 
     func testMeasuresLibraryCapacity() throws {
         executionTimeAllowance = 1200
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.devworkflow")
         app.launchArguments += ["--foliole-physical-acceptance"]
         app.launch()
         let run = app.buttons["Run T219 capacity"]
@@ -87,7 +87,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
 
     func testMeasuresLibraryWorkspaceCapacity() throws {
         executionTimeAllowance = 1200
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.devworkflow")
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         var results: [[String: Any]] = []
