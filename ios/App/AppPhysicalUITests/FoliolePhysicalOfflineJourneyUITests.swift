@@ -146,8 +146,9 @@ extension FoliolePhysicalSyncGroupUITests {
             waitForDisappearance(exit, timeout: 30,
                                  message: "Fri did not exit before S220 Browse verification.")
         }
-        if app.buttons["Directory"].waitForExistence(timeout: 3) {
-            app.buttons["Directory"].tap()
+        let directory = app.buttons["Directory"].firstMatch
+        if directory.waitForExistence(timeout: 3) {
+            directory.tap()
         } else {
             if !app.buttons["Browse"].exists,
                app.buttons["Settings"].waitForExistence(timeout: 3) {

@@ -73,6 +73,7 @@ describe('Fri S220 deterministic journey contract', () => {
     expect(source).toContain('waitForSyncNowCompletion(in: app)');
     expect(source).toContain('The public Sync Now action explicitly failed.');
     expect(onlineBatch).toContain('allowingBackgroundSync: true');
+    expect(source).toContain('let directory = app.buttons["Directory"].firstMatch');
     expect(onlineBatch).not.toContain('tapEnabledButton(named: "Sync Now", in: app, timeout: 120)');
   });
 
