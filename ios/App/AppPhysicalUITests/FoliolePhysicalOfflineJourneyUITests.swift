@@ -7,52 +7,94 @@ private let friOfflineSignalCallback: CFNotificationCallback = { _, observer, _,
 }
 
 extension FoliolePhysicalSyncGroupUITests {
-    func testRetainsManuallyOfflineEditAcrossRelaunch() throws {
+    func testS220OfflineBatchRetainsChangesAcrossRelaunch() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        assertS220GroupAndCachedFacts(in: app)
+        print("[foliole-fri] s220-offline-window-ready attempt=\(s220AttemptId)")
+
+        waitForExternalOfflineSignal()
+        assertPublicSyncNowFailsOffline(in: app)
+        completeCachedReadingReview(in: app)
+        appendToVisibleTopic(prefix: s220SourceTitle, existingText: s220SourceTitle,
+                             text: s220EditMarker, in: app)
+        captureFact(named: s220CaptureTitle, in: app)
+        assertS220LocalState(in: app, afterRelaunch: true)
+        print("[foliole-fri] s220-offline-batch-complete attempt=\(s220AttemptId)")
+    }
+
+    func testS220OnlineBatchConvergesAfterSyncNow() throws {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
         XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 30))
-        openBrowse(in: app)
-        waitForJourneyFacts(["A"], in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
+        assertS220LocalState(in: app, afterRelaunch: true)
+        print("[foliole-fri] s220-online-batch-complete attempt=\(s220AttemptId)")
+    }
 
-        waitForExternalOfflineSignal()
-        attachScreenshot(named: "Fri-S220-offline-ready")
-        completeCachedReadingReview(in: app)
-        let title = "S220 Fri offline \(UUID().uuidString)"
-        let edit = "S220 Fri offline edit \(UUID().uuidString)"
-        print("[foliole-fri] s220-offline-fact-title \(title)")
-        print("[foliole-fri] s220-offline-edit-text \(edit)")
-        appendToVisibleTopic(prefix: "Multi-device sync A fact", existingText: "Multi-device sync A fact",
-                             text: edit, in: app)
-        captureFact(named: title, in: app)
-        waitForVisibleTopic(prefix: title, in: app)
-        app.terminate()
-        XCTAssertTrue(app.wait(for: .notRunning, timeout: 30))
-        app.launch()
+    private var s220AttemptId: String {
+        String(requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID").suffix(12))
+    }
+
+    private var s220SourceTitle: String { "Multi-device sync A fact" }
+    private var s220ReviewTitle: String { "Multi-device sync D fact" }
+    private var s220CaptureTitle: String { "S220 Fri capture \(s220AttemptId)" }
+    private var s220EditMarker: String { "S220 Fri edit \(s220AttemptId)." }
+
+    private func assertS220GroupAndCachedFacts(in app: XCUIApplication) {
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 30),
+                      "Fri did not retain the isolated S220 Sync Group.")
         openBrowse(in: app)
-        waitForVisibleTopicText(prefix: "Multi-device sync A fact", text: edit, in: app)
-        openBrowse(in: app)
-        waitForVisibleTopic(prefix: title, in: app)
-        tapButton(named: "Exit", in: app, timeout: 30)
-        tapButton(named: "Learn", in: app, timeout: 30)
-        XCTAssertFalse(app.staticTexts["Multi-device sync D fact"].waitForExistence(timeout: 5),
-                       "Fri restored the reading review as due after offline relaunch.")
-        attachScreenshot(named: "Fri-S220-offline-capture-restored")
+        waitForVisibleTopic(prefix: s220SourceTitle, in: app)
+        openLearn(in: app)
+        XCTAssertTrue(app.staticTexts[s220ReviewTitle].waitForExistence(timeout: 30),
+                      "Fri did not cache the S220 reading review before the offline window.")
+    }
+
+    private func assertPublicSyncNowFailsOffline(in app: XCUIApplication) {
+        openSyncSettings(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
+        let failure = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] 'failed' OR label CONTAINS[c] 'could not connect'"
+        )).firstMatch
+        XCTAssertTrue(failure.waitForExistence(timeout: 45),
+                      "Public Sync Now did not expose a product-level offline failure.")
+        attachScreenshot(named: "Fri-S220-public-sync-offline-failed")
     }
 
     private func completeCachedReadingReview(in app: XCUIApplication) {
-        let cachedReading = app.staticTexts["Multi-device sync D fact"]
-        if !cachedReading.exists {
-            if app.buttons["Exit"].waitForExistence(timeout: 3) {
-                app.buttons["Exit"].tap()
-            }
-            tapButton(named: "Learn", in: app, timeout: 30)
-        }
+        openLearn(in: app)
+        let cachedReading = app.staticTexts[s220ReviewTitle]
         XCTAssertTrue(cachedReading.waitForExistence(timeout: 30),
                       "Fri did not expose the cached reading review while offline.")
         tapButton(named: "Read", in: app, timeout: 30)
         XCTAssertFalse(cachedReading.waitForExistence(timeout: 10),
                        "Fri did not advance after recording the offline reading review.")
+    }
+
+    private func assertS220LocalState(in app: XCUIApplication, afterRelaunch: Bool) {
+        if afterRelaunch {
+            app.terminate()
+            XCTAssertTrue(app.wait(for: .notRunning, timeout: 30))
+            app.launch()
+        }
+        openBrowse(in: app)
+        waitForVisibleTopicText(prefix: s220SourceTitle, text: s220EditMarker, in: app)
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: s220CaptureTitle, in: app)
+        openLearn(in: app)
+        XCTAssertFalse(app.staticTexts[s220ReviewTitle].waitForExistence(timeout: 5),
+                       "Fri restored the completed reading review as due.")
+        attachScreenshot(named: "Fri-S220-state-restored")
+    }
+
+    private func openLearn(in app: XCUIApplication) {
+        if app.buttons["Exit"].waitForExistence(timeout: 3) { app.buttons["Exit"].tap() }
+        tapButton(named: "Learn", in: app, timeout: 30)
     }
 
     private func waitForExternalOfflineSignal() {
@@ -65,8 +107,6 @@ extension FoliolePhysicalSyncGroupUITests {
         CFNotificationCenterAddObserver(center, observer, friOfflineSignalCallback,
                                         name.rawValue, nil, .deliverImmediately)
         defer { CFNotificationCenterRemoveObserver(center, observer, name, nil) }
-        print("[foliole-fri] waiting-for-external-offline-signal")
         wait(for: [received], timeout: 600)
-        print("[foliole-fri] received-external-offline-signal")
     }
 }
