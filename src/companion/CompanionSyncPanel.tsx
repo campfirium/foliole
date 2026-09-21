@@ -61,10 +61,24 @@ function formatSyncPanelError(message: string, t: Translate) {
   return message;
 }
 
-function ConnectedContent(props: CompanionSyncPanelProps & { endpointUrl: string }) {
+function formatManualSyncFailure(message: string | null, t: Translate) {
+  if (message === 'discovery_waiting_anchor' || message === 'discovery_unavailable'
+    || message === 'discovery_connection_failed') {
+    return t('companion.sync.action.failedConnection');
+  }
+  const formatted = message ? formatSyncPanelError(message, t) : '';
+  return formatted && !/^[a-z0-9_]+$/i.test(formatted)
+    ? formatted : t('companion.sync.action.failedFallback');
+}
+
+function ConnectedContent(props: CompanionSyncPanelProps & {
+  endpointUrl: string;
+  manualSyncFailureDetail: string;
+}) {
   if (!props.syncGroup || props.page === 'syncHandoff') return null;
   const syncAction = props.page === 'sync' ? (
-    <CompanionSyncNowButton isSyncing={props.status === 'syncing'}
+    <CompanionSyncNowButton failureDetail={props.manualSyncFailureDetail}
+      isSyncing={props.status === 'syncing'}
       manualSyncAction={props.manualSyncAction ?? null}
       onSync={() => void props.onPull(props.endpointUrl)} />
   ) : null;
@@ -88,16 +102,19 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     ?? props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT;
   const busy = props.joinStatus === 'requesting';
   const searching = props.joinStatus === 'discovering' || props.discoveries.length > 0;
+  const manualSyncFailed = props.manualSyncAction?.status === 'terminal'
+    && props.manualSyncAction.terminalResult === 'failed';
   return (
     <section className="mb-8 px-5 py-3">
       <div className="flex flex-col gap-5">
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
-        {props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl} />
+        {props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
+          manualSyncFailureDetail={formatManualSyncFailure(props.error, t)} />
           : props.joinRequest
             ? <AwaitingApprovalState expiresAt={props.joinRequest.expiresAt} onCancel={props.onCancelJoin} />
             : searching ? null : <EmptyDiscoveryState disabled={busy} onTryAgain={() => void props.onDiscover()} />}
-        {props.error ? <p className="text-sm text-error" data-error-code={props.error}
+        {props.error && !manualSyncFailed ? <p className="text-sm text-error" data-error-code={props.error}
           data-testid="companion-sync-error">{formatSyncPanelError(props.error, t)}</p> : null}
         {props.syncGroup && (props.page === 'sync' || props.page === 'syncHandoff') ? (
           <CompanionHandoffReminderSettingsPanel page={props.page} settings={props.handoffReminderSettings}

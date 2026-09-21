@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
@@ -47,7 +47,9 @@ describe('CompanionSyncNowButton', () => {
 
     expect(screen.getByRole('button', { name: 'Syncing' })).toBeDisabled();
   });
+});
 
+describe('CompanionSyncNowButton manual lifecycle', () => {
   it('keeps the same manual action identity while running', () => {
     renderWithLocalization(
       <CompanionSyncNowButton
@@ -61,5 +63,37 @@ describe('CompanionSyncNowButton', () => {
     const button = screen.getByRole('button', { name: 'Syncing' });
     expect(button).toHaveAttribute('data-sync-action-run-id', 'run-manual-1');
     expect(button).toHaveAttribute('data-sync-action-status', 'running');
+  });
+
+  it('keeps a failed result visible and accessible while allowing retry', () => {
+    const onSync = vi.fn();
+    const { rerender } = renderWithLocalization(
+      <CompanionSyncNowButton
+        failureDetail="Foliole could not connect to another device."
+        isSyncing={false}
+        manualSyncAction={{ runId: 'run-failed', started: true,
+          status: 'terminal', terminalResult: 'failed' }}
+        onSync={onSync}
+      />
+    );
+
+    const failure = screen.getByRole('alert');
+    expect(failure).toHaveTextContent('Sync failed.');
+    expect(failure).toHaveTextContent('Foliole could not connect to another device.');
+    expect(failure).toHaveTextContent('Unsynced changes remain on this device.');
+    const retry = screen.getByRole('button', { name: 'Sync Now' });
+    expect(retry).toBeEnabled();
+    fireEvent.click(retry);
+    expect(onSync).toHaveBeenCalledOnce();
+
+    rerender(
+      <CompanionSyncNowButton
+        isSyncing={false}
+        manualSyncAction={{ runId: 'run-retry', started: true,
+          status: 'starting', terminalResult: null }}
+        onSync={onSync}
+      />
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
