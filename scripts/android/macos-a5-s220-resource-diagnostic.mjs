@@ -10,9 +10,11 @@ import { assertS220A5NetworkRestored, confirmS220A5NetworkRestored,
   inspectS220A5Network } from './macos-a5-s220-network-status.mjs';
 import { S220_APP_ID } from './macos-a5-s220-package-inventory.mjs';
 import { classifyS220ResourceDiagnostic } from './macos-a5-s220-resource-diagnostic-classifier.mjs';
+import {
+  buildS220ResourceDiagnosticInstrumentationArgs
+} from './macos-a5-s220-resource-diagnostic-args.mjs';
 
 const TEST_CLASS = 'com.foliole.android.FolioleS220ResourceDiagnosticTest';
-const BODY_MARKER = 'Resource LAN body remains readable.';
 
 function extractReceipt(stdout) {
   const encoded = stdout.match(/folioleS220ResourceDiagnostic=(\{[^\n]+\})/u)?.[1];
@@ -49,11 +51,9 @@ export async function diagnoseS220A5Resource(args) {
     run = await runMacosA5InstrumentationMechanics({ appId: S220_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(root, 'android-test'), execute,
       installMain: false, instrumentationOwnsActivity: true, needsTransport: false,
-      instrumentationArgs: ['-e', 'resourceNodeId', fixture.nodeId,
-        '-e', 'resourceGroupId', snapshot.inspection.group.group_id,
-        '-e', 'bodyMarker', BODY_MARKER,
-        '-e', 'availableHash', fixture.images[0].hash,
-        '-e', 'recoveringHash', fixture.images[1].hash], paths, serial,
+      instrumentationArgs: buildS220ResourceDiagnosticInstrumentationArgs(
+        fixture, snapshot.inspection.group.group_id
+      ), paths, serial,
       testClass: TEST_CLASS,
       validateInstrumentation: ({ stdout }) => {
         if (!/folioleS220ResourceDiagnostic=\{.+"networkRestored":\{"restored":true/u

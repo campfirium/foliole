@@ -26,6 +26,8 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public final class FolioleS220ResourceDiagnosticTest {
+    private static final String BODY_MARKER = "Resource LAN body remains readable.";
+
     @Test public void capturesOfflineResourceBoundariesOnce() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
@@ -41,7 +43,7 @@ public final class FolioleS220ResourceDiagnosticTest {
             activity = openNode(instrumentation, context, args);
             WebView view = activity.findViewById(R.id.webview);
             JSONObject document = waitForDocument(instrumentation, view,
-                args.getString("resourceNodeId", ""), args.getString("bodyMarker", ""));
+                args.getString("resourceNodeId", ""));
             receipt.put("document", document);
             receipt.put("images", captureImages(instrumentation, view, context, hashes));
         } catch (Throwable error) {
@@ -83,8 +85,7 @@ public final class FolioleS220ResourceDiagnosticTest {
     }
 
     private static JSONObject waitForDocument(Instrumentation instrumentation, WebView view,
-        String nodeId, String bodyMarker) throws Exception {
-        assertFalse("S220 resource body marker must be provided", bodyMarker.isEmpty());
+        String nodeId) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         JSONObject observed = new JSONObject();
         while (System.nanoTime() < deadline) {
@@ -92,7 +93,7 @@ public final class FolioleS220ResourceDiagnosticTest {
                 "(function(){var root=document.querySelector('[data-companion-readable-document]');" +
                     "var text=root?.innerText||'';var images=Array.from(root?.querySelectorAll('img')||[]);" +
                     "return JSON.stringify({node:root?.getAttribute('data-node-id')||null," +
-                    "bodyReadable:text.includes(" + JSONObject.quote(bodyMarker) + ")," +
+                    "bodyReadable:text.includes(" + JSONObject.quote(BODY_MARKER) + ")," +
                     "text:text.slice(0,1600),widgets:root?.querySelectorAll(" +
                     "'.cm-md-image-widget').length||0,images:images.length,loadedImages:" +
                     "images.filter(i=>i.complete&&i.naturalWidth>0).length});})()");
