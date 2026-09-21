@@ -74,11 +74,12 @@ jobs:
       - name: Rebuild Electron native ABI
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
+        run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Run canonical quality tooling bucket
         run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Upload quality tooling logs
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: quality-tooling-${{ matrix.host }}-${{ matrix.bucket }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}

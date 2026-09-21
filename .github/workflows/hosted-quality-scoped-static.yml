@@ -54,7 +54,7 @@ jobs:
       - name: Rebuild Electron native ABI
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
+        run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Run canonical shared static quality
         if: inputs.scope == 'shared'
         run: bash scripts/quality/quality-gate-target.sh shared-static

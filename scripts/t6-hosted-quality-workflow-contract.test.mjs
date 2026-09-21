@@ -117,10 +117,10 @@ describe('T6 hosted quality workflow contracts', () => {
     const electronMatrix = workflows.electron.jobs['electron-tests'].strategy.matrix.include;
     const expectedElectronEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
       ['database', 'import', 'ipc', 'services'].map((shard) => `${host}:${shard}`)
-    ));
+    )).sort();
     const actualElectronEntries = electronMatrix.flatMap(({ host, shards }) => (
       shards.map((shard) => `${host}:${shard}`)
-    ));
+    )).sort();
     expect(actualElectronEntries).toEqual(expectedElectronEntries);
     expect(new Set(actualElectronEntries).size).toBe(actualElectronEntries.length);
     expect(workflows.electron.jobs['electron-tests'].strategy['fail-fast']).toBe(false);
@@ -139,7 +139,6 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(desktopSourceMatrix.filter(({ host }) => host === 'Windows').map(({ shards }) => shards))
       .toEqual([['one', 'two'], ['three', 'four']]);
     expect(sources.full).not.toContain('portable-quality');
-    expect(sources.portableDomain).not.toContain('continue-on-error');
     expect(sources.portableDomain).not.toContain('paths:');
     expect(sources.portableDomain).not.toContain('paths-ignore:');
     expect(sources.portableDomain).not.toContain('changed-files');

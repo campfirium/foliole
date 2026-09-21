@@ -55,6 +55,7 @@ jobs:
         run: bash scripts/quality/quality-gate-target.sh desktop-static
       - name: Upload desktop static logs
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: desktop-static-${{ env.TARGET_SHA }}-${{ github.run_attempt }}

@@ -33,6 +33,12 @@ const desktopSource = parseWorkflow('hosted-quality-desktop-source.yml');
 const electron = parseWorkflow('hosted-quality-electron.yml');
 const t5 = parseWorkflow('t5-baseline-admission.yml');
 const tooling = parseWorkflow('hosted-quality-tooling.yml');
+const t5LeafWorkflows = [
+  portable, desktopSource, electron, tooling,
+  parseWorkflow('hosted-quality-static.yml'),
+  parseWorkflow('hosted-quality-desktop-static.yml'),
+  parseWorkflow('hosted-quality-windows-core.yml')
+];
 const TEST_PATTERN = /\.test\.(?:mjs|mts|ts|tsx)$/u;
 
 function collectTests(root) {
@@ -187,6 +193,31 @@ describe('T5 canonical leaf ownership', () => {
       expect(source.match(/Activate pinned npm/gu)).toHaveLength(1);
       expect(source.indexOf('Activate pinned npm')).toBeLessThan(source.indexOf('Install dependencies'));
     }
+  });
+
+  it('keeps diagnostic log uploads from replacing canonical leaf results', () => {
+    for (const workflow of t5LeafWorkflows) {
+      const testJob = Object.values(workflow.jobs)[0];
+      const uploadSteps = testJob.steps.filter(({ name }) => name.startsWith('Upload '));
+      expect(uploadSteps.length).toBeGreaterThan(0);
+      for (const step of uploadSteps) {
+        expect(step.if).toBe('${{ always() }}');
+        expect(step['continue-on-error']).toBe(true);
+      }
+      for (const step of testJob.steps.filter(({ name }) => name.startsWith('Run '))) {
+        expect(step['continue-on-error']).toBeUndefined();
+      }
+    }
+  });
+
+  it('balances every Electron host without changing shard coverage or leaf count', () => {
+    expect(electron.jobs['electron-tests'].strategy.matrix.include
+      .map(({ bucket, shards }) => ({ bucket, shards }))).toEqual([
+      { bucket: 'database-services', shards: ['database', 'services'] },
+      { bucket: 'import-ipc', shards: ['import', 'ipc'] },
+      { bucket: 'database-services', shards: ['database', 'services'] },
+      { bucket: 'import-ipc', shards: ['import', 'ipc'] }
+    ]);
   });
 
   it('keeps every top-level caller within GitHub reusable workflow depth limits', () => {

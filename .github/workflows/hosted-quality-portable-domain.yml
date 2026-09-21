@@ -69,7 +69,7 @@ jobs:
       - name: Rebuild Electron native ABI
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
+        run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Run canonical shared domain
         if: inputs.domain == 'shared'
         run: npm run test:release:shared
@@ -81,6 +81,7 @@ jobs:
         run: npm run test:release:android-shared
       - name: Upload portable domain logs
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: portable-${{ inputs.domain }}-${{ matrix.host }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}

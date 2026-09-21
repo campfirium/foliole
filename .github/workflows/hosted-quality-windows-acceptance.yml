@@ -54,7 +54,7 @@ jobs:
         id: native_abi
         run: |
           npm run electron:rebuild:native
-          node scripts/electron-sqlite-runner.mjs --preflight
+          node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Build desktop acceptance outputs
         id: desktop_build
         if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}

@@ -34,20 +34,20 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: database-import
-            shards: [database, import]
+            bucket: database-services
+            shards: [database, services]
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: ipc-services
-            shards: [ipc, services]
+            bucket: import-ipc
+            shards: [import, ipc]
           - host: Windows
             runner: windows-latest
-            bucket: database-import
-            shards: [database, import]
+            bucket: database-services
+            shards: [database, services]
           - host: Windows
             runner: windows-latest
-            bucket: ipc-services
-            shards: [ipc, services]
+            bucket: import-ipc
+            shards: [import, ipc]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
@@ -78,11 +78,12 @@ jobs:
       - name: Rebuild Electron native ABI
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
+        run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Run canonical Electron bucket
         run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Upload Electron test logs
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: electron-test-${{ matrix.host }}-${{ matrix.bucket }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
