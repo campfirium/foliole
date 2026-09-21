@@ -29,8 +29,11 @@ extension FoliolePhysicalSyncGroupUITests {
         app.terminate()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30))
         app.launch()
+        openBrowse(in: app)
         waitForVisibleTopicText(prefix: "Multi-device sync A fact", text: edit, in: app)
+        openBrowse(in: app)
         waitForVisibleTopic(prefix: title, in: app)
+        tapButton(named: "Exit", in: app, timeout: 30)
         tapButton(named: "Learn", in: app, timeout: 30)
         XCTAssertFalse(app.staticTexts["Multi-device sync D fact"].waitForExistence(timeout: 5),
                        "Fri restored the reading review as due after offline relaunch.")
@@ -38,8 +41,10 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     private func completeCachedReadingReview(in app: XCUIApplication) {
-        tapButton(named: "Learn", in: app, timeout: 30)
         let cachedReading = app.staticTexts["Multi-device sync D fact"]
+        if !cachedReading.exists {
+            tapButton(named: "Learn", in: app, timeout: 30)
+        }
         XCTAssertTrue(cachedReading.waitForExistence(timeout: 30),
                       "Fri did not expose the cached reading review while offline.")
         tapButton(named: "Read", in: app, timeout: 30)
