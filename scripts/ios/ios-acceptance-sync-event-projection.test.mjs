@@ -21,6 +21,7 @@ it('runs the isolated signed projection target and accepts only its fixed fields
   expect(source).toContain('value.container_identity !== applicationId');
   expect(source).not.toMatch(/CapacitorDatabase|device copy|container_path|workgroup_key|endpoint/u);
   expect(projectionTest).toContain('requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")');
+  expect(projectionTest).toContain('t[0-9]+|s[0-9]+acceptance');
   expect(projectionTest).not.toContain('.t152-acceptance');
 });
 

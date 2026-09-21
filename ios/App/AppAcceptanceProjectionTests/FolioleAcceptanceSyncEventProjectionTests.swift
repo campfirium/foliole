@@ -5,7 +5,10 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
     func testProjectsSyncEvents() throws {
         let bundle = try XCTUnwrap(Bundle.main.bundleIdentifier)
         let suffix = try requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")
-        XCTAssertNotNil(suffix.range(of: #"^\.t[0-9]+$"#, options: .regularExpression))
+        XCTAssertNotNil(suffix.range(
+            of: #"^\.(?:t[0-9]+|s[0-9]+acceptance)$"#,
+            options: .regularExpression
+        ))
         XCTAssertEqual(bundle, "com.foliole.ios\(suffix)")
         let build = try XCTUnwrap(ProcessInfo.processInfo.environment["FOLIOLE_T152_BUILD_IDENTITY"])
         let databaseURL = try database()
