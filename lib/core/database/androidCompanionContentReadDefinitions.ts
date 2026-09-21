@@ -94,6 +94,7 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       contentStatus: 'content_status',
       id: 'id',
       pdfAttachmentId: 'pdf_attachment_id',
+      reveal: 'reveal',
       title: 'title'
     },
     outputKeys: {
@@ -102,12 +103,14 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       contentStatus: 'content_status',
       nodeId: 'node_id',
       pdfAttachmentId: 'pdf_attachment_id',
+      reveal: 'reveal',
       title: 'title'
     },
     articleFields: [
       { outputKey: 'node_id', rowKey: 'id', type: 'string' },
       { outputKey: 'title', rowKey: 'title', type: 'string' },
       { outputKey: 'body_blob_hash', rowKey: 'body_blob_hash', type: 'nullableString' },
+      { outputKey: 'reveal', rowKey: 'reveal', type: 'nullableString' },
       { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
       { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
       { outputKey: 'pdf_attachment_id', rowKey: 'pdf_attachment_id', type: 'nullableString' }

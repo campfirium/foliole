@@ -149,6 +149,22 @@ export function resolveCompanionReviewSession(
   };
 }
 
+export function hydrateCompanionReviewSession(
+  session: CompanionReviewSession,
+  article: { content: string; nodeId: string; reveal?: string | null; title: string } | null
+): CompanionReviewSession {
+  if (!session.currentCard || article?.nodeId !== session.currentCard.nodeId) return session;
+  return {
+    ...session,
+    currentCard: {
+      ...session.currentCard,
+      content: article.content,
+      reveal: article.reveal ?? null,
+      title: article.title
+    }
+  };
+}
+
 export async function gradeCompanionReviewCard(args: {
   grade: ReviewGrade;
   nodeId: string;

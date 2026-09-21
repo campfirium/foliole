@@ -62,6 +62,7 @@ function normalizeBodyStatus(status: CompanionReadableNode['bodyStatus']) {
 
 function hasReadableContent(node: CompanionReadableNode | undefined) {
   return Boolean(node && (
+    node.hasContent ||
     (typeof node.content === 'string' && node.content.trim()) ||
     node.bodyStatus === 'empty' ||
     node.bodyStatus === 'failed' ||
@@ -106,7 +107,7 @@ function isVirtualFolderNode(node: CompanionReadableNode | undefined): node is C
 }
 
 function resolveCompanionVirtualFolderItems(snapshot: WorkspaceSnapshot, folderNode: CompanionReadableNode) {
-  const resultIds = resolveVirtualNodeResultIds({
+  const resultIds = snapshot.virtualResultIdsByNodeId?.[folderNode.id] ?? resolveVirtualNodeResultIds({
     activeNodeId: folderNode.id,
     filter: folderNode.virtualFilter,
     manualChildOrder: folderNode.manualChildOrder,

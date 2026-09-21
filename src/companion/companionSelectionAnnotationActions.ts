@@ -6,6 +6,7 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
   applyCompanionLocalNodeVersions,
@@ -156,7 +157,8 @@ async function persistExistingHighlightNode(args: {
   snapshot: WorkspaceSnapshot;
   update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot;
 }) {
-  const node = args.update(args.node, new Date().toISOString());
+  const sourceNode = await hydrateNativeNodeContent(args.node);
+  const node = args.update(sourceNode, new Date().toISOString());
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   await applyCompanionLocalNodeVersions([nodeVersion]);
@@ -170,6 +172,16 @@ async function persistExistingHighlightNode(args: {
       nodesById: { ...args.snapshot.nodesById, [versionedNode.id]: versionedNode }
     }
   };
+}
+
+async function hydrateNativeNodeContent(node: WorkspaceNodeSnapshot) {
+  if (!isAvailableNativeCompanionRuntime()) return node;
+  const current = await loadCompanionWorkspaceNode(node.id);
+  if (!current) throw new Error('companion_highlight_node_unavailable');
+  if (current.currentVersionId !== node.currentVersionId) {
+    throw new Error('companion_highlight_node_changed');
+  }
+  return current;
 }
 
 export async function addNoteToCompanionExistingHighlight(args: {

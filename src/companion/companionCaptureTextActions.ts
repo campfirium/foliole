@@ -3,8 +3,10 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import {
   toCompanionNativeNodeVersion
@@ -61,7 +63,12 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
   if (!args.snapshot || !inboxNode || args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID)) {
     throw new CompanionCaptureTextError('inbox-unavailable');
   }
-  const existingNode = args.nodeId ? args.snapshot.nodesById[args.nodeId] : null;
+  let existingNode = args.nodeId ? args.snapshot.nodesById[args.nodeId] : null;
+  if (existingNode && isAvailableNativeCompanionRuntime()) {
+    const currentNode = await loadCompanionWorkspaceNode(existingNode.id);
+    if (!currentNode) throw new Error('share_delivery_source_unavailable');
+    existingNode = currentNode;
+  }
   if (existingNode) {
     if (existingNode.content !== content || existingNode.parentNodeId !== INBOX_NODE_ID) {
       throw new Error('share_delivery_collision');

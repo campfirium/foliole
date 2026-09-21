@@ -37,13 +37,13 @@ function countVirtualResults(snapshot: WorkspaceSnapshot | null, virtualNodeId: 
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
   const virtualNode = normalizedSnapshot?.nodesById[virtualNodeId];
   if (!normalizedSnapshot || !virtualNode?.virtualFilter) return null;
-  return resolveVirtualNodeResultIds({
+  return (normalizedSnapshot.virtualResultIdsByNodeId?.[virtualNode.id] ?? resolveVirtualNodeResultIds({
     activeNodeId: virtualNode.id,
     filter: virtualNode.virtualFilter,
     manualChildOrder: virtualNode.manualChildOrder,
     nodeOrder: selectCanonicalVisibleNodeIds(normalizedSnapshot),
     nodesById: normalizedSnapshot.nodesById
-  }).length;
+  })).length;
 }
 
 export function resolveDirectoryRowMeta(args: {

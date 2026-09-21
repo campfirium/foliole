@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
-import { resolveCompanionReviewSession } from './companionReviewSession';
+import { hydrateCompanionReviewSession, resolveCompanionReviewSession } from './companionReviewSession';
 import { useCompanionActionState } from './useCompanionActionState';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
@@ -163,16 +163,26 @@ export function useCompanionArticleSurface(
     reviewSession: browseState.reviewSession,
     snapshot: browseState.snapshot
   });
+  useEffect(() => {
+    const nodeId = reviewSessions.effectiveReviewSession.currentCard?.nodeId;
+    if (activeAction === 'review' && nodeId) {
+      void Promise.resolve(workspaceSync.openReadableArticle(nodeId)).catch(() => undefined);
+    }
+  }, [activeAction, reviewSessions.effectiveReviewSession.currentCard?.nodeId, workspaceSync.openReadableArticle]);
+  const effectiveReviewSession = useMemo(
+    () => hydrateCompanionReviewSession(reviewSessions.effectiveReviewSession, workspaceSync.readableArticle),
+    [reviewSessions.effectiveReviewSession, workspaceSync.readableArticle]
+  );
   const handleViewScroll = useCompanionViewStateSync({
     activeAction,
     readableArticleNodeId: browseState.readableArticle?.nodeId ?? null,
-    reviewNodeId: reviewSessions.effectiveReviewSession.currentCard?.nodeId ?? null,
+    reviewNodeId: effectiveReviewSession.currentCard?.nodeId ?? null,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId
   });
   const interactionState = useCompanionInteractionState(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
-    reviewSessions.effectiveReviewSession,
+    effectiveReviewSession,
     setUserActiveAction,
     browseState.setSelectedBrowseNodeId,
     browseState.snapshot,
@@ -190,7 +200,7 @@ export function useCompanionArticleSurface(
     browsedFolder: browseState.browsedFolder,
     readableArticle,
     recentArticles: browseState.recentArticles,
-    effectiveReviewSession: reviewSessions.effectiveReviewSession,
+    effectiveReviewSession,
     onlyReviewSession: reviewSessions.onlyReviewSession,
     reviewSession: browseState.reviewSession,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,

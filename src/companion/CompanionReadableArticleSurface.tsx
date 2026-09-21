@@ -10,9 +10,10 @@ import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
-import { isCompanionSelectionToolbarTarget } from './companionSelectionToolbarDom';
+import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
+import { useCompanionLoadedNodeSnapshot } from './useCompanionLoadedNodeSnapshot';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
@@ -24,12 +25,6 @@ import { definedProps } from '@/shared/lib/definedProps';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
-const ARTICLE_INTERACTIVE_TARGET_SELECTOR = 'button, a, input, textarea, select, [role="button"], [contenteditable="true"]';
-
-function isImmersiveArticleInteractiveTarget(target: EventTarget | null) {
-  return isCompanionSelectionToolbarTarget(target) ||
-    (target instanceof Element && target.closest(ARTICLE_INTERACTIVE_TARGET_SELECTOR) !== null);
-}
 
 interface ImmersiveReadableArticleProps {
   onAttachmentResourceSynced?: () => void;
@@ -80,10 +75,11 @@ function ImmersiveArticleContent(props: {
 
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
   const reading = useImmersiveReadableArticleState();
+  const snapshot = useCompanionLoadedNodeSnapshot(props.snapshot, props.readableArticle);
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) && !reading.isContentEditing,
     nodeId: props.readableArticle.nodeId,
-    snapshot: props.snapshot
+    snapshot
   });
   useEffect(() => {
     if (reading.isContentEditing) toolbar.editorRef.current?.focus();
@@ -104,15 +100,15 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     toolbar.closeSelectionToolbar();
   }
   function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isImmersiveArticleInteractiveTarget(event.target)) return;
+    if (isCompanionArticleInteractiveTarget(event.target)) return;
     toolbar.closeSelectionToolbar();
   }
   function closeToolbarFromArticleTouch(event: ReactTouchEvent<HTMLElement>) {
-    if (isImmersiveArticleInteractiveTarget(event.target)) return;
+    if (isCompanionArticleInteractiveTarget(event.target)) return;
     toolbar.closeSelectionToolbar();
   }
   function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isImmersiveArticleInteractiveTarget(event.target)) return;
+    if (isCompanionArticleInteractiveTarget(event.target)) return;
     toolbar.openSelectionToolbar(event);
   }
   const chromeReservedSpacing = 'pt-24 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+6rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';

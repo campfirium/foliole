@@ -3,6 +3,7 @@ import {
   type WorkspaceNodeRowShape,
   type WorkspaceNodeSnapshot
 } from '../../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { readTopicCollections } from '../../../../../../lib/core/nodes/topicCollectionsFrontmatter';
 import type { PersistedNodeViewState } from '../../../../../../lib/platform/persistedNodeViewState';
 import { normalizeNodeViewStateWriteSource } from '../../../../../../lib/platform/persistedNodeViewState';
 
@@ -13,11 +14,19 @@ export function buildIosWorkspaceNodes(rows: SqlRow[]) {
   const trashedNodeIds: string[] = [];
   for (const row of rows) {
     const node = buildWorkspaceSnapshotNode(toWorkspaceNodeRow(row));
+    node.hasContent = row.has_content === 1;
+    node.hasReveal = row.has_reveal === 1;
+    node.collections = readCollections(row.collection_source_content);
     if (typeof row.position === 'number') node.position = row.position;
     nodesById[node.id] = node;
     if (node.deletedAt) trashedNodeIds.push(node.id);
   }
   return { nodesById, trashedNodeIds };
+}
+
+function readCollections(value: unknown) {
+  if (typeof value !== 'string') return [];
+  try { return readTopicCollections(value); } catch { return []; }
 }
 
 export function attachIosWorkspaceNodeAttachments(

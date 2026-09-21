@@ -12,12 +12,15 @@ function nodeRow() {
     body_blob_hash: null,
     body_status: 'ready',
     content: 'Body',
+    collection_source_content: '---\ncollections:\n  - "Research"\n---\n',
     created_at: '2026-07-19T00:00:00.000Z',
     current_version_id: 'version-1',
     deleted_at: null,
     desired_retention: null,
     enable_short_term: 1,
     hide_title_heading: 0,
+    has_content: 1,
+    has_reveal: 0,
     id: 'node-1',
     image_regions: null,
     import_content_fingerprint: null,
@@ -52,7 +55,10 @@ describe('iosCompanionWorkspaceSnapshotRows', () => {
 
     expect(nodesById['node-1']).toMatchObject({
       content: 'Body',
+      collections: ['Research'],
       enableShortTerm: true,
+      hasContent: true,
+      hasReveal: false,
       position: 3,
       reading: { intervalDurationMs: 86_400_000, readingPosition: 2, state: 'active' },
       title: 'Topic'

@@ -58,6 +58,8 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     error: null,
     isWorkspaceSyncStateReady: true,
     manualSyncAction: null,
+    openReadableArticle: vi.fn(),
+    openVirtualFolder: vi.fn(),
     pendingJoinRequest: null,
     syncGroupDiscoveries: [],
     syncGroupJoined: true,

@@ -9,6 +9,7 @@ import {
 } from '../features/settings/model/reviewSchedulerSettings';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { createFloatingBar } from './useCompanionArticleSurfaceTestSupport';
 
 const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncActiveViewState: vi.fn(),
@@ -76,6 +77,17 @@ function createSnapshot(): WorkspaceSnapshot {
   };
 }
 
+function createBootstrapState() {
+  return {
+    booted_at: '2026-04-22T08:03:00.000Z',
+    database_path: 'foliole-companion-preview.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    device_name: 'Android companion',
+    runtime_kind: 'android-capacitor' as const
+  };
+}
+
 function createWorkspaceSync(snapshot = createSnapshot()) {
   const state = {
     endpoint_url: 'http://10.0.2.2:38641',
@@ -86,14 +98,7 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     workspace_snapshot: snapshot
   };
   return {
-    bootstrapState: {
-      booted_at: '2026-04-22T08:03:00.000Z',
-      database_path: 'foliole-companion-preview.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      device_name: 'Android companion',
-      runtime_kind: 'android-capacitor' as const
-    },
+    bootstrapState: createBootstrapState(),
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     cancelJoin: vi.fn(),
@@ -113,6 +118,8 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     syncGroupJoined: true,
     joinStatus: 'idle' as const,
     pendingPairRequest: null,
+    openReadableArticle: vi.fn(),
+    openVirtualFolder: vi.fn(),
     pairingState: createPairingState(),
     pairingStatus: 'idle' as const,
     pullFromDesktop: vi.fn(),
@@ -134,17 +141,6 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     },
     syncProgress: null,
     status: 'idle' as const
-  };
-}
-
-function createFloatingBar() {
-  return {
-    handleContainerScroll: vi.fn(),
-    handleTouchEnd: vi.fn(),
-    handleTouchMove: vi.fn(),
-    handleTouchStart: vi.fn(),
-    isVisible: true,
-    revealBar: vi.fn()
   };
 }
 

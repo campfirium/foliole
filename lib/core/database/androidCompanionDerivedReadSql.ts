@@ -57,7 +57,7 @@ const READABLE_ARTICLE_STATUS = androidBodyStatusExpression({
 export function androidReadableArticleSql(whereClause: string) {
   return (
     'SELECT n.id, ' +
-    `${READABLE_ARTICLE_TITLE_EXPRESSION} AS title, n.body_blob_hash, ` +
+    `${READABLE_ARTICLE_TITLE_EXPRESSION} AS title, n.body_blob_hash, n.reveal, ` +
     `${readableArticleContentSql()} AS content, ${READABLE_ARTICLE_STATUS} AS content_status, ` +
     `(${READABLE_ARTICLE_PDF_ATTACHMENT_ID}) AS pdf_attachment_id ` +
     'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
@@ -72,6 +72,7 @@ export function androidReadableArticleColumns() {
     { key: 'title', source: 'title', type: 'string' },
     { key: 'content', source: 'content', type: 'nullableString' },
     { key: 'body_blob_hash', source: 'body_blob_hash', type: 'nullableString' },
+    { key: 'reveal', source: 'reveal', type: 'nullableString' },
     { key: 'content_status', source: 'content_status', type: 'string' },
     { key: 'pdf_attachment_id', source: 'pdf_attachment_id', type: 'nullableString' }
   ];

@@ -1,21 +1,3 @@
-import {
-  androidBodyStatusExpression,
-  androidResolvedContentExpression
-} from './androidCompanionDerivedReadSql.js';
-
-const WORKSPACE_INLINE_CONTENT = 'n.content';
-const WORKSPACE_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';
-const WORKSPACE_CONTENT_WITH_BODY_BLOB = androidResolvedContentExpression(WORKSPACE_INLINE_CONTENT, WORKSPACE_BODY_BLOB_DATA);
-const WORKSPACE_BODY_STATUS_WITH_BODY_BLOB = androidBodyStatusExpression({
-  availabilityExpression: 'cb.availability',
-  bodyBlobDataExpression: WORKSPACE_BODY_BLOB_DATA,
-  bodyBlobHashExpression: 'n.body_blob_hash',
-  contentExpression: WORKSPACE_CONTENT_WITH_BODY_BLOB,
-  emptyWhenBlank: true
-});
-const WORKSPACE_BODY_STATUS_INLINE =
-  "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END";
-
 export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
   groupKeys: {
     snapshot: 'snapshot',
@@ -37,14 +19,6 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
     }
   },
   snapshot: {
-    bodyStatusExpressionToken: '__BODY_STATUS_EXPRESSION__',
-    bodyStatusExpressionInlineSql: WORKSPACE_BODY_STATUS_INLINE,
-    bodyStatusExpressionWithBodyBlobSql: WORKSPACE_BODY_STATUS_WITH_BODY_BLOB,
-    contentBlobJoinToken: '__CONTENT_BLOB_JOIN__',
-    contentBlobJoinSql: 'LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ',
-    contentExpressionToken: '__CONTENT_EXPRESSION__',
-    contentExpressionInlineSql: WORKSPACE_INLINE_CONTENT,
-    contentExpressionWithBodyBlobSql: WORKSPACE_CONTENT_WITH_BODY_BLOB,
     deletedAtRowKey: 'deleted_at',
     nodeIdRowKey: 'id',
     metaValueQueryName: 'workspaceMetaValue',
@@ -83,10 +57,13 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'isTitleManual', rowKey: 'is_title_manual', type: 'booleanLong' },
         { outputKey: 'hideTitleHeading', rowKey: 'hide_title_heading', type: 'booleanLong' },
         { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
+        { outputKey: 'hasContent', rowKey: 'has_content', type: 'booleanLong' },
+        { outputKey: 'collectionSourceContent', rowKey: 'collection_source_content', type: 'nullableString' },
         { outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash', type: 'nullableString' },
         { outputKey: 'openingText', rowKey: 'opening_text', type: 'nullableString' },
         { outputKey: 'virtualFilter', rowKey: 'virtual_filter', type: 'json' },
         { outputKey: 'reveal', rowKey: 'reveal', type: 'nullableString' },
+        { outputKey: 'hasReveal', rowKey: 'has_reveal', type: 'booleanLong' },
         { outputKey: 'anchorLink', rowKey: 'anchor_link', type: 'json' },
         { outputKey: 'imageRegions', rowKey: 'image_regions', type: 'json' },
         { outputKey: 'imageSources', rowKey: 'image_sources', type: 'json' },

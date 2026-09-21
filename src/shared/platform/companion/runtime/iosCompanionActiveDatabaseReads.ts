@@ -70,6 +70,16 @@ interface TopicSearchResult extends DbRow {
   updated_at: string;
 }
 
+export interface CompanionNodeDocumentRow extends DbRow {
+  body_blob_hash: string | null;
+  content: string;
+  content_status: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  id: string;
+  pdf_attachment_id: string | null;
+  reveal: string | null;
+  title: string;
+}
+
 export function loadIosSyncIndex() {
   return queryIosCompanionDatabase<NativeSyncIndexEntry & DbRow>('syncIndex');
 }
@@ -98,6 +108,23 @@ export async function loadIosSyncObjects(objectIds: string[], objectTypes?: stri
 
 export function searchIosTopics(query: string, limit = 20) {
   return search<TopicSearchResult & DbRow>('topicSearch', query, limit);
+}
+
+export function loadIosCompanionNodeDocument(nodeId: string) {
+  return queryIosCompanionDatabase<CompanionNodeDocumentRow>('readableArticleByNodeId', [nodeId])
+    .then((rows) => rows[0] ?? null);
+}
+
+export function loadIosCompanionAnnotationContents(parentNodeId: string) {
+  return readIosCompanionDatabase(async (db) => {
+    const rows = await db.query<{ content: string; id: string }>(
+      `SELECT n.id, COALESCE(CAST(cbd.data AS TEXT), n.content, '') AS content
+       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.parent_id = ? AND n.anchor_link IS NOT NULL AND n.deleted_at IS NULL`,
+      [parentNodeId]
+    );
+    return Object.fromEntries(rows.map((row) => [row.id, row.content]));
+  });
 }
 
 export function loadIosPdfPageText(attachmentId: string) {

@@ -15,16 +15,18 @@ function snapshotPort(database: Database.Database) {
   return { connection, port: createCapacitorSqliteDbPort(connection as never, 'android') };
 }
 
-it('preserves every body, original order and hidden descendants across bounded reads', async () => {
+it('loads the complete lightweight directory without transferring node bodies', async () => {
   const database = new Database(':memory:');
   try {
     seedSnapshotDatabase(database);
     const { connection, port } = snapshotPort(database);
-    const sizes: number[] = [];
+    const transferredBodies: string[] = [];
     const original = connection.query;
     vi.spyOn(connection, 'query').mockImplementation(async (sql, params) => {
       const result = await original(sql, params);
-      if (result.values.some(row => Object.hasOwn(row as object, 'content'))) sizes.push(result.values.length);
+      for (const row of result.values as Array<Record<string, unknown>>) {
+        if (typeof row.content === 'string' && row.content.length > 0) transferredBodies.push(row.content);
+      }
       return result;
     });
     const snapshot = await loadIosCompanionWorkspaceSnapshot(port);
@@ -32,13 +34,12 @@ it('preserves every body, original order and hidden descendants across bounded r
     expect(snapshot!.nodeOrder).toEqual(Array.from({ length: 1201 }, (_, index) => snapshotNodeId(1200 - index)));
     expect(snapshot!.trashedNodeIds).toEqual([snapshotNodeId(1201)]);
     for (let index = 0; index < SNAPSHOT_NODE_COUNT; index++) {
-      const expected = index === 17 || index === 18 ? '' : index === 19 ? 'Blob 正文' : `Body ${index}`;
-      expect(snapshot!.nodesById[snapshotNodeId(index)]!.content).toBe(expected);
+      expect(snapshot!.nodesById[snapshotNodeId(index)]!.content).toBe('');
     }
+    expect(snapshot!.nodesById[snapshotNodeId(0)]!.hasContent).toBe(true);
+    expect(snapshot!.nodesById[snapshotNodeId(17)]!.hasContent).toBe(false);
     expect(snapshot!.nodesById['node-0']!.attachments?.[0]?.originalName).toBe('original.pdf');
-    expect(sizes.length).toBeGreaterThan(1);
-    expect(Math.max(...sizes)).toBeLessThan(SNAPSHOT_NODE_COUNT);
-    expect(sizes.reduce((sum, count) => sum + count, 0)).toBe(SNAPSHOT_NODE_COUNT);
+    expect(transferredBodies).toEqual([]);
   } finally {
     database.close();
   }

@@ -21,6 +21,7 @@ import {
 } from './companionWorkspaceSyncFlow';
 import { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
+import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
 import { useCompanionWorkspaceParticipationActions } from './useCompanionWorkspaceParticipationActions';
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
@@ -168,6 +169,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     manualSyncAction, setReadableArticle, setState, setStatus,
     setSyncConflictCount, state, status, syncConflictCount } = viewState;
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
+  const loaders = useCompanionWorkspaceLoaders({ setReadableArticle, setState, state });
   const snapshotActions = createCompanionSnapshotActions(viewState, setMergedSyncProgress);
   const join = useCompanionSyncGroupJoin({
     bootstrapState,
@@ -187,13 +189,13 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     participationActions.participation.sync_enabled,
     participationActions.participation.sync_paused
   );
-
   return {
     bootstrapState,
     clearError: () => setError(null),
     error,
     isWorkspaceSyncStateReady,
     manualSyncAction,
+    ...loaders,
     readableArticle,
     syncParticipation: participationActions.participation,
     state,

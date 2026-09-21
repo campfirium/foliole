@@ -4,7 +4,6 @@ import { attachmentStorageKeySql } from '../../../../../../lib/core/database/att
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
-import { loadOrderedWorkspaceSnapshotRows } from './iosCompanionWorkspaceSnapshotBatchRead';
 import {
   attachIosWorkspaceNodeAttachments,
   buildIosPersistedNodeViews,
@@ -23,7 +22,7 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
 async function loadSnapshot(connection: DbPort) {
   const hostName = await loadMetaValue(connection, 'companion_meta', HOST_NAME_KEY);
   if (!hostName) throw new Error('Companion Host is unavailable.');
-  const nodes = await loadOrderedWorkspaceSnapshotRows(connection, await snapshotSql(connection), hostName);
+  const nodes = await queryRows(connection, QUERIES.workspaceSnapshotNodes.sql, [hostName]);
   if (nodes.length === 0) return null;
 
   const { nodesById, trashedNodeIds } = buildIosWorkspaceNodes(nodes);
@@ -56,14 +55,6 @@ async function loadSnapshot(connection: DbPort) {
   });
 }
 
-async function snapshotSql(connection: DbPort) {
-  const hasBlobData = await tableExists(connection, 'content_blob_data');
-  return QUERIES.workspaceSnapshotNodes.sql
-    .replaceAll(RULES.contentExpressionToken, hasBlobData ? RULES.contentExpressionWithBodyBlobSql : RULES.contentExpressionInlineSql)
-    .replaceAll(RULES.contentBlobJoinToken, hasBlobData ? RULES.contentBlobJoinSql : '')
-    .replaceAll(RULES.bodyStatusExpressionToken, hasBlobData ? RULES.bodyStatusExpressionWithBodyBlobSql : RULES.bodyStatusExpressionInlineSql);
-}
-
 async function loadAttachments(connection: DbPort) {
   return queryRows(connection,
     `SELECT na.node_id, na.attachment_id, na.role, a.mime_type,
@@ -71,15 +62,6 @@ async function loadAttachments(connection: DbPort) {
      FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id
      ORDER BY na.node_id, na.role, na.attachment_id`
   );
-}
-
-async function tableExists(connection: DbPort, table: string) {
-  const rows = await queryRows(
-    connection,
-    "SELECT 1 AS found FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
-    [table]
-  );
-  return rows.length > 0;
 }
 
 async function loadMetaValue(connection: DbPort, table: string, key: string) {

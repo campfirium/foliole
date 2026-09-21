@@ -1,13 +1,21 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import {
+  loadIosCompanionAnnotationContents,
+  loadIosCompanionNodeDocument
+} from './companion/runtime/iosCompanionActiveDatabaseReads';
+import {
   publishCompanionSyncMutationRevision
 } from './companion/sync/mutation/companionSyncMutationRevision';
 import {
   loadIosCompanionWorkspaceSyncState,
   saveIosCompanionWorkspaceSyncState
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
-import { resolveReadableCompanionArticle } from './companionReadableArticle';
+import {
+  resolveLoadedCompanionArticle,
+  resolveReadableCompanionArticle,
+  resolveReadableCompanionArticleByNodeId
+} from './companionReadableArticle';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   cancelCompanionSyncGroupJoin,
@@ -138,14 +146,29 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
   return writeWebSyncState(prependSyncEvent(current, event));
 }
 
-export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
-  if (snapshot) {
-    return resolveReadableCompanionArticle(snapshot);
-  }
+export async function loadCompanionReadableArticle(
+  snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
+  nodeId?: string | null
+) {
   if (usesSharedOwner()) {
-    return resolveReadableCompanionArticle((await loadIosCompanionWorkspaceSyncState()).workspace_snapshot);
+    const currentSnapshot = snapshot ?? (await loadIosCompanionWorkspaceSyncState()).workspace_snapshot;
+    const targetNodeId = nodeId ?? currentSnapshot?.activeNodeId ?? currentSnapshot?.nodeOrder.find((id) => {
+      const node = currentSnapshot.nodesById[id];
+      return Boolean(node?.hasContent || node?.bodyStatus === 'empty' || node?.bodyStatus === 'missing');
+    }) ?? null;
+    if (!targetNodeId) return null;
+    const inMemoryArticle = resolveReadableCompanionArticleByNodeId(currentSnapshot, targetNodeId);
+    if (inMemoryArticle?.content.trim()) return inMemoryArticle;
+    const [document, annotationContents] = await Promise.all([
+      loadIosCompanionNodeDocument(targetNodeId),
+      loadIosCompanionAnnotationContents(targetNodeId)
+    ]);
+    return resolveLoadedCompanionArticle(currentSnapshot, document, annotationContents);
   }
-  return resolveReadableCompanionArticle(readWebSyncState().workspace_snapshot);
+  const currentSnapshot = snapshot ?? readWebSyncState().workspace_snapshot;
+  return nodeId
+    ? resolveReadableCompanionArticleByNodeId(currentSnapshot, nodeId)
+    : resolveReadableCompanionArticle(currentSnapshot);
 }
 
 export async function persistCompanionWorkspaceSnapshot(args: {

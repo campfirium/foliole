@@ -47,10 +47,10 @@ export function useCompanionBrowseSelection(
   );
 
   useEffect(() => {
-    if (selectedBrowseNodeId && !resolvedReadableArticle && !browsedFolder) {
+    if (selectedBrowseNodeId && !snapshot?.nodesById[selectedBrowseNodeId] && !resolvedReadableArticle && !browsedFolder) {
       setSelectedBrowseNodeId(null);
     }
-  }, [browsedFolder, resolvedReadableArticle, selectedBrowseNodeId]);
+  }, [browsedFolder, resolvedReadableArticle, selectedBrowseNodeId, snapshot]);
 
   return {
     browsedFolder,

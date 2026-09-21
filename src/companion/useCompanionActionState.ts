@@ -21,15 +21,24 @@ type CompanionActionStateArgs = {
   workspaceSync: CompanionWorkspaceSyncApi;
 };
 
-export function useCompanionActionState(args: CompanionActionStateArgs) {
-  function markOpened(nodeId: string) {
-    void markCompanionNodeOpened({
-      nodeId,
-      snapshot: args.snapshot,
-      workspaceSync: args.workspaceSync
-    }).catch(() => undefined);
-  }
+function markOpened(args: CompanionActionStateArgs, nodeId: string) {
+  void markCompanionNodeOpened({ nodeId, snapshot: args.snapshot, workspaceSync: args.workspaceSync })
+    .catch(() => undefined);
+}
 
+function loadArticle(args: CompanionActionStateArgs, nodeId: string) {
+  const node = args.snapshot?.nodesById[nodeId];
+  if (!node) return;
+  if (node.kind === 'folder') {
+    if (node.virtualFilter) {
+      void Promise.resolve(args.workspaceSync.openVirtualFolder(nodeId)).catch(() => undefined);
+    }
+    return;
+  }
+  void Promise.resolve(args.workspaceSync.openReadableArticle(nodeId)).catch(() => undefined);
+}
+
+export function useCompanionActionState(args: CompanionActionStateArgs) {
   function handleTabAction(action: CompanionTabAction) {
     args.setActiveAction(action);
     args.setReviewError(null);
@@ -44,7 +53,8 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
   function handleSelectRecentArticle(nodeId: string) {
     args.setBrowseReturnNodeId(null);
     args.setSelectedBrowseNodeId(nodeId);
-    markOpened(nodeId);
+    loadArticle(args, nodeId);
+    markOpened(args, nodeId);
     args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
@@ -52,7 +62,8 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
   function handleSelectBrowseNode(nodeId: string) {
     args.setBrowseReturnNodeId(args.browsedFolderNodeId);
     args.setSelectedBrowseNodeId(nodeId);
-    markOpened(nodeId);
+    loadArticle(args, nodeId);
+    markOpened(args, nodeId);
     args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }

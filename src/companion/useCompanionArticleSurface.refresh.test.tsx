@@ -58,15 +58,19 @@ function createSnapshot(overrides: Partial<WorkspaceSnapshot['nodesById'][string
   };
 }
 
+function createBootstrapState() {
+  return {
+    booted_at: '2026-04-25T09:00:00.000Z',
+    database_path: 'foliole-companionSQLite.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    runtime_kind: 'android-capacitor' as const
+  };
+}
+
 function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
   return {
-    bootstrapState: {
-      booted_at: '2026-04-25T09:00:00.000Z',
-      database_path: 'foliole-companionSQLite.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor' as const
-    },
+    bootstrapState: createBootstrapState(),
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     cancelJoin: vi.fn(),
@@ -82,6 +86,8 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
     isWorkspaceSyncStateReady: true,
     manualSyncAction: null,
     pendingJoinRequest: null,
+    openReadableArticle: vi.fn(),
+    openVirtualFolder: vi.fn(),
     syncGroupDiscoveries: [],
     syncGroupJoined: true,
     joinStatus: 'idle' as const,

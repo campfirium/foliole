@@ -2,10 +2,16 @@ export const SELECTION_SETTLE_DELAY_MS = 240;
 
 const ACTIVE_HIGHLIGHT_CLASS = 'cm-md-highlight-active';
 const ACTIVE_HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
+const ARTICLE_INTERACTIVE_TARGET_SELECTOR = 'button, a, input, textarea, select, [role="button"], [contenteditable="true"]';
 const RECENT_SELECTION_INTERACTION_MS = 2_000;
 
 export function isCompanionSelectionToolbarTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-companion-selection-toolbar]') !== null;
+}
+
+export function isCompanionArticleInteractiveTarget(target: EventTarget | null) {
+  return isCompanionSelectionToolbarTarget(target) ||
+    (target instanceof Element && target.closest(ARTICLE_INTERACTIVE_TARGET_SELECTOR) !== null);
 }
 
 export function isCompanionSelectionToolbarActiveElement() {

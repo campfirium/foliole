@@ -49,6 +49,8 @@ export interface WorkspaceNodeSnapshot {
   title: string;
   isTitleManual: boolean;
   hideTitleHeading: boolean;
+  hasContent?: boolean;
+  hasReveal?: boolean;
   openingText?: string | null;
   content: string;
   currentVersionId?: string | null;

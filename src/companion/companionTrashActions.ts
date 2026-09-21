@@ -5,7 +5,9 @@ import {
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { loadCompanionWorkspaceNodes } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { applyCompanionTrashRestoreNodeVersions } from '../shared/platform/companionSyncObjects';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import {
   isCanonicalTrashedNodeId,
   selectCanonicalTrashedNodeDeletedAtById,
@@ -82,9 +84,20 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
     subtreeIds,
     Object.values(snapshot.nodesById).map(toRestoreCandidate)
   );
-  const restorableNodes = restoreResult.restoredNodeIds
+  let restorableNodes = restoreResult.restoredNodeIds
     .map((nodeId) => snapshot.nodesById[nodeId])
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
+  if (isAvailableNativeCompanionRuntime()) {
+    restorableNodes = await loadCompanionWorkspaceNodes(restoreResult.restoredNodeIds);
+    if (restorableNodes.length !== restoreResult.restoredNodeIds.length) {
+      throw new Error('Trash restore source is unavailable.');
+    }
+    if (restorableNodes.some((current) => (
+      current.currentVersionId !== snapshot.nodesById[current.id]?.currentVersionId
+    ))) {
+      throw new Error('local_restore_not_applied');
+    }
+  }
   const restored = await Promise.all(
     restorableNodes.map((node) => buildRestoredNodeVersion(
       node, args.deviceId, restoredAt, node.id === args.nodeId ? args.versionId : undefined

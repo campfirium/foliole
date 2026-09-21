@@ -25,11 +25,23 @@ export interface CompanionReadableArticle {
   contentPaddingTop?: string;
   hideTitleHeading: boolean;
   isTrashed?: boolean;
+  loadedNodeContentById?: Record<string, string>;
   nodeId: string;
   persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
   readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
+  reveal?: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
+  title: string;
+}
+
+export interface CompanionNodeDocument {
+  body_blob_hash: string | null;
+  content: string;
+  content_status: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  id: string;
+  pdf_attachment_id: string | null;
+  reveal: string | null;
   title: string;
 }
 
@@ -102,6 +114,39 @@ export function resolveReadableCompanionArticleByNodeId(
   }
   const node = normalizedSnapshot.nodesById[nodeId];
   return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(normalizedSnapshot, node) : null;
+}
+
+export function resolveLoadedCompanionArticle(
+  snapshot: WorkspaceSnapshot | null,
+  document: CompanionNodeDocument | null,
+  loadedNodeContentById: Record<string, string> = {}
+): CompanionReadableArticle | null {
+  if (!snapshot || !document) return null;
+  const node = snapshot.nodesById[document.id];
+  if (!node) return null;
+  const hydratedSnapshot: WorkspaceSnapshot = {
+    ...snapshot,
+    nodesById: {
+      ...snapshot.nodesById,
+      [document.id]: {
+        ...node,
+        bodyBlobHash: document.body_blob_hash,
+        bodyStatus: document.content_status,
+        content: document.content,
+        reveal: document.reveal,
+        title: document.title
+      }
+    }
+  };
+  const article = snapshot.trashedNodeIds.includes(document.id)
+    ? resolveReadableCompanionTrashArticleByNodeId(hydratedSnapshot, document.id)
+    : resolveReadableCompanionArticleByNodeId(hydratedSnapshot, document.id);
+  return article ? {
+    ...article,
+    ...(Object.keys(loadedNodeContentById).length ? { loadedNodeContentById } : {}),
+    pdfAttachmentId: document.pdf_attachment_id,
+    reveal: document.reveal
+  } : null;
 }
 
 export function resolveReadableCompanionTrashArticleByNodeId(

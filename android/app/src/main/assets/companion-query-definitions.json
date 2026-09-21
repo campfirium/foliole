@@ -764,7 +764,7 @@
     },
     "readableArticleByNodeId": {
       "resultKey": "articles",
-      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ? LIMIT 1",
+      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, n.reveal, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ? LIMIT 1",
       "columns": [
         {
           "key": "id",
@@ -784,6 +784,11 @@
         {
           "key": "body_blob_hash",
           "source": "body_blob_hash",
+          "type": "nullableString"
+        },
+        {
+          "key": "reveal",
+          "source": "reveal",
           "type": "nullableString"
         },
         {
@@ -800,7 +805,7 @@
     },
     "readableArticleFirstNode": {
       "resultKey": "articles",
-      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, n.reveal, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1",
       "columns": [
         {
           "key": "id",
@@ -820,6 +825,11 @@
         {
           "key": "body_blob_hash",
           "source": "body_blob_hash",
+          "type": "nullableString"
+        },
+        {
+          "key": "reveal",
+          "source": "reveal",
           "type": "nullableString"
         },
         {
@@ -921,7 +931,7 @@
     },
     "workspaceSnapshotNodes": {
       "resultKey": "nodes",
-      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child INDEXED BY idx_nodes_parent_id\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.image_sources, n.import_source_fingerprint, n.import_content_fingerprint, (SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child INDEXED BY idx_nodes_parent_id\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, '' AS content, n.opening_text, CASE WHEN n.body_blob_hash IS NOT NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability WHEN n.body_blob_hash IS NOT NULL AND (cb.hash IS NULL OR cb.availability = 'missing') THEN 'missing' WHEN n.body_blob_hash IS NOT NULL THEN 'ready' WHEN TRIM(n.content) = '' THEN 'empty' ELSE 'ready' END AS body_status, CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content, CASE WHEN substr(replace(n.content, char(13) || char(10), char(10)), 1, 4) = '---' || char(10) THEN substr(replace(n.content, char(13) || char(10), char(10)), 1, instr(substr(replace(n.content, char(13) || char(10), char(10)), 5), char(10) || '---' || char(10)) + 8) ELSE NULL END AS collection_source_content, n.virtual_filter, NULL AS reveal, CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal, n.anchor_link, n.image_regions, n.image_sources, n.import_source_fingerprint, n.import_content_fingerprint, (SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
       "columns": [
         {
           "key": "id",
@@ -999,6 +1009,16 @@
           "type": "string"
         },
         {
+          "key": "has_content",
+          "source": "has_content",
+          "type": "long"
+        },
+        {
+          "key": "collection_source_content",
+          "source": "collection_source_content",
+          "type": "nullableString"
+        },
+        {
           "key": "virtual_filter",
           "source": "virtual_filter",
           "type": "nullableString"
@@ -1007,6 +1027,11 @@
           "key": "reveal",
           "source": "reveal",
           "type": "nullableString"
+        },
+        {
+          "key": "has_reveal",
+          "source": "has_reveal",
+          "type": "long"
         },
         {
           "key": "anchor_link",
@@ -2513,6 +2538,7 @@
         "contentStatus": "content_status",
         "id": "id",
         "pdfAttachmentId": "pdf_attachment_id",
+        "reveal": "reveal",
         "title": "title"
       },
       "outputKeys": {
@@ -2521,6 +2547,7 @@
         "contentStatus": "content_status",
         "nodeId": "node_id",
         "pdfAttachmentId": "pdf_attachment_id",
+        "reveal": "reveal",
         "title": "title"
       },
       "articleFields": [
@@ -2537,6 +2564,11 @@
         {
           "outputKey": "body_blob_hash",
           "rowKey": "body_blob_hash",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "reveal",
+          "rowKey": "reveal",
           "type": "nullableString"
         },
         {
@@ -3207,14 +3239,6 @@
       }
     },
     "snapshot": {
-      "bodyStatusExpressionToken": "__BODY_STATUS_EXPRESSION__",
-      "bodyStatusExpressionInlineSql": "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END",
-      "bodyStatusExpressionWithBodyBlobSql": "CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END",
-      "contentBlobJoinToken": "__CONTENT_BLOB_JOIN__",
-      "contentBlobJoinSql": "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ",
-      "contentExpressionToken": "__CONTENT_EXPRESSION__",
-      "contentExpressionInlineSql": "n.content",
-      "contentExpressionWithBodyBlobSql": "COALESCE(CAST(cbd.data AS TEXT), n.content)",
       "deletedAtRowKey": "deleted_at",
       "nodeIdRowKey": "id",
       "metaValueQueryName": "workspaceMetaValue",
@@ -3316,6 +3340,16 @@
             "type": "nullableString"
           },
           {
+            "outputKey": "hasContent",
+            "rowKey": "has_content",
+            "type": "booleanLong"
+          },
+          {
+            "outputKey": "collectionSourceContent",
+            "rowKey": "collection_source_content",
+            "type": "nullableString"
+          },
+          {
             "outputKey": "bodyBlobHash",
             "rowKey": "body_blob_hash",
             "type": "nullableString"
@@ -3334,6 +3368,11 @@
             "outputKey": "reveal",
             "rowKey": "reveal",
             "type": "nullableString"
+          },
+          {
+            "outputKey": "hasReveal",
+            "rowKey": "has_reveal",
+            "type": "booleanLong"
           },
           {
             "outputKey": "anchorLink",

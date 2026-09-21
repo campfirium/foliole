@@ -25,6 +25,7 @@ export interface WorkspaceSnapshot {
   trashedNodeDeletedAtById?: Record<string, string>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
+  virtualResultIdsByNodeId?: Record<string, string[]>;
 }
 
 export interface WorkspaceSnapshotLoadOptions {

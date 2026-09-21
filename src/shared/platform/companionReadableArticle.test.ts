@@ -5,6 +5,7 @@ import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnap
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
 import {
+  resolveLoadedCompanionArticle,
   resolveCompanionArticleTitle,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
@@ -101,6 +102,28 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result?.hideTitleHeading).toBe(true);
+  });
+
+  it('hydrates one document and its annotation bodies without changing the directory snapshot', () => {
+    const snapshot = createExplicitArticleSnapshot();
+    snapshot.nodesById['node-1'] = { ...snapshot.nodesById['node-1']!, content: '', hasContent: true };
+
+    const result = resolveLoadedCompanionArticle(snapshot, {
+      body_blob_hash: null,
+      content: '# Loaded\n\nBody',
+      content_status: 'ready',
+      id: 'node-1',
+      pdf_attachment_id: null,
+      reveal: 'Answer',
+      title: 'Loaded'
+    }, { 'node-2': 'Highlight note' });
+
+    expect(result).toMatchObject({
+      content: '# Loaded\n\nBody',
+      loadedNodeContentById: { 'node-2': 'Highlight note' },
+      reveal: 'Answer'
+    });
+    expect(snapshot.nodesById['node-1']?.content).toBe('');
   });
 });
 
