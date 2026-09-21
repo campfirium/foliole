@@ -12,6 +12,8 @@ import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_DEV_APP_ID = 'com.foliole.ios.devworkflow';
 export const FRI_DEV_BUNDLE_SUFFIX = '.devworkflow';
+export const FRI_T219_APP_ID = 'com.foliole.ios.t219capacity';
+export const FRI_T219_BUNDLE_SUFFIX = '.t219capacity';
 export const FRI_DEV_TEST =
   'AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testOpensAndOperatesBrowse';
 export const FRI_XCUITEST_RUNNER =
@@ -39,31 +41,38 @@ function execute(command, args, options = {}) {
 }
 
 export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER, scenario = 'browse' }) {
-  if (!['browse', 'library-capacity'].includes(scenario)) throw new Error('Unsupported Fri development scenario.');
-  const capacity = scenario === 'library-capacity';
+  if (!['browse', 'library-capacity', 'library-capacity-workspace'].includes(scenario)) {
+    throw new Error('Unsupported Fri development scenario.');
+  }
+  const capacity = scenario.startsWith('library-capacity');
+  const method = scenario === 'library-capacity-workspace'
+    ? 'testMeasuresLibraryWorkspaceCapacity' : 'testMeasuresLibraryCapacity';
+  const appId = scenario === 'library-capacity-workspace' ? FRI_T219_APP_ID : FRI_DEV_APP_ID;
+  const bundleSuffix = scenario === 'library-capacity-workspace'
+    ? FRI_T219_BUNDLE_SUFFIX : FRI_DEV_BUNDLE_SUFFIX;
   const buildEnv = { ...process.env, VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: capacity ? '1' : '0',
-    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity ? 'library-capacity' : '' };
+    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity ? scenario : '' };
   const runnerArgs = [runnerPath,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
     '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
-    '--only-testing', capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', 'testMeasuresLibraryCapacity') : FRI_DEV_TEST];
+    '--only-testing', capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', method) : FRI_DEV_TEST];
   return [
     { command: 'npm', args: ['run', 'android:web:build'], env: buildEnv, stage: 'companion-build' },
     { command: 'npx', args: ['cap', 'sync', 'ios'], stage: 'capacitor-ios-sync' },
     {
       command: 'bash',
       args: [...runnerArgs, '--build-for-testing'],
-      env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
+      env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundleSuffix },
       stage: 'fri-dev-xcuitest-build'
     },
     {
       command: 'bash',
       args: [...runnerArgs,
         '--test-without-building',
-        '--keep-app-foreground', FRI_DEV_APP_ID,
+        '--keep-app-foreground', appId,
       ],
-      env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: FRI_DEV_BUNDLE_SUFFIX },
+      env: { ...process.env, FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundleSuffix },
       stage: 'fri-dev-xcuitest-run'
     }
   ];

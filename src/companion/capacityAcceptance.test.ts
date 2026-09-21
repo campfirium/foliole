@@ -54,6 +54,10 @@ it.each(['com.foliole.ios', 'com.foliole.ios.t152acceptance'])('refuses unowned 
   expect(() => assertIdentity('ios', id)).toThrow('fixed acceptance');
 });
 
+it('accepts the fixed isolated iOS workspace capacity identity', () => {
+  expect(() => assertIdentity('ios', 'com.foliole.ios.t219capacity')).not.toThrow();
+});
+
 it('exposes a terminal error through the fixed readable result control', async () => {
   const root = document.createElement('div');
   mountCapacityAcceptance(root);

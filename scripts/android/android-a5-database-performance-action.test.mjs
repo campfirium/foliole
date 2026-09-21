@@ -116,6 +116,36 @@ it.each([false, true])('runs capacity with explicit reset=%s and restores the is
   }
 });
 
+it('runs normal workspace capacity in two clean instrumentation processes', async () => {
+  const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-workspace-capacity-test-'));
+  created.push(evidenceRoot);
+  const calls = [];
+  const result = { status: 'passed', scenario: 'library-capacity-workspace',
+    results: [{ fixtureCount: 1000 }, { fixtureCount: 10000 }] };
+  const outcome = await runA5DatabasePerformance({
+    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity-workspace' },
+    evidenceRoot, serial: 'fixed-a5',
+    paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
+    captured: (_cmd, args) => args.at(-1) === '/app.apk'
+      ? '<manifest package="com.foliole.android.acceptance"/>'
+      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+    execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0, output: args.includes('dumpsys')
+        ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}'
+        : args.includes('instrument') ? 'OK (1 test)\n'
+        : args.includes('exec-out') ? JSON.stringify(result) : 'Success' };
+    }
+  });
+  const instrumentation = calls.filter(args => args.includes('instrument'));
+  expect(instrumentation).toHaveLength(2);
+  expect(instrumentation[0]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtOneThousand`);
+  expect(instrumentation[1]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtTenThousand`);
+  expect(JSON.parse(fs.readFileSync(outcome.evidencePath))).toMatchObject(result);
+});
+
+const WORKSPACE_TEST = 'com.foliole.android.FolioleLibraryWorkspaceCapacityTest';
+
 
 it.each([
   { FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' },

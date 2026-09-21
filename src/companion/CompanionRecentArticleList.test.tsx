@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
 
-import { RecentArticleList, formatCompanionTopicDate, resolveRecentArticlePreviewLineClamp } from './CompanionRecentArticleList';
+import { RecentArticleList, RecentArticleRow, formatCompanionTopicDate, resolveRecentArticlePreviewLineClamp } from './CompanionRecentArticleList';
 
 const article: CompanionRecentArticle = {
   nodeId: 'article-1', title: 'Article 1', preview: 'Opening text',
@@ -35,6 +35,10 @@ describe('RecentArticleList', () => {
     const select = setup();
     fireEvent.click(screen.getByRole('button', { name: 'Open topic Article 1' }));
     expect(select).toHaveBeenCalledWith('article-1');
+  });
+  it('puts an optional semantic target on the interactive topic control', () => {
+    render(<RecentArticleRow article={article} currentArticleId={null} onSelectArticle={vi.fn()} testId="topic-target" />);
+    expect(screen.getByTestId('topic-target')).toHaveRole('button');
   });
   it('opens the overflow menu independently without navigating', () => {
     const select = setup();

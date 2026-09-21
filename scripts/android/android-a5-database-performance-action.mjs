@@ -17,10 +17,13 @@ const RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabasePerformanceGateTest`;
 const LIFECYCLE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
 const BATCH_DATA_PLANE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionBatchDataPlaneTest`;
+const WORKSPACE_CAPACITY_TEST_CLASS = `${TEST_NAMESPACE}.FolioleLibraryWorkspaceCapacityTest`;
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, captured, paths, serial }) {
   const identities = assertPerformanceApkIdentity({ captured, paths, env });
-  const capacity = performanceScenario(env) === 'library-capacity';
+  const scenario = performanceScenario(env);
+  const capacity = scenario === 'library-capacity';
+  const workspaceCapacity = scenario === 'library-capacity-workspace';
   const resetFixture = env.FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE;
   if (resetFixture !== undefined && (resetFixture !== '1' || !capacity)) {
     throw new Error('Capacity fixture reset requires the explicit library-capacity scenario and value 1.');
@@ -40,12 +43,30 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options)).output);
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options)).output);
     testInstalled = true;
-    const result = await checked(execute, paths.adb, [
-      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-      '-e', 'class', capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
-    ], options);
-    output.push(result.output);
+    let result;
+    if (workspaceCapacity) {
+      for (const method of [
+        'measuresNormalCompanionWorkspaceAtOneThousand',
+        'measuresNormalCompanionWorkspaceAtTenThousand'
+      ]) {
+        result = await checked(execute, paths.adb, [
+          '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+          '-e', 'class', `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`, RUNNER
+        ], options);
+        output.push(result.output);
+        fs.writeFileSync(path.join(evidenceRoot, `android-workspace-capacity-${method}.log`), result.output);
+        assertSingleInstrumentationPassed(result.output, `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`);
+      }
+    } else {
+      result = await checked(execute, paths.adb, [
+        '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+        '-e', 'class', capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
+      ], options);
+      output.push(result.output);
+    }
     if (capacity) return await saveCapacityEvidence({ evidenceRoot, identities, result, output,
+      execute, paths, serial, options });
+    if (workspaceCapacity) return await saveWorkspaceCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options });
     for (const testClass of [LIFECYCLE_TEST_CLASS, BATCH_DATA_PLANE_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
@@ -66,6 +87,22 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
   } finally {
     if (testInstalled) await restoreAcceptanceActivity({ execute, paths, serial, options, evidenceRoot });
   }
+}
+
+async function saveWorkspaceCapacityEvidence(args) {
+  const { evidenceRoot, identities, result, output, execute, paths, serial, options } = args;
+  fs.writeFileSync(path.join(evidenceRoot, 'android-workspace-capacity.log'), result.output);
+  if (!/OK \(1 test\)/u.test(result.output) || /FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(result.output)) {
+    throw new Error('Normal workspace capacity instrumentation failed.');
+  }
+  const artifact = await checked(execute, paths.adb, ['-s', serial, 'exec-out', 'run-as', APP_ID,
+    'cat', 'files/t219-library-workspace-capacity.json'], options);
+  const parsed = JSON.parse(artifact.output);
+  if (parsed.status !== 'passed' || parsed.scenario !== 'library-capacity-workspace'
+    || parsed.results?.length !== 2) throw new Error('Normal workspace capacity artifact is invalid.');
+  const evidencePath = path.join(evidenceRoot, 'workspace-capacity-result.json');
+  fs.writeFileSync(evidencePath, `${JSON.stringify({ ...parsed, identities }, null, 2)}\n`);
+  return { evidencePath, output: output.join('') };
 }
 
 async function restoreAcceptanceActivity({ execute, paths, serial, options, evidenceRoot }) {
@@ -97,6 +134,12 @@ async function saveCapacityEvidence({ evidenceRoot, identities, result, output, 
 function assertInstrumentationPassed(output, testClass) {
   if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(2 tests\)/u.test(output)) {
     throw new Error(`Android lifecycle plugin contract failed: ${testClass}`);
+  }
+}
+
+function assertSingleInstrumentationPassed(output, testClass) {
+  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(1 test\)/u.test(output)) {
+    throw new Error(`Android instrumentation failed: ${testClass}`);
   }
 }
 

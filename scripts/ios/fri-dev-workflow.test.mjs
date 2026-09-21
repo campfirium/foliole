@@ -12,6 +12,8 @@ import {
   FRI_DEV_APP_ID,
   FRI_DEV_BUNDLE_SUFFIX,
   FRI_DEV_TEST,
+  FRI_T219_APP_ID,
+  FRI_T219_BUNDLE_SUFFIX,
   FRI_XCUITEST_RUNNER,
   runFriDevWorkflow
 } from './fri-dev-workflow.mjs';
@@ -102,4 +104,16 @@ it('builds the fixed capacity resource and selects its physical UI test', () => 
   expect(commands[2].args).toContain('AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testMeasuresLibraryCapacity');
   expect(commands[3].args).toContain(FRI_DEV_APP_ID);
   expect(commands[3].args).not.toContain('--allow-wireless');
+});
+
+it('builds the normal workspace capacity resource and selects its physical UI test', () => {
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot: '/evidence', repoRoot: '/repo',
+    scenario: 'library-capacity-workspace' });
+  expect(commands[0].env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO)
+    .toBe('library-capacity-workspace');
+  expect(commands[2].args).toContain(
+    'AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testMeasuresLibraryWorkspaceCapacity'
+  );
+  expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_T219_BUNDLE_SUFFIX);
+  expect(commands[3].args).toContain(FRI_T219_APP_ID);
 });

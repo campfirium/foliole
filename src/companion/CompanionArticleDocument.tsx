@@ -39,6 +39,7 @@ export function CompanionArticleDocument(props: {
     <section
       className={sectionClassName}
       data-companion-article-document="true"
+      data-testid="companion-article-document"
       data-node-id={props.nodeId}
       data-companion-readable-document={props.layout === 'review' ? undefined : 'true'}
       style={{ '--document-content-inline-padding': '0px' } as CSSProperties}

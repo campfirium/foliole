@@ -31,6 +31,7 @@ function ReadingChromeTextButton(props: {
   label: string;
   onClick?: (() => void) | undefined;
   primary?: boolean | undefined;
+  testId?: string | undefined;
 }) {
   return (
     <button
@@ -39,6 +40,7 @@ function ReadingChromeTextButton(props: {
         ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition'
         : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:text-foreground'}
       onClick={props.onClick}
+      data-testid={props.testId}
       type="button"
     >
       {props.label}
@@ -61,7 +63,7 @@ function EditingChrome(props: {
         <span className="min-w-0 flex-1 text-center text-[17px] font-normal text-foreground">
           {t('companion.reading.editContent')}
         </span>
-        <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} />
+        <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} testId="companion-reading-edit-done" />
       </div>
     </div>
   );
@@ -114,6 +116,7 @@ export function ReadingChrome(props: {
                   icon={Pencil}
                   label={t('companion.reading.editTopic')}
                   onClick={props.onToggleContentEditing ?? (() => undefined)}
+                  testId="companion-reading-edit"
                 />
               ) : null}
               <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />

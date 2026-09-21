@@ -84,7 +84,8 @@ final class FolioleCompanionWebViewSemanticAdapter {
             "code:matches.length>1?'target_ambiguous':'target_missing'});matches[0].click();" +
             "return JSON.stringify({ok:true});})()";
         while (System.nanoTime() < deadline) {
-            JSONObject receipt = evaluateJson(instrumentation, webView, script);
+            JSONObject receipt = tryEvaluateJson(instrumentation, webView, script);
+            if (receipt == null) continue;
             if (receipt.optBoolean("ok")) return receipt;
             if ("target_ambiguous".equals(receipt.optString("code"))) {
                 throw new IllegalStateException("Sync Group target is not unique: " + testId);

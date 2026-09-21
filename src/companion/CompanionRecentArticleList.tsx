@@ -95,8 +95,8 @@ export function RecentArticleRow(props: {
   const open = () => props.onSelectArticle(props.article.nodeId);
   const status = renderBodyStatus(props.article.bodyStatus, t);
   return (
-    <div className="companion-topic-row" data-testid={props.testId}>
-      <button aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })} className="companion-topic-open" onClick={open} type="button">
+    <div className="companion-topic-row">
+      <button aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })} className="companion-topic-open" data-testid={props.testId} onClick={open} type="button">
         <h2 ref={titleRef} className="companion-topic-title line-clamp-2 break-words [overflow-wrap:anywhere]">{props.article.title}</h2>
         <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
         {status ? <p className="companion-topic-preview">{status}</p> : null}
