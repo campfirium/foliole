@@ -40,7 +40,9 @@ public final class FolioleS220ResourceDiagnosticTest {
             receipt.put("networkOff", FolioleArticleImageTestNetwork.disconnect(context));
             activity = openNode(instrumentation, context, args);
             WebView view = activity.findViewById(R.id.webview);
-            waitForDocument(instrumentation, view, args.getString("resourceNodeId", ""));
+            JSONObject document = waitForDocument(instrumentation, view,
+                args.getString("resourceNodeId", ""), args.getString("bodyMarker", ""));
+            receipt.put("document", document);
             receipt.put("images", captureImages(instrumentation, view, context, hashes));
         } catch (Throwable error) {
             failure = error;
@@ -80,18 +82,27 @@ public final class FolioleS220ResourceDiagnosticTest {
         return activity;
     }
 
-    private static void waitForDocument(Instrumentation instrumentation, WebView view,
-        String nodeId) throws Exception {
+    private static JSONObject waitForDocument(Instrumentation instrumentation, WebView view,
+        String nodeId, String bodyMarker) throws Exception {
+        assertFalse("S220 resource body marker must be provided", bodyMarker.isEmpty());
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        JSONObject observed = new JSONObject();
         while (System.nanoTime() < deadline) {
-            JSONObject observed = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
-                instrumentation, view, "JSON.stringify({node:document.querySelector(" +
-                    "'[data-companion-readable-document]')?.getAttribute('data-node-id')," +
-                    "images:document.querySelectorAll('[data-companion-readable-document] img').length})");
-            if (nodeId.equals(observed.optString("node")) && observed.optInt("images") == 2) return;
+            observed = FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, view,
+                "(function(){var root=document.querySelector('[data-companion-readable-document]');" +
+                    "var text=root?.innerText||'';var images=Array.from(root?.querySelectorAll('img')||[]);" +
+                    "return JSON.stringify({node:root?.getAttribute('data-node-id')||null," +
+                    "bodyReadable:text.includes(" + JSONObject.quote(bodyMarker) + ")," +
+                    "text:text.slice(0,1600),widgets:root?.querySelectorAll(" +
+                    "'.cm-md-image-widget').length||0,images:images.length,loadedImages:" +
+                    "images.filter(i=>i.complete&&i.naturalWidth>0).length});})()");
+            if (nodeId.equals(observed.optString("node")) && observed.optBoolean("bodyReadable")) {
+                return observed;
+            }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("S220 resource document did not expose two image elements.");
+        throw new IllegalStateException("S220 resource document body did not become readable: "
+            + observed);
     }
 
     private static JSONArray captureImages(Instrumentation instrumentation, WebView view,
@@ -123,9 +134,15 @@ public final class FolioleS220ResourceDiagnosticTest {
     private static void startBrowserDiagnostics(Instrumentation instrumentation, WebView view,
         JSONArray hashes) throws Exception {
         String script = "(function(){window.__s220ResourceDiagnostic={state:'pending'};" +
-            "(async function(){var out={state:'done'};for(const hash of " + hashes + "){var img=" +
-            "Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
-            ".find(i=>(i.currentSrc||i.src||'').includes(hash));var fact={dom:img?{src:img.src," +
+            "(async function(){var out={state:'done'};var root=document.querySelector(" +
+            "'[data-companion-readable-document]');for(const hash of " + hashes + "){var widget=" +
+            "Array.from(root?.querySelectorAll('.cm-md-image-widget')||[]).find(w=>" +
+            "(w.dataset.mdImageSource||'').includes(hash));var img=widget?.querySelector('img')||null;" +
+            "var status=widget?.querySelector('[data-md-image-status]')||null;var fact={widget:widget?" +
+            "{present:true,source:widget.dataset.mdImageSource||null,attachmentId:" +
+            "widget.dataset.mdImageAttachmentId||null,status:status?.getAttribute(" +
+            "'data-md-image-status')||null,html:widget.outerHTML.slice(0,2400)}:{present:false}," +
+            "dom:img?{src:img.src," +
             "currentSrc:img.currentSrc,complete:img.complete,naturalWidth:img.naturalWidth," +
             "naturalHeight:img.naturalHeight}:null};if(img){try{var controller=new AbortController();" +
             "var timeout=setTimeout(()=>controller.abort(),5000);var response=await fetch(img.src," +

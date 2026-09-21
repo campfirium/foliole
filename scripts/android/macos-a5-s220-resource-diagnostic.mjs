@@ -12,6 +12,7 @@ import { S220_APP_ID } from './macos-a5-s220-package-inventory.mjs';
 import { classifyS220ResourceDiagnostic } from './macos-a5-s220-resource-diagnostic-classifier.mjs';
 
 const TEST_CLASS = 'com.foliole.android.FolioleS220ResourceDiagnosticTest';
+const BODY_MARKER = 'Resource LAN body remains readable.';
 
 function extractReceipt(stdout) {
   const encoded = stdout.match(/folioleS220ResourceDiagnostic=(\{[^\n]+\})/u)?.[1];
@@ -21,7 +22,8 @@ function extractReceipt(stdout) {
 
 function flattenImages(receipt) {
   return receipt.images.map((image) => ({ hash: image.hash, local: image.local,
-    resolver: image.resolver, dom: image.browser?.dom ?? null,
+    resolver: image.resolver, widget: image.browser?.widget ?? null,
+    dom: image.browser?.dom ?? null,
     fetch: image.browser?.fetch ?? null, decode: image.browser?.decode ?? null }));
 }
 
@@ -49,6 +51,7 @@ export async function diagnoseS220A5Resource(args) {
       installMain: false, instrumentationOwnsActivity: true, needsTransport: false,
       instrumentationArgs: ['-e', 'resourceNodeId', fixture.nodeId,
         '-e', 'resourceGroupId', snapshot.inspection.group.group_id,
+        '-e', 'bodyMarker', BODY_MARKER,
         '-e', 'availableHash', fixture.images[0].hash,
         '-e', 'recoveringHash', fixture.images[1].hash], paths, serial,
       testClass: TEST_CLASS,
@@ -63,8 +66,9 @@ export async function diagnoseS220A5Resource(args) {
   if (runError) throw runError;
   const nativeReceipt = extractReceipt(run.stdout);
   const images = flattenImages(nativeReceipt);
-  const receipt = { appId: S220_APP_ID, fixture, images,
-    classification: classifyS220ResourceDiagnostic(images),
+  const document = nativeReceipt.document ?? null;
+  const receipt = { appId: S220_APP_ID, fixture, document, images,
+    classification: classifyS220ResourceDiagnostic(document, images),
     networkOff: JSON.stringify(nativeReceipt.networkOff),
     networkRestored: JSON.stringify(nativeReceipt.networkRestored), stage: 'captured' };
   receipt.networkStatus = await confirmS220A5NetworkRestored({ assertFixed, execute,
