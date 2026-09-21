@@ -54,7 +54,16 @@ function isBlockedIpv6Host(hostname: string) {
   if (normalized.startsWith('fe') && ['8', '9', 'a', 'b'].includes(normalized[2] ?? '')) return true;
   if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('ff')) return true;
   if (normalized.startsWith('::ffff:')) {
-    return isBlockedIpv4Host(normalized.slice('::ffff:'.length));
+    const suffix = normalized.slice('::ffff:'.length);
+    // URL serializes the mapped IPv4 bytes as two hexadecimal IPv6 pieces.
+    const pieces = /^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/u.exec(suffix);
+    const ipv4 = pieces
+      ? pieces.slice(1).flatMap((piece) => {
+        const value = Number.parseInt(piece, 16);
+        return [value >>> 8, value & 255];
+      }).join('.')
+      : suffix;
+    return isBlockedIpv4Host(ipv4);
   }
   return false;
 }
