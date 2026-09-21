@@ -4,7 +4,7 @@ import type { DbPort, DbValue } from '../../lib/core/sync/dbPort';
 import { sha256 } from './capacityAcceptanceSafety';
 
 const time = '2026-09-20T00:00:00.000Z';
-const insertBatchSize = 100;
+const insertBatchSize = 40;
 export const host = 'T219-isolated';
 export async function seedCapacityFixture(db: DbPort, count: number) {
   if (![1000, 10000].includes(count)) throw new Error('Unsupported fixed fixture size');
