@@ -47,12 +47,14 @@ async function initializeCapacityWorkspaceAcceptance(root: HTMLElement) {
     if (prepare) prepare.onclick = async () => {
       status.dataset.status = 'running';
       const target = stage === 0 ? 1000 : 10000;
+      status.textContent = `T219 workspace fixture: preparing ${target}`;
       try {
         stage = await owner.runWriter((db) => prepareCapacityWorkspace(db, target, hostName));
         renderSetup();
       } catch (error) {
         status.dataset.status = 'failed';
         status.dataset.error = error instanceof Error ? error.message : String(error);
+        status.textContent = `T219 workspace failed: ${status.dataset.error}`;
       }
     };
     if (open) open.onclick = () => ReactDOM.createRoot(root).render(
