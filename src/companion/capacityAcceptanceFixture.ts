@@ -21,9 +21,13 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
     Array.from({ length: count }, (_, offset) => capacityNodeRecords(start + offset, 4096, hostName))
   );
   await db.transaction(async (tx) => {
-    await insertRows(tx, 'nodes', 8, records.map((record) => record.node));
+    await insertRows(tx, `nodes
+      (id,parent_id,title,content,body_blob_hash,created_at,updated_at,deleted_at)`, 8,
+    records.map((record) => record.node));
     await insertRows(tx, 'node_order', 2, records.map((record) => record.order));
-    await insertRows(tx, 'content_blobs', 9, records.flatMap((record) => record.blob ? [record.blob] : []));
+    await insertRows(tx, `content_blobs
+      (hash,storage_key,kind,original_size_bytes,stored_size_bytes,original_sha256,stored_sha256,availability,created_at)`,
+    9, records.flatMap((record) => record.blob ? [record.blob] : []));
     await insertRows(tx, 'content_blob_data', 2, records.flatMap((record) => record.blobData ? [record.blobData] : []));
     await insertRows(tx, 'node_review', 2, records.flatMap((record) => record.metadata?.review ?? []));
     await insertRows(tx, 'node_reading', 3, records.flatMap((record) => record.metadata?.reading ?? []));
