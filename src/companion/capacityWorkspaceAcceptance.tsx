@@ -41,6 +41,7 @@ async function initializeCapacityWorkspaceAcceptance(root: HTMLElement) {
     status.dataset.status = 'ready';
     status.dataset.stage = String(stage);
     status.textContent = `T219 workspace fixture: ${stage}`;
+    status.style.paddingTop = 'max(env(safe-area-inset-top), 48px)';
     const prepare = stage < 10000 ? setupButton(`Prepare ${stage === 0 ? '1k' : '10k'} workspace`, 't219-prepare-workspace') : null;
     const open = stage > 0 ? setupButton(`Open ${stage / 1000}k workspace`, 't219-open-workspace') : null;
     root.replaceChildren(status, ...(prepare ? [prepare] : []), ...(open ? [open] : []));
