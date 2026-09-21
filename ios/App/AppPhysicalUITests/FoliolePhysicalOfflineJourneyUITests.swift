@@ -12,16 +12,16 @@ extension FoliolePhysicalSyncGroupUITests {
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settings.launch()
         let airplane = settings.switches["com.apple.settings.airplaneMode"]
-        guard airplane.waitForExistence(timeout: 5), airplane.value as? String == "1" else {
-            throw XCTSkip("Fri has not been manually put into Airplane Mode.")
-        }
+        XCTAssertTrue(airplane.waitForExistence(timeout: 5))
+        print("[foliole-fri] waiting-for-manual-airplane-mode")
+        waitForSwitch(airplane, value: "1", message: "Fri was not manually put into Airplane Mode.")
         let wifi = settings.buttons["com.apple.settings.wifi"]
         XCTAssertTrue(wifi.waitForExistence(timeout: 5))
         wifi.tap()
         let offlineWifi = settings.switches["无线局域网"]
-        guard offlineWifi.waitForExistence(timeout: 5), offlineWifi.value as? String == "0" else {
-            throw XCTSkip("Fri Wi-Fi is still enabled; no offline claim is possible.")
-        }
+        XCTAssertTrue(offlineWifi.waitForExistence(timeout: 5))
+        print("[foliole-fri] waiting-for-manual-wifi-off")
+        waitForSwitch(offlineWifi, value: "0", message: "Fri Wi-Fi remained enabled.")
         attachScreenshot(named: "Fri-S220-radios-off")
 
         app.activate()
@@ -53,5 +53,12 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Read", in: app, timeout: 30)
         XCTAssertFalse(cachedReading.waitForExistence(timeout: 10),
                        "Fri did not advance after recording the offline reading review.")
+    }
+
+    private func waitForSwitch(_ element: XCUIElement, value: String, message: String) {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", value), object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 180), .completed, message)
     }
 }
