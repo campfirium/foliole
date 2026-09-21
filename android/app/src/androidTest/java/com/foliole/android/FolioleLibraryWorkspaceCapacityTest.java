@@ -183,9 +183,14 @@ public class FolioleLibraryWorkspaceCapacityTest {
         long deadline = deadline();
         while (System.nanoTime() < deadline) {
             for (String testId : new String[] {"companion-top-bar-left-action", "companion-bottom-tab-bar"}) {
-                JSONObject value = FolioleCompanionWebViewSemanticAdapter.readAttribute(
-                    instrumentation, webView, testId, "data-testid");
-                if (value.optBoolean("found")) return testId;
+                JSONObject value = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
+                    instrumentation, webView,
+                    "(function(){var nodes=Array.prototype.slice.call(document.querySelectorAll(" +
+                    JSONObject.quote("[data-testid=\"" + testId + "\"]") + "));" +
+                    "return JSON.stringify({ok:nodes.some(function(node){var r=node.getBoundingClientRect();" +
+                    "return !!(r.width&&r.height);})});})()"
+                );
+                if (value.optBoolean("ok")) return testId;
             }
             Thread.sleep(150);
         }
