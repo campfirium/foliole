@@ -28,21 +28,28 @@ export function assertFriS220ResidueFree(snapshot, attempt, sourceContent = '') 
   if (source.length !== 1 || review.length !== 1) {
     throw new Error('S220 source and review facts must each resolve exactly once.');
   }
-  return { reviewId: review[0].id, sourceId: source[0].id };
+  return { reviewId: review[0].id, reviewReading: review[0].reading ?? null,
+    sourceId: source[0].id };
 }
 
-export function assertFriS220Converged(snapshot, attempt, sourceContent) {
+export function assertFriS220Converged(snapshot, attempt, sourceContent, baseline) {
   const values = nodes(snapshot);
   const captures = values.filter((node) => node.title === attempt.captureTitle);
   const sources = values.filter((node) => node.title === attempt.sourceTitle);
   const reviews = values.filter((node) => node.title === attempt.reviewTitle);
+  const beforeReading = baseline?.reviewReading;
+  const afterReading = reviews[0]?.reading;
   if (captures.length !== 1 || sources.length !== 1 || reviews.length !== 1
       || exactCount(sourceContent, attempt.editMarker) !== 1
-      || reviews[0].review?.reps !== 1) {
-    throw new Error('S220 Mac/Fri content or review state did not converge exactly once.');
+      || sources[0].currentVersionId === baseline?.sourceVersionId
+      || afterReading?.repetitionCount !== (beforeReading?.repetitionCount ?? 0) + 1
+      || afterReading?.lastHandledAt === beforeReading?.lastHandledAt
+      || snapshot.attemptPendingDeliveryCount !== 0 || snapshot.conflicts !== 0) {
+    throw new Error('S220 Mac/Fri content or reading state did not converge exactly once.');
   }
   return { captureId: captures[0].id, reviewId: reviews[0].id,
-    sourceId: sources[0].id, sourceVersionId: sources[0].currentVersionId };
+    reading: afterReading, sourceId: sources[0].id,
+    sourceVersionId: sources[0].currentVersionId };
 }
 
 const STAGES = ['prepared', 'offline_ready', 'offline_verified', 'offline_complete',

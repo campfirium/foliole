@@ -22,16 +22,44 @@ function query(databasePath, sql) {
   return JSON.parse(result.stdout || '[]');
 }
 
+function sqlString(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
 export function readFriS220MacState(databasePath) {
   const groups = query(databasePath, 'SELECT group_id FROM sync_groups ORDER BY group_id;');
-  const values = query(databasePath, `SELECT id,title,content,current_version_id AS currentVersionId
-    FROM nodes WHERE deleted_at IS NULL AND
+  const values = query(databasePath, `SELECT nodes.id,nodes.title,nodes.content,
+    nodes.current_version_id AS currentVersionId,
+    node_reading.last_handled_at AS readingLastHandledAt,
+    node_reading.next_at AS readingNextAt,
+    node_reading.repetition_count AS readingRepetitionCount,
+    node_reading.state AS readingState
+    FROM nodes LEFT JOIN node_reading ON node_reading.node_id=nodes.id
+    WHERE nodes.deleted_at IS NULL AND
     (title IN ('Multi-device sync A fact','Multi-device sync D fact') OR title LIKE 'S220 Fri %');`);
-  const nodesById = Object.fromEntries(values.map((node) => [node.id, node]));
+  const nodesById = Object.fromEntries(values.map((node) => [node.id, {
+    content: node.content, currentVersionId: node.currentVersionId, id: node.id,
+    reading: node.readingState === null ? null : {
+      lastHandledAt: node.readingLastHandledAt, nextAt: node.readingNextAt,
+      repetitionCount: node.readingRepetitionCount, state: node.readingState
+    }, title: node.title
+  }]));
   const source = values.find((node) => node.title === 'Multi-device sync A fact');
   const conflicts = source ? query(databasePath,
     `SELECT count(*) AS count FROM node_sync_conflicts WHERE object_id='${source.id}';`)[0]?.count : null;
   return { conflicts, groupIds: groups.map(({ group_id }) => group_id), nodesById };
+}
+
+export function readFriS220PostState(databasePath, attempt, since) {
+  const state = readFriS220MacState(databasePath);
+  const ids = Object.values(state.nodesById)
+    .filter((node) => [attempt.sourceTitle, attempt.reviewTitle, attempt.captureTitle]
+      .includes(node.title)).map((node) => sqlString(node.id));
+  const pending = ids.length === 0 ? [{ count: 0 }] : query(databasePath,
+    `SELECT count(*) AS count FROM sync_delivery_receipts
+      WHERE status='pending' AND updated_at>=${sqlString(since)}
+      AND object_id IN (${ids.join(',')});`);
+  return { ...state, attemptPendingDeliveryCount: Number(pending[0]?.count ?? 0) };
 }
 
 export async function inspectFriS220Preflight({ groupId, readState, receiptPath }) {
@@ -43,7 +71,8 @@ export async function inspectFriS220Preflight({ groupId, readState, receiptPath 
   const source = Object.values(state.nodesById).filter((node) => node.title === attempt.sourceTitle);
   const baseline = assertFriS220ResidueFree(state, attempt, source[0]?.content ?? '');
   if (state.conflicts !== 0) throw new Error('S220 source fact already has a conflict.');
-  const receipt = { attempt, baseline, groupId, resultStatus: 'ready',
+  const receipt = { attempt, baseline, capturedAt: new Date().toISOString(),
+    groupId, resultStatus: 'ready',
     sourceVersionId: source[0]?.currentVersionId ?? null };
   if (receiptPath) writeJson(receiptPath, receipt);
   return receipt;

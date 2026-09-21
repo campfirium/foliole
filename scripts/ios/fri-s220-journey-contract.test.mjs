@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,7 +10,8 @@ const groupId = 'group-563c698c-b964-4c05-b273-c3d9c2c02995';
 const attempt = createFriS220Attempt(groupId);
 const baseline = { nodesById: {
   a: { content: 'Multi-device sync A fact', id: 'a', title: 'Multi-device sync A fact' },
-  d: { id: 'd', review: { reps: 0 }, title: 'Multi-device sync D fact' }
+  d: { id: 'd', reading: { lastHandledAt: 'old', repetitionCount: 0 },
+    title: 'Multi-device sync D fact' }
 } };
 
 describe('Fri S220 deterministic journey contract', () => {
@@ -22,7 +24,8 @@ describe('Fri S220 deterministic journey contract', () => {
   });
 
   it('refuses an occupied attempt before the manual network window', () => {
-    expect(assertFriS220ResidueFree(baseline, attempt)).toEqual({ reviewId: 'd', sourceId: 'a' });
+    expect(assertFriS220ResidueFree(baseline, attempt)).toEqual({ reviewId: 'd',
+      reviewReading: { lastHandledAt: 'old', repetitionCount: 0 }, sourceId: 'a' });
     expect(() => assertFriS220ResidueFree({ nodesById: { ...baseline.nodesById,
       residue: { id: 'residue', title: attempt.captureTitle } } }, attempt))
       .toThrow('already has isolated fixture residue');
@@ -32,14 +35,27 @@ describe('Fri S220 deterministic journey contract', () => {
     const converged = { nodesById: { ...baseline.nodesById,
       a: { ...baseline.nodesById.a, content: `body\n${attempt.editMarker}`,
         currentVersionId: 'version-a' },
-      d: { ...baseline.nodesById.d, review: { reps: 1 } },
-      capture: { id: 'capture', title: attempt.captureTitle } } };
+      d: { ...baseline.nodesById.d,
+        reading: { lastHandledAt: 'new', repetitionCount: 1 } },
+      capture: { id: 'capture', title: attempt.captureTitle } },
+    attemptPendingDeliveryCount: 0, conflicts: 0 };
+    const before = { reviewReading: baseline.nodesById.d.reading, sourceVersionId: 'version-before' };
     expect(assertFriS220Converged(converged, attempt,
-      `body\n${attempt.editMarker}`)).toMatchObject({
-      captureId: 'capture', reviewId: 'd', sourceVersionId: 'version-a'
+      `body\n${attempt.editMarker}`, before)).toMatchObject({
+      captureId: 'capture', reading: { repetitionCount: 1 }, sourceVersionId: 'version-a'
     });
     expect(() => assertFriS220Converged(converged, attempt,
-      `body\n${attempt.editMarker}\n${attempt.editMarker}`)).toThrow('exactly once');
+      `body\n${attempt.editMarker}\n${attempt.editMarker}`, before)).toThrow('exactly once');
+  });
+
+  it('keeps the physical test attempt bound to the injected group identity', () => {
+    const source = fs.readFileSync('ios/App/AppPhysicalUITests/FoliolePhysicalOfflineJourneyUITests.swift', 'utf8');
+    expect(source).toContain('requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID")');
+    expect(source).not.toContain('private var s220AttemptId: String { "c3d9c2c02995" }');
+    expect(source.indexOf('waitForExternalOfflineSignal()'))
+      .toBeLessThan(source.indexOf('assertPublicSyncNowFailsOffline(in: app)'));
+    expect(source.indexOf('assertPublicSyncNowFailsOffline(in: app)'))
+      .toBeLessThan(source.indexOf('completeCachedReadingReview(in: app)'));
   });
 
   it('permits one offline and one online transition without retries', () => {
