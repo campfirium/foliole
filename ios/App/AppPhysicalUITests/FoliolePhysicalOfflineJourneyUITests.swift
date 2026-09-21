@@ -7,6 +7,14 @@ private let friOfflineSignalCallback: CFNotificationCallback = { _, observer, _,
 }
 
 extension FoliolePhysicalSyncGroupUITests {
+    func testS220ReadOnlyNavigationPreflight() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        assertS220GroupAndCachedFacts(in: app)
+        attachScreenshot(named: "Fri-S220-read-only-navigation-ready")
+        print("[foliole-fri] s220-read-only-navigation-ready attempt=\(s220AttemptId)")
+    }
+
     func testS220OfflineBatchRetainsChangesAcrossRelaunch() throws {
         let app = acceptanceApplication()
         app.launch()
