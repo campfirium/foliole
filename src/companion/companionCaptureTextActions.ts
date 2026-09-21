@@ -21,7 +21,9 @@ export class CompanionCaptureTextError extends Error {
 
 interface PersistCompanionCapturedTextArgs {
   deviceId: string;
+  nodeId?: string;
   now?: string;
+  preserveBoundaryWhitespace?: boolean;
   snapshot: WorkspaceSnapshot | null;
   text: string;
   versionId?: string;
@@ -33,13 +35,13 @@ interface CaptureTextDraft {
   snapshot: WorkspaceSnapshot;
 }
 
-function createCaptureNode(content: string, timestamp: string): WorkspaceNodeSnapshot {
+function createCaptureNode(content: string, timestamp: string, nodeId?: string): WorkspaceNodeSnapshot {
   return {
     anchorLink: null,
     content,
     createdAt: timestamp,
     hideTitleHeading: false,
-    id: `node-${createCompanionUuid()}`,
+    id: nodeId ?? `node-${createCompanionUuid()}`,
     isTitleManual: false,
     kind: 'topic',
     openingText: null,
@@ -53,13 +55,22 @@ function createCaptureNode(content: string, timestamp: string): WorkspaceNodeSna
 }
 
 async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Promise<CaptureTextDraft> {
-  const content = args.text.trim();
-  if (!content) throw new CompanionCaptureTextError('empty');
+  if (!args.text.trim()) throw new CompanionCaptureTextError('empty');
+  const content = args.preserveBoundaryWhitespace ? args.text : args.text.trim();
   const inboxNode = args.snapshot?.nodesById[INBOX_NODE_ID];
   if (!args.snapshot || !inboxNode || args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID)) {
     throw new CompanionCaptureTextError('inbox-unavailable');
   }
-  const node = createCaptureNode(content, args.now ?? new Date().toISOString());
+  const existingNode = args.nodeId ? args.snapshot.nodesById[args.nodeId] : null;
+  if (existingNode) {
+    if (existingNode.content !== content || existingNode.parentNodeId !== INBOX_NODE_ID) {
+      throw new Error('share_delivery_collision');
+    }
+    return { node: existingNode, nodeVersion: await toCompanionNativeNodeVersion(
+      existingNode, args.deviceId, args.versionId
+    ), snapshot: args.snapshot };
+  }
+  const node = createCaptureNode(content, args.now ?? new Date().toISOString(), args.nodeId);
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId, args.versionId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   return {

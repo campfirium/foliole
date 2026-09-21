@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,6 +32,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPackTransferPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
+        registerPlugin(FolioleCompanionShareInboxPlugin.class);
+        receiveSharedText(getIntent());
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();
         webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -47,6 +50,23 @@ public class MainActivity extends BridgeActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        receiveSharedText(intent);
+    }
+
+    private void receiveSharedText(Intent intent) {
+        try {
+            if (FolioleCompanionShareInboxStore.enqueue(getApplicationContext(), intent)) {
+                FolioleCompanionShareInboxPlugin.notifyInboxChanged();
+            }
+        } catch (Exception error) {
+            Log.e(LOG_TAG, "Failed to persist shared text", error);
+        }
     }
 
     private boolean shouldRefreshWebAssets(String webAssetSignature) {

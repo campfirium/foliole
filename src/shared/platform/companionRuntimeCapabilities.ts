@@ -34,6 +34,7 @@ export const COMPANION_CAPABILITY_NAMES = [
   'reading-write',
   'syncback',
   'review-write',
+  'share-inbox',
   'sync-pack-apply',
   'sync-diagnostics',
   'sync-object-read',

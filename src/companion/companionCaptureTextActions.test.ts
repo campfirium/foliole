@@ -36,14 +36,14 @@ function createSnapshot(): WorkspaceSnapshot {
   };
 }
 
-describe('companion capture text actions', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000010')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000011');
-  });
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.spyOn(crypto, 'randomUUID')
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000010')
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000011');
+});
 
+describe('companion capture text actions', () => {
   it('persists captured text as an Inbox topic node version', async () => {
     const { persistCompanionCapturedText } = await import('./companionCaptureTextActions');
 
@@ -69,7 +69,43 @@ describe('companion capture text actions', () => {
       })
     ]);
   });
+});
 
+describe('companion shared text delivery', () => {
+  it('preserves shared boundary whitespace and reuses a stable delivery node', async () => {
+    const { persistCompanionCapturedText } = await import('./companionCaptureTextActions');
+    const snapshot = createSnapshot();
+    const first = await persistCompanionCapturedText({
+      deviceId: 'android-device', nodeId: 'node-share-delivery', preserveBoundaryWhitespace: true,
+      snapshot, text: '  indented text\n', versionId: 'ver_share_delivery'
+    });
+    const second = await persistCompanionCapturedText({
+      deviceId: 'android-device', nodeId: 'node-share-delivery', preserveBoundaryWhitespace: true,
+      snapshot: first.snapshot, text: '  indented text\n', versionId: 'ver_share_delivery'
+    });
+
+    expect(second.nodeId).toBe(first.nodeId);
+    expect(second.snapshot.nodeOrder).toEqual([INBOX_NODE_ID, 'node-share-delivery']);
+    expect(second.snapshot.nodesById[second.nodeId]?.content).toBe('  indented text\n');
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a stable delivery id collision without writing', async () => {
+    const { persistCompanionCapturedText } = await import('./companionCaptureTextActions');
+    const snapshot = createSnapshot();
+    snapshot.nodesById['node-share-delivery'] = {
+      ...snapshot.nodesById[INBOX_NODE_ID]!, id: 'node-share-delivery', kind: 'topic',
+      parentNodeId: INBOX_NODE_ID, content: 'different', title: 'different'
+    };
+    await expect(persistCompanionCapturedText({
+      deviceId: 'android-device', nodeId: 'node-share-delivery', preserveBoundaryWhitespace: true,
+      snapshot, text: 'incoming', versionId: 'ver_share_delivery'
+    })).rejects.toThrow('share_delivery_collision');
+    expect(syncObjectsMock.applyCompanionLocalNodeVersions).not.toHaveBeenCalled();
+  });
+});
+
+describe('companion capture validation', () => {
   it('rejects blank captured text before writing a node version', async () => {
     const { persistCompanionCapturedText } = await import('./companionCaptureTextActions');
 

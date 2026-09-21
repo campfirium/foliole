@@ -15,6 +15,7 @@ import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
+import { useCompanionShareInbox } from './useCompanionShareInbox';
 import { useCompanionShellActions } from './useCompanionShellActions';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
@@ -133,13 +134,19 @@ function buildCompanionShellModel(args: {
   };
 }
 
+function useCompanionWorkspaceRuntime(bootstrapState: NativeCompanionBootstrapState) {
+  const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
+  useCompanionShareInbox(workspaceSync);
+  return workspaceSync;
+}
+
 function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
   const browseSort = useCompanionBrowseSortState();
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useState(false);
   const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
   const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
-  const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
+  const workspaceSync = useCompanionWorkspaceRuntime(bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
     sortDirection: browseSort.browseSortDirection,
     sortKey: browseSort.browseSortKey
