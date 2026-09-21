@@ -146,16 +146,11 @@ extension FoliolePhysicalSyncGroupUITests {
             waitForDisappearance(exit, timeout: 30,
                                  message: "Fri did not exit before S220 Browse verification.")
         }
-        let directory = app.buttons["Directory"].firstMatch
-        if directory.waitForExistence(timeout: 3) {
-            directory.tap()
-        } else {
-            if !app.buttons["Browse"].exists,
-               app.buttons["Settings"].waitForExistence(timeout: 3) {
-                app.buttons["Settings"].tap()
-            }
-            tapButton(named: "Browse", in: app, timeout: 30)
+        if !app.buttons["Browse"].exists,
+           app.buttons["Settings"].waitForExistence(timeout: 3) {
+            app.buttons["Settings"].tap()
         }
+        tapButton(named: "Browse", in: app, timeout: 30)
         let inbox = app.buttons["Open topic Inbox"]
         if inbox.waitForExistence(timeout: 3) { inbox.tap() }
     }
