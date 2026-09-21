@@ -7,6 +7,7 @@ import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channe
 import { observeMacosAnchorAfterElection } from './macos-a5-anchor-observation.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
+import { prepareS220EvidenceRoot } from './macos-a5-s220-evidence-root.mjs';
 import { instrumentation } from './macos-a5-s220-offline.mjs';
 import { inspectS220A5Group } from './macos-a5-s220-group-inspect.mjs';
 import { confirmS220A5NetworkRestored } from './macos-a5-s220-network-status.mjs';
@@ -35,7 +36,7 @@ export async function verifyS220A5Resource(args) {
   assertFixed();
   const root = path.join(paths.artifactsRoot, 'S220', 'final-same-tip', 'a5-resource');
   const receiptPath = path.join(root, 'receipt.json');
-  if (fs.existsSync(receiptPath)) throw new Error('S220 resource final verification already attempted.');
+  prepareS220EvidenceRoot(root, receiptPath);
   const fixture = JSON.parse(fs.readFileSync(path.join(paths.artifactsRoot, 'S220',
     'a5-resource', 'receipt.json'), 'utf8')).fixture;
   if (!fixture?.nodeId || fixture.images?.length !== 2) {
@@ -55,7 +56,6 @@ export async function verifyS220A5Resource(args) {
     runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   const receipt = { appId: S220_APP_ID, cachedFiles: files, stage: 'cached-on-a5' };
   const save = () => fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
-  fs.mkdirSync(root, { recursive: true });
   save();
   let disconnected = false;
   try {
