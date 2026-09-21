@@ -30,7 +30,9 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
-  const discovered = await discoverCompanionDesktops(normalized, options);
+  const discovered = await discoverCompanionDesktops(normalized, {
+    ...options, requiredGroupId: group.group_id
+  });
   const matches = discovered.filter((candidate) => {
     const known = group.devices.find((device) =>
       device.device_identity_key === candidate.discovery.provider_device_id);

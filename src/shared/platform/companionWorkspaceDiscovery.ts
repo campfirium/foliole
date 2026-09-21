@@ -26,6 +26,7 @@ export type CompanionDiscoveryResult = {
 
 export type CompanionDiscoveryOptions = {
   allowWhileNotParticipating?: boolean;
+  requiredGroupId?: string;
 };
 
 export type DiscoveryCandidate = {
@@ -71,10 +72,12 @@ async function loadNativeDiscoveryCandidates(
   }
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const immediate = desktopAnchorAdvertisements(payload);
+    const immediate = desktopAnchorAdvertisements(payload, options.requiredGroupId);
     const discovered = immediate.length > 0
       ? immediate
-      : await waitForCompanionDesktopAdvertisements(FolioleCompanionSync);
+      : await waitForCompanionDesktopAdvertisements(
+        FolioleCompanionSync, undefined, options.requiredGroupId
+      );
     const native = discovered
       .map((candidate) => ({
         endpointUrl: candidate.endpoint_url,

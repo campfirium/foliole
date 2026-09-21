@@ -57,6 +57,9 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
   }]);
+  expect(runtime.discover).toHaveBeenCalledWith('http://old:38641', {
+    requiredGroupId: 'group-1'
+  });
 });
 
 it('routes a Windows 11 desktop using its product-facing discovery label', async () => {

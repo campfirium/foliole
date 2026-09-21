@@ -1,3 +1,5 @@
+/* global console */
+
 import {
   macosA5ErrorEvidence,
   recoverMacosA5SyncGroupRejoinEntry,
@@ -26,6 +28,80 @@ export async function dispatchMacosA5Action({
   }
   if (action === 'status') {
     assertFixed(paths); pairingReadiness(paths); readiness(paths);
+  }
+  if (action === 's220-package-inventory') {
+    const { inspectS220A5Packages } = await import('./macos-a5-s220-package-inventory.mjs');
+    const { filePath, receipt } = await inspectS220A5Packages({ assertFixed: () => assertFixed(paths),
+      execute, paths, serial });
+    console.log(`[macos-a5-dev] S220 package inventory=${filePath} available=${receipt.s220PackageAvailable}`);
+  }
+  if (action === 's220-upgrade') {
+    const { upgradeS220A5Package } = await import('./macos-a5-s220-upgrade.mjs');
+    await upgradeS220A5Package({ assertFixed: () => assertFixed(paths), captured, checked,
+      env, execute, markMutationBoundary, paths, serial });
+  }
+  if (action === 's220-upgrade-test') {
+    const { upgradeS220A5TestPackage } = await import('./macos-a5-s220-upgrade.mjs');
+    await upgradeS220A5TestPackage({ assertFixed: () => assertFixed(paths), captured, checked,
+      env, execute, markMutationBoundary, paths, serial });
+  }
+  if (action === 's220-offline-test-upgrade') {
+    const { upgradeS220A5TestPackage } = await import('./macos-a5-s220-upgrade.mjs');
+    await upgradeS220A5TestPackage({ assertFixed: () => assertFixed(paths), captured,
+      checked, env, execute, markMutationBoundary, paths, phase: 'offline', serial });
+  }
+  if (action === 's220-resource-test-upgrade') {
+    const { upgradeS220A5TestPackage } = await import('./macos-a5-s220-upgrade.mjs');
+    await upgradeS220A5TestPackage({ assertFixed: () => assertFixed(paths), captured,
+      checked, env, execute, markMutationBoundary, paths, phase: 'resource', serial });
+  }
+  if (action === 's220-final-test-upgrade') {
+    const { upgradeS220A5TestPackage } = await import('./macos-a5-s220-upgrade.mjs');
+    await upgradeS220A5TestPackage({ assertFixed: () => assertFixed(paths), captured,
+      checked, env, execute, markMutationBoundary, paths, phase: 'final', serial });
+  }
+  if (action === 's220-main-compare') {
+    const { compareS220A5Main } = await import('./macos-a5-s220-main-compare.mjs');
+    const result = await compareS220A5Main({ assertFixed: () => assertFixed(paths),
+      env, execute, paths, serial });
+    console.log(`[macos-a5-dev] S220 main comparison=${result.filePath} preserved=${result.preserved}`);
+  }
+  if (action === 's220-offline') {
+    const { runS220A5Offline } = await import('./macos-a5-s220-offline.mjs');
+    await runS220A5Offline({ assertFixed: () => assertFixed(paths), captured, checked,
+      env, execute, paths, serial });
+  }
+  if (action === 's220-final-fixture') {
+    const { seedS220FinalFixture } = await import('./macos-a5-s220-final-fixture.mjs');
+    await seedS220FinalFixture({ assertFixed: () => assertFixed(paths), buildIdentity,
+      env, execute, paths, serial });
+  }
+  if (action === 's220-offline-edit') {
+    const { runS220A5OfflineEdit } = await import('./macos-a5-s220-offline-edit.mjs');
+    await runS220A5OfflineEdit({ assertFixed: () => assertFixed(paths), captured,
+      checked, env, execute, paths, serial });
+  }
+  if (action === 's220-converge') {
+    const { convergeS220A5 } = await import('./macos-a5-s220-converge.mjs');
+    await convergeS220A5({ assertFixed: () => assertFixed(paths), buildIdentity,
+      env, execute, paths, serial });
+  }
+  if (action === 's220-resource-verify') {
+    const { verifyS220A5Resource } = await import('./macos-a5-s220-resource-verify.mjs');
+    await verifyS220A5Resource({ assertFixed: () => assertFixed(paths), buildIdentity,
+      captured, checked, env, execute, paths, serial });
+  }
+  if (action === 's220-group-inspect') {
+    const { inspectS220A5Group } = await import('./macos-a5-s220-group-inspect.mjs');
+    const filePath = await inspectS220A5Group({ assertFixed: () => assertFixed(paths),
+      paths, serial });
+    console.log(`[macos-a5-dev] S220 group inspection=${filePath}`);
+  }
+  if (action === 's220-network-status') {
+    const { inspectS220A5Network } = await import('./macos-a5-s220-network-status.mjs');
+    const filePath = await inspectS220A5Network({ assertFixed: () => assertFixed(paths),
+      execute, paths, serial });
+    console.log(`[macos-a5-dev] S220 network status=${filePath}`);
   }
   if (action === 'sync-group-stopped-status') {
     await runMacosA5SettledStoppedStatus({ assertFixed: () => assertFixed(paths), checked,

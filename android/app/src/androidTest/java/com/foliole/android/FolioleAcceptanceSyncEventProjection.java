@@ -13,7 +13,7 @@ final class FolioleAcceptanceSyncEventProjection {
     private FolioleAcceptanceSyncEventProjection() {}
 
     static JSONObject read(Context context) throws Exception {
-        if (!"com.foliole.android.acceptance".equals(context.getPackageName())) {
+        if (!isAcceptancePackage(context.getPackageName())) {
             throw new IllegalStateException("acceptance_sync_projection_identity_invalid");
         }
         String path = context.getDatabasePath(DATABASE_NAME).getPath();
@@ -59,6 +59,11 @@ final class FolioleAcceptanceSyncEventProjection {
                 .put("events", events).put("source_runs", sourceRuns)
                 .put("syncEventsProjected", true);
         }
+    }
+
+    static boolean isAcceptancePackage(String packageName) {
+        return "com.foliole.android.acceptance".equals(packageName)
+            || "com.foliole.android.s220acceptance".equals(packageName);
     }
 
     private static String scalar(SQLiteDatabase database, String sql) {

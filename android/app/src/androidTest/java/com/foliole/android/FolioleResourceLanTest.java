@@ -26,10 +26,12 @@ public final class FolioleResourceLanTest {
     @Test public void readsResourcesAcrossPhysicalLanAndRestoresMissingBytes() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
-        assertEquals("com.foliole.android.acceptance", context.getPackageName());
+        assertTrue("Resource test must use an isolated acceptance package",
+            "com.foliole.android.acceptance".equals(context.getPackageName())
+                || "com.foliole.android.s220acceptance".equals(context.getPackageName()));
         Bundle args = InstrumentationRegistry.getArguments();
         String phase = args.getString("resourcePhase", "");
-        assertTrue(phase.matches("missing|restored|restarted"));
+        assertTrue(phase.matches("missing|restored|restarted|offline"));
         String nodeId = args.getString("resourceNodeId", "");
         String groupId = args.getString("resourceGroupId", "");
         String url = "foliole://node/v1?group=" + Uri.encode(groupId) + "&id=" + Uri.encode(nodeId);
@@ -54,7 +56,8 @@ public final class FolioleResourceLanTest {
             Bundle evidence = new Bundle();
             evidence.putString("folioleResourceLanReceipt", observation.put("passed", true)
                 .put("phase", phase).put("nodeId", nodeId)
-                .put("lanEndpoint", discoverLanProvider(context, groupId)).toString());
+                .put("lanEndpoint", "offline".equals(phase)
+                    ? JSONObject.NULL : discoverLanProvider(context, groupId)).toString());
             instrumentation.sendStatus(2, evidence);
         } finally { instrumentation.runOnMainSync(activity::finish); }
     }
