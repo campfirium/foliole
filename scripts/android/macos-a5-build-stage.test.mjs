@@ -31,6 +31,7 @@ describe('macOS fixed A5 build stage', () => {
       }, (stage) => stages.push(stage));
       expect(calls.map(({ command }) => command)).toEqual(['npm', paths.cap, paths.gradle]);
       expect(calls.map(({ cwd }) => cwd)).toEqual([root, root, path.join(root, 'android')]);
+      expect(calls[2].args).toEqual(expect.arrayContaining(['--no-daemon', '--build-cache']));
       expect(stages).toEqual(['web-build', 'capacitor-sync', 'gradle-build', 'apk-check']);
     } finally { fs.rmSync(root, { force: true, recursive: true }); }
   });

@@ -68,7 +68,7 @@ export function build(paths, run = checked, onStage = () => {}) {
   onStage('capacitor-sync');
   run(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot });
   onStage('gradle-build');
-  run(paths.gradle, ['--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'], {
+  run(paths.gradle, ['--no-daemon', '--build-cache', 'assembleDebug', 'assembleDebugAndroidTest'], {
     cwd: path.join(paths.buildRoot, 'android'), env: macosA5GradleEnv()
   });
   onStage('apk-check');
