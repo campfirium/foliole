@@ -1,3 +1,4 @@
+import Network
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
@@ -9,22 +10,10 @@ extension FoliolePhysicalSyncGroupUITests {
         openBrowse(in: app)
         waitForJourneyFacts(["A"], in: app)
 
-        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
-        settings.launch()
-        let airplane = settings.switches["com.apple.settings.airplaneMode"]
-        XCTAssertTrue(airplane.waitForExistence(timeout: 5))
-        print("[foliole-fri] waiting-for-manual-airplane-mode")
-        waitForSwitch(airplane, value: "1", message: "Fri was not manually put into Airplane Mode.")
-        let wifi = settings.buttons["com.apple.settings.wifi"]
-        XCTAssertTrue(wifi.waitForExistence(timeout: 5))
-        wifi.tap()
-        let offlineWifi = settings.switches["无线局域网"]
-        XCTAssertTrue(offlineWifi.waitForExistence(timeout: 5))
-        print("[foliole-fri] waiting-for-manual-wifi-off")
-        waitForSwitch(offlineWifi, value: "0", message: "Fri Wi-Fi remained enabled.")
-        attachScreenshot(named: "Fri-S220-radios-off")
+        waitForManualNetworkIsolation()
 
         app.activate()
+        attachScreenshot(named: "Fri-S220-offline-ready")
         completeCachedReadingReview(in: app)
         let title = "S220 Fri offline \(UUID().uuidString)"
         let edit = "S220 Fri offline edit \(UUID().uuidString)"
@@ -55,10 +44,17 @@ extension FoliolePhysicalSyncGroupUITests {
                        "Fri did not advance after recording the offline reading review.")
     }
 
-    private func waitForSwitch(_ element: XCUIElement, value: String, message: String) {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", value), object: element
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 600), .completed, message)
+    private func waitForManualNetworkIsolation() {
+        let offline = expectation(description: "Fri network path becomes unavailable")
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { path in
+            if path.status == .unsatisfied {
+                offline.fulfill()
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "com.foliole.tests.network-path"))
+        defer { monitor.cancel() }
+        print("[foliole-fri] waiting-for-manual-network-isolation")
+        wait(for: [offline], timeout: 600)
     }
 }
