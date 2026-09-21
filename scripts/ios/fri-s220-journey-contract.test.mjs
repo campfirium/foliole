@@ -60,6 +60,22 @@ describe('Fri S220 deterministic journey contract', () => {
       .toBeLessThan(source.indexOf('completeCachedReadingReview(in: app)'));
   });
 
+  it('lets automatic Sync own online convergence without waiting for resource completion', () => {
+    const source = fs.readFileSync(
+      'ios/App/AppPhysicalUITests/FoliolePhysicalOfflineJourneyUITests.swift', 'utf8');
+    const onlineBatch = source.slice(source.indexOf('func testS220OnlineBatchConvergesAfterSyncNow'),
+      source.indexOf('private var s220AttemptId'));
+    expect(onlineBatch).toContain('startS220OnlineConvergence(in: app)');
+    expect(source).toContain('if s220AutomaticSyncIsRunning(in: app)');
+    expect(source).toContain('s220-online-auto-sync-took-over');
+    expect(source).toContain('syncNow.waitForExistence(timeout: 15)');
+    expect(source).toContain('XCTAssertTrue(syncNow.isEnabled');
+    expect(source).toContain('waitForSyncNowCompletion(in: app)');
+    expect(source).toContain('The public Sync Now action explicitly failed.');
+    expect(onlineBatch).toContain('allowingBackgroundSync: true');
+    expect(onlineBatch).not.toContain('tapEnabledButton(named: "Sync Now", in: app, timeout: 120)');
+  });
+
   it('permits one offline and one online transition without retries', () => {
     expect(advanceFriS220Stage('prepared', 'offline_ready')).toBe('offline_ready');
     expect(advanceFriS220Stage('offline_complete', 'network_restored')).toBe('network_restored');
