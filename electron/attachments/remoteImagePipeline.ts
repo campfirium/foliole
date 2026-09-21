@@ -188,7 +188,6 @@ function createRemoteImageFetchLifecycle(
   ).then(async (result) => {
     finishMetadata(result.status === 'ready' ? result.resource.intrinsicSize : null);
     if (result.status === 'error') {
-      fetchByCacheKey.delete(fetchKey);
       failureByCacheKey.set(fetchKey, {
         error: result.error,
         expiresAt: Date.now() + resolveRemoteImageFailureCacheMs(result.error)
@@ -196,6 +195,11 @@ function createRemoteImageFetchLifecycle(
       return result;
     }
     return storeRemoteImageFetchResult(sourceUrl, options.sourceOrigin ?? null, result);
+  }).finally(() => {
+    finishMetadata(null);
+    if (fetchByCacheKey.get(fetchKey)?.resourceReady === resourceReady) {
+      fetchByCacheKey.delete(fetchKey);
+    }
   });
   return { metadataReady, resourceReady };
 }

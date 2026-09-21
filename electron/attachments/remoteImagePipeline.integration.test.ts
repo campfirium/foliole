@@ -1,6 +1,10 @@
 // @vitest-environment node
 
-import { beforeEach, expect, it, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
   handle: vi.fn(),
@@ -44,6 +48,7 @@ import { buildRemoteImageRenderUrl } from '../../lib/platform/remoteImageProtoco
 
 import {
   configureRemoteImageFetchTransportForTests,
+  configureRemoteImagePipelineCacheRoot,
   fetchRemoteImageMetadata,
   importRemoteImageAttachment,
   resetRemoteImagePipelineForTests
@@ -52,10 +57,18 @@ import { registerRemoteImageProtocol } from './remoteImageProtocol.js';
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-beforeEach(() => {
+let cacheRoot: string;
+
+beforeEach(async () => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   resetRemoteImagePipelineForTests();
+  cacheRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-image-integration-'));
+  configureRemoteImagePipelineCacheRoot(cacheRoot);
+});
+
+afterEach(async () => {
+  await fs.rm(cacheRoot, { recursive: true, force: true });
 });
 
 it('shares one remote fetch across protocol renders and auto localization', async () => {
