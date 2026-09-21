@@ -78,7 +78,9 @@ extension FoliolePhysicalSyncGroupUITests {
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
         editor.tap()
+        resolveOptionalCellularDataDecision()
         editor.typeText(title)
+        XCTAssertEqual(editor.value as? String, title, "Capture must receive the complete requested text.")
         let keyboardDone = app.toolbars["Toolbar"].buttons["Done"]
         XCTAssertTrue(keyboardDone.waitForExistence(timeout: 15), "The Capture keyboard cannot be dismissed.")
         keyboardDone.tap()
@@ -116,11 +118,17 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
         editor.tap()
         editor.typeText("\n\n\(text)")
+        let submittedBody = editor.value as? String ?? ""
+        XCTAssertTrue(submittedBody.contains(existingText), "Editing must preserve the existing text.")
+        XCTAssertTrue(submittedBody.contains(text), "Editing must receive the complete new text.")
         tapButton(named: "Done", in: app, timeout: 30)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
             .firstMatch.waitForExistence(timeout: 30), "Fri did not visibly save the requested edit.")
         revealReadingChrome(in: app, matching: text)
         tapButton(named: "Exit", in: app, timeout: 30)
+        if ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_VERIFY_BODY_RELAUNCH"] == "1" {
+            verifyCompleteBodyAfterRelaunch(submittedBody, prefix: prefix, matching: text, in: app)
+        }
     }
 
     func setAutomaticSyncPaused(_ paused: Bool, in app: XCUIApplication) {
