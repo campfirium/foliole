@@ -127,6 +127,7 @@ extension FoliolePhysicalSyncGroupUITests {
         }
         openS220Browse(in: app, allowingBackgroundSync: allowingBackgroundSync)
         waitForVisibleTopicText(prefix: s220SourceTitle, text: s220EditMarker, in: app)
+        revealReadingChrome(in: app, matching: s220EditMarker)
         openS220Browse(in: app, allowingBackgroundSync: allowingBackgroundSync)
         waitForVisibleTopic(prefix: s220CaptureTitle, in: app)
         openLearn(in: app)
