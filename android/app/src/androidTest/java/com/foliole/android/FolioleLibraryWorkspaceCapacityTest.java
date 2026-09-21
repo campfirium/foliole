@@ -84,13 +84,14 @@ public class FolioleLibraryWorkspaceCapacityTest {
         }
         long startupStarted = SystemClock.elapsedRealtime();
         clickExact(instrumentation, webView, "t219-open-workspace");
-        String startupTarget = waitForStartupTarget(instrumentation, webView);
+        FolioleCompanionWebViewSemanticAdapter.waitForVisibleTargetAfterReveal(
+            instrumentation, webView, "companion-bottom-tab-bar", "companion-top-bar-left-action",
+            false, deadline()
+        );
         long startupMs = SystemClock.elapsedRealtime() - startupStarted;
-        exitStartupSurface(instrumentation, webView, startupTarget);
         long readStarted = SystemClock.elapsedRealtime();
         clickExact(instrumentation, webView, "companion-tab-shortcut");
-        clickExact(instrumentation, webView, "companion-directory-node-node-0");
-        clickExact(instrumentation, webView, "companion-directory-node-node-1");
+        openCapacityTopic(instrumentation, webView);
         waitForTestId(instrumentation, webView, "companion-article-document");
         long readMs = SystemClock.elapsedRealtime() - readStarted;
         String refreshToken = "T219 refreshed " + target;
@@ -109,7 +110,10 @@ public class FolioleLibraryWorkspaceCapacityTest {
             "(function(){var d=document.querySelector('[data-companion-readable-document=true]');" +
             "return JSON.stringify({ok:!!d,text:d?d.textContent.slice(0,80):''});})()");
         assertTrue(readable.toString(), readable.optBoolean("ok"));
-        clickExact(instrumentation, webView, "companion-reading-exit");
+        FolioleCompanionWebViewSemanticAdapter.waitForVisibleTargetAfterReveal(
+            instrumentation, webView, "companion-reading-exit", "companion-article-document", true,
+            deadline()
+        );
         clickExact(instrumentation, webView, "companion-tab-search");
         JSONObject input = FolioleCompanionWebViewSemanticAdapter.perform(instrumentation, webView,
             "companion-search-input", "input", "Synthetic measurement node 1");
@@ -179,31 +183,22 @@ public class FolioleLibraryWorkspaceCapacityTest {
         assertTrue(result.toString(), result.optBoolean("ok"));
     }
 
-    private String waitForStartupTarget(Instrumentation instrumentation, WebView webView) throws Exception {
+    private void openCapacityTopic(Instrumentation instrumentation, WebView webView) throws Exception {
         long deadline = deadline();
         while (System.nanoTime() < deadline) {
-            for (String testId : new String[] {"companion-top-bar-left-action", "companion-bottom-tab-bar"}) {
-                JSONObject value = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
-                    instrumentation, webView,
-                    "(function(){var nodes=Array.prototype.slice.call(document.querySelectorAll(" +
-                    JSONObject.quote("[data-testid=\"" + testId + "\"]") + "));" +
-                    "return JSON.stringify({ok:nodes.some(function(node){var r=node.getBoundingClientRect();" +
-                    "return !!(r.width&&r.height);})});})()"
-                );
-                if (value.optBoolean("ok")) return testId;
-            }
+            JSONObject value = FolioleCompanionWebViewSemanticAdapter.tryEvaluateJson(
+                instrumentation, webView,
+                "(function(){function visible(id){return Array.prototype.slice.call(" +
+                "document.querySelectorAll('[data-testid=\"'+id+'\"]')).find(function(node){" +
+                "var r=node.getBoundingClientRect();return !!(r.width&&r.height);});}" +
+                "var topic=visible('companion-directory-node-node-1');if(topic){topic.click();" +
+                "return JSON.stringify({ok:true});}var folder=visible('companion-directory-node-node-0');" +
+                "if(folder)folder.click();return JSON.stringify({ok:false,folderClicked:!!folder});})()"
+            );
+            if (value != null && value.optBoolean("ok")) return;
             Thread.sleep(150);
         }
-        throw new IllegalStateException("Timed out waiting for normal Companion startup.");
-    }
-
-    private void exitStartupSurface(
-        Instrumentation instrumentation, WebView webView, String startupTarget
-    ) throws Exception {
-        if ("companion-top-bar-left-action".equals(startupTarget)) {
-            clickExact(instrumentation, webView, startupTarget);
-        }
-        waitForTestId(instrumentation, webView, "companion-bottom-tab-bar");
+        throw new IllegalStateException("Timed out opening the fixed capacity topic.");
     }
 
     private JSONObject waitForScript(Instrumentation instrumentation, WebView webView, String script) throws Exception {

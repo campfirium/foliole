@@ -95,6 +95,29 @@ final class FolioleCompanionWebViewSemanticAdapter {
         throw new IllegalStateException("Timed out waiting for semantic target: " + testId);
     }
 
+    static void waitForVisibleTargetAfterReveal(
+        Instrumentation instrumentation,
+        WebView webView,
+        String targetTestId,
+        String revealTestId,
+        boolean clickTarget,
+        long deadline
+    ) throws Exception {
+        String script = "(function(){function visible(id){return Array.prototype.slice.call(" +
+            "document.querySelectorAll('[data-testid=\"'+id+'\"]')).find(function(node){" +
+            "var r=node.getBoundingClientRect();return !!(r.width&&r.height);});}" +
+            "var target=visible(" + JSONObject.quote(targetTestId) + ");if(target){" +
+            (clickTarget ? "target.click();" : "") + "return JSON.stringify({ok:true});}" +
+            "var reveal=visible(" + JSONObject.quote(revealTestId) + ");if(reveal)reveal.click();" +
+            "return JSON.stringify({ok:false,revealClicked:!!reveal});})()";
+        while (System.nanoTime() < deadline) {
+            JSONObject receipt = tryEvaluateJson(instrumentation, webView, script);
+            if (receipt != null && receipt.optBoolean("ok")) return;
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for semantic target: " + targetTestId);
+    }
+
     static JSONObject waitForAttribute(
         Instrumentation instrumentation,
         WebView webView,
