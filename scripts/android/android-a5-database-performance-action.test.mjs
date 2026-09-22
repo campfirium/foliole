@@ -123,7 +123,8 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
   const result = { status: 'passed', scenario: 'library-capacity-workspace',
     results: [{ fixtureCount: 1000 }, { fixtureCount: 10000 }] };
   const outcome = await runA5DatabasePerformance({
-    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity-workspace' },
+    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity-workspace',
+      FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' },
     evidenceRoot, serial: 'fixed-a5',
     paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
     captured: (_cmd, args) => args.at(-1) === '/app.apk'
@@ -131,7 +132,9 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
       : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
     execute: async (_command, args) => {
       calls.push(args);
-      return { code: 0, output: args.includes('dumpsys')
+      return { code: 0, output: args.includes('meminfo')
+        ? '** MEMINFO in pid 123 [com.foliole.android.acceptance] **\nTOTAL PSS: 12,345 TOTAL RSS: 67,890\n'
+        : args.includes('dumpsys')
         ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}'
         : args.includes('instrument') ? 'OK (1 test)\n'
         : args.includes('exec-out') ? JSON.stringify(result) : 'Success' };
@@ -141,7 +144,18 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
   expect(instrumentation).toHaveLength(2);
   expect(instrumentation[0]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtOneThousand`);
   expect(instrumentation[1]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtTenThousand`);
-  expect(JSON.parse(fs.readFileSync(outcome.evidencePath))).toMatchObject(result);
+  const evidence = JSON.parse(fs.readFileSync(outcome.evidencePath));
+  expect(evidence).toMatchObject({ ...result, fixtureResetBeforeRun: true,
+    results: [{ fixtureCount: 1000, fresh: true }, { fixtureCount: 10000, fresh: true }],
+    memory: { stages: [
+      { fixtureCount: 1000, peakPssKb: 12345, peakRssKb: 67890 },
+      { fixtureCount: 10000, peakPssKb: 12345, peakRssKb: 67890 }
+    ] } });
+  expect(calls.findIndex(args => args.includes('uninstall')
+    && args.at(-1) === 'com.foliole.android.acceptance'))
+    .toBeLessThan(calls.findIndex(args => args.includes('install')));
+  expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'))))
+    .toMatchObject({ scenario: 'library-capacity-workspace', status: 'reset' });
 });
 
 const WORKSPACE_TEST = 'com.foliole.android.FolioleLibraryWorkspaceCapacityTest';

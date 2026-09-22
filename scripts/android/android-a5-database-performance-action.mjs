@@ -4,6 +4,7 @@ import { assertPerformanceApkIdentity, performanceScenario, PERFORMANCE_APP_ID }
 import { parseLibraryCapacityResult } from '../mobile/library-capacity-result.mjs';
 import { extractTopActivity, matchesLaunchComponent } from './verify-android-launch.mjs';
 import { removeA5AcceptanceApplication } from './macos-a5-acceptance-package-cleanup.mjs';
+import { measureAndroidWorkspaceMemory } from './android-a5-workspace-memory.mjs';
 
 import {
   evaluateCompanionDatabasePerformanceResults,
@@ -25,8 +26,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
   const capacity = scenario === 'library-capacity';
   const workspaceCapacity = scenario === 'library-capacity-workspace';
   const resetFixture = env.FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE;
-  if (resetFixture !== undefined && (resetFixture !== '1' || !capacity)) {
-    throw new Error('Capacity fixture reset requires the explicit library-capacity scenario and value 1.');
+  if (resetFixture !== undefined && (resetFixture !== '1' || (!capacity && !workspaceCapacity))) {
+    throw new Error('Capacity fixture reset requires an explicit capacity scenario and value 1.');
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const testApk = paths.androidTestApk;
@@ -37,22 +38,26 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     if (resetFixture === '1') {
       await removeA5AcceptanceApplication({ env, execute, paths, serial });
       fs.writeFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'),
-        `${JSON.stringify({ appId: APP_ID, serial, scenario: 'library-capacity', identities,
+        `${JSON.stringify({ appId: APP_ID, serial, scenario, identities,
           status: 'reset', resetAt: new Date().toISOString() }, null, 2)}\n`);
     }
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options)).output);
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options)).output);
     testInstalled = true;
     let result;
+    const workspaceMemory = [];
     if (workspaceCapacity) {
-      for (const method of [
-        'measuresNormalCompanionWorkspaceAtOneThousand',
-        'measuresNormalCompanionWorkspaceAtTenThousand'
-      ]) {
-        result = await checked(execute, paths.adb, [
-          '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-          '-e', 'class', `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`, RUNNER
-        ], options);
+      for (const [fixtureCount, method] of [[1000,
+        'measuresNormalCompanionWorkspaceAtOneThousand'], [10000,
+        'measuresNormalCompanionWorkspaceAtTenThousand']]) {
+        const measured = await measureAndroidWorkspaceMemory({
+          adb: paths.adb, appId: APP_ID, env, execute, serial
+        }, () => checked(execute, paths.adb, [
+          '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+          `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`, RUNNER
+        ], options));
+        result = measured.value;
+        workspaceMemory.push({ fixtureCount, ...measured.memory });
         output.push(result.output);
         fs.writeFileSync(path.join(evidenceRoot, `android-workspace-capacity-${method}.log`), result.output);
         assertSingleInstrumentationPassed(result.output, `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`);
@@ -67,7 +72,7 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     if (capacity) return await saveCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options });
     if (workspaceCapacity) return await saveWorkspaceCapacityEvidence({ evidenceRoot, identities, result, output,
-      execute, paths, serial, options });
+      execute, paths, serial, options, resetFixture, workspaceMemory });
     for (const testClass of [LIFECYCLE_TEST_CLASS, BATCH_DATA_PLANE_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
@@ -90,7 +95,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
 }
 
 async function saveWorkspaceCapacityEvidence(args) {
-  const { evidenceRoot, identities, result, output, execute, paths, serial, options } = args;
+  const { evidenceRoot, identities, result, output, execute, paths, serial, options,
+    resetFixture, workspaceMemory } = args;
   fs.writeFileSync(path.join(evidenceRoot, 'android-workspace-capacity.log'), result.output);
   if (!/OK \(1 test\)/u.test(result.output) || /FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(result.output)) {
     throw new Error('Normal workspace capacity instrumentation failed.');
@@ -101,7 +107,11 @@ async function saveWorkspaceCapacityEvidence(args) {
   if (parsed.status !== 'passed' || parsed.scenario !== 'library-capacity-workspace'
     || parsed.results?.length !== 2) throw new Error('Normal workspace capacity artifact is invalid.');
   const evidencePath = path.join(evidenceRoot, 'workspace-capacity-result.json');
-  fs.writeFileSync(evidencePath, `${JSON.stringify({ ...parsed, identities }, null, 2)}\n`);
+  const evidence = { ...parsed,
+    fixtureResetBeforeRun: resetFixture === '1',
+    results: parsed.results.map(item => ({ ...item, fresh: resetFixture === '1' })),
+    memory: { stages: workspaceMemory }, identities };
+  fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
   return { evidencePath, output: output.join('') };
 }
 
