@@ -32,6 +32,14 @@ function document(content: string, updatedAt?: string) {
   };
 }
 
+function deferredDocument() {
+  let resolve!: (value: ReturnType<typeof document>) => void;
+  const promise = new Promise<ReturnType<typeof document>>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 function seedTrimmedNode(updatedAt = CURRENT_UPDATED_AT) {
   const initial = createInitialWorkspaceState(new Date('2026-07-18T00:00:00.000Z'));
   useWorkspaceStore.setState({
@@ -93,4 +101,75 @@ it.each([
   await expect(loadWorkspaceNodeDocument('node-1', {})).resolves.toEqual(cached);
 
   expect(invoke).not.toHaveBeenCalled();
+});
+
+it('rejects a runtime body that becomes older than node metadata while loading', async () => {
+  const deferred = deferredDocument();
+  const invoke = vi.fn().mockReturnValue(deferred.promise);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const pendingLoad = loadWorkspaceNodeDocument('node-1', {});
+  seedTrimmedNode(NEW_UPDATED_AT);
+  deferred.resolve(document('Late runtime body', CURRENT_UPDATED_AT));
+
+  await expect(pendingLoad).resolves.toBeNull();
+  expect(readCachedWorkspaceNodeDocument('node-1')).toBeNull();
+});
+
+it('accepts a runtime body that catches up with metadata advanced while loading', async () => {
+  const deferred = deferredDocument();
+  const invoke = vi.fn().mockReturnValue(deferred.promise);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const pendingLoad = loadWorkspaceNodeDocument('node-1', {});
+  seedTrimmedNode(NEW_UPDATED_AT);
+  const currentDocument = document('Current runtime body', NEW_UPDATED_AT);
+  deferred.resolve(currentDocument);
+
+  await expect(pendingLoad).resolves.toBe(currentDocument);
+  expect(readCachedWorkspaceNodeDocument('node-1')).toBe(currentDocument);
+});
+
+it('preserves a document cached while an unversioned runtime body is loading', async () => {
+  seedTrimmedNode('');
+  const deferred = deferredDocument();
+  const invoke = vi.fn().mockReturnValue(deferred.promise);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const pendingLoad = loadWorkspaceNodeDocument('node-1', {});
+  const currentDocument = document('Current local body');
+  writeCachedWorkspaceNodeDocument('node-1', currentDocument);
+  deferred.resolve(document('Late runtime body'));
+
+  await expect(pendingLoad).resolves.toBeNull();
+  expect(readCachedWorkspaceNodeDocument('node-1')).toBe(currentDocument);
+});
+
+it('shares runtime IO while validating each repeated request', async () => {
+  const deferred = deferredDocument();
+  const invoke = vi.fn().mockReturnValue(deferred.promise);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const firstLoad = loadWorkspaceNodeDocument('node-1', {});
+  const secondLoad = loadWorkspaceNodeDocument('node-1', { forceLoad: true });
+  const loadedDocument = document('Shared runtime body', CURRENT_UPDATED_AT);
+  deferred.resolve(loadedDocument);
+
+  await expect(firstLoad).resolves.toBe(loadedDocument);
+  await expect(secondLoad).resolves.toBe(loadedDocument);
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(readCachedWorkspaceNodeDocument('node-1')).toBe(loadedDocument);
+});
+
+it('clears a rejected pending read so a later request can retry', async () => {
+  const invoke = vi.fn()
+    .mockRejectedValueOnce(new Error('read failed'))
+    .mockResolvedValueOnce(document('Retried body', CURRENT_UPDATED_AT));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await expect(loadWorkspaceNodeDocument('node-1', {})).rejects.toThrow('read failed');
+  await expect(loadWorkspaceNodeDocument('node-1', {})).resolves.toMatchObject({
+    content: 'Retried body'
+  });
+  expect(invoke).toHaveBeenCalledTimes(2);
 });

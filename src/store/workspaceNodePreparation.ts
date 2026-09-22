@@ -7,8 +7,12 @@ import {
 } from './workspaceBrowseRoot';
 import { isCanonicalTrashedNodeId, isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory } from './workspaceNavigation';
-import { writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
-import { loadWorkspaceNodeDocument, shouldSkipNodeDocumentPreparation } from './workspaceNodeDocumentLoader';
+import {
+  discardCachedWorkspaceNodeDocumentResult,
+  isWorkspaceNodeDocumentResultCurrent,
+  loadWorkspaceNodeDocument,
+  shouldSkipNodeDocumentPreparation
+} from './workspaceNodeDocumentLoader';
 import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { RECENT_RENDERER_BOUNDARY_NODE_LIMIT } from './workspaceRendererBoundaryKeepNodeIds';
@@ -33,11 +37,22 @@ function mergePreparedNodeDocument(
   document: WorkspaceNodeDocument,
   options: EnsureWorkspaceNodeDocumentReadyOptions
 ) {
+  let accepted = false;
+  let merged = false;
   useWorkspaceStore.setState((state) => {
     const nextNode = state.nodesById[nodeId];
-    if (!nextNode || (!options.forceLoad && isNodeDocumentLoaded(nextNode))) {
+    if (
+      !isWorkspaceNodeDocumentLoadAllowed(state, nodeId, options)
+      || !nextNode
+      || !isWorkspaceNodeDocumentResultCurrent(nodeId, document)
+    ) {
       return state;
     }
+    accepted = true;
+    if (!options.forceLoad && isNodeDocumentLoaded(nextNode)) {
+      return state;
+    }
+    merged = true;
 
     return {
       nodesById: patchWorkspaceRecord(state.nodesById, {
@@ -53,8 +68,13 @@ function mergePreparedNodeDocument(
         : {})
     };
   });
-  writeCachedWorkspaceNodeDocument(nodeId, document);
-  options.onDocumentMerged?.(document);
+  if (!accepted) {
+    discardCachedWorkspaceNodeDocumentResult(nodeId, document);
+  }
+  if (merged) {
+    options.onDocumentMerged?.(document);
+  }
+  return { accepted, merged };
 }
 
 function buildPreparedOpenState(
@@ -156,8 +176,7 @@ export async function ensureWorkspaceNodeDocumentReady(
     return null;
   }
 
-  mergePreparedNodeDocument(nodeId, document, options);
-  return document;
+  return mergePreparedNodeDocument(nodeId, document, options).accepted ? document : null;
 }
 
 export async function openWorkspaceNodeWithPreparedDocument(
@@ -173,10 +192,28 @@ export async function openWorkspaceNodeWithPreparedDocument(
   if (options.shouldApply && !options.shouldApply()) {
     return null;
   }
-  useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document, options));
-  if (document) {
-    writeCachedWorkspaceNodeDocument(nodeId, document);
+  let documentAccepted = document === null;
+  let documentMerged = false;
+  let selectionApplied = false;
+  useWorkspaceStore.setState((state) => {
+    if (!isWorkspaceNodeVisible(state, nodeId)) {
+      return state;
+    }
+    selectionApplied = true;
+    const acceptedDocument = document && isWorkspaceNodeDocumentResultCurrent(nodeId, document)
+      ? document
+      : null;
+    documentAccepted = document === null || acceptedDocument !== null;
+    documentMerged = Boolean(
+      acceptedDocument && (options.forceLoad || !isNodeDocumentLoaded(state.nodesById[nodeId]))
+    );
+    return buildPreparedOpenState(state, nodeId, acceptedDocument, options);
+  });
+  if (document && !documentAccepted) {
+    discardCachedWorkspaceNodeDocumentResult(nodeId, document);
+  }
+  if (document && documentMerged) {
     options.onDocumentMerged?.(document);
   }
-  return { focusAnchor: null, nodeId };
+  return selectionApplied ? { focusAnchor: null, nodeId } : null;
 }
