@@ -156,7 +156,10 @@ public class FolioleLibraryWorkspaceCapacityTest {
     }
 
     private String waitForWorkspaceStage(Instrumentation instrumentation, WebView webView) throws Exception {
-        waitForTestId(instrumentation, webView, "t219-workspace-status");
+        JSONObject ready = FolioleCompanionWebViewSemanticAdapter.waitForAttribute(
+            instrumentation, webView, "t219-workspace-status", "data-status", "ready", DEADLINE_MS,
+            new JSONObject());
+        assertEquals(ready.toString(), "ready", ready.optString("value"));
         JSONObject value = FolioleCompanionWebViewSemanticAdapter.readAttribute(
             instrumentation, webView, "t219-workspace-status", "data-stage");
         assertTrue(value.toString(), value.optBoolean("found"));
