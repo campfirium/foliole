@@ -156,7 +156,11 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 30), "T219 search is unavailable.")
         search.tap()
         search.typeText("Synthetic measurement node 1")
-        XCTAssertTrue(app.buttons["Open topic Topic 1"].waitForExistence(timeout: 60))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(
+            format: "label BEGINSWITH %@", "Topic 1\n"
+        )).firstMatch.waitForExistence(timeout: 60))
+        let keyboardDone = app.toolbars.buttons["Done"]
+        if keyboardDone.exists { keyboardDone.tap() }
         tap("Flow", in: app, timeout: 30)
         XCTAssertTrue(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "Synthetic measurement node")
