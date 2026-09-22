@@ -41,7 +41,8 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
 }
 async function capacityNodeRecords(index: number, bytes: number, hostName: string) {
   const id = `node-${index}`;
-  const body = (`Synthetic measurement node ${index}.\n` + 'Representative prose. '.repeat(bytes)).slice(0, bytes);
+  const prose = 'Representative prose. ';
+  const body = (`Synthetic measurement node ${index}.\n` + prose.repeat(Math.ceil(bytes / prose.length))).slice(0, bytes);
   const hash = await sha256(body);
   const blob = index % 2 === 0;
   const missing = index % 20 === 0;
