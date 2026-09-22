@@ -25,7 +25,7 @@ it('trims the previous active document when selection and target document change
     }
   });
 
-  const nextState = enforceWorkspaceRendererBoundary({
+  const nextState = enforceWorkspaceRendererBoundary<WorkspaceState>({
     activeNodeId: 'node-2',
     nodesById: {
       ...currentState.nodesById,
